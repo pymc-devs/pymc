@@ -309,8 +309,12 @@ var Search = {
     var excluded = [];
     var hlterms = [];
     var tmp = query.split(/\s+/);
-    var object = (tmp.length == 1) ? tmp[0].toLowerCase() : null;
+    var objectterms = [];
     for (var i = 0; i < tmp.length; i++) {
+      if (tmp[i] != "") {
+          objectterms.push(tmp[i].toLowerCase());
+      }
+
       if ($u.indexOf(stopwords, tmp[i]) != -1 || tmp[i].match(/^\d+$/) ||
           tmp[i] == "") {
         // skip this "word"
@@ -341,9 +345,6 @@ var Search = {
     var filenames = this._index.filenames;
     var titles = this._index.titles;
     var terms = this._index.terms;
-    var objects = this._index.objects;
-    var objtypes = this._index.objtypes;
-    var objnames = this._index.objnames;
     var fileMap = {};
     var files = null;
     // different result priorities
@@ -354,39 +355,18 @@ var Search = {
     $('#search-progress').empty();
 
     // lookup as object
-    if (object != null) {
-      for (var prefix in objects) {
-        for (var name in objects[prefix]) {
-          var fullname = (prefix ? prefix + '.' : '') + name;
-          if (fullname.toLowerCase().indexOf(object) > -1) {
-            match = objects[prefix][name];
-            descr = objnames[match[1]] + _(', in ') + titles[match[0]];
-            // XXX the generated anchors are not generally correct
-            // XXX there may be custom prefixes
-            result = [filenames[match[0]], fullname, '#'+fullname, descr];
-            switch (match[2]) {
-            case 1: objectResults.push(result); break;
-            case 0: importantResults.push(result); break;
-            case 2: unimportantResults.push(result); break;
-            }
-          }
-        }
-      }
+    for (var i = 0; i < objectterms.length; i++) {
+      var others = [].concat(objectterms.slice(0,i),
+                             objectterms.slice(i+1, objectterms.length))
+      var results = this.performObjectSearch(objectterms[i], others);
+      // Assume first word is most likely to be the object,
+      // other words more likely to be in description.
+      // Therefore put matches for earlier words first.
+      // (Results are eventually used in reverse order).
+      objectResults = results[0].concat(objectResults);
+      importantResults = results[1].concat(importantResults);
+      unimportantResults = results[2].concat(unimportantResults);
     }
-
-    // sort results descending
-    objectResults.sort(function(a, b) {
-      return (a[1] > b[1]) ? -1 : ((a[1] < b[1]) ? 1 : 0);
-    });
-
-    importantResults.sort(function(a, b) {
-      return (a[1] > b[1]) ? -1 : ((a[1] < b[1]) ? 1 : 0);
-    });
-
-    unimportantResults.sort(function(a, b) {
-      return (a[1] > b[1]) ? -1 : ((a[1] < b[1]) ? 1 : 0);
-    });
-
 
     // perform the search on the required terms
     for (var i = 0; i < searchterms.length; i++) {
@@ -486,7 +466,7 @@ var Search = {
             listItem.slideDown(5, function() {
               displayNextItem();
             });
-          });
+          }, "text");
         } else {
           // no source available, just display title
           Search.output.append(listItem);
@@ -507,6 +487,71 @@ var Search = {
       }
     }
     displayNextItem();
+  },
+
+  performObjectSearch : function(object, otherterms) {
+    var filenames = this._index.filenames;
+    var objects = this._index.objects;
+    var objnames = this._index.objnames;
+    var titles = this._index.titles;
+
+    var importantResults = [];
+    var objectResults = [];
+    var unimportantResults = [];
+
+    for (var prefix in objects) {
+      for (var name in objects[prefix]) {
+        var fullname = (prefix ? prefix + '.' : '') + name;
+        if (fullname.toLowerCase().indexOf(object) > -1) {
+          var match = objects[prefix][name];
+          var objname = objnames[match[1]][2];
+          var title = titles[match[0]];
+          // If more than one term searched for, we require other words to be
+          // found in the name/title/description
+          if (otherterms.length > 0) {
+            var haystack = (prefix + ' ' + name + ' ' +
+                            objname + ' ' + title).toLowerCase();
+            var allfound = true;
+            for (var i = 0; i < otherterms.length; i++) {
+              if (haystack.indexOf(otherterms[i]) == -1) {
+                allfound = false;
+                break;
+              }
+            }
+            if (!allfound) {
+              continue;
+            }
+          }
+          var descr = objname + _(', in ') + title;
+          anchor = match[3];
+          if (anchor == '')
+            anchor = fullname;
+          else if (anchor == '-')
+            anchor = objnames[match[1]][1] + '-' + fullname;
+          result = [filenames[match[0]], fullname, '#'+anchor, descr];
+          switch (match[2]) {
+          case 1: objectResults.push(result); break;
+          case 0: importantResults.push(result); break;
+          case 2: unimportantResults.push(result); break;
+          }
+        }
+      }
+    }
+
+    // sort results descending
+    objectResults.sort(function(a, b) {
+      return (a[1] > b[1]) ? -1 : ((a[1] < b[1]) ? 1 : 0);
+    });
+
+    importantResults.sort(function(a, b) {
+      return (a[1] > b[1]) ? -1 : ((a[1] < b[1]) ? 1 : 0);
+    });
+
+    unimportantResults.sort(function(a, b) {
+      return (a[1] > b[1]) ? -1 : ((a[1] < b[1]) ? 1 : 0);
+    });
+
+    return [importantResults, objectResults, unimportantResults]
   }
 }
 

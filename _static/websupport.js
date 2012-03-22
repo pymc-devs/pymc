@@ -566,7 +566,7 @@
     var context = $.extend({}, opts, comment);
     var div = $(renderTemplate(commentTemplate, context));
 
-    // If the user has voted on this comment, highblight the correct arrow.
+    // If the user has voted on this comment, highlight the correct arrow.
     if (comment.vote) {
       var direction = (comment.vote == 1) ? 'u' : 'd';
       div.find('#' + direction + 'v' + comment.id).hide();

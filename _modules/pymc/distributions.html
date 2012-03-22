@@ -52,7 +52,7 @@
   <h1>Source code for pymc.distributions</h1><div class="highlight"><pre>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">pymc.distributions</span>
-<span class="sd"> </span>
+
 <span class="sd">A collection of common probability distributions. The objects associated</span>
 <span class="sd">with a distribution called &#39;dist&#39; are:</span>
 
@@ -113,9 +113,9 @@
 
 <span class="n">sc_continuous_distributions</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;beta&#39;</span><span class="p">,</span> <span class="s">&#39;cauchy&#39;</span><span class="p">,</span> <span class="s">&#39;chi2&#39;</span><span class="p">,</span>
                                <span class="s">&#39;degenerate&#39;</span><span class="p">,</span> <span class="s">&#39;exponential&#39;</span><span class="p">,</span> <span class="s">&#39;exponweib&#39;</span><span class="p">,</span>
-                               <span class="s">&#39;gamma&#39;</span><span class="p">,</span> <span class="s">&#39;half_normal&#39;</span><span class="p">,</span> 
+                               <span class="s">&#39;gamma&#39;</span><span class="p">,</span> <span class="s">&#39;half_normal&#39;</span><span class="p">,</span>
                                <span class="s">&#39;inverse_gamma&#39;</span><span class="p">,</span> <span class="s">&#39;laplace&#39;</span><span class="p">,</span> <span class="s">&#39;logistic&#39;</span><span class="p">,</span>
-                               <span class="s">&#39;lognormal&#39;</span><span class="p">,</span> <span class="s">&#39;noncentral_t&#39;</span><span class="p">,</span> <span class="s">&#39;normal&#39;</span><span class="p">,</span> 
+                               <span class="s">&#39;lognormal&#39;</span><span class="p">,</span> <span class="s">&#39;noncentral_t&#39;</span><span class="p">,</span> <span class="s">&#39;normal&#39;</span><span class="p">,</span>
                                <span class="s">&#39;pareto&#39;</span><span class="p">,</span> <span class="s">&#39;t&#39;</span><span class="p">,</span> <span class="s">&#39;truncated_pareto&#39;</span><span class="p">,</span> <span class="s">&#39;uniform&#39;</span><span class="p">,</span>
                                <span class="s">&#39;weibull&#39;</span><span class="p">,</span> <span class="s">&#39;skew_normal&#39;</span><span class="p">,</span> <span class="s">&#39;truncated_normal&#39;</span><span class="p">,</span>
                                <span class="s">&#39;von_mises&#39;</span><span class="p">]</span>
@@ -205,7 +205,7 @@
         <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
             <span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parent_names</span><span class="p">,</span> <span class="n">parents_default</span><span class="p">,</span> <span class="n">docstr</span><span class="p">,</span> <span class="n">logp</span><span class="p">,</span> <span class="n">random</span><span class="p">,</span> <span class="n">mv</span><span class="p">,</span> <span class="n">logp_partial_gradients</span><span class="p">)</span> <span class="o">=</span> <span class="n">new_class_args</span>
             <span class="n">parents</span><span class="o">=</span><span class="n">parents_default</span>
-            
+
             <span class="c"># Figure out what argument names are needed.</span>
             <span class="n">arg_keys</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;parents&#39;</span><span class="p">,</span> <span class="s">&#39;value&#39;</span><span class="p">,</span> <span class="s">&#39;observed&#39;</span><span class="p">,</span> <span class="s">&#39;size&#39;</span><span class="p">,</span> <span class="s">&#39;trace&#39;</span><span class="p">,</span> <span class="s">&#39;rseed&#39;</span><span class="p">,</span> <span class="s">&#39;doc&#39;</span><span class="p">,</span> <span class="s">&#39;debug&#39;</span><span class="p">,</span> <span class="s">&#39;plot&#39;</span><span class="p">,</span> <span class="s">&#39;verbose&#39;</span><span class="p">]</span>
             <span class="n">arg_vals</span> <span class="o">=</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="n">parents</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -232,7 +232,7 @@
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">arg_dict_out</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                 <span class="k">except</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Too many positional arguments provided. Arguments for class &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="s">&#39; are: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">all_args_needed</span><span class="p">))</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Too many positional arguments provided. Arguments for class &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="s">&#39; are: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">args_needed</span><span class="p">))</span>
 
 
             <span class="c"># Sort keyword arguments</span>
@@ -317,7 +317,7 @@
             <span class="k">elif</span> <span class="s">&#39;size&#39;</span> <span class="ow">in</span> <span class="n">kwds</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;No size argument allowed for multivariate stochastic variables.&#39;</span><span class="p">)</span>
 
-            
+
             <span class="c"># Call base class initialization method</span>
             <span class="k">if</span> <span class="n">arg_dict_out</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;debug&#39;</span><span class="p">):</span>
                 <span class="n">logp</span> <span class="o">=</span> <span class="n">debug_wrapper</span><span class="p">(</span><span class="n">logp</span><span class="p">)</span>
@@ -366,7 +366,7 @@
 
 <span class="sd">    :SeeAlso:</span>
 <span class="sd">      new_dist_class</span>
-<span class="sd">    &quot;&quot;&quot;</span>  
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">varargs</span><span class="p">,</span> <span class="n">varkw</span><span class="p">,</span> <span class="n">defaults</span><span class="p">)</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">logp</span><span class="p">)</span>
     <span class="n">parent_names</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
@@ -386,7 +386,7 @@
     <span class="n">docstr</span> <span class="o">+=</span> <span class="s">&#39;Docstring of log-probability function:</span><span class="se">\n</span><span class="s">&#39;</span>
     <span class="k">try</span><span class="p">:</span> <span class="n">docstr</span> <span class="o">+=</span> <span class="n">logp</span><span class="o">.</span><span class="n">__doc__</span>
     <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span> <span class="k">pass</span>  <span class="c"># This will happen when logp doesn&#39;t have a docstring</span>
-    
+
     <span class="n">logp</span><span class="o">=</span><span class="n">valuewrapper</span><span class="p">(</span><span class="n">logp</span><span class="p">)</span>
     <span class="n">distribution_arguments</span> <span class="o">=</span> <span class="n">logp</span><span class="o">.</span><span class="n">__dict__</span>
 
@@ -394,7 +394,7 @@
 
     <span class="k">for</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">six</span><span class="o">.</span><span class="n">iteritems</span><span class="p">(</span><span class="n">logp_partial_gradients</span><span class="p">):</span>
         <span class="n">wrapped_logp_partial_gradients</span><span class="p">[</span><span class="n">parameter</span><span class="p">]</span> <span class="o">=</span> <span class="n">valuewrapper</span><span class="p">(</span><span class="n">logp_partial_gradients</span><span class="p">[</span><span class="n">parameter</span><span class="p">],</span> <span class="n">arguments</span> <span class="o">=</span> <span class="n">distribution_arguments</span><span class="p">)</span>
-    
+
     <span class="k">return</span> <span class="n">new_dist_class</span><span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parent_names</span><span class="p">,</span> <span class="n">parents_default</span><span class="p">,</span> <span class="n">docstr</span><span class="p">,</span>
 						 <span class="n">logp</span><span class="p">,</span> <span class="n">random</span><span class="p">,</span> <span class="n">mv</span><span class="p">,</span> <span class="n">wrapped_logp_partial_gradients</span><span class="p">)</span>
 
@@ -430,7 +430,7 @@
 <span class="sd">      np.asarray([[0, 1],</span>
 <span class="sd">             [0, 1]])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    
+
     <span class="c"># Find the order of the arguments.</span>
     <span class="n">refargs</span><span class="p">,</span> <span class="n">varargs</span><span class="p">,</span> <span class="n">varkw</span><span class="p">,</span> <span class="n">defaults</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
     <span class="c">#vfunc = np.vectorize(self.func)</span>
@@ -452,7 +452,7 @@
                     <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">kwds</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">defaults</span><span class="p">[</span><span class="n">n</span><span class="o">-</span><span class="n">npos</span><span class="o">+</span><span class="n">i</span><span class="p">])</span>
-        
+
         <span class="n">r</span> <span class="o">=</span> <span class="p">[];</span><span class="n">s</span><span class="o">=</span><span class="p">[];</span><span class="n">largs</span><span class="o">=</span><span class="p">[];</span><span class="n">nr</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="n">length</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">args</span><span class="p">]</span>
         <span class="n">dimension</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">.</span><span class="n">ndim</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">args</span><span class="p">]</span>
@@ -800,7 +800,7 @@
 <span class="sd">    .. note::</span>
 <span class="sd">       - :math:`E(X)=np`</span>
 <span class="sd">       - :math:`Var(X)=np(1-p)`</span>
-<span class="sd">       </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">p</span><span class="p">)</span>
@@ -881,9 +881,9 @@
 <span class="sd">    :Parameters:</span>
 <span class="sd">      - `x` : [int] :math:`x \in 0\ldots k-1`</span>
 <span class="sd">      - `p` : [float] :math:`p &gt; 0`, :math:`\sum p = 1`</span>
-<span class="sd">      </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
-    
+
     <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">&gt;</span><span class="mf">0.0001</span><span class="p">):</span>
         <span class="n">print_</span><span class="p">(</span><span class="s">&quot;Probabilities in categorical_like sum to&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
@@ -924,7 +924,7 @@
 
 <span class="sd">    .. note::</span>
 <span class="sd">       - Mode and median are at alpha.</span>
-<span class="sd">       </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">cauchy</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">alpha</span><span class="p">,</span><span class="n">beta</span><span class="p">)</span>
@@ -998,7 +998,7 @@
 <span class="sd">    :Parameters:</span>
 <span class="sd">      - `x` : Input value.</span>
 <span class="sd">      - `k` : Degenerate value.</span>
-<span class="sd">      </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">([</span><span class="n">i</span><span class="o">==</span><span class="n">k</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">x</span><span class="p">]))</span>
@@ -1059,7 +1059,7 @@
 <span class="sd">    .. note::</span>
 <span class="sd">        Only the first `k-1` elements of `x` are expected. Can be used</span>
 <span class="sd">        as a parent of Multinomial and Categorical nevertheless.</span>
-<span class="sd">        </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
     <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
@@ -1100,7 +1100,7 @@
 <span class="sd">      - :math:`E(X) = 1/\beta`</span>
 <span class="sd">      - :math:`Var(X) = 1/\beta^2`</span>
 <span class="sd">      - PyMC&#39;s beta is named &#39;lambda&#39; by Wikipedia, SciPy, Wolfram MathWorld and other sources.</span>
-<span class="sd">      </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">gamma</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
@@ -1362,16 +1362,16 @@
 
 <div class="viewcode-block" id="hypergeometric_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.hypergeometric_like">[docs]</a><span class="k">def</span> <span class="nf">hypergeometric_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">N</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
-<span class="sd">    Hypergeometric log-likelihood. </span>
-<span class="sd">    </span>
-<span class="sd">    Discrete probability distribution that describes the number of successes in </span>
+<span class="sd">    Hypergeometric log-likelihood.</span>
+
+<span class="sd">    Discrete probability distribution that describes the number of successes in</span>
 <span class="sd">    a sequence of draws from a finite population without replacement.</span>
 
 <span class="sd">    .. math::</span>
 
-<span class="sd">        f(x \mid n, m, N) = \frac{\left({ \begin{array}{c} {m} \\ {x} \\ </span>
-<span class="sd">        \end{array} }\right)\left({ \begin{array}{c} {N-m} \\ {n-x} \\ </span>
-<span class="sd">        \end{array}}\right)}{\left({ \begin{array}{c} {N} \\ {n} \\ </span>
+<span class="sd">        f(x \mid n, m, N) = \frac{\left({ \begin{array}{c} {m} \\ {x} \\</span>
+<span class="sd">        \end{array} }\right)\left({ \begin{array}{c} {N-m} \\ {n-x} \\</span>
+<span class="sd">        \end{array}}\right)}{\left({ \begin{array}{c} {N} \\ {n} \\</span>
 <span class="sd">        \end{array}}\right)}</span>
 
 
@@ -1382,7 +1382,7 @@
 <span class="sd">      - `N` : [int] Total number of units in the population.</span>
 
 <span class="sd">    .. note::</span>
-<span class="sd">        </span>
+
 <span class="sd">        :math:`E(X) = \frac{n n}{N}`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -1416,10 +1416,10 @@
 <span class="sd">      - `beta` : Scale parameter (beta &gt; 0).</span>
 
 <span class="sd">    .. note::</span>
-<span class="sd">    </span>
+
 <span class="sd">       :math:`E(X)=\frac{\beta}{\alpha-1}`  for :math:`\alpha &gt; 1`</span>
 <span class="sd">       :math:`Var(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha)}`  for :math:`\alpha &gt; 2`</span>
-<span class="sd">       </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">igamma</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
@@ -1445,11 +1445,11 @@
 <span class="k">def</span> <span class="nf">inverse_wishart_expval</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">C</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Expected value of inverse Wishart distribution.</span>
-<span class="sd">    </span>
+
 <span class="sd">    :Parameters:</span>
 <span class="sd">      - `n` : [int] Degrees of freedom (n &gt; 0).</span>
 <span class="sd">      - `C` : Symmetric and positive definite scale matrix</span>
-<span class="sd">    </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">C</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">C</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
@@ -1461,7 +1461,7 @@
 
 <span class="sd">    .. math::</span>
 <span class="sd">        f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X</span>
-<span class="sd">        \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1})</span>
+<span class="sd">        \mid}^{-(n+k+1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1})</span>
 <span class="sd">        \right\}}{2^{nk/2} \Gamma_p(n/2)}</span>
 
 <span class="sd">    where :math:`k` is the rank of X.</span>
@@ -1626,10 +1626,10 @@
 
 <div class="viewcode-block" id="lognormal_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.lognormal_like">[docs]</a><span class="k">def</span> <span class="nf">lognormal_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">tau</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
-<span class="sd">    Log-normal log-likelihood. </span>
-<span class="sd">    </span>
-<span class="sd">    Distribution of any random variable whose logarithm is normally </span>
-<span class="sd">    distributed. A variable might be modeled as log-normal if it can be thought </span>
+<span class="sd">    Log-normal log-likelihood.</span>
+
+<span class="sd">    Distribution of any random variable whose logarithm is normally</span>
+<span class="sd">    distributed. A variable might be modeled as log-normal if it can be thought</span>
 <span class="sd">    of as the multiplicative product of many small independent factors.</span>
 
 <span class="sd">    .. math::</span>
@@ -1642,7 +1642,7 @@
 <span class="sd">      - `tau` : Scale parameter (tau &gt; 0).</span>
 
 <span class="sd">    .. note::</span>
-<span class="sd">    </span>
+
 <span class="sd">       :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`</span>
 <span class="sd">       :math:`Var(X)=(e^{1/\tau}-1)e^{2\mu+\frac{1}{\tau}}`</span>
 
@@ -1683,8 +1683,8 @@
 
 <div class="viewcode-block" id="multinomial_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.multinomial_like">[docs]</a><span class="k">def</span> <span class="nf">multinomial_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
-<span class="sd">    Multinomial log-likelihood. </span>
-<span class="sd">    </span>
+<span class="sd">    Multinomial log-likelihood.</span>
+
 <span class="sd">    Generalization of the binomial</span>
 <span class="sd">    distribution, but instead of each trial resulting in &quot;success&quot; or</span>
 <span class="sd">    &quot;failure&quot;, each one results in exactly one of some fixed finite number k</span>
@@ -1759,13 +1759,13 @@
 <div class="viewcode-block" id="multivariate_hypergeometric_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.multivariate_hypergeometric_like">[docs]</a><span class="k">def</span> <span class="nf">multivariate_hypergeometric_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
 <span class="sd">    Multivariate hypergeometric log-likelihood</span>
-<span class="sd">    </span>
-<span class="sd">    Describes the probability of drawing x[i] elements of the ith category, </span>
+
+<span class="sd">    Describes the probability of drawing x[i] elements of the ith category,</span>
 <span class="sd">    when the number of items in each category is given by m.</span>
 
 <span class="sd">    .. math::</span>
-<span class="sd">        \frac{\prod_i \left({ \begin{array}{c} {m_i} \\ {x_i} \\ </span>
-<span class="sd">        \end{array}}\right)}{\left({ \begin{array}{c} {N} \\ {n} \\ </span>
+<span class="sd">        \frac{\prod_i \left({ \begin{array}{c} {m_i} \\ {x_i} \\</span>
+<span class="sd">        \end{array}}\right)}{\left({ \begin{array}{c} {N} \\ {n} \\</span>
 <span class="sd">        \end{array}}\right)}</span>
 
 
@@ -1774,7 +1774,7 @@
 <span class="sd">    :Parameters:</span>
 <span class="sd">      - `x` : [int sequence] Number of draws from each category, (x &lt; m).</span>
 <span class="sd">      - `m` : [int sequence] Number of items in each categoy.</span>
-<span class="sd">      </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">mvhyperg</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
 
@@ -1956,8 +1956,8 @@
 
 <div class="viewcode-block" id="negative_binomial_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.negative_binomial_like">[docs]</a><span class="k">def</span> <span class="nf">negative_binomial_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
-<span class="sd">    Negative binomial log-likelihood. </span>
-<span class="sd">    </span>
+<span class="sd">    Negative binomial log-likelihood.</span>
+
 <span class="sd">    The negative binomial</span>
 <span class="sd">    distribution describes a Poisson random variable whose rate</span>
 <span class="sd">    parameter is gamma distributed. PyMC&#39;s chosen parameterization is</span>
@@ -2076,7 +2076,7 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">vonmises</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">kappa</span><span class="p">)</span>
-    
+
 <span class="c"># Pareto---------------------------------------------------</span></div>
 <span class="nd">@randomwrap</span>
 <span class="k">def</span> <span class="nf">rpareto</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
@@ -2084,19 +2084,19 @@
 <span class="sd">    Random Pareto variates.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">m</span> <span class="o">/</span> <span class="p">(</span><span class="n">random_number</span><span class="p">(</span><span class="n">size</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">alpha</span><span class="p">))</span>
-    
+
 <span class="k">def</span> <span class="nf">pareto_expval</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Expected value of Pareto distribution.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    
+
     <span class="k">if</span> <span class="n">alpha</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">inf</span>
     <span class="k">return</span> <span class="n">alpha</span><span class="o">*</span><span class="n">m</span><span class="o">/</span><span class="p">(</span><span class="n">alpha</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-    
+
 <div class="viewcode-block" id="pareto_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.pareto_like">[docs]</a><span class="k">def</span> <span class="nf">pareto_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
-<span class="sd">    Pareto log-likelihood. The Pareto is a continuous, positive </span>
+<span class="sd">    Pareto log-likelihood. The Pareto is a continuous, positive</span>
 <span class="sd">    probability distribution with two parameters. It is often used</span>
 <span class="sd">    to characterize wealth distribution, or other examples of the</span>
 <span class="sd">    80/20 rule.</span>
@@ -2115,7 +2115,7 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">pareto</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
-    
+
 <span class="c"># Truncated Pareto---------------------------------------------------</span></div>
 <span class="nd">@randomwrap</span>
 <span class="k">def</span> <span class="nf">rtruncated_pareto</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
@@ -2124,22 +2124,22 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">u</span> <span class="o">=</span> <span class="n">random_number</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">u</span><span class="o">*</span><span class="n">b</span><span class="o">**</span><span class="n">alpha</span> <span class="o">-</span> <span class="n">u</span><span class="o">*</span><span class="n">m</span><span class="o">**</span><span class="n">alpha</span> <span class="o">-</span> <span class="n">b</span><span class="o">**</span><span class="n">alpha</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">b</span><span class="o">**</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">m</span><span class="o">**</span><span class="n">alpha</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">1.</span><span class="o">/</span><span class="n">alpha</span><span class="p">)</span>
-    
+
 <span class="k">def</span> <span class="nf">truncated_pareto_expval</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Expected value of truncated Pareto distribution.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    
+
     <span class="k">if</span> <span class="n">alpha</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">inf</span>
     <span class="n">part1</span> <span class="o">=</span> <span class="p">(</span><span class="n">m</span><span class="o">**</span><span class="n">alpha</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="p">(</span><span class="n">m</span><span class="o">/</span><span class="n">b</span><span class="p">)</span><span class="o">**</span><span class="n">alpha</span><span class="p">)</span>
     <span class="n">part2</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">*</span><span class="n">alpha</span><span class="o">/</span><span class="p">(</span><span class="n">alpha</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">part3</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="p">(</span><span class="n">m</span><span class="o">**</span><span class="p">(</span><span class="n">alpha</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span> <span class="o">-</span> <span class="mf">1.</span><span class="o">/</span><span class="p">(</span><span class="n">b</span><span class="o">**</span><span class="p">(</span><span class="n">alpha</span><span class="o">-</span><span class="mf">1.</span><span class="p">)))</span>
     <span class="k">return</span> <span class="n">part1</span><span class="o">*</span><span class="n">part2</span><span class="o">*</span><span class="n">part3</span>
-    
+
 <div class="viewcode-block" id="truncated_pareto_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.truncated_pareto_like">[docs]</a><span class="k">def</span> <span class="nf">truncated_pareto_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
-<span class="sd">    Truncated Pareto log-likelihood. The Pareto is a continuous, positive </span>
+<span class="sd">    Truncated Pareto log-likelihood. The Pareto is a continuous, positive</span>
 <span class="sd">    probability distribution with two parameters. It is often used</span>
 <span class="sd">    to characterize wealth distribution, or other examples of the</span>
 <span class="sd">    80/20 rule.</span>
@@ -2176,8 +2176,8 @@
 
 <div class="viewcode-block" id="poisson_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.poisson_like">[docs]</a><span class="k">def</span> <span class="nf">poisson_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">mu</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
-<span class="sd">    Poisson log-likelihood. </span>
-<span class="sd">    </span>
+<span class="sd">    Poisson log-likelihood.</span>
+
 <span class="sd">    The Poisson is a discrete probability</span>
 <span class="sd">    distribution.  It is often used to model the number of events</span>
 <span class="sd">    occurring in a fixed period of time when the times at which events</span>
@@ -2194,7 +2194,7 @@
 <span class="sd">    .. note::</span>
 <span class="sd">       - :math:`E(x)=\mu`</span>
 <span class="sd">       - :math:`Var(x)=\mu`</span>
-<span class="sd">    </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">mu</span><span class="p">)</span>
 </div>
@@ -2210,13 +2210,12 @@
 
     <span class="c"># Calculate m</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span>
-        <span class="n">m</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="o">-</span><span class="n">mu</span><span class="p">))</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="n">mu</span><span class="p">))</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
         <span class="c"># More than one mu</span>
-        <span class="n">k</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">rtruncated_poisson</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
-                         <span class="k">for</span> <span class="n">x</span><span class="p">,</span><span class="n">i</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">mu</span><span class="p">)))])</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">rtruncated_poisson</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+                         <span class="k">for</span> <span class="n">x</span><span class="p">,</span><span class="n">i</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">mu</span><span class="p">)))])</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+    <span class="n">k</span><span class="o">-=</span><span class="mi">1</span>
 
     <span class="c"># Calculate constant for acceptance probability</span>
     <span class="n">C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">flib</span><span class="o">.</span><span class="n">factln</span><span class="p">(</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="n">flib</span><span class="o">.</span><span class="n">factln</span><span class="p">(</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="o">-</span><span class="n">m</span><span class="p">))</span>
@@ -2254,8 +2253,8 @@
 
 <div class="viewcode-block" id="truncated_poisson_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.truncated_poisson_like">[docs]</a><span class="k">def</span> <span class="nf">truncated_poisson_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">mu</span><span class="p">,</span><span class="n">k</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
-<span class="sd">    Truncated Poisson log-likelihood. </span>
-<span class="sd">    </span>
+<span class="sd">    Truncated Poisson log-likelihood.</span>
+
 <span class="sd">    The Truncated Poisson is a</span>
 <span class="sd">    discrete probability distribution that is arbitrarily truncated to</span>
 <span class="sd">    be greater than some minimum value k. For example, zero-truncated</span>
@@ -2274,7 +2273,7 @@
 <span class="sd">    .. note::</span>
 <span class="sd">       - :math:`E(x)=\frac{\mu}{1-F(k|\mu)}`</span>
 <span class="sd">       - :math:`Var(x)=\frac{\mu}{1-F(k|\mu)}`</span>
-<span class="sd">       </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">trpoisson</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">mu</span><span class="p">,</span><span class="n">k</span><span class="p">)</span>
 </div>
@@ -2286,16 +2285,16 @@
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Random truncated normal variates.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    
+
     <span class="n">sigma</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">tau</span><span class="p">)</span>
     <span class="n">na</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">normcdf</span><span class="p">((</span><span class="n">a</span><span class="o">-</span><span class="n">mu</span><span class="p">)</span><span class="o">/</span><span class="n">sigma</span><span class="p">)</span>
     <span class="n">nb</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">normcdf</span><span class="p">((</span><span class="n">b</span><span class="o">-</span><span class="n">mu</span><span class="p">)</span><span class="o">/</span><span class="n">sigma</span><span class="p">)</span>
-    
+
     <span class="c"># Use the inverse CDF generation method.</span>
-    <span class="n">U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">mtrand</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>	
+    <span class="n">U</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">mtrand</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
     <span class="n">q</span> <span class="o">=</span> <span class="n">U</span> <span class="o">*</span> <span class="n">nb</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">U</span><span class="p">)</span><span class="o">*</span><span class="n">na</span>
     <span class="n">R</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">invcdf</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
-    
+
     <span class="c"># Unnormalize</span>
     <span class="k">return</span> <span class="n">R</span><span class="o">*</span><span class="n">sigma</span> <span class="o">+</span> <span class="n">mu</span>
 
@@ -2306,10 +2305,10 @@
 
 <span class="sd">    .. math::</span>
 <span class="sd">       E(X) =\mu + \frac{\sigma(\varphi_1-\varphi_2)}{T}</span>
-<span class="sd">       </span>
-<span class="sd">       </span>
+
+
 <span class="sd">    where</span>
-<span class="sd">    </span>
+
 <span class="sd">    .. math::</span>
 <span class="sd">       T &amp; =\Phi\left(\frac{B-\mu}{\sigma}\right)-\Phi</span>
 <span class="sd">       \left(\frac{A-\mu}{\sigma}\right)\text \\</span>
@@ -2317,15 +2316,15 @@
 <span class="sd">       \varphi\left(\frac{A-\mu}{\sigma}\right) \\</span>
 <span class="sd">       \varphi_2 &amp;=</span>
 <span class="sd">       \varphi\left(\frac{B-\mu}{\sigma}\right) \\</span>
-<span class="sd">       </span>
+
 <span class="sd">    and :math:`\varphi = N(0,1)` and :math:`tau &amp; 1/sigma**2`.</span>
-<span class="sd">    </span>
+
 <span class="sd">    :Parameters:</span>
 <span class="sd">      - `mu` : Mean of the distribution.</span>
 <span class="sd">      - `tau` : Precision of the distribution, which corresponds to 1/sigma**2 (tau &gt; 0).</span>
 <span class="sd">      - `a` : Left bound of the distribution.</span>
 <span class="sd">      - `b` : Right bound of the distribution.</span>
-<span class="sd">       </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">phia</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">normal_like</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">tau</span><span class="p">))</span>
     <span class="n">phib</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">normal_like</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">tau</span><span class="p">))</span>
@@ -2400,7 +2399,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">delta</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.</span><span class="o">+</span><span class="n">alpha</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="o">/</span><span class="n">pi</span><span class="o">/</span><span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="n">delta</span>
-    
+
 <div class="viewcode-block" id="skew_normal_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.skew_normal_like">[docs]</a><span class="k">def</span> <span class="nf">skew_normal_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">mu</span><span class="p">,</span><span class="n">tau</span><span class="p">,</span><span class="n">alpha</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
 <span class="sd">    Azzalini&#39;s skew-normal log-likelihood</span>
@@ -2435,11 +2434,11 @@
 <span class="sd">    Expectation of Student&#39;s t random variables.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="mi">0</span>
-    
+
 <div class="viewcode-block" id="t_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.t_like">[docs]</a><span class="k">def</span> <span class="nf">t_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">nu</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
-<span class="sd">    Student&#39;s T log-likelihood. </span>
-<span class="sd">    </span>
+<span class="sd">    Student&#39;s T log-likelihood.</span>
+
 <span class="sd">    Describes a zero-mean normal variable</span>
 <span class="sd">    whose precision is gamma distributed. Alternatively, describes the</span>
 <span class="sd">    mean of several zero-mean normal random variables divided by their</span>
@@ -2477,8 +2476,8 @@
 
 <span class="k">def</span> <span class="nf">noncentral_t_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">lam</span><span class="p">,</span> <span class="n">nu</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
-<span class="sd">    Non-central Student&#39;s T log-likelihood. </span>
-<span class="sd">    </span>
+<span class="sd">    Non-central Student&#39;s T log-likelihood.</span>
+
 <span class="sd">    Describes a normal variable whose precision is gamma distributed.</span>
 
 <span class="sd">    .. math::</span>
@@ -2490,7 +2489,7 @@
 <span class="sd">    :Parameters:</span>
 <span class="sd">      - `x` : Input data.</span>
 <span class="sd">      - `mu` : Location parameter.</span>
-<span class="sd">      - `lambda` : Scale parameter. </span>
+<span class="sd">      - `lambda` : Scale parameter.</span>
 <span class="sd">      - `nu` : Degrees of freedom.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -2523,7 +2522,7 @@
     <span class="k">if</span> <span class="n">nu</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">mu</span>
     <span class="k">return</span> <span class="n">inf</span>
-    
+
 <div class="viewcode-block" id="noncentral_t_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.noncentral_t_like">[docs]</a><span class="k">def</span> <span class="nf">noncentral_t_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">lam</span><span class="p">,</span> <span class="n">nu</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
 <span class="sd">    Non-central Student&#39;s T log-likelihood. Describes a normal variable</span>
@@ -2538,7 +2537,7 @@
 <span class="sd">    :Parameters:</span>
 <span class="sd">      - `x` : Input data.</span>
 <span class="sd">      - `mu` : Location parameter.</span>
-<span class="sd">      - `lambda` : Scale parameter. </span>
+<span class="sd">      - `lambda` : Scale parameter.</span>
 <span class="sd">      - `nu` : Degrees of freedom.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -2642,7 +2641,7 @@
 <span class="sd">    .. note::</span>
 <span class="sd">      - :math:`E(x)=\beta \Gamma(1+\frac{1}{\alpha})`</span>
 <span class="sd">      - :math:`Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)`</span>
-<span class="sd">      </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">weibull</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
 </div>
@@ -2680,8 +2679,8 @@
 
 <div class="viewcode-block" id="wishart_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.wishart_like">[docs]</a><span class="k">def</span> <span class="nf">wishart_like</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">Tau</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
-<span class="sd">    Wishart log-likelihood. </span>
-<span class="sd">    </span>
+<span class="sd">    Wishart log-likelihood.</span>
+
 <span class="sd">    The Wishart distribution is the probability</span>
 <span class="sd">    distribution of the maximum-likelihood estimator (MLE) of the precision</span>
 <span class="sd">    matrix of a multivariate normal distribution. If Tau=1, the distribution</span>
@@ -2691,7 +2690,8 @@
 <span class="sd">    `wishart_cov_like`.</span>
 
 <span class="sd">    .. math::</span>
-<span class="sd">        f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}</span>
+<span class="sd">        f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2}}{2^{nk/2}</span>
+<span class="sd">        \Gamma_p(n/2)} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}</span>
 
 <span class="sd">    where :math:`k` is the rank of X.</span>
 
@@ -2742,7 +2742,7 @@
 <span class="k">def</span> <span class="nf">wishart_cov_expval</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">C</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Expected value of wishart distribution.</span>
-<span class="sd">    </span>
+
 <span class="sd">    :Parameters:</span>
 <span class="sd">      n : int</span>
 <span class="sd">        Degrees of freedom, &gt; 0.</span>
@@ -2816,12 +2816,12 @@
     <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
         <span class="n">value</span> <span class="o">=</span> <span class="n">kwds</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;value&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">f</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
-    
-    <span class="k">if</span> <span class="n">arguments</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> 
+
+    <span class="k">if</span> <span class="n">arguments</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
         <span class="n">wrapper</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">__dict__</span><span class="p">)</span>
     <span class="k">else</span> <span class="p">:</span>
         <span class="n">wrapper</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">arguments</span><span class="p">)</span>
-        
+
     <span class="k">return</span> <span class="n">wrapper</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
@@ -2870,13 +2870,13 @@
 
 <span class="k">for</span> <span class="n">dist</span> <span class="ow">in</span> <span class="n">sc_bool_distributions</span><span class="p">:</span>
     <span class="n">_inject_dist</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;dtype&#39;</span> <span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">bool</span><span class="p">})</span>
-    
+
 <span class="k">for</span> <span class="n">dist</span> <span class="ow">in</span> <span class="n">sc_discrete_distributions</span><span class="p">:</span>
     <span class="n">_inject_dist</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;dtype&#39;</span> <span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">})</span>
 
 <span class="k">for</span> <span class="n">dist</span> <span class="ow">in</span> <span class="n">mv_discrete_distributions</span><span class="p">:</span>
     <span class="n">_inject_dist</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;dtype&#39;</span> <span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">,</span> <span class="s">&#39;mv&#39;</span> <span class="p">:</span> <span class="bp">True</span><span class="p">})</span>
-    
+
 
 
 
@@ -3188,7 +3188,7 @@
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="../../search.html" method="get">
-      <input type="text" name="q" size="18" />
+      <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
@@ -3217,7 +3217,7 @@
     </div>
     <div class="footer">
         &copy; Copyright 2011, Christopher J. Fonnesbeck.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1pre.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
   </body>
 </html>

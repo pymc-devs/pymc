@@ -207,12 +207,12 @@ sequence of Bernoulli trials occurs on the x&#8217;th trial.</p>
 <dt id="pymc.distributions.hypergeometric_like">
 <tt class="descclassname">pymc.distributions.</tt><tt class="descname">hypergeometric_like</tt><big>(</big><em>x</em>, <em>n</em>, <em>m</em>, <em>N</em><big>)</big><a class="reference internal" href="_modules/pymc/distributions.html#hypergeometric_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymc.distributions.hypergeometric_like" title="Permalink to this definition">¶</a></dt>
 <dd><p>Hypergeometric log-likelihood.</p>
-<p>Discrete probability distribution that describes the number of successes in 
+<p>Discrete probability distribution that describes the number of successes in
 a sequence of draws from a finite population without replacement.</p>
 <div class="math">
-\[\begin{split}f(x \mid n, m, N) = \frac{\left({ \begin{array}{c} {m} \\ {x} \\ 
-\end{array} }\right)\left({ \begin{array}{c} {N-m} \\ {n-x} \\ 
-\end{array}}\right)}{\left({ \begin{array}{c} {N} \\ {n} \\ 
+\[\begin{split}f(x \mid n, m, N) = \frac{\left({ \begin{array}{c} {m} \\ {x} \\
+\end{array} }\right)\left({ \begin{array}{c} {N-m} \\ {n-x} \\
+\end{array}}\right)}{\left({ \begin{array}{c} {N} \\ {n} \\
 \end{array}}\right)}\end{split}\]</div>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -653,8 +653,8 @@ populations, markets. Resembles a heavy-tailed normal distribution.</p>
 <dt id="pymc.distributions.lognormal_like">
 <tt class="descclassname">pymc.distributions.</tt><tt class="descname">lognormal_like</tt><big>(</big><em>x</em>, <em>mu</em>, <em>tau</em><big>)</big><a class="reference internal" href="_modules/pymc/distributions.html#lognormal_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymc.distributions.lognormal_like" title="Permalink to this definition">¶</a></dt>
 <dd><p>Log-normal log-likelihood.</p>
-<p>Distribution of any random variable whose logarithm is normally 
-distributed. A variable might be modeled as log-normal if it can be thought 
+<p>Distribution of any random variable whose logarithm is normally
+distributed. A variable might be modeled as log-normal if it can be thought
 of as the multiplicative product of many small independent factors.</p>
 <div class="math">
 \[f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
@@ -737,7 +737,7 @@ whose precision is gamma distributed.</p>
 <dl class="function">
 <dt id="pymc.distributions.pareto_like">
 <tt class="descclassname">pymc.distributions.</tt><tt class="descname">pareto_like</tt><big>(</big><em>x</em>, <em>alpha</em>, <em>m</em><big>)</big><a class="reference internal" href="_modules/pymc/distributions.html#pareto_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymc.distributions.pareto_like" title="Permalink to this definition">¶</a></dt>
-<dd><p>Pareto log-likelihood. The Pareto is a continuous, positive 
+<dd><p>Pareto log-likelihood. The Pareto is a continuous, positive
 probability distribution with two parameters. It is often used
 to characterize wealth distribution, or other examples of the
 80/20 rule.</p>
@@ -843,7 +843,7 @@ sample standard deviation.</p>
 <dl class="function">
 <dt id="pymc.distributions.truncated_pareto_like">
 <tt class="descclassname">pymc.distributions.</tt><tt class="descname">truncated_pareto_like</tt><big>(</big><em>x</em>, <em>alpha</em>, <em>m</em>, <em>b</em><big>)</big><a class="reference internal" href="_modules/pymc/distributions.html#truncated_pareto_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymc.distributions.truncated_pareto_like" title="Permalink to this definition">¶</a></dt>
-<dd><p>Truncated Pareto log-likelihood. The Pareto is a continuous, positive 
+<dd><p>Truncated Pareto log-likelihood. The Pareto is a continuous, positive
 probability distribution with two parameters. It is often used
 to characterize wealth distribution, or other examples of the
 80/20 rule.</p>
@@ -950,11 +950,11 @@ to characterize wealth distribution, or other examples of the
 <dt id="pymc.distributions.multivariate_hypergeometric_like">
 <tt class="descclassname">pymc.distributions.</tt><tt class="descname">multivariate_hypergeometric_like</tt><big>(</big><em>x</em>, <em>m</em><big>)</big><a class="reference internal" href="_modules/pymc/distributions.html#multivariate_hypergeometric_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymc.distributions.multivariate_hypergeometric_like" title="Permalink to this definition">¶</a></dt>
 <dd><p>Multivariate hypergeometric log-likelihood</p>
-<p>Describes the probability of drawing x[i] elements of the ith category, 
+<p>Describes the probability of drawing x[i] elements of the ith category,
 when the number of items in each category is given by m.</p>
 <div class="math">
-\[\begin{split}\frac{\prod_i \left({ \begin{array}{c} {m_i} \\ {x_i} \\ 
-\end{array}}\right)}{\left({ \begin{array}{c} {N} \\ {n} \\ 
+\[\begin{split}\frac{\prod_i \left({ \begin{array}{c} {m_i} \\ {x_i} \\
+\end{array}}\right)}{\left({ \begin{array}{c} {N} \\ {n} \\
 \end{array}}\right)}\end{split}\]</div>
 <p>where <span class="math">\(N = \sum_i m_i\)</span> and <span class="math">\(n = \sum_i x_i\)</span>.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1059,7 +1059,7 @@ is the conjugate prior for the covariance matrix of a multivariate
 normal distribution.</p>
 <div class="math">
 \[f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X
-\mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1})
+\mid}^{-(n+k+1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1})
 \right\}}{2^{nk/2} \Gamma_p(n/2)}\]</div>
 <p>where <span class="math">\(k\)</span> is the rank of X.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1190,7 +1190,8 @@ is identical to the chi-square distribution with n degrees of freedom.</p>
 <p>For an alternative parameterization based on <span class="math">\(C=T{-1}\)</span>, see
 <cite>wishart_cov_like</cite>.</p>
 <div class="math">
-\[f(X \mid n, T) = {\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}\]</div>
+\[f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2}}{2^{nk/2}
+\Gamma_p(n/2)} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}\]</div>
 <p>where <span class="math">\(k\)</span> is the rank of X.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1288,7 +1289,7 @@ is identical to the chi-square distribution with n degrees of freedom.</p>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" size="18" />
+      <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
@@ -1322,7 +1323,7 @@ is identical to the chi-square distribution with n degrees of freedom.</p>
     </div>
     <div class="footer">
         &copy; Copyright 2011, Christopher J. Fonnesbeck.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1pre.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
   </body>
 </html>
