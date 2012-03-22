@@ -353,7 +353,7 @@ def plotwrapper(f):
 
 @plotwrapper
 def plot(data, name, format='png', suffix='', path='./', common_scale=True, datarange=(None, None), 
-    new=True, last=True, rows=1, num=1, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+    new=True, last=True, rows=1, num=1, fontmap = None, verbose=1):
     """
     Generates summary plots for nodes of a given PyMC object.
 
@@ -378,6 +378,8 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
             (defaults to True).
 
     """
+
+    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
 
     # If there is only one data array, go ahead and plot it ...
     if rank(data)==1:
@@ -430,10 +432,12 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
 
 @plotwrapper
 def histogram(data, name, nbins=None, datarange=(None, None), format='png', suffix='', path='./', rows=1, 
-    columns=1, num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+    columns=1, num=1, last=True, fontmap = None, verbose=1):
 
     # Internal histogram specification for handling nested arrays
     try:
+
+        if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
 
         # Stand-alone plot or subplot?
         standalone = rows==1 and columns==1 and num==1
@@ -485,8 +489,10 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
 
 @plotwrapper
 def trace(data, name, format='png', datarange=(None, None), suffix='', path='./', rows=1, columns=1, 
-    num=1, last=True, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+    num=1, last=True, fontmap = None, verbose=1):
     # Internal plotting specification for handling nested arrays
+
+    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
 
     # Stand-alone plot or subplot?
     standalone = rows==1 and columns==1 and num==1
@@ -520,12 +526,11 @@ def trace(data, name, format='png', datarange=(None, None), suffix='', path='./'
         #close()
 
 @plotwrapper
-def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, 
+def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontmap = None, 
     verbose=1):
-
     # Generate Geweke (1992) diagnostic plots
 
-    # print_('Plotting', name+suffix)
+    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
 
     # Generate new scatter plot
     figure()
@@ -554,10 +559,13 @@ def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontm
 
 @plotwrapper
 def discrepancy_plot(data, name='discrepancy', report_p=True, format='png', suffix='-gof', path='./', 
-    fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+    fontmap = None, verbose=1):
     # Generate goodness-of-fit deviate scatter plot
+
     if verbose>0:
         print_('Plotting', name+suffix)
+
+    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
 
     # Generate new scatter plot
     figure()
@@ -595,9 +603,10 @@ def discrepancy_plot(data, name='discrepancy', report_p=True, format='png', suff
     #close()
 
 def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof', path='./', 
-    fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+    fontmap = None, verbose=1):
     """Plots histogram of replicated data, indicating the location of the observed data"""
 
+    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
     try:
         if ndim(simdata)==1:
             simdata = simdata.trace()
@@ -647,7 +656,7 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
 
 @plotwrapper
 def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='./', 
-    fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, new=True, last=True, rows=1, columns=1, num=1, verbose=1):
+    fontmap = None, new=True, last=True, rows=1, columns=1, num=1, verbose=1):
     """
     Generate bar plot of the autocorrelation function for a series (usually an MCMC trace).
 
@@ -678,6 +687,8 @@ def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='
 
     """
     # Internal plotting specification for handling nested arrays
+
+    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
 
     # Stand-alone plot or subplot?
     standalone = rows==1 and columns==1 and num==1
@@ -724,7 +735,7 @@ def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='
 
 # TODO: make sure pair_posterior works.
 def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', path='./', new=True, 
-    fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+    fontmap = None, verbose=1):
     """
     pair_posterior(nodes, clear=True, mask=None, trueval=None)
 
@@ -743,6 +754,8 @@ def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', path='
     """
 
     nodes = list(nodes)
+
+    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
 
     if mask is not None:
         mask={}
@@ -851,13 +864,15 @@ def pair_posterior(nodes, mask=None, trueval=None, fontsize=8, suffix='', path='
         path += '/'
     savefig("%s%s%s.%s" % (path, plotname, suffix, format))
 
-def zplot(pvalue_dict, name='', format='png', path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1):
+def zplot(pvalue_dict, name='', format='png', path='./', fontmap = None, verbose=1):
     """Plots absolute values of z-scores for model validation output from
     diagnostics.validate()."""
 
     if verbose:
         print_('\nGenerating model validation plot')
 
+    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
+    
     x,y,labels = [],[],[]
 
     for i,var in enumerate(pvalue_dict):
