@@ -4,6 +4,8 @@ export CFLAGS="-arch x86_64"
 export FFLAGS="-static -ff2c"
 export LDFLAGS="-Wall -undefined dynamic_lookup -bundle -arch x86_64"
 export PYTHONPATH="/Library/Python/2.7/site-packages/"
+export CC=gcc-4.2
+export CXX=g++-4.2
 rm -rf build
 python setup.py config_fc --fcompiler gfortran build
 #sudo python setup.py install

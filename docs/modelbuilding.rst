@@ -647,7 +647,6 @@ function ``pymc.graph.moral_graph``.
 .. _pot:
 
 .. figure:: _images/PotExample.*
-    :scale: 70 %
     :width: 800
     
     Directed graphical model example. Factor potentials are represented by 

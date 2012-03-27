@@ -14,7 +14,8 @@ from .utils import crawl_dataless
 
 from .six import print_
 
-from .progressbar import ProgressBar, Percentage, Bar, ETA, Iterations
+# from .progressbar import ProgressBar, Percentage, Bar, ETA, Iterations
+from progressbar import ProgressBar
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -216,10 +217,7 @@ class MCMC(Sampler):
         # Progress bar
         self.pbar = None
         if not verbose and progress_bar:
-            widgets = ['Sampling: ', Percentage(), ' ',
-                       Bar(marker='#',left='[',right=']'),
-                       ' ', Iterations()]
-            self.pbar = ProgressBar(widgets=widgets, maxval=self._iter)
+            self.pbar = ProgressBar(self._iter)
 
         # Run sampler
         Sampler.sample(self, iter, length, verbose)
@@ -227,17 +225,17 @@ class MCMC(Sampler):
     def _loop(self):
         # Set status flag
         self.status='running'
-
-        # Progress bar
-        if self.pbar:
-            self.pbar.start()
-
+        
         try:
             while self._current_iter < self._iter and not self.status == 'halt':
                 if self.status == 'paused':
                     break
 
                 i = self._current_iter
+
+                # Update progress bar
+                if not (i+1) % 100 and self.pbar:
+                    self.pbar.animate(i+1)
 
                 # Tune at interval
                 if i and not (i % self._tune_interval) and self._tuning:
@@ -272,16 +270,12 @@ class MCMC(Sampler):
                 # Increment interation
                 self._current_iter += 1
 
-                # Update progress bar
-                if self.pbar:
-                    self.pbar.update(i)
-
         except KeyboardInterrupt:
             self.status='halt'
         finally:
             # Stop progress bar
             if self.pbar:
-                self.pbar.finish()
+                self.pbar.animate(self._iter)
 
         if self.status == 'halt':
             self._halt()

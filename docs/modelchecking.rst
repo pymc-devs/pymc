@@ -161,7 +161,6 @@ departures from the standard normal assumption.
 .. figure:: _images/geweke.*
    :align: center
    :alt: Geweke figure.
-   :scale: 70 %
    :width: 800
    
    Sample plot of Geweke z-scores for a variable using ``geweke_plot``.
@@ -365,7 +364,7 @@ By default, when calling the ``summary_plot`` function using nodes with multiple
 
 .. figure:: _images/summary.*
    :align: center
-   :scale: 90
+   :width: 800
 
    Summary plot of parameters from `gelman_bioassay` model, showing credible 
    intervals on the left and the Gelman-Rubin statistic on the right.
