@@ -77,13 +77,13 @@ sc_nonnegative_distributions = ['bernoulli', 'beta', 'betabin', 'binomial', 'chi
                                 'hypergeometric', 'inverse_gamma', 'lognormal',
                                 'weibull']
 
-mv_continuous_distributions = ['dirichlet', 'inverse_wishart', 'mv_normal',
+mv_continuous_distributions = ['dirichlet', 'mv_normal',
                                'mv_normal_cov', 'mv_normal_chol', 'wishart',
-                               'wishart_cov', 'inverse_wishart_prec']
+                               'wishart_cov']
 
 mv_discrete_distributions = ['multivariate_hypergeometric', 'multinomial']
 
-mv_nonnegative_distributions = ['dirichlet', 'inverse_wishart', 'wishart',
+mv_nonnegative_distributions = ['dirichlet', 'wishart',
                                 'wishart_cov', 'multivariate_hypergeometric',
                                 'multinomial']
 
@@ -1378,92 +1378,92 @@ inverse_gamma_grad_like = {'value' : flib.igamma_grad_x,
 
 # Inverse Wishart---------------------------------------------------
 
-def rinverse_wishart(n, C):
-    """
-    Return an inverse Wishart random matrix.
+# def rinverse_wishart(n, C):
+#     """
+#     Return an inverse Wishart random matrix.
 
-    :Parameters:
-      - `n` : [int] Degrees of freedom (n > 0).
-      - `C` : Symmetric and positive definite scale matrix
-    """
-    wi = rwishart(n, np.asmatrix(C).I).I
-    flib.symmetrize(wi)
-    return wi
+#     :Parameters:
+#       - `n` : [int] Degrees of freedom (n > 0).
+#       - `C` : Symmetric and positive definite scale matrix
+#     """
+#     wi = rwishart(n, np.asmatrix(C).I).I
+#     flib.symmetrize(wi)
+#     return wi
 
-def inverse_wishart_expval(n, C):
-    """
-    Expected value of inverse Wishart distribution.
+# def inverse_wishart_expval(n, C):
+#     """
+#     Expected value of inverse Wishart distribution.
 
-    :Parameters:
-      - `n` : [int] Degrees of freedom (n > 0).
-      - `C` : Symmetric and positive definite scale matrix
+#     :Parameters:
+#       - `n` : [int] Degrees of freedom (n > 0).
+#       - `C` : Symmetric and positive definite scale matrix
 
-    """
-    return np.asarray(C)/(n-len(C)-1)
+#     """
+#     return np.asarray(C)/(n-len(C)-1)
 
-def inverse_wishart_like(X, n, C):
-    R"""
-    Inverse Wishart log-likelihood. The inverse Wishart distribution
-    is the conjugate prior for the covariance matrix of a multivariate
-    normal distribution.
+# def inverse_wishart_like(X, n, C):
+#     R"""
+#     Inverse Wishart log-likelihood. The inverse Wishart distribution
+#     is the conjugate prior for the covariance matrix of a multivariate
+#     normal distribution.
 
-    .. math::
-        f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X
-        \mid}^{-(n+k+1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1})
-        \right\}}{2^{nk/2} \Gamma_p(n/2)}
+#     .. math::
+#         f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X
+#         \mid}^{-(n+k+1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1})
+#         \right\}}{2^{nk/2} \Gamma_p(n/2)}
 
-    where :math:`k` is the rank of X.
+#     where :math:`k` is the rank of X.
 
-    :Parameters:
-      - `X` : Symmetric, positive definite matrix.
-      - `n` : [int] Degrees of freedom (n > 0).
-      - `C` : Symmetric and positive definite scale matrix
+#     :Parameters:
+#       - `X` : Symmetric, positive definite matrix.
+#       - `n` : [int] Degrees of freedom (n > 0).
+#       - `C` : Symmetric and positive definite scale matrix
 
-    .. note::
-       Step method MatrixMetropolis will preserve the symmetry of
-       Wishart variables.
+#     .. note::
+#        Step method MatrixMetropolis will preserve the symmetry of
+#        Wishart variables.
 
-    """
-    return flib.blas_inv_wishart(X, n, C)
+#     """
+#     return flib.blas_inv_wishart(X, n, C)
 
-def rinverse_wishart_prec(n, Tau):
-    """
-    Return an inverse Wishart random matrix.
+# def rinverse_wishart_prec(n, Tau):
+#     """
+#     Return an inverse Wishart random matrix.
 
-    :Parameters:
-      - `n` : [int] Degrees of freedom (n > 0).
-      - `Tau` : Symmetric and positive definite precision matrix
+#     :Parameters:
+#       - `n` : [int] Degrees of freedom (n > 0).
+#       - `Tau` : Symmetric and positive definite precision matrix
 
-    """
-    wi = rwishart(n, np.asmatrix(Tau)).I
-    flib.symmetrize(wi)
-    return wi
+#     """
+#     wi = rwishart(n, np.asmatrix(Tau)).I
+#     flib.symmetrize(wi)
+#     return wi
 
-def inverse_wishart_prec_expval(X, n, Tau):
-    """
-    Expected value of inverse Wishart distribution.
+# def inverse_wishart_prec_expval(X, n, Tau):
+#     """
+#     Expected value of inverse Wishart distribution.
 
-    :Parameters:
-      - `n` : [int] Degrees of freedom (n > 0).
-      - `Tau` : Symmetric and positive definite precision matrix
+#     :Parameters:
+#       - `n` : [int] Degrees of freedom (n > 0).
+#       - `Tau` : Symmetric and positive definite precision matrix
 
-    """
-    return inverse_wishart_like(X, n, inverse(Tau))
+#     """
+#     return inverse_wishart_like(X, n, inverse(Tau))
 
-def inverse_wishart_prec_like(X, n, Tau):
-    """
-    Inverse Wishart log-likelihood
+# def inverse_wishart_prec_like(X, n, Tau):
+#     """
+#     Inverse Wishart log-likelihood
 
-    For an alternative parameterization based on :math:`C=Tau^{-1}`, see
-    `inverse_wishart_like`.
+#     For an alternative parameterization based on :math:`C=Tau^{-1}`, see
+#     `inverse_wishart_like`.
 
-    :Parameters:
-      - `X` : Symmetric, positive definite matrix.
-      - `n` : [int] Degrees of freedom (n > 0).
-      - `Tau` : Symmetric and positive definite precision matrix
+#     :Parameters:
+#       - `X` : Symmetric, positive definite matrix.
+#       - `n` : [int] Degrees of freedom (n > 0).
+#       - `Tau` : Symmetric and positive definite precision matrix
 
-    """
-    return inverse_wishart_like(X, n, inverse(Tau))
+#     """
+#     return inverse_wishart_like(X, n, inverse(Tau))
 
 # Double exponential (Laplace)--------------------------------------------
 @randomwrap
