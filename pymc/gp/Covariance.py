@@ -86,7 +86,7 @@ class Covariance(object):
             -   `nugget`: The 'nugget' parameter, which will essentially be
                 added to the diagonal of C(x,x) before Cholesky factorizing.
 
-            -   `rank_limit`: If rank_limit > 0, the factor will have at most 
+            -   `rank_limit`: If rank_limit > 0, the factor will have at most
                 rank_limit rows.
         """
 
@@ -150,7 +150,7 @@ class Covariance(object):
     def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank = False, rank_limit=0):
         """
 
-        U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None, 
+        U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None,
             rank_limit=0])
 
 
@@ -160,7 +160,7 @@ class Covariance(object):
         Computes incomplete Cholesky factorization of self(z,z), without
         actually evaluating the matrix first. Here z is the concatenation of x
         and x_old. Assumes the Cholesky factorization of self(x_old, x_old) has
-        already been computed. 
+        already been computed.
 
 
         :Arguments:
@@ -186,8 +186,8 @@ class Covariance(object):
 
             -   `nugget`: The 'nugget' parameter, which will essentially be
                 added to the diagonal of C(x,x) before Cholesky factorizing.
-                
-            -   `rank_limit`: If rank_limit > 0, the factor will have at most 
+
+            -   `rank_limit`: If rank_limit > 0, the factor will have at most
                 rank_limit rows.
         """
 
@@ -301,7 +301,7 @@ class Covariance(object):
         """
         Observes self on obs_mesh with observation variance obs_V.
         Output_type controls the information returned:
-        
+
         'r' : returns information needed by Realization objects.
         'o' : returns information needed by function observe.
         's' : returns information needed by the Gaussian process
@@ -445,11 +445,11 @@ class Covariance(object):
         # Output expected by Realization
         if output_type == 'r':
             return relevant_slice, obs_mesh_new, self.full_Uo[m_old:,argsort(piv_new)[N_old:]], self.full_Uo[:m_old, argsort(piv_new)[N_old:]]
-            
+
         # Ouptut expected by observe
         if output_type == 'o':
             return relevant_slice, obs_mesh_new
-            
+
         # Output expected by the GP submodel
         if output_type=='s':
             return obs_dict_new['U_new'], obs_dict_new['C_eval'], self.full_Uo[:m_old, argsort(piv_new)[N_old:]]
@@ -511,7 +511,7 @@ class Covariance(object):
                 square_and_sum(Uo_Cxo, sqpart)
                 V -= sqpart
 
-            if return_Uo_Cxo:    
+            if return_Uo_Cxo:
                 return V.reshape(orig_shape), Uo_Cxo
             else:
                 return V.reshape(orig_shape)
@@ -558,7 +558,7 @@ class Covariance(object):
                     # and chol(self(obs_mesh, obs_mesh)).T.I * self(obs_mesh, y)
                     Cyo = self.eval_fun(self.obs_mesh, y, **self.params)
                     Uo_Cyo = trisolve(self.Uo, Cyo,uplo='U', transa='T')
-                    C -= Uo_Cxo.T * Uo_Cyo
+                    C -= Uo_Cyo.T * Uo_Cyo
 
                 return C
 
@@ -575,7 +575,7 @@ class Covariance(object):
         trisolve(self.Uo[m_old:,m_old:].T, reg_mat_new, 'L', inplace=True)
         reg_mat_new += asmatrix(trisolve(self.Uo[m_old:,m_old:], dev_new.T, uplo='U', transa='T')).T
         return asmatrix(vstack((M.reg_mat,reg_mat_new)))
-        
+
     def _obs_eval(self, M, M_out, x, Uo_Cxo=None):
         if Uo_Cxo is None:
             Uo_Cxo = trisolve(M.Uo, self(M.obs_mesh, x, observed = False), uplo='U', transa='T')
