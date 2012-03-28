@@ -556,9 +556,11 @@ class Covariance(object):
 
                     # If there are observation points, prepare self(obs_mesh, y)
                     # and chol(self(obs_mesh, obs_mesh)).T.I * self(obs_mesh, y)
+                    Cxo = self.eval_fun(self.obs_mesh, x, **self.params)
+                    Uo_Cxo = trisolve(self.Uo, Cxo, uplo='U', transa='T')
                     Cyo = self.eval_fun(self.obs_mesh, y, **self.params)
                     Uo_Cyo = trisolve(self.Uo, Cyo,uplo='U', transa='T')
-                    C -= Uo_Cyo.T * Uo_Cyo
+                    C -= Uo_Cxo.T * Uo_Cyo
 
                 return C
 
