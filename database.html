@@ -61,14 +61,15 @@
 <span id="accessing-data"></span><h2>6.1. Accessing Sampled Data<a class="headerlink" href="#accessing-sampled-data" title="Permalink to this headline">¶</a></h2>
 <p>The recommended way to access data from an MCMC run, irrespective of the
 database backend, is to use the <tt class="docutils literal"><span class="pre">trace</span></tt> method:</p>
-<div class="highlight-python"><pre>    &gt;&gt;&gt; from pymc.examples import disaster_model
-&gt;&gt;&gt; from pymc import MCMC
-    &gt;&gt;&gt; M = MCMC(disaster_model)
-    &gt;&gt;&gt; M.sample(10)
-Sampling: 100% [00000000000000000000000000000000000000000000000000] Iterations: 10
-    &gt;&gt;&gt; M.trace('early_mean')[:]
-    array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,
-            2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489])</pre>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pymc.examples</span> <span class="kn">import</span> <span class="n">disaster_model</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pymc</span> <span class="kn">import</span> <span class="n">MCMC</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span> <span class="o">=</span> <span class="n">MCMC</span><span class="p">(</span><span class="n">disaster_model</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="go">Sampling: 100% [00000000000000000000000000000000000000000000000000] Iterations: 10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="s">&#39;early_mean&#39;</span><span class="p">)[:]</span>
+<span class="go">array([ 2.28320992,  2.28320992,  2.28320992,  2.28320992,  2.28320992,</span>
+<span class="go">        2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489])</span>
+</pre></div>
 </div>
 <p><tt class="docutils literal"><span class="pre">M.trace('early_mean')</span></tt> returns a copy of the <tt class="docutils literal"><span class="pre">Trace</span></tt> instance associated
 with the tallyable object <cite>early_mean</cite>:</p>
@@ -86,6 +87,49 @@ the last chain. To return the samples from all the chains, use <tt class="docuti
 <span class="go">      2.36982455,  2.36982455,  3.1669422 ,  3.1669422 ,  3.14499489,</span>
 <span class="go">      3.14499489,  3.14499489,  3.14499489,  2.94672454,  3.10767686])</span>
 </pre></div>
+</div>
+<div class="section" id="output-summaries">
+<h3>6.1.1. Output Summaries<a class="headerlink" href="#output-summaries" title="Permalink to this headline">¶</a></h3>
+<p>PyMC samplers include a couple of methods that are useful for obtaining
+summaries of the model, or particular member nodes, rather than the entire
+trace. The <tt class="docutils literal"><span class="pre">summary</span></tt> method can be used to generate a pretty-printed summary
+of posterior quantities. For example, if we want a statistical snapshot of the
+<tt class="docutils literal"><span class="pre">early_mean</span></tt> node:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">early_mean</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
+
+<span class="go">early_mean:</span>
+
+<span class="go">    Mean             SD               MC Error        95% HPD interval</span>
+<span class="go">    ------------------------------------------------------------------</span>
+<span class="go">    3.075            0.287            0.01             [ 2.594  3.722]</span>
+
+
+<span class="go">    Posterior quantiles:</span>
+
+<span class="go">    2.5             25              50              75             97.5</span>
+<span class="go">     |---------------|===============|===============|---------------|</span>
+<span class="go">    2.531            2.876           3.069          3.255         3.671</span>
+</pre></div>
+</div>
+<p>A method of the same name exists for the sampler, which yields summaries for
+every node in the model.</p>
+<p>Alternatively, we may wish to write posterior statistics to a file, where they
+may be imported into a spreadsheet or plotting package. In that case,
+<tt class="docutils literal"><span class="pre">write_csv</span></tt> may be called to generate a comma-separated values (csv) file
+containing all available statistics for each node:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">M</span><span class="o">.</span><span class="n">write_csv</span><span class="p">(</span><span class="s">&quot;disasters.csv&quot;</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;early_mean&quot;</span><span class="p">,</span> <span class="s">&quot;late_mean&quot;</span><span class="p">,</span> <span class="s">&quot;switchpoint&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+<div class="figure align-center" id="write-csv">
+<a class="reference internal image-reference" href="_images/write_csv.png"><img alt="Table of summary stats" src="_images/write_csv.png" style="width: 745.2px; height: 81.0px;" /></a>
+<p class="caption">Summary statistics of stochastics from the <tt class="docutils literal"><span class="pre">disaster_model</span></tt> example,
+shown in a spreadsheet.</p>
+</div>
+<p><tt class="docutils literal"><span class="pre">write_csv</span></tt> is called with a single mandatory argument, the name of the
+output file for the summary statistics, and several optional arguments,
+including a list of parameters for which summaries are desired (if not
+given, all model nodes are summarized) and an alpha level for calculating
+credible intervalse (defaults to 0.05).</p>
 </div>
 </div>
 <div class="section" id="saving-data-to-disk">
@@ -128,12 +172,13 @@ model around.</p>
 <p>To add a new trace to this file, we need to create an MCMC instance. This time,
 instead of setting <tt class="docutils literal"><span class="pre">db='pickle'</span></tt>, we will pass the existing <tt class="docutils literal"><span class="pre">Database</span></tt>
 instance and sample as usual. A new trace will be appended to the first:</p>
-<div class="highlight-python"><pre>    &gt;&gt;&gt; M = MCMC(disaster_model, db=db)
-    &gt;&gt;&gt; M.sample(5)
-Sampling: 100% [000000000000000000000000000000000000000000000000000] Iterations: 5
-    &gt;&gt;&gt; len(M.trace('early_model', chain=None)[:])
-    15
-    &gt;&gt;&gt; M.db.close()</pre>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">M</span> <span class="o">=</span> <span class="n">MCMC</span><span class="p">(</span><span class="n">disaster_model</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="go">Sampling: 100% [000000000000000000000000000000000000000000000000000] Iterations: 5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="s">&#39;early_model&#39;</span><span class="p">,</span> <span class="n">chain</span><span class="o">=</span><span class="bp">None</span><span class="p">)[:])</span>
+<span class="go">15</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">M</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
 </div>
 <div class="section" id="the-ram-backend">
 <h3>6.3.1. The <tt class="docutils literal"><span class="pre">ram</span></tt> backend<a class="headerlink" href="#the-ram-backend" title="Permalink to this headline">¶</a></h3>
@@ -263,7 +308,10 @@ basic features required of all backends are implemented and working properly.</p
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">6. Saving and managing sampling results</a><ul>
-<li><a class="reference internal" href="#accessing-sampled-data">6.1. Accessing Sampled Data</a></li>
+<li><a class="reference internal" href="#accessing-sampled-data">6.1. Accessing Sampled Data</a><ul>
+<li><a class="reference internal" href="#output-summaries">6.1.1. Output Summaries</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#saving-data-to-disk">6.2. Saving Data to Disk</a></li>
 <li><a class="reference internal" href="#reloading-a-database">6.3. Reloading a Database</a><ul>
 <li><a class="reference internal" href="#the-ram-backend">6.3.1. The <tt class="docutils literal"><span class="pre">ram</span></tt> backend</a></li>

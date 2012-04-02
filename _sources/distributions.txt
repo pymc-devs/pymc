@@ -98,10 +98,6 @@ Multivariate continuous distributions
 
 .. autofunction:: dirichlet_like
 
-.. autofunction:: inverse_wishart_like
-
-.. autofunction:: inverse_wishart_prec_like
-
 .. autofunction:: mv_normal_like
 
 .. autofunction:: mv_normal_chol_like

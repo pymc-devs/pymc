@@ -1052,58 +1052,6 @@ as a parent of Multinomial and Categorical nevertheless.</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="pymc.distributions.inverse_wishart_like">
-<tt class="descclassname">pymc.distributions.</tt><tt class="descname">inverse_wishart_like</tt><big>(</big><em>X</em>, <em>n</em>, <em>C</em><big>)</big><a class="reference internal" href="_modules/pymc/distributions.html#inverse_wishart_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymc.distributions.inverse_wishart_like" title="Permalink to this definition">¶</a></dt>
-<dd><p>Inverse Wishart log-likelihood. The inverse Wishart distribution
-is the conjugate prior for the covariance matrix of a multivariate
-normal distribution.</p>
-<div class="math">
-\[f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X
-\mid}^{-(n+k+1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1})
-\right\}}{2^{nk/2} \Gamma_p(n/2)}\]</div>
-<p>where <span class="math">\(k\)</span> is the rank of X.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><ul class="first last simple">
-<li><cite>X</cite> : Symmetric, positive definite matrix.</li>
-<li><cite>n</cite> : [int] Degrees of freedom (n &gt; 0).</li>
-<li><cite>C</cite> : Symmetric and positive definite scale matrix</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Step method MatrixMetropolis will preserve the symmetry of
-Wishart variables.</p>
-</div>
-</dd></dl>
-
-<dl class="function">
-<dt id="pymc.distributions.inverse_wishart_prec_like">
-<tt class="descclassname">pymc.distributions.</tt><tt class="descname">inverse_wishart_prec_like</tt><big>(</big><em>X</em>, <em>n</em>, <em>Tau</em><big>)</big><a class="reference internal" href="_modules/pymc/distributions.html#inverse_wishart_prec_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymc.distributions.inverse_wishart_prec_like" title="Permalink to this definition">¶</a></dt>
-<dd><p>Inverse Wishart log-likelihood</p>
-<p>For an alternative parameterization based on <span class="math">\(C=Tau^{-1}\)</span>, see
-<cite>inverse_wishart_like</cite>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><ul class="first last simple">
-<li><cite>X</cite> : Symmetric, positive definite matrix.</li>
-<li><cite>n</cite> : [int] Degrees of freedom (n &gt; 0).</li>
-<li><cite>Tau</cite> : Symmetric and positive definite precision matrix</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
 <dt id="pymc.distributions.mv_normal_like">
 <tt class="descclassname">pymc.distributions.</tt><tt class="descname">mv_normal_like</tt><big>(</big><em>x</em>, <em>mu</em>, <em>tau</em><big>)</big><a class="reference internal" href="_modules/pymc/distributions.html#mv_normal_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymc.distributions.mv_normal_like" title="Permalink to this definition">¶</a></dt>
 <dd><p>Multivariate normal log-likelihood</p>

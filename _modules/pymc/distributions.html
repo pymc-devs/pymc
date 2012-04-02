@@ -129,13 +129,13 @@
                                 <span class="s">&#39;hypergeometric&#39;</span><span class="p">,</span> <span class="s">&#39;inverse_gamma&#39;</span><span class="p">,</span> <span class="s">&#39;lognormal&#39;</span><span class="p">,</span>
                                 <span class="s">&#39;weibull&#39;</span><span class="p">]</span>
 
-<span class="n">mv_continuous_distributions</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;dirichlet&#39;</span><span class="p">,</span> <span class="s">&#39;inverse_wishart&#39;</span><span class="p">,</span> <span class="s">&#39;mv_normal&#39;</span><span class="p">,</span>
+<span class="n">mv_continuous_distributions</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;dirichlet&#39;</span><span class="p">,</span> <span class="s">&#39;mv_normal&#39;</span><span class="p">,</span>
                                <span class="s">&#39;mv_normal_cov&#39;</span><span class="p">,</span> <span class="s">&#39;mv_normal_chol&#39;</span><span class="p">,</span> <span class="s">&#39;wishart&#39;</span><span class="p">,</span>
-                               <span class="s">&#39;wishart_cov&#39;</span><span class="p">,</span> <span class="s">&#39;inverse_wishart_prec&#39;</span><span class="p">]</span>
+                               <span class="s">&#39;wishart_cov&#39;</span><span class="p">]</span>
 
 <span class="n">mv_discrete_distributions</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;multivariate_hypergeometric&#39;</span><span class="p">,</span> <span class="s">&#39;multinomial&#39;</span><span class="p">]</span>
 
-<span class="n">mv_nonnegative_distributions</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;dirichlet&#39;</span><span class="p">,</span> <span class="s">&#39;inverse_wishart&#39;</span><span class="p">,</span> <span class="s">&#39;wishart&#39;</span><span class="p">,</span>
+<span class="n">mv_nonnegative_distributions</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;dirichlet&#39;</span><span class="p">,</span> <span class="s">&#39;wishart&#39;</span><span class="p">,</span>
                                 <span class="s">&#39;wishart_cov&#39;</span><span class="p">,</span> <span class="s">&#39;multivariate_hypergeometric&#39;</span><span class="p">,</span>
                                 <span class="s">&#39;multinomial&#39;</span><span class="p">]</span>
 
@@ -1430,94 +1430,94 @@
 
 <span class="c"># Inverse Wishart---------------------------------------------------</span>
 
-<span class="k">def</span> <span class="nf">rinverse_wishart</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">C</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return an inverse Wishart random matrix.</span>
+<span class="c"># def rinverse_wishart(n, C):</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+<span class="c">#     Return an inverse Wishart random matrix.</span>
 
-<span class="sd">    :Parameters:</span>
-<span class="sd">      - `n` : [int] Degrees of freedom (n &gt; 0).</span>
-<span class="sd">      - `C` : Symmetric and positive definite scale matrix</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">wi</span> <span class="o">=</span> <span class="n">rwishart</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="n">C</span><span class="p">)</span><span class="o">.</span><span class="n">I</span><span class="p">)</span><span class="o">.</span><span class="n">I</span>
-    <span class="n">flib</span><span class="o">.</span><span class="n">symmetrize</span><span class="p">(</span><span class="n">wi</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">wi</span>
+<span class="c">#     :Parameters:</span>
+<span class="c">#       - `n` : [int] Degrees of freedom (n &gt; 0).</span>
+<span class="c">#       - `C` : Symmetric and positive definite scale matrix</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+<span class="c">#     wi = rwishart(n, np.asmatrix(C).I).I</span>
+<span class="c">#     flib.symmetrize(wi)</span>
+<span class="c">#     return wi</span>
 
-<span class="k">def</span> <span class="nf">inverse_wishart_expval</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">C</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Expected value of inverse Wishart distribution.</span>
+<span class="c"># def inverse_wishart_expval(n, C):</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+<span class="c">#     Expected value of inverse Wishart distribution.</span>
 
-<span class="sd">    :Parameters:</span>
-<span class="sd">      - `n` : [int] Degrees of freedom (n &gt; 0).</span>
-<span class="sd">      - `C` : Symmetric and positive definite scale matrix</span>
+<span class="c">#     :Parameters:</span>
+<span class="c">#       - `n` : [int] Degrees of freedom (n &gt; 0).</span>
+<span class="c">#       - `C` : Symmetric and positive definite scale matrix</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">C</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">C</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+<span class="c">#     return np.asarray(C)/(n-len(C)-1)</span>
 
-<div class="viewcode-block" id="inverse_wishart_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.inverse_wishart_like">[docs]</a><span class="k">def</span> <span class="nf">inverse_wishart_like</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">C</span><span class="p">):</span>
-    <span class="sd">R&quot;&quot;&quot;</span>
-<span class="sd">    Inverse Wishart log-likelihood. The inverse Wishart distribution</span>
-<span class="sd">    is the conjugate prior for the covariance matrix of a multivariate</span>
-<span class="sd">    normal distribution.</span>
+<span class="c"># def inverse_wishart_like(X, n, C):</span>
+<span class="c">#     R&quot;&quot;&quot;</span>
+<span class="c">#     Inverse Wishart log-likelihood. The inverse Wishart distribution</span>
+<span class="c">#     is the conjugate prior for the covariance matrix of a multivariate</span>
+<span class="c">#     normal distribution.</span>
 
-<span class="sd">    .. math::</span>
-<span class="sd">        f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X</span>
-<span class="sd">        \mid}^{-(n+k+1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1})</span>
-<span class="sd">        \right\}}{2^{nk/2} \Gamma_p(n/2)}</span>
+<span class="c">#     .. math::</span>
+<span class="c">#         f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X</span>
+<span class="c">#         \mid}^{-(n+k+1)/2} \exp\left\{ -\frac{1}{2} Tr(TX^{-1})</span>
+<span class="c">#         \right\}}{2^{nk/2} \Gamma_p(n/2)}</span>
 
-<span class="sd">    where :math:`k` is the rank of X.</span>
+<span class="c">#     where :math:`k` is the rank of X.</span>
 
-<span class="sd">    :Parameters:</span>
-<span class="sd">      - `X` : Symmetric, positive definite matrix.</span>
-<span class="sd">      - `n` : [int] Degrees of freedom (n &gt; 0).</span>
-<span class="sd">      - `C` : Symmetric and positive definite scale matrix</span>
+<span class="c">#     :Parameters:</span>
+<span class="c">#       - `X` : Symmetric, positive definite matrix.</span>
+<span class="c">#       - `n` : [int] Degrees of freedom (n &gt; 0).</span>
+<span class="c">#       - `C` : Symmetric and positive definite scale matrix</span>
 
-<span class="sd">    .. note::</span>
-<span class="sd">       Step method MatrixMetropolis will preserve the symmetry of</span>
-<span class="sd">       Wishart variables.</span>
+<span class="c">#     .. note::</span>
+<span class="c">#        Step method MatrixMetropolis will preserve the symmetry of</span>
+<span class="c">#        Wishart variables.</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">blas_inv_wishart</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">C</span><span class="p">)</span>
-</div>
-<span class="k">def</span> <span class="nf">rinverse_wishart_prec</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">Tau</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return an inverse Wishart random matrix.</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+<span class="c">#     return flib.blas_inv_wishart(X, n, C)</span>
 
-<span class="sd">    :Parameters:</span>
-<span class="sd">      - `n` : [int] Degrees of freedom (n &gt; 0).</span>
-<span class="sd">      - `Tau` : Symmetric and positive definite precision matrix</span>
+<span class="c"># def rinverse_wishart_prec(n, Tau):</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+<span class="c">#     Return an inverse Wishart random matrix.</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">wi</span> <span class="o">=</span> <span class="n">rwishart</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="n">Tau</span><span class="p">))</span><span class="o">.</span><span class="n">I</span>
-    <span class="n">flib</span><span class="o">.</span><span class="n">symmetrize</span><span class="p">(</span><span class="n">wi</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">wi</span>
+<span class="c">#     :Parameters:</span>
+<span class="c">#       - `n` : [int] Degrees of freedom (n &gt; 0).</span>
+<span class="c">#       - `Tau` : Symmetric and positive definite precision matrix</span>
 
-<span class="k">def</span> <span class="nf">inverse_wishart_prec_expval</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">Tau</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Expected value of inverse Wishart distribution.</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+<span class="c">#     wi = rwishart(n, np.asmatrix(Tau)).I</span>
+<span class="c">#     flib.symmetrize(wi)</span>
+<span class="c">#     return wi</span>
 
-<span class="sd">    :Parameters:</span>
-<span class="sd">      - `n` : [int] Degrees of freedom (n &gt; 0).</span>
-<span class="sd">      - `Tau` : Symmetric and positive definite precision matrix</span>
+<span class="c"># def inverse_wishart_prec_expval(X, n, Tau):</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+<span class="c">#     Expected value of inverse Wishart distribution.</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">inverse_wishart_like</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">inverse</span><span class="p">(</span><span class="n">Tau</span><span class="p">))</span>
+<span class="c">#     :Parameters:</span>
+<span class="c">#       - `n` : [int] Degrees of freedom (n &gt; 0).</span>
+<span class="c">#       - `Tau` : Symmetric and positive definite precision matrix</span>
 
-<div class="viewcode-block" id="inverse_wishart_prec_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.inverse_wishart_prec_like">[docs]</a><span class="k">def</span> <span class="nf">inverse_wishart_prec_like</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">Tau</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Inverse Wishart log-likelihood</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+<span class="c">#     return inverse_wishart_like(X, n, inverse(Tau))</span>
 
-<span class="sd">    For an alternative parameterization based on :math:`C=Tau^{-1}`, see</span>
-<span class="sd">    `inverse_wishart_like`.</span>
+<span class="c"># def inverse_wishart_prec_like(X, n, Tau):</span>
+<span class="c">#     &quot;&quot;&quot;</span>
+<span class="c">#     Inverse Wishart log-likelihood</span>
 
-<span class="sd">    :Parameters:</span>
-<span class="sd">      - `X` : Symmetric, positive definite matrix.</span>
-<span class="sd">      - `n` : [int] Degrees of freedom (n &gt; 0).</span>
-<span class="sd">      - `Tau` : Symmetric and positive definite precision matrix</span>
+<span class="c">#     For an alternative parameterization based on :math:`C=Tau^{-1}`, see</span>
+<span class="c">#     `inverse_wishart_like`.</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">inverse_wishart_like</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">inverse</span><span class="p">(</span><span class="n">Tau</span><span class="p">))</span>
+<span class="c">#     :Parameters:</span>
+<span class="c">#       - `X` : Symmetric, positive definite matrix.</span>
+<span class="c">#       - `n` : [int] Degrees of freedom (n &gt; 0).</span>
+<span class="c">#       - `Tau` : Symmetric and positive definite precision matrix</span>
 
-<span class="c"># Double exponential (Laplace)--------------------------------------------</span></div>
+<span class="c">#     &quot;&quot;&quot;</span>
+<span class="c">#     return inverse_wishart_like(X, n, inverse(Tau))</span>
+
+<span class="c"># Double exponential (Laplace)--------------------------------------------</span>
 <span class="nd">@randomwrap</span>
 <span class="k">def</span> <span class="nf">rlaplace</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
