@@ -5,7 +5,6 @@ Class MCMC, which fits probability models using Markov Chain Monte Carlo, is def
 __all__ = ['MCMC']
 
 from .Model import Sampler
-from .Node import ZeroProbability
 from .StepMethods import StepMethodRegistry, assign_method, DrawFromPrior
 from .distributions import absolute_loss, squared_loss, chi_square_loss
 import sys, time, pdb
