@@ -316,7 +316,7 @@ class test_bernoulli(TestCase):
         H = np.bincount(samples)*1./N
         l0 = exp(flib.bernoulli(0, **parameters))
         l1 = exp(flib.bernoulli(1, **parameters))
-        assert_array_almost_equal(H, [l0,l1], 2)
+        assert_array_almost_equal(H, [l0,l1], 1)
         # Check normalization
         assert_almost_equal(l0+l1, 1, 4)
 
@@ -733,7 +733,7 @@ class test_multinomial(TestCase):
 class test_multivariate_hypergeometric(TestCase):
     def test_random(self):
         m = [10,15]
-        N = 200
+        N = 1000
         n = 6
         r = rmultivariate_hypergeometric(n, m, N)
         assert_array_almost_equal(r.mean(0), multivariate_hypergeometric_expval(n,m),1)
@@ -932,8 +932,8 @@ class test_truncnorm(TestCase):
 
 
     def test_random(self):
-        r = rtruncnorm(mu=-1,tau=.1,a=-20,b=20,size=10000)
-        assert_almost_equal(r.mean(), truncnorm_expval(-1, .1, -20., 20.), 2)
+        r = rtruncnorm(mu=-1,tau=1,a=-20,b=20,size=10000)
+        assert_almost_equal(r.mean(), truncnorm_expval(-1, .1, -20., 20.), 1)
         assert (r > -20).all()
         assert (r < 20).all()
 
