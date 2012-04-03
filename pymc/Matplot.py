@@ -939,6 +939,9 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     """
     Model summary plot
 
+    Generates a "forest plot" of 100*(1-alpha)% credible intervals for either the 
+    set of nodes in a given model, or a specified set of nodes.
+
     :Arguments:
         pymc_obj: PyMC object, trace or array
             A trace from an MCMC sample or a PyMC object with one or more traces.
@@ -973,6 +976,10 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         main (optional): string
             Title for main plot. Passing False results in titles being
             suppressed; passing False (default) results in default titles.
+
+        custom_labels (optional): list
+            User-defined labels for each node. If not provided, the node
+            __name__ attributes are used.
 
         chain_spacing (optional): float
             Plot spacing between chains (defaults to 0.05).
