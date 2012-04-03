@@ -754,9 +754,9 @@ class test_mv_normal(TestCase):
         mu = array([3,4])
         C = np.matrix([[1, .5],[.5,1]])
 
-        r = rmv_normal(mu, np.linalg.inv(C), 1000)
-        rC = rmv_normal_cov(mu,C,1000)
-        rchol = rmv_normal_chol(mu,cholesky(C),1000)
+        r = rmv_normal(mu, np.linalg.inv(C), 5000)
+        rC = rmv_normal_cov(mu,C,5000)
+        rchol = rmv_normal_chol(mu,cholesky(C),5000)
 
         assert_array_almost_equal(mu, r.mean(0), 1)
         assert_array_almost_equal(C, np.cov(r.T), 1)
