@@ -7,7 +7,7 @@ Installation
 :Contact: chris.fonnesbeck@vanderbilt.edu
 :Web site: http://github.com/pymc-devs/pymc
 :Copyright: This document has been placed in the public domain.
-:License: PyMC is released under the MIT license.
+:License: PyMC is released under the Academic Free license.
 :Version: 2.2
 
 PyMC is known to run on Mac OS X, Linux and Windows, but in theory should be 
