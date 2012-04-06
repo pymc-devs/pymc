@@ -74,7 +74,8 @@ class MCMC(Sampler):
         for s in self.stochastics:
             self.step_method_dict[s] = []
 
-        self._state = ['status', '_current_iter', '_iter', '_tune_interval', '_burn', '_thin']
+        self._state = ['status', '_current_iter', '_iter', '_tune_interval', '_burn',
+                       '_thin', '_tuned_count', '_tune_throughout', '_burn_till_tuned']
 
     def use_step_method(self, step_method_class, *args, **kwds):
         """
@@ -170,7 +171,10 @@ class MCMC(Sampler):
         self.restore_sm_state()
         self._sm_assigned = True
 
-    def sample(self, iter, burn=0, thin=1, tune_interval=1000, tune_throughout=True, save_interval=None, verbose=0, progress_bar=True):
+    def sample(self, iter, burn=0, thin=1, tune_interval=1000, tune_throughout=True,
+               save_interval=None, burn_till_tuned=False, stop_tuning_after=5,
+               verbose=0, progress_bar=True):
+
         """
         sample(iter, burn, thin, tune_interval, tune_throughout, save_interval, verbose, progress_bar)
 
@@ -193,17 +197,40 @@ class MCMC(Sampler):
           - verbose : boolean
           - progress_bar : boolean
             Display progress bar while sampling.
+          - burn_till_tuned: boolean
+            If True the Sampler would burn samples until all step methods are tuned.
+            A tuned step methods is one that was not tuned for the last `stop_tuning_after` tuning intervals.
+            The burn-in phase will have a minimum of 'burn' iterations but could be longer if
+            tuning is needed. After the phase is done the sampler will run for another 
+            (iter - burn) iterations, and will tally the samples according to the 'thin' argument.
+            This means that the total number of iteration is update throughout the sampling
+            procedure.
+            If burn_till_tuned is True it also overrides the tune_thorughout argument, so no step method
+            will be tuned when sample are being tallied.
+          - stop_tuning_adfter: int
+            the number of untuned successive tuning interval needed to be reach in order for
+            the burn-in phase to be done (If burn_till_tuned is True).
         """
 
         self.assign_step_methods(verbose=verbose)
 
-        if burn >= iter:
-            raise ValueError('Burn interval must be smaller than specified number of iterations.')
+        if burn > iter:
+            raise ValueError('Burn interval cannot be larger than specified number of iterations.')
+
+        self._n_tally = int(iter) - int(burn)
+        if burn_till_tuned:
+            tune_throughout = False
+            if verbose > 0:
+                print "burn_til_tuned is True. tune_throughout is set to False"
+            burn = int(max(burn, stop_tuning_after * tune_interval))
+            iter = self._n_tally + burn
+
         self._iter = int(iter)
         self._burn = int(burn)
         self._thin = int(thin)
         self._tune_interval = int(tune_interval)
         self._tune_throughout = tune_throughout
+        self._burn_till_tuned = burn_till_tuned
         self._save_interval = save_interval
 
         length = max(int(np.floor((1.0*iter-burn)/thin)), 1)
@@ -239,6 +266,12 @@ class MCMC(Sampler):
                 # Tune at interval
                 if i and not (i % self._tune_interval) and self._tuning:
                     self.tune()
+
+                    #update _burn and _iter if needed
+                    if self._burn_till_tuned and (self._tuned_count == 0):
+                        new_burn = self._current_iter + int(self._stop_tuning_after * self._tune_interval)
+                        self._burn =  max(new_burn, self._burn);
+                        self._iter = self._burn + self._n_tally
 
                 # Manage burn-in
                 if i == self._burn:
@@ -317,8 +350,9 @@ class MCMC(Sampler):
                 # Otherwise re-initialize count
                 self._tuned_count = 0
 
-            # 5 consecutive clean intervals removed tuning
-            if self._tuned_count == 5:
+            # n consecutive clean intervals removed tuning
+            # n is equal to self._stop_tuning_after
+            if self._tuned_count ==  self._stop_tuning_after:
                 if self.verbose > 0: print_('\nFinished tuning')
                 self._tuning = False
 
