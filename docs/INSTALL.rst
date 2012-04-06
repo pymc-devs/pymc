@@ -2,7 +2,7 @@
 Installation
 ************
 
-:Date: 25 January 2011
+:Date: 5 April 2012
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Contact: chris.fonnesbeck@vanderbilt.edu
 :Web site: http://github.com/pymc-devs/pymc
@@ -51,13 +51,13 @@ available online.
 * `nose (optional)`_ : A test discovery-based unittest extension (required to 
   run the test suite).
 
-There are prebuilt distributions that include all required dependencies. For 
-Mac OS X users, we recommend the `MacPython`_ distribution or the `Enthought 
-Python Distribution`_ on OS X 10.5 (Leopard) and Python 2.7 that ships with 
-OS X 10.7 (Lion). Windows users should download and install the 
-`Enthought Python Distribution`_. The Enthought Python Distribution comes 
-bundled with these prerequisites. Note that depending on the currency of these 
-distributions, some packages may need to be updated manually.
+There are prebuilt distributions that include all required dependencies. For
+Mac OS X users, we recommend the Python distribution that ships with OS X on
+versions 10.5 (Leopard) or later, or the `Enthought Python Distribution`_. The
+Enthought Python Distribution comes  bundled with these prerequisites. Windows
+users should download and install the `Enthought Python Distribution`_. Note
+that depending on the currency of these  distributions, some packages may need
+to be updated manually.
 
 If instead of installing the prebuilt binaries you prefer (or have) to build 
 ``pymc`` yourself, make sure you have a Fortran and a C compiler. There are 
@@ -69,8 +69,6 @@ not been tested with PyMC but may work nonetheless.
 .. _`NumPy`: http://www.scipy.org/NumPy
 
 .. _`Matplotlib (optional)`: http://matplotlib.sourceforge.net/
-
-.. _`MacPython`: http://www.activestate.com/Products/ActivePython/
 
 .. _`Enthought Python Distribution`:
    http://www.enthought.com/products/epddownload.php
@@ -104,17 +102,16 @@ install software on your computer.
 
 .. _`Python Package Index`: http://pypi.python.org/pypi
 
-
 .. _`setuptools`: http://peak.telecommunity.com/DevCenter/setuptools
 
 
 Installing from pre-built binaries
 ==================================
 
-Pre-built binaries are available for Windows XP and Mac OS X. There are at 
-least two ways to install these:
+Pre-built binaries are available for Windows XP and Mac OS X. These can be
+installed as follows:
 
-1. Download the installer for your platform from `PyPI`_.
+1. Download the installer for your platform from `PyPI`_ or the `GitHub download page`_.
 
 2. Double-click the executable installation package, then follow the on-screen 
 instructions.
@@ -122,7 +119,7 @@ instructions.
 For other platforms, you will need to build the package yourself from source. 
 Fortunately, this should be relatively straightforward.
 
-.. _`PyMC site`: pymc.googlecode.com
+.. _`GitHub download page`: http://github.com/pymc-devs/pymc/downloads
 
 
 Compiling the source code
@@ -149,7 +146,7 @@ type::
     python setup.py install
 
 This will build the C and Fortran extension and copy the libraries and python
-modules in the C:/Python26/Lib/site-packages/pymc directory.
+modules in the `site-packages` directory of your Python distribution.
 
 
 .. _`MinGW`: http://www.mingw.org/
@@ -165,14 +162,14 @@ Mac OS X or Linux
 
 In a terminal, type::
 
-    python setup.py config_fc --fcompiler gnu95 build
+    python setup.py config_fc --fcompiler gfortran build
     python setup.py install
 
 The above syntax also assumes that you have gFortran installed and available. 
 The `sudo` command may be required to install PyMC into the Python 
 ``site-packages`` directory if it has restricted privileges.
 
-In addition, the python2.6-dev package may be required to install PyMC on Linux systems.
+In addition, the python-dev package may be required to install PyMC on Linux systems.
 
 
 .. _`EasyInstall`: http://peak.telecommunity.com/DevCenter/EasyInstall
@@ -184,18 +181,14 @@ In addition, the python2.6-dev package may be required to install PyMC on Linux 
 Development version
 ===================
 
-You can check out the bleeding edge version of the code from the `subversion`_ 
+You can check out the development version of the code from the `GitHub`_ 
 repository::
 
-    svn checkout http://pymc.googlecode.com/svn/trunk/ pymc
+    git clone git://github.com/pymc-devs/pymc.git
 
 Previous versions are available in the ``/tags`` directory.
 
-.. _`subversion`: http://subversion.tigris.org/
-
-You can also get the code from the GIT mirror::
-
-    git clone git://github.com/pymc-devs/pymc.git pymc
+.. _`GitHub`: https://github.com/pymc-devs/pymc
 
 
 Running the test suite
@@ -213,7 +206,7 @@ appear. In case this happens (it shouldn't), please report the problems on the
 `issue tracker`_ (the issues tab on the Google Code page), specifying the 
 version you are using and the environment.
 
-.. _`nose`: http://somethingaboutorange.com/mrl/projects/nose/
+.. _`nose`: http://readthedocs.org/docs/nose/en/latest/
 
 
 Bugs and feature requests
@@ -223,6 +216,6 @@ Report problems with the installation, bugs in the code or feature request at
 the `issue tracker`_. Comments and questions are welcome and should be 
 addressed to PyMC's `mailing list`_.
 
-.. _`issue tracker`: http://code.google.com/p/pymc/issues/list
+.. _`issue tracker`: http://github.com/pymc-devs/pymc/issues
 
 .. _`mailing list`: pymc@googlegroups.com
