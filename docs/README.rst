@@ -2,21 +2,13 @@
 Introduction
 ************
 
-:Date: 16 February 2011
+:Date: 5 April 2012
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Contact: chris.fonnesbeck@vanderbilt.edu
 :Web site: http://github.com/pymc-devs/pymc
 :Copyright: This document has been placed in the public domain.
-:License: PyMC is released under the MIT license.
+:License: PyMC is released under the Academic Free license.
 :Version: 2.2
-
-.. _warning:
-
-.. topic:: Documentation under construction
-    
-    This is a draft of the documentation to accompany PyMC 2.2 when it is 
-    released later this year. If you spot errors, have edits to recommend, or 
-    text to contribute, please open a report on our `issues page`_.
 
 
 Purpose

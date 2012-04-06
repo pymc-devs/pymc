@@ -31,24 +31,24 @@ available online.
   provides a multidimensional array type and many useful functions for 
   numerical analysis.
 
-* `Matplotlib (1.0 or newer)`_ : 2D plotting library which produces publication 
+* `Matplotlib`_ (1.0 or newer): 2D plotting library which produces publication 
   quality figures in a variety of image formats and interactive environments
 
-* `SciPy (optional)`_ : Library of algorithms for mathematics, science and 
+* `SciPy`_ (optional): Library of algorithms for mathematics, science and 
   engineering.
 
-* `pyTables (optional)`_ : Package for managing hierarchical datasets and
+* `pyTables`_ (optional): Package for managing hierarchical datasets and
   designed to efficiently and easily cope with extremely large amounts of data.
   Requires the `HDF5`_ library.
 
-* `pydot (optional)`_ : Python interface to Graphviz's Dot language, it allows 
+* `pydot`_ (optional): Python interface to Graphviz's Dot language, it allows 
   PyMC to create both directed and non-directed graphical representations of 
   models. Requires the `Graphviz`_ library.
 
-* `IPython (optional)`_ : An enhanced interactive Python shell and an 
+* `IPython`_ (optional): An enhanced interactive Python shell and an 
   architecture for interactive parallel computing.
 
-* `nose (optional)`_ : A test discovery-based unittest extension (required to 
+* `nose`_ (optional): A test discovery-based unittest extension (required to 
   run the test suite).
 
 There are prebuilt distributions that include all required dependencies. For
@@ -68,24 +68,24 @@ not been tested with PyMC but may work nonetheless.
 
 .. _`NumPy`: http://www.scipy.org/NumPy
 
-.. _`Matplotlib (optional)`: http://matplotlib.sourceforge.net/
+.. _`Matplotlib`: http://matplotlib.sourceforge.net/
 
 .. _`Enthought Python Distribution`:
    http://www.enthought.com/products/epddownload.php
 
-.. _`SciPy (optional)`: http://www.scipy.org/
+.. _`SciPy`: http://www.scipy.org/
 
-.. _`IPython (optional)`: http://ipython.scipy.org/
+.. _`IPython`: http://ipython.scipy.org/
 
-.. _`pyTables (optional)`: http://www.pytables.org/moin
+.. _`pyTables`: http://www.pytables.org/moin
 
 .. _`HDF5`: http://www.hdfgroup.org/HDF5/
 
-.. _`pydot (optional)`: http://code.google.com/p/pydot/
+.. _`pydot`: http://code.google.com/p/pydot/
 
 .. _`Graphviz`: http://www.graphviz.org/
 
-.. _`nose (optional)`: http://somethingaboutorange.com/mrl/projects/nose/
+.. _`nose`: http://somethingaboutorange.com/mrl/projects/nose/
 
 
 Installation using EasyInstall
