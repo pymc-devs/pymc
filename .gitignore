@@ -5,6 +5,7 @@ dist/*
 pymc.egg-info/
 UNKNOWN.egg-info/
 docs/_build
+MANIFEST
 develop
 testresults
 *.tmproj
