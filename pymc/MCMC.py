@@ -219,6 +219,7 @@ class MCMC(Sampler):
 
         self._n_tally = int(iter) - int(burn)
         if burn_till_tuned:
+            self._stop_tuning_after = stop_tuning_after
             tune_throughout = False
             if verbose > 0:
                 print "burn_til_tuned is True. tune_throughout is set to False"
@@ -272,6 +273,8 @@ class MCMC(Sampler):
                         new_burn = self._current_iter + int(self._stop_tuning_after * self._tune_interval)
                         self._burn =  max(new_burn, self._burn);
                         self._iter = self._burn + self._n_tally
+                        self.pbar = ProgressBar(self._iter)
+                        self.pbar.animate(i+1)
 
                 # Manage burn-in
                 if i == self._burn:
