@@ -129,7 +129,7 @@ class TestPickle(TestRam):
         db.close()
 
     def test_yconnect_and_sample(self):
-        
+
         original_filters = warnings.filters[:]
         warnings.simplefilter("ignore")
         try:
@@ -142,22 +142,22 @@ class TestPickle(TestRam):
             db.close()
         finally:
             warnings.filters = original_filters
-        
+
         # TODO: Restore in 2.2
         # with warnings.catch_warnings():
-        #             warnings.simplefilter('ignore')        
+        #             warnings.simplefilter('ignore')
         #             db = self.load()
         #         with warnings.catch_warnings():
-        #             warnings.simplefilter('ignore')            
+        #             warnings.simplefilter('ignore')
         #             S = pymc.MCMC(disaster_model, db=db)
         #             S.use_step_method(pymc.Metropolis, S.early_mean, tally=True)
         #             S.sample(5, progress_bar=0)
         #             assert_array_equal(db.trace('early_mean', chain=-1)[:].shape, (5,))
         #             assert_array_equal(db.trace('early_mean', chain=None)[:].shape, (20,))
         #             db.close()
-        
+
     def test_yrestore_state(self):
-        
+
         original_filters = warnings.filters[:]
         warnings.simplefilter("ignore")
         try:
@@ -168,7 +168,7 @@ class TestPickle(TestRam):
             assert_equal(sm.accepted+sm.rejected, 75)
         finally:
             warnings.filters = original_filters
-            
+
         # TODO: Restore in 2.2
         # with warnings.catch_warnings():
         #             warnings.simplefilter('ignore')
@@ -270,13 +270,13 @@ class TestHDF5(TestPickle):
         del db
 
     def test_zcompression(self):
-        
+
         original_filters = warnings.filters[:]
         warnings.simplefilter("ignore")
         try:
             db = pymc.database.hdf5.Database(dbname=os.path.join(testdir, 'disaster_modelCompressed.hdf5'),
                                              dbmode='w',
-                                             dbcomplevel=5)                                 
+                                             dbcomplevel=5)
             S = MCMC(disaster_model, db=db)
             S.sample(45,10,1, progress_bar=0)
             assert_array_equal(S.trace('early_mean')[:].shape, (35,))
@@ -285,20 +285,20 @@ class TestHDF5(TestPickle):
             del S
         finally:
             warnings.filters = original_filters
-        
+
         # TODO: Restore in 2.2
         # with warnings.catch_warnings():
         #             warnings.simplefilter('ignore')
         #             db = pymc.database.hdf5.Database(dbname=os.path.join(testdir, 'disaster_modelCompressed.hdf5'),
         #                                              dbmode='w',
-        #                                              dbcomplevel=5)                                 
+        #                                              dbcomplevel=5)
         #             S = MCMC(disaster_model, db=db)
         #             S.sample(45,10,1, progress_bar=0)
         #             assert_array_equal(S.trace('early_mean')[:].shape, (35,))
         #             S.db.close()
         #             db.close()
         #             del S
-        
+
 
 
 class testHDF5Objects(TestCase):
@@ -391,7 +391,7 @@ def test_interactive():
 
 
 if __name__ == '__main__':
-    
+
     original_filters = warnings.filters[:]
     warnings.simplefilter("ignore")
     try:
@@ -401,10 +401,10 @@ if __name__ == '__main__':
             S.db.close()
         except:
             pass
-       
+
     finally:
         warnings.filters = original_filters
-    
+
     # TODO: Restore in 2.2
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')

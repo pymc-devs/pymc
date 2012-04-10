@@ -21,9 +21,9 @@ process.
 Dependencies
 ============
 
-PyMC requires some prerequisite packages to be present on the system. 
-Fortunately, there are currently only a few dependencies, and all are freely 
-available online.
+PyMC requires some prerequisite packages to be present on the system.
+Fortunately, there are currently only a few hard dependencies, and all are
+freely available online.
 
 * `Python`_ version 2.6 or later.
 
@@ -52,14 +52,12 @@ available online.
   run the test suite).
 
 There are prebuilt distributions that include all required dependencies. For
-Mac OS X users, we recommend the Python distribution that ships with OS X on
-versions 10.5 (Leopard) or later, or the `Enthought Python Distribution`_. The
-Enthought Python Distribution comes  bundled with these prerequisites. Windows
-users should download and install the `Enthought Python Distribution`_. Note
-that depending on the currency of these  distributions, some packages may need
+Mac OS X and Windows users, we recommend the `Enthought Python Distribution`_. The
+Enthought Python Distribution comes  bundled with these prerequisites. Note
+that depending on the currency of these distributions, some packages may need
 to be updated manually.
 
-If instead of installing the prebuilt binaries you prefer (or have) to build 
+If, instead of installing the prebuilt binaries, you prefer (or have) to build 
 ``pymc`` yourself, make sure you have a Fortran and a C compiler. There are 
 free compilers (gfortran, gcc) available on all platforms. Other compilers have 
 not been tested with PyMC but may work nonetheless.
@@ -85,7 +83,7 @@ not been tested with PyMC but may work nonetheless.
 
 .. _`Graphviz`: http://www.graphviz.org/
 
-.. _`nose`: http://somethingaboutorange.com/mrl/projects/nose/
+.. _`nose`: http://readthedocs.org/docs/nose/en/latest/
 
 
 Installation using EasyInstall
@@ -111,10 +109,9 @@ Installing from pre-built binaries
 Pre-built binaries are available for Windows XP and Mac OS X. These can be
 installed as follows:
 
-1. Download the installer for your platform from `PyPI`_ or the `GitHub download page`_.
-
-2. Double-click the executable installation package, then follow the on-screen 
-instructions.
+  1. Download the installer for your platform from `PyPI`_ or the `GitHub download page`_.
+  2. Double-click the executable installation package, then follow the on-screen 
+  instructions.
 
 For other platforms, you will need to build the package yourself from source. 
 Fortunately, this should be relatively straightforward.
@@ -125,7 +122,7 @@ Fortunately, this should be relatively straightforward.
 Compiling the source code
 =========================
 
-First download the source code tarball from `PyPI`_ and unpack it. Then move 
+First download the source code from `GitHub`_ and unpack it. Then move 
 into the unpacked directory and follow the platform specific instructions.
 
 Windows

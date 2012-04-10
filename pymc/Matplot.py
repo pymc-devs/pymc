@@ -700,6 +700,7 @@ def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='
 
     subplot(rows, columns, num)
     if ndim(data) == 1:
+        maxlags = min(len(data)-1, maxlags)
         acorr(data, detrend=mlab.detrend_mean, maxlags=maxlags)
 
         # Set axis bounds
