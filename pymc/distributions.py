@@ -55,10 +55,6 @@ from copy import copy
 random_number = np.random.random
 inverse = np.linalg.pinv
 
-class ArgumentError(AttributeError):
-    """Incorrect class argument"""
-    pass
-
 sc_continuous_distributions = ['beta', 'cauchy', 'chi2',
                                'degenerate', 'exponential', 'exponweib',
                                'gamma', 'half_normal',
