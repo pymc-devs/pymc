@@ -18,6 +18,22 @@ except:
 
 DIR = 'testresults/'
 
+class test_tiny_MCMC(TestCase):
+
+    # Instantiate samplers
+    M = MCMC(disaster_model)
+
+    # Sample
+    M.sample(10, progress_bar=False)
+
+    def test_plot(self):
+
+        if not PLOT:
+            raise nose.SkipTest
+
+        # Plot samples
+        plot(M)
+
 
 class test_MCMC(TestCase):
 
