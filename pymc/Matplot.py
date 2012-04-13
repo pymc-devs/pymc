@@ -13,12 +13,12 @@ import pymc
 import os
 from pylab import hist, plot as pyplot, xlabel, ylabel, xlim, ylim, savefig, acorr, mlab
 from pylab import figure, subplot, subplots_adjust, gca, scatter, axvline, yticks, xticks
-from pylab import setp, axis, contourf, cm, title, colorbar, fill, text
+from pylab import setp, contourf, cm, title, colorbar, fill, text
 from pylab import errorbar
 
 # Import numpy functions
 from numpy import arange, log, ravel, rank, swapaxes, concatenate, asarray, ndim
-from numpy import histogram2d, mean, std, sort, prod, floor, shape, size, transpose
+from numpy import mean, std, sort, prod, floor, shape, size, transpose
 from numpy import min as nmin, max as nmax, abs
 from numpy import append, ones, dtype, indices, array, unique, zeros
 from .utils import quantiles as calc_quantiles, hpd as calc_hpd
@@ -808,7 +808,7 @@ def var_str(name, shape):
 
 
 def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./', 
-    alpha=0.05, quartiles=True, hpd=True, rhat=True, main=None, custom_labels=None, 
+    alpha=0.05, quartiles=True, hpd=True, rhat=True, main=None, xlab=None, custom_labels=None, 
     chain_spacing=0.05, vline_pos=0):
     """
     Model summary plot
@@ -1047,6 +1047,10 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     if main is not False:
         plot_title = main or str(int((1-alpha)*100)) + "% Credible Intervals"
         title(plot_title)
+    
+    # Add x-axis label
+    if xlab is not None:
+        xlabel(xlab)
 
     # Remove ticklines on y-axes
     for ticks in interval_plot.yaxis.get_major_ticks():
