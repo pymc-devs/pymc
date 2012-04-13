@@ -808,8 +808,8 @@ def var_str(name, shape):
 
 
 def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./', 
-    alpha=0.05, quartiles=True, hpd=True, rhat=True, main=None, xlab=None, custom_labels=None, 
-    chain_spacing=0.05, vline_pos=0):
+    alpha=0.05, quartiles=True, hpd=True, rhat=True, main=None, xlab=None, x_range=None, 
+    custom_labels=None, chain_spacing=0.05, vline_pos=0):
     """
     Model summary plot
 
@@ -850,6 +850,12 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         main (optional): string
             Title for main plot. Passing False results in titles being
             suppressed; passing False (default) results in default titles.
+        
+        xlab (optional): string
+            Label for x-axis. Defaults to no label
+
+        x_range (optional): list or tuple
+            Range for x-axis. Defaults to matplotlib's best guess.
 
         custom_labels (optional): list
             User-defined labels for each node. If not provided, the node
@@ -1051,6 +1057,10 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     # Add x-axis label
     if xlab is not None:
         xlabel(xlab)
+
+    # Constrain to specified range
+    if x_range is not None:
+        xlim(*x_range)
 
     # Remove ticklines on y-axes
     for ticks in interval_plot.yaxis.get_major_ticks():
