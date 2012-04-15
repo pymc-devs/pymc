@@ -47,7 +47,7 @@ class ModelView(object):
         
         calculations = [logp_calculation] + [grad(logp_calculation, var) for var in derivative_vars]
             
-        self.function = function(free_vars, calculations)
+        self.function = function(free_vars, calculations, allow_input_downcast = True)
         
         
     def _evaluate(self,d_repr, chain_state):
