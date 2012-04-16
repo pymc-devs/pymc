@@ -606,7 +606,7 @@ class PDMatrixMetropolis(Metropolis):
         """
         # MatrixMetropolis handles the Wishart family, which are valued as
         # _symmetric_ matrices.
-        if any([isinstance(s,cls) for cls in [distributions.Wishart,distributions.InverseWishart,distributions.WishartCov]]):
+        if any([isinstance(s,cls) for cls in [distributions.Wishart,distributions.WishartCov]]):
             return 2
         else:
             return 0

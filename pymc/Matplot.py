@@ -62,6 +62,7 @@ def get_index_list(shape, j):
 
     return index_list
 
+
 def func_quantiles(node, qlist=(.025, .25, .5, .75, .975)):
     """
     Returns an array whose ith row is the q[i]th quantile of the
