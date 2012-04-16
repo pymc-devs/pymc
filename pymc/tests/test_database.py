@@ -269,23 +269,7 @@ class TestHDF5(TestPickle):
         db.close()
         del db
 
-    def test_zcompression(self):
-
-        original_filters = warnings.filters[:]
-        warnings.simplefilter("ignore")
-        try:
-            db = pymc.database.hdf5.Database(dbname=os.path.join(testdir, 'disaster_modelCompressed.hdf5'),
-                                             dbmode='w',
-                                             dbcomplevel=5)
-            S = MCMC(disaster_model, db=db)
-            S.sample(45,10,1, progress_bar=0)
-            assert_array_equal(S.trace('early_mean')[:].shape, (35,))
-            S.db.close()
-            db.close()
-            del S
-        finally:
-            warnings.filters = original_filters
-
+    #def test_zcompression(self):
         # TODO: Restore in 2.2
         # with warnings.catch_warnings():
         #             warnings.simplefilter('ignore')
@@ -301,66 +285,66 @@ class TestHDF5(TestPickle):
 
 
 
-class testHDF5Objects(TestCase):
-    @classmethod
-    def setUpClass(self):
-        if 'hdf5' not in dir(pymc.database):
-            raise nose.SkipTest
-        from . import objectmodel
-        self.S = pymc.MCMC(objectmodel,
-                           db='hdf5',
-                           dbname=os.path.join(testdir, 'Objects.hdf5'))
-
-    def load(self):
-        return pymc.database.hdf5.load(os.path.join(testdir, 'Objects.hdf5'))
-
-    def test_simple_sample(self):
-        self.S.sample(50, 25, 5, progress_bar=0)
-
-        assert_array_equal(self.S.trace('B')[:].shape, (5,))
-        assert_array_equal(self.S.trace('K')[:].shape, (5,))
-        assert_array_equal(self.S.trace('K', chain=0)[:].shape, (5,))
-        assert_array_equal(self.S.trace('K', chain=None)[:].shape, (5,))
-
-        assert_equal(self.S.trace('K').length(), 5)
-        assert_equal(self.S.trace('K').length(chain=0), 5)
-        assert_equal(self.S.trace('K').length(chain=None), 5)
-
-
-        self.S.sample(10, progress_bar=0)
-
-        assert_array_equal(self.S.trace('K')[:].shape, (10,))
-        assert_array_equal(self.S.trace('K', chain=1)[:].shape, (10,))
-        assert_array_equal(self.S.trace('K', chain=None)[:].shape, (15,))
-
-        assert_equal(self.S.trace('K').length(), 10)
-        assert_equal(self.S.trace('K').length(chain=1), 10)
-        assert_equal(self.S.trace('K').length(chain=None), 15)
-
-        self.S.db.close()
-
-    def test_xload(self):
-        db = self.load()
-        assert_array_equal(db.B().shape, (10,))
-        assert_array_equal(db.K().shape, (10,))
-        assert_array_equal(db.K(chain=0).shape, (5,))
-        assert_array_equal(db.K(chain=None).shape, (15,))
-        db.close()
-
-    def test_yconnect_and_sample(self):
-        db = self.load()
-        from . import objectmodel
-        S = pymc.MCMC(objectmodel, db=db)
-        S.sample(5, progress_bar=0)
-        assert_array_equal(db.K(chain=0).shape, (5,))
-        assert_array_equal(db.K(chain=1).shape, (10,))
-        assert_array_equal(db.K(chain=2).shape, (5,))
-        assert_array_equal(db.K(chain=-1).shape, (5,))
-        assert_array_equal(db.K(chain=None).shape, (20,))
-        db.close()
-
-
-
+# class testHDF5Objects(TestCase):
+#     @classmethod
+#     def setUpClass(self):
+#         if 'hdf5' not in dir(pymc.database):
+#             raise nose.SkipTest
+#         from . import objectmodel
+#         self.S = pymc.MCMC(objectmodel,
+#                            db='hdf5',
+#                            dbname=os.path.join(testdir, 'Objects.hdf5'))
+# 
+#     def load(self):
+#         return pymc.database.hdf5.load(os.path.join(testdir, 'Objects.hdf5'))
+# 
+#     def test_simple_sample(self):
+#         self.S.sample(50, 25, 5, progress_bar=0)
+# 
+#         assert_array_equal(self.S.trace('B')[:].shape, (5,))
+#         assert_array_equal(self.S.trace('K')[:].shape, (5,))
+#         assert_array_equal(self.S.trace('K', chain=0)[:].shape, (5,))
+#         assert_array_equal(self.S.trace('K', chain=None)[:].shape, (5,))
+# 
+#         assert_equal(self.S.trace('K').length(), 5)
+#         assert_equal(self.S.trace('K').length(chain=0), 5)
+#         assert_equal(self.S.trace('K').length(chain=None), 5)
+# 
+# 
+#         self.S.sample(10, progress_bar=0)
+# 
+#         assert_array_equal(self.S.trace('K')[:].shape, (10,))
+#         assert_array_equal(self.S.trace('K', chain=1)[:].shape, (10,))
+#         assert_array_equal(self.S.trace('K', chain=None)[:].shape, (15,))
+# 
+#         assert_equal(self.S.trace('K').length(), 10)
+#         assert_equal(self.S.trace('K').length(chain=1), 10)
+#         assert_equal(self.S.trace('K').length(chain=None), 15)
+# 
+#         self.S.db.close()
+# 
+#     def test_xload(self):
+#         db = self.load()
+#         assert_array_equal(db.B().shape, (10,))
+#         assert_array_equal(db.K().shape, (10,))
+#         assert_array_equal(db.K(chain=0).shape, (5,))
+#         assert_array_equal(db.K(chain=None).shape, (15,))
+#         db.close()
+# 
+#     def test_yconnect_and_sample(self):
+#         db = self.load()
+#         from . import objectmodel
+#         S = pymc.MCMC(objectmodel, db=db)
+#         S.sample(5, progress_bar=0)
+#         assert_array_equal(db.K(chain=0).shape, (5,))
+#         assert_array_equal(db.K(chain=1).shape, (10,))
+#         assert_array_equal(db.K(chain=2).shape, (5,))
+#         assert_array_equal(db.K(chain=-1).shape, (5,))
+#         assert_array_equal(db.K(chain=None).shape, (20,))
+#         db.close()
+ 
+ 
+ 
 def test_identical_object_names():
     A = pymc.Uniform('a', 0, 10)
     B = pymc.Uniform('a', 0, 10)
