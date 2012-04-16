@@ -2,21 +2,13 @@
 Introduction
 ************
 
-:Date: 16 February 2011
+:Date: 5 April 2012
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Contact: chris.fonnesbeck@vanderbilt.edu
 :Web site: http://github.com/pymc-devs/pymc
 :Copyright: This document has been placed in the public domain.
-:License: PyMC is released under the MIT license.
+:License: PyMC is released under the Academic Free License.
 :Version: 2.2
-
-.. _warning:
-
-.. topic:: Documentation under construction
-    
-    This is a draft of the documentation to accompany PyMC 2.2 when it is 
-    released later this year. If you spot errors, have edits to recommend, or 
-    text to contribute, please open a report on our `issues page`_.
 
 
 Purpose
@@ -139,22 +131,23 @@ team for PyMC 2.0. This iteration of the software strives for more flexibility,
 better performance and a better end-user experience than any previous version 
 of PyMC.
 
-PyMC 2.2 will be released in early 2012. It contains numerous bugfixes and 
-optimizations, as well as a few new features. This user guide has been updated 
-for version 2.2.
+PyMC 2.2 was released in April 2012. It contains numerous bugfixes and
+optimizations, as well as a few new features, inculding improved output
+plotting, csv table output, improved imputation syntax, and posterior
+predictive check plots. This user guide has been updated  for version 2.2.
 
 
 Relationship to other packages
 ==============================
 
-PyMC in one of many general-purpose MCMC packages. The most prominent among 
-them is `WinBUGS`_, which has made MCMC and with it Bayesian statistics 
-accessible to a huge user community. Unlike PyMC, WinBUGS is a stand-alone, 
-self-contained application. This can be an attractive feature for users without 
-much programming experience, but others may find it constraining. A related 
-package is `JAGS`_, which provides a more UNIX-like implementation of the BUGS 
-language. Other packages include `Hierarchical Bayes Compiler`_ and a number of 
-`R packages`_ of varying scope.
+PyMC in one of many general-purpose MCMC packages. The most prominent among
+them is `WinBUGS`_, which has made MCMC (and with it, Bayesian statistics)
+accessible to a huge user community. Unlike PyMC, WinBUGS is a stand-alone,
+self-contained application. This can be an attractive feature for users
+without  much programming experience, but others may find it constraining. A
+related  package is `JAGS`_, which provides a more UNIX-like implementation of
+the BUGS  language. Other packages include `Hierarchical Bayes Compiler`_ and,
+more recently, `STAN`_.
 
 It would be difficult to meaningfully benchmark PyMC against these other 
 packages because of the unlimited variety in Bayesian probability models and 
@@ -175,9 +168,9 @@ required for sampling is often quite reasonable despite this poorer performance.
 
 We have chosen to spend time developing PyMC rather than using an existing 
 package primarily because it allows us to build and efficiently fit any model 
-we like within a full-fledged Python environment. We have emphasized 
+we like within a productuve Python environment. We have emphasized 
 extensibility throughout PyMC's design, so if it doesn't meet your needs out of 
-the box chances are you can make it do so with a relatively small amount of 
+the box, chances are you can make it do so with a relatively small amount of 
 code. See the `testimonials`_ page on the wiki for reasons why other users have 
 chosen PyMC.
 
@@ -198,7 +191,7 @@ available. More `examples and tutorials`_ are available from the PyMC web site.
 
 .. _`Hierarchical Bayes Compiler`: http://www.cs.utah.edu/~hal/HBC/
 
-.. _`R packages`: http://cran.r-project.org/web/packages/
+.. _`STAN`: http://code.google.com/p/stan/
 
 .. _`testimonials`: https://github.com/pymc-devs/pymc/wiki/Testimonials
 

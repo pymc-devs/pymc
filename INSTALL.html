@@ -61,7 +61,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Date:</th><td class="field-body">25 January 2011</td>
+<tr class="field-odd field"><th class="field-name">Date:</th><td class="field-body">5 April 2012</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Authors:</th><td class="field-body">Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier</td>
 </tr>
@@ -71,7 +71,7 @@
 </tr>
 <tr class="field-odd field"><th class="field-name">Copyright:</th><td class="field-body">This document has been placed in the public domain.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">License:</th><td class="field-body">PyMC is released under the MIT license.</td>
+<tr class="field-even field"><th class="field-name">License:</th><td class="field-body">PyMC is released under the Academic Free license.</td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Version:</th><td class="field-body">2.2</td>
 </tr>
@@ -86,36 +86,34 @@ process.</p>
 <div class="section" id="dependencies">
 <h2>2.1. Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
 <p>PyMC requires some prerequisite packages to be present on the system.
-Fortunately, there are currently only a few dependencies, and all are freely
-available online.</p>
+Fortunately, there are currently only a few hard dependencies, and all are
+freely available online.</p>
 <ul class="simple">
 <li><a class="reference external" href="http://www.python.org/.">Python</a> version 2.6 or later.</li>
 <li><a class="reference external" href="http://www.scipy.org/NumPy">NumPy</a> (1.6 or newer): The fundamental scientific programming package, it
 provides a multidimensional array type and many useful functions for
 numerical analysis.</li>
-<li><a href="#id1"><span class="problematic" id="id2">`Matplotlib (1.0 or newer)`_</span></a> : 2D plotting library which produces publication
+<li><a class="reference external" href="http://matplotlib.sourceforge.net/">Matplotlib</a> (1.0 or newer): 2D plotting library which produces publication
 quality figures in a variety of image formats and interactive environments</li>
-<li><a class="reference external" href="http://www.scipy.org/">SciPy (optional)</a> : Library of algorithms for mathematics, science and
+<li><a class="reference external" href="http://www.scipy.org/">SciPy</a> (optional): Library of algorithms for mathematics, science and
 engineering.</li>
-<li><a class="reference external" href="http://www.pytables.org/moin">pyTables (optional)</a> : Package for managing hierarchical datasets and
+<li><a class="reference external" href="http://www.pytables.org/moin">pyTables</a> (optional): Package for managing hierarchical datasets and
 designed to efficiently and easily cope with extremely large amounts of data.
 Requires the <a class="reference external" href="http://www.hdfgroup.org/HDF5/">HDF5</a> library.</li>
-<li><a class="reference external" href="http://code.google.com/p/pydot/">pydot (optional)</a> : Python interface to Graphviz&#8217;s Dot language, it allows
+<li><a class="reference external" href="http://code.google.com/p/pydot/">pydot</a> (optional): Python interface to Graphviz&#8217;s Dot language, it allows
 PyMC to create both directed and non-directed graphical representations of
 models. Requires the <a class="reference external" href="http://www.graphviz.org/">Graphviz</a> library.</li>
-<li><a class="reference external" href="http://ipython.scipy.org/">IPython (optional)</a> : An enhanced interactive Python shell and an
+<li><a class="reference external" href="http://ipython.scipy.org/">IPython</a> (optional): An enhanced interactive Python shell and an
 architecture for interactive parallel computing.</li>
-<li><a class="reference external" href="http://somethingaboutorange.com/mrl/projects/nose/">nose (optional)</a> : A test discovery-based unittest extension (required to
+<li><a class="reference external" href="http://readthedocs.org/docs/nose/en/latest/">nose</a> (optional): A test discovery-based unittest extension (required to
 run the test suite).</li>
 </ul>
 <p>There are prebuilt distributions that include all required dependencies. For
-Mac OS X users, we recommend the <a class="reference external" href="http://www.activestate.com/Products/ActivePython/">MacPython</a> distribution or the <a class="reference external" href="http://www.enthought.com/products/epddownload.php">Enthought
-Python Distribution</a> on OS X 10.5 (Leopard) and Python 2.7 that ships with
-OS X 10.7 (Lion). Windows users should download and install the
-<a class="reference external" href="http://www.enthought.com/products/epddownload.php">Enthought Python Distribution</a>. The Enthought Python Distribution comes
-bundled with these prerequisites. Note that depending on the currency of these
-distributions, some packages may need to be updated manually.</p>
-<p>If instead of installing the prebuilt binaries you prefer (or have) to build
+Mac OS X and Windows users, we recommend the <a class="reference external" href="http://www.enthought.com/products/epddownload.php">Enthought Python Distribution</a>. The
+Enthought Python Distribution comes  bundled with these prerequisites. Note
+that depending on the currency of these distributions, some packages may need
+to be updated manually.</p>
+<p>If, instead of installing the prebuilt binaries, you prefer (or have) to build
 <tt class="docutils literal"><span class="pre">pymc</span></tt> yourself, make sure you have a Fortran and a C compiler. There are
 free compilers (gfortran, gcc) available on all platforms. Other compilers have
 not been tested with PyMC but may work nonetheless.</p>
@@ -132,19 +130,21 @@ install software on your computer.</p>
 </div>
 <div class="section" id="installing-from-pre-built-binaries">
 <h2>2.3. Installing from pre-built binaries<a class="headerlink" href="#installing-from-pre-built-binaries" title="Permalink to this headline">¶</a></h2>
-<p>Pre-built binaries are available for Windows XP and Mac OS X. There are at
-least two ways to install these:</p>
-<ol class="arabic simple">
-<li>Download the installer for your platform from <a class="reference external" href="http://pypi.python.org/pypi/pymc/">PyPI</a>.</li>
+<p>Pre-built binaries are available for Windows XP and Mac OS X. These can be
+installed as follows:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>Download the installer for your platform from <a class="reference external" href="http://pypi.python.org/pypi/pymc/">PyPI</a> or the <a class="reference external" href="http://github.com/pymc-devs/pymc/downloads">GitHub download page</a>.</li>
 </ol>
 <p>2. Double-click the executable installation package, then follow the on-screen
 instructions.</p>
+</div></blockquote>
 <p>For other platforms, you will need to build the package yourself from source.
 Fortunately, this should be relatively straightforward.</p>
 </div>
 <div class="section" id="compiling-the-source-code">
 <h2>2.4. Compiling the source code<a class="headerlink" href="#compiling-the-source-code" title="Permalink to this headline">¶</a></h2>
-<p>First download the source code tarball from <a class="reference external" href="http://pypi.python.org/pypi/pymc/">PyPI</a> and unpack it. Then move
+<p>First download the source code from <a class="reference external" href="https://github.com/pymc-devs/pymc">GitHub</a> and unpack it. Then move
 into the unpacked directory and follow the platform specific instructions.</p>
 <div class="section" id="windows">
 <h3>2.4.1. Windows<a class="headerlink" href="#windows" title="Permalink to this headline">¶</a></h3>
@@ -161,35 +161,32 @@ type:</p>
 <div class="highlight-python"><pre>python setup.py install</pre>
 </div>
 <p>This will build the C and Fortran extension and copy the libraries and python
-modules in the C:/Python26/Lib/site-packages/pymc directory.</p>
+modules in the <cite>site-packages</cite> directory of your Python distribution.</p>
 </div>
 <div class="section" id="mac-os-x-or-linux">
 <h3>2.4.2. Mac OS X or Linux<a class="headerlink" href="#mac-os-x-or-linux" title="Permalink to this headline">¶</a></h3>
 <p>In a terminal, type:</p>
-<div class="highlight-python"><pre>python setup.py config_fc --fcompiler gnu95 build
+<div class="highlight-python"><pre>python setup.py config_fc --fcompiler gfortran build
 python setup.py install</pre>
 </div>
 <p>The above syntax also assumes that you have gFortran installed and available.
 The <cite>sudo</cite> command may be required to install PyMC into the Python
 <tt class="docutils literal"><span class="pre">site-packages</span></tt> directory if it has restricted privileges.</p>
-<p>In addition, the python2.6-dev package may be required to install PyMC on Linux systems.</p>
+<p>In addition, the python-dev package may be required to install PyMC on Linux systems.</p>
 </div>
 </div>
 <div class="section" id="development-version">
 <h2>2.5. Development version<a class="headerlink" href="#development-version" title="Permalink to this headline">¶</a></h2>
-<p>You can check out the bleeding edge version of the code from the <a class="reference external" href="http://subversion.tigris.org/">subversion</a>
+<p>You can check out the development version of the code from the <a class="reference external" href="https://github.com/pymc-devs/pymc">GitHub</a>
 repository:</p>
-<div class="highlight-python"><pre>svn checkout http://pymc.googlecode.com/svn/trunk/ pymc</pre>
+<div class="highlight-python"><pre>git clone git://github.com/pymc-devs/pymc.git</pre>
 </div>
 <p>Previous versions are available in the <tt class="docutils literal"><span class="pre">/tags</span></tt> directory.</p>
-<p>You can also get the code from the GIT mirror:</p>
-<div class="highlight-python"><pre>git clone git://github.com/pymc-devs/pymc.git pymc</pre>
-</div>
 </div>
 <div class="section" id="running-the-test-suite">
 <h2>2.6. Running the test suite<a class="headerlink" href="#running-the-test-suite" title="Permalink to this headline">¶</a></h2>
 <p><tt class="docutils literal"><span class="pre">pymc</span></tt> comes with a set of tests that verify that the critical components of
-the code work as expected. To run these tests, users must have <a class="reference external" href="http://somethingaboutorange.com/mrl/projects/nose/">nose</a>
+the code work as expected. To run these tests, users must have <a class="reference external" href="http://readthedocs.org/docs/nose/en/latest/">nose</a>
 installed. The tests are launched from a python shell:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">pymc</span>
 <span class="n">pymc</span><span class="o">.</span><span class="n">test</span><span class="p">()</span>
@@ -197,13 +194,13 @@ installed. The tests are launched from a python shell:</p>
 </div>
 <p>In case of failures, messages detailing the nature of these failures will
 appear. In case this happens (it shouldn&#8217;t), please report the problems on the
-<a class="reference external" href="http://code.google.com/p/pymc/issues/list">issue tracker</a> (the issues tab on the Google Code page), specifying the
+<a class="reference external" href="http://github.com/pymc-devs/pymc/issues">issue tracker</a> (the issues tab on the Google Code page), specifying the
 version you are using and the environment.</p>
 </div>
 <div class="section" id="bugs-and-feature-requests">
 <h2>2.7. Bugs and feature requests<a class="headerlink" href="#bugs-and-feature-requests" title="Permalink to this headline">¶</a></h2>
 <p>Report problems with the installation, bugs in the code or feature request at
-the <a class="reference external" href="http://code.google.com/p/pymc/issues/list">issue tracker</a>. Comments and questions are welcome and should be
+the <a class="reference external" href="http://github.com/pymc-devs/pymc/issues">issue tracker</a>. Comments and questions are welcome and should be
 addressed to PyMC&#8217;s <a class="reference external" href="mailto:pymc&#37;&#52;&#48;googlegroups&#46;com">mailing list</a>.</p>
 </div>
 </div>
@@ -282,7 +279,7 @@ addressed to PyMC&#8217;s <a class="reference external" href="mailto:pymc&#37;&#
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2011, Christopher J. Fonnesbeck.
+        &copy; Copyright 2012, Christopher J. Fonnesbeck.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
   </body>
