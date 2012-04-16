@@ -7,7 +7,7 @@ import numpy as np
 
 class HMCStep(object):
     """Hamiltonian step method"""
-    def __init__(self,model,covariance, step_size_scaling = .25, trajectory_length = 2. ):
+    def __init__(self,model,covariance, step_size_scaling = .25, trajectory_length = 2. , debug = False):
         self.model = model
         
         self.zero = np.zeros(self.model.mapping.dimensions)
@@ -22,6 +22,9 @@ class HMCStep(object):
         else :
             self.step_size_max = self.step_size_min = step_size 
         self.trajectory_length = trajectory_length   
+        
+        self.debug = debug
+        self.d = 5
         
     def step(self, chain_state):
         #randomize step size
@@ -56,8 +59,18 @@ class HMCStep(object):
             
         log_metrop_ratio = (-start_logp) - (-current_logp) + self.kenergy(start_p) - self.kenergy(p)
         
+        
+        
         self.acceptr = np.minimum(np.exp(log_metrop_ratio), 1.)
         
+        if self.debug: 
+            print self.acceptr, log_metrop_ratio, start_logp, current_logp, start_p, p, self.kenergy(start_p), self.kenergy(p)
+            if not np.isfinite(self.acceptr) :
+                if self.d < 0:
+                    print self.model.evaluate_as_vector(proposed_state)
+                    raise ValueError
+                else:
+                    self.d -= 1
         
         if (np.isfinite(log_metrop_ratio) and 
             np.log(np.random.uniform()) < log_metrop_ratio):

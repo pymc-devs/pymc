@@ -6,19 +6,29 @@ Created on Mar 12, 2011
 from scipy.optimize import fmin_bfgs, fmin_ncg
 import numpy as np 
 
-def find_MAP( model, chain_state, disp = False):
+def find_MAP( model, chain_state, disp = False, retall = False):
     """
     moves the chain to the local maximum a posteriori point given a model
     """
     def logp(x):
-        
-        return np.nan_to_num(-(model.evaluate_as_vector(model.project(chain_state, x)))[0])
+        return nan_to_high(-(model.evaluate_as_vector(model.project(chain_state, x)))[0])
         
     def grad_logp(x):
         return np.nan_to_num(-(model.evaluate_as_vector(model.project(chain_state, x)))[1])
 
-    
-    x = fmin_ncg(logp, model.subspace(chain_state), grad_logp, disp = disp)
+    x = fmin_bfgs(logp, model.subspace(chain_state), grad_logp, disp = disp, retall = retall)
     return model.project(chain_state, x)
 
+    
+    
+def nan_to_high(x):
+    x = x.copy() 
+    if (x.ndim >= 1):
+        x[np.logical_not(np.isfinite(x))] = 1.79769313e+308
+        return x
+    else: 
+        if np.logical_not(np.isfinite(x)): 
+            return 1.79769313e+308
+        else:
+            return x
     

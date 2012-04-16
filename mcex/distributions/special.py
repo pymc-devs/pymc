@@ -31,6 +31,12 @@ class XlogX(scalar.UnaryScalarOp):
                 ? 0.0
                 : %(x)s * log(%(x)s);""" % locals()
         raise NotImplementedError('only floatingpoint is implemented')
+    
+    def __eq__(self, other):
+        return type(self) == type(other)
+    def __hash__(self):
+        return hash(type(self))
+    
 scalar_xlogx  = XlogX(scalar.upgrade_to_float, name='scalar_xlogx')
 xlogx = tensor.Elemwise(scalar_xlogx, name='xlogx')
 
@@ -54,6 +60,10 @@ class GammaLn(scalar.UnaryScalarOp):
             return """%(z)s =
                 lgamma(%(x)s);""" % locals()
         raise NotImplementedError('only floatingpoint is implemented')
+    def __eq__(self, other):
+        return type(self) == type(other)
+    def __hash__(self):
+        return hash(type(self))
     
 scalar_gammaln  = GammaLn(scalar.upgrade_to_float, name='scalar_gammaln')
 gammaln = tensor.Elemwise(scalar_gammaln, name='gammaln')
@@ -74,7 +84,9 @@ class Psi(scalar.UnaryScalarOp):
     def c_support_code(self):
         return ( 
         """
-double psi(double x){
+#ifndef _PSIFUNCDEFINED
+#define _PSIFUNCDEFINED
+double _psi(double x){
 
     /*taken from 
     Bernardo, J. M. (1976). Algorithm AS 103: Psi (Digamma) Function. Applied Statistics. 25 (3), 315-317. 
@@ -106,14 +118,20 @@ double psi(double x){
     psi_ = psi_ - R * (S3 - R * (S4 - R * S5));
     
     return psi_;}
+    #endif
         """ )
     def c_code(self, node, name, inp, out, sub):
         x, = inp
         z, = out
         if node.inputs[0].type in [scalar.float32, scalar.float64]:
             return """%(z)s =
-                psi(%(x)s);""" % locals()
+                _psi(%(x)s);""" % locals()
         raise NotImplementedError('only floatingpoint is implemented')
+    
+    def __eq__(self, other):
+        return type(self) == type(other)
+    def __hash__(self):
+        return hash(type(self))
     
 scalar_psi = Psi(scalar.upgrade_to_float, name='scalar_psi')
 psi = tensor.Elemwise(scalar_psi, name='psi')
@@ -148,6 +166,11 @@ double factln(int n){
             return """%(z)s =
                 factln(%(x)s);""" % locals()
         raise NotImplementedError('only floatingpoint is implemented')
+    
+    def __eq__(self, other):
+        return type(self) == type(other)
+    def __hash__(self):
+        return hash(type(self))
     
 scalar_factln = Psi(scalar.upgrade_to_float, name='scalar_factln')
 factln = tensor.Elemwise(scalar_factln, name='factln')
