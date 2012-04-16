@@ -32,7 +32,7 @@ class test_tiny_MCMC(TestCase):
             raise nose.SkipTest
 
         # Plot samples
-        plot(M)
+        plot(self.M)
 
 
 class test_MCMC(TestCase):

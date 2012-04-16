@@ -35,6 +35,13 @@ class test_norm_approx(TestCase):
     def test_fmin_powell(self):
         N = NormApprox(model)
         N.fit('fmin_powell')
+    def test_revert(self):
+        N = NormApprox(model)
+        N.fit()
+        max_alpha = N.alpha.value.copy()
+        N.alpha.random()
+        N.revert_to_max()
+        assert_almost_equal(N.alpha.value, max_alpha)
     def test_sig(self):
         N = NormApprox(model)
         N.fit('fmin')
