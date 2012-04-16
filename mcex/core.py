@@ -28,7 +28,7 @@ def AddVar(model, var, distribution):
     model.factors.append(distribution(var))
 def AddVar(model, var,proximate_variable, distribution):
     model.vars.append(var)
-    model.factors.append((distribution(proximate_variable) * grad(proximate_variable, variable)
+    model.factors.append(distribution(proximate_variable) * grad(proximate_variable, variable))
 
 class ModelView(object):
     """
