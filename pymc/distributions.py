@@ -1923,7 +1923,8 @@ def negative_binomial_like(x, mu, alpha):
         :math:`\mu=r(1-p)/p`
 
     """
-    if any(alpha > 1e10):
+    if np.any(alpha > 1e10):
+
         # Return Poisson when alpha gets very large
         return flib.poisson(x, mu)
     return flib.negbin2(x, mu, alpha)
