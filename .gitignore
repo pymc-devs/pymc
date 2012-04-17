@@ -1,0 +1,4 @@
+*.pyc
+examples/*.png
+build/*
+*.egg-info/
