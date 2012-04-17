@@ -17,23 +17,37 @@ def FreeVariable( name, shape, dtype):
     var.dshape = tuple(shape)
     var.dsize = int(np.prod(shape))
     return var
+class Model(object):
+    def __init__(self):
+       self.vars = []
+       self.factors = [] 
+
+ 
+def AddVar(model, var, distribution):
+    if isinstance(var, TensorVariable):
+        model.vars.append(var)
+    
+    model.factors.append(distribution(var))
+    
+def AddVarIndirect(model, var,proximate_variable, distribution):
+    model.vars.append(var)
+    model.factors.append(distribution(proximate_variable) * grad(proximate_variable, variable))
 
 class ModelView(object):
     """
     encapsulates the probability model
     """
-    def __init__(self, free_vars, logps, derivative_vars = []):
+    def __init__(self, model, derivative_vars = []):
 
-        self.free_vars = free_vars
-        self.logps = logps
+        self.model = model
         
         if derivative_vars == 'all' :
-            derivative_vars = [ var for var in free_vars if var.dtype in continuous_types]
+            derivative_vars = [ var for var in model.vars if var.dtype in continuous_types]
             
         self.derivative_vars = derivative_vars 
         
         
-        logp_calculation = buitin_sum((sum(logp) for logp in logps))
+        logp_calculation = buitin_sum((sum(factor) for factor in model.factors))
         
         self.mapping = VariableMapping(derivative_vars)
         self.derivative_order = [str(var) for var in derivative_vars]
@@ -41,7 +55,7 @@ class ModelView(object):
         
         calculations = [logp_calculation] + [grad(logp_calculation, var) for var in derivative_vars]
             
-        self.function = function(free_vars, calculations, allow_input_downcast = True)
+        self.function = function(model.vars, calculations, allow_input_downcast = True)
         
         
     def _evaluate(self,d_repr, chain_state):
