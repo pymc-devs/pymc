@@ -1923,10 +1923,16 @@ def negative_binomial_like(x, mu, alpha):
         :math:`\mu=r(1-p)/p`
 
     """
-    if np.any(alpha > 1e10):
-
-        # Return Poisson when alpha gets very large
-        return flib.poisson(x, mu)
+    alpha = np.array(alpha)
+    if (alpha > 1e10).any():
+        if (alpha > 1e10).all():
+            # Return Poisson when alpha gets very large
+            return flib.poisson(x, mu)
+        
+        # Split big and small dispersion values
+        big = alpha > 1e10
+        return flib.poisson(x[big], mu[big]) + flib.negbin2(x[big-True],
+                mu[big-True], alpha[big-True])
     return flib.negbin2(x, mu, alpha)
 
 negative_binomial_grad_like = {'mu'    : flib.negbin2_gmu,
