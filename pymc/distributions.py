@@ -829,7 +829,7 @@ def categorical_like(x, p):
     """
 
     p = np.atleast_2d(p)
-    if any(abs(np.sum(p, 1)-1)>0.0001):
+    if np.any(abs(np.sum(p, 1)-1)>0.0001):
         print_("Probabilities in categorical_like sum to", np.sum(p, 1))
     if np.array(x).dtype != int:
         #print_("Non-integer values in categorical_like")
