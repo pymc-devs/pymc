@@ -9,7 +9,7 @@ import numpy as np
 
 random.seed(1)
 
-n_groups = 29
+n_groups = 2
 no_pergroup = 30 
 n_observed = no_pergroup * n_groups
 n_group_predictors = 2
@@ -61,7 +61,7 @@ chain = {'sg' : np.array([2.]),
          'group_effects' : np.zeros((1,) + group_effects_a.shape),
          'effects' : np.zeros(effects_a.shape ) }
 
-chain2 = find_MAP(view, chain)
+chain2, v = find_MAP(view, chain, retall = True)
 
 hmc_cov = approx_cov( view, chain2) #find a good orientation using the hessian at the MAP
 
