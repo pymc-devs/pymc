@@ -16,8 +16,14 @@ def find_MAP( model, chain_state, disp = False, retall = False):
     def grad_logp(x):
         return np.nan_to_num(-(model.evaluate_as_vector(model.project(chain_state, x)))[1])
 
-    x = fmin_bfgs(logp, model.subspace(chain_state), grad_logp, disp = disp, retall = retall)
-    return model.project(chain_state, x)
+    x = fmin_bfgs(logp, model.subspace(chain_state), grad_logp, disp = disp, retall = retall, full_output = True)
+    
+    chain_state = model.project(chain_state, x[0])
+    
+    if retall:
+        return chain_state, x[-1]
+    else:
+        return chain_state
 
     
     
