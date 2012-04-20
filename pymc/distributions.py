@@ -322,7 +322,10 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
     name = capitalize(name)
 
     # Build docstring from distribution
-    docstr = name[0]+' = '+name + '(name, '+', '.join(parent_names)+', value=None, observed=False,'
+    parents_str = ''
+    if parent_names:
+        parents_str = ', '.join(parent_names) + ', ' 
+    docstr = name[0]+' = '+name + '(name, '+parents_str+'value=None, observed=False,'
     if not mv:
         docstr += ' size=1,'
     docstr += ' trace=True, rseed=True, doc=None, verbose=-1, debug=False)\n\n'
