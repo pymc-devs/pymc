@@ -17,16 +17,18 @@ def FreeVariable( name, shape, dtype):
     var.dshape = tuple(shape)
     var.dsize = int(np.prod(shape))
     return var
+
 class Model(object):
     def __init__(self):
        self.vars = []
        self.factors = [] 
 
- 
+
+def AddData(model, data, distribution):
+    model.factors.append(distribution(data))
+
 def AddVar(model, var, distribution):
-    if isinstance(var, TensorVariable):
-        model.vars.append(var)
-    
+    model.vars.append(var)
     model.factors.append(distribution(var))
     
 def AddVarIndirect(model, var,proximate_variable, distribution):
