@@ -3,16 +3,15 @@ import theano.tensor as T
 from numpy import random, sum as nsum, ones, concatenate, newaxis, dot, arange
 from __builtin__ import map
 import numpy as np 
-#import pydevd 
-#pydevd.set_pm_excepthook()
+
 
 
 random.seed(1)
 
-n_groups = 2
+n_groups = 10
 no_pergroup = 30 
 n_observed = no_pergroup * n_groups
-n_group_predictors = 2
+n_group_predictors = 1
 n_predictors = 3
 
 group = concatenate([ [i]*no_pergroup for i in range(n_groups)])
@@ -41,7 +40,7 @@ AddVar(model, sg, Uniform(.05, 10))
 
 #m ~ N(mg * pg, sg)
 effects = FreeVariable("effects", (n_groups, n_predictors), 'float64')
-AddVar(model, effects, Normal( sum(group_predictors[:, :, newaxis] * group_effects ,1)  ,sg))
+AddVar(model, effects, Normal( sum(group_predictors[:, :, newaxis] * group_effects ,1)  ,sg**-2))
 
 #s ~ 
 s = FreeVariable("s", n_groups, 'float64')
@@ -50,7 +49,7 @@ AddVar(model, s, Uniform(.01, 10))
 g = T.constant(group)
 
 #y ~ Normal(m[g] * p, s)
-AddVar(model, T.constant(y), Normal( sum(effects[g] * predictors, 1),s[g]))
+AddData(model, T.constant(y), Normal( sum(effects[g] * predictors, 1),s[g]**-2))
 
 
 
@@ -63,16 +62,6 @@ chain = {'sg' : np.array([2.]),
 
 chain2, v = find_MAP(view, chain, retall = True)
 
-hmc_cov = approx_cov( view, chain2) #find a good orientation using the hessian at the MAP
-
-step_method = CompoundStep([hmc.HMCStep(view, hmc_cov, step_size_scaling = .05)])
-
-
-ndraw = 3e3
-
-history = NpHistory(view, ndraw) # an object that keeps track
-print "took :", sample(ndraw, step_method, chain2, history)
-
 def project(chain, name, slc, value):
     c = chain.copy() 
     c[name] = c[name].copy()
@@ -83,6 +72,19 @@ def get_like(chain, name, slc):
     def like(x):
         return view.evaluate(project(chain2, name, slc, x))[0]
     return like
+
+
+hmc_cov = approx_cov( view, chain2) #find a good orientation using the hessian at the MAP
+
+step_method = CompoundStep([hmc.HMCStep(view, hmc_cov, step_size_scaling = .25)])
+
+
+ndraw = 3e3
+
+history = NpHistory(view, ndraw) # an object that keeps track
+print "took :", sample(ndraw, step_method, chain2, history)
+
+
     
 #x = arange(.001, 5, .001)
 #y = np.array(map(get_like(chain2, 's', 0), x))
