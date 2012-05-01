@@ -345,7 +345,7 @@ class MCMC(Sampler):
                 print_('\t\tTuning step method %s, returned %i\n' %(step_method._id, tuning_count))
                 sys.stdout.flush()
 
-        if not self._tune_throughout or self._burn_till_tuned:
+        if self._burn_till_tuned:
             if not tuning_count:
                 # If no step methods needed tuning, increment count
                 self._tuned_count += 1
