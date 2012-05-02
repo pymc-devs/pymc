@@ -8,7 +8,8 @@ import numpy as np
 
 def find_MAP( model, chain_state, minalg = fmin_bfgs, disp = False, retall = False):
     """
-    moves the chain to the local maximum a posteriori point given a model
+    Moves the chain to the local maximum a posteriori point given a model.
+    Current default of fmin_bfgs does not deal well with optimizing close to sharp edges, especially if they are the minimum.
     """
     def logp(x):
         return nan_to_high(-(model.evaluate_as_vector(model.project(chain_state, x)))[0])
