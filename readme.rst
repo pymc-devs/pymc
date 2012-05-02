@@ -12,10 +12,11 @@ Some design decisions
 +----------------------------------+---------------------------------------+---------------------------------------------------+
 | Design decision                  | Advantages                            | Disadvantages                                     |
 +==================================+=======================================+===================================================+
-| Computational core outsourced    | - simple package code                 | - supporting arbitrary stochastics/deterministics |
-| to Theano                        | - efficient                           |   more difficult in complex cases                 |
-|                                  | - improvements to Theano improve MCEx |                                                   |
+| Computational core outsourced    | - Simple package code (~400 lines)    | - supporting arbitrary stochastics/deterministics |
+| to Theano                        | - Efficient                           |   more difficult in complex cases                 |
+|                                  | - Improvements to Theano improve MCEx |                                                   |
 |                                  | - GPU enabled                         |                                                   |
+|                                  | - Automatic Differentiation           |                                                   |
 +----------------------------------+---------------------------------------+---------------------------------------------------+
 | Random variables, chains,        | - Easy to understand design           |  - more verbose                                   |
 | chain history, and model all     | - Reflects the mathematical structure |                                                   |
