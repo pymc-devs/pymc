@@ -4,18 +4,20 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 '''
 import numpy as np
+from ..core import *
 
 class HMCStep(object):
     """Hamiltonian step method"""
-    def __init__(self,model,covariance, step_size_scaling = .25, trajectory_length = 2. , debug = False):
-        self.model = model
+    def __init__(self,model, vars, covariance, step_size_scaling = .25, trajectory_length = 2. , debug = False):
+        self.mapping = DASpaceMap(vars)
+        self.logp_d = model_logp_dlogp(model, vars)
         
-        self.zero = np.zeros(self.model.mapping.dimensions)
+        self.zero = np.zeros(self.mapping.dimensions)
         
         self.covariance = covariance
         self.inv_covariance = np.linalg.inv(covariance)
         
-        step_size = step_size_scaling * self.model.mapping.dimensions**(1/4.)
+        step_size = step_size_scaling * self.mapping.dimensions**(1/4.)
       
         if np.size(step_size) > 1:
             self.step_size_max, self.step_size_min = step_size
@@ -32,8 +34,9 @@ class HMCStep(object):
         step_count = int(np.floor(self.trajectory_length / step_size))
         
         
-        q = self.model.subspace(chain_state)
-        start_logp, gradient = self.model.evaluate_as_vector(chain_state)
+        q = self.mapping.project(chain_state)
+        start_logp, gradient = self.logp_d(chain_state)
+        
         current_logp = start_logp
         
         # momentum scale proportional to inverse of parameter scale (basically sqrt(covariance))
@@ -47,8 +50,9 @@ class HMCStep(object):
             #alternate full variable and momentum updates
             q = q + step_size * np.dot(self.covariance, p)
             
-            proposed_state = self.model.project(chain_state, q)
-            current_logp, gradient = self.model.evaluate_as_vector(proposed_state)
+            proposed_state = self.mapping.rproject(q, chain_state)
+            
+            current_logp, gradient = self.logp_d(proposed_state)
             
             if i != step_count - 1:
                 p = p - step_size * -gradient
@@ -67,7 +71,7 @@ class HMCStep(object):
             print self.acceptr, log_metrop_ratio, start_logp, current_logp, start_p, p, self.kenergy(start_p), self.kenergy(p)
             if not np.isfinite(self.acceptr) :
                 if self.d < 0:
-                    print self.model.evaluate_as_vector(proposed_state)
+                    print self.logp_d(proposed_state)
                     raise ValueError
                 else:
                     self.d -= 1

@@ -17,3 +17,5 @@ class CompoundStep(object):
         for step_method in self.step_methods: 
             chain_state = step_method.step(chain_state)
         return chain_state 
+    
+    

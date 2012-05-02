@@ -23,7 +23,6 @@ class Model(object):
        self.vars = []
        self.factors = [] 
 
-
 def AddData(model, data, distribution):
     model.factors.append(distribution(data))
 
@@ -33,71 +32,57 @@ def AddVar(model, var, distribution):
     
 def AddVarIndirect(model, var,proximate_variable, distribution):
     model.vars.append(var)
-    model.factors.append(distribution(proximate_variable) * grad(proximate_variable, variable))
-
-class ModelView(object):
-    """
-    encapsulates the probability model
-    """
-    def __init__(self, model, derivative_vars = [], mode = None ):
-
-        self.model = model
-        
-        if derivative_vars == 'all' :
-            derivative_vars = [ var for var in model.vars if var.dtype in continuous_types]
-            
-        self.derivative_vars = derivative_vars 
-        
-        
-        logp_calculation = buitin_sum((sum(factor) for factor in model.factors))
-        
-        self.mapping = VariableMapping(derivative_vars)
-        self.derivative_order = [str(var) for var in derivative_vars]
-        
-        
-        calculations = [logp_calculation] + [grad(logp_calculation, var) for var in derivative_vars]
-            
-        self.function = function(model.vars, calculations, allow_input_downcast = True, mode = mode)
-        
-        
-    def _evaluate(self,d_repr, chain_state):
-        """
-        returns logp, derivative1, derivative2...
-        does not currently do beyond derivative1
-        """
-        results = iter(self.function(**chain_state))
-        if self.derivative_vars:
-            return results.next(), d_repr(1, self.derivative_order, results)
-        else :
-            return results.next()
-        
-    def evaluate(self, chain_state):
-        def dict_representation(n, ordering, it):
-            #replaceable with dict comprehensions
-            values = {}
-            for key, value in zip(ordering, it):
-                values[key] = value
-            return values
-
-        return self._evaluate(dict_representation, chain_state)
+    model.factors.append(distribution(proximate_variable) * grad(proximate_variable, var))
     
-    def evaluate_as_vector(self, chain_state):
-        """
-        perhaps needs to be moved out of Evaluate
-        """   
-        def vector_representation(n, ordering, it):
-            return self.mapping.subspace(zip(ordering,it))
-        return self._evaluate(vector_representation, chain_state)
-        
-    def project(self, chain_state, vector):
-        return self.mapping.project(chain_state, vector)
-    def subspace(self, chain_state):
-        return self.mapping.dict_subspace(chain_state)
     
-class VariableMapping(object):
-    """encapsulates a subset of variables represented as a vector
-    each vector defines a subspace of the whole parameter space 
-    """
+def continuous_vars(model):
+    return [ var for var in model.vars if var.dtype in continuous_types] 
+
+
+
+def model_logp(model, mode = None):
+    f = function(model.vars, logp_graph(model), allow_input_downcast = True, mode = mode)
+    def fn(state):
+        return f(**state)
+    return fn
+
+def model_dlogp(model, dvars = None, mode = None ):    
+    if dvars is None :
+        dvars = continuous_vars(model)
+    
+    mapping = IASpaceMap(dvars)
+    
+    logp = logp_graph(model)    
+    f = function(model.vars, [grad(logp, var) for var in dvars],
+                 allow_input_downcast = True, mode = mode)
+    def fn(state):
+        return mapping.project(f(**state))
+    return fn
+    
+def model_logp_dlogp(model, dvars = None, mode = None ):    
+    if dvars is None :
+        dvars = continuous_vars(model)
+    
+    mapping = IASpaceMap(dvars)
+    
+    logp = logp_graph(model)
+    calculations = [logp] + [grad(logp, var) for var in dvars]
+        
+    f = function(model.vars, calculations, allow_input_downcast = True, mode = mode)
+    def fn(state):
+        r = f(**state)
+        return r[0], mapping.project(r[1:])
+    return fn
+        
+    
+def logp_graph(model):
+    return buitin_sum((sum(factor) for factor in model.factors))
+    
+
+    
+class DASpaceMap(object):
+    """ encapsulates a mapping of 
+        dict space -> array space"""
     def __init__(self,free_vars):
         self.dimensions = 0
         
@@ -108,36 +93,49 @@ class VariableMapping(object):
             self.slices[str(var)] = slice(self.dimensions, self.dimensions + var.dsize)
             self.dimensions += var.dsize
             
-    def dict_subspace(self, values):
-        """gets the subspace given a dict
-        """
-        return self.subspace( values.iteritems())
-
-    def subspace(self,varset_values):
-        """
-        returns a vector that defines a subspace given an iterable of (variablename, value)
-        """
-        vector = np.empty(self.dimensions)
+    def project(self, d, a = None):
+        if a is None:
+            a = np.empty(self.dimensions)
+        else:
+            a = np.copy(a)
         
-        for varname, value in varset_values:
+        for varname, value in d.iteritems():
             try:    
-                vector[self.slices[varname]] = np.ravel(value)
+                a[self.slices[varname]] = np.ravel(value)
             except KeyError:
                 pass
-                
-        return vector
+        return a
     
-     
-    def project(self,values, vector):
-        """
-        projects the values onto the subspace defined by the vector
-        """
-        values = values.copy()
-        for var, slice in self.slices.iteritems():
-            values[var] = np.reshape(vector[slice], self.vars[var].dshape)
+    def rproject(self, a, d = {}):
+        d = d.copy()
             
-        return values 
-
+        for var, slice in self.slices.iteritems():
+            d[var] = np.reshape(a[slice], self.vars[var].dshape)
+            
+        return d
+    
+    
+class IASpaceMap(object):
+    """ encapsulates a mapping of 
+        iterable space -> array space"""
+    def __init__(self,free_vars):
+        self.dimensions = 0
+        
+        self.slices = []
+        for var in free_vars:       
+            self.slices.append(slice(self.dimensions, self.dimensions + var.dsize))
+            self.dimensions += var.dsize
+            
+    def project(self, d , a = None):
+        if a is None:
+            a = np.empty(self.dimensions)
+        else:
+            a = np.copy(a)
+        
+        for slc, v in zip(self.slices, d):    
+            a[slc] = np.ravel(v)
+        return a
+            
 def sample(draws, step_method, chain_state, sample_history ):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""

@@ -9,10 +9,10 @@ class NpHistory(object):
     encapsulates the recording of a process chain
     should handle any burn-in, thinning (though this can also be handled at the sampler level) etc.
     """
-    def __init__(self, view, max_draws):
+    def __init__(self, vars, max_draws):
         self.max_draws = max_draws
         samples = {}
-        for var in view.model.vars: 
+        for var in vars: 
             samples[str(var)] = np.empty((int(max_draws),) + var.dshape)
             
         self._samples = samples

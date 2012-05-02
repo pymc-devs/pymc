@@ -5,20 +5,27 @@ Created on Mar 12, 2011
 '''
 from scipy.optimize import fmin_bfgs, fmin_ncg
 import numpy as np 
+from core import *
 
 def find_MAP( model, chain_state, minalg = fmin_bfgs, disp = False, retall = False):
     """
     moves the chain to the local maximum a posteriori point given a model
     """
-    def logp(x):
-        return nan_to_high(-(model.evaluate_as_vector(model.project(chain_state, x)))[0])
-        
-    def grad_logp(x):
-        return np.nan_to_num(-(model.evaluate_as_vector(model.project(chain_state, x)))[1])
-
-    x = minalg(logp, model.subspace(chain_state), grad_logp, disp = disp, retall = retall, full_output = True)
+    vars = model.vars
+    mapping = DASpaceMap(vars)
     
-    chain_state = model.project(chain_state, x[0])
+    logp = model_logp(model)
+    dlogp = model_dlogp(model, vars)
+    
+    def logp_o(x):
+        return nan_to_high(-logp(mapping.rproject(x, chain_state)))
+        
+    def grad_logp_o(x):
+        return np.nan_to_num(-dlogp(mapping.rproject(x, chain_state)))
+
+    x = minalg(logp_o, mapping.project(chain_state), grad_logp_o, disp = disp, retall = retall, full_output = True)
+    
+    chain_state = mapping.rproject(x[0], chain_state)
     
     if retall:
         return chain_state, x[-1]
