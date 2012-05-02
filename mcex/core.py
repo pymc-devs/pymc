@@ -33,6 +33,8 @@ def AddVar(model, name, distribution, shape = 1, dtype = 'float64'):
     return var
     
 def AddVarIndirect(model, name,proximate_calc, distribution, shape = 1):
+    raise NotImplementedError("need to figure out the math for this still")
+    
     var = FreeVariable(name, shape)
     model.vars.append(var)
     
