@@ -10,7 +10,7 @@ import numpy as np
 from __builtin__ import sum as buitin_sum
 import time 
 
-def FreeVariable( name, shape, dtype):
+def FreeVariable( name, shape, dtype = 'float64'):
     """creates a TensorVariable of the given shape and type"""
     shape = np.atleast_1d(shape)
     var = TensorType(str(dtype), shape == 1)(name)
@@ -33,7 +33,7 @@ def AddVar(model, var, distribution):
     
 def AddVarIndirect(model, var,proximate_variable, distribution):
     model.vars.append(var)
-    model.factors.append(distribution(proximate_variable) * grad(proximate_variable, variable))
+    model.factors.append(distribution(proximate_variable) * grad(proximate_variable, var))
 
 class ModelView(object):
     """
