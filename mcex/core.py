@@ -10,7 +10,7 @@ import numpy as np
 from __builtin__ import sum as buitin_sum
 import time 
 
-def FreeVariable( name, shape, dtype):
+def FreeVariable( name, shape, dtype = 'float64'):
     """creates a TensorVariable of the given shape and type"""
     shape = np.atleast_1d(shape)
     var = TensorType(str(dtype), shape == 1)(name)
