@@ -39,7 +39,7 @@ class ModelView(object):
     """
     encapsulates the probability model
     """
-    def __init__(self, model, derivative_vars = []):
+    def __init__(self, model, derivative_vars = [], mode = None ):
 
         self.model = model
         
@@ -57,7 +57,7 @@ class ModelView(object):
         
         calculations = [logp_calculation] + [grad(logp_calculation, var) for var in derivative_vars]
             
-        self.function = function(model.vars, calculations, allow_input_downcast = True)
+        self.function = function(model.vars, calculations, allow_input_downcast = True, mode = mode)
         
         
     def _evaluate(self,d_repr, chain_state):
