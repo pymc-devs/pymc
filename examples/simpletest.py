@@ -12,12 +12,10 @@ data = np.random.normal(size = (3, 20))
 model = Model()
 
 
-x = FreeVariable('x', (3,1), 'float64')
-AddVar(model, x, Normal(mu = .5, tau = 2.**-2))
+x = AddVar(model, 'x', Normal(mu = .5, tau = 2.**-2), (3,1))
 
 
-z = FreeVariable('z', (1,), 'float64')
-AddVar(model, z, Beta(alpha = 10, beta =5.5))
+z = AddVar(model, 'z', Beta(alpha = 10, beta =5.5))
 
 AddData(model, data, Normal(mu = x, tau = .75**-2))
 

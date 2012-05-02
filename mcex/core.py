@@ -26,14 +26,19 @@ class Model(object):
 def AddData(model, data, distribution):
     model.factors.append(distribution(data))
 
-def AddVar(model, var, distribution):
+def AddVar(model, name, distribution, shape = 1, dtype = 'float64'):
+    var = FreeVariable(name, shape, dtype)
     model.vars.append(var)
     model.factors.append(distribution(var))
+    return var
     
-def AddVarIndirect(model, var,proximate_variable, distribution):
+def AddVarIndirect(model, name,proximate_calc, distribution, shape = 1):
+    var = FreeVariable(name, shape)
     model.vars.append(var)
-    model.factors.append(distribution(proximate_variable) * grad(proximate_variable, var))
     
+    prox_var = proximate_calc(var)
+    model.factors.append(distribution(prox_var) * grad(prox_var, var))
+    return var
     
 def continuous_vars(model):
     return [ var for var in model.vars if var.dtype in continuous_types] 

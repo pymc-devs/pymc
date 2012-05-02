@@ -29,60 +29,41 @@ y = nsum(effects_a[group, :] * predictors, 1) + random.normal(size = (n_observed
 model = Model()
 
 #m_g ~ N(0, .1)
-group_effects = FreeVariable("group_effects", (1, n_group_predictors, n_predictors), 'float64')
-AddVar(model, group_effects, Normal(0, .1))
+group_effects = AddVar(model, "group_effects", Normal(0, .1), (1, n_group_predictors, n_predictors))
 
 
-# sg ~ 
-sg = FreeVariable("sg", 1, 'float64')
-AddVar(model, sg, Uniform(.05, 10))
-#sg = 1
+# sg ~ Uniform(.05, 10)
+sg = AddVar(model, "sg", Uniform(.05, 10))
 
 #m ~ N(mg * pg, sg)
-effects = FreeVariable("effects", (n_groups, n_predictors), 'float64')
-AddVar(model, effects, Normal( sum(group_predictors[:, :, newaxis] * group_effects ,1)  ,sg**-2))
+effects = AddVar(model, "effects", 
+                 Normal( sum(group_predictors[:, :, newaxis] * group_effects ,1)  ,sg**-2),
+                 (n_groups, n_predictors))
 
 #s ~ 
-s = FreeVariable("s", n_groups, 'float64')
-AddVar(model, s, Uniform(.01, 10))
+s = AddVar(model, "s", Uniform(.01, 10), n_groups)
 
 g = T.constant(group)
 
 #y ~ Normal(m[g] * p, s)
 AddData(model, T.constant(y), Normal( sum(effects[g] * predictors, 1),s[g]**-2))
 
-
-
-view = ModelView(model, 'all')
                  
 chain = {'sg' : np.array([2.]), 
          's'  : np.ones(n_groups) * 2.,
          'group_effects' : np.zeros((1,) + group_effects_a.shape),
          'effects' : np.zeros(effects_a.shape ) }
 
-chain2, v = find_MAP(view, chain, retall = True)
+map_x, v = find_MAP(model, chain, retall = True)
+map_cov = approx_cov(model, map_x) #find a good orientation using the hessian at the MAP
 
-def project(chain, name, slc, value):
-    c = chain.copy() 
-    c[name] = c[name].copy()
-    c[name][slc] = value
-    return c
-
-def get_like(chain, name, slc):
-    def like(x):
-        return view.evaluate(project(chain2, name, slc, x))[0]
-    return like
-
-
-hmc_cov = approx_cov( view, chain2) #find a good orientation using the hessian at the MAP
-
-step_method = CompoundStep([hmc.HMCStep(view, hmc_cov, step_size_scaling = .25)])
+step_method = HMCStep(model, model.vars, map_cov, step_size_scaling = .25)
 
 
 ndraw = 3e3
 
-history = NpHistory(view, ndraw) # an object that keeps track
-print "took :", sample(ndraw, step_method, chain2, history)
+history = NpHistory(model.vars, ndraw) # an object that keeps track
+print "took :", sample(ndraw, step_method, map_x, history)
 
 
     

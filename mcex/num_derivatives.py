@@ -7,10 +7,11 @@ import numdifftools as nd
 import numpy as np 
 from core import *
 
-def approx_cov(model, vars, chain_state):
+def approx_cov(model,chain_state):
     """
     returns an approximation of the hessian at the current chain location 
     """
+    vars = model.vars
     dlogp = model_dlogp(model, vars)
     mapping = DASpaceMap(vars)
     
