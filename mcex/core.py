@@ -19,9 +19,14 @@ def FreeVariable( name, shape, dtype = 'float64'):
     return var
 
 class Model(object):
+    """encapsulates the variables and the likelihood factors"""
     def __init__(self):
        self.vars = []
        self.factors = [] 
+
+"""
+these functions add random variables
+"""
 
 def AddData(model, data, distribution):
     model.factors.append(distribution(data))
@@ -32,21 +37,29 @@ def AddVar(model, name, distribution, shape = 1, dtype = 'float64'):
     model.factors.append(distribution(var))
     return var
     
-def AddVarIndirect(model, name,proximate_calc, distribution, shape = 1):
-    raise NotImplementedError("need to figure out the math for this still")
-    
+def AddVarIndirectElemewise(model, name,proximate_calc, distribution, shape = 1):
     var = FreeVariable(name, shape)
     model.vars.append(var)
-    
     prox_var = proximate_calc(var)
-    model.factors.append(distribution(prox_var) * grad(prox_var, var))
+    
+    model.factors.append(distribution(prox_var) + log_jacobian_determinant(prox_var, var))
     return var
+    
+def log_jacobian_determinant(var1, var2):
+    # need to find a way to calculate the log of the jacobian determinant easily, 
+    raise NotImplementedError()
+    # in the case of elemwise operations we can just sum the gradients
+    # so we might just test if var1 is elemwise wrt to var2 and then calculate the gradients, summing their logs
+    # otherwise throw an error
+    return
     
 def continuous_vars(model):
     return [ var for var in model.vars if var.dtype in continuous_types] 
 
 
-
+"""
+these functions compile log-posterior functions (and derivatives)
+"""
 def model_logp(model, mode = None):
     f = function(model.vars, logp_graph(model), allow_input_downcast = True, mode = mode)
     def fn(state):
@@ -89,7 +102,7 @@ def logp_graph(model):
     
 class DASpaceMap(object):
     """ encapsulates a mapping of 
-        dict space -> array space"""
+        dict space <-> array space"""
     def __init__(self,free_vars):
         self.dimensions = 0
         

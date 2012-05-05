@@ -4,24 +4,26 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 '''
 import numpy as np
+from ..core import *
 
 class MetropolisStep(object):
     """Hamiltonian step method"""
-    def __init__(self,model,covariance, scaling = .25, ):
-        self.model = model
+    def __init__(self,model, vars, covariance, scaling = .25, ):
+        self.mapping = DASpaceMap(vars)
+        self.logp = model_logp(model, vars)
+        
         self.zero = np.zeros(self.model.mapping.dimensions)
-        self.covariance = covariance
-        self.scaling = scaling
+        self.covariance = covariance * scaling
         
     def step(self, chain_state):
 
-        delta = np.random.multivariate_normal(mean = self.zero ,cov = self.covariance * self.scaling) 
+        delta = np.random.multivariate_normal(mean = self.zero ,cov = self.covariance) 
         
-        current_state = self.model.subspace(chain_state)
-        proposed_state = self.model.project(chain_state, current_state + delta)
+        current_state = self.mapping.project(chain_state)
+        proposed_state = current_state + delta
         
-        current_logp = self.model.evaluate_as_vector(current_state)
-        proposed_logp = self.model.evaluate_as_vector(proposed_state)
+        current_logp = self.logp(chain_state)
+        proposed_logp = self.logp(self.mapping.rproject(proposed_state, chain_state))
 
         log_metrop_ratio = (proposed_logp) - (current_logp) 
         
