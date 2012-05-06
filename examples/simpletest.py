@@ -28,22 +28,12 @@ chain = {'x' : np.array([[0.2],[.3],[.1]]),
 
 #move the chain to the MAP which should be a good starting point
 chain = find_MAP(model, chain)
-hmc_cov = approx_cov(model, model.vars, chain) #find a good orientation using the hessian at the MAP
+hmc_cov = approx_cov(model, chain) #find a good orientation using the hessian at the MAP
 
 step_method = HMCStep(model, model.vars, hmc_cov)
 
 
 ndraw = 3e3
-"""
-print chain.values
-x = np.linspace(.01, .99, 50)
-y = np.array([ hmc_model.function(x = np.array([[0],[0],[0]]), z = np.array([xi]) )[0][()] for xi in x])
 
-import pylab 
-pylab.figure()
-y2 = np.exp(y)/np.sum(np.exp(y))
-pylab.plot(x,y2)
-pylab.show()
-print hmc_cov"""
 history = NpHistory(model.vars, ndraw) # an object that keeps track
 print "took :", sample(ndraw, step_method, chain, history)
