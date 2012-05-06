@@ -166,6 +166,19 @@ def sample(draws, step_method, chain_state, sample_history ):
         
     return (time.time() - start)
 
+
+def sample1(draws, step_method, chain_state, sample_history ):
+    """draw a number of samples using the given step method. Multiple step methods supported via compound step method
+    returns the amount of time taken"""
+    start = time.time()
+    for i in xrange(int(draws)):
+        step_method.step(chain_state, step_state)
+        
+        sample_history.record(chain_state)
+        
+    return (time.time() - start)
+
+
 bool_types = set(['int8'])
    
 int_types = set(['int8',

@@ -98,7 +98,7 @@ from numpy.linalg import inv, cholesky
     
     
     
-def hmc_step(logp_d,n, C, step_size_scaling = .25, trajectory_length = 2. , debug = False):
+def hmc_step(logp_d,n, C, step_size_scaling = .25, trajectory_length = 2. ):
     step_size = step_size_scaling * n**(1/4.)
     
     cholInvC = cholesky(inv(C))
