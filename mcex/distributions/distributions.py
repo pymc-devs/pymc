@@ -40,21 +40,29 @@ def BetaBin(alpha, beta, n):
                    -inf)
     return dist
 def Bernoulli(p):
-    return switch(ge(p , 0) & le(p , 1), 
+    def dist(value):
+        return switch(ge(p , 0) & le(p , 1), 
                   switch(value, log(p), log(1-p)),
                   -inf)
+    return dist
 
 def T(mu, lam, nu):
-    return switch(gt(lam  , 0) & gt(nu , 0),
+    def dist(value):
+        return switch(gt(lam  , 0) & gt(nu , 0),
                   gammaln((nu+1.0)/2.0) + .5 * log(lam / (nu * pi)) - gammaln(nu/2.0) - (nu+1.0)/2.0 * log(1.0 + lam *(value - mu)**2/nu),
                   -inf)
+    return dist
     
 def Cauchy(alpha, beta):
-    return switch(gt(beta , 0),
+    def dist(value):
+        return switch(gt(beta , 0),
                   -log(beta) - log( 1 + ((value-alpha) / beta) ** 2 ),
                   -inf)
+    return dist
     
 def Gamma(alpha, beta):
-    return switch(ge(value , 0) & gt(alpha , 0) & gt(beta , 0),
+    def dist(value):
+        return switch(ge(value , 0) & gt(alpha , 0) & gt(beta , 0),
                   -gammaln(alpha) + alpha*log(beta) - beta*value + switch(alpha != 1.0, (alpha - 1.0)*log(value), 0),
                   -inf)
+    return dist
