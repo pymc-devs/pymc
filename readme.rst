@@ -12,17 +12,18 @@ Some design decisions
 +----------------------------------+---------------------------------------+---------------------------------------------------+
 | Design decision                  | Advantages                            | Disadvantages                                     |
 +==================================+=======================================+===================================================+
-| Computational core outsourced    | - Simple package code (~400 lines)    | - supporting arbitrary stochastics/deterministics |
+| Computational core outsourced    | - Simple package code (<400 lines)    | - Supporting arbitrary stochastics/deterministics |
 | to Theano                        | - Efficient                           |   more difficult in complex cases                 |
 |                                  | - Improvements to Theano improve MCEx |                                                   |
 |                                  | - GPU enabled                         |                                                   |
 |                                  | - Automatic Differentiation           |                                                   |
 +----------------------------------+---------------------------------------+---------------------------------------------------+
-| Random variables, chains,        | - Easy to understand design           |  - more verbose                                   |
-| chain history, and model all     | - Reflects the mathematical structure |                                                   |
-| distinct                         | - Adding new functionality can be done|                                                   |
+| Random variables, distributions, | - Easy to understand design           | - More verbose                                    |
+| chains, chain history,           | - Reflects the mathematical structure |                                                   |
+| and model all distinct           | - Adding new functionality can be done|                                                   |
 |                                  |   independently from the rest of the  |                                                   |                       
 |                                  |   package                             |                                                   |
 +----------------------------------+---------------------------------------+---------------------------------------------------+
- 
+| Functional style design          | - Allows easier exchange of components| - Design less similar to Object Oriented design   |                                                   |
++----------------------------------+---------------------------------------+---------------------------------------------------+ 
  
