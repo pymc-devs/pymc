@@ -65,19 +65,6 @@ def model_logp(model, mode = None):
     def fn(state):
         return f(**state)
     return fn
-
-def model_dlogp(model, dvars = None, mode = None ):    
-    if dvars is None :
-        dvars = continuous_vars(model)
-    
-    mapping = IASpaceMap(dvars)
-    
-    logp = logp_graph(model)    
-    f = function(model.vars, [grad(logp, var) for var in dvars],
-                 allow_input_downcast = True, mode = mode)
-    def fn(state):
-        return mapping.project(f(**state))
-    return fn
     
 def model_logp_dlogp(model, dvars = None, mode = None ):    
     if dvars is None :
