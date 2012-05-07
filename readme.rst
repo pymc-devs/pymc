@@ -21,10 +21,11 @@ Some design decisions
 +----------------------------------+---------------------------------------+---------------------------------------------------+
 | Random variables, distributions, | - Easy to understand design           | - More verbose                                    |
 | chains, chain history,           | - Reflects the mathematical structure |                                                   |
-| and model all distinct           | - Adding new functionality can be done|                                                   |
-|                                  |   independently from the rest of the  |                                                   |                       
-|                                  |   package                             |                                                   |
+| and model all distinct           | - Adding new functionality can be     |                                                   |
+|                                  |   done independently from the rest of |                                                   |                       
+|                                  |   the package                         |                                                   |
 +----------------------------------+---------------------------------------+---------------------------------------------------+
-| Functional style design          | - Allows easier exchange of components| - Design less similar to Object Oriented design   |                                                   |
+| Functional style design          | - Allows easier exchange of           | - Design less similar to Object Oriented design   |      
+|                                  |   components                          |                                                   |
 +----------------------------------+---------------------------------------+---------------------------------------------------+ 
  
