@@ -57,15 +57,10 @@ chain = {'sg' : np.array([2.]),
 map_x, v = find_MAP(model, chain, retall = True)
 map_cov = approx_cov(model, map_x) #find a good orientation using the hessian at the MAP
 
-step_method = HMCStep(model, model.vars, map_cov, step_size_scaling = .25)
+step_method = hmc_step(model, model.vars, map_cov, step_size_scaling = .25)
 
 
 ndraw = 3e3
 
 history = NpHistory(model.vars, ndraw) # an object that keeps track
 print "took :", sample(ndraw, step_method, map_x, history)
-
-
-    
-#x = arange(.001, 5, .001)
-#y = np.array(map(get_like(chain2, 's', 0), x))

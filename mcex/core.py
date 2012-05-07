@@ -19,9 +19,14 @@ def FreeVariable( name, shape, dtype = 'float64'):
     return var
 
 class Model(object):
+    """encapsulates the variables and the likelihood factors"""
     def __init__(self):
        self.vars = []
        self.factors = [] 
+
+"""
+these functions add random variables
+"""
 
 def AddData(model, data, distribution):
     model.factors.append(distribution(data))
@@ -32,38 +37,33 @@ def AddVar(model, name, distribution, shape = 1, dtype = 'float64'):
     model.factors.append(distribution(var))
     return var
     
-def AddVarIndirect(model, name,proximate_calc, distribution, shape = 1):
-    raise NotImplementedError("need to figure out the math for this still")
-    
+def AddVarIndirectElemewise(model, name,proximate_calc, distribution, shape = 1):
     var = FreeVariable(name, shape)
     model.vars.append(var)
-    
     prox_var = proximate_calc(var)
-    model.factors.append(distribution(prox_var) * grad(prox_var, var))
+    
+    model.factors.append(distribution(prox_var) + log_jacobian_determinant(prox_var, var))
     return var
+    
+def log_jacobian_determinant(var1, var2):
+    # need to find a way to calculate the log of the jacobian determinant easily, 
+    raise NotImplementedError()
+    # in the case of elemwise operations we can just sum the gradients
+    # so we might just test if var1 is elemwise wrt to var2 and then calculate the gradients, summing their logs
+    # otherwise throw an error
+    return
     
 def continuous_vars(model):
     return [ var for var in model.vars if var.dtype in continuous_types] 
 
 
-
+"""
+these functions compile log-posterior functions (and derivatives)
+"""
 def model_logp(model, mode = None):
     f = function(model.vars, logp_graph(model), allow_input_downcast = True, mode = mode)
     def fn(state):
         return f(**state)
-    return fn
-
-def model_dlogp(model, dvars = None, mode = None ):    
-    if dvars is None :
-        dvars = continuous_vars(model)
-    
-    mapping = IASpaceMap(dvars)
-    
-    logp = logp_graph(model)    
-    f = function(model.vars, [grad(logp, var) for var in dvars],
-                 allow_input_downcast = True, mode = mode)
-    def fn(state):
-        return mapping.project(f(**state))
     return fn
     
 def model_logp_dlogp(model, dvars = None, mode = None ):    
@@ -89,7 +89,7 @@ def logp_graph(model):
     
 class DASpaceMap(object):
     """ encapsulates a mapping of 
-        dict space -> array space"""
+        dict space <-> array space"""
     def __init__(self,free_vars):
         self.dimensions = 0
         
@@ -143,15 +143,18 @@ class IASpaceMap(object):
             a[slc] = np.ravel(v)
         return a
             
-def sample(draws, step_method, chain_state, sample_history ):
+
+def sample(draws, step, chain, sample_history, state = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
     start = time.time()
     for i in xrange(int(draws)):
-        chain_state = step_method.step(chain_state)
-        sample_history.record(chain_state, step_method)
+        state, chain = step(state, chain)
+        
+        sample_history.record(chain)
         
     return (time.time() - start)
+
 
 bool_types = set(['int8'])
    
