@@ -9,6 +9,7 @@ in PyMC. People are encouraged to fork MCEx to try out their own designs and imp
 as well as make criticisms.
 
 Some design decisions
+
 +----------------------------------+---------------------------------------+---------------------------------------------------+
 | Design decision                  | Advantages                            | Disadvantages                                     |
 +==================================+=======================================+===================================================+
