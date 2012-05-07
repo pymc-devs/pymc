@@ -30,8 +30,8 @@ chain = {'x' : np.array([[0.2],[.3],[.1]]),
 chain = find_MAP(model, chain)
 hmc_cov = approx_cov(model, chain) #find a good orientation using the hessian at the MAP
 
-step_method = HMCStep(model, model.vars, hmc_cov)
-
+step_method = split_hmc_step(model, model.vars, hmc_cov, chain, hmc_cov)
+#step_method = hmc_step(model, model.vars, hmc_cov)
 
 ndraw = 3e3
 

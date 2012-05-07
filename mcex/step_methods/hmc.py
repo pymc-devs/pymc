@@ -8,7 +8,11 @@ from numpy.linalg import inv, cholesky
 
 from utils import *
 from ..core import * 
-    
+
+
+# todo : 
+#make step method use separate gradient and logp functions
+
 def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2. ):
     n = C.shape[0]
     
@@ -25,14 +29,14 @@ def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2. ):
         nstep = int(floor(trajectory_length / step_size))
         
         q = q0
-        logp0, gradient = logp_d(q)
+        logp0, dlogp = logp_d(q)
         logp = logp0
         
         # momentum scale proportional to inverse of parameter scale (basically sqrt(covariance))
         p = p0 = cholesky_normal( q.shape, cholInvC)
         
         #use the leapfrog method
-        p = p - (e/2) * -gradient # half momentum update
+        p = p - (e/2) * -dlogp # half momentum update
         
         for i in range(nstep): 
             #alternate full variable and momentum updates
