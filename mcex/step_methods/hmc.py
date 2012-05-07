@@ -3,7 +3,8 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 ''' 
-from numpy import floor
+from numpy.random import uniform, normal
+from numpy import floor, dot, log , isfinite
 from numpy.linalg import inv, cholesky
 
 from utils import *
