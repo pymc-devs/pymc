@@ -166,7 +166,7 @@ def sample(draws, step, chain, sample_history, state = None):
         
         sample_history.record(chain)
         
-    return (time.time() - start)
+    return state, (time.time() - start)
 
 
 bool_types = set(['int8'])

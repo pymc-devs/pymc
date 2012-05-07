@@ -1,4 +1,5 @@
 from ..core import *
+import numpy as np 
 
 def array_step(astep, f, vars):
     mapping = DASpaceMap(vars)
@@ -39,3 +40,9 @@ def eigen(a, n = -1):
 
     indicies = np.argsort(eigenvalues)[::-1]
     return eigenvalues[indicies[0:n]], eigenvectors[:,indicies[0:n]]
+
+class SamplerHist(object):
+    def __init__(self):
+        self.metrops =[]
+    def acceptr(self):
+        return np.minimum(np.exp(self.metrops), 1)

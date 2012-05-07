@@ -24,6 +24,9 @@ def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2. ):
     
     def step(logp_d, state, q0):
         
+        if state is None:
+            state = SamplerHist()
+            
         #randomize step size
         e = uniform(.85, 1.15) * step_size
         nstep = int(floor(trajectory_length / step_size))
@@ -52,6 +55,7 @@ def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2. ):
         p = -p 
             
         mr = logp - logp0 + K(C, p0) - K(C, p)
+        state.metrops.append(mr)
         
         return state, metrop_select(mr, q, q0)
         
