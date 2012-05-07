@@ -18,7 +18,7 @@ class NpHistory(object):
         self._samples = samples
         self.nsamples = 0
     
-    def record(self, chain_state, step_method):
+    def record(self, chain_state):
         """
         records the position of a chain at a certain point in time
         as well as any variables of interest in the step method

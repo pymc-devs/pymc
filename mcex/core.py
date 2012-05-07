@@ -156,25 +156,15 @@ class IASpaceMap(object):
             a[slc] = np.ravel(v)
         return a
             
-def sample(draws, step_method, chain_state, sample_history ):
+
+def sample(draws, step, chain, sample_history, state = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
     start = time.time()
     for i in xrange(int(draws)):
-        chain_state = step_method.step(chain_state)
-        sample_history.record(chain_state, step_method)
+        state, chain = step(state, chain)
         
-    return (time.time() - start)
-
-
-def sample1(draws, step_method, chain_state, sample_history ):
-    """draw a number of samples using the given step method. Multiple step methods supported via compound step method
-    returns the amount of time taken"""
-    start = time.time()
-    for i in xrange(int(draws)):
-        step_method.step(chain_state, step_state)
-        
-        sample_history.record(chain_state)
+        sample_history.record(chain)
         
     return (time.time() - start)
 

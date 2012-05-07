@@ -3,33 +3,24 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
-import numpy as np
+from numpy.linalg import cholesky
+
 from ..core import *
 
-class MetropolisStep(object):
-    """Hamiltonian step method"""
-    def __init__(self,model, vars, covariance, scaling = .25, ):
-        self.mapping = DASpaceMap(vars)
-        self.logp = model_logp(model, vars)
-        
-        self.zero = np.zeros(self.model.mapping.dimensions)
-        self.covariance = covariance * scaling
-        
-    def step(self, chain_state):
+from utils import *
 
-        delta = np.random.multivariate_normal(mean = self.zero ,cov = self.covariance) 
+def metropolis_step(model, vars, C, scaling = .25):
+    logp_d = model_logp(model)
         
-        current_state = self.mapping.project(chain_state)
-        proposed_state = current_state + delta
+    cholC = cholesky(scaling * C)
         
-        current_logp = self.logp(chain_state)
-        proposed_logp = self.logp(self.mapping.rproject(proposed_state, chain_state))
+    def step(logp, state, q0):
 
-        log_metrop_ratio = (proposed_logp) - (current_logp) 
+        delta = cholesky_normal(q0.shape, cholC)
         
-        if (np.isfinite(log_metrop_ratio) and 
-            np.log(np.random.uniform()) < log_metrop_ratio):
-            
-            return proposed_state
-        else: 
-            return chain_state
+        q = q0 + delta  
+        return state, metrop_select(logp(q) - logp(q0),
+                                    q, q0)
+        
+    return array_step(step, logp_d, vars)
+        
