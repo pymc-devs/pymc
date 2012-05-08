@@ -8,7 +8,7 @@ import theano.tensor as t
 def invlogit(x):
     return np.exp(x)/(1 + np.exp(x)) 
 
-npred = 4
+npred = 20
 n = 4000
 
 effects_a = np.random.normal(size = npred)
@@ -39,10 +39,11 @@ chain = {'effects' : np.zeros((1,npred))}
 chain = find_MAP(model, chain)
 hmc_cov = approx_cov(model, chain) #find a good orientation using the hessian at the MAP
 
-step_method = metropolis_step(model, model.vars, hmc_cov) 
-
+step_method = hmc_step(model, model.vars, hmc_cov) 
+#step_method = split_hmc_step(model, model.vars, hmc_cov, chain, hmc_cov) 
 
 ndraw = 3e3
 
 history = NpHistory(model.vars, ndraw)
-print "took :", sample(ndraw, step_method, chain, history)
+state, t = sample(ndraw, step_method, chain, history)
+print "took :", t
