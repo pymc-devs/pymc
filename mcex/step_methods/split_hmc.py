@@ -31,7 +31,7 @@ def split_hmc_step(model, vars, C, approx_loc, approx_C, step_size_scaling = .25
     D, gamma = eig(A)
         
     e = step_size
-    R = real(gamma.dot(diag(exp(D* e))).dot(gamma.T))
+    R = real(gamma.dot(diag(exp(D * e))).dot(gamma.conj().T))
     def step(logp_d, state, q0):
         
         if state is None: 
@@ -56,7 +56,7 @@ def split_hmc_step(model, vars, C, approx_loc, approx_C, step_size_scaling = .25
             x = concatenate((q - approx_loc, p))
             x = dot(R, x)
             q = x[:n] + approx_loc
-             
+            p = x[n:] 
             logp, dlogp = logp_d(q)
             dlogp = dlogp + dot(approx_C, q - approx_loc)
             
@@ -65,7 +65,8 @@ def split_hmc_step(model, vars, C, approx_loc, approx_C, step_size_scaling = .25
         
         p = -p 
             
-        mr = logp - logp0 + K(C, p0) - K(C, p)
+        # - H(q*, p*) + H(q, p) = -H(q, p) + H(q0, p0) = -(- logp(q) + K(p)) + (-logp(q0) + K(p0))
+        mr = (-logp0) + K(C, p0) - ((-logp)  + K(C, p))
         state.metrops.append(mr)
         
         return state, metrop_select(mr, q, q0)
