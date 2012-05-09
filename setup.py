@@ -34,7 +34,8 @@ if __name__ == "__main__":
         license = LICENSE,
         url = URL,
         long_description = LONG_DESCRIPTION,
-        packages = ['mcex'], 
+        packages =
+        ['mcex','mcex/distributions','mcex/history','mcex/step_methods'],
         classifiers =classifiers,
         install_requires=['theano','numpy','scipy','numdifftools'])
 
