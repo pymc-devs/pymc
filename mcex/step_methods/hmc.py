@@ -54,7 +54,8 @@ def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2. ):
         
         p = -p 
             
-        mr = logp - logp0 + K(C, p0) - K(C, p)
+        # - H(q*, p*) + H(q, p) = -H(q, p) + H(q0, p0) = -(- logp(q) + K(p)) + (-logp(q0) + K(p0))
+        mr = (-logp0) + K(C, p0) - ((-logp)  + K(C, p))
         state.metrops.append(mr)
         
         return state, metrop_select(mr, q, q0)
