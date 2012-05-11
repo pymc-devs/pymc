@@ -64,14 +64,10 @@ class Trace(base.Trace):
         
         # Create the variable name strings.
         vstr = ', '.join(v + ' FLOAT' for v in var_str(self._shape))
-        
-        try:
-            query = "create table [%s] (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, trace  int(5), %s )" % (self.name, vstr)
-        
-            self.db.cur.execute(query)
-        except OperationalError:
-            "Table already exists"
-            return
+        query = """CREATE TABLE IF NOT EXISTS [%s]
+                     (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                      trace  int(5), %s)""" % (self.name, vstr)
+        self.db.cur.execute(query)
 
 
     
