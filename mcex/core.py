@@ -31,9 +31,11 @@ these functions add random variables
 def AddData(model, data, distribution):
     model.factors.append(distribution(data))
 
-def AddVar(model, name, distribution, shape = 1, dtype = 'float64'):
+def AddVar(model, name, distribution, shape = 1, dtype = 'float64', test = None):
     var = FreeVariable(name, shape, dtype)
     model.vars.append(var)
+    if test is not None: 
+        var.tag.test_value = test 
     model.factors.append(distribution(var))
     return var
     

@@ -8,6 +8,8 @@ The hope is that some of the lessons learned in this experimental package lead t
 in PyMC. People are encouraged to fork MCEx to try out their own designs and improvements 
 as well as make criticisms.
 
+For a tutorial on basic inference, see tutorial.py in the examples folder.
+
 Some design decisions
 
 +----------------------------------+---------------------------------------+---------------------------------------------------+
@@ -28,4 +30,5 @@ Some design decisions
 | Functional style design          | - Allows easier exchange of           | - Design less similar to Object Oriented design   |      
 |                                  |   components                          |                                                   |
 +----------------------------------+---------------------------------------+---------------------------------------------------+ 
+ 
  
