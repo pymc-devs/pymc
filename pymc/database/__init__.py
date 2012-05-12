@@ -32,7 +32,7 @@ file. Look at base.py for skeleton classes, and the other modules for examples.
 
 """
 
-__modules__ = ['no_trace', 'txt', 'ram', 'pickle', 'sqlite', 'hdf5', 'hdf52', "__test_import__"]
+__modules__ = ['no_trace', 'txt', 'ram', 'pickle', 'sqlite', 'hdf5', 'hdf5ea', "__test_import__"]
 
 from . import no_trace
 from . import txt
@@ -50,7 +50,7 @@ except ImportError:
     pass
 
 try:
-    from . import hdf52
+    from . import hdf5ea
 except ImportError:
     pass
 
