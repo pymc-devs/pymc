@@ -138,7 +138,7 @@ class Database(pickle.Database):
                  dbcomplevel=0, dbcomplib='zlib',
                  **kwds):
         """Create an HDF5 database instance, where samples are stored
-        in tables.
+        in extendable arrays.
 
         :Parameters:
         dbname : string
@@ -175,49 +175,29 @@ class Database(pickle.Database):
 
         self.trace_names = []
         self._traces = {}
-        self._states = {}
+        # self._states = {}
         self._chains = {}
         self._arrays = {}
 
-        # # LOAD LOGIC
-        # if self.chains > 0:
-        #     # Create traces from objects stored in Table.
-        #     db = self
-        #     for k in db._tables[-1].colnames:
-        #         db._traces[k] = Trace(name=k, db=db)
-        #         setattr(db, k, db._traces[k])
+        # load existing data
+        existing_chains = [ gr for gr in self._h5file.listNodes("/") 
+                            if gr._v_name[:5] == 'chain' ]
 
+        for chain in existing_chains:
+            nchain = int(chain._v_name[5:])
+            self._chains[nchain] = chain
 
-        #     # Walk nodes proceed from top to bottom, so we need to invert
-        #     # the list to have the chains in chronological order.
-        #     objects = {}
-        #     for chain in self._chains:
-        #         for node in db._h5file.walkNodes(chain, classname='VLArray'):
-        #             if node._v_name != '_state_':
-        #                 try:
-        #                     objects[node._v_name].append(node)
-        #                 except:
-        #                     objects[node._v_name] = [node,]
+            names = []
+            for array in chain._f_listNodes():
+                name = array._v_name
+                self._arrays[nchain, name] = array
 
-        #     # Note that the list vlarrays is in reverse order.
-        #     for k, vlarrays in six.iteritems(objects):
-        #         db._traces[k] = TraceObject(name=k, db=db, vlarrays=vlarrays)
-        #         setattr(db, k, db._traces[k])
+                if name not in self._traces:
+                    self._traces[name] = Trace(name, db=self)
 
-        #     # Restore table attributes.
-        #     # This restores the sampler's state for the last chain.
-        #     table = db._tables[-1]
-        #     for k in table.attrs._v_attrnamesuser:
-        #         setattr(db, k, getattr(table.attrs, k))
+                names.append(name)
 
-        #     # Restore group attributes.
-        #     for k in db._chains[-1]._f_listNodes():
-        #         if k.__class__ not in [tables.Table, tables.Group]:
-        #             setattr(db, k.name, k)
-
-        #     varnames = db._tables[-1].colnames+ objects.keys()
-        #     db.trace_names = db.chains * [varnames,]
-
+            self.trace_names.append(names)
 
 
     @property
@@ -230,42 +210,42 @@ class Database(pickle.Database):
         return len(self._chains)
 
 
-    def connect_model(self, model):
-        """Link the Database to the Model instance.
+    # def connect_model(self, model):
+    #     """Link the Database to the Model instance.
 
-        In case a new database is created from scratch, ``connect_model``
-        creates Trace objects for all tallyable pymc objects defined in
-        `model`.
+    #     In case a new database is created from scratch, ``connect_model``
+    #     creates Trace objects for all tallyable pymc objects defined in
+    #     `model`.
 
-        If the database is being loaded from an existing file, ``connect_model``
-        restore the objects trace to their stored value.
+    #     If the database is being loaded from an existing file, ``connect_model``
+    #     restore the objects trace to their stored value.
 
-        :Parameters:
-        model : pymc.Model instance
-          An instance holding the pymc objects defining a statistical
-          model (stochastics, deterministics, data, ...)
-        """
+    #     :Parameters:
+    #     model : pymc.Model instance
+    #       An instance holding the pymc objects defining a statistical
+    #       model (stochastics, deterministics, data, ...)
+    #     """
 
-        # Changed this to allow non-Model models. -AP
-        if isinstance(model, pymc.Model):
-            self.model = model
-        else:
-            raise AttributeError('Not a Model instance.')
+    #     # Changed this to allow non-Model models. -AP
+    #     if isinstance(model, pymc.Model):
+    #         self.model = model
+    #     else:
+    #         raise AttributeError('Not a Model instance.')
 
-        # Restore the state of the Model from an existing Database.
-        # The `load` method will have already created the Trace objects.
-        if hasattr(self, '_state_'):
-            names = set()
-            for morenames in self.trace_names:
-                names.update(morenames)
-            for name, fun in six.iteritems(model._funs_to_tally):
-                if name in self._traces:
-                    self._traces[name]._getfunc = fun
-                    names.remove(name)
-            if len(names) > 0:
-                raise RuntimeError("Some objects from the database"
-                                   + "have not been assigned a getfunc: %s" 
-                                      % ', '.join(names))
+    #     # Restore the state of the Model from an existing Database.
+    #     # The `load` method will have already created the Trace objects.
+    #     if hasattr(self, '_state_'):
+    #         names = set()
+    #         for morenames in self.trace_names:
+    #             names.update(morenames)
+    #         for name, fun in six.iteritems(model._funs_to_tally):
+    #             if name in self._traces:
+    #                 self._traces[name]._getfunc = fun
+    #                 names.remove(name)
+    #         if len(names) > 0:
+    #             raise RuntimeError("Some objects from the database"
+    #                                + "have not been assigned a getfunc: %s" 
+    #                                   % ', '.join(names))
 
 
     def _initialize(self, funs_to_tally, length):
@@ -290,7 +270,6 @@ class Database(pickle.Database):
             self._traces[name] = Trace(name, getfunc=fun, db=self)
             self._traces[name]._initialize(self.chains, length)
 
-        # XXX: not quite sure if this is right
         self.trace_names.append(funs_to_tally.keys())
 
 
