@@ -49,4 +49,9 @@ try:
 except ImportError:
     pass
 
+try:
+    from . import hdf52
+except ImportError:
+    pass
+
 
