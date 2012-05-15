@@ -7,12 +7,14 @@ from scipy.optimize import fmin_bfgs, fmin_ncg
 import numpy as np 
 from core import *
 
-def find_MAP( model, chain_state, minalg = fmin_bfgs, disp = False, retall = False):
+def find_MAP( model, chain_state, vars = None, minalg = fmin_bfgs, disp = False, retall = False):
     """
     Moves the chain to the local maximum a posteriori point given a model.
     Current default of fmin_bfgs does not deal well with optimizing close to sharp edges, especially if they are the minimum.
     """
-    vars = model.vars
+    if vars is None: 
+        vars = model.vars 
+        
     mapping = DASpaceMap(vars)
     
     logp = model_logp(model)
