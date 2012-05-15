@@ -12,6 +12,8 @@ from ..core import *
 
 # todo : 
 #make step method use separate gradient and logp functions
+#add constraint handling via page 37 of Radford's http://www.cs.utoronto.ca/~radford/ham-mcmc.abstract.html
+#allow users to pass Hamiltonian splitting functions
 
 def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2. ):
     n = C.shape[0]
