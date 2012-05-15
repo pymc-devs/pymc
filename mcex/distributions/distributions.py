@@ -66,3 +66,24 @@ def Gamma(alpha, beta):
                   -gammaln(alpha) + alpha*log(beta) - beta*value + switch(alpha != 1.0, (alpha - 1.0)*log(value), 0),
                   -inf)
     return dist
+
+def Poisson(lam):
+    def dist(value):
+        return switch( gt(lam,0),
+                       #factorial not implemented yet, so
+                       value * log(lam) - gammaln(value + 1) - lam,
+                       -inf)
+    return dist
+
+def ConstantDist(c):
+    def dist(value):
+        
+        return switch(eq(value, c), 0, -inf)
+    return dist
+
+def ZeroInflatedPoisson(theta, z):
+    def dist(value):
+        return switch(z, 
+                      Poisson(theta)(value), 
+                      ConstantDist(0)(value))
+    return dist
