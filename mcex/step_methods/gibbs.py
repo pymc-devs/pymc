@@ -4,15 +4,23 @@ Created on May 12, 2012
 @author: john
 '''
 from ..core import *
-from numpy import max, exp, cumsum, nested_iters, empty, searchsorted
+from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones
 from numpy.random import uniform
     
     
-def categorical_gibbs_step(var, conditionalp):
+def elemwise_cat_gibbs_step(model, var, values):
+    """
+    gibbs sampling for categorical variables that only have only have elementwise effects
+    """
+    
+    elogp = elemwise_logp(model, var)
+    sh = ones(var.dhshape);
+    def conditionalp(chain):
+        return array([elogp(v * sh) for v in values])
     
     def step( state, chain):
         chain = chain.copy()    
-        chain[str(var)] = categorical(conditionalp(**chain), var.dshape)
+        chain[str(var)] = categorical(conditionalp(chain), var.dshape)
         return state, chain
     
     return step
@@ -35,3 +43,15 @@ def categorical(prob, shape) :
         o[0] = searchsorted(p, r)
         
     return out[0,...]
+
+from theano.gof.graph import inputs
+
+
+
+
+
+def elemwise_logp(model, var):
+    p = function(model.vars, builtin_sum(filter(lambda term: var in inputs(term), model.terms)))
+    def fn(x):
+        return p(**x)
+    return p

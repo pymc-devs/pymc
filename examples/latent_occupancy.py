@@ -89,25 +89,12 @@ def AddDiscrete(model, name, distribution, shape, values):
 
 """
 
-z_condp = function(model.vars,
-                   ZeroInflatedPoisson(theta, zs)(y) + Bernoulli(p)(zs)   ,
-                   on_unused_input= 'ignore', allow_input_downcast=True)
-
 step_method = compound_step([hmc_step(model, [p, theta], C, step_size_scaling = .25, trajectory_length = 2),
-                             categorical_gibbs_step(z,  z_condp)])
+                             elemwise_cat_gibbs_step(model, z,  [0,1])])
 
 ndraw = 3e3
 
 history = NpHistory(model.vars, ndraw) # an object that keeps track
 state, t = sample(ndraw, step_method, chain, history)
 
-def hchain(history, idx):
-    return dict((name, hist[idx]) for name, hist in history._samples.iteritems())
-
 print "took :", t  
-"""
-#this doesn't look like it converges '
-figure()
-plot(history['p'])
-show()
-"""
