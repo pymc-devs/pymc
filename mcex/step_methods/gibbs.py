@@ -11,6 +11,7 @@ from numpy.random import uniform
 def elemwise_cat_gibbs_step(model, var, values):
     """
     gibbs sampling for categorical variables that only have only have elementwise effects
+    the variable can't be indexed into or transposed or anything otherwise that will mess things up
     """
     
     elogp = elemwise_logp(model, var)
@@ -51,7 +52,9 @@ from theano.gof.graph import inputs
 
 
 def elemwise_logp(model, var):
-    p = function(model.vars, builtin_sum(filter(lambda term: var in inputs(term), model.terms)))
+    terms = filter(lambda term: var in inputs(term), model.terms)
+
+    p = function(model.vars, builtin_sum(terms))
     def fn(x):
         return p(**x)
     return p
