@@ -7,7 +7,7 @@ import theano
 from theano.tensor import sum, grad, TensorType, TensorVariable
 from theano import function
 import numpy as np 
-from __builtin__ import sum as buitin_sum
+from __builtin__ import sum as builtin_sum
 import time 
 
 def FreeVariable( name, shape, dtype = 'float64'):
@@ -98,7 +98,7 @@ def model_logp_dlogp(model, dvars = None, mode = None ):
         
     
 def logp_graph(model):
-    return buitin_sum((sum(factor) for factor in model.factors))
+    return builtin_sum((sum(factor) for factor in model.factors))
     
 
     
