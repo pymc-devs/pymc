@@ -28,11 +28,6 @@ def elemwise_cat_gibbs_step(model, var, values):
     
     return step
 
-def project(key, value, chain):
-    chain = chain.copy()
-    chain[key] = value
-    return chain
-
 def categorical(prob, shape) :
     out = empty([1] + list(shape))
     
