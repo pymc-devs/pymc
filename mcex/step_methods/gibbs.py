@@ -13,20 +13,20 @@ def elemwise_cat_gibbs_step(model, var, values):
     gibbs sampling for categorical variables that only have only have elementwise effects
     the variable can't be indexed into or transposed or anything otherwise that will mess things up
     """
-    
     elogp = elemwise_logp(model, var)
-    sh = ones(var.dhshape);
-    def conditionalp(chain):
-        return array([elogp(v * sh) for v in values])
+    sh = ones(var.dshape, var.dtype);
     
     def step( state, chain):
-        chain = chain.copy()    
-        chain[str(var)] = categorical(conditionalp(chain), var.dshape)
-        return state, chain
+        def project(x):
+            c = chain.copy()
+            c[str(var)] = x
+            return c 
+            
+         
+        p = array([elogp(project(v * sh)) for v in values])
+        return state, project(categorical(p, var.dshape))
     
     return step
-
-
 
 def categorical(prob, shape) :
     out = empty([1] + list(shape))
@@ -52,9 +52,9 @@ from theano.gof.graph import inputs
 
 
 def elemwise_logp(model, var):
-    terms = filter(lambda term: var in inputs(term), model.terms)
+    terms = filter(lambda term: var in inputs([term]), model.factors)
 
     p = function(model.vars, builtin_sum(terms))
     def fn(x):
         return p(**x)
-    return p
+    return fn

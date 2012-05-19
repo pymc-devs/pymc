@@ -69,26 +69,6 @@ chain = {'p' : .5,
 chain, r = find_MAP(model, chain, vars = [p, theta], retall = True)
 C = approx_cov(model, chain, [p, theta])
 
-zs = t.constant(arange(0,1+1)[ :, None] * ones(y.shape)[None, :], 'zs', dtype = 'int8')
-
-"""
-gibbs sampling for discrete variables is currently done with categorical_gibbs. 
-This won't work for discrete but unbounded variables, like poisson.
- it would be really excellent to encapsulate this behavior somehow
- one idea is to have a separate class like "Model" (plus functions) which stores
- these exhaustive conditional probability calculations.
- 
- #this will only work for elemwise distributions
-def AddDiscrete(model, name, distribution, shape, values):
-    var = FreeVar(name)
-    
-    model.priors[name] = distribution()
-
-#this doesn't work 
-    
-
-"""
-
 step_method = compound_step([hmc_step(model, [p, theta], C, step_size_scaling = .25, trajectory_length = 2),
                              elemwise_cat_gibbs_step(model, z,  [0,1])])
 
