@@ -4,7 +4,7 @@ import warnings
 try:
     from numpy.testing import Tester
     import numpy
-    numpy.seterr(divide = 'raise', invalid = 'raise')
+    old_settings = numpy.seterr(divide = 'raise', invalid = 'raise')
     
     # TODO: Restore this implementation in 2.2, when minimum requirements are changed to Python 2.6
     # with warnings.catch_warnings():
@@ -24,6 +24,7 @@ try:
     finally:
         # Restore the list of warning filters.
         warnings.filters = original_filters
+        numpy.seterr(**old_settings)
         
 except ImportError:
     warnings.warn('NumPy 1.2 and nose are required to run the test suite.', ImportWarning)
