@@ -12,6 +12,8 @@ def elemwise_cat_gibbs_step(model, var, values):
     """
     gibbs sampling for categorical variables that only have only have elementwise effects
     the variable can't be indexed into or transposed or anything otherwise that will mess things up
+    
+    It would be great to come up with a way to make this more general (handling more complex elementwise variables)
     """
     elogp = elemwise_logp(model, var)
     sh = ones(var.dshape, var.dtype);
