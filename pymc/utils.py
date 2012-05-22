@@ -710,8 +710,8 @@ def coda_output(pymc_object):
     index_file = open(name+'_coda.ind', 'w')
 
     variables = [pymc_object]
-    if hasattr(pymc_object, 'variables'):
-        variables = pymc_object.variables
+    if hasattr(pymc_object, 'stochastics'):
+        variables = pymc_object.stochastics
 
     # Initialize index
     index = 1
@@ -721,7 +721,6 @@ def coda_output(pymc_object):
 
         vname = v.__name__
         print_("Processing", vname)
-
         try:
             index = _process_trace(trace_file, index_file, v.trace(), vname, index)
         except TypeError:
