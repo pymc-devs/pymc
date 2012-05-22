@@ -17,15 +17,16 @@ from pylab import setp, contourf, cm, title, colorbar, fill, text
 from pylab import errorbar
 
 # Import numpy functions
-from numpy import arange, log, ravel, rank, swapaxes, concatenate, asarray, ndim
+from numpy import arange, ravel, rank, swapaxes, concatenate, asarray, ndim
 from numpy import mean, std, sort, prod, floor, shape, size, transpose
-from numpy import min as nmin, max as nmax, abs
+from numpy import min as nmin, max as nmax, abs, log2, log, sqrt
 from numpy import append, ones, dtype, indices, array, unique, zeros
 from .utils import quantiles as calc_quantiles, hpd as calc_hpd
 try:
     from scipy import special
 except ImportError:
     special = None
+from scipy.stats import kurtosis
 
 from . import six
 from .six import print_
@@ -354,7 +355,7 @@ def plotwrapper(f):
 
 @plotwrapper
 def plot(data, name, format='png', suffix='', path='./', common_scale=True, datarange=(None, None), 
-    new=True, last=True, rows=1, num=1, fontmap = None, verbose=1):
+    new=True, last=True, rows=1, num=1, fontmap=None, verbose=1):
     """
     Generates summary plots for nodes of a given PyMC object.
 
@@ -430,10 +431,45 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
 
             plot(tdata[i], name+'_'+str(i), format=format, path=path, common_scale=common_scale, datarange=datarange, suffix=suffix, new=_new, last=_last, rows=_rows, num=_num)
 
+_sturges = lambda n: log2(n) + 1
+
+_doanes = lambda data, n: 1 + log(n) + log(1 + sqrt(kurtosis(data)*n/6.))
+
+_sqrt_choice = lambda n: sqrt(n)
 
 @plotwrapper
-def histogram(data, name, nbins=None, datarange=(None, None), format='png', suffix='', path='./', rows=1, 
+def histogram(data, name, bins='doanes', datarange=(None, None), format='png', suffix='', path='./', rows=1, 
     columns=1, num=1, last=True, fontmap = None, verbose=1):
+    """
+    Generates histogram from an array of data.
+
+    :Arguments:
+        data: array or list
+            Usually a trace from an MCMC sample.
+
+        name: string
+            The name of the histogram.
+            
+        bins: int or string
+            The number of bins, or a preferred binning method. Available methods include
+            'doanes', 'sturges' and 'sqrt' (defaults to 'doanes').
+            
+        datarange: tuple or list
+            Preferred range of histogram (defaults to (None,None)).
+
+        format (optional): string
+            Graphic output format (defaults to png).
+
+        suffix (optional): string
+            Filename suffix.
+
+        path (optional): string
+            Specifies location for saving plots (defaults to local directory).
+            
+        fontmap (optional): dict
+            Font map for plot.
+    """
+    
 
     # Internal histogram specification for handling nested arrays
     try:
@@ -449,12 +485,23 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
 
         subplot(rows, columns, num)
 
-        #Specify number of bins (10 as default)
+        #Specify number of bins
         uniquevals = len(unique(data))
-        nbins = nbins or uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(data)))
+        if bins=='sturges':
+            bins = uniquevals*(uniquevals<=25) or _sturges(len(data))
+        elif bins=='doanes':
+            bins = uniquevals*(uniquevals<=25) or _doanes(data, len(data))
+        elif bins=='sqrt':
+            bins = uniquevals*(uniquevals<=25) or _sqrt_choice(len(data))
+        elif isinstance(bins, int):
+            bins = bins
+        else:
+            raise ValueError('Invalid bins argument in histogram')
+        
+        # bins = bins or uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(data)))
 
         # Generate histogram
-        hist(data.tolist(), nbins, histtype='stepfilled')
+        hist(data.tolist(), bins, histtype='stepfilled')
 
         xlim(datarange)
 
@@ -491,7 +538,32 @@ def histogram(data, name, nbins=None, datarange=(None, None), format='png', suff
 @plotwrapper
 def trace(data, name, format='png', datarange=(None, None), suffix='', path='./', rows=1, columns=1, 
     num=1, last=True, fontmap = None, verbose=1):
-    # Internal plotting specification for handling nested arrays
+    """
+    Generates trace plot from an array of data.
+
+    :Arguments:
+        data: array or list
+            Usually a trace from an MCMC sample.
+
+        name: string
+            The name of the trace.
+            
+        datarange: tuple or list
+            Preferred y-range of trace (defaults to (None,None)).
+
+        format (optional): string
+            Graphic output format (defaults to png).
+
+        suffix (optional): string
+            Filename suffix.
+
+        path (optional): string
+            Specifies location for saving plots (defaults to local directory).
+            
+        fontmap (optional): dict
+            Font map for plot.
+
+    """
 
     if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
 
@@ -603,9 +675,36 @@ def discrepancy_plot(data, name='discrepancy', report_p=True, format='png', suff
     savefig("%s%s%s.%s" % (path, name, suffix, format))
     #close()
 
-def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof', path='./', 
+def gof_plot(simdata, trueval, name=None, bins=None, format='png', suffix='-gof', path='./', 
     fontmap = None, verbose=1):
-    """Plots histogram of replicated data, indicating the location of the observed data"""
+    """
+    Plots histogram of replicated data, indicating the location of the observed data
+    
+    :Arguments:
+        simdata: array or PyMC object
+            Trace of simulated data or the PyMC stochastic object containing trace.
+
+        trueval: numeric
+            True (observed) value of the data
+            
+        bins: int or string
+            The number of bins, or a preferred binning method. Available methods include
+            'doanes', 'sturges' and 'sqrt' (defaults to 'doanes').
+
+        format (optional): string
+            Graphic output format (defaults to png).
+
+        suffix (optional): string
+            Filename suffix.
+
+        path (optional): string
+            Specifies location for saving plots (defaults to local directory).
+            
+        fontmap (optional): dict
+            Font map for plot.
+
+    """
+    
 
     if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
     try:
@@ -618,7 +717,7 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
         # Iterate over more than one set of data
         for i in range(len(trueval)):
             n = name or 'MCMC'
-            gof_plot(simdata[:,i], trueval[i], '%s[%i]' % (n, i), nbins=nbins, format=format, suffix=suffix, path=path, fontmap=fontmap)
+            gof_plot(simdata[:,i], trueval[i], '%s[%i]' % (n, i), bins=bins, format=format, suffix=suffix, path=path, fontmap=fontmap)
         return
 
     if verbose>0:
@@ -626,12 +725,22 @@ def gof_plot(simdata, trueval, name=None, nbins=None, format='png', suffix='-gof
 
     figure()
 
-    #Specify number of bins (10 as default)
+    #Specify number of bins
     uniquevals = len(unique(simdata))
-    nbins = nbins or uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(simdata)))
+    if bins=='sturges':
+        bins = uniquevals*(uniquevals<=25) or _sturges(len(simdata))
+    elif bins=='doanes':
+        bins = uniquevals*(uniquevals<=25) or _doanes(simdata, len(simdata))
+    elif bins=='sqrt':
+        bins = uniquevals*(uniquevals<=25) or _sqrt_choice(len(simdata))
+    elif isinstance(bins, int):
+        bins = bins
+    else:
+        raise ValueError('Invalid bins argument in gof_plot')
+    
 
     # Generate histogram
-    hist(simdata, nbins)
+    hist(simdata, bins)
 
     # Plot options
     xlabel(name or 'Value', fontsize='x-small')
