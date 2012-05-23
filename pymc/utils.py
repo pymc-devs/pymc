@@ -688,7 +688,7 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
     except IndexError:
         print_("Too few elements for quantile calculation")
 
-def coda_output(pymc_object):
+def coda_output(pymc_object, name=None, chain=-1):
     """Generate output files that are compatible with CODA
 
     :Arguments:
@@ -701,7 +701,8 @@ def coda_output(pymc_object):
     print_("Generating CODA output")
     print_('='*50)
 
-    name = pymc_object.__name__
+    if name is None:
+        name = pymc_object.__name__
 
     # Open trace file
     trace_file = open(name+'_coda.out', 'w')
@@ -722,7 +723,7 @@ def coda_output(pymc_object):
         vname = v.__name__
         print_("Processing", vname)
         try:
-            index = _process_trace(trace_file, index_file, v.trace(), vname, index)
+            index = _process_trace(trace_file, index_file, v.trace(chain=chain), vname, index)
         except TypeError:
             pass
 

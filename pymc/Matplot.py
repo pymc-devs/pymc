@@ -433,7 +433,7 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
 
 _sturges = lambda n: log2(n) + 1
 
-_doanes = lambda data, n: 1 + log(n) + log(1 + sqrt(kurtosis(data)*n/6.))
+_doanes = lambda data, n: 1 + log(n) + log(1 + (kurtosis(data)*n/6.)**0.5)
 
 _sqrt_choice = lambda n: sqrt(n)
 
