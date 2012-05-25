@@ -53,7 +53,7 @@ class Database(base.Database):
             if dbmode=='w':
                 os.remove(dbname)
 
-    def commit(self):
+    def _finalize(self):
         """Dump traces using cPickle."""
         container={}
         try:
