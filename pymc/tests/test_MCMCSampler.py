@@ -32,7 +32,7 @@ class test_tiny_MCMC(TestCase):
             raise nose.SkipTest
 
         # Plot samples
-        plot(self.M)
+        plot(self.M, path=DIR, verbose=0)
 
 
 class test_MCMC(TestCase):
