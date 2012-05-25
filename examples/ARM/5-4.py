@@ -6,30 +6,25 @@ Created on May 18, 2012
 import numpy as np 
 from mcex import * 
 import theano.tensor as t 
+import utils 
 
-data = np.loadtxt('wells.dat',  usecols = range(1,6), skiprows = 1)
+data= utils.readcsv('wells.dat', delimiter = ' ', quotechar='"')
+
+switched = data['switch'].astype(bool)
 
 def demean(x, axis = 0):
     return x - np.mean(x, axis)
-cdist100 = demean(data[:,2, None]/100.)
-carsenic = demean(data[:,1, None])
+data = dict((n, demean(v)[:, None]) for n, v in data.iteritems())
 
-assoc = demean(data[:,3, None])
-educ4 = demean(data[:,4, None])/4.
+data['dist'] = data['dist']/100.
+data['educ'] = data['educ']/4.
 
+n = data['switch'].shape[0]
 
-
-data[:,2] /= 100. 
-
-n = data.shape[0]
-switch = data[:,0]
-data = data - np.mean(data, 0)
-
-predictors = concatenate((ones((n,1)), cdist100, carsenic, cdist100*carsenic, assoc, educ4), 1)
+predictors = concatenate((ones((n,1)), data['dist'], data['arsenic'], data['dist']*data['arsenic'], data['assoc'], data['educ']), 1)
 npr = predictors.shape[1]
 
 model = Model()
-
 
 def tinvlogit(x):
     return t.exp(x)/(1 + t.exp(x)) 
@@ -37,13 +32,11 @@ def tinvlogit(x):
 effects = AddVar(model, 'effects', Normal(mu = 0, tau = 10.**-2), (1,  npr))
 p = tinvlogit(sum(effects * predictors, 1))
 
-AddData(model, switch, Bernoulli(p))
+AddData(model, switched, Bernoulli(p))
 
 
 #make a chain with some starting point 
 chain = {'effects' : np.zeros((1,npr))}
-
-
 
 #move the chain to the MAP which should be a good starting point
 map = find_MAP(model, chain)
