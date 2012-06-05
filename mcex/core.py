@@ -5,6 +5,7 @@ Created on Mar 7, 2011
 '''
 import theano
 from theano.tensor import sum, grad, TensorType, TensorVariable
+import theano.tensor as t 
 from theano import function
 import numpy as np 
 from __builtin__ import sum as builtin_sum
@@ -98,7 +99,9 @@ def model_logp_dlogp(model, dvars = None, mode = None ):
         
     
 def logp_graph(model):
-    return builtin_sum((sum(factor) for factor in model.factors))
+    factors = map(sum,model.factors)
+    
+    return t.add(*factors)
     
 
     
@@ -157,7 +160,6 @@ class IASpaceMap(object):
         for slc, v in zip(self.slices, d):    
             a[slc] = np.ravel(v)
         return a
-            
 
 def sample(draws, step, chain, sample_history, state = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method

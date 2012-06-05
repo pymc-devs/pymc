@@ -1,7 +1,7 @@
 from core import *
 from distributions import *
 
-from map import * 
+from MAP import * 
 from num_derivatives import *
 
 from step_methods import *
