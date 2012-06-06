@@ -6,6 +6,7 @@ Introduction
 :Version: 2.1
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Web site: https://github.com/pymc-devs/pymc
+:Documentation: http://bit.ly/pymc_docs
 :Copyright: This document has been placed in the public domain.
 :License: PyMC is released under the MIT license.
 
