@@ -142,9 +142,9 @@ a Bayesian statistical model, run the sampler, save and visualize the results.
 In addition, it contains a list of the statistical distributions currently available. More `examples`_ of usage as well as
 `tutorials`_  are available from the PyMC web site.
 
-.. _`examples`: http://code.google.com/p/pymc/
+.. _`examples`: https://github.com/pymc-devs/pymc/wiki
 
-.. _`tutorials`: http://code.google.com/p/pymc/wiki/TutorialsAndRecipes
+.. _`tutorials`: http://pymc-devs.github.com/pymc/tutorial.html
 
 .. _`WinBUGS`: http://www.mrc-bsu.cam.ac.uk/bugs/
 
@@ -154,4 +154,4 @@ In addition, it contains a list of the statistical distributions currently avail
 
 .. _`R packages`: http://cran.r-project.org/web/packages/
 
-.. _`testimonials`: http://code.google.com/p/pymc/wiki/Testimonials
+.. _`testimonials`: https://github.com/pymc-devs/pymc/wiki/Testimonials
