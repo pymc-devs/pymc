@@ -653,7 +653,7 @@ in the subsequent sections, including:
 Also, be sure to check out the documentation for the Gaussian process 
 extension, which is available on PyMC's `download`_ page.
 
-.. _download: http://code.google.com/p/pymc/downloads/list
+.. _download: https://github.com/pymc-devs/pymc/downloads
 
 .. _Python documentation: http://www.python.org/doc/
 
