@@ -86,3 +86,19 @@ The history object can be indexed by names of variables returning an array with 
 and the other indexes the shape of the parameter. Thus the shape of history['x'].shape == (ndraw, 2,1)
 """ 
 print np.mean(history['x'], axis = 0)
+
+try :
+    from pylab import * 
+    figure()
+    subplot(2,2,1)
+    plot(history['x'][:,0,0])
+    subplot(2,2,2)
+    hist(history['x'][:,0,0], 50)
+    
+    subplot(2,2,3)
+    plot(history['z'])
+    subplot(2,2,4)
+    hist(history['z'], 50)
+    show()
+except ImportError : 
+    pass 
