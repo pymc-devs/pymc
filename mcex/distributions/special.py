@@ -5,7 +5,7 @@ Created on Mar 17, 2011
 '''
 from theano import scalar,tensor
 import numpy 
-from scipy import special
+from scipy import special, misc
 
 class GammaLn(scalar.UnaryScalarOp):
     """
@@ -109,7 +109,7 @@ class FactLn(scalar.UnaryScalarOp):
     """
     @staticmethod
     def st_impl(x):
-        return numpy.log(special.factorial(x))
+        return numpy.log(misc.factorial(x))
     def impl(self, x):
         return FactLn.st_impl(x)
     
