@@ -30,7 +30,7 @@ these functions add random variables
 """
 
 def AddData(model, data, distribution):
-    model.factors.append(distribution(data))
+    model.factors.append(distribution(t.constant(data)))
 
 def AddVar(model, name, distribution, shape = 1, dtype = 'float64', test = None):
     var = FreeVariable(name, shape, dtype)
@@ -64,7 +64,7 @@ def continuous_vars(model):
 these functions compile log-posterior functions (and derivatives)
 """
 def model_logp(model, mode = None):
-    f = function(model.vars, logp_graph(model), allow_input_downcast = True, mode = mode)
+    f = function(model.vars, logp_calc(model), allow_input_downcast = True, mode = mode)
     def fn(state):
         return f(**state)
     return fn
@@ -75,7 +75,7 @@ def model_dlogp(model, dvars = None, mode = None ):
     
     mapping = IASpaceMap(dvars)
     
-    logp = logp_graph(model)    
+    logp = logp_calc(model)    
     f = function(model.vars, [grad(logp, var) for var in dvars],
                  allow_input_downcast = True, mode = mode)
     def fn(state):
@@ -88,7 +88,7 @@ def model_logp_dlogp(model, dvars = None, mode = None ):
     
     mapping = IASpaceMap(dvars)
     
-    logp = logp_graph(model)
+    logp = logp_calc(model)
     calculations = [logp] + [grad(logp, var) for var in dvars]
         
     f = function(model.vars, calculations, allow_input_downcast = True, mode = mode)
@@ -98,7 +98,7 @@ def model_logp_dlogp(model, dvars = None, mode = None ):
     return fn
         
     
-def logp_graph(model):
+def logp_calc(model):
     factors = map(sum,model.factors)
     
     return t.add(*factors)
