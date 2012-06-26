@@ -19,7 +19,7 @@ from pylab import errorbar
 # Import numpy functions
 from numpy import arange, ravel, rank, swapaxes, concatenate, asarray, ndim
 from numpy import mean, std, sort, prod, floor, shape, size, transpose
-from numpy import min as nmin, max as nmax, abs, log2, log, sqrt
+from numpy import min as nmin, max as nmax, abs, log2, log, sqrt, isnan
 from numpy import append, ones, dtype, indices, array, unique, zeros
 from .utils import quantiles as calc_quantiles, hpd as calc_hpd
 try:
@@ -438,7 +438,7 @@ _doanes = lambda data, n: 1 + log(n) + log(1 + kurtosis(data)*(n/6.)**0.5)
 _sqrt_choice = lambda n: sqrt(n)
 
 @plotwrapper
-def histogram(data, name, bins='doanes', datarange=(None, None), format='png', suffix='', path='./', rows=1, 
+def histogram(data, name, bins='sturges', datarange=(None, None), format='png', suffix='', path='./', rows=1, 
     columns=1, num=1, last=True, fontmap = None, verbose=1):
     """
     Generates histogram from an array of data.
@@ -487,6 +487,8 @@ def histogram(data, name, bins='doanes', datarange=(None, None), format='png', s
 
         #Specify number of bins
         uniquevals = len(unique(data))
+        if isinstance(bins, int):
+            pass
         if bins=='sturges':
             bins = uniquevals*(uniquevals<=25) or _sturges(len(data))
         elif bins=='doanes':
@@ -498,7 +500,9 @@ def histogram(data, name, bins='doanes', datarange=(None, None), format='png', s
         else:
             raise ValueError('Invalid bins argument in histogram')
         
-        # bins = bins or uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(data)))
+        if isnan(bins):  
+            bins = uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(data)))
+            print_('Bins could not be calculated using selected method. Setting bins to %i.' % bins)
 
         # Generate histogram
         hist(data.tolist(), bins, histtype='stepfilled')
