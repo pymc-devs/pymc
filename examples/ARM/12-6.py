@@ -22,6 +22,7 @@ stfips,ctfips,st,cty,lon,lat,Uppm = readtable('cty.dat', delimiter = ',' )
 
 ufips = np.unique(fips)
 n = ufips.shape[0]
+group = np.searchsorted(ufips, fips)
 
 model = Model()
 
@@ -34,18 +35,12 @@ sd = AddVar(model, 'sd', Uniform(0, 10))
 
 means = AddVar(model, 'means', Normal(groupmean, groupsd ** -2), n)
 
-id_means = []
-for i, fip in enumerate(ufips):
-    d = lradon[fips == fip]
-    AddData(model, d , Normal(means[i], sd**-2))
-    id_means.append(np.mean(d))
-    
-
+AddData(model, lradon, Normal(means[group], sd**-2))
 
 
 
 logp = model_logp(model)
-def fn(var, idx, C):
+def fn(var, idx, C, logp):
     def lp(x):
         c = C.copy()
         v = c[var].copy()
@@ -54,10 +49,12 @@ def fn(var, idx, C):
         return logp(c)
     return lp
 
+obs_means = np.array([np.mean(lradon[fips == fip]) for fip in np.unique(fips)])
+
 chain = {'groupmean' : np.mean(lradon)[None],
-         'groupsd' : np.std(id_means)[None], 
+         'groupsd' : np.std(obs_means)[None], 
          'sd' : np.std(lradon)[None], 
-         'means' : np.array(id_means) }
+         'means' : obs_means }
 #MAP, retall = find_MAP(model, chain, retall = True)
 
 hmc_cov = approx_cov(model, chain) 
