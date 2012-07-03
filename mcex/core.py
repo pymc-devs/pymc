@@ -119,6 +119,7 @@ class DASpaceMap(object):
             self.dimensions += var.dsize
             
     def project(self, d, a = None):
+        """project dict space -> array space"""
         if a is None:
             a = np.empty(self.dimensions)
         else:
@@ -132,6 +133,7 @@ class DASpaceMap(object):
         return a
     
     def rproject(self, a, d = {}):
+        """project array space -> dict space"""
         d = d.copy()
             
         for var, slice in self.slices.iteritems():
