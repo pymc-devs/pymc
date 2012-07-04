@@ -23,23 +23,27 @@ stfips,ctfips,st,cty,lon,lat,Uppm = readtable('cty.dat', delimiter = ',' )
 ufips = np.unique(fips)
 n = ufips.shape[0]
 group = np.searchsorted(ufips, fips)
+obs_means = np.array([np.mean(lradon[fips == fip]) for fip in np.unique(fips)])
 
 model = Model()
 
-groupmean = AddVar(model, 'groupmean', Normal(0, 10**-2))
+chain = {'groupmean' : np.mean(lradon)[None],
+         'groupsd' : np.std(obs_means)[None], 
+         'sd' : np.std(lradon)[None], 
+         'means' : obs_means }
+
+groupmean = AddVar(model, 'groupmean', Normal(0, 10**-2), test = chain['groupmean'])
 
 #as recommended by "Prior distributions for variance parameters in hierarchical models"
-groupsd = AddVar(model, 'groupsd', Uniform(0,10))
+groupsd = AddVar(model, 'groupsd', Uniform(0,10), test = chain['groupsd'])
 
-sd = AddVar(model, 'sd', Uniform(0, 10))
+sd = AddVar(model, 'sd', Uniform(0, 10), test = chain['sd'])
 
-means = AddVar(model, 'means', Normal(groupmean, groupsd ** -2), n)
+means = AddVar(model, 'means', Normal(groupmean, groupsd ** -2), n, test = chain['means'])
 
 AddData(model, lradon, Normal(means[group], sd**-2))
 
 
-
-logp = model_logp(model)
 def fn(var, idx, C, logp):
     def lp(x):
         c = C.copy()
@@ -49,17 +53,11 @@ def fn(var, idx, C, logp):
         return logp(c)
     return lp
 
-obs_means = np.array([np.mean(lradon[fips == fip]) for fip in np.unique(fips)])
+MAP, retall = find_MAP(model, chain, retall = True)
 
-chain = {'groupmean' : np.mean(lradon)[None],
-         'groupsd' : np.std(obs_means)[None], 
-         'sd' : np.std(lradon)[None], 
-         'means' : obs_means }
-#MAP, retall = find_MAP(model, chain, retall = True)
 
-hmc_cov = approx_cov(model, chain) 
-
-step_method = hmc_step(model, model.vars, hmc_cov)
+C = approx_cov(model, MAP)
+step_method = hmc_step(model, model.vars, C)
 
 ndraw = 3e3
 
