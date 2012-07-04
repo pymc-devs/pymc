@@ -38,3 +38,15 @@ history = NpHistory(model.vars, ndraw) # an object that keeps track
 state, t = sample(ndraw, step_method, chain, history)
 
 print "took :", t
+
+from pylab import * 
+subplot(2,2,1)
+plot(history['x'][:,0,0])
+subplot(2,2,2)
+hist(history['x'][:,0,0])
+
+subplot(2,2,3)
+plot(history['z'])
+subplot(2,2,4)
+hist(history['x'])
+show()
