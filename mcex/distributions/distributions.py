@@ -3,9 +3,11 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
-from theano.tensor import switch, log, eq, neq, lt, gt, le, ge
+from theano.tensor import switch, log, eq, neq, lt, gt, le, ge, zeros_like
 from numpy import pi, inf
 from special import gammaln, factln
+
+from theano.printing import Print
 
 def Uniform(lb, ub):
     def dist(value):
@@ -13,6 +15,12 @@ def Uniform(lb, ub):
                   -log(ub-lb),
                   -inf)
     return dist
+
+def Flat():
+    def dist(value):
+        return zeros_like(value)
+    return dist
+
 def Normal(mu = 0.0, tau = 1.0):
     def dist(value):
         return switch(gt(tau , 0),
