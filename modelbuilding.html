@@ -179,19 +179,19 @@ distributions that may be helpful for creating custom stochastic variables.</p>
 a slightly more complex implementation which allows you to specify a
 <tt class="docutils literal"><span class="pre">random</span></tt> method for sampling the stochastic variable&#8217;s value conditional
 on its parents.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="nd">@pymc.stochastic</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">switchpoint</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">1900</span><span class="p">,</span> <span class="n">t_l</span><span class="o">=</span><span class="mi">1851</span><span class="p">,</span> <span class="n">t_h</span><span class="o">=</span><span class="mi">1962</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;The switchpoint for the rate of disaster occurrence.&quot;&quot;&quot;</span>
+<div class="highlight-python"><pre>@pymc.stochastic(dtype=int)
+def switchpoint(value=1900, t_l=1851, t_h=1962):
+    """The switchpoint for the rate of disaster occurrence."""
 
-    <span class="k">def</span> <span class="nf">logp</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">t_h</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">t_l</span><span class="p">:</span>
-            <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">t_h</span> <span class="o">-</span> <span class="n">t_l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    def logp(value, t_l, t_h):
+        if value &gt; t_h or value &lt; t_l:
+            return -numpy.inf
+        else:
+            return -numpy.log(t_h - t_l + 1)
 
-    <span class="k">def</span> <span class="nf">random</span><span class="p">(</span><span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">round</span><span class="p">(</span> <span class="p">(</span><span class="n">t_l</span> <span class="o">-</span> <span class="n">t_h</span><span class="p">)</span> <span class="o">*</span> <span class="n">random</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span> <span class="n">t_l</span>
-</pre></div>
+    def random(t_l, t_h):
+                from numpy.random import random
+        return numpy.round( (t_l - t_h) * random() ) + t_l</pre>
 </div>
 <p class="last">The stochastic variable again gets its name, docstring and parents from
 function <span class="math">\(switchpoint\)</span>, but in this case it will evaluate its
@@ -201,29 +201,29 @@ take a <tt class="docutils literal"><span class="pre">value</span></tt> argument
 </dd>
 <dt><strong>Direct</strong></dt>
 <dd><p class="first">It&#8217;s possible to instantiate <tt class="docutils literal"><span class="pre">Stochastic</span></tt> directly:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">switchpoint_logp</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">t_h</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">t_l</span><span class="p">:</span>
-        <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">t_h</span> <span class="o">-</span> <span class="n">t_l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<div class="highlight-python"><pre>def switchpoint_logp(value, t_l, t_h):
+    if value &gt; t_h or value &lt; t_l:
+        return -numpy.inf
+    else:
+        return -numpy.log(t_h - t_l + 1)
 
-<span class="k">def</span> <span class="nf">switchpoint_rand</span><span class="p">(</span><span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">round</span><span class="p">(</span> <span class="p">(</span><span class="n">t_l</span> <span class="o">-</span> <span class="n">t_h</span><span class="p">)</span> <span class="o">*</span> <span class="n">random</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span> <span class="n">t_l</span>
+def switchpoint_rand(t_l, t_h):
+        from numpy.random import random
+    return numpy.round( (t_l - t_h) * random() ) + t_l
 
-<span class="n">switchpoint</span> <span class="o">=</span> <span class="n">Stochastic</span><span class="p">(</span> <span class="n">logp</span> <span class="o">=</span> <span class="n">switchpoint_logp</span><span class="p">,</span>
-                <span class="n">doc</span> <span class="o">=</span> <span class="s">&#39;The switchpoint for the rate of disaster occurrence.&#39;</span><span class="p">,</span>
-                <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;switchpoint&#39;</span><span class="p">,</span>
-                <span class="n">parents</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;t_l&#39;</span><span class="p">:</span> <span class="mi">1851</span><span class="p">,</span> <span class="s">&#39;t_h&#39;</span><span class="p">:</span> <span class="mi">1962</span><span class="p">},</span>
-                <span class="n">random</span> <span class="o">=</span> <span class="n">switchpoint_rand</span><span class="p">,</span>
-                <span class="n">trace</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
-                <span class="n">value</span> <span class="o">=</span> <span class="mi">1900</span><span class="p">,</span>
-                <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
-                <span class="n">rseed</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span>
-                <span class="n">observed</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
-                <span class="n">cache_depth</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-                <span class="n">plot</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-                <span class="n">verbose</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
-</pre></div>
+switchpoint = Stochastic( logp = switchpoint_logp,
+                doc = 'The switchpoint for the rate of disaster occurrence.',
+                name = 'switchpoint',
+                parents = {'t_l': 1851, 't_h': 1962},
+                random = switchpoint_rand,
+                trace = True,
+                value = 1900,
+                dtype=int,
+                rseed = 1.,
+                observed = False,
+                cache_depth = 2,
+                plot=True,
+                verbose = 0)</pre>
 </div>
 <p class="last">Notice that the log-probability and random variate functions are specified
 externally and passed to <tt class="docutils literal"><span class="pre">Stochastic</span></tt> as arguments. This is a rather
