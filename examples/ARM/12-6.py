@@ -32,7 +32,7 @@ chain = {'groupmean' : np.mean(obs_means )[None],
          'sd' : np.std(lradon)[None], 
          'means' : obs_means }
 
-groupmean = AddVar(model, 'groupmean', Normal(0, 10**-2), test = chain['groupmean'])
+groupmean = AddVar(model, 'groupmean', Normal(0, (10)**-2), test = chain['groupmean'])
 
 #as recommended by "Prior distributions for variance parameters in hierarchical models"
 groupsd = AddVar(model, 'groupsd', Uniform(0,10), test = chain['groupsd'])
@@ -53,14 +53,20 @@ def fn(var, idx, C, logp):
         return logp(c)
     return lp
 
-ndraw = 3e3
+#first take some trial samples
+ndraw = 3e2
 C = approx_cov(model, chain)
 step_method = hmc_step(model, model.vars, C,.12, .75)
 
 history = NpHistory(model.vars, ndraw)
+state0, t = sample(ndraw, step_method, chain, history)
+print "prelim accept ratio ", np.eman(state0.acceptr())
+
+# now we can use the trial samples to get a better covariance matrix to get better movement
+c = covar(map(history.__getitem__, model.vars))
+step_method = hmc_step(model, model.vars, c, .12, .75)
+
+history = NpHistory(model.vars, ndraw)
 state, t = sample(ndraw, step_method, chain, history)
-
 print "took :", t
-
-
-
+print "accept ratio ", np.mean(state.acceptr())
