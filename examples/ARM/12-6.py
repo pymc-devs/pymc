@@ -27,7 +27,7 @@ obs_means = np.array([np.mean(lradon[fips == fip]) for fip in np.unique(fips)])
 
 model = Model()
 
-chain = {'groupmean' : np.mean(lradon)[None],
+chain = {'groupmean' : np.mean(obs_means )[None],
          'groupsd' : np.std(obs_means)[None], 
          'sd' : np.std(lradon)[None], 
          'means' : obs_means }
@@ -53,16 +53,13 @@ def fn(var, idx, C, logp):
         return logp(c)
     return lp
 
-MAP, retall = find_MAP(model, chain, retall = True)
-
-
-C = approx_cov(model, MAP)
-step_method = hmc_step(model, model.vars, C)
-
 ndraw = 3e3
+C = approx_cov(model, chain)
+step_method = hmc_step(model, model.vars, C,.12, .75)
 
 history = NpHistory(model.vars, ndraw)
 state, t = sample(ndraw, step_method, chain, history)
+
 print "took :", t
 
 
