@@ -157,6 +157,7 @@ There are three main ways to create stochastic variables, called the
                   return -numpy.log(t_h - t_l + 1)
 
           def random(t_l, t_h):
+		      from numpy.random import random
               return numpy.round( (t_l - t_h) * random() ) + t_l
 
    The stochastic variable again gets its name, docstring and parents from 
@@ -175,6 +176,7 @@ There are three main ways to create stochastic variables, called the
               return -numpy.log(t_h - t_l + 1)
 
       def switchpoint_rand(t_l, t_h):
+	      from numpy.random import random
           return numpy.round( (t_l - t_h) * random() ) + t_l
 
       switchpoint = Stochastic( logp = switchpoint_logp,
