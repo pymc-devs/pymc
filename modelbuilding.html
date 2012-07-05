@@ -179,19 +179,20 @@ distributions that may be helpful for creating custom stochastic variables.</p>
 a slightly more complex implementation which allows you to specify a
 <tt class="docutils literal"><span class="pre">random</span></tt> method for sampling the stochastic variable&#8217;s value conditional
 on its parents.</p>
-<div class="highlight-python"><pre>@pymc.stochastic(dtype=int)
-def switchpoint(value=1900, t_l=1851, t_h=1962):
-    """The switchpoint for the rate of disaster occurrence."""
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@pymc.stochastic</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">switchpoint</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">1900</span><span class="p">,</span> <span class="n">t_l</span><span class="o">=</span><span class="mi">1851</span><span class="p">,</span> <span class="n">t_h</span><span class="o">=</span><span class="mi">1962</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The switchpoint for the rate of disaster occurrence.&quot;&quot;&quot;</span>
 
-    def logp(value, t_l, t_h):
-        if value &gt; t_h or value &lt; t_l:
-            return -numpy.inf
-        else:
-            return -numpy.log(t_h - t_l + 1)
+    <span class="k">def</span> <span class="nf">logp</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">t_h</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">t_l</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">t_h</span> <span class="o">-</span> <span class="n">t_l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 
-    def random(t_l, t_h):
-                from numpy.random import random
-        return numpy.round( (t_l - t_h) * random() ) + t_l</pre>
+    <span class="k">def</span> <span class="nf">random</span><span class="p">(</span><span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">numpy.random</span> <span class="kn">import</span> <span class="n">random</span>
+        <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">round</span><span class="p">(</span> <span class="p">(</span><span class="n">t_l</span> <span class="o">-</span> <span class="n">t_h</span><span class="p">)</span> <span class="o">*</span> <span class="n">random</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span> <span class="n">t_l</span>
+</pre></div>
 </div>
 <p class="last">The stochastic variable again gets its name, docstring and parents from
 function <span class="math">\(switchpoint\)</span>, but in this case it will evaluate its
@@ -201,29 +202,30 @@ take a <tt class="docutils literal"><span class="pre">value</span></tt> argument
 </dd>
 <dt><strong>Direct</strong></dt>
 <dd><p class="first">It&#8217;s possible to instantiate <tt class="docutils literal"><span class="pre">Stochastic</span></tt> directly:</p>
-<div class="highlight-python"><pre>def switchpoint_logp(value, t_l, t_h):
-    if value &gt; t_h or value &lt; t_l:
-        return -numpy.inf
-    else:
-        return -numpy.log(t_h - t_l + 1)
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">switchpoint_logp</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">t_h</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">t_l</span><span class="p">:</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">t_h</span> <span class="o">-</span> <span class="n">t_l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 
-def switchpoint_rand(t_l, t_h):
-        from numpy.random import random
-    return numpy.round( (t_l - t_h) * random() ) + t_l
+<span class="k">def</span> <span class="nf">switchpoint_rand</span><span class="p">(</span><span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">numpy.random</span> <span class="kn">import</span> <span class="n">random</span>
+    <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">round</span><span class="p">(</span> <span class="p">(</span><span class="n">t_l</span> <span class="o">-</span> <span class="n">t_h</span><span class="p">)</span> <span class="o">*</span> <span class="n">random</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span> <span class="n">t_l</span>
 
-switchpoint = Stochastic( logp = switchpoint_logp,
-                doc = 'The switchpoint for the rate of disaster occurrence.',
-                name = 'switchpoint',
-                parents = {'t_l': 1851, 't_h': 1962},
-                random = switchpoint_rand,
-                trace = True,
-                value = 1900,
-                dtype=int,
-                rseed = 1.,
-                observed = False,
-                cache_depth = 2,
-                plot=True,
-                verbose = 0)</pre>
+<span class="n">switchpoint</span> <span class="o">=</span> <span class="n">Stochastic</span><span class="p">(</span> <span class="n">logp</span> <span class="o">=</span> <span class="n">switchpoint_logp</span><span class="p">,</span>
+                <span class="n">doc</span> <span class="o">=</span> <span class="s">&#39;The switchpoint for the rate of disaster occurrence.&#39;</span><span class="p">,</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;switchpoint&#39;</span><span class="p">,</span>
+                <span class="n">parents</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;t_l&#39;</span><span class="p">:</span> <span class="mi">1851</span><span class="p">,</span> <span class="s">&#39;t_h&#39;</span><span class="p">:</span> <span class="mi">1962</span><span class="p">},</span>
+                <span class="n">random</span> <span class="o">=</span> <span class="n">switchpoint_rand</span><span class="p">,</span>
+                <span class="n">trace</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="mi">1900</span><span class="p">,</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                <span class="n">rseed</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span>
+                <span class="n">observed</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                <span class="n">cache_depth</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+                <span class="n">plot</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                <span class="n">verbose</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
 </div>
 <p class="last">Notice that the log-probability and random variate functions are specified
 externally and passed to <tt class="docutils literal"><span class="pre">Stochastic</span></tt> as arguments. This is a rather
@@ -320,9 +322,8 @@ These are brief enough to list:</p>
 <dt><tt class="docutils literal"><span class="pre">Index</span></tt>:</dt>
 <dd><p class="first">Has two parents <span class="math">\(x\)</span> and <tt class="docutils literal"><span class="pre">index</span></tt>. <span class="math">\(x\)</span> must be iterables,
 <tt class="docutils literal"><span class="pre">index</span></tt> must be valued as an integer. The value of an <tt class="docutils literal"><span class="pre">index</span></tt> is:</p>
-<blockquote class="last">
-<div><tt class="docutils literal"><span class="pre">Index</span></tt> is useful for implementing dynamic models, in which the
-parent-child connections change.</div></blockquote>
+<p class="last"><tt class="docutils literal"><span class="pre">Index</span></tt> is useful for implementing dynamic models, in which the
+parent-child connections change.</p>
 </dd>
 <dt><tt class="docutils literal"><span class="pre">Lambda</span></tt>:</dt>
 <dd>Converts an anonymous function (in Python, called <strong>lambda functions</strong>)
@@ -339,8 +340,7 @@ element is determined by the others. <tt class="docutils literal"><span class="p
 to step methods.</p>
 </dd>
 <dt><strong>Elementary operations on variables</strong></dt>
-<dd><blockquote class="first">
-<div><p>Certain elementary operations on variables create deterministic variables. For example:</p>
+<dd><p class="first">Certain elementary operations on variables create deterministic variables. For example:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">MvNormalCov</span><span class="p">(</span><span class="s">&#39;x&#39;</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span><span class="n">numpy</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">MvNormalCov</span><span class="p">(</span><span class="s">&#39;y&#39;</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span><span class="n">numpy</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">x</span><span class="o">+</span><span class="n">y</span>
@@ -351,7 +351,6 @@ to step methods.</p>
 <span class="go">&lt;pymc.PyMCObjects.Deterministic &#39;(x[1]_add_y[2])&#39; at 0x105c52410&gt;</span>
 </pre></div>
 </div>
-</div></blockquote>
 <p class="last">All the objects thus created have <tt class="docutils literal"><span class="pre">trace=False</span></tt> and <tt class="docutils literal"><span class="pre">plot=False</span></tt> by
 default. This convenient method of generating simple deterministics was
 inspired by <a class="reference internal" href="references.html#kerman2004">[Kerman2004]</a>.</p>
@@ -417,7 +416,7 @@ parent of some variable. Consider <span class="math">\(y\)</span> in the followi
 wouldn&#8217;t want to manually enter <span class="math">\(N\)</span> parent labels <tt class="docutils literal"><span class="pre">`x_0'</span></tt>, <tt class="docutils literal"><span class="pre">`x_1'</span></tt>,
 etc.</p>
 <p>This situation can be handled naturally in PyMC:</p>
-<div class="highlight-python"><pre>    N = 10
+<div class="highlight-python"><pre>N = 10
 x_0 = pymc.Normal(`x_0', mu=0, tau=1)
 
 x = numpy.empty(N, dtype=object)
