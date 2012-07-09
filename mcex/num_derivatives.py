@@ -7,7 +7,7 @@ import numdifftools as nd
 import numpy as np 
 from core import *
 
-def approx_cov(model,chain_state, vars = None):
+def approx_hess(model,chain_state, vars = None):
     """
     returns an approximation of the hessian at the current chain location 
     """
@@ -21,4 +21,4 @@ def approx_cov(model,chain_state, vars = None):
     
     #find the jacobian of the gradient function at the current position
     #this should be the hessian; invert it to find the approximate covariance matrix
-    return np.linalg.inv(nd.Jacobian(grad_logp)(mapping.project(chain_state)))
+    return nd.Jacobian(grad_logp)(mapping.project(chain_state))
