@@ -6,3 +6,5 @@ from num_derivatives import *
 
 from step_methods import *
 from history import *
+
+from misc import * 
