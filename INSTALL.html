@@ -162,6 +162,15 @@ type:</p>
 </div>
 <p>This will build the C and Fortran extension and copy the libraries and python
 modules in the <cite>site-packages</cite> directory of your Python distribution.</p>
+<p>Some Windows users have reported problems building PyMC with MinGW,
+particularly under Enthought Python. An alternative approach in this case is
+to use the gcc and gfortran compilers that are bundled with EPD (located in the
+Scripts directory). In order to do this, you should add the EPD &#8220;Scripts&#8221;
+directory to your PATH environment variable (ensuring that it appears ahead of
+the MinGW binary directory, if it exists on your PATH). Then build PyMC using
+the install command above.</p>
+<p>Alternatively, one may build the currently-available release of PyMC using
+<a class="reference external" href="http://www.pip-installer.org">pip</a>.</p>
 </div>
 <div class="section" id="mac-os-x-or-linux">
 <h3>2.4.2. Mac OS X or Linux<a class="headerlink" href="#mac-os-x-or-linux" title="Permalink to this headline">¶</a></h3>
