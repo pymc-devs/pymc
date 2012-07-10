@@ -157,7 +157,7 @@ There are three main ways to create stochastic variables, called the
                   return -numpy.log(t_h - t_l + 1)
 
           def random(t_l, t_h):
-		      from numpy.random import random
+              from numpy.random import random
               return numpy.round( (t_l - t_h) * random() ) + t_l
 
    The stochastic variable again gets its name, docstring and parents from 
@@ -176,7 +176,7 @@ There are three main ways to create stochastic variables, called the
               return -numpy.log(t_h - t_l + 1)
 
       def switchpoint_rand(t_l, t_h):
-	      from numpy.random import random
+          from numpy.random import random
           return numpy.round( (t_l - t_h) * random() ) + t_l
 
       switchpoint = Stochastic( logp = switchpoint_logp,
@@ -208,7 +208,7 @@ There are three main ways to create stochastic variables, called the
     stochastic variable's value should be updated is using statements of the 
     following form::
 
-    	A.value = new_value
+        A.value = new_value
  
     The following are in-place updates and should _never_ be used::
 
@@ -311,11 +311,11 @@ have similar **automatic**, **decorator**, and **direct** interfaces:
     ``Index``:
         Has two parents :math:`x` and ``index``. :math:`x` must be iterables, 
         ``index`` must be valued as an integer. The value of an ``index`` is:
-		
-		.. math: x[\mathtt{index}]^T y[\mathtt{index}].
-		
-		``Index`` is useful for implementing dynamic models, in which the 
-		parent-child connections change.
+        
+        .. math: x[\mathtt{index}]^T y[\mathtt{index}].
+        
+        ``Index`` is useful for implementing dynamic models, in which the 
+        parent-child connections change.
 
     ``Lambda``:
         Converts an anonymous function (in Python, called **lambda functions**) 
@@ -332,19 +332,19 @@ have similar **automatic**, **decorator**, and **direct** interfaces:
 
     It’s a good idea to use these classes when feasible in order to give hints 
     to step methods.
-	
+    
 **Elementary operations on variables** 
-	Certain elementary operations on variables create deterministic variables. For example::
-	
-		>>> x = pymc.MvNormalCov('x',numpy.ones(3),numpy.eye(3)) 
-		>>> y = pymc.MvNormalCov('y',numpy.ones(3),numpy.eye(3)) 
-		>>> print x+y 
-		<pymc.PyMCObjects.Deterministic '(x_add_y)' at 0x105c3bd10> 
-		>>> print x[0]
-		<pymc.CommonDeterministics.Index 'x[0]' at 0x105c52390> 
-		>>> print x[1]+y[2] 
-		<pymc.PyMCObjects.Deterministic '(x[1]_add_y[2])' at 0x105c52410>
-		
+    Certain elementary operations on variables create deterministic variables. For example::
+    
+        >>> x = pymc.MvNormalCov('x',numpy.ones(3),numpy.eye(3)) 
+        >>> y = pymc.MvNormalCov('y',numpy.ones(3),numpy.eye(3)) 
+        >>> print x+y 
+        <pymc.PyMCObjects.Deterministic '(x_add_y)' at 0x105c3bd10> 
+        >>> print x[0]
+        <pymc.CommonDeterministics.Index 'x[0]' at 0x105c52390> 
+        >>> print x[1]+y[2] 
+        <pymc.PyMCObjects.Deterministic '(x[1]_add_y[2])' at 0x105c52410>
+        
     All the objects thus created have ``trace=False`` and ``plot=False`` by 
     default. This convenient method of generating simple deterministics was 
     inspired by [Kerman2004]_.
@@ -418,7 +418,7 @@ etc.
 
 This situation can be handled naturally in PyMC::
 
-	N = 10
+    N = 10
     x_0 = pymc.Normal(`x_0', mu=0, tau=1)
     
     x = numpy.empty(N, dtype=object)
