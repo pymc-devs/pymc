@@ -374,7 +374,10 @@
     <span class="n">name</span> <span class="o">=</span> <span class="n">capitalize</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
 
     <span class="c"># Build docstring from distribution</span>
-    <span class="n">docstr</span> <span class="o">=</span> <span class="n">name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="s">&#39; = &#39;</span><span class="o">+</span><span class="n">name</span> <span class="o">+</span> <span class="s">&#39;(name, &#39;</span><span class="o">+</span><span class="s">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parent_names</span><span class="p">)</span><span class="o">+</span><span class="s">&#39;, value=None, observed=False,&#39;</span>
+    <span class="n">parents_str</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">parent_names</span><span class="p">:</span>
+        <span class="n">parents_str</span> <span class="o">=</span> <span class="s">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parent_names</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;, &#39;</span> 
+    <span class="n">docstr</span> <span class="o">=</span> <span class="n">name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="s">&#39; = &#39;</span><span class="o">+</span><span class="n">name</span> <span class="o">+</span> <span class="s">&#39;(name, &#39;</span><span class="o">+</span><span class="n">parents_str</span><span class="o">+</span><span class="s">&#39;value=None, observed=False,&#39;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">mv</span><span class="p">:</span>
         <span class="n">docstr</span> <span class="o">+=</span> <span class="s">&#39; size=1,&#39;</span>
     <span class="n">docstr</span> <span class="o">+=</span> <span class="s">&#39; trace=True, rseed=True, doc=None, verbose=-1, debug=False)</span><span class="se">\n\n</span><span class="s">&#39;</span>
@@ -881,7 +884,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">&gt;</span><span class="mf">0.0001</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">&gt;</span><span class="mf">0.0001</span><span class="p">):</span>
         <span class="n">print_</span><span class="p">(</span><span class="s">&quot;Probabilities in categorical_like sum to&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="nb">int</span><span class="p">:</span>
         <span class="c">#print_(&quot;Non-integer values in categorical_like&quot;)</span>
@@ -1975,9 +1978,16 @@
 <span class="sd">        :math:`\mu=r(1-p)/p`</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">alpha</span> <span class="o">&gt;</span> <span class="mf">1e10</span><span class="p">):</span>
-        <span class="c"># Return Poisson when alpha gets very large</span>
-        <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">alpha</span> <span class="o">&gt;</span> <span class="mf">1e10</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">alpha</span> <span class="o">&gt;</span> <span class="mf">1e10</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="c"># Return Poisson when alpha gets very large</span>
+            <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span>
+        
+        <span class="c"># Split big and small dispersion values</span>
+        <span class="n">big</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">&gt;</span> <span class="mf">1e10</span>
+        <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">big</span><span class="p">],</span> <span class="n">mu</span><span class="p">[</span><span class="n">big</span><span class="p">])</span> <span class="o">+</span> <span class="n">flib</span><span class="o">.</span><span class="n">negbin2</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">big</span><span class="o">-</span><span class="bp">True</span><span class="p">],</span>
+                <span class="n">mu</span><span class="p">[</span><span class="n">big</span><span class="o">-</span><span class="bp">True</span><span class="p">],</span> <span class="n">alpha</span><span class="p">[</span><span class="n">big</span><span class="o">-</span><span class="bp">True</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">negbin2</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
 </div>
 <span class="n">negative_binomial_grad_like</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;mu&#39;</span>    <span class="p">:</span> <span class="n">flib</span><span class="o">.</span><span class="n">negbin2_gmu</span><span class="p">,</span>
