@@ -59,14 +59,12 @@ AddData(model, lradon, Normal( floor*floor_m + means[group], sd**-2))
 
 
 #first take some trial samples
-ndraw = 1e4
+ndraw = 1e3
 
-
-c = approx_hess(model, chain)
-
-step_method = hmc_step(model, model.vars, c,.12, .75, is_cov = False)
+step_method = fast_hmc_step(model, model.vars, 20,.10, .25, )
 
 history = NpHistory(model.vars, ndraw)
+
 state, t = sample(ndraw, step_method, chain, history)
     
 print  " took: ", t
