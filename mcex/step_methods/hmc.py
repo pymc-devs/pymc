@@ -20,7 +20,7 @@ def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2. ):
     
     logp_d_dict = model_logp_dlogp(model, vars)
     
-    step_size = step_size_scaling * n**(1/4.)
+    step_size = step_size_scaling / n**(1/4.)
     
     cholInvC = cholesky(inv(C))
     
