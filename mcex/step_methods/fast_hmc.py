@@ -17,7 +17,7 @@ def fast_hmc_step(model, vars, m, step_size_scaling = .25, trajectory_length = 2
     
     logp_d_dict = model_logp_dlogp(model, vars)
     
-    step_size = step_size_scaling * n**(1/4.)
+    step_size = step_size_scaling / n**(1/4.)
     def step(logp_d, state, q0):
         
         if state is None:
