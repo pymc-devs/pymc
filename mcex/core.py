@@ -169,8 +169,6 @@ def sample(draws, step, chain, sample_history, state = None):
     start = time.time()
     for i in xrange(int(draws)):
         state, chain = step(state, chain)
-        if i == 100:
-            print "well that's weird"
         sample_history.record(chain)
         
     return state, (time.time() - start)

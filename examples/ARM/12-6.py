@@ -59,9 +59,13 @@ AddData(model, lradon, Normal( floor*floor_m + means[group], sd**-2))
 
 
 #first take some trial samples
-ndraw = 1e3
+ndraw = 3e3
 
-step_method = fast_hmc_step(model, model.vars, 20,.10, .25, )
+#step_method = velocity_hmc_step(model, model.vars, 20,.20, 1.5, )
+
+hmc_hess = approx_hess(model, chain) 
+
+step_method = hmc_step(model, model.vars, hmc_hess, .1, 1., is_cov = False)
 
 history = NpHistory(model.vars, ndraw)
 
