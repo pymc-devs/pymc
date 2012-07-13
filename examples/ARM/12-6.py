@@ -65,7 +65,7 @@ ndraw = 3e3
 
 hmc_hess = approx_hess(model, chain) 
 
-step_method = hmc_step(model, model.vars, hmc_hess, .1, 1., is_cov = False)
+step_method = hmc_step(model, model.vars, hmc_hess, .5, 1.5, is_cov = False)
 
 history = NpHistory(model.vars, ndraw)
 

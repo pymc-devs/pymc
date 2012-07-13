@@ -1,17 +1,21 @@
 from ..core import *
 import numpy as np 
 
-def array_step(astep, f, vars):
+def array_step(astep, vars, fs):
     mapping = DASpaceMap(vars)
     
     def step(state, chain):
-        def fn( a):
-            return f(mapping.rproject(a, chain))
         
-        state, achain = astep(fn, state, mapping.project(chain))
+        fns = [arr_wrap(f, mapping, chain) for f in fs]
+        
+        state, achain = astep(state, mapping.project(chain), *fns)
         return state, mapping.rproject(achain, chain)
     return step
 
+def arr_wrap(f, mapping, chain):    
+    def fn( a):
+        return f(mapping.rproject(a, chain))
+    return fn
 
 from numpy.random import uniform, normal
 from numpy import dot, log , isfinite
