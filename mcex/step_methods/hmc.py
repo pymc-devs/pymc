@@ -23,7 +23,7 @@ def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is
     logp_dict = model_logp(model)
     dlogp_dict = model_dlogp(model, vars)
     
-    step_size = step_size_scaling * n**(-1/4.)
+    step_size = step_size_scaling / n**(1/4.)
     
     pot = quad_potential(C, is_cov)
 
