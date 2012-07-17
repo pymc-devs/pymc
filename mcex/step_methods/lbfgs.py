@@ -7,80 +7,102 @@ from numpy import *
 
 from Queue import Queue
 
-def HessApproxGen(object):
+class HessApproxGen(object):
     def __init__(self, n, S0 = 1e-8):
         self.S0 = S0
-        self.lps = Queue(n)
-        self.xs = Queue(n)
-        self.grads = Queue(n)
+        self.lps = IterQueue(n)
+        self.xs = IterQueue(n)
+        self.grads = IterQueue(n)
         
-    def update(self, lp, x, dlp):
+    def update(self, x, lp, dlp):
         self.lps.put(lp)
         self.xs.put(x)
         self.grads.put(dlp)
 
-        d = zip(sorted(self.xs   , self.lps),
-                sorted(self.grads, self.lps))
+        d = zip(self.lps, self.xs, self.grads)
+        d.sort(key = lambda a: a[0])
 
-        bfgs = LBFGS(self.S0)
-        x0, g0 = d.next()
-        while True:
-            while True:
-                x1,g1 = d.next()
+        lbfgs = LBFGS(self.S0)
+        if len(d) > 0:
+            _,x0, g0 = d.pop(0)
+            for _,x1,g1 in d:
                 s = x1 - x0
                 y = g1 - g0
                 
                 sy = dot(s, y)
                 if sy > 0:
-                    bfgs.update(s,y, sy)
-                        
-                x0 = x1
-                g0 = g1
-        return LBFGS
+                    lbfgs.update(s,y, sy)  
+                    x0 = x1
+                    g0 = g1
+                    
+        return lbfgs
         
 
-def Ipq_dot((p,q), vi):
-    qiTvi = dot(q, vi)
-    pq_v = p * -qiTvi
-    return vi + pq_v
+def Iab_dot(vi, (a, b)):
+    return vi + a * -dot(b, vi)
+
+class I_abT_Product(object):
+    def __init__(self, A0):
+        self.A0= A0 
+        self.a = []
+        self.b = []
+        
+    def dot(self, v):
+        ab = zip(self.a, self.b)
+        return reduce(Iab_dot, ab, self.A0 * v)
+    
+    def Tdot(self, v):
+        ba = reversed(zip(self.b, self.a))
+        return self.A0 * reduce(Iab_dot, ba, v)
+    
+    def update(self, a, b):
+        self.a.append(a)
+        self.b.append(b)
+
 
 class LBFGS(object):
-    def __init__(self, S0):
-        self.S0 =S0
-        self.C0 = 1./S0
-        self.pq =[]
-        self.ut = [] 
-        
+    def __init__(self, Var0):
+        C0 = sqrt(Var0)
+
+        self.C = I_abT_Product(C0)
+        self.S = I_abT_Product(1./C0)
+
         
     def update(self, s, y, sy):
         
-        By = self.Bdot(y)
         Bs = self.Bdot(s)
+        sBs =dot(s.T, Bs)
+        ro = sqrt(sy/sBs)
         
         p = s /sy
-        q = sqrt(sy/dot(s, By))*Bs - y
-        self.pq.appen((p,q))
+        q = Bs*ro + y
         
-        sBs =dot(s, Bs)
+        t = Bs + y/ro
+        u = s/sBs
+        
+        """
+                p = s /sy
+        q = sqrt(sy/sBs)*Bs - y
+        
         t = s/sBs
-        u = sqrt(sBs/sy) * y + Bs
-        self.ut.append((u,t))
+        u = sqrt(sBs/sy) * y + Bs"""
         
-    def Sdot(self, x):
-        return reduce(Ipq_dot, self.pq, self.S0 * x)
-    def STdot(self, x):
-        return self.S0 * reduce(Ipq_dot, self.pq, x)
+        self.S.update(p, q)
+        self.C.update(t, u)
+        
     def Hdot(self, x):
-        return self.Sdot(self.STdot(x))
+        return self.S.dot(self.S.Tdot(x))
     
-    
-    def Cdot(self,x ):
-        return reduce(Ipq_dot, self.ut, self.C0 * x)
-    
-    def CTdot(self, x):
-        return self.C0 * reduce(Ipq_dot, self.ut, x)
     def Bdot(self, x):
-        return self.Cdot(self.CTdot(x))
+        return self.C.dot(self.C.Tdot(x))
         
-def argsort(seq):
-    return sorted(range(len(seq)), key=seq.__getitem__)
+class IterQueue(list): 
+    
+    def __init__(self, n):
+        self.n = n 
+        
+    def put(self, v):
+        self.append(v)
+        if len(self) > self.n: 
+            self.pop(0)
+            

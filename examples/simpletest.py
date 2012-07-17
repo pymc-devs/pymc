@@ -26,7 +26,7 @@ chain = {'x' : np.array([[0.2],[.3]]),
 
 
 #step_method = split_hmc_step(model, model.vars, hmc_cov, chain, hmc_cov)
-step_method = fast_hmc_step(model, model.vars,2)
+step_method = vlbfgs_hmc_step(model, model.vars,60)
 
 ndraw = 1e3
 history = NpHistory(model.vars, ndraw) # an object that keeps track
