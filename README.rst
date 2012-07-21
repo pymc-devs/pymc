@@ -2,8 +2,7 @@
 Introduction
 ************
 
-:Date: August 16, 2011
-:Version: 2.1
+:Version: 2.2
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Web site: https://github.com/pymc-devs/pymc
 :Documentation: http://bit.ly/pymc_docs
