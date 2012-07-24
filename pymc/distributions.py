@@ -57,7 +57,7 @@ inverse = np.linalg.pinv
 
 sc_continuous_distributions = ['beta', 'cauchy', 'chi2',
                                'degenerate', 'exponential', 'exponweib',
-                               'gamma', 'half_normal',
+                               'gamma', 'half_cauchy', 'half_normal',
                                'inverse_gamma', 'laplace', 'logistic',
                                'lognormal', 'noncentral_t', 'normal',
                                'pareto', 't', 'truncated_pareto', 'uniform',
@@ -69,7 +69,7 @@ sc_discrete_distributions = ['binomial', 'betabin', 'geometric', 'poisson',
                              'discrete_uniform', 'truncated_poisson']
 
 sc_nonnegative_distributions = ['bernoulli', 'beta', 'betabin', 'binomial', 'chi2', 'exponential',
-                                'exponweib', 'gamma', 'half_normal',
+                                'exponweib', 'gamma', 'half_cauchy', 'half_normal',
                                 'hypergeometric', 'inverse_gamma', 'lognormal',
                                 'weibull']
 
