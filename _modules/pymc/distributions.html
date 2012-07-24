@@ -1286,7 +1286,7 @@
     <span class="k">return</span> <span class="n">inf</span>
 
 <span class="c"># In wikipedia, the arguments name are k, x0.</span>
-<span class="k">def</span> <span class="nf">half_cauchy_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">):</span>
+<div class="viewcode-block" id="half_cauchy_like"><a class="viewcode-back" href="../../distributions.html#pymc.distributions.half_cauchy_like">[docs]</a><span class="k">def</span> <span class="nf">half_cauchy_like</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">):</span>
     <span class="sd">R&quot;&quot;&quot;</span>
 <span class="sd">    Half-Cauchy log-likelihood. Simply the absolute value of Cauchy.</span>
 
@@ -1305,7 +1305,7 @@
     <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">):</span> <span class="k">return</span> <span class="o">-</span><span class="n">inf</span>
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">cauchy</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">alpha</span><span class="p">,</span><span class="n">beta</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
 
-<span class="c"># Half-normal----------------------------------------------</span>
+<span class="c"># Half-normal----------------------------------------------</span></div>
 <span class="nd">@randomwrap</span>
 <span class="k">def</span> <span class="nf">rhalf_normal</span><span class="p">(</span><span class="n">tau</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>

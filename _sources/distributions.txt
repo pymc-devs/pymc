@@ -54,6 +54,8 @@ Continuous distributions
 
 .. autofunction:: gamma_like
 
+.. autofunction:: half_cauchy_like
+
 .. autofunction:: half_normal_like
 
 .. autofunction:: inverse_gamma_like

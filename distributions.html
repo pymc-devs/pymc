@@ -542,6 +542,32 @@ of which has mean beta.</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="pymc.distributions.half_cauchy_like">
+<tt class="descclassname">pymc.distributions.</tt><tt class="descname">half_cauchy_like</tt><big>(</big><em>x</em>, <em>alpha</em>, <em>beta</em><big>)</big><a class="reference internal" href="_modules/pymc/distributions.html#half_cauchy_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymc.distributions.half_cauchy_like" title="Permalink to this definition">¶</a></dt>
+<dd><p>Half-Cauchy log-likelihood. Simply the absolute value of Cauchy.</p>
+<div class="math">
+\[f(x \mid \alpha, \beta) = \frac{2}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}\]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><ul class="first last simple">
+<li><cite>alpha</cite> : Location parameter.</li>
+<li><cite>beta</cite> : Scale parameter (beta &gt; 0).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>x must be non-negative.</li>
+</ul>
+</div>
+</dd></dl>
+
+<dl class="function">
 <dt id="pymc.distributions.half_normal_like">
 <tt class="descclassname">pymc.distributions.</tt><tt class="descname">half_normal_like</tt><big>(</big><em>x</em>, <em>tau</em><big>)</big><a class="reference internal" href="_modules/pymc/distributions.html#half_normal_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymc.distributions.half_normal_like" title="Permalink to this definition">¶</a></dt>
 <dd><p>Half-normal log-likelihood, a normal distribution with mean 0 limited
