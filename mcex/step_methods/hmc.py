@@ -18,6 +18,9 @@ from ..core import *
 #allow users to pass Hamiltonian splitting functions
 
 def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is_cov = False):
+    """
+    is_cov : treat C as a covariance matrix/vector if True, else treat it as a precision matrix/vector
+    """
     n = C.shape[0]
     
     logp_dict = model_logp(model)
@@ -63,10 +66,16 @@ def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is
 
 
 def quad_potential(C, is_cov):
-    if is_cov:
-        return QuadPotential(C)
-    else :
-        return QuadPotential_Inv(C) 
+    if C.ndim == 1:
+        if is_cov:
+            return ElemWiseQuadPotential(C)
+        else: 
+            return ElemWiseQuadPotential(1./C)
+    else:
+        if is_cov:
+            return QuadPotential(C)
+        else :
+            return QuadPotential_Inv(C) 
 
 class QuadPotential_Inv(object):
     def __init__(self, A):
@@ -98,4 +107,13 @@ class QuadPotential(object):
     
     def energy(self, x):
         return .5 * dot(x, dot(self.A, x))
-        
+    
+class ElemWiseQuadPotential(object):
+    def __init__(self, v):
+        self.s = v**.5
+    def velocity(self, x):
+        return self.s* x
+    def random(self):
+        return self.velocity(normal(size = self.s.shape))
+    def energy(self, x):
+        return dot(self.s, x)**2
