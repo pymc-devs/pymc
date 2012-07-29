@@ -20,7 +20,7 @@ class HessApproxGen(object):
         self.grads.put(dlp)
 
         d = zip(self.lps, self.xs, self.grads)
-        d.sort(key = lambda a: a[0])
+        #d.sort(key = lambda a: a[0])
 
         lbfgs = LBFGS(self.S0)
         if len(d) > 0:
@@ -62,10 +62,10 @@ class I_abT_Product(object):
 
 class LBFGS(object):
     def __init__(self, Var0):
-        C0 = sqrt(Var0)
+        S0 = sqrt(Var0)
 
-        self.C = I_abT_Product(C0)
-        self.S = I_abT_Product(1./C0)
+        self.C = I_abT_Product(1./S0)
+        self.S = I_abT_Product(S0)
 
         
     def update(self, s, y, sy):

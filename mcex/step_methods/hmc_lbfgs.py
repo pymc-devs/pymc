@@ -4,10 +4,6 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 ''' 
 from numpy import floor
-from numpy.linalg import solve
-from scipy.linalg import cholesky, cho_solve
-
-
 from utils import *
 from ..core import * 
 from lbfgs import *
@@ -41,21 +37,21 @@ def lbfgs_hmc_step(model, vars, approx_n, step_size_scaling = .25, trajectory_le
         z = np.random.normal(size = n)
         p = p0 = state.hess.C.dot(z)
         #use the leapfrog method
-        p = p - (e/2) * -dlogp(q) # half momentum update
+        p = p - (e/2) * dlogp(q) # half momentum update
         
         for i in range(nstep): 
             #alternate full variable and momentum updates
-            q = q + e * state.hess.Bdot(p)
+            q = q + -e * state.hess.Hdot(p)
             if i != nstep - 1:
-                p = p - e * -dlogp(q)
+                p = p - e *dlogp(q)
              
-        p = p - (e/2) * -dlogp(q)  # do a half step momentum update to finish off
+        p = p - (e/2) * dlogp(q)  # do a half step momentum update to finish off
         
         p = -p 
             
         def energy(d):
-            Cd = state.hess.C.dot(d)
-            return .5 * dot(Cd, Cd)
+            Sd = state.hess.S.Tdot(d)
+            return .5 * dot(Sd, Sd)
         
         
         mr = (-logp(q0)) + energy(p0) - ((-logp(q))  + energy(p))

@@ -4,10 +4,7 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 ''' 
 from numpy import floor
-from numpy.linalg import solve
-from scipy.linalg import cholesky, cho_solve
-
-
+from quadpotential import *
 from utils import *
 from ..core import * 
 
@@ -59,43 +56,4 @@ def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is
         return state, metrop_select(mr, q, q0)
         
     return array_step(step, vars, [logp_dict, dlogp_dict])
-
-
-
-def quad_potential(C, is_cov):
-    if is_cov:
-        return QuadPotential(C)
-    else :
-        return QuadPotential_Inv(C) 
-
-class QuadPotential_Inv(object):
-    def __init__(self, A):
-        self.L = cholesky(A, lower = True)
-        
-    def velocity(self, x ):
-        return cho_solve((self.L, True), x)
-        
-    def random(self):
-        n = normal(size = self.L.shape[0])
-        return dot(self.L, n)
-    
-    def energy(self, x):
-        L1x = solve(self.L, x)
-        return .5 * dot(L1x.T, L1x)
-
-
-class QuadPotential(object):
-    def __init__(self, A):
-        self.A = A
-        self.L = cholesky(A, lower = True)
-    
-    def velocity(self, x):
-        return dot(self.A, x)
-    
-    def random(self):
-        n = normal(size = self.L.shape[0])
-        return solve(self.L.T, n)
-    
-    def energy(self, x):
-        return .5 * dot(x, dot(self.A, x))
         
