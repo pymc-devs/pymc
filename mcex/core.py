@@ -5,6 +5,7 @@ Created on Mar 7, 2011
 '''
 import theano
 from theano.tensor import sum, grad, TensorType, TensorVariable
+import theano.tensor as tt
 import theano.tensor as t 
 from theano import function
 import numpy as np 
@@ -63,46 +64,74 @@ def continuous_vars(model):
 """
 these functions compile log-posterior functions (and derivatives)
 """
-def model_logp(model, mode = None):
-    f = function(model.vars, logp_calc(model), allow_input_downcast = True, mode = mode)
+def model_func(model, calcs, mode = None):
+    f = function(model.vars, 
+             calcs,
+             allow_input_downcast = True, mode = mode)
     def fn(state):
         return f(**state)
     return fn
 
+def model_logp(model, mode = None):
+    return model_func(model, logp_calc(model), mode)
+
 def model_dlogp(model, dvars = None, mode = None ):    
-    if dvars is None :
-        dvars = continuous_vars(model)
-    
-    mapping = IASpaceMap(dvars)
-    
-    logp = logp_calc(model)    
-    f = function(model.vars, [grad(logp, var) for var in dvars],
-                 allow_input_downcast = True, mode = mode)
-    def fn(state):
-        return mapping.project(f(**state))
-    return fn
+    return model_func(model, dlogp_calc(model, dvars), mode)
     
 def model_logp_dlogp(model, dvars = None, mode = None ):    
-    if dvars is None :
-        dvars = continuous_vars(model)
-    
-    mapping = IASpaceMap(dvars)
-    
-    logp = logp_calc(model)
-    calculations = [logp] + [grad(logp, var) for var in dvars]
+    return model_func(model, [logp_calc(model), dlogp_calc(model, dvars)], mode)
+
+
+"""
+The functions build graphs from other graphs
+"""
+def flatgrad(f, v):
+    return tt.flatten(grad(f, v))
+
+def gradient(f, dvars):
+    return tt.concatenate([flatgrad(f, v) for v in dvars])
+
+def jacobian(f, dvars):
+    def jac(v):
+        def grad_i (i, f1, v): 
+            return flatgrad(f1[i], v)
         
-    f = function(model.vars, calculations, allow_input_downcast = True, mode = mode)
-    def fn(state):
-        r = f(**state)
-        return r[0], mapping.project(r[1:])
-    return fn
+        return theano.scan(grad_i, sequences = tt.arange(f.shape[0]), non_sequences = [f,v])[0]
+
+    return tt.concatenate(map(jac, dvars))
+
+def hessian(f, dvars):
+    return jacobian(gradient(f, dvars), dvars)
+
+
+
+def hessian_diag(f, dvars):
+    def hess(v):
+        df = tt.flatten(grad(f, v))
+        def grad_i (i, df1, v): 
+            return flatgrad(df1[i], v)[i]
         
-    
-def logp_calc(model):
-    factors = map(sum,model.factors)
-    
-    return t.add(*factors)
-    
+        return theano.scan(grad_i, sequences = tt.arange(f.shape[0]), non_sequences = [df,v])[0]
+
+    return tt.concatenate(map(hess, dvars))
+
+"""
+These functions build log-posterior graphs (and derivatives)
+   """ 
+def logp_calc(model):  
+    return t.add(*map(sum,model.factors))
+
+def dercalc(d_calc):
+    def der_calc(model, dvars = None):
+        if dvars is None:
+            dvars = continuous_vars(model)
+        
+        return d_calc(logp_calc(model), dvars)
+    return der_calc
+
+dlogp_calc = dercalc(gradient)
+hess_calc = dercalc(jacobian)
+hess_diag_calc = dercalc(hessian_diag)
 
     
 class DASpaceMap(object):
@@ -140,28 +169,6 @@ class DASpaceMap(object):
             d[var] = np.reshape(a[slice], self.vars[var].dshape)
             
         return d
-    
-    
-class IASpaceMap(object):
-    """ encapsulates a mapping of 
-        iterable space -> array space"""
-    def __init__(self,free_vars):
-        self.dimensions = 0
-        
-        self.slices = []
-        for var in free_vars:       
-            self.slices.append(slice(self.dimensions, self.dimensions + var.dsize))
-            self.dimensions += var.dsize
-            
-    def project(self, d , a = None):
-        if a is None:
-            a = np.empty(self.dimensions)
-        else:
-            a = np.copy(a)
-        
-        for slc, v in zip(self.slices, d):    
-            a[slc] = np.ravel(v)
-        return a
 
 def sample(draws, step, chain, sample_history, state = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method

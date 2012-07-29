@@ -15,6 +15,9 @@ from ..core import *
 #allow users to pass Hamiltonian splitting functions
 
 def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is_cov = False):
+    """
+    is_cov : treat C as a covariance matrix/vector if True, else treat it as a precision matrix/vector
+    """
     n = C.shape[0]
     
     logp_dict = model_logp(model)

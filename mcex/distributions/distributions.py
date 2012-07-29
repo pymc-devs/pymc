@@ -95,3 +95,10 @@ def ZeroInflatedPoisson(theta, z):
                       Poisson(theta)(value), 
                       ConstantDist(0)(value))
     return dist
+
+def Bound(dist, lower = -inf, upper = inf):
+    def ndist(value):
+        return switch(ge(value , lower) & le(value , upper),
+                  dist(value),
+                  -inf)
+    return ndist
