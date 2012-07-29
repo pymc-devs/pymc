@@ -37,7 +37,6 @@ start = {'groupmean' : np.mean(obs_means )[None],
          'groupsd' : np.std(obs_means)[None], 
          'sd' : np.std(lradon)[None], 
          'means' : obs_means,
-         'u_m' : np.array([.72]),
          'floor_m' : np.array([0.]),
          }
 
@@ -49,25 +48,30 @@ groupsd = AddVar(model, 'groupsd', Uniform(0,10), test = start['groupsd'])
 sd = AddVar(model, 'sd', Uniform(0, 10), test = start['sd'])
 
 floor_m = AddVar(model, 'floor_m', Normal(0, 5.** -2), test = start['floor_m'])
-u_m = AddVar(model, 'u_m', Normal(0, 5.** -2), test = start['u_m'])
 
 means = AddVar(model, 'means', Normal(groupmean, groupsd ** -2), n, test = start['means'])
 
 
 #the gradient of indexing into an array is generally slow unless you have the experimental branch of theano
-AddData(model, lradon, Normal( floor*floor_m + means[group] + u_m*ufull, sd**-2))
+AddData(model, lradon, Normal( floor*floor_m + means[group], sd**-2))
 
 
 
 nd = np.sum([v.dsize for v in model.vars])
 
-C = np.eye(nd)*1e-3
-for n in [200, 400, 800, 2000]:
-    step_method = hmc_step(model, model.vars, C, .2, 1.0, is_cov = True)
-    history = NpHistory(model.vars, n)
-    state, t = sample(n, step_method, start, history)
-    C = hist_covar(history, model.vars)
+
+hess = approx_hess(model, start)
+"""
+n = 3000
+step_method = hmc_step(model, model.vars, hess, .2, 1.0, is_cov = False)
+history = NpHistory(model.vars, n)
+state, t = sample(n, step_method, start, history)"""
+
     
-    print "accept ratio ", np.mean(state.acceptr())
+
+n= 3000
+step_method = lbfgs_hmc_step(model, model.vars,15, .2, 1.0)
+history = NpHistory(model.vars, n)
+state, t = sample(n, step_method, start, history)
     
 print  " took: ", t
