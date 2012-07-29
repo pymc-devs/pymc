@@ -3,16 +3,10 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 ''' 
-from numpy import floor
 from utils import *
 from ..core import * 
 from lbfgs import *
 from __builtin__ import sum as bsum
-
-# todo : 
-#make step method use separate gradient and logp functions
-#add constraint handling via page 37 of Radford's http://www.cs.utoronto.ca/~radford/ham-mcmc.abstract.html
-#allow users to pass Hamiltonian splitting functions
 
 def lbfgs_hmc_step(model, vars, approx_n, step_size_scaling = .25, trajectory_length = 2., is_cov = False):
     n = bsum(v.dsize for v in vars)

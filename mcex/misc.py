@@ -17,9 +17,6 @@ def make_univariate(var, idx, C, f):
         c[var] = v
         return f(c)
     return univariate
-
-
-    
     
 def hist_covar(hist, vars):
     """calculate the flattened covariance matrix using a sample history"""

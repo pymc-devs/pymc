@@ -10,7 +10,6 @@ from ..core import *
 
 
 # todo : 
-#make step method use separate gradient and logp functions
 #add constraint handling via page 37 of Radford's http://www.cs.utoronto.ca/~radford/ham-mcmc.abstract.html
 #allow users to pass Hamiltonian splitting functions
 
