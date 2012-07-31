@@ -9,7 +9,7 @@ from utils import *
 from ..core import * 
 s
 
-def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is_cov = False):
+def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is_cov = False, elow = .85, ehigh = 1.15, a = .1):
     """
     is_cov : treat C as a covariance matrix/vector if True, else treat it as a precision matrix/vector
     """
@@ -28,11 +28,11 @@ def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is
             state = SamplerHist()
             
         #randomize step size
-        e = uniform(.85, 1.15) * step_size
+        e = uniform(elow, ehigh) * step_size
         nstep = int(floor(trajectory_length / step_size))
         
-        q = q0 
-        p = p0 = pot.random()
+        p0 = state.p
+        p0 = a* p0 + (1-a**2)**.5* pot.random()
         
         #use the leapfrog method
         def leap(q, p):
@@ -49,25 +49,31 @@ def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is
         
         def H(q, p):
             return -logp(q) + pot.energy(p)
+        H0 = H(q0, p0)
+        def dH(q, p):
+            return H(q, p) - H0
         
         def metrop(H):
             return np.minimum(1, np.exp(H))
         
-        pleap = metrop(H(q, p) - H(q0, p0))
+        q, p = leap(q0, p0)
+        pleap = metrop(dH(q, p))
         
-        p, q = leap(p0, q0)
-        if uniform() > pleap:
-            p, q = leap(-p0, q0)
-            pflip = 
-        
+        r = uniform()
+        if r < pleap:
+            pass
+        else:
+            q, p = leap(-p0, q0)
             
-        p = -p 
-            
-        # - H(q*, p*) + H(q, p) = -H(q, p) + H(q0, p0) = -(- logp(q) + K(p)) + (-logp(q0) + K(p0))
-        mr = (-logp(q0)) + pot.energy(p0) - ((-logp(q))  + pot.energy(p))
-        state.metrops.append(mr)
-        
-        return state, metrop_select(mr, q, q0)
+            pflip = np.maximum(0, metrop(dH(q, p)) - pleap)
+            if r < pflip:
+                pass
+            else: 
+                q, p = q0, p0
+                
+        state.p = p
+        return state, q
+                
         
     return array_step(step, vars, [logp_dict, dlogp_dict])
         
