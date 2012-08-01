@@ -7,9 +7,8 @@ from numpy import floor
 from quadpotential import *
 from utils import *
 from ..core import * 
-s
 
-def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is_cov = False, elow = .85, ehigh = 1.15, a = .1):
+def hmc_lowflip_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is_cov = False, elow = .85, ehigh = 1.15, a = .9):
     """
     is_cov : treat C as a covariance matrix/vector if True, else treat it as a precision matrix/vector
     """
@@ -26,6 +25,7 @@ def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is
         
         if state is None:
             state = SamplerHist()
+            state.p = pot.random()
             
         #randomize step size
         e = uniform(elow, ehigh) * step_size
