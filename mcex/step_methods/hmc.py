@@ -14,7 +14,7 @@ from ..core import *
 #add constraint handling via page 37 of Radford's http://www.cs.utoronto.ca/~radford/ham-mcmc.abstract.html
 #allow users to pass Hamiltonian splitting functions
 
-def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is_cov = False):
+def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is_cov = False, elow = .85, ehigh = 1.15):
     """
     is_cov : treat C as a covariance matrix/vector if True, else treat it as a precision matrix/vector
     """
@@ -33,7 +33,7 @@ def hmc_step(model, vars, C, step_size_scaling = .25, trajectory_length = 2., is
             state = SamplerHist()
             
         #randomize step size
-        e = uniform(.85, 1.15) * step_size
+        e = uniform(elow, ehigh) * step_size
         nstep = int(floor(trajectory_length / step_size))
         
         q = q0 

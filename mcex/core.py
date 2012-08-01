@@ -4,12 +4,10 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 '''
 import theano
-from theano.tensor import sum, grad, TensorType, TensorVariable
-import theano.tensor as tt
-import theano.tensor as t 
-from theano import function
+from theano import function, scan
+from theano.tensor import TensorType, add, sum, grad,  flatten, arange, concatenate, constant
+
 import numpy as np 
-from __builtin__ import sum as builtin_sum
 import time 
 
 def FreeVariable( name, shape, dtype = 'float64'):
@@ -31,7 +29,7 @@ these functions add random variables
 """
 
 def AddData(model, data, distribution):
-    model.factors.append(distribution(t.constant(data)))
+    model.factors.append(distribution(constant(data)))
 
 def AddVar(model, name, distribution, shape = 1, dtype = 'float64', test = None):
     var = FreeVariable(name, shape, dtype)
@@ -49,13 +47,6 @@ def AddVarIndirectElemewise(model, name,proximate_calc, distribution, shape = 1)
     model.factors.append(distribution(prox_var) + log_jacobian_determinant(prox_var, var))
     return var
     
-def log_jacobian_determinant(var1, var2):
-    # need to find a way to calculate the log of the jacobian determinant easily, 
-    raise NotImplementedError()
-    # in the case of elemwise operations we can just sum the gradients
-    # so we might just test if var1 is elemwise wrt to var2 and then calculate the gradients, summing their logs
-    # otherwise throw an error
-    return
     
 def continuous_vars(model):
     return [ var for var in model.vars if var.dtype in continuous_types] 
@@ -86,19 +77,19 @@ def model_logp_dlogp(model, dvars = None, mode = None ):
 The functions build graphs from other graphs
 """
 def flatgrad(f, v):
-    return tt.flatten(grad(f, v))
+    return flatten(grad(f, v))
 
 def gradient(f, dvars):
-    return tt.concatenate([flatgrad(f, v) for v in dvars])
+    return concatenate([flatgrad(f, v) for v in dvars])
 
 def jacobian(f, dvars):
     def jac(v):
         def grad_i (i, f1, v): 
             return flatgrad(f1[i], v)
         
-        return theano.scan(grad_i, sequences = tt.arange(f.shape[0]), non_sequences = [f,v])[0]
+        return scan(grad_i, sequences = arange(f.shape[0]), non_sequences = [f,v])[0]
 
-    return tt.concatenate(map(jac, dvars))
+    return concatenate(map(jac, dvars))
 
 def hessian(f, dvars):
     return jacobian(gradient(f, dvars), dvars)
@@ -107,19 +98,27 @@ def hessian(f, dvars):
 
 def hessian_diag(f, dvars):
     def hess(v):
-        df = tt.flatten(grad(f, v))
+        df = flatten(grad(f, v))
         def grad_i (i, df1, v): 
             return flatgrad(df1[i], v)[i]
         
-        return theano.scan(grad_i, sequences = tt.arange(f.shape[0]), non_sequences = [df,v])[0]
+        return scan(grad_i, sequences = arange(f.shape[0]), non_sequences = [df,v])[0]
 
-    return tt.concatenate(map(hess, dvars))
+    return concatenate(map(hess, dvars))
+
+def log_jacobian_determinant(var1, var2):
+    # need to find a way to calculate the log of the jacobian determinant easily, 
+    raise NotImplementedError()
+    # in the case of elemwise operations we can just sum the gradients
+    # so we might just test if var1 is elemwise wrt to var2 and then calculate the gradients, summing their logs
+    # otherwise throw an error
+    return
 
 """
 These functions build log-posterior graphs (and derivatives)
    """ 
 def logp_calc(model):  
-    return t.add(*map(sum,model.factors))
+    return add(*map(sum,model.factors))
 
 def dercalc(d_calc):
     def der_calc(model, dvars = None):
@@ -165,12 +164,12 @@ class DASpaceMap(object):
         """project array space -> dict space"""
         d = d.copy()
             
-        for var, slice in self.slices.iteritems():
-            d[var] = np.reshape(a[slice], self.vars[var].dshape)
+        for var, slc in self.slices.iteritems():
+            d[var] = np.reshape(a[slc], self.vars[var].dshape)
             
         return d
 
-def sample(draws, step, chain, sample_history, state = None):
+def sample(draws, step, chain, sample_history = None, state = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
     start = time.time()
