@@ -47,13 +47,6 @@ def AddVarIndirectElemewise(model, name,proximate_calc, distribution, shape = 1)
     model.factors.append(distribution(prox_var) + log_jacobian_determinant(prox_var, var))
     return var
     
-def log_jacobian_determinant(var1, var2):
-    # need to find a way to calculate the log of the jacobian determinant easily, 
-    raise NotImplementedError()
-    # in the case of elemwise operations we can just sum the gradients
-    # so we might just test if var1 is elemwise wrt to var2 and then calculate the gradients, summing their logs
-    # otherwise throw an error
-    return
     
 def continuous_vars(model):
     return [ var for var in model.vars if var.dtype in continuous_types] 
@@ -112,6 +105,14 @@ def hessian_diag(f, dvars):
         return scan(grad_i, sequences = arange(f.shape[0]), non_sequences = [df,v])[0]
 
     return concatenate(map(hess, dvars))
+
+def log_jacobian_determinant(var1, var2):
+    # need to find a way to calculate the log of the jacobian determinant easily, 
+    raise NotImplementedError()
+    # in the case of elemwise operations we can just sum the gradients
+    # so we might just test if var1 is elemwise wrt to var2 and then calculate the gradients, summing their logs
+    # otherwise throw an error
+    return
 
 """
 These functions build log-posterior graphs (and derivatives)
