@@ -31,9 +31,9 @@ Some design decisions
 |                                  |   components                          |                                                   |
 +----------------------------------+---------------------------------------+---------------------------------------------------+ 
  
-****
-TODO
-****
+*****
+To Do
+*****
 
  * Simplify standard usage. 
  * Build a GPU example 
@@ -44,3 +44,11 @@ TODO
  * Implement a potential object which can take incomplete covariances and exploit the conditional independence of nodes to do the whole calculation 
  * Build examples showcasing different samplers
  * Reconsider nphistory design
+ 
+****************
+Possible Changes
+****************
+
+ * Make HMC and related automatically choose a variance/covariance
+ * Eliminate `model` arguments to AddVar, AddData, step methods etc by making it hidden and default
+ * Eliminate test = argument to AddVar by allowing the user to specify a 'test point'. 
