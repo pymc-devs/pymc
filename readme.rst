@@ -35,8 +35,10 @@ Some design decisions
 TODO
 ****
 
+ * Simplify standard usage. 
  * Build a GPU example 
- * Make nphistory a default for sample() so that you don't have to construct it every time
+ * Give `sample` a default history object.
+ * Give `sample` a way of automatically choosing step methods.
  * Do some profiling to see why likelihoods are slower in mcex than pymc 
  * Fix step_methods.gibbs.categorical so that it's faster, currently very slow. 
  * Implement a potential object which can take incomplete covariances and exploit the conditional independence of nodes to do the whole calculation 
