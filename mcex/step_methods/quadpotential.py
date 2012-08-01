@@ -17,13 +17,16 @@ def quad_potential(C, is_cov):
 
 class ElemWiseQuadPotential(object):
     def __init__(self, v):
-        self.s = v**.5
+        s = v **.5
+        self.s = s
+        self.inv_s = 1./s
+        self.v = v 
     def velocity(self, x):
-        return self.s* x
+        return self.v* x
     def random(self):
-        return self.velocity(normal(size = self.s.shape))
+        return normal(size = self.s.shape)* self.inv_s
     def energy(self, x):
-        return dot(self.s, x)**2
+        return .5*dot(x, self.v*x)
 
 class QuadPotential_Inv(object):
     def __init__(self, A):
