@@ -38,8 +38,5 @@ hmc_hess = approx_hess(model, chain) #find a good orientation using the hessian 
 
 step_method = hmc_step(model, model.vars, hmc_hess, is_cov = False)
 
-ndraw = 3e2
-
-history = NpHistory(model.vars, ndraw)
-state, t = sample(ndraw, step_method, map, history)
+history, state, t = sample(3e2, step_method, map)
 print "took :", t
