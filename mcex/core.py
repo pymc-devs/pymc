@@ -9,6 +9,7 @@ from theano.tensor import TensorType, add, sum, grad,  flatten, arange, concaten
 
 import numpy as np 
 import time 
+from history import NpHistory
 
 def FreeVariable( name, shape, dtype = 'float64'):
     """creates a TensorVariable of the given shape and type"""
@@ -169,15 +170,20 @@ class DASpaceMap(object):
             
         return d
 
-def sample(draws, step, chain, sample_history = None, state = None):
+def sample(draws, step, point, sample_history = None, state = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
-    start = time.time()
-    for i in xrange(int(draws)):
-        state, chain = step(state, chain)
-        sample_history.record(chain)
+    
+    if not sample_history :
+        sample_history = NpHistory(draws)
         
-    return state, (time.time() - start)
+    tstart = time.time()
+    
+    for _ in xrange(int(draws)):
+        state, point = step(state, point)
+        sample_history.record(point)
+        
+    return sample_history, state, (time.time() - tstart)
 
 
 bool_types = set(['int8'])

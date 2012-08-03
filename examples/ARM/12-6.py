@@ -55,13 +55,11 @@ means = AddVar(model, 'means', Normal(groupmean, groupsd ** -2), n, test = start
 #the gradient of indexing into an array is generally slow unless you have the experimental branch of theano
 AddData(model, lradon, Normal( floor*floor_m + means[group], sd**-2))
 
-hess = approx_hess(model, start)
-hess2 = diag(diag(hess))
-    
+hess = diag(approx_hess(model, start))
 
-n= 3000
-step_method = hmc_step(model, model.vars, hess2, .2, 1.0, is_cov = False)
-history = NpHistory(model.vars, n)
-state, t = sample(n, step_method, start, history)
-    
+step_method = hmc_step(model, model.vars, hess, .2, 1.0, is_cov = False)
+#step_method = hmc_lowflip_step(model, model.vars, hess, .5, a = .5)
+
+history, state, t = sample(3000, step_method, start)
+
 print  " took: ", t

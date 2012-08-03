@@ -64,19 +64,12 @@ To sample from the posterior, we must choose a sampling method.
 """
 step_method = hmc_step(model, model.vars, hmc_cov)
 
-ndraw = 3e3
-"""
-In order to store the samples we get, we need a storage object. NpHistory stores the samples in history arrays.
-It needs a list of variables to care about and a maximum number of samples to store.
-"""
-history = NpHistory(model.vars, ndraw)
-
 """
 To use the step functions, we use the sample function. It takes a number of steps to do, 
 a step method, a starting point and a storage object for the resulting samples. It returns the final state of 
 the step method and the total time in seconds that the sampling took. The samples are now in history.
 """
-state, t = sample(ndraw, step_method, chain, history)
+history, state, t = sample(3e3, step_method, chain)
 print "took :", t, " seconds"
 
 """

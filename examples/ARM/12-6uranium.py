@@ -58,21 +58,17 @@ means = AddVar(model, 'means', Normal(groupmean, groupsd ** -2), n, test = start
 AddData(model, lradon, Normal( floor*floor_m + means[group] + u_m*ufull, sd**-2))
 
 
-hess = approx_hess(model, start)
-hess2 = diag(diag(hess))
+hess = diag(approx_hess(model, start))
     
 
-n= 1000
-step_method = hmc_step(model, model.vars, hess2, .2, 1.0, is_cov = False)
-history0 = NpHistory(model.vars, n)
-state, t = sample(n, step_method, start, history0)
+step_method = hmc_step(model, model.vars, hess, .2, 1.0, is_cov = False)
+
+history0, state, t = sample(1000, step_method, start)
 
 
-n= 3000
 cov = hist_covar(history0, model.vars)
 step_method = hmc_step(model, model.vars, cov, .5, 1.5, is_cov = True, elow = .4, ehigh = 1.5)
-history = NpHistory(model.vars, n)
-state, t = sample(n, step_method, start, history)
+history, state, t = sample(3000, step_method, start)
     
     
 print  " took: ", t

@@ -25,12 +25,9 @@ chain = {'x' : np.array([[0.2],[.3]]),
          'z' : np.array([.5])}
 
 
-#step_method = split_hmc_step(model, model.vars, hmc_cov, chain, hmc_cov)
-step_method = vlbfgs_hmc_step(model, model.vars,60)
+step_method = hmc_step(model, model.vars)
 
-ndraw = 1e3
-history = NpHistory(model.vars, ndraw) # an object that keeps track
-state, t = sample(ndraw, step_method, chain, history)
+history,state, t = sample(1e3, step_method, chain)
 
 print "took :", t
 

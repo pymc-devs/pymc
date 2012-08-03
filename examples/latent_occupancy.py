@@ -33,7 +33,6 @@ Copyright (c) 2008 University of Otago. All rights reserved.
 # Import statements
 from numpy import random, array, arange, ones 
 from mcex import *
-import theano.tensor as t
 # Sample size
 n = 100
 # True mean count, given occupancy
@@ -62,19 +61,15 @@ theta = AddVar( model, 'theta', Uniform(0, 100))
 
 AddData(model, y, ZeroInflatedPoisson(theta, z))
 
-chain = {'p' : .5,
+start = {'p' : .5,
          'z' : (y > 0)*1,
          'theta' : 10.}
 
-chain, r = find_MAP(model, chain, vars = [p, theta], retall = True)
-C = approx_cov(model, chain, [p, theta])
-
-step_method = compound_step([hmc_step(model, [p, theta], C, step_size_scaling = .25, trajectory_length = 2),
+start = find_MAP(model, start, vars = [p, theta])
+hess = approx_hess(model, start)
+step_method = compound_step([hmc_step(model, [p, theta], hess, is_cov = False),
                              elemwise_cat_gibbs_step(model, z,  [0,1])])
 
-ndraw = 3e3
-
-history = NpHistory(model.vars, ndraw) # an object that keeps track
-state, t = sample(ndraw, step_method, chain, history)
+history, state, t = sample(3000, step_method, start)
 
 print "took :", t  

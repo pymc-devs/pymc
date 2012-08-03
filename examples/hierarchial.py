@@ -49,18 +49,15 @@ g = T.constant(group)
 AddData(model, T.constant(y), Normal( sum(effects[g] * predictors, 1),s[g]**-2))
 
                  
-chain = {'sg' : np.array([2.]), 
+start = {'sg' : np.array([2.]), 
          's'  : np.ones(n_groups) * 2.,
          'group_effects' : np.zeros((1,) + group_effects_a.shape),
          'effects' : np.zeros(effects_a.shape ) }
 
-map_x, v = find_MAP(model, chain, retall = True)
-map_cov = approx_cov(model, map_x) #find a good orientation using the hessian at the MAP
+map_x = find_MAP(model, start)
+hess = approx_hess(model, map_x) #find a good orientation using the hessian at the MAP
 
-step_method = hmc_step(model, model.vars, map_cov, step_size_scaling = .25)
+step_method = hmc_step(model, model.vars, hess, is_cov = False)
 
 
-ndraw = 3e3
-
-history = NpHistory(model.vars, ndraw) # an object that keeps track
-print "took :", sample(ndraw, step_method, map_x, history)
+print "took :", sample(3e3, step_method, map_x)
