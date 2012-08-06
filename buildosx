@@ -1,5 +1,5 @@
 #!/bin/sh
-export MACOSX_DEPLOYMENT_TARGET=10.7
+export MACOSX_DEPLOYMENT_TARGET=10.8
 export CFLAGS="-arch x86_64"
 export FFLAGS="-static -ff2c"
 export LDFLAGS="-Wall -undefined dynamic_lookup -bundle -arch x86_64"
