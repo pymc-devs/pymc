@@ -1,3 +1,0 @@
-"""
-Gaussian processes examples.
-"""

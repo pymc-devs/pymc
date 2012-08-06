@@ -1,13 +1,4 @@
 *.pyc
-*.so
+examples/*.png
 build/*
-dist/*
-pymc.egg-info/
-UNKNOWN.egg-info/
-docs/_build
-MANIFEST
-develop
-testresults
-*.tmproj
-*.py.bak
-.DS_Store
+*.egg-info/
