@@ -2577,7 +2577,7 @@ def weibull_expval(alpha,beta):
     """
     Expected value of weibull distribution.
     """
-    return beta * gammaln((alpha + 1.) / alpha)
+    return beta * np.exp(gammaln((alpha + 1.) / alpha))
 
 def weibull_like(x, alpha, beta):
     R"""
