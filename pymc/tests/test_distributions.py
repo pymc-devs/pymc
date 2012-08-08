@@ -984,6 +984,11 @@ class test_weibull(TestCase):
         b = flib.weibull([1,2], [2,2], [3,3])
         assert_equal(a,b)
 
+    def test_random(self):
+        parameters = {'alpha': 2., 'beta': 3.}
+        r = rweibull(parameters['alpha'], parameters['beta'], size=100)
+        assert_almost_equal(r.mean(), weibull_expval(**parameters), 1)
+
 #-------------------------------------------------------------------------------
 # Test Wishart / Inverse Wishart distributions
 _Tau_test = np.matrix([[ 209.47883244,   10.88057915,   13.80581557],
