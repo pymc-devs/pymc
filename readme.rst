@@ -37,7 +37,6 @@ To Do
 
  * Simplify standard usage. 
  * Build a GPU example 
- * Give `sample` a default history object.
  * Give `sample` a way of automatically choosing step methods.
  * Do some profiling to see why likelihoods are slower in mcex than pymc 
  * Fix step_methods.gibbs.categorical so that it's faster, currently very slow. 
