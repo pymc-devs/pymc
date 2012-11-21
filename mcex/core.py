@@ -29,8 +29,14 @@ class Model(object):
 these functions add random variables
 """
 
+def make_constants(data) : 
+    if isinstance(data, tuple): 
+        return tuple(map(constant, data))
+    else:
+        return constant(data)
 def AddData(model, data, distribution):
-    model.factors.append(distribution(constant(data)))
+    
+    model.factors.append(distribution(make_constants(data)))
 
 def AddVar(model, name, distribution, shape = 1, dtype = 'float64', test = None):
     var = FreeVariable(name, shape, dtype)
