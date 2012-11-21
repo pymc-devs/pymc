@@ -1,12 +1,14 @@
 from ..core import *
 import numpy as np 
 
-def array_step(astep, vars, fs):
+def array_step(astep, vars, fs, provide_full = False):
     mapping = DASpaceMap(vars)
     
     def step(state, chain):
         
         fns = [arr_wrap(f, mapping, chain) for f in fs]
+        if provide_full :
+            fns += [chain]	
         
         state, achain = astep(state, mapping.project(chain), *fns)
         return state, mapping.rproject(achain, chain)
