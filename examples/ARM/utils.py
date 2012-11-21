@@ -25,9 +25,9 @@ def readtable(file, **args):
             va.append(v)
     return map(np.array, values)
 
-def readtabledict(file, **args):
-    
-    r = reader(open(file, 'rb'), **args)
+
+def readtabledict(file, delimiter = ',', quotechar='"', skipinitialspace = True, **args):
+    r = reader(open(file, 'rb'),delimiter, quotechar, skipinitialspace **args)
 
     values =[]
     names = list( r.next()) 
