@@ -2,6 +2,7 @@ from utils import normal
 from numpy import dot
 from numpy.linalg import solve
 from scipy.linalg import cholesky, cho_solve
+import numpy as np
 
 def quad_potential(C, is_cov):
     if C.ndim == 1:
@@ -58,4 +59,33 @@ class QuadPotential(object):
     
     def energy(self, x):
         return .5 * dot(x, dot(self.A, x))
+    
+try:
+    import scikits.sparse.cholmod as cholmod
+    chol_available = True
+except ImportError:
+    chol_available = False
+
+if chol_available:
+    class QuadPotential_SparseInv(object):
+        def __init__(self, A):
+            self.n = A.shape[0]
+            self.factor = factor = cholmod.cholesky(A)
+            self.L = factor.L()
+            self.p = np.argsort(factor.P())
+            
+        def velocity(self, x ):
+            return self.factor(x)
+            
+        def Ldot(self, x):
+            return (self.L * x)[self.p]
+        
+        def random(self):
+            return self.Ldot(normal(size = self.n))
+        
+        def energy(self, x):
+            return .5 * dot(x,self.velocity(x))
+        
+
+
         
