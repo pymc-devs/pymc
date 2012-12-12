@@ -1,4 +1,4 @@
-from mcex import *
+from pymc import *
 import theano.tensor as T 
 from numpy import random, sum as nsum, ones, concatenate, newaxis, dot, arange
 from __builtin__ import map
