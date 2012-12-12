@@ -3,7 +3,7 @@ Created on May 10, 2012
 
 @author: jsalvatier
 '''
-from mcex import * 
+from pymc import * 
 from numpy.random import normal
 import numpy as np 
 import pylab as pl 
@@ -14,7 +14,11 @@ ya = 0
 n = 200
 data = normal( size = n) + xa + ya
 
-model = Model()
+start = {'x' : 0,
+         'y' : 0}
+model = Model(test = start)
+Data = model.Data 
+Var = model.Var
 """
 This model is U shaped because of the non identifiability. 
 As n increases, the walls become steeper but the distribution does not shrink towards the mode. 
@@ -30,21 +34,20 @@ Girolami and B. Calderhead
 http://arxiv.org/abs/1011.0057
 """
 
-x = AddVar(model, 'x', Normal(0, 1))
-y = AddVar(model, 'y', Normal(0, 1))
+x = Var('x', Normal(0, 1))
+y = Var('y', Normal(0, 1))
 
-AddData(model, data, Normal(x + y**2, 1.) )
+Data(data, Normal(x + y**2, 1.) )
 
 
-chain = {'x' : 0,
-         'y' : 0}
 
-hess = ones(2)*diag(approx_hess(model, chain))[0]
+
+hess = ones(2)*diag(approx_hess(model, start))[0]
 
 
 step_method = hmc_lowflip_step(model, model.vars, hess,is_cov = False, step_size = .25, a = .9)
 
-history, state, t = sample(40e3, step_method, chain)
+history, state, t = sample(40e3, step_method, start)
 
 print "took :", t
 pl.figure()

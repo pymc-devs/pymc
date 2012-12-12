@@ -32,7 +32,7 @@ Copyright (c) 2008 University of Otago. All rights reserved.
 
 # Import statements
 from numpy import random, array, arange, ones 
-from mcex import *
+from pymc import *
 # Sample size
 n = 100
 # True mean count, given occupancy
@@ -43,27 +43,30 @@ pi = 0.4
 # Simulate some data data
 y = array([(random.random()<pi) * random.poisson(theta) for i in range(n)])
 
+start = {'p' : .5,
+         'z' : ((y > 0)*1).astype('int8'),
+         'theta' : 10.}
 
-model = Model()
+model = Model(test = start)
+Data = model.Data
+Var = model.Var 
 # Estimated occupancy
 
-p = AddVar(model, 'p', Beta(1,1))
+p = Var('p', Beta(1,1))
 
 # Latent variable for occupancy
-z = AddVar(model, 'z', Bernoulli(p) , y.shape, dtype = 'int8')
+z = Var('z', Bernoulli(p) , y.shape, dtype = 'int8')
 
 # Estimated mean count
-theta = AddVar( model, 'theta', Uniform(0, 100))
+theta = Var('theta', Uniform(0, 100))
 
 # Poisson likelihood
 
 
 
-AddData(model, y, ZeroInflatedPoisson(theta, z))
+Data(y, ZeroInflatedPoisson(theta, z))
 
-start = {'p' : .5,
-         'z' : (y > 0)*1,
-         'theta' : 10.}
+
 
 start = find_MAP(model, start, vars = [p, theta])
 hess = approx_hess(model, start)
