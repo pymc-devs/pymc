@@ -12,7 +12,7 @@ def approx_hess(model,chain_state, vars = None):
     returns an approximation of the hessian at the current chain location 
     """
     if vars is None :
-        vars = model.vars
+        vars = continuous_vars(model)
     dlogp = model_dlogp(model, vars)
     mapping = DASpaceMap(vars)
     

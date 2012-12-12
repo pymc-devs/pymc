@@ -13,7 +13,7 @@ def find_MAP( model, chain_state, vars = None, minalg = fmin_bfgs, disp = False,
     Current default of fmin_bfgs does not deal well with optimizing close to sharp edges, especially if they are the minimum.
     """
     if vars is None: 
-        vars = model.vars 
+        vars = continuous_vars(model)
         
     mapping = DASpaceMap(vars)
     
