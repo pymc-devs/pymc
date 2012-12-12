@@ -1,6 +1,6 @@
 from  utils import * 
 import numpy as np 
-from mcex import *
+from pymc import *
 
 
 data = readtabledict('srrs2.dat', delimiter = ',', quotechar='"', skipinitialspace = True)
@@ -31,7 +31,7 @@ n = ufips.shape[0]
 group = np.searchsorted(ufips, fips)
 obs_means = np.array([np.mean(lradon[fips == fip]) for fip in np.unique(fips)])
 
-model = Model()
+
 
 start = {'groupmean' : np.mean(obs_means )[None],
          'groupsd' : np.std(obs_means)[None], 
@@ -39,21 +39,24 @@ start = {'groupmean' : np.mean(obs_means )[None],
          'means' : obs_means,
          'floor_m' : np.array([0.]),
          }
+model = Model(test= start)
+Var = model.Var
+Data = model.Data
 
-groupmean = AddVar(model, 'groupmean', Normal(0, (10)**-2), test = start['groupmean'])
+groupmean = Var('groupmean', Normal(0, (10)**-2))
 
 #as recommended by "Prior distributions for variance parameters in hierarchical models"
-groupsd = AddVar(model, 'groupsd', Uniform(0,10), test = start['groupsd'])
+groupsd = Var('groupsd', Uniform(0,10))
 
-sd = AddVar(model, 'sd', Uniform(0, 10), test = start['sd'])
+sd = Var('sd', Uniform(0, 10))
 
-floor_m = AddVar(model, 'floor_m', Normal(0, 5.** -2), test = start['floor_m'])
+floor_m = Var('floor_m', Normal(0, 5.** -2))
 
-means = AddVar(model, 'means', Normal(groupmean, groupsd ** -2), n, test = start['means'])
+means = Var('means', Normal(groupmean, groupsd ** -2), n)
 
 
 #the gradient of indexing into an array is generally slow unless you have the experimental branch of theano
-AddData(model, lradon, Normal( floor*floor_m + means[group], sd**-2))
+Data(lradon, Normal( floor*floor_m + means[group], sd**-2))
 
 hess = diag(approx_hess(model, start))
 

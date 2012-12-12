@@ -17,7 +17,7 @@ Some design decisions
 +==================================+=======================================+===================================================+
 | Computational core outsourced    | - Simple package code (<400 lines)    | - Supporting arbitrary stochastics/deterministics |
 | to Theano                        | - Efficient                           |   more difficult in complex cases                 |
-|                                  | - Improvements to Theano improve MCEx |                                                   |
+|                                  | - Improvements to Theano improve PyMC |                                                   |
 |                                  | - GPU enabled                         |                                                   |
 |                                  | - Automatic Differentiation           |                                                   |
 +----------------------------------+---------------------------------------+---------------------------------------------------+
@@ -38,7 +38,7 @@ To Do
  * Simplify standard usage. 
  * Build a GPU example 
  * Give `sample` a way of automatically choosing step methods.
- * Do some profiling to see why likelihoods are slower in mcex than pymc 
+ * Do some profiling to see why likelihoods are slower in pymc3 than pymc 
  * Fix step_methods.gibbs.categorical so that it's faster, currently very slow. 
  * Implement a potential object which can take incomplete covariances and exploit the conditional independence of nodes to do the whole calculation 
  * Build examples showcasing different samplers
