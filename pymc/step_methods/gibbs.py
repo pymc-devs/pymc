@@ -6,6 +6,7 @@ Created on May 12, 2012
 from ..core import *
 from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones
 from numpy.random import uniform
+from __builtin__ import sum as builtin_sum
     
     
 def elemwise_cat_gibbs_step(model, var, values):
