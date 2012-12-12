@@ -7,14 +7,14 @@ from distutils.core import setup
 from distutils.extension import Extension
 
 
-DISTNAME            = 'mcex'
-DESCRIPTION         = "Monte-Carlo Experiment"
+DISTNAME            = 'pymc'
+DESCRIPTION         = "PyMC 3"
 LONG_DESCRIPTION    =""""""
 MAINTAINER          = 'John Salvatier'
 MAINTAINER_EMAIL    = "jsalvati@u.washington.edu"
 URL                 = ""
 LICENSE             = "BSD"
-VERSION             = "0.1"
+VERSION             = "3.0"
 
 classifiers =  ['Development Status :: 3 - Alpha',
                 'Programming Language :: Python',
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         url = URL,
         long_description = LONG_DESCRIPTION,
         packages =
-        ['mcex','mcex/distributions','mcex/history','mcex/step_methods'],
+        ['pymc','pymc/distributions','pymc/history','pymc/step_methods'],
         classifiers =classifiers,
         install_requires=['theano','numpy','scipy','numdifftools'])
 
