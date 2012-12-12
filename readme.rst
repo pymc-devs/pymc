@@ -1,8 +1,8 @@
 ***********************
- Monte-Carlo Experiment
+ PyMC 3 
 ***********************
 
-MCEx is an experimental package designed to be allow experimentation with MCMC package design. 
+PyMC grew out of, MCEx, an experimental package designed to be allow experimentation with MCMC package design. 
 It's goal is to be simple to use, understand, extend and improve, while still being fast. 
 The hope is that some of the lessons learned in this experimental package lead to improvements
 in PyMC. People are encouraged to fork MCEx to try out their own designs and improvements 
