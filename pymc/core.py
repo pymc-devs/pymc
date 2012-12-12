@@ -24,44 +24,46 @@ class Model(object):
     def __init__(self, test = {}):
        self.vars = []
        self.factors = [] 
-       self.test = test
+       self.test = clean_point(test)
        if test:
            theano.config.compute_test_value = 'raise'
        else:
            theano.config.compute_test_value = 'off'
 
-"""
-these functions add random variables
-"""
+    """
+    these functions add random variables
+    it is totally appropriate to add new functions to Model
+    """
+    def Data(model, data, distribution):
+        args = map(constant, as_iterargs(data))
+        model.factors.append(distribution(*args))
+
+    def Var(model, name, distribution, shape = 1, dtype = 'float64'):
+        var = FreeVariable(name, shape, dtype)
+        model.vars.append(var)
+        if model.test is not None: 
+            var.tag.test_value = model.test[name]
+        model.factors.append(distribution(var))
+        return var
+        
+    def VarIndirectElemewise(model, name,proximate_calc, distribution, shape = 1):
+        var = FreeVariable(name, shape)
+        model.vars.append(var)
+        prox_var = proximate_calc(var)
+        
+        model.factors.append(distribution(prox_var) + log_jacobian_determinant(prox_var, var))
+        return var
+     
 
 def as_iterargs(data):
     if isinstance(data, tuple): 
         return data
-    if hasattr(data, 'columns'):
+    if hasattr(data, 'columns'): #data frames
         return [np.asarray(data[c]) for c in data.columns] 
     else:
         return [data]
-def AddData(model, data, distribution):
-    args = map(constant, as_iterargs(data))
-    model.factors.append(distribution(*args))
 
-def AddVar(model, name, distribution, shape = 1, dtype = 'float64'):
-    var = FreeVariable(name, shape, dtype)
-    model.vars.append(var)
-    if model.test is not None: 
-        var.tag.test_value = model.test[name]
-    model.factors.append(distribution(var))
-    return var
-    
-def AddVarIndirectElemewise(model, name,proximate_calc, distribution, shape = 1):
-    var = FreeVariable(name, shape)
-    model.vars.append(var)
-    prox_var = proximate_calc(var)
-    
-    model.factors.append(distribution(prox_var) + log_jacobian_determinant(prox_var, var))
-    return var
-    
-    
+       
 def continuous_vars(model):
     return [ var for var in model.vars if var.dtype in continuous_types] 
 
@@ -192,7 +194,7 @@ def sample(draws, step, point, sample_history = None, state = None):
     
     if not sample_history :
         sample_history = NpHistory(draws)
-        
+    point = clean_point(point)    
     tstart = time.time()
     
     for _ in xrange(int(draws)):
