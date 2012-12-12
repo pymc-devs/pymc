@@ -21,28 +21,35 @@ def FreeVariable( name, shape, dtype = 'float64'):
 
 class Model(object):
     """encapsulates the variables and the likelihood factors"""
-    def __init__(self):
+    def __init__(self, test = {}):
        self.vars = []
        self.factors = [] 
+       self.test = test
+       if test:
+           theano.config.compute_test_value = 'raise'
+       else:
+           theano.config.compute_test_value = 'off'
 
 """
 these functions add random variables
 """
 
-def make_constants(data) : 
+def as_iterargs(data):
     if isinstance(data, tuple): 
-        return tuple(map(constant, data))
+        return data
+    if hasattr(data, 'columns'):
+        return [np.asarray(data[c]) for c in data.columns] 
     else:
-        return constant(data)
+        return [data]
 def AddData(model, data, distribution):
-    
-    model.factors.append(distribution(make_constants(data)))
+    args = map(constant, as_iterargs(data))
+    model.factors.append(distribution(*args))
 
-def AddVar(model, name, distribution, shape = 1, dtype = 'float64', test = None):
+def AddVar(model, name, distribution, shape = 1, dtype = 'float64'):
     var = FreeVariable(name, shape, dtype)
     model.vars.append(var)
-    if test is not None: 
-        var.tag.test_value = test 
+    if model.test is not None: 
+        var.tag.test_value = model.test[name]
     model.factors.append(distribution(var))
     return var
     
@@ -139,7 +146,10 @@ dlogp_calc = dercalc(gradient)
 hess_calc = dercalc(jacobian)
 hess_diag_calc = dercalc(hessian_diag)
 
-    
+
+def clean_point(d) : 
+    return dict([(k,np.atleast_1d(v)) for (k,v) in d.iteritems()]) 
+
 class DASpaceMap(object):
     """ encapsulates a mapping of 
         dict space <-> array space"""
