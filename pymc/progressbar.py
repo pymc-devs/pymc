@@ -26,7 +26,7 @@ class ProgressBar:
         if sys.platform.lower().startswith('win'):
             print self, '\r',
         else:
-            print self, chr(27) + '[A'
+            print self
         self.update_iteration(iter)
         # time.sleep(0.5)
 
