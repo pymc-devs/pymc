@@ -32,7 +32,7 @@ Copyright (c) 2008 University of Otago. All rights reserved.
 
 # Import statements
 from numpy import random, array, arange, ones 
-from mcex import *
+from pymc import *
 # Sample size
 n = 100
 # True mean count, given occupancy

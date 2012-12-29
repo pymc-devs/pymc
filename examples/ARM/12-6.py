@@ -1,6 +1,6 @@
 from  utils import * 
 import numpy as np 
-from mcex import *
+from pymc import *
 
 
 data = readtabledict('srrs2.dat', delimiter = ',', quotechar='"', skipinitialspace = True)
