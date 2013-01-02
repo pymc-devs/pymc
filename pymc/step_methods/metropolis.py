@@ -9,7 +9,8 @@ from ..core import *
 
 from utils import *
 
-def metropolis_step(model, vars, C, scaling = .25):
+# TODO Implement tuning for Metropolis step
+def metropolis_step(model, vars, C, scaling=0.25):
     logp_d = model_logp(model)
         
     cholC = cholesky(scaling * C)
@@ -19,6 +20,7 @@ def metropolis_step(model, vars, C, scaling = .25):
         delta = cholesky_normal(q0.shape, cholC)
         
         q = q0 + delta  
+        
         return state, metrop_select(logp(q) - logp(q0),
                                     q, q0)
         

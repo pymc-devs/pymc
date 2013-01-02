@@ -11,8 +11,21 @@ import numpy as np
 import time 
 from history import NpHistory
 
-def FreeVariable( name, shape, dtype = 'float64'):
-    """creates a TensorVariable of the given shape and type"""
+def FreeVariable(name, shape, dtype='float64'):
+    """
+    Creates a TensorVariable of the given shape and type
+    
+    Parameters
+    ----------
+    
+    shape : int or vector of ints        
+    dtype : str
+    
+    Examples
+    --------
+    
+    
+    """
     shape = np.atleast_1d(shape)
     var = TensorType(str(dtype), shape == 1)(name)
     var.dshape = tuple(shape)
@@ -20,7 +33,11 @@ def FreeVariable( name, shape, dtype = 'float64'):
     return var
 
 class Model(object):
-    """encapsulates the variables and the likelihood factors"""
+    """
+    Base class for encapsulation of the variables and 
+    likelihood factors of a model
+    """
+    
     def __init__(self):
        self.vars = []
        self.factors = [] 
@@ -30,42 +47,103 @@ these functions add random variables
 """
 
 def make_constants(data) : 
+    """
+    Helper function for creating constants from data
+        
+    Parameters
+    ----------
+        
+    data : tuple, list, array  
+        
+    Examples
+    --------
+        
+    """
     if isinstance(data, tuple): 
         return tuple(map(constant, data))
     else:
         return constant(data)
+        
+        
 def AddData(model, data, distribution):
+    """
+    Adds data node to specified model, according to specified distribution
+        
+    Parameters
+    ----------
+        
+    model : Model
+    data : vector, list or array
+    distribution : function 
+        
+    Examples
+    --------
+
+        
+    """
     
     model.factors.append(distribution(make_constants(data)))
 
-def AddVar(model, name, distribution, shape = 1, dtype = 'float64', test = None):
+def AddVar(model, name, distribution, shape=1, dtype='float64'):
+    """
+    Adds variable to specified model
+        
+    Parameters
+    ----------
+        
+    model : Model
+        Model object to which variable is to be added
+    name : str
+        Variable name
+    distribution : function
+        Distribution associated with variable
+    shape : int or vector
+        Shape of variable (defaults to 1)
+    dtype : str  
+        Type of variable (defaults to float64)
+        
+    Examples
+    --------
+    
+        
+    """
     var = FreeVariable(name, shape, dtype)
     model.vars.append(var)
-    if test is not None: 
-        var.tag.test_value = test 
     model.factors.append(distribution(var))
     return var
     
-def AddVarIndirectElemewise(model, name,proximate_calc, distribution, shape = 1):
+# TODO Document AddVarIndirectElemewise
+def AddVarIndirectElemewise(model, name, proximate_calc, distribution, shape=1):
     var = FreeVariable(name, shape)
     model.vars.append(var)
     prox_var = proximate_calc(var)
     
     model.factors.append(distribution(prox_var) + log_jacobian_determinant(prox_var, var))
+    
     return var
     
     
 def continuous_vars(model):
-    return [ var for var in model.vars if var.dtype in continuous_types] 
+    """
+    Returns a list of the continuous variables in a specified model
+        
+    Parameters
+    ----------
+        
+    model : Model  
+        
+    """
+    
+    return [var for var in model.vars if var.dtype in continuous_types] 
 
 
 """
 these functions compile log-posterior functions (and derivatives)
 """
-def model_func(model, calcs, mode = None):
+def model_func(model, calcs, mode=None):
     f = function(model.vars, 
              calcs,
-             allow_input_downcast = True, mode = mode)
+             allow_input_downcast=True, mode= mode)
     def fn(state):
         return f(**state)
     return fn
@@ -91,10 +169,10 @@ def gradient(f, dvars):
 
 def jacobian(f, dvars):
     def jac(v):
-        def grad_i (i, f1, v): 
+        def grad_i(i, f1, v): 
             return flatgrad(f1[i], v)
         
-        return scan(grad_i, sequences = arange(f.shape[0]), non_sequences = [f,v])[0]
+        return scan(grad_i, sequences=arange(f.shape[0]), non_sequences=[f,v])[0]
 
     return concatenate(map(jac, dvars))
 
@@ -123,9 +201,23 @@ def log_jacobian_determinant(var1, var2):
 
 """
 These functions build log-posterior graphs (and derivatives)
-   """ 
-def logp_calc(model):  
-    return add(*map(sum,model.factors))
+""" 
+def logp_calc(model):
+    """
+    Calculates the log-probability of a specified model
+        
+    Parameters
+    ----------
+        
+    model : Model  
+        
+    Examples
+    --------
+        
+    >>> an example
+        
+    """
+    return add(*map(sum, model.factors))
 
 def dercalc(d_calc):
     def der_calc(model, dvars = None):
@@ -141,8 +233,10 @@ hess_diag_calc = dercalc(hessian_diag)
 
     
 class DASpaceMap(object):
-    """ encapsulates a mapping of 
-        dict space <-> array space"""
+    """ 
+    DASpaceMap encapsulates a mapping of dict space <-> array 
+    space
+    """
     def __init__(self,free_vars):
         self.dimensions = 0
         
@@ -154,7 +248,17 @@ class DASpaceMap(object):
             self.dimensions += var.dsize
             
     def project(self, d, a = None):
-        """project dict space -> array space"""
+        """
+        Projects dict space to array space
+        
+        Parameters
+        ----------
+        
+        d : dict
+        a : array
+            Defaults to None
+        
+        """
         if a is None:
             a = np.empty(self.dimensions)
         else:
@@ -168,7 +272,17 @@ class DASpaceMap(object):
         return a
     
     def rproject(self, a, d = {}):
-        """project array space -> dict space"""
+        """
+        Projects array space to dict space
+        
+        Parameters
+        ----------
+        
+        a : array
+        d : dict
+            Defaults to empty dict
+        
+        """
         d = d.copy()
             
         for var, slc in self.slices.iteritems():
@@ -176,13 +290,39 @@ class DASpaceMap(object):
             
         return d
 
-def sample(draws, step, point, sample_history = None, state = None):
-    """draw a number of samples using the given step method. Multiple step methods supported via compound step method
-    returns the amount of time taken"""
+# TODO Can we change `sample_history` to `trace`?
+def sample(draws, step, point, sample_history=None, state=None):
+    """
+    Draw a number of samples using the given step method. 
+    Multiple step methods supported via compound step method 
+    returns the amount of time taken.
+        
+    Parameters
+    ----------
+        
+    draws : int  
+        The number of samples to draw
+    step : function
+        A step function
+    point : float or vector
+        The current sample index
+    sample_history : NpHistory
+        A trace of past values (defaults to None)
+    state : 
+        The current state of the sampler (defaults to None)
+        
+    Examples
+    --------
+        
+    >>> an example
+        
+    """
     
+    # Instantiate a trace if there is not one passed
     if not sample_history :
         sample_history = NpHistory(draws)
-        
+    
+    # Keep track of sampling time    
     tstart = time.time()
     
     for _ in xrange(int(draws)):
@@ -191,6 +331,7 @@ def sample(draws, step, point, sample_history = None, state = None):
         
     return sample_history, state, (time.time() - tstart)
 
+# Sets of dtypes
 
 bool_types = set(['int8'])
    
