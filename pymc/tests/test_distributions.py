@@ -200,7 +200,7 @@ def discrete_consistency(randomf, likef, parameters,nrandom=1000, \
     for z in x:
         l.append(likef(z, **parameters))
     like = np.exp(np.array(l))
-    figuredata = {'hist':hist, 'bins':x, \
+    figuredata = {'hist':hist, 'bins':x-1, \
         'like':like.copy(), 'x':x, 'discrete':True}
     return hist, like, figuredata
 
