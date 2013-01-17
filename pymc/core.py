@@ -11,6 +11,7 @@ import numpy as np
 import time 
 from history import NpHistory
 
+# TODO Can we change this to just 'Variable'? 
 def FreeVariable(name, shape, dtype='float64'):
     """
     Creates a TensorVariable of the given shape and type
@@ -35,7 +36,7 @@ def FreeVariable(name, shape, dtype='float64'):
 class Model(object):
     """
     Base class for encapsulation of the variables and 
-    likelihood factors of a model
+    likelihood factors of a model.
     """
     
     def __init__(self):
@@ -79,6 +80,9 @@ def AddData(model, data, distribution):
     Examples
     --------
 
+    >>> model = Model()
+    >>> data = np.random.normal(size = (2, 20))
+    >>> AddData(model, data, Normal(mu = x, tau = .75**-2))
         
     """
     
@@ -97,7 +101,7 @@ def AddVar(model, name, distribution, shape=1, dtype='float64'):
         Variable name
     distribution : function
         Distribution associated with variable
-    shape : int or vector
+    shape : int or tuple
         Shape of variable (defaults to 1)
     dtype : str  
         Type of variable (defaults to float64)
@@ -105,6 +109,8 @@ def AddVar(model, name, distribution, shape=1, dtype='float64'):
     Examples
     --------
     
+    >>> model = Model()
+    >>> x = AddVar(model, 'x', Normal(mu = .5, tau = 2.**-2), (2,1))
         
     """
     var = FreeVariable(name, shape, dtype)
@@ -197,7 +203,6 @@ def log_jacobian_determinant(var1, var2):
     # in the case of elemwise operations we can just sum the gradients
     # so we might just test if var1 is elemwise wrt to var2 and then calculate the gradients, summing their logs
     # otherwise throw an error
-    return
 
 """
 These functions build log-posterior graphs (and derivatives)
@@ -220,6 +225,18 @@ def logp_calc(model):
     return add(*map(sum, model.factors))
 
 def dercalc(d_calc):
+    """
+    Returns a function for calculating the derivative of the output 
+    of another function.
+    
+    Parameters
+    ----------
+    d_calc : function
+    
+    Returns
+    -------
+    der_calc : function
+    """
     def der_calc(model, dvars = None):
         if dvars is None:
             dvars = continuous_vars(model)
@@ -237,7 +254,7 @@ class DASpaceMap(object):
     DASpaceMap encapsulates a mapping of dict space <-> array 
     space
     """
-    def __init__(self,free_vars):
+    def __init__(self, free_vars):
         self.dimensions = 0
         
         self.slices = {}

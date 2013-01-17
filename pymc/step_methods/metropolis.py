@@ -1,8 +1,3 @@
-'''
-Created on Mar 7, 2011
-
-@author: johnsalvatier
-'''
 from numpy.linalg import cholesky
 
 from ..core import *
