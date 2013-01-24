@@ -40,8 +40,8 @@ Data(outcomes, Bernoulli(p))
 start = find_MAP(model, start)
 hess = diag(approx_hess(model, start)) #find a good orientation using the hessian at the MAP
 
-step_method = hmc_step(model, model.vars, hess, is_cov = False) 
+step_method = HMCStep(model, model.vars, hess, is_cov = False) 
 #step_method = split_hmc_step(model, model.vars, hess,  start, hess, is_cov = False) 
 
-history, state, t = sample(3e3, step_method, start)
-print "took :", t
+history, state = psample(3e2, step_method, start, threads = 2 )
+#print "took :", t

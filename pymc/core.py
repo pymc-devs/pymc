@@ -9,7 +9,10 @@ from theano.tensor import TensorType, add, sum, grad,  flatten, arange, concaten
 
 import numpy as np 
 import time 
-from history import NpHistory
+from history import NpHistory, MultiHistory
+
+import itertools as itools
+import multiprocessing as mp
 
 def FreeVariable( name, shape, dtype = 'float64'):
     """creates a TensorVariable of the given shape and type"""
@@ -75,9 +78,13 @@ def model_func(model, calcs, mode = None):
     f = function(model.vars, 
              calcs,
              allow_input_downcast = True, mode = mode)
-    def fn(state):
-        return f(**state)
-    return fn
+    return KWArgFunc(f)
+
+class KWArgFunc(object): 
+    def __init__(self, f):
+        self.f = f
+    def __call__(self,state):
+        return self.f(**state)
 
 def model_logp(model, mode = None):
     return model_func(model, logp_calc(model), mode)
@@ -188,20 +195,45 @@ class DASpaceMap(object):
             
         return d
 
-def sample(draws, step, point, sample_history = None, state = None):
+def sample(draws, step, point, history = None, state = None): 
+    point = clean_point(point)
+    if history is None: 
+        history = NpHistory()
+
+    for _ in xrange(int(draws)):
+        state, point = step.step(state, point)
+        history = history + point
+    return state, history
+
+def argsample(args):
+    """ defined at top level so it can be pickled"""
+    return sample(*args)
+  
+def psample(draws, step, point, mhistory = None, state = None, threads = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
+
+    if not threads:
+        threads = min(mp.cpu_count() - 2, 1)
+
+    if isinstance(point, dict) :
+        point = threads * [point]
+
+    if not mhistory:
+        mhistory = MultiHistory([NpHistory() for _ in xrange(threads)])
+
+    if not state: 
+        state = threads*[None]
+
+    p = mp.Pool(threads)
+
+    argset = zip([draws]*threads, [step]*threads, point, mhistory.histories, state)
     
-    if not sample_history :
-        sample_history = NpHistory(draws)
-    point = clean_point(point)    
-    tstart = time.time()
-    
-    for _ in xrange(int(draws)):
-        state, point = step(state, point)
-        sample_history.record(point)
+    #doesn't work because you can't pickle nested functions
+    res = p.map(argsample, argset)
+    states, hist = zip(*res)
         
-    return sample_history, state, (time.time() - tstart)
+    return state, mhistory 
 
 
 bool_types = set(['int8'])
@@ -219,7 +251,3 @@ float_types = set(['float32',
 complex_types = set(['complex64',
                 'complex128'])
 continuous_types = float_types | complex_types
-discrete_types = bool_types | int_types
-
-#theano stuff 
-theano.config.warn.sum_div_dimshuffle_bug = False

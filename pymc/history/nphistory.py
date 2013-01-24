@@ -8,12 +8,12 @@ class NpHistory(object):
     """
     encapsulates the recording of a process chain
     """
-    def __init__(self, max_draws):
+    def __init__(self, max_draws = 10000):
         self.max_draws = max_draws
         self.samples = {}
         self.nsamples = 0
     
-    def record(self, point):
+    def __add__(self, point):
         """
         records the position of a chain at a certain point in time
         """
@@ -30,6 +30,20 @@ class NpHistory(object):
             self.nsamples += 1
         else :
             raise ValueError('out of space!')
+        return self
         
     def __getitem__(self, key):
         return self.samples[key][0:self.nsamples,...]
+
+class MultiHistory(object): 
+    def __init__(self, histories): 
+        self.histories = histories 
+
+    def __getitem__(self, key): 
+        return [h[key] for h in self.histories]
+    def combined():
+        h = NpHistory()
+        for k in histories[0].samples: 
+            h.samples[k] = concatenate([s[k] for s in self.histories])
+            h.nsamples = h[k].shape[0]
+        return h

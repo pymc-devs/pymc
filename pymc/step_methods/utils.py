@@ -1,23 +1,29 @@
 from ..core import *
 import numpy as np 
 
-def array_step(astep, vars, fs, provide_full = False):
-    mapping = DASpaceMap(vars)
-    
-    def step(state, chain):
+class array_step(object):
+    def __init__(self, vars, fs, provide_full = False):
+        self.mapping = DASpaceMap(vars)
+        self.fs = fs
+        self.provide_full = provide_full
         
-        fns = [arr_wrap(f, mapping, chain) for f in fs]
-        if provide_full :
+    def step(self, state, chain):
+        
+        fns = [ArrWrap(f, self.mapping, chain) for f in self.fs]
+        if self.provide_full:
             fns += [chain]	
         
-        state, achain = astep(state, mapping.project(chain), *fns)
-        return state, mapping.rproject(achain, chain)
-    return step
+        state, achain = self.astep(state, self.mapping.project(chain), *fns)
+        return state, self.mapping.rproject(achain, chain)
 
-def arr_wrap(f, mapping, chain):    
-    def fn( a):
-        return f(mapping.rproject(a, chain))
-    return fn
+class ArrWrap(object):
+    def __init__(self, f, mapping, chain):
+        self.f = f
+        self.mapping = mapping
+        self.chain = chain
+
+    def __call__(self, a):
+        return self.f(self.mapping.rproject(a, self.chain))
 
 from numpy.random import uniform, normal
 from numpy import dot, log , isfinite
