@@ -207,7 +207,7 @@ class MCMC(Sampler):
             procedure.
             If burn_till_tuned is True it also overrides the tune_thorughout argument, so no step method
             will be tuned when sample are being tallied.
-          - stop_tuning_adfter: int
+          - stop_tuning_after: int
             the number of untuned successive tuning interval needed to be reach in order for
             the burn-in phase to be done (If burn_till_tuned is True).
         """
