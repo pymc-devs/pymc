@@ -3,11 +3,11 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 '''
-from scipy.optimize import fmin_Hessian, fmin_ncg
+from scipy.optimize import fmin_bfgs, fmin_ncg
 import numpy as np 
 from core import *
 
-def find_MAP(model, chain_state, vars=None, min_alg=fmin_Hessian, disp=False, return_all=False):
+def find_MAP(model, chain_state, vars=None, min_alg=fmin_bfgs, disp=False, return_all=False):
     """
     Sets state to the local maximum a posteriori point given a model.
     Current default of fmin_Hessian does not deal well with optimizing close 
@@ -61,4 +61,4 @@ def nan_to_high(x):
             return 1.79769313e+100
         else:
             return x
-    
+
