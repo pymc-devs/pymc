@@ -98,3 +98,6 @@ def Bound(dist, lower = -inf, upper = inf):
                   dist(value),
                   -inf)
     return ndist
+
+def TruncT(mu, lam, nu):
+    return Bound(T(mu,lam,nu), 0)
