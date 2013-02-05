@@ -24,7 +24,7 @@ def FreeVariable( name, shape, dtype = 'float64'):
 
 class Model(object):
     """encapsulates the variables and the likelihood factors"""
-    def __init__(self, test = {}):
+    def __init__(self, test = None):
        self.vars = []
        self.factors = [] 
        self.test = clean_point(test)
@@ -200,10 +200,12 @@ def sample(draws, step, point, history = None, state = None):
     if history is None: 
         history = NpHistory()
 
+    tstart = time.time() 
     for _ in xrange(int(draws)):
         state, point = step.step(state, point)
         history = history + point
-    return state, history
+
+    return state, history, time.time() - tstart
 
 def argsample(args):
     """ defined at top level so it can be pickled"""
@@ -229,11 +231,12 @@ def psample(draws, step, point, mhistory = None, state = None, threads = None):
 
     argset = zip([draws]*threads, [step]*threads, point, mhistory.histories, state)
     
-    #doesn't work because you can't pickle nested functions
+    tstart = time.time() 
+
     res = p.map(argsample, argset)
-    states, hist = zip(*res)
+    states, hist, _ = zip(*res)
         
-    return state, mhistory 
+    return state, mhistory, time.time() - tstart
 
 
 bool_types = set(['int8'])

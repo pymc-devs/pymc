@@ -15,6 +15,9 @@ from ..core import *
 #allow users to pass Hamiltonian splitting functions
 
 
+def unif(step_size, elow = .85, ehigh = 1.15):
+    return uniform(elow, ehigh) * step_size
+
 class hmc_step(array_step):
     def __init__(self, model, vars, C, step_size_scaling = .25, trajectory_length = 2., is_cov = False, step_rand = unif):
         """
@@ -64,5 +67,3 @@ class hmc_step(array_step):
         
         return state, metrop_select(mr, q, q0)
         
-def unif(step_size, elow = .85, ehigh = 1.15):
-    return uniform(elow, ehigh) * step_size
