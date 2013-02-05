@@ -4,7 +4,7 @@ Created on May 18, 2012
 @author: jsalvatier
 '''
 import numpy as np 
-from mcex import * 
+from pymc import * 
 import theano.tensor as t 
 from  utils import * 
 

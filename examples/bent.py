@@ -3,7 +3,7 @@ Created on May 10, 2012
 
 @author: jsalvatier
 '''
-from mcex import * 
+from pymc import * 
 from numpy.random import normal
 import numpy as np 
 import pylab as pl 

@@ -31,7 +31,7 @@ Copyright (c) 2008 University of Otago. All rights reserved.
 """
 
 # Import statements
-from mcex import *
+from pymc import *
 from numpy import random, array, arange, ones 
 import theano.tensor as t
 # Sample size

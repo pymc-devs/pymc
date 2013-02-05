@@ -1,18 +1,15 @@
-'''
-Created on Oct 24, 2009
-
-# Author: John Salvatier <jsalvati@u.washington.edu>, 2009.
-'''
 from distutils.core import setup
 from distutils.extension import Extension
 
 
 DISTNAME            = 'pymc'
 DESCRIPTION         = "PyMC 3"
-LONG_DESCRIPTION    =""""""
+LONG_DESCRIPTION    = """Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC), is an increasingly relevant approach to statistical estimation. However, few statistical software packages implement MCMC samplers, and they are non-trivial to code by hand. ``pymc`` is a python package that implements the Metropolis-Hastings algorithm as a python class, and is extremely flexible and applicable to a large suite of problems. ``pymc`` includes methods for summarizing output, plotting, goodness-of-fit and convergence diagnostics."""
 MAINTAINER          = 'John Salvatier'
-MAINTAINER_EMAIL    = "jsalvati@u.washington.edu"
-URL                 = ""
+MAINTAINER_EMAIL    = 'jsalvati@u.washington.edu'
+AUTHOR              = 'John Salvatier and Christopher Fonnesbeck'
+AUTHOR_EMAIL        = 'chris.fonnesbeck@vanderbilt.edu'
+URL                 = "http://github.com/pymc-devs/pymc"
 LICENSE             = "BSD"
 VERSION             = "3.0"
 

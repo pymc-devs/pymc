@@ -1,4 +1,4 @@
-from mcex import *
+from pymc import *
 import numpy as np 
 import theano.tensor as t
 
