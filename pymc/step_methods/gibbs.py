@@ -9,7 +9,7 @@ from numpy.random import uniform
 from __builtin__ import sum as builtin_sum
     
     
-class elemwise_cat_gibbs_step(array_step):
+class elemwise_cat_gibbs_step():
     """
     gibbs sampling for categorical variables that only have only have elementwise effects
     the variable can't be indexed into or transposed or anything otherwise that will mess things up

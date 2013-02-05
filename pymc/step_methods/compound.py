@@ -9,10 +9,10 @@ class compound_step(object):
         self.steppers = steppers
     def step(self, states, chain_state):
         if states is None:
-            states = [None ]*len(steppers)
+            states = [None ]*len(self.steppers)
         # this seems somewhat complicated, I wonder if there's a better way for this
         for i, (state, stepper) in enumerate(zip(states, self.steppers)): 
-            state, chain_state = stepper(state, chain_state)
+            state, chain_state = stepper.step(state, chain_state)
             states[i] = state
             
         return states, chain_state 
