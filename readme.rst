@@ -43,11 +43,10 @@ To Do
  * Implement a potential object which can take incomplete covariances and exploit the conditional independence of nodes to do the whole calculation 
  * Build examples showcasing different samplers
  * Reconsider nphistory design
-  * missing value imputation
+ * missing value imputation
  
 ****************
 Possible Changes
 ****************
 
  * Make HMC and related automatically choose a variance/covariance
-
