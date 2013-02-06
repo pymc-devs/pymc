@@ -5,7 +5,7 @@
 PyMC grew out of, MCEx, an experimental package designed to be allow experimentation with MCMC package design. 
 It's goal is to be simple to use, understand, extend and improve, while still being fast. 
 The hope is that some of the lessons learned in this experimental package lead to improvements
-in PyMC. People are encouraged to fork MCEx to try out their own designs and improvements 
+in PyMC. This branch is still experimental so people are encouraged to try out their own designs and improvements 
 as well as make criticisms.
 
 For a tutorial on basic inference, see tutorial.py in the examples folder.
@@ -17,7 +17,7 @@ Some design decisions
 +==================================+=======================================+===================================================+
 | Computational core outsourced    | - Simple package code (<400 lines)    | - Supporting arbitrary stochastics/deterministics |
 | to Theano                        | - Efficient                           |   more difficult in complex cases                 |
-|                                  | - Improvements to Theano improve MCEx |                                                   |
+|                                  | - Improvements to Theano improve PyMC |                                                   |
 |                                  | - GPU enabled                         |                                                   |
 |                                  | - Automatic Differentiation           |                                                   |
 +----------------------------------+---------------------------------------+---------------------------------------------------+
@@ -38,16 +38,15 @@ To Do
  * Simplify standard usage. 
  * Build a GPU example 
  * Give `sample` a way of automatically choosing step methods.
- * Do some profiling to see why likelihoods are slower in mcex than pymc 
+ * Do some profiling to see why likelihoods are slower in pymc3 than pymc 
  * Fix step_methods.gibbs.categorical so that it's faster, currently very slow. 
  * Implement a potential object which can take incomplete covariances and exploit the conditional independence of nodes to do the whole calculation 
  * Build examples showcasing different samplers
  * Reconsider nphistory design
+ * missing value imputation
  
 ****************
 Possible Changes
 ****************
 
  * Make HMC and related automatically choose a variance/covariance
- * Eliminate `model` arguments to AddVar, AddData, step methods etc by making it hidden and default
- * Eliminate test = argument to AddVar by allowing the user to specify a 'test point'. 

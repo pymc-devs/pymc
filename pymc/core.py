@@ -9,7 +9,10 @@ from theano.tensor import TensorType, add, sum, grad,  flatten, arange, concaten
 
 import numpy as np 
 import time 
-from history import NpHistory
+from history import NpHistory, MultiHistory
+
+import itertools as itools
+import multiprocessing as mp
 
 # TODO Can we change this to just 'Variable'? 
 def FreeVariable(name, shape, dtype='float64'):
@@ -39,120 +42,67 @@ class Model(object):
     likelihood factors of a model.
     """
     
-    def __init__(self):
+    def __init__(self, test = None):
        self.vars = []
        self.factors = [] 
+       self.test = clean_point(test)
+       if test:
+           theano.config.compute_test_value = 'raise'
+       else:
+           theano.config.compute_test_value = 'off'
 
-"""
-these functions add random variables
-"""
+    """
+    these functions add random variables
+    it is totally appropriate to add new functions to Model
+    """
+    def Data(model, data, distribution):
+        args = map(constant, as_iterargs(data))
+        model.factors.append(distribution(*args))
 
-def make_constants(data) : 
-    """
-    Helper function for creating constants from data
+    def Var(model, name, distribution, shape = 1, dtype = 'float64'):
+        var = FreeVariable(name, shape, dtype)
+        model.vars.append(var)
+        if model.test is not None: 
+            var.tag.test_value = model.test[name]
+        model.factors.append(distribution(var))
+        return var
         
-    Parameters
-    ----------
+    def VarIndirectElemewise(model, name,proximate_calc, distribution, shape = 1):
+        var = FreeVariable(name, shape)
+        model.vars.append(var)
+        prox_var = proximate_calc(var)
         
-    data : tuple, list, array  
-        
-    Examples
-    --------
-        
-    """
+        model.factors.append(distribution(prox_var) + log_jacobian_determinant(prox_var, var))
+        return var
+     
+
+def as_iterargs(data):
     if isinstance(data, tuple): 
-        return tuple(map(constant, data))
+        return data
+    if hasattr(data, 'columns'): #data frames
+        return [np.asarray(data[c]) for c in data.columns] 
     else:
-        return constant(data)
-        
-        
-def AddData(model, data, distribution):
-    """
-    Adds data node to specified model, according to specified distribution
-        
-    Parameters
-    ----------
-        
-    model : Model
-    data : vector, list or array
-    distribution : function 
-        
-    Examples
-    --------
+        return [data]
 
-    >>> model = Model()
-    >>> data = np.random.normal(size = (2, 20))
-    >>> AddData(model, data, Normal(mu = x, tau = .75**-2))
-        
-    """
-    
-    model.factors.append(distribution(make_constants(data)))
-
-def AddVar(model, name, distribution, shape=1, dtype='float64'):
-    """
-    Adds variable to specified model
-        
-    Parameters
-    ----------
-        
-    model : Model
-        Model object to which variable is to be added
-    name : str
-        Variable name
-    distribution : function
-        Distribution associated with variable
-    shape : int or tuple
-        Shape of variable (defaults to 1)
-    dtype : str  
-        Type of variable (defaults to float64)
-        
-    Examples
-    --------
-    
-    >>> model = Model()
-    >>> x = AddVar(model, 'x', Normal(mu = .5, tau = 2.**-2), (2,1))
-        
-    """
-    var = FreeVariable(name, shape, dtype)
-    model.vars.append(var)
-    model.factors.append(distribution(var))
-    return var
-    
-# TODO Document AddVarIndirectElemewise
-def AddVarIndirectElemewise(model, name, proximate_calc, distribution, shape=1):
-    var = FreeVariable(name, shape)
-    model.vars.append(var)
-    prox_var = proximate_calc(var)
-    
-    model.factors.append(distribution(prox_var) + log_jacobian_determinant(prox_var, var))
-    
-    return var
-    
-    
+       
 def continuous_vars(model):
-    """
-    Returns a list of the continuous variables in a specified model
-        
-    Parameters
-    ----------
-        
-    model : Model  
-        
-    """
-    
-    return [var for var in model.vars if var.dtype in continuous_types] 
+    return [ var for var in model.vars if var.dtype in continuous_types] 
 
 
 """
 these functions compile log-posterior functions (and derivatives)
 """
-def model_func(model, calcs, mode=None):
+def model_func(model, calcs, mode = None):
     f = function(model.vars, 
              calcs,
-             allow_input_downcast=True, mode= mode)
-    def fn(state):
-        return f(**state)
-    return fn
+             allow_input_downcast = True, mode = mode)
+    return KWArgFunc(f)
+
+class KWArgFunc(object): 
+    def __init__(self, f):
+        self.f = f
+    def __call__(self,state):
+        return self.f(**state)
 
 def model_logp(model, mode = None):
     return model_func(model, logp_calc(model), mode)
@@ -203,6 +153,7 @@ def log_jacobian_determinant(var1, var2):
     # in the case of elemwise operations we can just sum the gradients
     # so we might just test if var1 is elemwise wrt to var2 and then calculate the gradients, summing their logs
     # otherwise throw an error
+    return
 
 """
 These functions build log-posterior graphs (and derivatives)
@@ -308,7 +259,7 @@ class DASpaceMap(object):
         return d
 
 # TODO Can we change `sample_history` to `trace`?
-def sample(draws, step, point, sample_history=None, state=None):
+def sample(draws, step, point, history = None, state = None): 
     """
     Draw a number of samples using the given step method. 
     Multiple step methods supported via compound step method 
@@ -334,17 +285,47 @@ def sample(draws, step, point, sample_history=None, state=None):
     >>> an example
         
     """
-    
-    # Instantiate a trace if there is not one passed
-    if not sample_history :
-        sample_history = NpHistory(draws)
-    
-    # Keep track of sampling time    
-    tstart = time.time()
-    
+
+    point = clean_point(point)
+    if history is None: 
+        history = NpHistory()
+    # Keep track of sampling time  
+    tstart = time.time() 
     for _ in xrange(int(draws)):
-        state, point = step(state, point)
-        sample_history.record(point)
+        state, point = step.step(state, point)
+        history = history + point
+
+    return state, history, time.time() - tstart
+
+def argsample(args):
+    """ defined at top level so it can be pickled"""
+    return sample(*args)
+  
+def psample(draws, step, point, mhistory = None, state = None, threads = None):
+    """draw a number of samples using the given step method. Multiple step methods supported via compound step method
+    returns the amount of time taken"""
+
+    if not threads:
+        threads = min(mp.cpu_count() - 2, 1)
+
+    if isinstance(point, dict) :
+        point = threads * [point]
+
+    if not mhistory:
+        mhistory = MultiHistory([NpHistory() for _ in xrange(threads)])
+
+    if not state: 
+        state = threads*[None]
+
+    p = mp.Pool(threads)
+
+    argset = zip([draws]*threads, [step]*threads, point, mhistory.histories, state)
+    
+    # Keep track of sampling time  
+    tstart = time.time() 
+
+    res = p.map(argsample, argset)
+    states, hist, _ = zip(*res)
         
     return sample_history, state, (time.time() - tstart)
 

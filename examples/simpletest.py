@@ -8,26 +8,25 @@ np.seterr(invalid = 'raise')
 
 data = np.random.normal(size = (2, 20))
 
-
-model = Model()
-
-
-x = AddVar(model, 'x', Normal(mu = .5, tau = 2.**-2), (2,1))
-
-
-z = AddVar(model, 'z', Beta(alpha = 10, beta =5.5))
-
-AddData(model, data, Normal(mu = x, tau = .75**-2))
-
-
 #make a chain with some starting point 
-chain = {'x' : np.array([[0.2],[.3]]),
+start = {'x' : np.array([[0.2],[.3]]),
          'z' : np.array([.5])}
+
+model = Model(test = start)
+Var = model.Var
+Data = model.Data
+
+x = Var('x', Normal(mu = .5, tau = 2.**-2), (2,1))
+
+z = Var('z', Beta(alpha = 10, beta =5.5))
+
+Data(data, Normal(mu = x, tau = .75**-2))
+
 
 
 step_method = hmc_step(model, model.vars)
 
-history,state, t = sample(1e3, step_method, chain)
+history,state, t = sample(1e3, step_method, start)
 
 print "took :", t
 

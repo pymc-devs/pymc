@@ -7,15 +7,18 @@ import theano
 np.seterr(invalid = 'raise')
 
 data = np.random.normal(size = (3, 20))
-
-
-model = Model()
-
 n = 1
-x = AddVar(model, 'x', Normal(mu = 0, tau = 1.), (n))
+start = {'x' : np.zeros(n)}
+
+model = Model(test = start)
+Var = model.Var 
+Data = model.Data 
+
+
+x = Var('x', Normal(mu = 0, tau = 1.), (n))
 
 #make a chain with some starting point 
-start = {'x' : np.zeros(n)}
+
 
 
 

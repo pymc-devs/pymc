@@ -28,7 +28,7 @@ def find_MAP(model, chain_state, vars=None, min_alg=fmin_bfgs, disp=False, retur
         to False).
     """
     if vars is None: 
-        vars = model.vars 
+        vars = continuous_vars(model)
         
     mapping = DASpaceMap(vars)
     
@@ -50,6 +50,8 @@ def find_MAP(model, chain_state, vars=None, min_alg=fmin_bfgs, disp=False, retur
     else:
         return chain_state
 
+    
+    
 def nan_to_high(x):
     # Converts NaN values to largest integer
     x = x.copy() 
@@ -61,4 +63,4 @@ def nan_to_high(x):
             return 1.79769313e+100
         else:
             return x
-
+    

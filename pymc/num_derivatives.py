@@ -1,3 +1,8 @@
+'''
+Created on Mar 12, 2011
+
+@author: johnsalvatier
+'''
 import numdifftools as nd
 import numpy as np 
 from core import *
@@ -14,7 +19,7 @@ def approx_hess(model, chain_state, vars=None):
         Variables for which Hessian is to be calculated.
     """
     if vars is None :
-        vars = model.vars
+        vars = continuous_vars(model)
     dlogp = model_dlogp(model, vars)
     mapping = DASpaceMap(vars)
     
