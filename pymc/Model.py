@@ -385,10 +385,14 @@ class Sampler(Model):
         header += ', '.join(['q%s' % i for i in quantiles])
         outfile.write(header + '\n')
 
-        stats = self.stats(alpha=alpha, start=start, batches=batches, chain=chain, quantiles=quantiles)
-
+        stats = self.stats(variables=variables, alpha=alpha, start=start, batches=batches, chain=chain, quantiles=quantiles)
+        
+        if variables is None:
+            variables = stats.keys()
+            variables.sort()
+        
         buffer = str()
-        for param in stats:
+        for param in variables:
 
             values = stats[param]
 
