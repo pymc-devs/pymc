@@ -1,8 +1,4 @@
 from numpy import *
- 
-# Download datafile
-import urllib
-urllib.urlretrieve('http://www.ai-geostats.org/fileadmin/Documents/Data/walker_01.dat',filename='walker_01.dat')
 
 # Whhether to thin dataset; definitely thin it if you're running this example on your laptop!
 thin = False
