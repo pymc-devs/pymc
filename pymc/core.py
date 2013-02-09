@@ -199,6 +199,8 @@ dlogp_calc = dercalc(gradient)
 hess_calc = dercalc(jacobian)
 hess_diag_calc = dercalc(hessian_diag)
 
+def clean_point(d) : 
+    return dict([(k,np.atleast_1d(v)) for (k,v) in d.iteritems()]) 
     
 class DASpaceMap(object):
     """ 
@@ -295,7 +297,7 @@ def sample(draws, step, point, history = None, state = None):
         state, point = step.step(state, point)
         history = history + point
 
-    return state, history, time.time() - tstart
+    return history, state, time.time() - tstart
 
 def argsample(args):
     """ defined at top level so it can be pickled"""
