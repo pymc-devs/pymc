@@ -261,7 +261,7 @@ class DASpaceMap(object):
         return d
 
 # TODO Can we change `sample_history` to `trace`?
-def sample(draws, step, point, history = None, state = None): 
+def sample(draws, step, point, sample_history = None, state = None): 
     """
     Draw a number of samples using the given step method. 
     Multiple step methods supported via compound step method 
@@ -289,21 +289,21 @@ def sample(draws, step, point, history = None, state = None):
     """
 
     point = clean_point(point)
-    if history is None: 
-        history = NpHistory()
+    if sample_history is None: 
+        sample_history = NpHistory()
     # Keep track of sampling time  
     tstart = time.time() 
     for _ in xrange(int(draws)):
         state, point = step.step(state, point)
-        history = history + point
+        sample_history = sample_history + point
 
-    return history, state, time.time() - tstart
+    return sample_history, state, time.time() - tstart
 
 def argsample(args):
     """ defined at top level so it can be pickled"""
     return sample(*args)
   
-def psample(draws, step, point, mhistory = None, state = None, threads = None):
+def psample(draws, step, point, msample_history = None, state = None, threads = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
 
@@ -313,15 +313,15 @@ def psample(draws, step, point, mhistory = None, state = None, threads = None):
     if isinstance(point, dict) :
         point = threads * [point]
 
-    if not mhistory:
-        mhistory = MultiHistory([NpHistory() for _ in xrange(threads)])
+    if not msample_history:
+        msample_history = MultiHistory([NpHistory() for _ in xrange(threads)])
 
     if not state: 
         state = threads*[None]
 
     p = mp.Pool(threads)
 
-    argset = zip([draws]*threads, [step]*threads, point, mhistory.histories, state)
+    argset = zip([draws]*threads, [step]*threads, point, msample_history.histories, state)
     
     # Keep track of sampling time  
     tstart = time.time() 
@@ -329,7 +329,7 @@ def psample(draws, step, point, mhistory = None, state = None, threads = None):
     res = p.map(argsample, argset)
     states, hist, _ = zip(*res)
         
-    return sample_history, state, (time.time() - tstart)
+    return msample_history, state, (time.time() - tstart)
 
 # Sets of dtypes
 
