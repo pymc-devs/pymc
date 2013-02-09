@@ -1,11 +1,10 @@
 from pymc import *
-import numpy as np 
-import theano.tensor as t
 
-#import pydevd 
-#pydevd.set_pm_excepthook()
+import theano.tensor as t
+import numpy as np 
 
 def invlogit(x):
+    import numpy as np
     return np.exp(x)/(1 + np.exp(x)) 
 
 npred = 4
@@ -25,6 +24,7 @@ Var = model.Var
 Data = model.Data 
 
 def tinvlogit(x):
+    import theano.tensor as t
     return t.exp(x)/(1 + t.exp(x)) 
 
 effects = Var('effects', Normal(mu = 0, tau = 2.**-2), (1, npred))
