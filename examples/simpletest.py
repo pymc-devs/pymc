@@ -23,8 +23,8 @@ z = Var('z', Beta(alpha = 10, beta =5.5))
 Data(data, Normal(mu = x, tau = .75**-2))
 
 
-
-step_method = hmc_step(model, model.vars)
+hess = approx_hess(model, start)
+step_method = hmc_step(model, model.vars, hess)
 
 history,state, t = sample(1e3, step_method, start)
 
