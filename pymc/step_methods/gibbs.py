@@ -18,10 +18,11 @@ class elemwise_cat_gibbs_step():
     """
     def __init__(self, model, var, values):
         self.elogp = elemwise_logp(model, var)
-        self.sh = ones(var.dshape, var.dtype);
+        self.sh = ones(var.dshape, var.dtype)
+        self.values = values
     
     def step(self, state, chain):
-        p = array([self.elogp(project(chain, self.var, v * self.sh)) for v in values])
+        p = array([self.elogp(project(chain, self.var, v * self.sh)) for v in self.values])
         return state, project(categorical(p, var.dshape))
 
 def project(chain,var, x):
