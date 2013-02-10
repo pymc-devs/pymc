@@ -1,5 +1,6 @@
 from checks import *
 from models import simple_model
+from theano.tensor import constant
 
 def check_moment(h, var, moment, value, bound):
     assert assert_almost_equal(
@@ -10,11 +11,11 @@ def check_moment(h, var, moment, value, bound):
 
 def test_step_continuous():
 
-    mu = np.array([-.1,.5, 1.1])
-    p = np.array([
+    mu = as_tensor_variable(np.array([-.1,.5, 1.1]))
+    p = as_tensor_variable(np.array([
         [2. , 0 ,  0],
         [.05 , .1,  0],
-        [1. ,-0.05,5.5]])
+        [1. ,-0.05,5.5]]))
 
     tau = np.dot(p,p.T) 
 

@@ -1,5 +1,4 @@
 '''
-Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
@@ -101,3 +100,13 @@ def Bound(dist, lower = -inf, upper = inf):
 
 def TruncT(mu, lam, nu):
     return Bound(T(mu,lam,nu), 0)
+
+
+from theano.sandbox.linalg import det
+from theano.tensor import dot
+
+def MvNormal(mu, tau):
+    def dist(value): 
+        delta = value - mu
+        return 1/2. * ( log(det(tau)) - dot(delta.T,dot(tau, delta)))
+    return dist

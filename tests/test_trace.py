@@ -1,5 +1,4 @@
-import numpy as np
-import pymc as pm
+from checks import *
 from models import simple_init
 
 def check_trace(h, n, step, start):
