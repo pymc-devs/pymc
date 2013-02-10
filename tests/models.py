@@ -9,7 +9,7 @@ def simple_init():
 
 
 def simple_model():
-    start = {'x' : .1}
+    start = {'x' : np.array([.1])}
     model = Model(start)
     Var = model.Var
 

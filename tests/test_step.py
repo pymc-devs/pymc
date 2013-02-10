@@ -1,47 +1,45 @@
 from checks import *
 from models import simple_model
 from theano.tensor import constant
+from scipy.stats.mstats import moment
 
-def check_moment(h, var, moment, value, bound):
+def check_stat(trace, var, stat, value, bound):
     assert assert_almost_equal(
-            np.moment(h[var], moment, axis =0),
+            stat(trace[var], axis =0),
             value,
             bound)
 
 
 def test_step_continuous():
 
-    mu = as_tensor_variable(np.array([-.1,.5, 1.1]))
-    p = as_tensor_variable(np.array([
+    mu = np.array([-.1,.5, 1.1])
+    p = np.array([
         [2. , 0 ,  0],
         [.05 , .1,  0],
-        [1. ,-0.05,5.5]]))
+        [1. ,-0.05,5.5]])
 
     tau = np.dot(p,p.T) 
 
-                    
-
-    start = {'x' : [.1, 1., .8]}
+    start = {'x' : np.array([.1, 1., .8])}
     model = pm.Model(start)
     Var = model.Var
 
-    x = Var('x', pm.MvNormal(mu,tau))
+    x = Var('x', pm.MvNormal(constant(mu),constant(tau)), 3)
 
     H = tau
 
-    hmc = pm.hmc_step(model, H)
+    hmc = pm.hmc_step(model, model.vars,  H)
     mh = pm.metropolis_step(model, model.vars , H)
-    compound = pm.compound_step(hmc, mh)
+    compound = pm.compound_step([hmc, mh])
     steps = [hmc, mh, compound]
 
-
-    moments = [('x', 0, mu, .01)]
+    check = [('x', np.mean, mu, 1)]
 
     for st in steps:
-        for (var, moment, val, bound) in moments:
-            h, _, _ = psample(2000, st, start)
+        for (var, stat, val, bound) in check:
+            h, _, _ = sample(5000, st, start)
 
-            yield check_moment, h, var, moment, val, bound  
+            yield check_stat, h, var, stat, val, bound  
 
 
 
