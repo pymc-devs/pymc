@@ -5,6 +5,7 @@ from scipy.linalg import cholesky, cho_solve
 import numpy as np
 
 def quad_potential(C, is_cov):
+    partial_check_positive_definite(C)
     if C.ndim == 1:
         if is_cov:
             return ElemWiseQuadPotential(C)
@@ -16,9 +17,26 @@ def quad_potential(C, is_cov):
         else :
             return QuadPotential_Inv(C) 
 
+def partial_check_positive_definite(C):
+    """Simple but partial check for Positive Definiteness"""
+    if C.ndim == 1:
+        d = C 
+    else :
+        d = np.diag(C)
+    i = np.where(np.logical_or(np.isnan(d), d<=0))
+
+    if len(i):
+        raise PositiveDefiniteError("Simple check failed. Diagonal contains negatives", i)
+
+class PositiveDefiniteError(ValueError):
+    def __init__(self, msg, idx): 
+        self.idx = idx
+        self.msg = "Scaling is not positive definite. " + msg + ". Check indexes " + str(idx)
+
 class ElemWiseQuadPotential(object):
     def __init__(self, v):
         s = v **.5
+
         self.s = s
         self.inv_s = 1./s
         self.v = v 
@@ -29,8 +47,10 @@ class ElemWiseQuadPotential(object):
     def energy(self, x):
         return .5*dot(x, self.v*x)
 
+
 class QuadPotential_Inv(object):
     def __init__(self, A):
+        try 
         self.L = cholesky(A, lower = True)
         
     def velocity(self, x ):
