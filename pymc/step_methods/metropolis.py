@@ -15,9 +15,9 @@ class metropolis_step(array_step):
         logp_d = model_logp(model)
         
         self.cholC = cholesky(scaling * C)
-        super(metropolis_step,self).__init__(step, logp_d, vars)
+        super(metropolis_step,self).__init__(vars, [logp_d])
         
-    def astep(logp, state, q0):
+    def astep(self, state, q0, logp):
 
         delta = cholesky_normal(q0.shape, self.cholC)
         
