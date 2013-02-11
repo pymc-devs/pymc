@@ -16,7 +16,7 @@ import multiprocessing as mp
 import collections
 
 # TODO Can we change this to just 'Variable'? 
-def FreeVariable(name, shape, dtype='float64'):
+def Variable(name, shape, dtype='float64'):
     """
     Creates a TensorVariable of the given shape and type
     
@@ -61,7 +61,7 @@ class Model(object):
         model.factors.append(distribution(*args))
 
     def Var(model, name, distribution, shape = 1, dtype = 'float64'):
-        var = FreeVariable(name, shape, dtype)
+        var = Variable(name, shape, dtype)
         model.vars.append(var)
         if model.test_point is not None: 
             var.tag.test_value = model.test_point[name]
@@ -69,7 +69,7 @@ class Model(object):
         return var
         
     def VarIndirectElemewise(model, name,proximate_calc, distribution, shape = 1):
-        var = FreeVariable(name, shape)
+        var = Variable(name, shape)
         model.vars.append(var)
         prox_var = proximate_calc(var)
         
@@ -148,13 +148,6 @@ def hessian_diag(f, dvars):
 
     return concatenate(map(hess, dvars))
 
-def log_jacobian_determinant(var1, var2):
-    # need to find a way to calculate the log of the jacobian determinant easily, 
-    raise NotImplementedError()
-    # in the case of elemwise operations we can just sum the gradients
-    # so we might just test if var1 is elemwise wrt to var2 and then calculate the gradients, summing their logs
-    # otherwise throw an error
-    return
 
 """
 These functions build log-posterior graphs (and derivatives)
