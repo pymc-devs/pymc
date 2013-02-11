@@ -28,10 +28,3 @@ def hist_covar(hist, vars):
         return x.reshape((x.shape[0], np.prod(x.shape[1:])))
     
     return np.cov(np.concatenate(map(flat_h, vars), 1).T)
-
-# TODO Also could not find this function used anywhere. Are any of the 
-# functions in misc necessary?
-def autocorr(x):
-    x = np.squeeze(x)
-    import pylab
-    return pylab.acorr( x - np.mean(x))
