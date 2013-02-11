@@ -2,23 +2,25 @@ import numpy as np
 
 # TODO I could not locate this function used anywhere in the code base
 # do we need it?
-def make_univariate(var, idx, C, f):
+def make_univariate(f,var, idx, point):
     """
     Convert a function that takes a parameter point into one that takes 
     a single value for a specific parameter holding all the other parameters 
     constant.
+
+    Useful for debugging misspecified likelihoods.
     
     Parameters
     ----------
+
+    f : function : dict -> val 
+    var : variable 
+    idx : index into variable 
+    point : point at which to center
     
     """
-    def univariate(x):
-        c = C.copy()
-        v = c[var].copy()
-        v[idx] = x 
-        c[var] = v
-        return f(c)
-    return univariate
+    bij = DictElemBij(var, idx, point) 
+    return bij.mapf(f)
     
 def hist_covar(hist, vars):
     """Calculate the flattened covariance matrix using a sample history"""
