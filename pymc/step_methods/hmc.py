@@ -9,11 +9,8 @@ from utils import *
 from ..core import * 
 
 
-# todo : 
-#make step method use separate gradient and logp functions
+#TODO: 
 #add constraint handling via page 37 of Radford's http://www.cs.utoronto.ca/~radford/ham-mcmc.abstract.html
-#allow users to pass Hamiltonian splitting functions
-
 
 def unif(step_size, elow = .85, ehigh = 1.15):
     return uniform(elow, ehigh) * step_size
@@ -25,16 +22,13 @@ class hmc_step(array_step):
         """
         n = C.shape[0]
         
-        self.logp_dict = model_logp(model)
-        self.dlogp_dict = model_dlogp(model, vars)
-        
         self.step_size = step_size_scaling * n**(1/4.)
         
         self.pot = quad_potential(C, is_cov)
         self.trajectory_length = trajectory_length
         self.step_rand = step_rand
 
-        super(hmc_step, self).__init__(vars, [self.logp_dict, self.dlogp_dict] )
+        super(hmc_step, self).__init__(vars, [model.logp(), model.dlogp(vars)] )
 
     def astep(self, state, q0, logp, dlogp):
         

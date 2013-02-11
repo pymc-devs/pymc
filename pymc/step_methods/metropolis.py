@@ -13,11 +13,11 @@ from utils import *
 # TODO Implement tuning for Metropolis step
 class metropolis_step(array_step):
     def __init__(self, model, vars, C, scaling=.25):
-        logp_d = model_logp(model)
+        logp = model.logp()
         
 
         self.potential = quad_potential(C*scaling, False) #
-        super(metropolis_step,self).__init__(vars, [logp_d])
+        super(metropolis_step,self).__init__(vars, [logp])
         
     def astep(self, state, q0, logp):
 

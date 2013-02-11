@@ -17,7 +17,7 @@ class elemwise_cat_gibbs_step():
     It would be great to come up with a way to make this more general (handling more complex elementwise variables)
     """
     def __init__(self, model, var, values):
-        self.elogp = elemwise_logp(model, var)
+        self.elogp = model.fn(elemwise_logp(var))
         self.sh = ones(var.dshape, var.dtype)
         self.values = values
         self.var = var
@@ -53,8 +53,8 @@ from theano.gof.graph import inputs
 
 
 
-def elemwise_logp(model, var):
-    terms = filter(lambda term: var in inputs([term]), model.factors)
-
-    p = function(model.vars, builtin_sum(terms))
-    return KWArgFunc(p)
+def elemwise_logp(var):
+    def elogp(model):
+        terms = filter(lambda term: var in inputs([term]), model.factors)
+        return builtin_sum(terms)
+    return elogp

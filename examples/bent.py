@@ -56,7 +56,7 @@ pl.hexbin(history['x'], history['y'])
 
 
 # lets plot the samples vs. the actual distribution
-logp = model_logp(model)
+logp = model.logp()
 
 pts = list(product(np.linspace(-2, 2, 1000), np.linspace(-1,1, 1000)))
 

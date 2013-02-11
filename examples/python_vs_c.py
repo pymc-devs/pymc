@@ -37,16 +37,16 @@ Data(outcomes, Bernoulli(p))
 
 
 
-
+calc = [logp, dlogp()]
 
 from theano import ProfileMode
 print "python"
 mode = theano.ProfileMode(optimizer='fast_run', linker = 'py')
-print model_logp_dlogp(model, mode = mode)(start)
+print model.fn(calc, mode = mode)(start)
 mode.print_summary()
 
 print "C"
 mode = theano.ProfileMode(optimizer='fast_run', linker = 'c|py')
-print model_logp_dlogp(model, mode = mode)(start)
+print model.fn(calc, mode = mode)(start)
 mode.print_summary()
 
