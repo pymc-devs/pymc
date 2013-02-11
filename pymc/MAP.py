@@ -31,6 +31,7 @@ def find_MAP(model, start, vars=None, min_alg=fmin_bfgs, disp=False, return_all=
     if vars is None: 
         vars = continuous_vars(model)
         
+    start = clean_point(start)
     bij = DictArrBij(IdxMap(vars), start)
     
     logp = bij.mapf(model_logp(model))

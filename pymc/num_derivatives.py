@@ -21,6 +21,8 @@ def approx_hess(model, start, vars=None):
     if vars is None :
         vars = continuous_vars(model)
 
+    start = clean_point(start)
+
     bij = DictArrBij(IdxMap(vars), start)
     dlogp = bij.mapf(model_dlogp(model, vars))
 

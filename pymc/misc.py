@@ -22,7 +22,11 @@ def eval_univariate(f,var, idx, point, x):
     return map(bij.mapf(f), x)
     
 def hist_covar(hist, vars):
-    """Calculate the flattened covariance matrix using a sample history"""
+    """
+    Calculate the flattened covariance matrix using a sample history
+
+    Useful if you want to base your covariance on some initial samples.
+    """
     def flat_h(var):
         x = hist[str(var)]
         return x.reshape((x.shape[0], np.prod(x.shape[1:])))
