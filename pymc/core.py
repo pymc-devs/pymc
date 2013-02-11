@@ -13,6 +13,7 @@ from history import NpHistory, MultiHistory
 
 import itertools as itools
 import multiprocessing as mp
+import collections
 
 # TODO Can we change this to just 'Variable'? 
 def FreeVariable(name, shape, dtype='float64'):
@@ -42,11 +43,11 @@ class Model(object):
     likelihood factors of a model.
     """
     
-    def __init__(self, test = None):
+    def __init__(self, test_point):
        self.vars = []
        self.factors = [] 
-       self.test = clean_point(test)
-       if test:
+       self.test_point = clean_point(test_point)
+       if test_point is not None:
            theano.config.compute_test_value = 'raise'
        else:
            theano.config.compute_test_value = 'off'
@@ -62,8 +63,8 @@ class Model(object):
     def Var(model, name, distribution, shape = 1, dtype = 'float64'):
         var = FreeVariable(name, shape, dtype)
         model.vars.append(var)
-        if model.test is not None: 
-            var.tag.test_value = model.test[name]
+        if model.test_point is not None: 
+            var.tag.test_value = model.test_point[name]
         model.factors.append(distribution(var))
         return var
         
@@ -202,63 +203,97 @@ hess_diag_calc = dercalc(hessian_diag)
 def clean_point(d) : 
     return dict([(k,np.atleast_1d(v)) for (k,v) in d.iteritems()]) 
     
-class DASpaceMap(object):
-    """ 
-    DASpaceMap encapsulates a mapping of dict space <-> array 
-    space
-    """
-    def __init__(self, free_vars):
-        self.dimensions = 0
-        
-        self.slices = {}
-        self.vars = {}
-        for var in free_vars:       
-            self.vars[str(var)] = var 
-            self.slices[str(var)] = slice(self.dimensions, self.dimensions + var.dsize)
-            self.dimensions += var.dsize
+VarMap = collections.namedtuple('VarMap', 'var, slc, shp')
+
+class IdxMap(object):
+    def __init__(self, vars):
+        self.vmap = []
+        dim = 0
+
+        for var in vars:       
+            slc = slice(dim, dim + var.dsize)
+            self.vmap.append( VarMap(str(var), slc, var.dshape)  )
+            dim += var.dsize
+
+        self.dimensions = dim
             
-    def project(self, d, a = None):
+
+class DictArrBij(object):
+    def __init__(self, idxmap, dpoint):
+        self.idxmap = idxmap
+        self.dpt = dpoint
+
+    def map(self, dpt):
         """
-        Projects dict space to array space
+        Maps value from dict space to array space
         
         Parameters
         ----------
-        
-        d : dict
-        a : array
-            Defaults to None
-        
+        dpt : dict 
         """
-        if a is None:
-            a = np.empty(self.dimensions)
+        apt = np.empty(self.idxmap.dimensions)
+        for var, slc, _ in self.idxmap.vmap:
+                apt[slc] = np.ravel(dpt[var])
+        return apt
+
+    def rmap(self, apt): 
+        """
+        Maps value from array space to dict space 
+
+        Parameters
+        ----------
+        apt : array
+        """
+        dpt = self.dpt.copy()
+            
+        for var, slc, shp in self.idxmap.vmap:
+            dpt[var] = np.reshape(apt[slc], shp)
+                
+            
+        return dpt
+
+    def mapf(self, f):
+        """
+        Maps function f : DictSpace -> T to ArraySpace -> T
+        
+        Parameters
+        ---------
+
+        f : dict -> T 
+        """
+        return BijWrapIn(self,f)
+
+class DictElemBij(object):
+    def __init__(self, var, idx, dpoint):
+        self.var = str(var)
+        self.idx = idx
+        self.dpt = dpoint
+
+    def map(self, dpt):
+        return dpt[self.var][self.idx]
+
+    def rmap(self, apt):
+        dpt = self.dpt.copy()
+        if self.idx:   
+            dvar = dpt[self.var].copy()
+            dvar[self.idx] = apt
         else:
-            a = np.copy(a)
+            dvar = apt
+        dpt[self.var] = dvar
         
-        for varname, value in d.iteritems():
-            try:    
-                a[self.slices[varname]] = np.ravel(value)
-            except KeyError:
-                pass
-        return a
-    
-    def rproject(self, a, d = {}):
-        """
-        Projects array space to dict space
-        
-        Parameters
-        ----------
-        
-        a : array
-        d : dict
-            Defaults to empty dict
-        
-        """
-        d = d.copy()
-            
-        for var, slc in self.slices.iteritems():
-            d[var] = np.reshape(a[slc], self.vars[var].dshape)
-            
-        return d
+        return dpt 
+    def mapf(self, f):
+        return BijWrapIn(self, f)
+
+
+class BijWrapIn(object):
+    def __init__(self, bij, fn): 
+        self.bij = bij
+        self.fn = fn
+
+    def __call__(self, d):
+        return self.fn(self.bij.rmap(d))
+
 
 # TODO Can we change `sample_history` to `trace`?
 def sample(draws, step, point, sample_history = None, state = None): 

@@ -10,7 +10,7 @@ data = np.random.normal(size = (3, 20))
 n = 1
 start = {'x' : np.zeros(n)}
 
-model = Model(test = start)
+model = Model(test_point = start)
 Var = model.Var 
 Data = model.Data 
 

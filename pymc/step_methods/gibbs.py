@@ -21,15 +21,14 @@ class elemwise_cat_gibbs_step():
         self.sh = ones(var.dshape, var.dtype)
         self.values = values
         self.var = var
+        
     
-    def step(self, state, chain):
-        p = array([self.elogp(project(chain, self.var, v * self.sh)) for v in self.values])
-        return state, project(chain, self.var, categorical(p, self.var.dshape))
+    def step(self, state, point):
+        bij = DictElemBij(self.var, (), point)
+        logp = bij.mapf(self.elogp)
 
-def project(chain,var, x):
-    c = chain.copy()
-    c[str(var)] = x
-    return c 
+        p = array([logp(v * self.sh) for v in self.values])
+        return state, bij.rmap(categorical(p, self.var.dshape))
 
 def categorical(prob, shape) :
     out = empty([1] + list(shape))

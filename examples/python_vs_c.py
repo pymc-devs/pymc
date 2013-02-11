@@ -21,7 +21,7 @@ outcomes = np.random.binomial(1, invlogit(np.sum(effects_a[None,:] * predictors,
 #make a chain with some starting point 
 start = {'effects' : np.zeros((1,npred))}
 
-model = Model(test = start)
+model = Model(test_point = start)
 Var = model.Var
 Data = model.Data 
 

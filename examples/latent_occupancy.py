@@ -47,7 +47,7 @@ start = {'p' : .5,
          'z' : ((y > 0)*1).astype('int8'),
          'theta' : 10.}
 
-model = Model(test = start)
+model = Model(test_point = start)
 Data = model.Data
 Var = model.Var 
 # Estimated occupancy

@@ -31,7 +31,7 @@ start = {'sg' : np.array([2.]),
          'group_effects' : np.zeros((1,) + group_effects_a.shape),
          'effects' : np.zeros(effects_a.shape ) }
 
-model = Model(test = start)
+model = Model(test_point = start)
 Var = model.Var
 Data = model.Data 
 

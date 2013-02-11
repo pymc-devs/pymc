@@ -16,7 +16,7 @@ data = normal( size = n) + xa + ya
 
 start = {'x' : 0,
          'y' : 0}
-model = Model(test = start)
+model = Model(test_point = start)
 Data = model.Data 
 Var = model.Var
 """

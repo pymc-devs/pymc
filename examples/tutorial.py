@@ -11,7 +11,7 @@ for parameters and a list of factors that go into the posterior (model.factors),
 start = {'x' : np.array([[0.2],[.3]]),
          'z' : np.array([.5])}
 
-model = Model(test = start)
+model = Model(test_point = start)
 Var = model.Var
 Data = model.Data 
 

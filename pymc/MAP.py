@@ -5,9 +5,10 @@ Created on Mar 12, 2011
 '''
 from scipy.optimize import fmin_bfgs, fmin_ncg
 import numpy as np 
+from numpy import isfinite, nan_to_num
 from core import *
 
-def find_MAP(model, chain_state, vars=None, min_alg=fmin_bfgs, disp=False, return_all=False):
+def find_MAP(model, start, vars=None, min_alg=fmin_bfgs, disp=False, return_all=False):
     """
     Sets state to the local maximum a posteriori point given a model.
     Current default of fmin_Hessian does not deal well with optimizing close 
@@ -16,7 +17,7 @@ def find_MAP(model, chain_state, vars=None, min_alg=fmin_bfgs, disp=False, retur
     Parameters
     ----------
     model : Model
-    chain_state : array
+    start : array
     vars : list or array
         List of variables to set to MAP point (Defaults to all).
     min_alg : function
@@ -30,37 +31,35 @@ def find_MAP(model, chain_state, vars=None, min_alg=fmin_bfgs, disp=False, retur
     if vars is None: 
         vars = continuous_vars(model)
         
-    mapping = DASpaceMap(vars)
+    bij = DictArrBij(IdxMap(vars), start)
     
-    logp = model_logp(model)
-    dlogp = model_dlogp(model, vars)
+    logp = bij.mapf(model_logp(model))
+    dlogp = bij.mapf(model_dlogp(model, vars))
     
-    def logp_o(x):
-        return nan_to_high(-logp(mapping.rproject(x, chain_state)))
+    def logp_o(point):
+        return nan_to_high(-logp(point))
         
-    def grad_logp_o(x):
-        return np.nan_to_num(-dlogp(mapping.rproject(x, chain_state)))
+    def grad_logp_o(point):
+        return nan_to_num(-dlogp(point))
 
-    x = min_alg(logp_o, mapping.project(chain_state), grad_logp_o, disp=disp, retall=return_all, full_output=True)
+    results = min_alg(logp_o, bij.map(start), grad_logp_o, disp=disp, retall=return_all, full_output=True)
+    mx = results[0]
+    log = results[-1]
+
+    if not np.all(isfinite(mx)):
+        raise ValueError("Optimization error, found optima has some bad values " + repr(mx)) 
+
+    if not isfinite(logp(mx)) or not np.all(isfinite(dlogp(mx))):
+        raise ValueError("Optimization error, logp or dlogp at max have bad values. logp: " + repr(logp(mx)) + " dlogp: " + repr(dlogp(mx)))
+
     
-    chain_state = mapping.rproject(x[0], chain_state)
+    max_point = bij.rmap(mx)
     
     if return_all:
-        return chain_state, x[-1]
+        return max_point, log
     else:
-        return chain_state
+        return max_point
 
     
-    
 def nan_to_high(x):
-    # Converts NaN values to largest integer
-    x = x.copy() 
-    if (x.ndim >= 1):
-        x[np.logical_not(np.isfinite(x))] = 1.79769313e+308
-        return x
-    else: 
-        if np.logical_not(np.isfinite(x)): 
-            return 1.79769313e+100
-        else:
-            return x
-    
+    return np.where(isfinite(x), x, 1.0e100)  
