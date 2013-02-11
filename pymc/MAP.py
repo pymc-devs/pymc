@@ -34,8 +34,8 @@ def find_MAP(model, start, vars=None, min_alg=fmin_bfgs, disp=False, return_all=
     start = clean_point(start)
     bij = DictArrBij(IdxMap(vars), start)
     
-    logp = bij.mapf(model_logp(model))
-    dlogp = bij.mapf(model_dlogp(model, vars))
+    logp = bij.mapf(model.logp())
+    dlogp = bij.mapf(model.dlogp(vars))
     
     def logp_o(point):
         return nan_to_high(-logp(point))

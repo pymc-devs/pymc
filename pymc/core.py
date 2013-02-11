@@ -5,7 +5,7 @@ Created on Mar 7, 2011
 '''
 import theano
 from theano import function, scan
-from theano.tensor import TensorType, add, sum, grad,  flatten, arange, concatenate, constant
+from theano.tensor import TensorType, add, sum, grad,hessian,  flatten, arange, concatenate, constant
 
 import numpy as np 
 import time 
@@ -67,14 +67,24 @@ class Model(object):
             var.tag.test_value = model.test_point[name]
         model.factors.append(distribution(var))
         return var
-        
-    def VarIndirectElemewise(model, name,proximate_calc, distribution, shape = 1):
-        var = Variable(name, shape)
-        model.vars.append(var)
-        prox_var = proximate_calc(var)
-        
-        model.factors.append(distribution(prox_var) + log_jacobian_determinant(prox_var, var))
-        return var
+
+    def fn(self, calc, mode = None):
+        if hasattr(calc, '__iter__'):
+            out = [f(self) for f in calc]
+        else:
+            out = calc(self)
+
+        return KWArgFunc(function(self.vars,
+                    out, 
+                    allow_input_downcast = True, mode = mode))
+
+    def logp(self):
+        return self.fn(logp)
+
+    def dlogp(self, *args, **kwargs):
+        return self.fn(dlogp(*args, **kwargs))
+
+
      
 
 def as_iterargs(data):
@@ -93,11 +103,6 @@ def continuous_vars(model):
 """
 these functions compile log-posterior functions (and derivatives)
 """
-def model_func(model, calcs, mode = None):
-    f = function(model.vars, 
-             calcs,
-             allow_input_downcast = True, mode = mode)
-    return KWArgFunc(f)
 
 class KWArgFunc(object): 
     def __init__(self, f):
@@ -105,54 +110,15 @@ class KWArgFunc(object):
     def __call__(self,state):
         return self.f(**state)
 
-def model_logp(model, mode = None):
-    return model_func(model, logp_calc(model), mode)
-
-def model_dlogp(model, dvars = None, mode = None ):    
-    return model_func(model, dlogp_calc(model, dvars), mode)
-    
-def model_logp_dlogp(model, dvars = None, mode = None ):    
-    return model_func(model, [logp_calc(model), dlogp_calc(model, dvars)], mode)
-
 
 """
 The functions build graphs from other graphs
 """
-def flatgrad(f, v):
-    return flatten(grad(f, v))
-
-def gradient(f, dvars):
-    return concatenate([flatgrad(f, v) for v in dvars])
-
-def jacobian(f, dvars):
-    def jac(v):
-        def grad_i(i, f1, v): 
-            return flatgrad(f1[i], v)
-        
-        return scan(grad_i, sequences=arange(f.shape[0]), non_sequences=[f,v])[0]
-
-    return concatenate(map(jac, dvars))
-
-def hessian(f, dvars):
-    return jacobian(gradient(f, dvars), dvars)
-
-
-
-def hessian_diag(f, dvars):
-    def hess(v):
-        df = flatten(grad(f, v))
-        def grad_i (i, df1, v): 
-            return flatgrad(df1[i], v)[i]
-        
-        return scan(grad_i, sequences = arange(f.shape[0]), non_sequences = [df,v])[0]
-
-    return concatenate(map(hess, dvars))
-
 
 """
 These functions build log-posterior graphs (and derivatives)
 """ 
-def logp_calc(model):
+def logp(model):
     """
     Calculates the log-probability of a specified model
         
@@ -169,7 +135,13 @@ def logp_calc(model):
     """
     return add(*map(sum, model.factors))
 
-def dercalc(d_calc):
+def flatgrad(f, v):
+    return flatten(grad(f, v))
+
+def gradient(f, dvars):
+    return concatenate([flatgrad(f, v) for v in dvars])
+
+def dlogp(dvars=None, n=1):
     """
     Returns a function for calculating the derivative of the output 
     of another function.
@@ -182,16 +154,19 @@ def dercalc(d_calc):
     -------
     der_calc : function
     """
-    def der_calc(model, dvars = None):
+    
+    dfn = [gradient, hessian]
+    def dlogp_calc(model):
+         
         if dvars is None:
-            dvars = continuous_vars(model)
-        
-        return d_calc(logp_calc(model), dvars)
-    return der_calc
+            vars = continuous_vars(model)
+        else: 
+            vars = dvars 
+        return dfn[n-1](logp(model), vars)
 
-dlogp_calc = dercalc(gradient)
-hess_calc = dercalc(jacobian)
-hess_diag_calc = dercalc(hessian_diag)
+    return dlogp_calc
+
+
 
 def clean_point(d) : 
     return dict([(k,np.atleast_1d(v)) for (k,v) in d.iteritems()]) 

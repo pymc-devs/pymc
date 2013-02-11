@@ -24,7 +24,7 @@ def approx_hess(model, start, vars=None):
     start = clean_point(start)
 
     bij = DictArrBij(IdxMap(vars), start)
-    dlogp = bij.mapf(model_dlogp(model, vars))
+    dlogp = bij.mapf(model.dlogp(vars))
 
     
     def grad_logp(point): 
