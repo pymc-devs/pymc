@@ -1,5 +1,5 @@
-from utils import normal
 from numpy import dot
+from numpy.random import normal
 from numpy.linalg import solve
 from scipy.linalg import cholesky, cho_solve
 import numpy as np
@@ -23,7 +23,7 @@ def partial_check_positive_definite(C):
         d = C 
     else :
         d = np.diag(C)
-    i = np.where(np.logical_or(np.isnan(d), d<=0))
+    i, = np.nonzero(np.logical_or(np.isnan(d), d<=0))
 
     if len(i):
         raise PositiveDefiniteError("Simple check failed. Diagonal contains negatives", i)
@@ -31,7 +31,9 @@ def partial_check_positive_definite(C):
 class PositiveDefiniteError(ValueError):
     def __init__(self, msg, idx): 
         self.idx = idx
-        self.msg = "Scaling is not positive definite. " + msg + ". Check indexes " + str(idx)
+        self.msg = msg
+    def __str__(self):
+        return "Scaling is not positive definite. " + self.msg + ". Check indexes " + str(self.idx)
 
 class ElemWiseQuadPotential(object):
     def __init__(self, v):
@@ -50,7 +52,6 @@ class ElemWiseQuadPotential(object):
 
 class QuadPotential_Inv(object):
     def __init__(self, A):
-        try 
         self.L = cholesky(A, lower = True)
         
     def velocity(self, x ):
