@@ -3,11 +3,9 @@ from models import simple_model
 from theano.tensor import constant
 from scipy.stats.mstats import moment
 
-def check_stat(trace, var, stat, value, bound):
-    assert assert_almost_equal(
-            stat(trace[var], axis =0),
-            value,
-            bound)
+def check_stat(name, trace, var, stat, value, bound):
+    s = stat(trace[var], axis =0)
+    assert all(np.abs(s - value) < bound), "stats out of bounds : " + repr(s) + ", " + repr(value) + ", " + repr(bound)
 
 
 def test_step_continuous():
@@ -29,18 +27,21 @@ def test_step_continuous():
     H = tau
 
     hmc = pm.hmc_step(model, model.vars,  H)
-    mh = pm.metropolis_step(model, model.vars , H)
+    mh = pm.metropolis_step(model, model.vars , np.linalg.inv(H), scaling = .25)
     compound = pm.compound_step([hmc, mh])
-    steps = [hmc, mh, compound]
 
-    check = [('x', np.mean, mu, 1)]
+    steps = [mh, hmc, compound]
+
+    unc = np.diag(tau)**-.5
+    check = [('x', np.mean, mu, unc/10.)]
 
     for st in steps:
         for (var, stat, val, bound) in check:
             np.random.seed(1)
-            h, _, _ = sample(5000, st, start)
+            h, _, _ = sample(8000, st, start)
 
-            yield check_stat, h, var, stat, val, bound  
+            #return h
+            yield check_stat,repr(st), h, var, stat, val, bound  
 
 
 
