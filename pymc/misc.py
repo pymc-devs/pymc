@@ -2,11 +2,9 @@ import numpy as np
 
 # TODO I could not locate this function used anywhere in the code base
 # do we need it?
-def make_univariate(f,var, idx, point):
+def eval_univariate(f,var, idx, point, x):
     """
-    Convert a function that takes a parameter point into one that takes 
-    a single value for a specific parameter holding all the other parameters 
-    constant.
+    Evaluate a function as a at a specific point and only varying values at one index.
 
     Useful for debugging misspecified likelihoods.
     
@@ -17,10 +15,11 @@ def make_univariate(f,var, idx, point):
     var : variable 
     idx : index into variable 
     point : point at which to center
+    x : array points at which to evaluate x
     
     """
     bij = DictElemBij(var, idx, point) 
-    return bij.mapf(f)
+    return map(bij.mapf(f), x)
     
 def hist_covar(hist, vars):
     """Calculate the flattened covariance matrix using a sample history"""
