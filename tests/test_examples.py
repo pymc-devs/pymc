@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 import traceback, sys
 from os import path
 from glob import glob
