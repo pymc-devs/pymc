@@ -343,7 +343,7 @@ def psample(draws, step, point, msample_history = None, state = None, threads = 
     returns the amount of time taken"""
 
     if not threads:
-        threads = min(mp.cpu_count() - 2, 1)
+        threads = max(mp.cpu_count() - 2, 1)
 
     if isinstance(point, dict) :
         point = threads * [point]
