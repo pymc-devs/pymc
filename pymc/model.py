@@ -8,7 +8,7 @@ from types import *
 
 import theano
 from theano import function
-from theano.tensor import TensorType, add, sum, grad,hessian, flatten, arange, concatenate, constant
+from theano.tensor import TensorType, add, sum, grad,hessian, flatten, concatenate, constant
 
 import numpy as np 
 
@@ -100,6 +100,11 @@ def as_iterargs(data):
 def continuous_vars(model):
     return [ var for var in model.vars if var.dtype in continuous_types] 
 
+class PointFunc(object): 
+    def __init__(self, f):
+        self.f = f
+    def __call__(self,state):
+        return self.f(**state)
 
 """
 These functions build log-posterior graphs (and derivatives)
