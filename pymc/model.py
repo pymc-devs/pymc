@@ -7,8 +7,8 @@ from point import *
 from types import *
 
 import theano
-from theano import function
-from theano.tensor import TensorType, add, sum, grad,hessian, flatten, concatenate, constant
+from theano import function, scan
+from theano.tensor import TensorType, add, sum, grad, arange, flatten, concatenate, constant
 
 import numpy as np 
 
@@ -131,6 +131,17 @@ def flatgrad(f, v):
 
 def gradient(f, dvars):
     return concatenate([flatgrad(f, v) for v in dvars])
+def jacobian(f, dvars):
+    def jac(v):
+        def grad_i(i, f1, v): 
+            return flatgrad(f1[i], v)
+
+        return scan(grad_i, sequences=arange(f.shape[0]), non_sequences=[f,v])[0]
+
+    return concatenate(map(jac, dvars))
+
+def hessian(f, dvars):
+    return jacobian(gradient(f, dvars), dvars)
 
 def dlogp(dvars=None, n=1):
     """

@@ -13,7 +13,7 @@ def check_trace(trace, n, step, start):
 
 
 def test_traces():
-    start, step  = simple_init()
+    start, step,_  = simple_init()
 
     for     h in [pm.NpHistory]:
         for n in [20, 1000]: 
