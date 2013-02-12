@@ -38,7 +38,7 @@ Data(outcomes, Bernoulli(p))
 
 #move the chain to the MAP which should be a good starting point
 start = find_MAP(model, start)
-hess = diag(approx_hess(model, start)) #find a good orientation using the hessian at the MAP
+hess = np.diag(approx_hess(model, start)) #find a good orientation using the hessian at the MAP
 
 step_method = hmc_step(model, model.vars, hess, is_cov = False) 
 #step_method = split_hmc_step(model, model.vars, hess,  start, hess, is_cov = False) 

@@ -42,7 +42,7 @@ Data(data, Normal(x + y**2, 1.) )
 
 
 
-hess = ones(2)*diag(approx_hess(model, start))[0]
+hess = np.ones(2)*np.diag(approx_hess(model, start))[0]
 
 
 #step_method = hmc_lowflip_step(model, model.vars, hess,is_cov = False, step_size = .25, a = .9)

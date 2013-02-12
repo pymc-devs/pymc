@@ -25,22 +25,23 @@ def test_step_continuous():
     x = Var('x', pm.MvNormal(constant(mu),constant(tau)), 3)
 
     H = tau
+    C = np.linalg.inv(H)
 
     hmc = pm.hmc_step(model, model.vars,  H)
-    mh = pm.metropolis_step(model, model.vars , np.linalg.inv(H), scaling = .25)
+    mh = pm.metropolis_step(model, model.vars , C, scaling = .25)
     compound = pm.compound_step([hmc, mh])
 
     steps = [mh, hmc, compound]
 
-    unc = np.diag(tau)**-.5
-    check = [('x', np.mean, mu, unc/10.)]
+    unc = np.diag(C)**.5
+    check = [('x', np.mean, mu, unc/10.),
+             ('x', np.std , unc, unc/10.)]
 
     for st in steps:
         for (var, stat, val, bound) in check:
             np.random.seed(1)
             h, _, _ = sample(8000, st, start)
 
-            #return h
             yield check_stat,repr(st), h, var, stat, val, bound  
 
 
