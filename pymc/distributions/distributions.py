@@ -408,20 +408,72 @@ def Gamma(alpha, beta):
     
     return dist
 
-def Poisson(lam):
+def Poisson(mu):
+    """
+    Poisson log-likelihood.
+
+    The Poisson is a discrete probability
+    distribution.  It is often used to model the number of events
+    occurring in a fixed period of time when the times at which events
+    occur are independent. The Poisson distribution can be derived as
+    a limiting case of the binomial distribution.
+
+    .. math::
+        f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
+
+    Parameters
+    ----------
+    mu : float
+        Expected number of occurrences during the given interval, :math:`\mu \geq 0`.
+
+    .. note::
+       - :math:`E(x)=\mu`
+       - :math:`Var(x)=\mu`
+
+    """
     def dist(value):
-        return switch( gt(lam,0),
+        return switch( gt(mu,0),
                #factorial not implemented yet, so
-               value * log(lam) - gammaln(value + 1) - lam,
+               value * log(mu) - gammaln(value + 1) - mu,
                -inf)
+               
+    dist.__doc__ = """
+        Poisson log-likelihood with parameters mu={0}.
+        
+        Parameters
+        ----------
+        x : int
+            :math:`x \in {0,1,2,...}`
+        """.format(mu)
     return dist
 
 def ConstantDist(c):
+    """
+    Constant value log-likelihood. All values not equal to the constant
+    (log-likelihood=0) are outside the support (ll=-inf).
+    
+    Parameters
+    ----------
+    c : float or int
+        Constant value
+    """
     def dist(value):
-        
         return switch(eq(value, c), 0, -inf)
+        
+    dist.__doc__ = """
+        Constant log-likelihood with parameter c={0}.
+        
+        Parameters
+        ----------
+        value : float or int
+            Data value(s)
+        """.format(c)
     return dist
 
+# TODO this distribution seems odd to me. The "parameter" z is usually
+# a variable in most applications, and could change at every iteration
+# of the MCMC run, so you would not want to fix it to 0/1 at the instantiation
+# of the node.
 def ZeroInflatedPoisson(theta, z):
     def dist(value):
         return switch(z, 
@@ -429,18 +481,37 @@ def ZeroInflatedPoisson(theta, z):
                       ConstantDist(0)(value))
     return dist
 
-def Bound(dist, lower=-inf, upper=inf):
+def Bound(ndist, lower=-inf, upper=inf):
     def dist(value):
         return switch(ge(value , lower) & le(value , upper),
-                  dist(value),
+                  ndist(value),
                   -inf)
     return ndist
 
-def TruncT(mu, lam, nu):
-    return Bound(T(mu,lam,nu), 0)
+def MvNormal(mu, Tau):
+    """
+    Multivariate normal log-likelihood
 
-def MvNormal(mu, tau):
+    .. math::
+        f(x \mid \pi, T) = \frac{|T|^{1/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+
+    Parameters
+    ----------
+    mu : array of floats shape(mu)=k
+        Location parameter sequence.
+    Tau : matrix of floats shape(Tau)=(k,k)
+        Positive definite precision matrix.
+    """
     def dist(value): 
-        delta=value - mu
-        return 1/2. * ( log(det(tau)) - dot(delta.T,dot(tau, delta)))
+        delta = value - mu
+        return 1/2. * ( log(det(Tau)) - dot(delta.T,dot(Tau, delta)))
+        
+    dist.__doc__ = """
+        Multivariate normal log-likelihood with parameters mu={0} and 
+        tau={1}.
+        
+        Parameters
+        ----------
+        x : 2D array or list of floats
+        """
     return dist
