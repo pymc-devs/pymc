@@ -72,6 +72,6 @@ def psample(draws, step, point, msample_history = None, state = None, threads = 
     tstart = time() 
 
     res = p.map(argsample, argset)
-    states, hist, _ = zip(*res)
+    trace, state, _ = zip(*res)
         
-    return msample_history, state, (time() - tstart)
+    return MultiHistory(trace), state, (time() - tstart)

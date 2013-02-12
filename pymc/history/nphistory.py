@@ -41,9 +41,9 @@ class MultiHistory(object):
 
     def __getitem__(self, key): 
         return [h[key] for h in self.histories]
-    def combined():
+    def combined(self):
         h = NpHistory()
-        for k in histories[0].samples: 
-            h.samples[k] = concatenate([s[k] for s in self.histories])
-            h.nsamples = h[k].shape[0]
+        for k in self.histories[0].samples: 
+            h.samples[k] = np.concatenate([s[k] for s in self.histories])
+            h.nsamples = h.samples[k].shape[0]
         return h
