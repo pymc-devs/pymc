@@ -1,6 +1,6 @@
 from core import * 
 from distributions import *
-from theano.tensor import * 
+from math import * 
 
 from history import *
 from sample import * 
