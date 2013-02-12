@@ -5,6 +5,7 @@ __all__ = ['IdxMap', 'DictArrBij', 'DictElemBij']
 
 VarMap = collections.namedtuple('VarMap', 'var, slc, shp')
 
+# TODO Classes and methods need to be fully documented.
 class IdxMap(object):
     def __init__(self, vars):
         self.vmap = []
