@@ -6,7 +6,7 @@ Created on Mar 12, 2011
 from scipy.optimize import fmin_bfgs, fmin_ncg
 import numpy as np 
 from numpy import isfinite, nan_to_num
-from core import *
+from ..core import *
 
 def find_MAP(model, start, vars=None, min_alg=fmin_bfgs, disp=False, return_all=False):
     """

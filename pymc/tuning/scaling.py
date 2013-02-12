@@ -5,7 +5,7 @@ Created on Mar 12, 2011
 '''
 import numdifftools as nd
 import numpy as np 
-from core import *
+from ..core import *
 
 def approx_hess(model, start, vars=None):
     """
@@ -36,3 +36,16 @@ def approx_hess(model, start, vars=None):
     covariance matrix.
     '''
     return nd.Jacobian(grad_logp)(bij.map(start))
+
+
+def trace_cov(trace, vars):
+    """
+    Calculate the flattened covariance matrix using a sample trace
+
+    Useful if you want to base your covariance on some initial samples.
+    """
+    def flat_t(var):
+        x = trace[str(var)]
+        return x.reshape((x.shape[0], np.prod(x.shape[1:])))
+    
+    return np.cov(np.concatenate(map(flat_t, vars), 1).T)

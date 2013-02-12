@@ -1,10 +1,11 @@
-from core import *
+from core import * 
 from distributions import *
+from theano.tensor import * 
 
-from MAP import * 
-from num_derivatives import *
-
-from step_methods import *
 from history import *
+from sample import * 
+from step_methods import *
+from tuning import *
 
-from misc import * 
+from debug import * 
+
