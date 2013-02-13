@@ -66,4 +66,3 @@ pl.figure()
 p = np.array(pts)
 xs, ys = p[:,0], p[:,1]
 pl.hexbin(xs, ys, exp(values))
-pl.show()

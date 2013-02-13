@@ -14,9 +14,6 @@ import numpy as np
 
 __all__ = ['Model', 'logp', 'dlogp', 'continuous_vars'] 
 
-
-
-# TODO Can we change this to just 'Variable'? 
 def Variable(name, shape, dtype='float64'):
     """
     Creates a TensorVariable of the given shape and type

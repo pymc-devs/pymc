@@ -23,18 +23,11 @@ def Uniform(lower=0, upper=1):
         Lower limit (defaults to 0)
     upper : float
         Upper limit (defaults to 1)
-        
-    Example
-    -------
-    >>> from pymc.distributions import Uniform
-    >>> U = Uniform(0,10)
-    >>> U(3.5)
-    -2.302585092994046
     """
     def dist(value):
         
-        return switch((value >= lb) & (value <= ub),
-                  -log(ub-lb),
+        return switch((value >= lower) & (value <= upper),
+                  -log(upper-lower),
                   -inf)
     
     dist.__doc__ = """
@@ -52,13 +45,6 @@ def Flat():
     """
     Uninformative log-likelihood that returns 0 regardless of 
     the passed value.
-    
-    Example
-    -------
-    >>> from pymc.distributions import Flat
-    >>> F = Flat()
-    >>> F([1000, 0, 15])
-    0.0
     """
     
     def dist(value):
@@ -85,13 +71,6 @@ def Normal(mu=0.0, tau=1.0):
     tau : float
         Precision of the distribution, which corresponds to
         :math:`1/\sigma^2` (tau > 0).
-        
-    Example
-    -------
-    >>> from pymc.distributions import Normal
-    >>> N = Normal(0, 0.01)
-    >>> N(-3.2)
-    -3.2727236261987187
 
     .. note::
     - :math:`E(X) = \mu`
@@ -128,13 +107,6 @@ def Beta(alpha, beta):
         alpha > 0
     beta : float
         beta > 0
-
-    Example
-    -------
-    >>> >>> from pymc.distributions import  Beta
-    >>> B = Beta(1,2)
-    >>> B(.4)
-    0.182321556793954
 
     .. note::
     - :math:`E(X)=\frac{\alpha}{\alpha+\beta}`
@@ -214,13 +186,6 @@ def BetaBin(alpha, beta, n):
     n : int
         n=x,x+1,\ldots
 
-    Example
-    -------
-    >>> from pymc.distributions import BetaBin
-    >>> B = BetaBin(1,1,10)
-    >>> B(3)
-    -2.3978952727989
-
     .. note::
     - :math:`E(X)=n\frac{\alpha}{\alpha+\beta}`
     - :math:`Var(X)=n\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
@@ -258,13 +223,6 @@ def Bernoulli(p):
         Series of successes (1) and failures (0). :math:`x=0,1`
     p : float
         Probability of success. :math:`0 < p < 1`.
-
-    Example
-    -------
-    >>> from pymc.distributions import Bernoulli
-    >>> B = Bernoulli(0.4)
-    >>> B([0,1,0,1])
-    -2.854232711280291
 
     .. note::
     - :math:`E(x)= p`
@@ -310,14 +268,6 @@ def T(nu, mu=0, lam=1):
         Location parameter (defaults to 0)
     lam : float
         Scale parameter (defaults to 1)
-
-
-    Example
-    -------
-    >>> from pymc.distributions import T
-    >>> t = T(nu=10, mu=3, lam=5)
-    >>> t(1.2)
-    -5.436637143685433
     """
     
     def dist(value):
