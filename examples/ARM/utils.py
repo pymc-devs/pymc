@@ -27,7 +27,7 @@ def readtable(file, **args):
 
 
 def readtabledict(file, delimiter = ',', quotechar='"', skipinitialspace = True, **args):
-    r = reader(open(file, 'rb'),delimiter, quotechar, skipinitialspace **args)
+    r = reader(open(file, 'rb'),delimiter = delimiter, quotechar = quotechar, skipinitialspace = skipinitialspace, **args)
 
     values =[]
     names = list( r.next()) 
