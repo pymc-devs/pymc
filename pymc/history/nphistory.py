@@ -4,7 +4,7 @@ Created on Mar 15, 2011
 @author: jsalvatier
 '''
 import numpy as np
-class NpHistory(object):
+class NpTrace(object):
     """
     encapsulates the recording of a process chain
     """
@@ -35,15 +35,15 @@ class NpHistory(object):
     def __getitem__(self, key):
         return self.samples[key][0:self.nsamples,...]
 
-class MultiHistory(object): 
-    def __init__(self, histories): 
-        self.histories = histories 
+class MultiTrace(object): 
+    def __init__(self, traces): 
+        self.traces = traces 
 
     def __getitem__(self, key): 
-        return [h[key] for h in self.histories]
+        return [h[key] for h in self.traces]
     def combined(self):
-        h = NpHistory()
-        for k in self.histories[0].samples: 
-            h.samples[k] = np.concatenate([s[k] for s in self.histories])
+        h = NpTrace()
+        for k in self.traces[0].samples: 
+            h.samples[k] = np.concatenate([s[k] for s in self.traces])
             h.nsamples = h.samples[k].shape[0]
         return h

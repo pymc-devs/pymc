@@ -1,12 +1,11 @@
 from point import *
-from history import NpHistory, MultiHistory
+from trace import NpTrace, MultiTrace
 import multiprocessing as mp
 from time import time
 
 __all__ = ['sample', 'psample']
 
-# TODO Can we change `sample_history` to `trace`?
-def sample(draws, step, point, sample_history = None, state = None): 
+def sample(draws, step, point, trace = None, state = None): 
     """
     Draw a number of samples using the given step method. 
     Multiple step methods supported via compound step method 
@@ -21,7 +20,7 @@ def sample(draws, step, point, sample_history = None, state = None):
         A step function
     point : float or vector
         The current sample index
-    sample_history : NpHistory
+    trace : NpTrace
         A trace of past values (defaults to None)
     state : 
         The current state of the sampler (defaults to None)
@@ -34,21 +33,21 @@ def sample(draws, step, point, sample_history = None, state = None):
     """
 
     point = clean_point(point)
-    if sample_history is None: 
-        sample_history = NpHistory()
+    if trace is None: 
+        trace = NpTrace()
     # Keep track of sampling time  
     tstart = time() 
     for _ in xrange(int(draws)):
         state, point = step.step(state, point)
-        sample_history = sample_history + point
+        trace = trace + point
 
-    return sample_history, state, time() - tstart
+    return trace, state, time() - tstart
 
 def argsample(args):
     """ defined at top level so it can be pickled"""
     return sample(*args)
   
-def psample(draws, step, point, msample_history = None, state = None, threads = None):
+def psample(draws, step, point, mtrace = None, state = None, threads = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
 
@@ -58,15 +57,15 @@ def psample(draws, step, point, msample_history = None, state = None, threads = 
     if isinstance(point, dict) :
         point = threads * [point]
 
-    if not msample_history:
-        msample_history = MultiHistory([NpHistory() for _ in xrange(threads)])
+    if not mtrace:
+        mtrace = MultiTrace([NpTrace() for _ in xrange(threads)])
 
     if not state: 
         state = threads*[None]
 
     p = mp.Pool(threads)
 
-    argset = zip([draws]*threads, [step]*threads, point, msample_history.histories, state)
+    argset = zip([draws]*threads, [step]*threads, point, mtrace.traces, state)
     
     # Keep track of sampling time  
     tstart = time() 
@@ -74,4 +73,4 @@ def psample(draws, step, point, msample_history = None, state = None, threads = 
     res = p.map(argsample, argset)
     trace, state, _ = zip(*res)
         
-    return MultiHistory(trace), state, (time() - tstart)
+    return MultiTrace(trace), state, (time() - tstart)
