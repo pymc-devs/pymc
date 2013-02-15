@@ -39,7 +39,7 @@ start = {'groupmean' : np.mean(obs_means )[None],
          'means' : obs_means,
          'floor_m' : np.array([0.]),
          }
-model = Model(test= start)
+model = Model(test_point= start)
 Var = model.Var
 Data = model.Data
 
@@ -58,7 +58,7 @@ means = Var('means', Normal(groupmean, groupsd ** -2), n)
 #the gradient of indexing into an array is generally slow unless you have the experimental branch of theano
 Data(lradon, Normal( floor*floor_m + means[group], sd**-2))
 
-hess = diag(approx_hess(model, start))
+hess = np.diag(approx_hess(model, start))
 
 step_method = hmc_step(model, model.vars, hess, .2, 1.0, is_cov = False)
 #step_method = hmc_lowflip_step(model, model.vars, hess, .5, a = .5)
