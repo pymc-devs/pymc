@@ -14,9 +14,6 @@ import numpy as np
 
 __all__ = ['Model', 'logp', 'dlogp', 'continuous_vars'] 
 
-
-
-# TODO Can we change this to just 'Variable'? 
 def Variable(name, shape, dtype='float64'):
     """
     Creates a TensorVariable of the given shape and type
@@ -59,14 +56,14 @@ class Model(object):
     """
     def Data(model, data, distribution):
         args = map(constant, as_iterargs(data))
-        model.factors.append(distribution(*args))
+        model.factors.append(distribution.logp(*args))
 
     def Var(model, name, distribution, shape = 1, dtype = 'float64'):
         var = Variable(name, shape, dtype)
         model.vars.append(var)
         if model.test_point is not None: 
             var.tag.test_value = model.test_point[name]
-        model.factors.append(distribution(var))
+        model.factors.append(distribution.logp(var))
         return var
 
     def fn(self, calc, mode = None):
