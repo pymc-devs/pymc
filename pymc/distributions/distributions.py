@@ -420,7 +420,7 @@ def Poisson(mu):
         Parameters
         ----------
         x : int
-            :math:`x \in {0,1,2,...}`
+            :math:`x \in \{0,1,2,...\}`
         """.format(mu)
     return locals()
 
