@@ -8,7 +8,7 @@ import numpy as np
 from numpy import isfinite, nan_to_num
 from ..core import *
 
-def find_MAP(model, start, vars=None, min_alg=fmin_bfgs, disp=False, return_all=False):
+def find_MAP(model, start = None, vars=None, min_alg=fmin_bfgs, disp=False, return_all=False):
     """
     Sets state to the local maximum a posteriori point given a model.
     Current default of fmin_Hessian does not deal well with optimizing close 
@@ -17,7 +17,7 @@ def find_MAP(model, start, vars=None, min_alg=fmin_bfgs, disp=False, return_all=
     Parameters
     ----------
     model : Model
-    start : array
+    start : dict of parameter values (Defaults to model.test_point())
     vars : list or array
         List of variables to set to MAP point (Defaults to all).
     min_alg : function
@@ -28,6 +28,9 @@ def find_MAP(model, start, vars=None, min_alg=fmin_bfgs, disp=False, return_all=
         Return a list of results at each iteration if True (Defaults 
         to False).
     """
+    if start is None:
+        start = model.test_point
+
     if vars is None: 
         vars = continuous_vars(model)
         

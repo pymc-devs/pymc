@@ -25,6 +25,12 @@ def quickclass(fn):
     Distribution.__name__ = fn.__name__
     return Distribution
 
+def bound(logp, *conds):
+    cond = 1
+    for c in conds:
+        cond = cond & (1*c)
+
+    return switch(cond, logp, -inf)
 
 @quickclass
 def Uniform(lower=0, upper=1):
@@ -41,11 +47,18 @@ def Uniform(lower=0, upper=1):
     upper : float
         Upper limit (defaults to 1)
     """
+    support = 'continuous'
+
     def logp(value):
-        
-        return switch((value >= lower) & (value <= upper),
-                  -log(upper-lower),
-                  -inf)
+        return bound(
+                -log(upper - lower),
+                lower <= value, value <= upper)
+
+    mean = (upper + lower)/2.
+    median = mean
+
+    default = mean
+
     
     logp.__doc__ = """
         Uniform log-likelihood with parameters lower={0} and upper={1}.
@@ -64,6 +77,7 @@ def Flat():
     Uninformative log-likelihood that returns 0 regardless of 
     the passed value.
     """
+    support = 'continuous'
     
     def logp(value):
         return zeros_like(value)
@@ -96,10 +110,19 @@ def Normal(mu=0.0, tau=1.0):
     - :math:`Var(X) = 1/\tau`
 
     """
+    support = 'continuous'
+
     def logp(value):
         
-        return switch(gt(tau , 0),
-			 -0.5 * tau * (value-mu)**2 + 0.5*log(0.5*tau/pi), -inf)
+        return bound(
+                (-tau * (value-mu)**2 + log(tau/pi/2.))/2., 
+                tau > 0)
+
+    mean = mu
+    variance = 1./tau
+
+    median = mean
+    mode = mean
     
     logp.__doc__ = """
         Normal log-likelihood with paraemters mu={0} and tau={1}.
@@ -133,12 +156,18 @@ def Beta(alpha, beta):
     - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
     """
+    support = 'continuous'
     def logp(value):
         
-        return switch(ge(value , 0) & le(value , 1) &
-                  gt(alpha , 0) & gt(beta , 0),
+        return bound(
                   gammaln(alpha+beta) - gammaln(alpha) - gammaln(beta) + (alpha- 1)*log(value) + (beta-1)*log(1-value),
-                  -inf)
+                  0 <= value, value <= 1,
+                  alpha > 0,
+                  beta > 0)
+
+    mean = alpha/(alpha + beta)
+    variance = alpha*beta/(
+            (alpha + beta)**2 * (alpha + beta +1))
                   
     logp.__doc__ = """
     Beta log-likelihood with parameters alpha={0} and beta={1}.
@@ -173,11 +202,15 @@ def Binomial(n, p):
     - :math:`Var(X)=np(1-p)`
 
     """
+    support = 'discrete'
     def logp(value):
         
-        return switch(ge(value , 0) & ge(n , value) & ge(p , 0) & le(p , 1),
-                   switch(ne(value , 0) , value*log(p), 0) + (n-value)*log(1-p) + factln(n)-factln(value)-factln(n-value),
-                   -inf)
+        return bound(
+                switch(ne(value, 0), value*log(p), 0) + (n-value)*log(1-p) + factln(n)-factln(value)-factln(n-value),
+
+                0 <= value, value <= n, 
+                0 <= p, p <= 1)
+
     logp.__doc__ = """
         Binomial log-likelihood with parameters n={0} and p={1}.
         
@@ -213,12 +246,17 @@ def BetaBin(alpha, beta, n):
     - :math:`Var(X)=n\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
     """
+    support = 'discrete'
     
     def logp(value):
         
-        return switch(ge(value , 0) & gt(alpha , 0) & gt(beta , 0) & ge(n , value), 
-                   gammaln(alpha+beta) - gammaln(alpha) - gammaln(beta)+ gammaln(n+1)- gammaln(value+1)- gammaln(n-value +1) + gammaln(alpha+value)+ gammaln(n+beta-value)- gammaln(beta+alpha+n),
-                   -inf)
+        return bound(
+                gammaln(alpha+beta) - gammaln(alpha) - gammaln(beta)+ gammaln(n+1)- gammaln(value+1)- gammaln(n-value +1) + gammaln(alpha+value)+ gammaln(n+beta-value)- gammaln(beta+alpha+n),
+
+                0 <= value, value <= n,
+                alpha > 0, 
+                beta > 0)
+                   
     logp.__doc__ = """
         Beta-binomial log-likelihood with parameters alpha={0}, beta={1},
         and n={2}.
@@ -252,12 +290,15 @@ def Bernoulli(p):
     - :math:`Var(x)= p(1-p)`
 
     """
+    support = 'discrete' 
+
     def logp(value):
-        
-        return switch(ge(p , 0) & le(p , 1), 
+        return bound(
                   switch(value, log(p), log(1-p)),
-                  -inf)
+                  0 <= p, p <= 1)
     
+    mode = cast(round(p), 'int8')
+
     logp.__doc__ = """
         Bernoulli log-likelihood with parameter p={0}.
         
@@ -293,11 +334,18 @@ def T(nu, mu=0, lam=1):
     lam : float
         Scale parameter (defaults to 1)
     """
+    support = 'continuous'
     
     def logp(value):
-        return switch(gt(lam  , 0) & gt(nu , 0),
+        return bound(
                   gammaln((nu+1.0)/2.0) + .5 * log(lam / (nu * pi)) - gammaln(nu/2.0) - (nu+1.0)/2.0 * log(1.0 + lam *(value - mu)**2/nu),
-                  -inf)
+                  lam > 0, 
+                  nu > 0)
+
+    mean = mu
+    variance = switch(nu >2, nu/(nu - 2) / lam , inf)
+
+
     logp.__doc__ = """
         Student's T log-likelihood with paramters nu={0}, mu={1} and lam={2}.
         
@@ -329,10 +377,11 @@ def Cauchy(alpha, beta):
     Mode and median are at alpha.
 
     """
+    support = 'continuous' 
     def logp(value):
-        return switch(gt(beta , 0),
+        return bound(
                   -log(beta) - log( 1 + ((value-alpha) / beta) ** 2 ),
-                  -inf)
+                  beta > 0)
                   
     logp.__doc__ = """
         Cauchy log-likelihood with parameters alpha={0} and beta={0}.
@@ -369,10 +418,15 @@ def Gamma(alpha, beta):
     - :math:`Var(X) = \frac{\alpha}{\beta^2}`
 
     """
+    support = 'continuous' 
     def logp(value):
-        return switch(ge(value , 0) & gt(alpha , 0) & gt(beta , 0),
-                  -gammaln(alpha) + alpha*log(beta) - beta*value + switch(alpha != 1.0, (alpha - 1.0)*log(value), 0),
-                  -inf)
+        return bound(
+                -gammaln(alpha) + alpha*log(beta) - beta*value + switch(alpha != 1.0, (alpha - 1.0)*log(value), 0),
+
+                value >= 0, 
+                alpha > 0, 
+                beta > 0)
+
     logp.__doc__ = """
         Gamma log-likelihood with paramters alpha={0} and beta={1}.
         
@@ -408,11 +462,13 @@ def Poisson(mu):
        - :math:`Var(x)=\mu`
 
     """
+    support = 'discrete'
     def logp(value):
-        return switch( gt(mu,0),
+        return bound(
                #factorial not implemented yet, so
-               value * log(mu) - gammaln(value + 1) - mu,
-               -inf)
+                value * log(mu) - gammaln(value + 1) - mu,
+
+                mu > 0)
                
     logp.__doc__ = """
         Poisson log-likelihood with parameters mu={0}.
@@ -420,14 +476,18 @@ def Poisson(mu):
         Parameters
         ----------
         x : int
-            :math:`x \in \{0,1,2,...\}`
+            :math:`x \in {{0,1,2,...}}`
         """.format(mu)
     return locals()
 
 @quickclass
 def ConstantDist(c):
+    support = 'discrete'
     def logp(value):
-        return switch(eq(value, c), 0, -inf)
+        return bound(
+                0,
+
+                eq(value,c))
         
     logp.__doc__ = """
         Constant log-likelihood with parameter c={0}.
@@ -441,18 +501,22 @@ def ConstantDist(c):
 
 @quickclass
 def ZeroInflatedPoisson(theta, z):
+    support = 'discrete'
     def logp(value):
         return switch(z, 
-                      Poisson(theta)(value), 
-                      ConstantDist(0)(value))
+                      Poisson(theta).logp(value), 
+                      ConstantDist(0).logp(value))
     return locals()
 
 @quickclass
 def Bound(dist, lower = -inf, upper = inf):
+    support = dist.support
     def logp(value):
-        return switch(ge(value , lower) & le(value , upper),
-                  dist.logp(value),
-                  -inf)
+        return bound(
+                dist.logp(value),
+                
+                lower <= value, value <= upper)
+
     return locals()
 
 @quickclass
@@ -464,6 +528,7 @@ def MvNormal(mu, Tau):
         f(x \mid \pi, T) = \frac{|T|^{1/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
     """
 
+    support = 'continuous'
 
     def logp(value): 
         delta = value - mu

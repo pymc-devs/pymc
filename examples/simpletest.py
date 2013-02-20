@@ -8,11 +8,8 @@ np.seterr(invalid = 'raise')
 
 data = np.random.normal(size = (2, 20))
 
-#make a chain with some starting point 
-start = {'x' : np.array([[0.2],[.3]]),
-         'z' : np.array([.5])}
 
-model = Model(test_point = start)
+model = Model()
 Var = model.Var
 Data = model.Data
 
@@ -22,6 +19,7 @@ z = Var('z', Beta(alpha = 10, beta =5.5))
 
 Data(data, Normal(mu = x, tau = .75**-2))
 
+start = model.test_point
 
 hess = approx_hess(model, start)
 step_method = hmc_step(model, model.vars, hess)

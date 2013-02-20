@@ -8,10 +8,9 @@ the first thing you interact with is the model class
 The model class is a dead simple class (see core.py), it contains a list of random variables (model.vars)
 for parameters and a list of factors that go into the posterior (model.factors), and no methods.
 """
-start = {'x' : np.array([[0.2],[.3]]),
-         'z' : np.array([.5])}
 
-model = Model(test_point = start)
+
+model = Model()
 Var = model.Var
 Data = model.Data 
 
@@ -44,14 +43,17 @@ Data(data, Normal(mu = x, tau = .75**-2))
 """
 We need to specify a point in parameter space as our starting point for fitting.
 To specify a point in the parameter space, we use a 
-dictionary of parameter names-> parameter values
+dictionary of parameter names-> parameter values. You can also get an automatically generated one from model.test_point
 """
-
+start = {'x' : np.array([[0.2],[.3]]),
+         'z' : np.array([.5])}
 
 """
 The maximum a posteriori point (MAP) may be a better starting point than the one we have chosen. 
 The find_MAP function uses an optimization algorithm on the log posterior to find and return the local maximum.
 """
+
+
 start = find_MAP(model, start)
 
 """

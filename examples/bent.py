@@ -14,9 +14,7 @@ ya = 0
 n = 200
 data = normal( size = n) + xa + ya
 
-start = {'x' : 0,
-         'y' : 0}
-model = Model(test_point = start)
+model = Model()
 Data = model.Data 
 Var = model.Var
 """
@@ -41,7 +39,7 @@ Data(data, Normal(x + y**2, 1.) )
 
 
 
-
+start = model.test_point
 hess = np.ones(2)*np.diag(approx_hess(model, start))[0]
 
 

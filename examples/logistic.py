@@ -16,10 +16,7 @@ predictors = np.random.normal( size = (n, npred))
 
 outcomes = np.random.binomial(1, invlogit(np.sum(effects_a[None,:] * predictors, 1)))
 
-#make a chain with some starting point 
-start = {'effects' : np.zeros((1,npred))}
-
-model = Model(test_point = start)
+model = Model()
 Var = model.Var
 Data = model.Data 
 
@@ -37,7 +34,7 @@ Data(outcomes, Bernoulli(p))
 
 
 #move the chain to the MAP which should be a good starting point
-start = find_MAP(model, start)
+start = find_MAP(model)
 hess = np.diag(approx_hess(model, start)) #find a good orientation using the hessian at the MAP
 
 step_method = hmc_step(model, model.vars, hess, is_cov = False) 

@@ -18,10 +18,7 @@ predictors = np.random.normal( size = (n, npred))
 
 outcomes = np.random.binomial(1, invlogit(np.sum(effects_a[None,:] * predictors, 1)))
 
-#make a chain with some starting point 
-start = {'effects' : np.zeros((1,npred))}
-
-model = Model(test_point = start)
+model = Model()
 Var = model.Var
 Data = model.Data 
 
@@ -38,6 +35,8 @@ Data(outcomes, Bernoulli(p))
 
 
 calc = [logp, dlogp()]
+
+start = model.test_point
 
 from theano import ProfileMode
 print "python"

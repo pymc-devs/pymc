@@ -8,22 +8,16 @@ np.seterr(invalid = 'raise')
 
 data = np.random.normal(size = (3, 20))
 n = 1
-start = {'x' : np.zeros(n)}
 
-model = Model(test_point = start)
+model = Model()
 Var = model.Var 
 Data = model.Data 
 
 
-x = Var('x', Normal(mu = 0, tau = 1.), (n))
+x = Var('x', Normal(0, tau = 1.), n)
 
-#make a chain with some starting point 
-
-
-
-
-#move the chain to the MAP which should be a good starting point
-start = find_MAP(model, start)
+#start sampling at the MAP
+start = find_MAP(model)
 hess = approx_hess(model, start) #find a good orientation using the hessian at the MAP
 
 #step_method = split_hmc_step(model, model.vars, hess, chain, hmc_cov)
