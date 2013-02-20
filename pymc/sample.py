@@ -5,7 +5,7 @@ from time import time
 
 __all__ = ['sample', 'psample']
 
-def sample(draws, step, point, trace = None, state = None): 
+def sample(draws, step, start = None, trace = None, state = None): 
     """
     Draw a number of samples using the given step method. 
     Multiple step methods supported via compound step method 
@@ -18,8 +18,8 @@ def sample(draws, step, point, trace = None, state = None):
         The number of samples to draw
     step : function
         A step function
-    point : float or vector
-        The current sample index
+    start : dict 
+        Starting point in parameter space
     trace : NpTrace
         A trace of past values (defaults to None)
     state : 
@@ -32,7 +32,7 @@ def sample(draws, step, point, trace = None, state = None):
         
     """
 
-    point = clean_point(point)
+    point = clean_point(start)
     if trace is None: 
         trace = NpTrace()
     # Keep track of sampling time  
@@ -47,15 +47,15 @@ def argsample(args):
     """ defined at top level so it can be pickled"""
     return sample(*args)
   
-def psample(draws, step, point, mtrace = None, state = None, threads = None):
+def psample(draws, step, start, mtrace = None, state = None, threads = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
 
     if not threads:
         threads = max(mp.cpu_count() - 2, 1)
 
-    if isinstance(point, dict) :
-        point = threads * [point]
+    if isinstance(start, dict) :
+        start = threads * [start]
 
     if not mtrace:
         mtrace = MultiTrace([NpTrace() for _ in xrange(threads)])
@@ -65,7 +65,7 @@ def psample(draws, step, point, mtrace = None, state = None, threads = None):
 
     p = mp.Pool(threads)
 
-    argset = zip([draws]*threads, [step]*threads, point, mtrace.traces, state)
+    argset = zip([draws]*threads, [step]*threads, start, mtrace.traces, state)
     
     # Keep track of sampling time  
     tstart = time() 
