@@ -1,4 +1,8 @@
-from distributions import *
+from continuous import *
+from discrete import * 
+
+import multivariate
+
 import timeseries 
 import meta 
 import survival

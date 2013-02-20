@@ -31,7 +31,7 @@ def mv_simple():
     model = pm.Model()
     Var = model.Var
 
-    x = Var('x', pm.MvNormal(pm.constant(mu),pm.constant(tau)), 3, testval = np.array([.1, 1., .8]))
+    x = Var('x', pm.multivariate.Normal(pm.constant(mu),pm.constant(tau)), 3, testval = np.array([.1, 1., .8]))
 
     H = tau
     C = np.linalg.inv(H)

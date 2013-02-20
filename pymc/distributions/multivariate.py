@@ -2,7 +2,7 @@ from dist_math import *
 
 __all__ = ['Normal']
 
-from theano.sandbox.linalg import det
+from theano.sandbox.linalg import det, solve
 from theano.tensor import dot
 
 @quickclass
@@ -32,19 +32,22 @@ def Normal(mu, Tau):
 
 
 @quickclass
-def Dirichlet(a, n): 
+def Dirichlet(k, a): 
     """
     Dirichlet distribution
     """
 
-    a = ones(n) * a
+    a = ones(k) * a
 
     support = 'continuous'
 
     def logp(value):
+
+        #only defined for sum(value) == 1 
         return bound(
                 sum((a -1)*log(value)) + gammaln(sum(a)) - sum(gammaln(a)),
 
+                k > 2,
                 a > 0)
     
     mean = a/sum(a)
@@ -54,4 +57,44 @@ def Dirichlet(a, n):
             nan)
 
     return locals()
+
+
+@quickclass
+def Multinomial(n, p):
+    support = 'discrete'
+
+    def logp(x): 
+        #only defined for sum(p) == 1
+        return bound( 
+                factln(n) + sum(x*log(p) - factln(x)), 
+                n > 0, 
+                0 <= x, x <= n)
+
+    mean = n*p
+
+    return locals()
+
+
+
+@quickclass
+def Wishart(n, p, V):
+    """
+    Wishart distribution
+    """
+    support = 'continuous'
+
+    def logp(X): 
+        IVI  = det(V)
+        return bound( 
+                ((n-p-1)*log( IVI ) - trace(solve(V, X)) - n*p *log(2) - n*log( IVI ) -2*multigammaln(p, n/2))/2, 
+
+                n > p -1)
+
+    mean = n*V
+    mode = switch(n >= p+1, 
+            (n-p-1)*V,
+            nan)
+
+    return locals()
+
 
