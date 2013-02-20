@@ -38,58 +38,12 @@ class GammaLn(scalar.UnaryScalarOp):
 scalar_gammaln  = GammaLn(scalar.upgrade_to_float, name='scalar_gammaln')
 gammaln = tensor.Elemwise(scalar_gammaln, name='gammaln')
 
-class MultiGammaLn(scalar.UnaryScalarOp):
-    """
-    Compute multigammaln(p, x)
-    """
-    @staticmethod
-    def st_impl(p, x):
-        return special.multigammaln(p, x)
 
-    def impl(self, x):
-        return MultiGammaLn.st_impl(x)
-
-    def grad(self, inp, grads):
-        p, x = inp
-        gz, = grads
-        return [p.zeros_like().astype(theano.config.floatX), gz * scalar_multipsi(p, x)]
-
-    def c_support_code(self):
-        return (
-        """
-#ifndef _MULTIGAMMAFUNCDEFINED
-#define _MULTIGAMMAFuNCDEFINED
-
-double _multigammaln(int p, double x){
-
-    double lnpi = 1.14472988585 ;
-    double res = %(p)s * ( %(p)s -1)*lnpi/4.0;
-
-    for (int i = 0: i < %(p)s; i++){
-        res += lgamma(%(x)s - i/2.0);
-        }
-    return res;
-    }
-
-#endif
-        """)
-    def c_code(self, node, name, inp, out, sub):
-        p, x = inp
-        z, = out
-        if node.inputs[0].type in [scalar.float32, scalar.float64]:
-            return """%(z)s =
-                _multigammaln(%(p)s, %(x)s);""" % locals()
-        raise NotImplementedError('only floating point is implemented')
-    def __eq__(self, other):
-        return type(self) == type(other)
-    def __hash__(self):
-        return hash(type(self))
-
-
+def multigammaln(p, a):
+    a = a[t.newaxis, ...]
+    i = t.arange(p)
+    return p*(p-1) * log(t.pi)/4.   +  t.sum(gammaln(a+i/2), axis = 0)
     
-scalar_multigammaln  = GammaLn(scalar.upgrade_to_float, name='scalar_multigammaln')
-multigammaln = tensor.Elemwise(scalar_multigammaln, name='multigammaln')
-
 cpsifunc = """
 #ifndef _PSIFUNCDEFINED
 #define _PSIFUNCDEFINED
@@ -133,8 +87,8 @@ class Psi(scalar.UnaryScalarOp):
     Compute derivative of gammaln(x)
     """
     @staticmethod
-    def st_impl(p, x):
-        return special.psi(p, x)
+    def st_impl(x):
+        return special.psi(x)
     def impl(self, x):
         return Psi.st_impl(x)
     
@@ -157,54 +111,6 @@ class Psi(scalar.UnaryScalarOp):
     
 scalar_psi = Psi(scalar.upgrade_to_float, name='scalar_psi')
 psi = tensor.Elemwise(scalar_psi, name='psi')
-
-
-class MultiPsi(scalar.UnaryScalarOp):
-    """
-    Compute derivative of gammaln(x)
-    """
-    @staticmethod
-    def st_impl(p, x):
-        r = p*(p-1)/4. 
-        for i in range(p): 
-            r += special.psi(x - i/2.)
-        return r
-    def impl(self, x):
-        return Psi.st_impl(x)
-    
-    #def grad()  no gradient now 
-    
-    def c_support_code(self):
-        return (cpsifunc + 
-        """
-#ifndef _MULTIPSIFUNCDEFINED
-#define _MULTIPSIFuNCDEFINED
-
-double _multipsi(int p, double x){
-    double res = 0.0;
-
-    for (int i = 0: i < %(p)s ; i++){
-        res += _psi(%(x)s - i/2.0);
-        }
-    return res;
-    }
-#endif
-        """)
-    def c_code(self, node, name, inp, out, sub):
-        x, = inp
-        z, = out
-        if node.inputs[0].type in [scalar.float32, scalar.float64]:
-            return """%(z)s =
-                _multipsi(%(x)s);""" % locals()
-        raise NotImplementedError('only floatingpoint is implemented')
-    
-    def __eq__(self, other):
-        return type(self) == type(other)
-    def __hash__(self):
-        return hash(type(self))
-    
-scalar_multipsi = Psi(scalar.upgrade_to_float, name='scalar_multipsi')
-multipsi = tensor.Elemwise(scalar_multipsi, name='multipsi')
 
 
 class FactLn(scalar.UnaryScalarOp):
