@@ -6,7 +6,7 @@ Created on Mar 7, 2011
 import theano.tensor as t
 from theano.tensor import switch, log, eq, neq, lt, gt, le, ge, zeros_like, cast, round
 
-from numpy import pi, inf
+from numpy import pi, inf, nan
 from special import gammaln, factln
 
 from theano.printing import Print

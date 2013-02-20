@@ -8,10 +8,17 @@ from theano.tensor import dot
 @quickclass
 def Normal(mu, Tau):
     """
-    Multivariate normal log-likelihood
+    Multivariate normal 
+
+    :Parameters:
+        mu : vector of means
+        Tau : precision matrix 
 
     .. math::
         f(x \mid \pi, T) = \frac{|T|^{1/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+
+    :Support:
+        2 array of floats
     """
 
     support = 'continuous'
@@ -19,15 +26,9 @@ def Normal(mu, Tau):
     def logp(value): 
         delta = value - mu
         return 1/2. * ( log(det(Tau)) - dot(delta.T,dot(Tau, delta)))
+
+    mean = median = mode = mu
         
-    logp.__doc__ = """
-        Multivariate normal log-likelihood with parameters mu={0} and 
-        tau={1}.
-        
-        Parameters
-        ----------
-        x : 2D array or list of floats
-        """
     return locals()
 
 
@@ -46,6 +47,9 @@ def Dirichlet(k, a):
         theta : array
             An (n,k) or (1,k) array > 0.
 
+    :Support: 
+        x : vector 
+            sum(x) == 1 and x > 0 
 
     .. note::
         Only the first `k-1` elements of `x` are expected. Can be used
@@ -85,14 +89,16 @@ def Multinomial(n, p):
         f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
 
     :Parameters:
-        x : (ns, k) int
-            Random variable indicating the number of time outcome i is
-            observed. :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
         n : int
             Number of trials.
         p : (k,)
             Probability of each one of the different outcomes.
             :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
+
+    :Support:
+        x : (ns, k) int
+            Random variable indicating the number of time outcome i is
+            observed. :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
 
     .. note::
         - :math:`E(X_i)=n p_i`
@@ -132,12 +138,14 @@ def Wishart(n, p, V):
     where :math:`k` is the rank of X.
 
     :Parameters:
-      X : matrix
-        Symmetric, positive definite.
       n : int
         Degrees of freedom, > 0.
       Tau : matrix
         Symmetric and positive definite
+
+    :Support:
+      X : matrix
+        Symmetric, positive definite.
     """
     support = 'continuous'
 
