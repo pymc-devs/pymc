@@ -18,7 +18,7 @@ model = Model()
 Data = model.Data 
 Var = model.Var
 """
-This model is U shaped because of the non identifiability. 
+This model is U shaped because of the non identifiability. I think this is the same as the Rosenbrock function.
 As n increases, the walls become steeper but the distribution does not shrink towards the mode. 
 As n increases this distribution gets harder and harder for HMC to sample.
 
