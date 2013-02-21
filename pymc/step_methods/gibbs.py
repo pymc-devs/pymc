@@ -24,7 +24,7 @@ class elemwise_cat_gibbs_step():
         
     
     def step(self, state, point):
-        bij = DictElemBij(self.var, (), point)
+        bij = DictToVarBijection(self.var, (), point)
         logp = bij.mapf(self.elogp)
 
         p = array([logp(v * self.sh) for v in self.values])

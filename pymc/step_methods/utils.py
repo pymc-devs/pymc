@@ -8,7 +8,7 @@ class array_step(object):
         self.provide_full = provide_full
         
     def step(self, state, point):
-        bij = DictArrBij(self.idxmap, point)
+        bij = DictToArrayBijection(self.idxmap, point)
         
         fns = map(bij.mapf, self.fs)
 

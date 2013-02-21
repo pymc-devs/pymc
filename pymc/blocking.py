@@ -1,7 +1,12 @@
+"""
+pymc.blocking
+
+Classes for working with subsets of parameters.
+"""
 import numpy as np
 import collections
 
-__all__ = ['IdxMap', 'DictArrBij', 'DictElemBij']
+__all__ = ['IdxMap', 'DictToArrayBijection', 'DictToVarBijection']
 
 VarMap = collections.namedtuple('VarMap', 'var, slc, shp')
 
@@ -19,7 +24,7 @@ class IdxMap(object):
         self.dimensions = dim
             
 
-class DictArrBij(object):
+class DictToArrayBijection(object):
     def __init__(self, idxmap, dpoint):
         self.idxmap = idxmap
         self.dpt = dpoint
@@ -62,9 +67,9 @@ class DictArrBij(object):
 
         f : dict -> T 
         """
-        return BijWrapIn(self,f)
+        return BijectionWrapFunc(self,f)
 
-class DictElemBij(object):
+class DictToVarBijection(object):
     def __init__(self, var, idx, dpoint):
         self.var = str(var)
         self.idx = idx
@@ -84,10 +89,10 @@ class DictElemBij(object):
         
         return dpt 
     def mapf(self, f):
-        return BijWrapIn(self, f)
+        return BijectionWrapFunc(self, f)
 
 
-class BijWrapIn(object):
+class BijectionWrapFunc(object):
     def __init__(self, bij, fn): 
         self.bij = bij
         self.fn = fn

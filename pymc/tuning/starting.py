@@ -35,7 +35,7 @@ def find_MAP(model, start = None, vars=None, min_alg=fmin_bfgs, disp=False, retu
         vars = continuous_vars(model)
         
     start = clean_point(start)
-    bij = DictArrBij(IdxMap(vars), start)
+    bij = DictToArrayBijection(IdxMap(vars), start)
     
     logp = bij.mapf(model.logp())
     dlogp = bij.mapf(model.dlogp(vars))
