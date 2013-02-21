@@ -1,10 +1,9 @@
 import matplotlib
 matplotlib.use('Agg')
 
-import os
 from os import path
-from glob import glob
 import fnmatch
+import imp
 
 def test_examples(): 
     for path in all_matching_files(example_dir(), '*.py'):
@@ -30,8 +29,5 @@ def example_dir():
 
 
 def check_example(p):
-    with open(p) as f :
-        #c = compile(f.read(), p, 'exec')
-        #exec(c)
-        os.chdir(path.dirname(p))
-        execfile(path.basename(p))
+    imp.load_source('__main__', p)
+
