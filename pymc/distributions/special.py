@@ -6,7 +6,7 @@ Created on Mar 17, 2011
 from theano import scalar,tensor
 import numpy 
 from scipy import special, misc
-import theano.tensor as t 
+from dist_math import *
 
 __all__ = ['gammaln', 'multigammaln', 'psi', 'multipsi', 'factln']
 
@@ -40,10 +40,19 @@ scalar_gammaln  = GammaLn(scalar.upgrade_to_float, name='scalar_gammaln')
 gammaln = tensor.Elemwise(scalar_gammaln, name='gammaln')
 
 
-def multigammaln(p, a):
+def multigammaln(a, p):
+    """Multivariate Log Gamma
+
+    :Parameters: 
+        a : tensor like
+        p : int degrees of freedom
+            p > 0 
+    """
     a = t.shape_padright(a)
-    i = t.arange(p)
-    return p*(p-1) * log(t.pi)/4.   +  t.sum(gammaln(a+i/2), axis = 0)
+    i = arange(p)
+
+    return p*(p-1) * log(pi)/4.   +  t.sum(gammaln(a+i/2.), axis = a.ndim-1)
+
     
 cpsifunc = """
 #ifndef _PSIFUNCDEFINED
