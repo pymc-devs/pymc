@@ -7,6 +7,7 @@ import numdifftools as nd
 import numpy as np 
 from ..core import *
 
+__all__ = ['approx_hess']
 def approx_hess(model, start, vars=None):
     """
     Returns an approximation of the Hessian at the current chain location.

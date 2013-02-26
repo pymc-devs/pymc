@@ -8,6 +8,7 @@ import numpy as np
 from numpy import isfinite, nan_to_num
 from ..core import *
 
+__all__ = ['find_MAP']
 def find_MAP(model, start = None, vars=None, min_alg=fmin_bfgs, disp=False, return_all=False):
     """
     Sets state to the local maximum a posteriori point given a model.
@@ -54,7 +55,7 @@ def find_MAP(model, start = None, vars=None, min_alg=fmin_bfgs, disp=False, retu
         raise ValueError("Optimization error, found optima has some bad values " + repr(mx)) 
 
     if not isfinite(logp(mx)) or not np.all(isfinite(dlogp(mx))):
-        raise ValueError("Optimization error, logp or dlogp at max have bad values. logp: " + repr(logp(mx)) + " dlogp: " + repr(dlogp(mx)))
+        raise ValueError("Optimization error, logp or dlogp at max have bad values. max: " + repr(mx) + " logp: " + repr(logp(mx)) + " dlogp: " + repr(dlogp(mx)))
 
     
     max_point = bij.rmap(mx)
