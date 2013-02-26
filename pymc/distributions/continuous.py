@@ -192,7 +192,7 @@ def T(nu, mu=0, lam=1):
                   nu > 0)
 
     mean = mu
-    variance = switch(nu >2, nu/(nu - 2) / lam , inf)
+    variance = switch((nu >2)*1, nu/(nu - 2) / lam , inf)
 
 
     logp.__doc__ = """
