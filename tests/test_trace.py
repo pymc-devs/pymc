@@ -46,4 +46,13 @@ def check_multi_trace(trace, n, step, start):
             assert np.shape(ctrace[var]) == (len(trace.traces)*n*(i+1),) + np.shape(val)
 
 
+def test_get_point():
+    from pymc import *
+    x = NpTrace(10)
+    p = {'a' : np.ones(5), 'm' : np.zeros((2,2))}
+    x += p
+    x += p
+    x.point(0)
+
+
 

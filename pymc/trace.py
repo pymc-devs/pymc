@@ -4,6 +4,9 @@ Created on Mar 15, 2011
 @author: jsalvatier
 '''
 import numpy as np
+
+__all__ = ['NpTrace', 'MultiTrace']
+
 class NpTrace(object):
     """
     encapsulates the recording of a process chain
@@ -23,7 +26,7 @@ class NpTrace(object):
                     s = self.samples[var]
                 except: 
                     s = np.empty((self.max_draws,) + value.shape) 
-                    self.samples[var] = s 
+                    self.samples[var] = s
                     
                 s[self.nsamples,...] = value
 
@@ -32,8 +35,11 @@ class NpTrace(object):
             raise ValueError('out of space!')
         return self
         
-    def __getitem__(self, key):
-        return self.samples[key][0:self.nsamples,...]
+    def __getitem__(self, key): 
+        return self.samples[str(key)][0:self.nsamples,...]
+
+    def point(self, index):
+        return dict((k, v[0:self.nsamples][index]) for (k,v) in self.samples.iteritems())
 
 class MultiTrace(object): 
     def __init__(self, traces): 
@@ -41,9 +47,13 @@ class MultiTrace(object):
 
     def __getitem__(self, key): 
         return [h[key] for h in self.traces]
+    def point(self, index): 
+        return [h.point(index) for h in self.traces]
+
     def combined(self):
         h = NpTrace()
         for k in self.traces[0].samples: 
             h.samples[k] = np.concatenate([s[k] for s in self.traces])
             h.nsamples = h.samples[k].shape[0]
         return h
+
