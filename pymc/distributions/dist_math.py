@@ -3,13 +3,16 @@ Created on Mar 7, 2011
 
 @author: johnsalvatier
 '''
+from __future__ import division
 import theano.tensor as t
-from theano.tensor import switch, log, eq, neq, lt, gt, le, ge, zeros_like, cast,arange, round
+from theano.tensor import sum, switch, log, eq, neq, lt, gt, le, ge, zeros_like, cast,arange, round
 
 from numpy import pi, inf, nan
 from special import gammaln, factln
 
 from theano.printing import Print
+
+
 
 
 
