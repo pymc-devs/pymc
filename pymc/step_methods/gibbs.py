@@ -8,6 +8,7 @@ from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, on
 from numpy.random import uniform
 from __builtin__ import sum as builtin_sum
     
+__all__ = ['elemwise_cat_gibbs_step']
     
 class elemwise_cat_gibbs_step():
     """
