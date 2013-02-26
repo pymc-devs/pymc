@@ -5,7 +5,7 @@ from time import time
 
 __all__ = ['sample', 'psample']
 
-def sample(draws, step, start = None, trace = None, state = None): 
+def sample(draws, step, start, trace = None, state = None): 
     """
     Draw a number of samples using the given step method. 
     Multiple step methods supported via compound step method 
