@@ -106,7 +106,8 @@ if chol_available:
             self.p = np.argsort(factor.P())
             
         def velocity(self, x ):
-            return self.factor(x)
+            x = np.ones((x.shape[0], 2)) * x[:,np.newaxis]
+            return self.factor(x)[:,0]
             
         def Ldot(self, x):
             return (self.L * x)[self.p]
