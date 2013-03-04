@@ -39,12 +39,16 @@ def approx_hess(model, start, vars=None):
     return nd.Jacobian(grad_logp)(bij.map(start))
 
 
-def trace_cov(trace, vars):
+def trace_cov(trace, vars = None):
     """
     Calculate the flattened covariance matrix using a sample trace
 
     Useful if you want to base your covariance on some initial samples.
     """
+
+    if vars is None: 
+        vars = trace.samples.keys
+
     def flat_t(var):
         x = trace[str(var)]
         return x.reshape((x.shape[0], np.prod(x.shape[1:])))
