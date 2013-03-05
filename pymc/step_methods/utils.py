@@ -1,5 +1,9 @@
 from ..core import * 
 import numpy as np 
+from numpy.random import uniform
+from numpy import log , isfinite
+
+__all__ = ['array_step', 'metrop_select', 'SamplerHist']
 
 class array_step(object):
     def __init__(self, vars, fs, provide_full = False):
@@ -18,9 +22,6 @@ class array_step(object):
         state, apoint = self.astep(state, bij.map(point), *fns)
         return state, bij.rmap(apoint)
 
-
-from numpy.random import uniform
-from numpy import dot, log , isfinite
 
 def metrop_select(mr, q, q0):
     if isfinite(mr) and log(uniform()) < mr:

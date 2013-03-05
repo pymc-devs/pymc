@@ -6,6 +6,8 @@ from scipy.sparse import issparse
 
 import numpy as np
 
+__all__ = ['quad_potential', 'ElemWiseQuadPotential', 'QuadPotential', 'QuadPotential_Inv', 'QuadPotential_SparseInv', 'isquadpotential']
+
 def quad_potential(C, is_cov):
     if isquadpotential(C):
         return C

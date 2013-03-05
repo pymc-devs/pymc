@@ -10,6 +10,8 @@ from quadpotential import quad_potential
 
 from utils import *
 
+__all__ = ['metropolis_step']
+
 # TODO Implement tuning for Metropolis step
 class metropolis_step(array_step):
     def __init__(self, model, vars, C, scaling=.25):
