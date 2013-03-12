@@ -13,7 +13,7 @@ class NpTrace(object):
     """
     def __init__(self, max_draws = 10000):
         self.max_draws = max_draws
-        self.samples = {}
+        self.samples = StrDict()
         self.nsamples = 0
     
     def __add__(self, point):
@@ -36,10 +36,10 @@ class NpTrace(object):
         return self
         
     def __getitem__(self, key): 
-        return self.samples[str(key)][0:self.nsamples,...]
+        return self.samples[key][0:self.nsamples,...]
 
     def point(self, index):
-        return dict((k, v[0:self.nsamples][index]) for (k,v) in self.samples.iteritems())
+        return StrDict((k, v[:self.nsamples][index]) for (k,v) in self.samples.iteritems())
 
 class MultiTrace(object): 
     def __init__(self, traces): 
@@ -57,3 +57,16 @@ class MultiTrace(object):
             h.nsamples = h.samples[k].shape[0]
         return h
 
+
+class StrDict(dict): 
+    """
+    All keys are cast to strings
+    """
+    def __getitem__(self,key): 
+        return dict.__getitem__(self, str(key))
+
+    def __setitem__(self,key,val):
+        return dict.__setitem__(self, str(key), val)
+
+    def __delitem__(self, key):
+        return dict.__delitem__(self, str(key))
