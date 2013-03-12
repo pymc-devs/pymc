@@ -18,3 +18,6 @@ discrete_types = bool_types | int_types
 
 default_type = {'discrete' :    'int64', 
                 'continuous':   'float64'}
+
+def typefilter(vars, types):
+    return filter(lambda v: v.dtype in types, vars)
