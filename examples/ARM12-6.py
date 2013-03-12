@@ -3,9 +3,9 @@ import numpy as np
 from pymc import *
 
 
-data  = pd.read_csv('srrs2.dat', index_col = 'idnum')
+data  = pd.read_csv('data/srrs2.dat', index_col = 'idnum')
 
-cty_data= pd.read_csv('cty.dat')
+cty_data= pd.read_csv('data/cty.dat')
 
 
 mn = data['state'] == 'MN'

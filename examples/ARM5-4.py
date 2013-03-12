@@ -8,7 +8,7 @@ from pymc import *
 import theano.tensor as t 
 import pandas as pd
 
-data  = pd.read_csv('wells.dat', skip_header = True, delimiter = ' ', index_col = 'id', dtype = {'switch': np.int8})
+data  = pd.read_csv('data/wells.dat', skip_header = True, delimiter = ' ', index_col = 'id', dtype = {'switch': np.int8})
 
 col = data.columns
 
