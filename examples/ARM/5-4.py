@@ -6,39 +6,34 @@ Created on May 18, 2012
 import numpy as np 
 from pymc import * 
 import theano.tensor as t 
-from  utils import * 
+import pandas as pd
 
-data  = readtable('wells.dat', delimiter = ' ', quotechar='"')
+data  = pd.read_csv('wells.dat', skip_header = True, delimiter = ' ', index_col = 'id', dtype = {'switch': np.int8})
 
-id, switched = data[:2]
-arsenic, dist, assoc, educ = map(demean, data[2:])
+col = data.columns
 
-switched = switched.astype(bool)
+credit = data[col[-1]]
+P =data[col[:-1]]
 
-dist100 = dist/100.
-educ4 = educ/4.
+P = P - P.mean()
+P['1'] = 1
 
-predictors = array([np.ones_like(id), dist, arsenic, dist * arsenic, assoc, educ]).T
-npr = predictors.shape[1]
+Pa = np.array(P)
 
-#make a chain with some starting point 
-start = {'effects' : np.zeros((1,npr))}
+model = Model()
 
-model = Model(test = start)
+effects = model.Var('effects', Normal(mu = 0, tau = 100.**-2), len(P.columns))
+p = sigmoid(dot(Pa, effects))
 
-effects = model.Var(model, 'effects', Normal(mu = 0, tau = 10.**-2), (1,  npr))
-p = invlogit(sum(effects * predictors, 1))
-
-model.Data(switched, Bernoulli(p))
-
-
+model.Data(np.array(credit), Bernoulli(p))
 
 
 #move the chain to the MAP which should be a good starting point
-map = find_MAP(model, start)
-hmc_hess = approx_hess(model, start) #find a good orientation using the hessian at the MAP
+start = find_MAP(model)
+H = model.fn(dlogp(n = 2)) #find a good orientation using the hessian at the MAP
+hess = H(start)
 
-step_method = hmc_step(model, model.vars, hmc_hess, is_cov = False)
+step_method = hmc_step(model, model.vars, hess, is_cov = False)
 
-history, state, t = sample(3e2, step_method, map)
+trace, state, t = sample(3e2, step_method, start)
 print "took :", t
