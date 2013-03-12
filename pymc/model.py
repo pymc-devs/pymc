@@ -6,15 +6,12 @@ Created on Mar 7, 2011
 from point import *
 from types import *
 
-import theano
-import theano.tensor as t
-
-from theano import function, scan
-
+from theano import theano, tensor as t, function
+from theano.gof.graph import inputs
 
 import numpy as np 
 
-__all__ = ['Model', 'logp', 'dlogp', 'continuous_vars'] 
+__all__ = ['Model', 'compilef', 'gradient', 'hessian'] 
 
 def Variable(name, shape, dtype, testval):
     """
@@ -64,44 +61,77 @@ class Model(object):
 
     """
     these functions add random variables
-    it is totally appropriate to add new functions to Model
     """
-    def Data(model, data, distribution):
+    def Data(model, data, dist):
         args = map(t.constant, as_iterargs(data))
-        model.factors.append(distribution.logp(*args))
+        model.factors.append(dist.logp(*args))
 
-    def Var(model, name, distribution, shape = 1, dtype = None, testval = try_defaults):
+    def Var(model, name, dist, shape = 1, dtype = None, testval = try_defaults):
         if not dtype:
-            dtype = default_type[distribution.support]
+            dtype = default_type[dist.support]
         
-        var = Variable(name, shape, dtype, get_test_val(distribution, testval))
+        var = Variable(name, shape, dtype, get_test_val(dist, testval))
 
         model.vars.append(var)
-        model.factors.append(distribution.logp(var))
+        model.factors.append(dist.logp(var))
         return var
 
+    def TransformedVar(model, name, dist, transform, logjacobian, shape = 1, dtype = None, testval = try_defaults): 
+        if not dtype:
+            dtype = default_type[dist.support]
+        
+        var = Variable('transformed_' + name, shape, dtype, get_test_val(dist, testval))
 
-    def fn(self, calc, mode = None):
-        if hasattr(calc, '__call__'):
-            out = calc(self)
-        else:
-            out = [f(self) for f in calc]
+        model.vars.append(var)
 
-        return PointFunc(
-                function(self.vars,out, 
-                    allow_input_downcast = True, mode = mode))
+        tvar = transform(var)
+        model.factors.append(dist.logp(tvar) + logjacobian(var))
 
-    def logp(self):
-        return self.fn(logp)
+        return tvar, var
 
-    def dlogp(self, *args, **kwargs):
-        return self.fn(dlogp(*args, **kwargs))
+    @property
+    def logp(model):
+        """
+        log-probability of the model
+            
+        Parameters
+        ----------
+            
+        model : Model  
+
+        Returns
+        -------
+
+        logp : Theano scalar
+            
+        """
+        return t.add(*map(t.sum, model.factors))
+
+    @property
+    def logpc(model): 
+        return compilef(model.logp)
+
+    def dlogpc(model, vars = None): 
+        return compilef(gradient(model.logp, vars))
+
+    def d2logpc(model, vars = None):
+        return compilef(hessian(model.logp, vars))
 
     @property
     def test_point(self):
         return dict( (str(var), var.tag.test_value) for var in self.vars)
 
+    @property
+    def cont_vars(model):
+        return typefilter(model.vars, continuous_types) 
 
+def compilef(outs, mode = None):
+    return PointFunc(
+                function(inputvars(outs), outs, 
+                         allow_input_downcast = True, 
+                         on_unused_input = 'ignore',
+                         mode = mode)
+           )
 
 
 def as_iterargs(data):
@@ -126,81 +156,50 @@ def get_test_val(dist, val):
     else:
         return val
 
-    
+def makeiter(a): 
+    if isinstance(a, (tuple, list)):
+        return a
+    else :
+        return [a]
 
-
-
-       
-def continuous_vars(model):
-    return [ var for var in model.vars if var.dtype in continuous_types] 
-
-class PointFunc(object): 
-    def __init__(self, f):
-        self.f = f
-    def __call__(self,state):
-        return self.f(**state)
+def inputvars(a): 
+    return [v for v in inputs(makeiter(a)) if isinstance(v, t.TensorVariable)]
 
 """
-These functions build log-posterior graphs (and derivatives)
+Theano derivative functions 
 """ 
-def logp(model):
-    """
-    Calculates the log-probability of a specified model
-        
-    Parameters
-    ----------
-        
-    model : Model  
-        
-    Examples
-    --------
-        
-    >>> an example
-        
-    """
-    return t.add(*map(t.sum, model.factors))
 
-def flatgrad(f, v):
+def cont_inputs(f):
+    return typefilter(inputvars(f), continuous_types)
+
+def gradient1(f, v):
+    """flat gradient of f wrt v"""
     return t.flatten(t.grad(f, v))
 
-def gradient(f, dvars):
-    return t.concatenate([flatgrad(f, v) for v in dvars])
-def jacobian(f, dvars):
-    def jac(v):
-        def grad_i(i, f1, v): 
-            return flatgrad(f1[i], v)
+def gradient(f, vars = None):
+    if not vars: 
+        vars = cont_inputs(f)
 
-        return scan(grad_i, sequences=t.arange(f.shape[0]), non_sequences=[f,v])[0]
+    return t.concatenate([gradient1(f, v) for v in vars], axis = 0)
 
-    return t.concatenate(map(jac, dvars))
-
-def hessian(f, dvars):
-    return jacobian(gradient(f, dvars), dvars)
-
-def dlogp(dvars=None, n=1):
-    """
-    Returns a function for calculating the derivative of the output 
-    of another function.
+def jacobian1(f, v):
+    """jacobian of f wrt v"""
+    f = t.flatten(f)
+    idx = t.arange(f.shape[0])
     
-    Parameters
-    ----------
-    d_calc : function
-    
-    Returns
-    -------
-    der_calc : function
-    """
-    
-    dfn = [gradient, hessian]
-    def dlogp_calc(model):
-         
-        if dvars is None:
-            vars = continuous_vars(model)
-        else: 
-            vars = dvars 
-        return dfn[n-1](logp(model), vars)
+    def grad_i(i): 
+        return gradient1(f[i], v)
 
-    return dlogp_calc
+    return theano.map(grad_i, idx)[0]
+
+def jacobian(f, vars = None):
+    if not vars: 
+        vars = cont_inputs(f)
+
+    return t.concatenate([jacobian1(f, v) for v in vars], axis = 1)
+
+def hessian(f, vars = None):
+    return -jacobian(gradient(f, vars), vars)
 
 
 #theano stuff 
