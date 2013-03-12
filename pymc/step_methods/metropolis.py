@@ -15,11 +15,9 @@ __all__ = ['metropolis_step']
 # TODO Implement tuning for Metropolis step
 class metropolis_step(array_step):
     def __init__(self, model, vars, C, scaling=.25):
-        logp = model.logp()
-        
 
-        self.potential = quad_potential(C*scaling, False) #
-        super(metropolis_step,self).__init__(vars, [logp])
+        self.potential = quad_potential(C*scaling, False)
+        super(metropolis_step,self).__init__(vars, [model.logpc])
         
     def astep(self, state, q0, logp):
 

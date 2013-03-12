@@ -6,22 +6,20 @@ from numpy import log , isfinite
 __all__ = ['array_step', 'metrop_select', 'SamplerHist']
 
 class array_step(object):
-    def __init__(self, vars, fs, provide_full = False):
+    def __init__(self, vars, fs, allvars = False):
         self.idxmap = IdxMap(vars)
         self.fs = fs
-        self.provide_full = provide_full
+        self.allvars = allvars
         
     def step(self, state, point):
         bij = DictToArrayBijection(self.idxmap, point)
         
-        fns = map(bij.mapf, self.fs)
+        inputs = map(bij.mapf, self.fs) 
+        if self.allvars:
+            inputs += [point]
 
-        if self.provide_full:
-            fns += [point]	
-        
-        state, apoint = self.astep(state, bij.map(point), *fns)
+        state, apoint = self.astep(state, bij.map(point), *inputs)
         return state, bij.rmap(apoint)
-
 
 def metrop_select(mr, q, q0):
     if isfinite(mr) and log(uniform()) < mr:

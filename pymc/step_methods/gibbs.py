@@ -4,13 +4,15 @@ Created on May 12, 2012
 @author: john
 '''
 from ..core import *
+from utils import * 
 from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones
 from numpy.random import uniform
-from __builtin__ import sum as builtin_sum
+
+from theano.gof.graph import inputs
     
 __all__ = ['elemwise_cat_gibbs_step']
     
-class elemwise_cat_gibbs_step():
+class elemwise_cat_gibbs_step(array_step):
     """
     gibbs sampling for categorical variables that only have only have elementwise effects
     the variable can't be indexed into or transposed or anything otherwise that will mess things up
@@ -18,18 +20,21 @@ class elemwise_cat_gibbs_step():
     It would be great to come up with a way to make this more general (handling more complex elementwise variables)
     """
     def __init__(self, model, var, values):
-        self.elogp = model.fn(elemwise_logp(var))
         self.sh = ones(var.dshape, var.dtype)
         self.values = values
         self.var = var
         
+        array_step.__init__(self, [var], [elemwise_logp(model, var)])
     
-    def step(self, state, point):
-        bij = DictToVarBijection(self.var, (), point)
-        logp = bij.mapf(self.elogp)
-
+    def astep(self, state, q, logp):
         p = array([logp(v * self.sh) for v in self.values])
-        return state, bij.rmap(categorical(p, self.var.dshape))
+        return state, categorical(p, self.var.dshape)
+
+
+
+def elemwise_logp(model, var):
+    terms = [term for term in model.factors       if var in inputs([term])] 
+    return add(*terms)
 
 def categorical(prob, shape) :
     out = empty([1] + list(shape))
@@ -48,14 +53,6 @@ def categorical(prob, shape) :
         
     return out[0,...]
 
-from theano.gof.graph import inputs
 
 
 
-
-
-def elemwise_logp(var):
-    def elogp(model):
-        terms = filter(lambda term: var in inputs([term]), model.factors)
-        return builtin_sum(terms)
-    return elogp

@@ -20,7 +20,7 @@ def find_MAP(model, start = None, vars=None, min_alg=fmin_bfgs, disp=False, retu
     model : Model
     start : dict of parameter values (Defaults to model.test_point())
     vars : list or array
-        List of variables to set to MAP point (Defaults to all).
+        List of variables to set to MAP point (Defaults to all continuous).
     min_alg : function
         Optimization algorithm (Defaults to `fmin_bfgs`).
     disp : bool
@@ -33,13 +33,13 @@ def find_MAP(model, start = None, vars=None, min_alg=fmin_bfgs, disp=False, retu
         start = model.test_point
 
     if vars is None: 
-        vars = continuous_vars(model)
+        vars = model.cont_vars
         
     start = clean_point(start)
     bij = DictToArrayBijection(IdxMap(vars), start)
     
-    logp = bij.mapf(model.logp())
-    dlogp = bij.mapf(model.dlogp(vars))
+    logp = bij.mapf(model.logpc)
+    dlogp = bij.mapf(model.dlogpc(vars))
     
     def logp_o(point):
         return nan_to_high(-logp(point))

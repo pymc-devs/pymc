@@ -20,7 +20,7 @@ def approx_hess(model, start, vars=None):
         Variables for which Hessian is to be calculated.
     """
     if vars is None :
-        vars = continuous_vars(model)
+        vars = model.cont_vars
 
     start = clean_point(start)
 
@@ -29,14 +29,14 @@ def approx_hess(model, start, vars=None):
 
     
     def grad_logp(point): 
-        return np.nan_to_num(-dlogp(point))
+        return np.nan_to_num(dlogpc(point))
     
     '''
     Find the jacobian of the gradient function at the current position
     this should be the Hessian; invert it to find the approximate 
     covariance matrix.
     '''
-    return nd.Jacobian(grad_logp)(bij.map(start))
+    return -nd.Jacobian(grad_logp)(bij.map(start))
 
 
 def trace_cov(trace, vars = None):
