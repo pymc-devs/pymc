@@ -34,7 +34,7 @@ def sample(draws, step, start, trace = None, state = None):
 
     point = clean_point(start)
     if trace is None: 
-        trace = NpTrace()
+        trace = NpTrace(max(draws, 10000))
     # Keep track of sampling time  
     tstart = time() 
     for _ in xrange(int(draws)):
