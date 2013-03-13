@@ -1,4 +1,4 @@
-idnum, state, state2, stfips, zip, region, typebldg, floor, room, basement, windoor, rep, stratum, wave, starttm, stoptm, startdt, stopdt, activity, pcterr, adjwt, dupflag, zipflag, cntyfips, county
+idnum,state,state2,stfips,zip,region,typebldg,floor,room,basement,windoor,rep,stratum,wave,starttm,stoptm,startdt,stopdt,activity,pcterr,adjwt,dupflag,zipflag,cntyfips,county
 1,AZ,AZ, 4,85920, 1,1,1,2,N, , 2, 1, 30,1100,1100,112987,120287,     0.3,     0.0,   136.060971,0,0,  1,APACHE              
 2,AZ,AZ, 4,85920, 1,0,9,0, , , 1, 1,117,0600,0700,070788,071188,     0.6,    33.3,   128.784975,0,0,  1,APACHE              
 3,AZ,AZ, 4,85924, 1,1,1,3,N, , 4, 1,122,1145,1145,070788,070788,     0.5,     0.0,   150.245112,0,0,  1,APACHE              
@@ -12776,4 +12776,3 @@ idnum, state, state2, stfips, zip, region, typebldg, floor, room, basement, wind
 12775,R5,WI,55,54660, 4,1,1,3,Y, , .,27,  .,0845,0830,031588,031788,     0.4,     0.0,     4.761628,0,0, 81,WISCONSIN WINNEBAGO 
 12776,R5,WI,55,54660, 4,1,1,3,N, , .,27,  .,0815,0730,031588,031788,     0.3,     0.0,     4.761628,0,0, 81,WISCONSIN WINNEBAGO 
 12777,R5,WI,55,54741, 4,1,1,1,Y, , .,27,  .,0900,0915,022488,022688,     0.5,     0.0,     4.761628,0,0, 35,WISCONSIN WINNEBAGO 
-
