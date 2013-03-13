@@ -8,7 +8,7 @@ nodes in PyMC.
 
 from dist_math import * 
 
-__all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'T', 'Cauchy', 'Gamma', 'Bound']
+__all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos']
 
 @quickclass
 def Uniform(lower=0, upper=1):
@@ -298,4 +298,11 @@ def Bound(dist, lower = -inf, upper = inf):
                 lower <= value, value <= upper)
 
     return locals()
+
+def Tpos(nu, mu=0, tau=1):
+    """
+    Student-t distribution bounded at 0
+    see T
+    """
+    return Bound(T(nu, mu, tau), 0)
 
