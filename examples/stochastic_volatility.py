@@ -1,11 +1,10 @@
 import numpy as np
 from pymc import  *
 
-from AR1 import AR1
 from scipy.sparse import csc_matrix
 
 
-returns_d = np.genfromtxt("SP500.csv")
+returns_d = np.genfromtxt("data/SP500.csv")
 
 
 model = Model()
@@ -20,7 +19,7 @@ k = Var('k', Uniform(0,1), testval = .95)
 tau, ltau = model.TransformedVar(
     'tau', Bound(T(.05,.05,10), 0), transform = exp, logjacobian = lambda x: x, testval = -2.3)
 
-lvol = Var('lvol', AR1(k, tau**-2), shape = n)
+lvol = Var('lvol', timeseries.AR1(k, tau**-2), shape = n)
 
 rtau = exp((lvol+gam)*-2.)
 
