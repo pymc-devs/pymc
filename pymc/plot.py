@@ -20,7 +20,7 @@ def traceplot(trace, vars=None):
     return f 
 
 def kdeplot(ax, data):
-    data = data[...,np.newaxis]
+    data = np.atleast_2d(data.T).T
     for i in range(data.shape[1]):
         d = data[:,i]
         density = kde.gaussian_kde(d) 
