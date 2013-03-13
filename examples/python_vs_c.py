@@ -34,18 +34,17 @@ Data(outcomes, Bernoulli(p))
 
 
 
-calc = [logp, dlogp()]
 
 start = model.test_point
 
 from theano import ProfileMode
-print "python"
-mode = theano.ProfileMode(optimizer='fast_run', linker = 'py')
-print model.fn(calc, mode = mode)(start)
-mode.print_summary()
 
-print "C"
-mode = theano.ProfileMode(optimizer='fast_run', linker = 'c|py')
-print model.fn(calc, mode = mode)(start)
-mode.print_summary()
+for mode in [ProfileMode(linker = 'py'),
+             ProfileMode(linker = 'c|py')]:
+
+    print mode
+    logp = model.logp
+    f = compilef([logp, gradient(logp)], mode)
+    print f(start)
+    mode.print_summary()
 
