@@ -25,11 +25,11 @@ def approx_hess(model, start, vars=None):
     start = clean_point(start)
 
     bij = DictToArrayBijection(IdxMap(vars), start)
-    dlogp = bij.mapf(model.dlogp(vars))
+    dlogp = bij.mapf(model.dlogpc(vars))
 
     
     def grad_logp(point): 
-        return np.nan_to_num(dlogpc(point))
+        return np.nan_to_num(dlogp(point))
     
     '''
     Find the jacobian of the gradient function at the current position
