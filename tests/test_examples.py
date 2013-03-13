@@ -2,11 +2,14 @@ import matplotlib
 matplotlib.use('Agg')
 
 from os import path
+import os 
 import fnmatch
 import imp
 
 def test_examples(): 
-    for path in all_matching_files(example_dir(), '*.py'):
+    os.chdir(example_dir())
+
+    for path in all_matching_files('.', '*.py'):
         yield check_example, path
 
 
