@@ -16,12 +16,9 @@ For each distribution:
 
 # FIXME no tests for discrete_uniform, negative_binomial, uniform.
 # TODO add tests for boundaries of distributions with restricted support
-#from decorators import *
 
-#from decorators import *
 from __future__ import with_statement
 from unittest import TestCase
-from pymc.distributions import *
 import unittest
 import os, pdb, warnings, nose
 
@@ -31,8 +28,8 @@ from numpy.testing import *
 import numpy as np
 import numpy.random as _npr
 
-from pymc.distributions import *
-from pymc import flib, utils, six
+from ..distributions import *
+from .. import flib, utils, six, deterministic
 xrange = six.moves.xrange
 
 PLOT=True
@@ -1153,14 +1150,14 @@ class test_shape_consistency(TestCase):
     def test(self):
         shape = (10, 5)
         data = np.zeros(shape)
-        mean = pymc.Normal("mean",mu = 0, tau = 1)
+        mean = Normal("mean",mu = 0, tau = 1)
 
-        @pymc.deterministic
+        @deterministic
         def means (mean = mean):
             return (np.ones(shape) * mean).ravel()
 
         #data has shape (10,5) but means returns an array of shape (10 * 5,)
-        assert_raises(ValueError, pymc.Normal, "obs", mu = means, tau = 1, observed =
+        assert_raises(ValueError, Normal, "obs", mu = means, tau = 1, observed =
 True, value = data)
 
 

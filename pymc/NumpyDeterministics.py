@@ -9,7 +9,7 @@ from numpy import sum, ones, zeros, ravel, shape, size, newaxis
 from .utils import find_element
 import inspect
 
-from pymc import six
+from . import six
 xrange = six.moves.xrange
 
 #accumulations 

@@ -17,3 +17,4 @@ Contributors
 * Max Nickel : A bugfix in the Raftery-Lewis convergence diagnostic
 * Joonas Paalasmaa : Fixed an installation bug
 * Nicholas Matsakis : Changed typographer's quotes to straight quotes in documentation
+* Nick Ward : Fixed breaking behaviour for Python 3

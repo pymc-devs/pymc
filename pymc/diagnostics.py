@@ -1,12 +1,12 @@
 # Convergence diagnostics and model validation
 import numpy as np
-import pymc
-from pymc.utils import autocorr, autocov
+from . import Matplot, flib
+from .utils import autocorr, autocov
 from copy import copy
 import pdb
 
-from pymc import six
-from pymc.six import print_
+from . import six
+from .six import print_
 xrange = six.moves.xrange
 
 __all__ = ['geweke', 'gelman_rubin', 'raftery_lewis', 'validate', 'discrepancy', 'iat']
@@ -206,7 +206,7 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
         p = copy(stats)
         for i in p:
             p[i] = p[i][1]
-        pymc.Matplot.zplot(p, verbose=verbose)
+        Matplot.zplot(p, verbose=verbose)
     
     return stats
 
@@ -340,7 +340,7 @@ def raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1):
     if np.rank(x)>1:
         return [raftery_lewis(y, q, r, s, epsilon, verbose) for y in np.transpose(x)]
     
-    output = nmin, kthin, nburn, nprec, kmind = pymc.flib.gibbmain(x, q, r, s, epsilon)
+    output = nmin, kthin, nburn, nprec, kmind = flib.gibbmain(x, q, r, s, epsilon)
     
     if verbose:
         

@@ -1,7 +1,7 @@
 import scipy.stats.distributions as sc_dst
 import inspect
 import numpy as np
-from pymc import Stochastic
+from . import Stochastic
 from copy import copy
 from .distributions import *
 
