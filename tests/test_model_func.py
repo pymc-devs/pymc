@@ -23,4 +23,4 @@ def test_dlogp2():
     
     d2logp = model.d2logpc()
 
-    close_to(d2logp(start), -H, np.abs(H/100.))
+    close_to(d2logp(start), H, np.abs(H/100.))
