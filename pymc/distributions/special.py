@@ -102,7 +102,10 @@ class Psi(scalar.UnaryScalarOp):
     def impl(self, x):
         return Psi.st_impl(x)
     
-    #def grad()  no gradient now 
+    def grad(self, inp, grads):
+        x, = inp
+        gz, = grads
+        return [gz * scalar_trigamma(x)]
     
     def c_support_code(self):
         return cpsifunc
@@ -122,6 +125,25 @@ class Psi(scalar.UnaryScalarOp):
 scalar_psi = Psi(scalar.upgrade_to_float, name='scalar_psi')
 psi = tensor.Elemwise(scalar_psi, name='psi')
 
+class Trigamma(scalar.UnaryScalarOp):
+    """
+    Compute 2nd derivative of gammaln(x)
+    """
+    @staticmethod
+    def st_impl(x):
+        return special.polygamma(1, x)
+    def impl(self, x):
+        return Psi.st_impl(x)
+    
+    #def grad()  no gradient now 
+    
+    def __eq__(self, other):
+        return type(self) == type(other)
+    def __hash__(self):
+        return hash(type(self))
+    
+scalar_trigamma = Trigamma(scalar.upgrade_to_float, name='scalar_trigamma')
+trigamma = tensor.Elemwise(scalar_trigamma, name='trigamma')
 
 class FactLn(scalar.UnaryScalarOp):
     """
