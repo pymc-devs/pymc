@@ -30,3 +30,29 @@ def AR1(k, tau_e):
     
 
     return locals()
+
+@quickclass
+def RW(tau, init = Flat()):
+    """
+    Random Walk with Normal innovations
+
+    Parameters
+    ----------
+    tau : tensor
+        tau > 0, innovation precision
+    init : distribution
+        distribution for initial value (Defaults to Flat())
+    """
+    support = 'continuous'
+    
+    
+    def logp(x): 
+        x_im1 = x[:-1]
+        x_i = x[1:]
+
+        innov_like = Normal(x_im1, tau).logp(x_i) 
+        return init.logp(x[0]) + sum(innov_like)
+
+    mean = 0.
+
+    return locals()
