@@ -6,18 +6,24 @@ from numpy import inf
 from scipy import integrate
 from numdifftools import Gradient
 
-def test_distributions():
+def test_continuous_distributions():
 
     R = np.array([-inf, -2.1, -1, -.01, .0, .01, 1, 2.1, inf])
     Rplus = np.array([0, .01,.1, .9, .99, 1, 1.5, 2, 100, inf])
+    Rplusbig =np.array([0, .5, .9, .99, 1, 1.5, 2, 20, inf]) 
     Unit = np.array([0,.001,  .1, .5, .75, .99, 1])
 
-    Runif = np.array([-2., -.5, 0,.5, 1, 2. ])
+    Runif =np.array([-1,-.4, 0, .4, 1]) 
     Rplusunif = np.array([0, .5, inf]) 
 
-    yield checkd, Uniform, np.array([-1,-.4, 0, .4, 1]), {'lower' : -Rplusunif, 'upper' : Rplusunif}
+    yield checkd, Uniform, Runif, {'lower' : -Rplusunif, 'upper' : Rplusunif}
     yield checkd, Normal, R, {'mu' : R, 'tau' : Rplus}
     yield checkd, Beta, Unit, {'alpha' : Rplus*5, 'beta' : Rplus*5}
+    yield checkd, Exponential, Rplus, {'lam' : Rplus}
+    yield checkd, T, R, {'nu' : Rplus, 'mu' : R, 'lam' : Rplus}
+    yield checkd, Cauchy, R, {'alpha' : R, 'beta' : Rplusbig}
+    yield checkd, Gamma, Rplus, {'alpha' : Rplusbig, 'beta' : Rplusbig}
+
 
 
 def checkd(distfam, valuedomain, vardomains):
@@ -25,7 +31,7 @@ def checkd(distfam, valuedomain, vardomains):
     m = Model()
     
     vars = dict((v , m.Var(v, Flat())) for v in vardomains.keys())
-    value = m.Var('value', distfam(**vars))
+    value = m.Var('value', distfam(**vars), testval = valuedomain[len(valuedomain)//2])
     vardomains['value'] = valuedomain
 
     domains = [vardomains[str(v)] for v in m.vars]

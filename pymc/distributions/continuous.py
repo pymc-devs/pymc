@@ -255,7 +255,7 @@ def Cauchy(alpha, beta):
     support = 'continuous' 
     def logp(value):
         return bound(
-                  -log(beta) - log( 1 + ((value-alpha) / beta) ** 2 ),
+                  -log(pi) -log(beta) - log( 1 + ((value-alpha) / beta) ** 2 ),
                   beta > 0)
                   
     logp.__doc__ = """
@@ -294,9 +294,14 @@ def Gamma(alpha, beta):
 
     """
     support = 'continuous' 
+
+    mean = alpha/beta
+    median = max((alpha -1)/beta, 0)
+    variance = alpha / beta**2
+
     def logp(value):
         return bound(
-                -gammaln(alpha) + alpha*log(beta) - beta*value + switch(alpha != 1.0, (alpha - 1.0)*log(value), 0),
+                -gammaln(alpha) + alpha*log(beta) - beta*value + switch(neq(alpha, 1.0) | neq(value, 0), (alpha - 1.0)*log(value), 0),
 
                 value >= 0, 
                 alpha > 0, 
