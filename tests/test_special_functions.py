@@ -9,7 +9,7 @@ from checks import close_to
 
 
 def test_functions(): 
-    xvals = map(np.atleast_1d, [ 0,.1, 2, 100, 10000])
+    xvals = map(np.atleast_1d, [ .01,.1, 2, 100, 10000])
 
     x = t.dvector('x')
     x.tag.test_value = xvals[0] 
