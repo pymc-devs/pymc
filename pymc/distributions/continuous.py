@@ -8,7 +8,7 @@ nodes in PyMC.
 
 from dist_math import * 
 
-__all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos']
+__all__ = ['Uniform', 'Flat', 'Normal', 'Beta','Exponential', 'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos']
 
 @quickclass
 def Uniform(lower=0, upper=1):
@@ -64,6 +64,8 @@ def Flat():
         Uninformative log-likelihood that returns 0 regardless of 
         the passed value.
         """
+
+    median = 0.0
         
     return locals()
 
@@ -156,6 +158,30 @@ def Beta(alpha, beta):
         0 < x < 1
     """.format(alpha, beta)
                   
+    return locals()
+
+@quickclass
+def Exponential(lam):
+    """
+    Exponential distribution
+    
+    Parameters
+    ----------
+    lam : float 
+        lam > 0 
+        rate or inverse scale
+    """ 
+
+    support = 'continuous'
+    mean = 1./lam
+    median = mean * log(2)
+    mode = 0
+
+    variance = lam**-2
+
+    def logp(value):
+        return log(lam) - lam*value
+
     return locals()
 
 
@@ -299,10 +325,10 @@ def Bound(dist, lower = -inf, upper = inf):
 
     return locals()
 
-def Tpos(nu, mu=0, tau=1):
+def Tpos(nu, mu=0, lam=1):
     """
     Student-t distribution bounded at 0
     see T
     """
-    return Bound(T(nu, mu, tau), 0)
+    return Bound(T(nu, mu, lam), 0)
 
