@@ -2,9 +2,19 @@ from numpy import dot
 from numpy.random import normal
 from numpy.linalg import solve
 from scipy.linalg import cholesky, cho_solve
+from scipy.sparse import issparse
+
 import numpy as np
 
+__all__ = ['quad_potential', 'ElemWiseQuadPotential', 'QuadPotential', 'QuadPotential_Inv', 'QuadPotential_SparseInv', 'isquadpotential']
+
 def quad_potential(C, is_cov):
+    if isquadpotential(C):
+        return C
+
+    if issparse(C):
+        return QuadPotential_SparseInv(C)
+    
     partial_check_positive_definite(C)
     if C.ndim == 1:
         if is_cov:
@@ -35,6 +45,9 @@ class PositiveDefiniteError(ValueError):
     def __str__(self):
         return "Scaling is not positive definite. " + self.msg + ". Check indexes " + str(self.idx)
 
+def isquadpotential(o): 
+    return all(hasattr(o, attr) for attr in ["velocity", "random", "energy"])
+
 class ElemWiseQuadPotential(object):
     def __init__(self, v):
         s = v **.5
@@ -48,7 +61,6 @@ class ElemWiseQuadPotential(object):
         return normal(size = self.s.shape)* self.inv_s
     def energy(self, x):
         return .5*dot(x, self.v*x)
-
 
 class QuadPotential_Inv(object):
     def __init__(self, A):
@@ -96,7 +108,8 @@ if chol_available:
             self.p = np.argsort(factor.P())
             
         def velocity(self, x ):
-            return self.factor(x)
+            x = np.ones((x.shape[0], 2)) * x[:,np.newaxis]
+            return self.factor(x)[:,0]
             
         def Ldot(self, x):
             return (self.L * x)[self.p]

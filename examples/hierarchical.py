@@ -25,13 +25,7 @@ y = nsum(effects_a[group, :] * predictors, 1) + random.normal(size = (n_observed
 
 
 
-
-start = {'sg' : np.array([2.]), 
-         's'  : np.ones(n_groups) * 2.,
-         'group_effects' : np.zeros((1,) + group_effects_a.shape),
-         'effects' : np.zeros(effects_a.shape ) }
-
-model = Model(test_point = start)
+model = Model()
 Var = model.Var
 Data = model.Data 
 
@@ -40,7 +34,7 @@ group_effects = Var("group_effects", Normal(0, .1), (1, n_group_predictors, n_pr
 
 
 # sg ~ Uniform(.05, 10)
-sg = Var("sg", Uniform(.05, 10))
+sg = Var("sg", Uniform(.05, 10), testval = 2.)
 
 #m ~ N(mg * pg, sg)
 effects = Var("effects", 
@@ -57,7 +51,7 @@ Data(y, Normal( sum(effects[g] * predictors, 1),s[g]**-2))
 
                  
 
-map_x = find_MAP(model, start)
+map_x = find_MAP(model)
 hess = approx_hess(model, map_x) #find a good orientation using the hessian at the MAP
 
 step_method = hmc_step(model, model.vars, hess, is_cov = False)

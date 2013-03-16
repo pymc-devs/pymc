@@ -44,10 +44,7 @@ pi = 0.4
 # Simulate some data data
 y = array([(random.random()<pi) * random.poisson(theta) for i in range(n)])
 
-point = {'p' : np.array([.5]),
-         'z' : ((y > 0)*1).astype('int8'),
-         'theta' : np.array([10.])}
-model = Model(test_point = point)
+model = Model()
 Var = model.Var
 Data = model.Data 
 
@@ -68,11 +65,12 @@ theta = Var('theta', Uniform(0, 100))
 Data(y, ZeroInflatedPoisson(theta, z))
 
 
+point = model.test_point
 
-_pymc3_logp = model.logp()
+_pymc3_logp = model.logpc
 def pymc3_logp():
     _pymc3_logp(point) 
 
-_pymc3_dlogp = model.dlogp()
+_pymc3_dlogp = model.dlogpc()
 def pymc3_dlogp():
     _pymc3_dlogp(point) 

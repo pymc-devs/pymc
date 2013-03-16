@@ -3,7 +3,7 @@ from models import simple_init
 
 def check_trace(trace, n, step, start):
 
-    #try using a history object a few times
+    #try using a trace object a few times
     for i in range(2):
         trace, _, _ = sample(n, step, start, trace)
 
@@ -15,7 +15,7 @@ def check_trace(trace, n, step, start):
 def test_trace():
     start, step,_  = simple_init()
 
-    for     h in [pm.NpHistory]:
+    for     h in [pm.NpTrace]:
         for n in [20, 1000]: 
             trace = h()
 
@@ -43,7 +43,16 @@ def check_multi_trace(trace, n, step, start):
         ctrace = trace.combined()
         for (var, val) in start.iteritems(): 
 
-            assert np.shape(ctrace[var]) == (len(trace.histories)*n*(i+1),) + np.shape(val)
+            assert np.shape(ctrace[var]) == (len(trace.traces)*n*(i+1),) + np.shape(val)
+
+
+def test_get_point():
+    from pymc import *
+    x = NpTrace(10)
+    p = {'a' : np.ones(5), 'm' : np.zeros((2,2))}
+    x += p
+    x += p
+    x.point(0)
 
 
 

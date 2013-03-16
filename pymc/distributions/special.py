@@ -6,6 +6,9 @@ Created on Mar 17, 2011
 from theano import scalar,tensor
 import numpy 
 from scipy import special, misc
+from dist_math import *
+
+__all__ = ['gammaln', 'multigammaln', 'psi', 'multipsi', 'factln']
 
 class GammaLn(scalar.UnaryScalarOp):
     """
@@ -20,6 +23,7 @@ class GammaLn(scalar.UnaryScalarOp):
         x, = inp
         gz, = grads
         return [gz * scalar_psi(x)]
+
     def c_code(self, node, name, inp, out, sub):
         x, = inp
         z, = out
@@ -36,21 +40,21 @@ scalar_gammaln  = GammaLn(scalar.upgrade_to_float, name='scalar_gammaln')
 gammaln = tensor.Elemwise(scalar_gammaln, name='gammaln')
 
 
-class Psi(scalar.UnaryScalarOp):
+def multigammaln(a, p):
+    """Multivariate Log Gamma
+
+    :Parameters: 
+        a : tensor like
+        p : int degrees of freedom
+            p > 0 
     """
-    Compute derivative of gammaln(x)
-    """
-    @staticmethod
-    def st_impl(x):
-        return special.psi(x)
-    def impl(self, x):
-        return Psi.st_impl(x)
+    a = t.shape_padright(a)
+    i = arange(p)
+
+    return p*(p-1) * log(pi)/4.   +  t.sum(gammaln(a+i/2.), axis = a.ndim-1)
+
     
-    #def grad()  no gradient now 
-    
-    def c_support_code(self):
-        return ( 
-        """
+cpsifunc = """
 #ifndef _PSIFUNCDEFINED
 #define _PSIFUNCDEFINED
 double _psi(double x){
@@ -86,7 +90,25 @@ double _psi(double x){
     
     return psi_;}
     #endif
-        """ )
+        """ 
+
+class Psi(scalar.UnaryScalarOp):
+    """
+    Compute derivative of gammaln(x)
+    """
+    @staticmethod
+    def st_impl(x):
+        return special.psi(x)
+    def impl(self, x):
+        return Psi.st_impl(x)
+    
+    def grad(self, inp, grads):
+        x, = inp
+        gz, = grads
+        return [gz * scalar_trigamma(x)]
+    
+    def c_support_code(self):
+        return cpsifunc
     def c_code(self, node, name, inp, out, sub):
         x, = inp
         z, = out
@@ -102,6 +124,26 @@ double _psi(double x){
     
 scalar_psi = Psi(scalar.upgrade_to_float, name='scalar_psi')
 psi = tensor.Elemwise(scalar_psi, name='psi')
+
+class Trigamma(scalar.UnaryScalarOp):
+    """
+    Compute 2nd derivative of gammaln(x)
+    """
+    @staticmethod
+    def st_impl(x):
+        return special.polygamma(1, x)
+    def impl(self, x):
+        return Psi.st_impl(x)
+    
+    #def grad()  no gradient now 
+    
+    def __eq__(self, other):
+        return type(self) == type(other)
+    def __hash__(self):
+        return hash(type(self))
+    
+scalar_trigamma = Trigamma(scalar.upgrade_to_float, name='scalar_trigamma')
+trigamma = tensor.Elemwise(scalar_trigamma, name='trigamma')
 
 class FactLn(scalar.UnaryScalarOp):
     """

@@ -10,15 +10,14 @@ def simple_init():
 
 
 def simple_model():
-    start = {'x' : np.array([.1])}
-    model = Model(start)
+    model = Model()
     Var = model.Var
 
     mu = -2.1
     tau = 1.3
-    x = Var('x', Normal(mu,tau))
+    x = Var('x', Normal(mu,tau), testval = .1)
 
-    return start, model, (mu, tau**-1)
+    return model.test_point, model, (mu, tau**-1)
 
 def mv_simple():
     mu = np.array([-.1,.5, 1.1])
@@ -29,13 +28,12 @@ def mv_simple():
 
     tau = np.dot(p,p.T) 
 
-    start = {'x' : np.array([.1, 1., .8])}
-    model = pm.Model(start)
+    model = pm.Model()
     Var = model.Var
 
-    x = Var('x', pm.MvNormal(pm.constant(mu),pm.constant(tau)), 3)
+    x = Var('x', pm.multivariate.Normal(pm.constant(mu),pm.constant(tau)), 3, testval = np.array([.1, 1., .8]))
 
     H = tau
     C = np.linalg.inv(H)
 
-    return start, model, (mu, C)
+    return model.test_point, model, (mu, C)

@@ -7,13 +7,17 @@ from numpy import floor
 from quadpotential import *
 from utils import *
 from ..core import * 
+import numpy as np
 
+__all__ = ['hmc_step']
 
 #TODO: 
 #add constraint handling via page 37 of Radford's http://www.cs.utoronto.ca/~radford/ham-mcmc.abstract.html
 
 def unif(step_size, elow = .85, ehigh = 1.15):
-    return uniform(elow, ehigh) * step_size
+    return np.random.uniform(elow, ehigh) * step_size
+
+
 
 class hmc_step(array_step):
     def __init__(self, model, vars, C, step_size_scaling = .25, trajectory_length = 2., is_cov = False, step_rand = unif):
@@ -22,13 +26,15 @@ class hmc_step(array_step):
         """
         n = C.shape[0]
         
-        self.step_size = step_size_scaling * n**(1/4.)
+        self.step_size = step_size_scaling / n**(1/4.)
         
         self.pot = quad_potential(C, is_cov)
         self.trajectory_length = trajectory_length
         self.step_rand = step_rand
 
-        super(hmc_step, self).__init__(vars, [model.logp(), model.dlogp(vars)] )
+        array_step.__init__(self, 
+                vars, [model.logpc, model.dlogpc(vars)]
+                )
 
     def astep(self, state, q0, logp, dlogp):
         

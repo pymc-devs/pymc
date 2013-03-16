@@ -3,12 +3,15 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 '''
-from scipy.optimize import fmin_bfgs, fmin_ncg
+from scipy import optimize
 import numpy as np 
 from numpy import isfinite, nan_to_num
 from ..core import *
 
-def find_MAP(model, start, vars=None, min_alg=fmin_bfgs, disp=False, return_all=False):
+__all__ = ['find_MAP', 'scipyminimize']
+
+
+def find_MAP(model, start = None, vars=None, fmin = optimize.fmin_bfgs, return_raw = False, disp = False, *args, **kwargs):
     """
     Sets state to the local maximum a posteriori point given a model.
     Current default of fmin_Hessian does not deal well with optimizing close 
@@ -17,25 +20,27 @@ def find_MAP(model, start, vars=None, min_alg=fmin_bfgs, disp=False, return_all=
     Parameters
     ----------
     model : Model
-    start : array
+    start : dict of parameter values (Defaults to model.test_point)
     vars : list or array
-        List of variables to set to MAP point (Defaults to all).
-    min_alg : function
-        Optimization algorithm (Defaults to `fmin_bfgs`).
-    disp : bool
-        Print convergence message if True (Defaults to False).
-    return_all : bool
-        Return a list of results at each iteration if True (Defaults 
-        to False).
+        List of variables to set to MAP point (Defaults to all continuous).
+    fmin : function
+        Optimization algorithm (Defaults to `scipy.optimize.fmin_l_bfgs_b`).
+    return_raw : Bool
+        Whether to return extra value returned by fmin (Defaults to False)
+    *args, **kwargs 
+        Extra args passed to fmin
     """
+    if start is None:
+        start = model.test_point
+
     if vars is None: 
-        vars = continuous_vars(model)
+        vars = model.cont_vars
         
     start = clean_point(start)
-    bij = DictArrBij(IdxMap(vars), start)
+    bij = DictToArrayBijection(IdxMap(vars), start)
     
-    logp = bij.mapf(model.logp())
-    dlogp = bij.mapf(model.dlogp(vars))
+    logp = bij.mapf(model.logpc)
+    dlogp = bij.mapf(model.dlogpc(vars))
     
     def logp_o(point):
         return nan_to_high(-logp(point))
@@ -43,24 +48,35 @@ def find_MAP(model, start, vars=None, min_alg=fmin_bfgs, disp=False, return_all=
     def grad_logp_o(point):
         return nan_to_num(-dlogp(point))
 
-    results = min_alg(logp_o, bij.map(start), grad_logp_o, disp=disp, retall=return_all, full_output=True)
-    mx = results[0]
-    log = results[-1]
+    r = fmin(logp_o, bij.map(start), fprime = grad_logp_o, disp = disp, *args, **kwargs)
+    if isinstance(r, tuple):
+        mx = r[0]
+    else: 
+        mx = r    
+   
 
-    if not np.all(isfinite(mx)):
-        raise ValueError("Optimization error, found optima has some bad values " + repr(mx)) 
-
-    if not isfinite(logp(mx)) or not np.all(isfinite(dlogp(mx))):
-        raise ValueError("Optimization error, logp or dlogp at max have bad values. logp: " + repr(logp(mx)) + " dlogp: " + repr(dlogp(mx)))
-
+    if (not allfinite(mx) or
+       not allfinite(logp(mx)) or
+       not allfinite(dlogp(mx))) :
+            raise ValueError("Optimization error: max, logp or dlogp at max have bad values. max: " + repr(mx) + " logp: " + repr(logp(mx)) + " dlogp: " + repr(dlogp(mx)))
     
-    max_point = bij.rmap(mx)
-    
-    if return_all:
-        return max_point, log
+    mx = bij.rmap(mx)
+    if return_raw: 
+        return mx, r
     else:
-        return max_point
+        return mx
 
-    
+def allfinite(x):
+    return np.all(isfinite(x))
+
 def nan_to_high(x):
     return np.where(isfinite(x), x, 1.0e100)  
+
+
+def scipyminimize(f, x0, fprime, *args, **kwargs):
+    r = scipy.optimize.minimize(f, x0, jac = fprime, *args, **kwargs)
+    return r.x, r
+    
+
+    
+

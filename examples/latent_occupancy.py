@@ -32,10 +32,10 @@ Copyright (c) 2008 University of Otago. All rights reserved.
 
 # Import statements
 from pymc import *
-from numpy import random, array, arange, ones
- 
+from numpy import random, array, arange, ones 
+import theano.tensor as t
 # Sample size
-n = 100
+n = 100000
 # True mean count, given occupancy
 theta = 2.1
 # True occupancy
@@ -44,13 +44,10 @@ pi = 0.4
 # Simulate some data data
 y = array([(random.random()<pi) * random.poisson(theta) for i in range(n)])
 
-start = {'p' : .5,
-         'z' : ((y > 0)*1).astype('int8'),
-         'theta' : 10.}
+model = Model()
+Var = model.Var
+Data = model.Data 
 
-model = Model(test_point = start)
-Data = model.Data
-Var = model.Var 
 # Estimated occupancy
 
 p = Var('p', Beta(1,1))
@@ -68,12 +65,12 @@ theta = Var('theta', Uniform(0, 100))
 Data(y, ZeroInflatedPoisson(theta, z))
 
 
+point = model.test_point
 
-start = find_MAP(model, start, vars = [p, theta])
-hess = approx_hess(model, start)
-step_method = compound_step([hmc_step(model, [p, theta], hess, is_cov = False),
-                             elemwise_cat_gibbs_step(model, z,  [0,1])])
+_pymc3_logp = model.logpc
+def pymc3_logp():
+    _pymc3_logp(point) 
 
-history, state, t = sample(3000, step_method, start)
-
-print "took :", t  
+_pymc3_dlogp = model.dlogpc()
+def pymc3_dlogp():
+    _pymc3_dlogp(point) 

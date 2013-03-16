@@ -2,6 +2,8 @@ import matplotlib.pyplot as p
 import numpy as np
 from scipy.stats import kde 
 
+__all__ = ['traceplot']
+
 def traceplot(trace, vars=None): 
     if vars is None:
         vars = trace.samples.keys()
@@ -18,6 +20,7 @@ def traceplot(trace, vars=None):
     return f 
 
 def kdeplot(ax, data):
+    data = np.atleast_2d(data.T).T
     for i in range(data.shape[1]):
         d = data[:,i]
         density = kde.gaussian_kde(d) 
