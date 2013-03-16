@@ -5,7 +5,7 @@ from time import time
 
 __all__ = ['sample', 'psample']
 
-def sample(draws, step, start, trace = None, state = None): 
+def sample(draws, step, start = None, trace = None, state = None): 
     """
     Draw a number of samples using the given step method. 
     Multiple step methods supported via compound step method 
@@ -19,7 +19,7 @@ def sample(draws, step, start, trace = None, state = None):
     step : function
         A step function
     start : dict 
-        Starting point in parameter space
+        Starting point in parameter space (Defaults to trace.point(-1))
     trace : NpTrace
         A trace of past values (defaults to None)
     state : 
@@ -31,10 +31,14 @@ def sample(draws, step, start, trace = None, state = None):
     >>> an example
         
     """
-
+    if start is None: 
+        start = trace.point(-1)
     point = clean_point(start)
+
     if trace is None: 
         trace = NpTrace(max(draws, 10000))
+    
+
     # Keep track of sampling time  
     tstart = time() 
     for _ in xrange(int(draws)):
