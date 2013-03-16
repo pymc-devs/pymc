@@ -80,11 +80,10 @@ class DictToVarBijection(object):
 
     def rmap(self, apt):
         dpt = self.dpt.copy()
-        if self.idx:   
-            dvar = dpt[self.var].copy()
-            dvar[self.idx] = apt
-        else:
-            dvar = apt
+
+        dvar = dpt[self.var].copy()
+        dvar[self.idx] = apt
+
         dpt[self.var] = dvar
         
         return dpt 
