@@ -17,40 +17,38 @@ Data = model.Data
 
 
 
-gam = Var('gam', Normal(-5., 3.**-2))
-k = Var('k', Uniform(0,1), testval = .95)
-
-tau, ltau = model.TransformedVar(
-                 'tau', Tpos(10,.05,.05),
+sd, lsd = model.TransformedVar(
+                 'sd', Exponential(1./.02),
                  transform = exp, logjacobian = lambda x: x, testval = -2.3)
 
-lvol = Var('lvol', timeseries.AR1(k, tau**-2), shape = n)
+nu = Var('nu', Exponential(1./10))
 
-rtau = exp((lvol+gam)*-2.)
+lvol = Var('lvol', timeseries.RW(sd**-2), shape = n)
 
-lreturns = Data(returns, Normal(0, rtau))
+lreturns = Data(returns, T(nu, lam = exp(-2*lvol)))
 
 
 
 #fitting
 
-start = find_MAP(model, vars = [lvol])
-start = find_MAP(model,start, vars = [gam, k])
-
 H = model.d2logpc()
 
-def hessian(q, tau_scale): 
+def hessian(q, nusd): 
     h = H(q)
-
-    h[2,2] = abs(h[2,2]) / tau_scale
-    h[2,3:] = h[3:,2] = 0
+    h[1,1] = nusd**-2
+    h[:2,2:] = h[2:,:2] = 0
 
     return csc_matrix(h)
 
+from  scipy import optimize
+s = find_MAP(model, vars = [lvol], fmin = optimize.fmin_l_bfgs_b)
+s = find_MAP(model, s, vars = [lsd, nu])
 
-step = hmc_step(model, model.vars, hessian(start, .5), step_size_scaling = .05, trajectory_length = 4.)
-trace, _,t = sample(1000, step, start) 
-start = trace.point(-1)
+step = hmc_step(model, model.vars, hessian(s, 6))
+trace, _,t = sample(200, step, s) 
 
-#step = hmc_step(model, model.vars, hessian(start, 2.), step_size_scaling = .5, trajectory_length = 4.)
-#trace, _,t = sample(10000, step, start) 
+s2 = trace.point(-1)
+
+step = hmc_step(model, model.vars, hessian(s2, 6), trajectory_length = 4)
+trace, _,t = sample(8000, step, trace = trace) 
+
