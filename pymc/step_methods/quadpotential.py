@@ -6,7 +6,7 @@ from scipy.sparse import issparse
 
 import numpy as np
 
-__all__ = ['quad_potential', 'ElemWiseQuadPotential', 'QuadPotential', 'QuadPotential_Inv', 'QuadPotential_SparseInv', 'isquadpotential']
+__all__ = ['quad_potential', 'ElemWiseQuadPotential', 'QuadPotential', 'QuadPotential_Inv', 'isquadpotential']
 
 def quad_potential(C, is_cov):
     if isquadpotential(C):
@@ -100,6 +100,8 @@ except ImportError:
     chol_available = False
 
 if chol_available:
+    __all__ += ['QuadPotential_SparseInv']
+
     class QuadPotential_SparseInv(object):
         def __init__(self, A):
             self.n = A.shape[0]
