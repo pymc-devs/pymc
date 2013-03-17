@@ -34,5 +34,5 @@ if __name__ == "__main__":
         packages =
         ['pymc'],
         classifiers =classifiers,
-        install_requires=['theano','numpy','scipy','numdifftools'])
+        requires=['theano','numpy','scipy','numdifftools'])
 
