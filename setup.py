@@ -1,5 +1,4 @@
-from distutils.core import setup
-from distutils.extension import Extension
+from setuptools import setup
 
 
 DISTNAME            = 'pymc'
@@ -31,8 +30,8 @@ if __name__ == "__main__":
         license = LICENSE,
         url = URL,
         long_description = LONG_DESCRIPTION,
-        packages =
-        ['pymc'],
+        packages = ['pymc'],
         classifiers =classifiers,
-        requires=['theano','numpy','scipy','numdifftools'])
+        install_requires=['theano','numpy','scipy','numdifftools'])
+
 
