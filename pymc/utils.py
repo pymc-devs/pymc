@@ -547,6 +547,9 @@ def rec_setattr(obj, attr, value):
 def hpd(x, alpha):
     """Calculate HPD (minimum width BCI) of array for given alpha
 
+    HPD - Highest Probability Density
+    BCI - Bayesian Confidence Interval
+
     :Arguments:
       x : Numpy array
           An array containing MCMC samples
