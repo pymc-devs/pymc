@@ -32,7 +32,7 @@ if __name__ == "__main__":
         url = URL,
         long_description = LONG_DESCRIPTION,
         packages =
-        ['pymc','pymc/distributions','pymc/history','pymc/step_methods'],
+        ['pymc'],
         classifiers =classifiers,
         install_requires=['theano','numpy','scipy','numdifftools'])
 
