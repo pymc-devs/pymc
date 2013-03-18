@@ -30,7 +30,7 @@ if __name__ == "__main__":
         license = LICENSE,
         url = URL,
         long_description = LONG_DESCRIPTION,
-        packages = ['pymc'],
+        packages = ['pymc', 'pymc.distributions', 'pymc.step_methods','pymc.tuning'],
         classifiers =classifiers,
         install_requires=['theano','numpy','scipy','numdifftools'])
 
