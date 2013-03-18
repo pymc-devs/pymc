@@ -38,11 +38,11 @@ These flattened representations are useful for things like cache checking.
 from .Node import Node, ContainerBase, Variable, StochasticBase, DeterministicBase, PotentialBase, ContainerRegistry
 from copy import copy
 from numpy import ndarray, array, zeros, shape, arange, where, dtype, Inf
-from pymc.Container_values import LCValue, DCValue, ACValue, OCValue
+from .Container_values import LCValue, DCValue, ACValue, OCValue
 from types import ModuleType
 import pdb
 
-from pymc import six
+from . import six
 xrange = six.moves.xrange
 
 __all__ = ['Container', 'DictContainer', 'TupleContainer', 'ListContainer', 'SetContainer', 'ObjectContainer', 'ArrayContainer']

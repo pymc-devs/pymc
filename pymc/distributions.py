@@ -27,8 +27,7 @@ with a distribution called 'dist' are:
 
 __docformat__='reStructuredText'
 
-from . import flib
-import pymc
+from . import flib, utils
 import numpy as np
 from .Node import ZeroProbability
 from .PyMCObjects import Stochastic, Deterministic
@@ -39,8 +38,8 @@ import pdb
 from . import utils
 import warnings
 
-from pymc import six
-from pymc.six import print_
+from . import six
+from .six import print_
 xrange = six.moves.xrange
 
 def poiscdf(a, x):
@@ -593,7 +592,7 @@ def rarlognormal(a, sigma, rho, size=1):
     If a is a sequence, generates size series of the same length
     as a.
     """
-    f = pymc.utils.ar1
+    f = utils.ar1
     if np.isscalar(a):
         r = f(rho, 0, sigma, size)
     else:
@@ -2241,13 +2240,13 @@ def rtruncated_normal(mu, tau, a=-np.inf, b=np.inf, size=None):
     """
 
     sigma = 1./np.sqrt(tau)
-    na = pymc.utils.normcdf((a-mu)/sigma)
-    nb = pymc.utils.normcdf((b-mu)/sigma)
+    na = utils.normcdf((a-mu)/sigma)
+    nb = utils.normcdf((b-mu)/sigma)
 
     # Use the inverse CDF generation method.
     U = np.random.mtrand.uniform(size=size)
     q = U * nb + (1-U)*na
-    R = pymc.utils.invcdf(q)
+    R = utils.invcdf(q)
 
     # Unnormalize
     return R*sigma + mu
@@ -2283,11 +2282,11 @@ def truncated_normal_expval(mu, tau, a, b):
     phia = np.exp(normal_like(a, mu, tau))
     phib = np.exp(normal_like(b, mu, tau))
     sigma = 1./np.sqrt(tau)
-    Phia = pymc.utils.normcdf((a-mu)/sigma)
+    Phia = utils.normcdf((a-mu)/sigma)
     if b == np.inf:
         Phib = 1.0
     else:
-        Phib = pymc.utils.normcdf((b-mu)/sigma)
+        Phib = utils.normcdf((b-mu)/sigma)
     return (mu + (phia-phib)/(Phib - Phia))[0]
 
 truncnorm_expval = truncated_normal_expval
@@ -2320,8 +2319,8 @@ def truncated_normal_like(x, mu, tau, a=None, b=None):
     else:
         n = len(x)
         phi = normal_like(x, mu, tau)
-        lPhia = pymc.utils.normcdf((a-mu)/sigma, log=True)
-        lPhib = pymc.utils.normcdf((b-mu)/sigma, log=True)
+        lPhia = utils.normcdf((a-mu)/sigma, log=True)
+        lPhib = utils.normcdf((b-mu)/sigma, log=True)
         try:
             d = utils.log_difference(lPhib, lPhia)
         except ValueError:
