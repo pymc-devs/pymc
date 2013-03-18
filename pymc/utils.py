@@ -545,7 +545,8 @@ def rec_setattr(obj, attr, value):
     setattr(reduce(getattr, attrs[:-1], obj), attrs[-1], value)
 
 def hpd(x, alpha):
-    """Calculate HPD (minimum width BCI) of array for given alpha
+    """Calculate highest posterior density (HPD) of array for given alpha. The HPD is the
+    minimum width Bayesian credible interval (BCI).
 
     :Arguments:
       x : Numpy array
