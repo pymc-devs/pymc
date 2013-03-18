@@ -11,7 +11,7 @@ from numpy.random import poisson as rpoisson
 from .PyMCObjects import Stochastic, Potential, Deterministic
 from .Container import Container
 from .Node import ZeroProbability, Node, Variable, StochasticBase
-from pymc.decorators import prop
+from .decorators import prop
 from . import distributions
 from copy import copy
 from .InstantiationDecorators import deterministic

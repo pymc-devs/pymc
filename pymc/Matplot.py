@@ -9,7 +9,7 @@ try:
     import matplotlib.gridspec as gridspec
 except ImportError:
     gridspec = None
-import pymc
+from . import Variable
 import os
 from pylab import hist, plot as pyplot, xlabel, ylabel, xlim, ylim, savefig, acorr, mlab
 from pylab import figure, subplot, subplots_adjust, gca, scatter, axvline, yticks, xticks
@@ -80,7 +80,7 @@ def func_quantiles(node, qlist=(.025, .25, .5, .75, .975)):
     # For very large objects, this will be rather long.
     # Too get the length of the table, use obj.trace.length()
 
-    if isinstance(node, pymc.Variable):
+    if isinstance(node, Variable):
         func_stacks = node.trace()
     else:
         func_stacks = node
@@ -124,7 +124,7 @@ def func_envelopes(node, CI=(.25, .5, .95)):
     :SeeAlso: centered_envelope, func_quantiles, func_hist, weightplot
     """
 
-    if isinstance(node, pymc.Variable):
+    if isinstance(node, Variable):
         func_stacks = asarray(node.trace())
     else:
         func_stacks = node
@@ -153,7 +153,7 @@ class func_sd_envelope(object):
 
     def __init__(self, node, format='pdf', plotpath='', suffix=''):
 
-        if isinstance(node, pymc.Variable):
+        if isinstance(node, Variable):
             func_stacks = node.trace()
         else:
             func_stacks = node

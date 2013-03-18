@@ -14,7 +14,7 @@ from .utils import crawl_dataless
 from .six import print_
 
 # from .progressbar import ProgressBar, Percentage, Bar, ETA, Iterations
-from progressbar import ProgressBar
+from .progressbar import ProgressBar
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -222,7 +222,7 @@ class MCMC(Sampler):
             self._stop_tuning_after = stop_tuning_after
             tune_throughout = False
             if verbose > 0:
-                print "burn_til_tuned is True. tune_throughout is set to False"
+                print("burn_til_tuned is True. tune_throughout is set to False")
             burn = int(max(burn, stop_tuning_after * tune_interval))
             iter = self._n_tally + burn
 
