@@ -8,7 +8,7 @@ import numpy
 from scipy import special, misc
 from dist_math import *
 
-__all__ = ['gammaln', 'multigammaln', 'psi', 'multipsi', 'factln']
+__all__ = ['gammaln', 'multigammaln', 'psi', 'trigamma', 'factln']
 
 class GammaLn(scalar.UnaryScalarOp):
     """
@@ -144,42 +144,3 @@ class Trigamma(scalar.UnaryScalarOp):
     
 scalar_trigamma = Trigamma(scalar.upgrade_to_float, name='scalar_trigamma')
 trigamma = tensor.Elemwise(scalar_trigamma, name='trigamma')
-
-class FactLn(scalar.UnaryScalarOp):
-    """
-    Compute factln(x)
-    """
-    @staticmethod
-    def st_impl(x):
-        return numpy.log(misc.factorial(x))
-    def impl(self, x):
-        return FactLn.st_impl(x)
-    
-    #def grad()  no gradient now 
-    
-    def c_support_code(self):
-        return ( 
-        """
-double factln(int n){
-    static double cachedfl[100];
-    
-    if (n < 0) return -1.0; // need to return -inf here at some point
-    if (n <= 1) return 0.0;
-    if (n < 100) return cachedfl[n] ? cachedfl[n] : (cachedfl[n]=lgammln(n + 1.0));
-    else return lgammln(n+1.0);}
-    """ )
-    def c_code(self, node, name, inp, out, sub):
-        x, = inp
-        z, = out
-        if node.inputs[0].type in [scalar.float32, scalar.float64]:
-            return """%(z)s =
-                factln(%(x)s);""" % locals()
-        raise NotImplementedError('only floatingpoint is implemented')
-    
-    def __eq__(self, other):
-        return type(self) == type(other)
-    def __hash__(self):
-        return hash(type(self))
-    
-scalar_factln = Psi(scalar.upgrade_to_float, name='scalar_factln')
-factln = tensor.Elemwise(scalar_factln, name='factln')
