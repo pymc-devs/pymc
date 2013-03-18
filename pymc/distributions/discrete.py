@@ -28,7 +28,7 @@ def Binomial(n, p):
     def logp(value):
         
         return bound(
-                switch(ne(value, 0), value*log(p), 0) + (n-value)*log(1-p) + factln(n)-factln(value)-factln(n-value),
+                logpow(p,value) + logpow(1-p,n-value) + factln(n)-factln(value)-factln(n-value),
 
                 0 <= value, value <= n, 
                 0 <= p, p <= 1)
@@ -159,8 +159,7 @@ def Poisson(mu):
     support = 'discrete'
     def logp(value):
         return bound(
-               #factorial not implemented yet, so
-                value * log(mu) - gammaln(value + 1) - mu,
+                logpow(mu, value) - factln(value) - mu,
 
                 mu > 0)
                

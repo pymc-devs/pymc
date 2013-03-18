@@ -65,7 +65,7 @@ def Flat():
         the passed value.
         """
 
-    median = 0.0
+    median = 0
         
     return locals()
 
@@ -140,7 +140,7 @@ def Beta(alpha, beta):
     def logp(value):
         
         return bound(
-                  gammaln(alpha+beta) - gammaln(alpha) - gammaln(beta) + (alpha- 1)*log(value) + (beta-1)*log(1-value),
+                  gammaln(alpha+beta) - gammaln(alpha) - gammaln(beta) + logpow(value, alpha -1) + logpow(1-value, beta-1),
                   0 <= value, value <= 1,
                   alpha > 0,
                   beta > 0)
@@ -301,7 +301,7 @@ def Gamma(alpha, beta):
 
     def logp(value):
         return bound(
-                -gammaln(alpha) + alpha*log(beta) - beta*value + switch(neq(alpha, 1.0) | neq(value, 0), (alpha - 1.0)*log(value), 0),
+                -gammaln(alpha) + logpow(beta, alpha) - beta*value + logpow(value, alpha-1),
 
                 value >= 0, 
                 alpha > 0, 

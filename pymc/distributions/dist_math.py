@@ -31,9 +31,35 @@ def quickclass(fn):
     Distribution.__name__ = fn.__name__
     return Distribution
 
-def bound(logp, *conds):
-    cond = 1
-    for c in conds:
-        cond = cond & (1*c)
+def bound(logp, *conditions):
+    """
+    Bounds a log probability density with several conditions
+    
+    Parameters
+    ----------
+    logp : float 
+    *conditionss : booleans 
 
-    return switch(cond, logp, -inf)
+    Returns
+    -------
+    logp if all conditions are true
+    -inf if some are false 
+    """
+
+    return switch(alltrue(conditions), logp, -inf)
+
+def alltrue(vals):
+    ret = 1
+    for c in vals:
+        ret = ret & (1*c)
+    return ret
+    
+
+def logpow(x, m):
+    """
+    Calculates log(x**m) since m*log(x) will fail when m, x = 0.
+    """
+    return switch( eq(x,0) & eq(m,0), 0, m*log(x))
+
+def factln(n):
+    return gammaln(n +1)
