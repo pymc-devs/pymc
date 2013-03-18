@@ -619,44 +619,26 @@ def make_indices(dimensions):
 
 def calc_min_interval(x, alpha):
     """Internal method to determine the minimum interval of
-    a given width"""
+    a given width
 
-    # Initialize interval
-    min_int = [None,None]
+    Assumes that x is sorted numpy array.
+    """
 
-    try:
+    n = len(x)
+    cred_mass = 1.0-alpha
 
-        # Number of elements in trace
-        n = len(x)
+    interval_idx_inc = int(np.floor( cred_mass*n ))
+    n_intervals = n - interval_idx_inc
+    interval_width = x[interval_idx_inc:] - x[:n_intervals]
 
-        # Start at far left
-        start, end = 0, int(n*(1-alpha))
-
-        # Initialize minimum width to large value
-        min_width = inf
-
-        while end < n:
-
-            # Endpoints of interval
-            hi, lo = x[end], x[start]
-
-            # Width of interval
-            width = hi - lo
-
-            # Check to see if width is narrower than minimum
-            if width < min_width:
-                min_width = width
-                min_int = [lo, hi]
-
-            # Increment endpoints
-            start +=1
-            end += 1
-
-        return min_int
-
-    except IndexError:
+    if len(interval_width)==0:
         print_('Too few elements for interval calculation')
         return [None,None]
+
+    min_idx = np.argmin(interval_width)
+    hdi_min = x[min_idx]
+    hdi_max = x[min_idx+interval_idx_inc]
+    return [hdi_min, hdi_max]
 
 def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
     """Returns a dictionary of requested quantiles from array

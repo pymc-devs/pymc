@@ -13,7 +13,7 @@ __all__ = ['Model', 'Sampler']
 
 from numpy import zeros, floor
 from numpy.random import randint
-from pymc import database
+from . import database
 from .PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 from .Container import Container, ObjectContainer
 import sys,os

@@ -24,9 +24,9 @@ class ProgressBar:
 
     def animate_noipython(self, iter):
         if sys.platform.lower().startswith('win'):
-            print self, '\r',
+            print(self, '\r')
         else:
-            print self
+            print(self)
         self.update_iteration(iter)
         # time.sleep(0.5)
 
@@ -36,7 +36,7 @@ class ProgressBar:
         except Exception:
             # terminal IPython has no clear_output
             pass
-        print '\r', self,
+        print('\r', self)
         sys.stdout.flush()
         self.update_iteration(iter)
 
