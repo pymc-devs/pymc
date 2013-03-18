@@ -98,6 +98,4 @@ def check_dlogp(model, value, domains):
     for a in its.product(*domains):
         pt = clean_point(dict( (str(var), val) for var,val in zip(model.vars, a)))
 
-        #print lp.f.maker.fgraph.inputs, dlp.f.maker.fgraph.inputs 
-
         pt = bij.map(pt)
