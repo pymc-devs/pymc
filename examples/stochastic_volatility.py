@@ -19,7 +19,7 @@ Data = model.Data
 
 sd, lsd = model.TransformedVar(
                  'sd', Exponential(1./.02),
-                 transform = exp, logjacobian = lambda x: x, testval = -2.3)
+                 transforms.log, testval = -2.3)
 
 nu = Var('nu', Exponential(1./10))
 
