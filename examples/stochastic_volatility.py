@@ -19,7 +19,7 @@ Data = model.Data
 
 sd, lsd = model.TransformedVar(
                  'sd', Exponential(1./.02),
-                 transforms.log, testval = -2.3)
+                 transforms.log, testval = -2.5)
 
 nu = Var('nu', Exponential(1./10))
 
@@ -40,6 +40,7 @@ def hessian(q, nusd):
 
     return csc_matrix(h)
 
+
 from  scipy import optimize
 s = find_MAP(model, vars = [lvol], fmin = optimize.fmin_l_bfgs_b)
 s = find_MAP(model, s, vars = [lsd, nu])
@@ -49,6 +50,6 @@ trace, _,t = sample(200, step, s)
 
 s2 = trace.point(-1)
 
-step = hmc_step(model, model.vars, hessian(s2, 6), trajectory_length = 4)
-trace, _,t = sample(8000, step, trace = trace) 
+step = hmc_step(model, model.vars, hessian(s2, 6), trajectory_length = 4.)
+trace, _,t = sample(4000, step, trace = trace) 
 
