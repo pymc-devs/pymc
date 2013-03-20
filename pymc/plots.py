@@ -15,7 +15,11 @@ def traceplot(trace, vars=None):
         d = np.squeeze(trace[v])
 
         kdeplot(ax[0,i], d)
-        ax[1,i].plot(d)
+        ax[0,i].set_title(str(v))
+        ax[1,i].plot(d, alpha = .35)
+        
+    ax[0,0].set_ylabel("densities")
+    ax[1,0].set_ylabel("traces")
 
     return f 
 
