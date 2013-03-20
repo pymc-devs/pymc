@@ -6,12 +6,15 @@ Classes for working with subsets of parameters.
 import numpy as np
 import collections
 
-__all__ = ['IdxMap', 'DictToArrayBijection', 'DictToVarBijection']
+__all__ = ['ArrayOrdering', 'DictToArrayBijection', 'DictToVarBijection']
 
 VarMap = collections.namedtuple('VarMap', 'var, slc, shp')
 
 # TODO Classes and methods need to be fully documented.
-class IdxMap(object):
+class ArrayOrdering(object):
+    """
+    An ordering for an array space
+    """
     def __init__(self, vars):
         self.vmap = []
         dim = 0
@@ -25,8 +28,11 @@ class IdxMap(object):
             
 
 class DictToArrayBijection(object):
-    def __init__(self, idxmap, dpoint):
-        self.idxmap = idxmap
+    """
+    A mapping between a dict space and an array space
+    """
+    def __init__(self, ordering, dpoint):
+        self.ordering = ordering
         self.dpt = dpoint
 
     def map(self, dpt):
@@ -37,8 +43,8 @@ class DictToArrayBijection(object):
         ----------
         dpt : dict 
         """
-        apt = np.empty(self.idxmap.dimensions)
-        for var, slc, _ in self.idxmap.vmap:
+        apt = np.empty(self.ordering.dimensions)
+        for var, slc, _ in self.ordering.vmap:
                 apt[slc] = np.ravel(dpt[var])
         return apt
 
@@ -52,7 +58,7 @@ class DictToArrayBijection(object):
         """
         dpt = self.dpt.copy()
             
-        for var, slc, shp in self.idxmap.vmap:
+        for var, slc, shp in self.ordering.vmap:
             dpt[var] = np.reshape(apt[slc], shp)
                 
             
@@ -60,16 +66,23 @@ class DictToArrayBijection(object):
 
     def mapf(self, f):
         """
-        Maps function f : DictSpace -> T to ArraySpace -> T
+         function f : DictSpace -> T to ArraySpace -> T
         
         Parameters
-        ---------
+        ----------
 
         f : dict -> T 
+
+        Returns
+        -------
+        f : array -> T 
         """
-        return BijectionWrapFunc(self,f)
+        return Compose(self.rmap,f)
 
 class DictToVarBijection(object):
+    """
+    A mapping between a dict space and the array space for one element within the dict space
+    """
     def __init__(self, var, idx, dpoint):
         self.var = str(var)
         self.idx = idx
@@ -88,13 +101,16 @@ class DictToVarBijection(object):
         
         return dpt 
     def mapf(self, f):
-        return BijectionWrapFunc(self, f)
+        return Compose(self.rmap, f)
 
 
-class BijectionWrapFunc(object):
-    def __init__(self, bij, fn): 
-        self.bij = bij
-        self.fn = fn
+class Compose(object):
+    """
+    Compose two functions in a pickleable way
+    """
+    def __init__(self, fa, fb): 
+        self.fa = fa
+        self.fb = fb
 
-    def __call__(self, d):
-        return self.fn(self.bij.rmap(d))
+    def __call__(self, x):
+        return self.fa(self.fb(x))

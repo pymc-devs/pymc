@@ -24,7 +24,7 @@ def approx_hess(model, start, vars=None):
 
     start = clean_point(start)
 
-    bij = DictToArrayBijection(IdxMap(vars), start)
+    bij = DictToArrayBijection(ArrayOrdering(vars), start)
     dlogp = bij.mapf(model.dlogpc(vars))
 
     

@@ -37,7 +37,7 @@ def find_MAP(model, start = None, vars=None, fmin = optimize.fmin_bfgs, return_r
         vars = model.cont_vars
         
     start = clean_point(start)
-    bij = DictToArrayBijection(IdxMap(vars), start)
+    bij = DictToArrayBijection(ArrayOrdering(vars), start)
     
     logp = bij.mapf(model.logpc)
     dlogp = bij.mapf(model.dlogpc(vars))

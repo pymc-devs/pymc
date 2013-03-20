@@ -86,7 +86,7 @@ def check_int_to_1(model, value, domains):
 def check_dlogp(model, value, domains): 
 
     domains = [d[1:-1] for d in domains]
-    bij = DictToArrayBijection(IdxMap(model.cont_vars), model.test_point)
+    bij = DictToArrayBijection(ArrayOrdering(model.cont_vars), model.test_point)
 
     dlp = model.dlogpc()
     dlogp = bij.mapf(model.dlogpc())

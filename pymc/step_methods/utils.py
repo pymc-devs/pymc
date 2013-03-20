@@ -7,12 +7,12 @@ __all__ = ['array_step', 'metrop_select', 'SamplerHist']
 
 class array_step(object):
     def __init__(self, vars, fs, allvars = False):
-        self.idxmap = IdxMap(vars)
+        self.ordering = ArrayOrdering(vars)
         self.fs = fs
         self.allvars = allvars
         
     def step(self, state, point):
-        bij = DictToArrayBijection(self.idxmap, point)
+        bij = DictToArrayBijection(self.ordering, point)
         
         inputs = map(bij.mapf, self.fs) 
         if self.allvars:
