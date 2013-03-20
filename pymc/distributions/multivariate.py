@@ -44,8 +44,12 @@ def Dirichlet(k, a):
         \cdot\left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k
 
     :Parameters:
-        theta : array
-            An (n,k) or (1,k) array > 0.
+        k : scalar int
+            k > 1
+        a : float tensor 
+            a > 0
+            concentration parameters
+            last index is the k index
 
     :Support: 
         x : vector 
@@ -55,16 +59,17 @@ def Dirichlet(k, a):
         Only the first `k-1` elements of `x` are expected. Can be used
         as a parent of Multinomial and Categorical nevertheless.
     """
+
     support = 'continuous'
 
-    a = ones(k) * a
+    a = ones([k]) * a
     def logp(value):
 
         #only defined for sum(value) == 1 
         return bound(
-                sum((a -1)*log(value)) + gammaln(sum(a)) - sum(gammaln(a)),
+                sum(logpow(value, a -1) - gammaln(a), axis = 0) + gammaln(sum(a)),
 
-                k > 2,
+                k > 1,
                 a > 0)
     
     mean = a/sum(a)
