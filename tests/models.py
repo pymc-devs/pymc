@@ -1,11 +1,11 @@
-from pymc import Model, Normal, metropolis_step
+from pymc import Model, Normal, Metropolis
 import numpy as np 
 import pymc as pm
 
 def simple_init(): 
     start, model, moments = simple_model()
 
-    step = metropolis_step(model, model.vars, np.diag([1.]))
+    step = Metropolis(model, model.vars, np.diag([1.]))
     return start, step, moments
 
 

@@ -4,7 +4,7 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 ''' 
     
-class compound_step(object): 
+class CompoundStep(object): 
     def __init__(self, steppers):
         self.steppers = steppers
     def step(self, states, chain_state):

@@ -18,12 +18,12 @@ x = Var('x', Normal(0, tau = 1.), n)
 
 #start sampling at the MAP
 start = find_MAP(model)
-hess = approx_hess(model, start) #find a good orientation using the hessian at the MAP
+h = approx_hess(model, start) #find a good orientation using the hessian at the MAP
 
 #step_method = split_hmc_step(model, model.vars, hess, chain, hmc_cov)
-step_method = hmc_step(model, model.vars, hess, is_cov = False)
+step = HamiltonianMC(model, model.vars, h, is_cov = False)
 
 ndraw = 3e3
-history, state, t = sample(ndraw, step_method, start)
+history, state, t = sample(ndraw, step, start)
 
 print "took :", t

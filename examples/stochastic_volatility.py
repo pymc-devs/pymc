@@ -9,11 +9,10 @@ from pymc.distributions.timeseries import *
 
 from scipy.sparse import csc_matrix
 from  scipy import optimize
-import pylab as pl
 
 # <markdowncell>
 
-# 1. Build Model
+# Build Model
 # --------------
 # Stochastic volatility model described in Hoffman (2011) on p21.
 
@@ -43,7 +42,7 @@ Data(returns, T(nu, lam = exp(-2*lvol)))
 
 # <markdowncell>
 
-# 2. Fit Model
+# Fit Model
 # ------------
 # To get a decent scale for the hamiltonaian sampler, we find the hessian at a point. However, the 2nd derivatives for the degrees of freedom are negative and thus not very informative, so we make an educated guess. The interactions between lsd/nu and lvol are also not very useful, so we set them to zero. 
 # 
@@ -74,21 +73,25 @@ s = find_MAP(model, vars = [lvol], fmin = optimize.fmin_l_bfgs_b)
 
 # <codecell>
 
-step = hmc_step(model, model.vars, hessian(s, 6))
+step = HamiltonianMC(model, model.vars, hessian(s, 6))
 trace, _,t = sample(200, step, s) 
 
 s2 = trace.point(-1)
-step = hmc_step(model, model.vars, hessian(s2, 6), trajectory_length = 4.)
+step = HamiltonianMC(model, model.vars, hessian(s2, 6), path_length = 4.)
 trace, _,t = sample(8000, step, trace = trace) 
 
 # <codecell>
 
-pl.plot(trace[lvol][::10].T,'b', alpha = .01);
-traceplot(trace, model.vars[:-1])
+#figsize(12,6)
+title(str(lvol))
+plot(trace[lvol][::10].T,'b', alpha = .01);
+
+#figsize(12,6)
+traceplot(trace, model.vars[:-1]);
 
 # <markdowncell>
 
-# 3. References
+# References
 # -------------
 #     1. Hoffman & Gelman. (2011). The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo. http://arxiv.org/abs/1111.4246 
 

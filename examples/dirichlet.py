@@ -19,7 +19,7 @@ H = model.d2logpc()
 
 s = find_MAP(model)
 
-step = hmc_step(model, model.vars, H(s))
+step = HamiltonianMC(model, model.vars, H(s))
 trace, _,t = sample(1000, step, s) 
 
 

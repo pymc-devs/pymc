@@ -3,9 +3,9 @@ import numpy as np
 from numpy.random import uniform
 from numpy import log , isfinite
 
-__all__ = ['array_step', 'metrop_select', 'SamplerHist']
+__all__ = ['ArrayStep', 'metrop_select', 'SamplerHist']
 
-class array_step(object):
+class ArrayStep(object):
     def __init__(self, vars, fs, allvars = False):
         self.ordering = ArrayOrdering(vars)
         self.fs = fs

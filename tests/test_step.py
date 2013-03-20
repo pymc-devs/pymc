@@ -13,9 +13,9 @@ def test_step_continuous():
     H = np.linalg.inv(C)
     
 
-    hmc = pm.hmc_step(model, model.vars,  H)
-    mh = pm.metropolis_step(model, model.vars , C, scaling = .25)
-    compound = pm.compound_step([hmc, mh])
+    hmc = pm.HamiltonianStep(model, model.vars,  H)
+    mh = pm.Metropolis(model, model.vars , C, scaling = .25)
+    compound = pm.Compound([hmc, mh])
 
     steps = [mh, hmc, compound]
 

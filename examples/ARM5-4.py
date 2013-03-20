@@ -32,9 +32,9 @@ model.Data(np.array(data.switch), Bernoulli(p))
 #move the chain to the MAP which should be a good starting point
 start = find_MAP(model)
 H = model.d2logpc() #find a good orientation using the hessian at the MAP
-hess = H(start)
+h = H(start)
 
-step_method = hmc_step(model, model.vars, hess, is_cov = False)
+step_method = HamiltonianMC(model, model.vars, h)
 
 trace, state, t = sample(3e3, step_method, start)
 print "took :", t

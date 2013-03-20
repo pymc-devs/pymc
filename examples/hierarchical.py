@@ -51,10 +51,10 @@ Data(y, Normal( sum(effects[g] * predictors, 1),s[g]**-2))
 
                  
 
-map_x = find_MAP(model)
-hess = approx_hess(model, map_x) #find a good orientation using the hessian at the MAP
+start = find_MAP(model)
+h = approx_hess(model, start) #find a good orientation using the hessian at the MAP
 
-step_method = hmc_step(model, model.vars, hess, is_cov = False)
+step = HamiltonianMC(model, model.vars, h, is_cov = False)
 
 
-print "took :", sample(3e3, step_method, map_x)
+print "took :", sample(3e3, step, start)

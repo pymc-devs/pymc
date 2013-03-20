@@ -64,9 +64,9 @@ start = {'groupmean' : obs_means.mean(),
 
 start = find_MAP(model, start, model.vars[:-1])
 H = model.d2logpc()
-hess = np.diag(H(start))
+h = np.diag(H(start))
 
-step = hmc_step(model, model.vars, hess, is_cov = False)
+step = HamiltonianMC(model, model.vars, h)
 
 trace, state, t = sample(3000, step, start)
 

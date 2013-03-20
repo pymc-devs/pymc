@@ -8,16 +8,16 @@ from numpy.linalg import cholesky
 from ..core import *
 from quadpotential import quad_potential
 
-from utils import *
+from arraystep import *
 
-__all__ = ['metropolis_step']
+__all__ = ['Metropolis']
 
 # TODO Implement tuning for Metropolis step
-class metropolis_step(array_step):
+class Metropolis(ArrayStep):
     def __init__(self, model, vars, C, scaling=.25):
 
         self.potential = quad_potential(C*scaling, False)
-        super(metropolis_step,self).__init__(vars, [model.logpc])
+        super(Metropolis,self).__init__(vars, [model.logpc])
         
     def astep(self, state, q0, logp):
 

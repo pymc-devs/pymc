@@ -21,10 +21,10 @@ Data(data, Normal(mu = x, tau = .75**-2))
 
 start = model.test_point
 
-hess = approx_hess(model, start)
-step_method = hmc_step(model, model.vars, hess)
+h = approx_hess(model, start)
+step = HamiltonianMC(model, model.vars, h)
 
-history,state, t = sample(1e3, step_method, start)
+history,state, t = sample(1e3, step, start)
 
 print "took :", t
 

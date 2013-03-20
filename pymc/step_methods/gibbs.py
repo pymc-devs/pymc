@@ -4,27 +4,27 @@ Created on May 12, 2012
 @author: john
 '''
 from ..core import *
-from utils import * 
+from arraystep import * 
 from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones
 from numpy.random import uniform
 
 from theano.gof.graph import inputs
     
-__all__ = ['elemwise_cat_gibbs_step']
+__all__ = ['ElemwiseCategoricalStep']
     
-class elemwise_cat_gibbs_step(array_step):
+class ElemwiseCategoricalStep(ArrayStep):
     """
-    gibbs sampling for categorical variables that only have only have elementwise effects
+    Gibbs sampling for categorical variables that only have only have elementwise effects
     the variable can't be indexed into or transposed or anything otherwise that will mess things up
     
-    It would be great to come up with a way to make this more general (handling more complex elementwise variables)
     """
+    #TODO: It would be great to come up with a way to make ElemwiseCategoricalStep  more general (handling more complex elementwise variables)
     def __init__(self, model, var, values):
         self.sh = ones(var.dshape, var.dtype)
         self.values = values
         self.var = var
         
-        array_step.__init__(self, [var], [elemwise_logp(model, var)])
+        ArrayStep.__init__(self, [var], [elemwise_logp(model, var)])
     
     def astep(self, state, q, logp):
         p = array([logp(v * self.sh) for v in self.values])

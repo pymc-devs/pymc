@@ -35,10 +35,9 @@ Data(outcomes, Bernoulli(p))
 
 #move the chain to the MAP which should be a good starting point
 start = find_MAP(model)
-hess = np.diag(approx_hess(model, start)) #find a good orientation using the hessian at the MAP
+h = np.diag(approx_hess(model, start)) #find a good orientation using the hessian at the MAP
 
-step_method = hmc_step(model, model.vars, hess, is_cov = False) 
-#step_method = split_hmc_step(model, model.vars, hess,  start, hess, is_cov = False) 
+step = HamiltonianMC(model, model.vars, h) 
 
-history, state, t = psample(3e2, step_method, start, threads = 2 )
+history, state, t = psample(3e2, step, start, threads = 2)
 print "took :", t

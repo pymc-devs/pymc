@@ -64,24 +64,24 @@ at the MAP (or points close to it) will approximate this covariance matrix.
 the approx_cov() function works similarly to the find_MAP function and returns the inverse hessian at a given point.
 
 """
-hmc_hess = approx_hess(model, start)
+h = approx_hess(model, start)
 
 
 """
 To sample from the posterior, we must choose a sampling method. 
 """
-step_method = hmc_step(model, model.vars, hmc_hess, is_cov = False)
+step = HamiltonianMC(model, model.vars, h)
 
 """
 To use the step functions, we use the sample function. It takes a number of steps to do, 
 a step method, a starting point and a storage object for the resulting samples. It returns the final state of 
 the step method and the total time in seconds that the sampling took. The samples are now in history.
 """
-history, state, t = sample(3e3, step_method, start)
+history, state, t = sample(3e3, step, start)
 print "took :", t, " seconds"
 
 """
-To use more than one sampler, look at the compound_step step method which takes a list of step methods. 
+To use more than one sampler, look at CompoundStep which takes a list of step methods. 
 
 The history object can be indexed by names of variables returning an array with the first index being the sample
 and the other indexes the shape of the parameter. Thus the shape of history['x'].shape == (ndraw, 2,1)

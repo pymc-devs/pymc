@@ -37,13 +37,12 @@ Data(np.zeros(N), Normal(x + y**2, 1.))
 
 
 start = model.test_point
-hess = np.ones(2)*np.diag(approx_hess(model, start))[0]
+h = np.ones(2)*np.diag(approx_hess(model, start))[0]
 
 
-#step_method = hmc_lowflip_step(model, model.vars, hess,is_cov = False, step_size = .25, a = .9)
-step_method = hmc_step(model, model.vars, hess, trajectory_length = 4., is_cov = False)
+step = HamiltonianMC(model, model.vars, h, path_length = 4.)
 
-history, state, t = sample(3e3, step_method, start)
+history, state, t = sample(3e3, step, start)
 
 print "took :", t
 pl.figure()
