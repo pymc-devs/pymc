@@ -77,7 +77,7 @@ class DictToArrayBijection(object):
         -------
         f : array -> T 
         """
-        return Compose(self.rmap,f)
+        return Compose(f, self.rmap)
 
 class DictToVarBijection(object):
     """
@@ -101,7 +101,7 @@ class DictToVarBijection(object):
         
         return dpt 
     def mapf(self, f):
-        return Compose(self.rmap, f)
+        return Compose(f, self.rmap)
 
 
 class Compose(object):
