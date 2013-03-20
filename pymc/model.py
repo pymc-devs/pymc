@@ -76,18 +76,10 @@ class Model(object):
         model.factors.append(dist.logp(var))
         return var
 
-    def TransformedVar(model, name, dist, transform, logjacobian, shape = 1, dtype = None, testval = try_defaults): 
-        if not dtype:
-            dtype = default_type[dist.support]
-        
-        var = Variable('transformed_' + name, shape, dtype, get_test_val(dist, testval))
+    def TransformedVar(model, name, dist, trans, shape = 1, dtype = None, testval = try_defaults): 
+        var = model.Var(trans.name + '_' + name, trans.apply(dist), shape, dtype, testval) 
 
-        model.vars.append(var)
-
-        tvar = transform(var)
-        model.factors.append(dist.logp(tvar) + logjacobian(var))
-
-        return tvar, var
+        return trans.backward(var), var
 
     @property
     def logp(model):

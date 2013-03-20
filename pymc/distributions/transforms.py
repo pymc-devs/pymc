@@ -12,10 +12,12 @@ def transform(name, forward, backward, jacobian_det):
             support = dist.support 
 
             def logp(x): 
-                return dist.logp(x) + jacobian_det(x)
+                return dist.logp(backward(x)) + jacobian_det(x)
 
             if hasattr(dist, "mode"): 
-                mode = backward(dist.mode)
+                mode = forward(dist.mode)
+            if hasattr(dist, "median"): 
+                mode = forward(dist.median)
 
             return locals()
 
@@ -30,5 +32,5 @@ log = transform("log", log, exp, idfn)
 
 simplex = transform("simplex",
         lambda p: p[:-1],
-        lambda p: concatenate([p, 1- sum(p)]),
-        0)
+        lambda p: concatenate([p, 1- sum(p, keepdims = True)]),
+        lambda p: constant([0]))

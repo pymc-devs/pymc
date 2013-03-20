@@ -6,7 +6,13 @@ Created on Mar 7, 2011
 from __future__ import division
 from ..quickclass import *
 import theano.tensor as t
-from theano.tensor import sum, switch, log,exp, eq, neq, lt, gt, le, ge, zeros_like, cast,arange, round, max, min
+from theano.tensor import (
+        sum, switch, log,exp, 
+        eq, neq, lt, gt, le, ge, all, any, 
+        cast,arange, round, max, min, 
+        zeros_like, ones, ones_like,
+        concatenate, constant)
+
 
 from numpy import pi, inf, nan
 from special import gammaln
