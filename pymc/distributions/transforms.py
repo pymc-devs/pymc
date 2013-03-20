@@ -1,6 +1,6 @@
 from dist_math import * 
 
-__all__ = ['log', 'simplex']
+__all__ = ['transform', 'logtransform', 'simplextransform']
 
 
 @quickclass
@@ -28,9 +28,9 @@ def transform(name, forward, backward, jacobian_det):
 
     return locals()
 
-log = transform("log", log, exp, idfn)
+logtransform = transform("log", log, exp, idfn)
 
-simplex = transform("simplex",
+simplextransform = transform("simplex",
         lambda p: p[:-1],
         lambda p: concatenate([p, 1- sum(p, keepdims = True)]),
         lambda p: constant([0]))

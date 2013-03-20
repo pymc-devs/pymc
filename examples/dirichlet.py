@@ -12,7 +12,7 @@ a = constant(np.array([2,3.,4, 2,2]))
 
 p, p_m1 = model.TransformedVar(
                  'p', Dirichlet(k,a), 
-                 transforms.simplex, shape = k - 1)
+                 simplextransform, shape = k - 1)
 
 
 H = model.d2logpc()
