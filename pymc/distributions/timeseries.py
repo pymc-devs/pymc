@@ -1,6 +1,7 @@
 from dist_math import * 
 from continuous import *
 
+__all__ = ['AR1', 'GaussianRandomWalk']
 @quickclass
 def AR1(k, tau_e): 
     """
@@ -32,7 +33,7 @@ def AR1(k, tau_e):
     return locals()
 
 @quickclass
-def RW(tau, init = Flat()):
+def GaussianRandomWalk(tau, init = Flat()):
     """
     Random Walk with Normal innovations
 

@@ -1,5 +1,6 @@
 import numpy as np
 from pymc import  *
+from pymc.distributions.timeseries import *
 
 from scipy.sparse import csc_matrix
 from  scipy import optimize
@@ -24,11 +25,11 @@ Data = model.Data
 
 #its easier to sample the scale of the volatility process innovations on a log scale 
 sd, log_sd = model.TransformedVar('sd', Exponential(1./.02),
-                 transforms.log, testval = -2.5)
+                 logtransform, testval = -2.5)
 
 nu = Var('nu', Exponential(1./10))
 
-lvol = Var('lvol', timeseries.RW(sd**-2), shape = n)
+lvol = Var('lvol', GaussianRandomWalk(sd**-2), shape = n)
 
 lreturns = Data(returns, T(nu, lam = exp(-2*lvol)))
 
