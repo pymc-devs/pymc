@@ -8,7 +8,9 @@ The hope is that some of the lessons learned in this experimental package lead t
 in PyMC. This branch is still experimental so people are encouraged to try out their own designs and improvements 
 as well as make criticisms.
 
-For a tutorial on basic inference, see tutorial.py in the examples folder.
+Guided Examples: 
+ * `Simple model <http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/examples/tutorial.ipynb>`
+ * More advanced `Stochastic Volatility model <http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/examples/stochastic_volatility.ipynb>`
 
 Some design decisions
 
