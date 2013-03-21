@@ -1007,22 +1007,10 @@ class AdaptiveMetropolis(StepMethod):
         """
         The competence function for AdaptiveMetropolis.
         The AM algorithm is well suited to deal with multivariate
-        parameters.
+        parameters, particularly those which are correlated with one
+        another. However, it does not work reliably with all multivariate
+        stochastics, so it must be applied manually via MCMC.use_step_method().
         """
-        # if not stochastic.dtype in float_dtypes and not stochastic.dtype in integer_dtypes:
-        #             return 0
-        #             # Algorithm is not well-suited to sparse datasets. Dont use if less than
-        #             # 25 percent of values are nonzero
-        #         if not getattr(stochastic, 'mask', None) is None:
-        #             return 0
-        #         if np.alen(stochastic.value) == 1:
-        #             return 0
-        #         elif np.alen(stochastic.value) < 5:
-        #             return 2
-        #         elif (len(stochastic.value.nonzero()[0]) > 0.25*len(stochastic.value)):
-        #             return 2
-        #         else:
-        #             return 0
         return 0
 
     def cov_from_value(self, scaling):
