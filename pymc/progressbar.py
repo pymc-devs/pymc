@@ -3,6 +3,8 @@ A simple progress bar to monitor MCMC sampling progress.
 Modified from original code by Corey Goldberg (2010)
 """
 
+from __future__ import print_function
+
 import sys, time
 try:
     from IPython.core.display import clear_output
@@ -24,7 +26,7 @@ class ProgressBar:
 
     def animate_noipython(self, iter):
         if sys.platform.lower().startswith('win'):
-            print(self, '\r')
+            print(self, '\r', end='')
         else:
             print(self)
         self.update_iteration(iter)
@@ -36,7 +38,7 @@ class ProgressBar:
         except Exception:
             # terminal IPython has no clear_output
             pass
-        print('\r', self)
+        print('\r', self, end='')
         sys.stdout.flush()
         self.update_iteration(iter)
 
