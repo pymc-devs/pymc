@@ -9,8 +9,8 @@ in PyMC. This branch is still experimental so people are encouraged to try out t
 as well as make criticisms.
 
 Guided Examples: 
- * `Simple model <http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/examples/tutorial.ipynb>`
- * More advanced `Stochastic Volatility model <http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/examples/stochastic_volatility.ipynb>`
+ * [Simple model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/examples/tutorial.ipynb)
+ * More advanced [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/examples/stochastic_volatility.ipynb)
 
 Some design decisions
 
