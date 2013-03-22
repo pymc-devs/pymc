@@ -1,0 +1,16 @@
+language: python
+python:
+  - "2.7"
+  - "3.3"
+before_install:
+  - sudo apt-get install liblapack-dev gfortran python-scipy libblas-dev
+install: 
+  - pip install git+https://github.com/numpy/numpy.git
+  - pip install scipy
+  - pip install matplotlib
+  - pip install git+https://github.com/Theano/Theano.git
+  - pip install pandas
+  - pip install numdifftools
+  - python setup.py build_ext --inplace
+script: 
+  - nosetests -s tests/
