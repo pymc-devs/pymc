@@ -11,6 +11,8 @@ install:
   - pip install git+https://github.com/Theano/Theano.git
   - pip install pandas
   - pip install numdifftools
+  - pip install Cython
+  - pip install scikits.sparse
   - python setup.py build_ext --inplace
 script: 
   - nosetests -s tests/
