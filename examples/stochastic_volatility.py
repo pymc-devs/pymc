@@ -9,6 +9,7 @@ from pymc.distributions.timeseries import *
 
 from scipy.sparse import csc_matrix
 from  scipy import optimize
+import matplotlib.pyplot as plt
 
 # <markdowncell>
 
@@ -20,7 +21,7 @@ from  scipy import optimize
 
 model = Model()
 Var = model.Var
-Data = model.Data 
+Data = model.Data
 
 # <markdowncell>
 
@@ -44,15 +45,15 @@ Data(returns, T(nu, lam = exp(-2*lvol)))
 
 # Fit Model
 # ------------
-# To get a decent scale for the hamiltonaian sampler, we find the hessian at a point. However, the 2nd derivatives for the degrees of freedom are negative and thus not very informative, so we make an educated guess. The interactions between lsd/nu and lvol are also not very useful, so we set them to zero. 
-# 
+# To get a decent scale for the hamiltonaian sampler, we find the hessian at a point. However, the 2nd derivatives for the degrees of freedom are negative and thus not very informative, so we make an educated guess. The interactions between lsd/nu and lvol are also not very useful, so we set them to zero.
+#
 # The hessian matrix is also very sparse, so we make it a sparse matrix for faster sampling.
 
 # <codecell>
 
 H = model.d2logpc()
 
-def hessian(point, nusd): 
+def hessian(point, nusd):
     h = H(point)
     h[1,1] = nusd**-2
     h[:2,2:] = h[2:,:2] = 0
@@ -74,17 +75,17 @@ s = find_MAP(model, vars = [lvol], fmin = optimize.fmin_l_bfgs_b)
 # <codecell>
 
 step = HamiltonianMC(model, model.vars, hessian(s, 6))
-trace, _,t = sample(200, step, s) 
+trace, _,t = sample(200, step, s)
 
 s2 = trace.point(-1)
 step = HamiltonianMC(model, model.vars, hessian(s2, 6), path_length = 4.)
-trace, _,t = sample(8000, step, trace = trace) 
+trace, _,t = sample(8000, step, trace = trace)
 
 # <codecell>
 
 #figsize(12,6)
-title(str(lvol))
-plot(trace[lvol][::10].T,'b', alpha = .01);
+plt.title(str(lvol))
+plt.plot(trace[lvol][::10].T,'b', alpha = .01);
 
 #figsize(12,6)
 traceplot(trace, model.vars[:-1]);
@@ -93,5 +94,5 @@ traceplot(trace, model.vars[:-1]);
 
 # References
 # -------------
-#     1. Hoffman & Gelman. (2011). The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo. http://arxiv.org/abs/1111.4246 
+#     1. Hoffman & Gelman. (2011). The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo. http://arxiv.org/abs/1111.4246
 
