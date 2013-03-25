@@ -39,5 +39,5 @@ h = np.diag(approx_hess(model, start)) #find a good orientation using the hessia
 
 step = HamiltonianMC(model, model.vars, h) 
 
-history, state, t = psample(3e2, step, start, threads = 2)
+history, state, t = sample(3e2, step, start)
 print "took :", t
