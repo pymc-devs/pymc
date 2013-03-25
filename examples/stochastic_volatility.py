@@ -95,11 +95,11 @@ trace, _,t = sample(8000, step, trace = trace)
 
 # <codecell>
 
-plt.figsize(12,6)
+#figsize(12,6)
 plt.title(str(s))
 plt.plot(trace[s][::10].T,'b', alpha = .01);
 
-plt.figsize(12,6)
+#figsize(12,6)
 traceplot(trace, model.vars[:-1]);
 
 # <markdowncell>
