@@ -11,11 +11,11 @@ def simple_init():
 
 def simple_model():
     model = Model()
-    Var = model.Var
 
     mu = -2.1
     tau = 1.3
-    x = Var('x', Normal(mu,tau), testval = .1)
+    with model:
+        x = Normal('x', mu,tau, testval = .1)
 
     return model.test_point, model, (mu, tau**-1)
 
@@ -29,9 +29,9 @@ def mv_simple():
     tau = np.dot(p,p.T) 
 
     model = pm.Model()
-    Var = model.Var
 
-    x = Var('x', pm.multivariate.Normal(pm.constant(mu),pm.constant(tau)), 3, testval = np.array([.1, 1., .8]))
+    with model:
+        x = pm.multivariate.Normal('x', pm.constant(mu),pm.constant(tau), shape = 3, testval = np.array([.1, 1., .8]))
 
     H = tau
     C = np.linalg.inv(H)

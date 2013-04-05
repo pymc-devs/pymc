@@ -10,14 +10,13 @@ data = np.random.normal(size = (2, 20))
 
 
 model = Model()
-Var = model.Var
-Data = model.Data
 
-x = Var('x', Normal(mu = .5, tau = 2.**-2), (2,1))
+with model:
+    x = Normal('x', mu = .5, tau = 2.**-2, shape = (2,1))
 
-z = Var('z', Beta(alpha = 10, beta =5.5))
+    z = Beta('z', alpha = 10, beta =5.5)
 
-Data(data, Normal(mu = x, tau = .75**-2))
+    d = Normal('data', mu = x, tau = .75**-2, observed = data)
 
 start = model.test_point
 

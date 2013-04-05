@@ -26,28 +26,26 @@ y = nsum(effects_a[group, :] * predictors, 1) + random.normal(size = (n_observed
 
 
 model = Model()
-Var = model.Var
-Data = model.Data 
+with model:
 
-#m_g ~ N(0, .1)
-group_effects = Var("group_effects", Normal(0, .1), (1, n_group_predictors, n_predictors))
+    #m_g ~ N(0, .1)
+    group_effects = Normal("group_effects", 0, .1, shape = (1, n_group_predictors, n_predictors))
 
 
-# sg ~ Uniform(.05, 10)
-sg = Var("sg", Uniform(.05, 10), testval = 2.)
+    # sg ~ Uniform(.05, 10)
+    sg = Uniform("sg", .05, 10, testval = 2.)
 
-#m ~ N(mg * pg, sg)
-effects = Var("effects", 
-                 Normal( sum(group_predictors[:, :, newaxis] * group_effects ,1)  ,sg**-2),
-                 (n_groups, n_predictors))
+    #m ~ N(mg * pg, sg)
+    effects = Normal("effects", 
+                 sum(group_predictors[:, :, newaxis] * group_effects ,1)  ,sg**-2,
+                 shape = (n_groups, n_predictors))
 
-#s ~ 
-s = Var("s", Uniform(.01, 10), n_groups)
+    s = Uniform("s",.01, 10, shape = n_groups)
 
-g = T.constant(group)
+    g = T.constant(group)
 
-#y ~ Normal(m[g] * p, s)
-Data(y, Normal( sum(effects[g] * predictors, 1),s[g]**-2))
+    #y ~ Normal(m[g] * p, s)
+    yd = Normal('y', sum(effects[g] * predictors, 1),s[g]**-2, observed = y)
 
                  
 

@@ -9,7 +9,8 @@ import theano.tensor as t
 from theano.tensor import (
         sum, switch, log,exp, 
         eq, neq, lt, gt, le, ge, all, any, 
-        cast,arange, round, max, min, 
+        cast, round, arange, max, min, 
+        maximum, minimum, floor, ceil,
         zeros_like, ones, ones_like,
         concatenate, constant)
 
@@ -18,6 +19,7 @@ from numpy import pi, inf, nan
 from special import gammaln
 
 from theano.printing import Print
+from distribution import *
 
 
 

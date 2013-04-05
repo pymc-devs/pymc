@@ -3,13 +3,16 @@ from dist_math import *
 __all__ = ['transform', 'logtransform', 'simplextransform']
 
 
-@quickclass
-def transform(name, forward, backward, jacobian_det): 
-
+@quickclass(object)
+def transform(name, forward, backward, jacobian_det,getshape = None): 
     def apply(dist): 
-        @quickclass
+        
+        @quickclass(TensorDist)
         def TransformedDistribtuion():
-            support = dist.support 
+            try :
+                testval = forward(dist.testval)
+            except TypeError: 
+                testval = dist.testval
 
             def logp(x): 
                 return dist.logp(backward(x)) + jacobian_det(x)
@@ -18,6 +21,14 @@ def transform(name, forward, backward, jacobian_det):
                 mode = forward(dist.mode)
             if hasattr(dist, "median"): 
                 mode = forward(dist.median)
+
+            _v = forward(dist.makevar('_v'))
+            type = _v.type 
+            shape = _v.shape.tag.test_value
+            dtype = _v.dtype
+
+            default_testvals = dist.default_testvals
+
 
             return locals()
 

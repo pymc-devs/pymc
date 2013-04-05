@@ -1,11 +1,12 @@
 from dist_math import *
 
-__all__ = ['Normal']
+__all__ = ['Normal', 'Dirichlet', 'Multinomial', 'Wishart']
 
 from theano.sandbox.linalg import det, solve
 from theano.tensor import dot
 
-@quickclass
+
+@tensordist(continuous)
 def Normal(mu, Tau):
     """
     Multivariate normal 
@@ -21,7 +22,6 @@ def Normal(mu, Tau):
         2 array of floats
     """
 
-    support = 'continuous'
 
     def logp(value): 
         delta = value - mu
@@ -32,7 +32,7 @@ def Normal(mu, Tau):
     return locals()
 
 
-@quickclass
+@tensordist(continuous)
 def Dirichlet(k, a): 
     """
     Dirichlet 
@@ -60,7 +60,6 @@ def Dirichlet(k, a):
         as a parent of Multinomial and Categorical nevertheless.
     """
 
-    support = 'continuous'
 
     a = ones([k]) * a
     def logp(value):
@@ -81,7 +80,7 @@ def Dirichlet(k, a):
     return locals()
 
 
-@quickclass
+@tensordist(discrete)
 def Multinomial(n, p):
     """
     Generalization of the binomial
@@ -111,7 +110,6 @@ def Multinomial(n, p):
         - :math:`Cov(X_i,X_j) = -n p_i p_j`
     """
 
-    support = 'discrete'
 
     def logp(x): 
         #only defined for sum(p) == 1
@@ -126,7 +124,7 @@ def Multinomial(n, p):
 
 
 
-@quickclass
+@tensordist(continuous)
 def Wishart(n, p, V):
     """
     The Wishart distribution is the probability
@@ -152,7 +150,6 @@ def Wishart(n, p, V):
       X : matrix
         Symmetric, positive definite.
     """
-    support = 'continuous'
 
     def logp(X): 
         IVI  = det(V)

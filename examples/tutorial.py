@@ -3,6 +3,7 @@
 
 # <codecell>
 
+from matplotlib.pylab import *
 from pymc import *
 import numpy as np 
 from numpy.random import normal, beta
@@ -35,8 +36,6 @@ zdata = normal(loc = xtrue + ytrue, scale = .75, size = (2, 20))
 # <codecell>
 
 model = Model()
-Var = model.Var
-Data = model.Data 
 
 # <markdowncell>
 
@@ -50,8 +49,10 @@ Data = model.Data
 
 # <codecell>
 
-x = Var('x', Normal(mu = 0., tau = 1))
-y = Var('y', Normal(mu = exp(x), tau = 2.**-2), shape = (2,1))
+with model:
+    x = Normal('x', mu = 0., tau = 1)
+    y = Normal('y', mu = exp(x), tau = 2.**-2, shape = (2,1))
+    z = Normal('z', mu = x + y, tau = .75**-2, observed = zdata)
 
 # <markdowncell>
 
@@ -59,7 +60,7 @@ y = Var('y', Normal(mu = exp(x), tau = 2.**-2), shape = (2,1))
 
 # <codecell>
 
-Data(zdata, Normal(mu = x + y, tau = .75**-2))
+   
 
 # <markdowncell>
 
@@ -117,5 +118,16 @@ trace, state, t = sample(3e3, step, start)
 
 # <codecell>
 
+plot(trace[x])
+
+# <codecell>
+
+plot(trace[y][:,:,0])
+
+# <codecell>
+
 traceplot(trace)
+
+# <codecell>
+
 

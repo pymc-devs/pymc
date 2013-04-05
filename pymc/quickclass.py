@@ -1,28 +1,47 @@
 from functools import wraps
 
-def quickclass_explicit(baseclass): 
+def quickclass(baseclass):
     def decorator(fn):
-        class Clas(baseclass):
-            __doc__ = fn.__doc__
 
-            @wraps(fn)
-            def __init__(self, *args, **kwargs):  #still need to figure out how to give it the right argument names
-                properties = fn(*args, **kwargs) 
-                if properties is None: 
-                    raise TypeError("function should return a dictionary; probably forgot 'return locals()'")
-                self.__dict__.update(properties)
+        def __init__(self, *args, **kwargs):
+            self.__dict__.update(fn(*args, **kwargs))
 
+        clsdict = {
+            '__init__' : __init__, 
+            '__doc__'  : fn.__doc__}
 
-
-        Clas.__name__ = fn.__name__
-        return Clas
+        return type(fn.__name__, (baseclass,), clsdict)
     return decorator
 
-def quickclass(arg):
-    if isinstance(arg, type):
-        return quickclass_explicit(arg)
-    else: 
-        return quickclass_explicit(object)(arg)
 
+def argnames(f): 
+    return set(f.func_code.co_varnames)
 
+def kfilter(ks, d):
+    return dict((k,v) for k,v in d.iteritems() if k in ks)
 
+dicterr = TypeError("function should return a dict perhaps forgot 'return locals()'")
+def withdefaults(d): 
+    def decorator(f):
+        @wraps(f)
+        def fn(*args, **kwargs):
+            dvar = argnames(d)
+            fvar = argnames(f)
+
+            if set(kwargs) - dvar - fvar:
+                raise ValueError("not all arguments used")
+
+        
+            narg = f.func_code.co_argcount
+            largs, rargs = args[:narg], args[narg:] 
+            u = f(*largs, **kfilter(fvar, kwargs))
+            if not u :
+                raise dicterr
+            
+            r = d(*rargs, **kfilter(dvar, kwargs))
+            if not r :
+                raise dicterr
+            r.update(u)
+            return r
+        return fn
+    return decorator

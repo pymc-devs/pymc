@@ -2,7 +2,9 @@ from dist_math import *
 
 __all__ = ['Binomial', 'BetaBin', 'Bernoulli', 'Poisson',  'ConstantDist', 'ZeroInflatedPoisson']  
 
-@quickclass
+
+
+@tensordist(discrete)
 def Binomial(n, p):
     """
     Binomial log-likelihood.  The discrete probability distribution 
@@ -24,7 +26,6 @@ def Binomial(n, p):
     - :math:`Var(X)=np(1-p)`
 
     """
-    support = 'discrete'
     def logp(value):
         
         return bound(
@@ -44,7 +45,7 @@ def Binomial(n, p):
     
     return locals()
     
-@quickclass
+@tensordist(discrete)
 def BetaBin(alpha, beta, n):
     """
     Beta-binomial log-likelihood. Equivalent to binomial random
@@ -68,7 +69,6 @@ def BetaBin(alpha, beta, n):
     - :math:`Var(X)=n\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
     """
-    support = 'discrete'
     
     def logp(value):
         
@@ -91,7 +91,7 @@ def BetaBin(alpha, beta, n):
     
     return locals()
     
-@quickclass
+@tensordist(discrete)
 def Bernoulli(p):
     """Bernoulli log-likelihood
 
@@ -112,7 +112,6 @@ def Bernoulli(p):
     - :math:`Var(x)= p(1-p)`
 
     """
-    support = 'discrete' 
 
     def logp(value):
         return bound(
@@ -132,7 +131,7 @@ def Bernoulli(p):
     
     return locals()
 
-@quickclass
+@tensordist(discrete)
 def Poisson(mu):
     """
     Poisson log-likelihood.
@@ -156,7 +155,6 @@ def Poisson(mu):
        - :math:`Var(x)=\mu`
 
     """
-    support = 'discrete'
     def logp(value):
         return bound(
                 logpow(mu, value) - factln(value) - mu,
@@ -171,11 +169,12 @@ def Poisson(mu):
         x : int
             :math:`x \in {{0,1,2,...}}`
         """.format(mu)
+
+    mode = floor(mu).astype('int32')
     return locals()
 
-@quickclass
+@tensordist(discrete)
 def ConstantDist(c):
-    support = 'discrete'
     def logp(value):
         return bound(
                 0,
@@ -192,11 +191,13 @@ def ConstantDist(c):
         """.format(c)
     return locals()
 
-@quickclass
+@tensordist(discrete)
 def ZeroInflatedPoisson(theta, z):
-    support = 'discrete'
+    pois = Poisson(theta)
+    const = ConstantDist(0)
     def logp(value):
         return switch(z, 
-                      Poisson(theta).logp(value), 
-                      ConstantDist(0).logp(value))
+                      pois.logp(value), 
+                      const.logp(value))
+    mode = pois.mode
     return locals()

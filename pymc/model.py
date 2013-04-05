@@ -11,42 +11,21 @@ from theano.gof.graph import inputs
 
 import numpy as np 
 
-__all__ = ['Model', 'compilef', 'gradient', 'hessian'] 
+__all__ = ['Model', 'compilef', 'gradient', 'hessian', 'get_context'] 
 
-def Variable(name, shape, dtype, testval):
-    """
-    Creates a TensorVariable of the given shape and type
-    
-    Parameters
-    ----------
-    
-    shape : int or vector of ints        
-    dtype : str
-    
-    Examples
-    --------
-    
-    
-    """
-    shape = np.atleast_1d(shape)
-    var = t.TensorType(str(dtype), shape == 1)(name)
-    var.dshape = tuple(shape)
-    var.dsize = int(np.prod(shape))
-    var.tag.test_value = np.ones(shape, dtype)*testval
+class Context(object): 
+    def __init__(self, model): 
+        self.model = model
 
-    return var
+    def __enter__(self): 
+        contexts.append(self)
 
-val_defaults = {'discrete'   : ['mode'], 
-                'continuous' : ['median', 'mean', 'mode']}
+    def __exit__(self, type, value, traceback):
+        contexts.pop()
 
-def try_defaults(dist):
-    vals =  val_defaults[dist.support]
-
-    for val in vals: 
-        if hasattr(dist, val): 
-            return getattr(dist,val)
-    raise AttributeError(str(dist) + " does not have a value for any of: " + str(vals))
-
+contexts = []
+def get_context():
+    return contexts[-1]
 
 
 class Model(object):
@@ -56,31 +35,17 @@ class Model(object):
     """
     
     def __init__(self):
-       self.vars = []
-       self.factors = [] 
+        self.vars = []
+        self.factors = [] 
 
-    """
-    these functions add random variables
-    """
-    def Data(model, data, dist):
-        args = map(t.constant, as_iterargs(data))
-        model.factors.append(dist.logp(*args))
+        self.context = Context(self)
 
-    def Var(model, name, dist, shape = 1, dtype = None, testval = try_defaults):
-        if not dtype:
-            dtype = default_type[dist.support]
+    def __enter__(self):
+        self.context.__enter__()
+
+    def __exit__(self, type, value, traceback):
+        self.context.__exit__(type, value,traceback)
         
-        var = Variable(name, shape, dtype, get_test_val(dist, testval))
-
-        model.vars.append(var)
-        model.factors.append(dist.logp(var))
-        return var
-
-    def TransformedVar(model, name, dist, trans, shape = 1, dtype = None, testval = try_defaults): 
-        var = model.Var(trans.name + '_' + name, trans.apply(dist), shape, dtype, testval) 
-
-        return trans.backward(var), var
-
     @property
     def logp(model):
         """
@@ -117,6 +82,26 @@ class Model(object):
     def cont_vars(model):
         return typefilter(model.vars, continuous_types) 
 
+    """
+    these functions add random variables
+    """
+    def Data(model, data, dist):
+        args = map(t.constant, as_iterargs(data))
+        model.factors.append(dist.logp(*args))
+
+    def Var(model, name, dist):
+        var = dist.makevar(name)
+
+        model.vars.append(var)
+        model.factors.append(dist.logp(var))
+        return var
+
+    def TransformedVar(model, name, dist, trans): 
+        tvar = model.Var(trans.name + '_' + name, trans.apply(dist)) 
+        return trans.backward(tvar), tvar
+
+
+
 def compilef(outs, mode = None):
     return PointFunc(
                 function(inputvars(outs), outs, 
@@ -133,20 +118,6 @@ def as_iterargs(data):
         return [np.asarray(data[c]) for c in data.columns] 
     else:
         return [data]
-
-def get_test_val(dist, val):
-    try :
-        val = getattr(dist, val)
-    except TypeError:
-        pass
-
-    if hasattr(val, '__call__'):
-        val = val(dist)
-
-    if isinstance(val, t.TensorVariable):
-        return val.tag.test_value
-    else:
-        return val
 
 def makeiter(a): 
     if isinstance(a, (tuple, list)):

@@ -45,24 +45,19 @@ pi = 0.4
 y = array([(random.random()<pi) * random.poisson(theta) for i in range(n)])
 
 model = Model()
-Var = model.Var
-Data = model.Data 
+with model:
+    # Estimated occupancy
 
-# Estimated occupancy
+    p = Beta('p', 1,1)
 
-p = Var('p', Beta(1,1))
+    # Latent variable for occupancy
+    z = Bernoulli('z',p , y.shape)
 
-# Latent variable for occupancy
-z = Var('z', Bernoulli(p) , y.shape, dtype = 'int8')
+    # Estimated mean count
+    theta = Uniform('theta', 0, 100)
 
-# Estimated mean count
-theta = Var('theta', Uniform(0, 100))
-
-# Poisson likelihood
-
-
-
-Data(y, ZeroInflatedPoisson(theta, z))
+    # Poisson likelihood
+    yd = ZeroInflatedPoisson('y', theta, z, observed = y)
 
 
 point = model.test_point

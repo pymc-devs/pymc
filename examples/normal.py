@@ -10,11 +10,8 @@ data = np.random.normal(size = (3, 20))
 n = 1
 
 model = Model()
-Var = model.Var 
-Data = model.Data 
-
-
-x = Var('x', Normal(0, tau = 1.), n)
+with model: 
+    x = Normal('x', 0, 1., n)
 
 #start sampling at the MAP
 start = find_MAP(model)

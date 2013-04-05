@@ -2,7 +2,7 @@ from dist_math import *
 from continuous import *
 
 __all__ = ['AR1', 'GaussianRandomWalk']
-@quickclass
+@tensordist(continuous)
 def AR1(k, tau_e): 
     """
     Autoregressive process with 1 lag. 
@@ -14,8 +14,6 @@ def AR1(k, tau_e):
     tau_e : tensor
        precision for innovations
     """
-
-    support = 'continuous'
 
     tau = tau_e * (1-k**2)
 
@@ -32,7 +30,7 @@ def AR1(k, tau_e):
 
     return locals()
 
-@quickclass
+@tensordist(continuous)
 def GaussianRandomWalk(tau, init = Flat()):
     """
     Random Walk with Normal innovations
@@ -44,7 +42,6 @@ def GaussianRandomWalk(tau, init = Flat()):
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
-    support = 'continuous'
     
     
     def logp(x): 

@@ -3,13 +3,13 @@
 
 # <codecell>
 
+from matplotlib.pylab import * 
 import numpy as np
 from pymc import  *
 from pymc.distributions.timeseries import *
 
 from scipy.sparse import csc_matrix
 from  scipy import optimize
-
 # <markdowncell>
 
 # Asset prices have time-varying volatility (variance of day over day `returns`). In some periods, returns are highly vaiable, and in others very stable. Stochastic volatility models model this with a latent volatility variable, modeled as a stochastic process. The following model is similar to the one described in the No-U-Turn Sampler paper, Hoffman (2011) p21.
@@ -32,8 +32,6 @@ from  scipy import optimize
 # <codecell>
 
 model = Model()
-Var = model.Var
-Data = model.Data
 
 # <markdowncell>
 
@@ -41,17 +39,19 @@ Data = model.Data
 
 # <codecell>
 
-sigma, log_sigma = model.TransformedVar('sigma', Exponential(1./.02),
-                 logtransform, testval = -2.5)
-
-nu = Var('nu', Exponential(1./10))
-
 n = 400
-s = Var('s', GaussianRandomWalk(sigma**-2), shape = n)
-
 returns = np.genfromtxt("data/SP500.csv")[-n:]
 
-Data(returns, T(nu, lam = exp(-2*s)))
+with model: 
+    sigma, log_sigma = model.TransformedVar('sigma', Exponential(1./.02, testval = .1),
+                 logtransform)
+
+    nu = Exponential('nu', 1./10)
+
+    
+    s = GaussianRandomWalk('s', sigma**-2, shape = n)
+
+    r = T('r', nu, lam = exp(-2*s), observed = returns)
 
 # <markdowncell>
 

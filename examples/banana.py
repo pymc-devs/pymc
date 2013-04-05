@@ -26,15 +26,13 @@ http://arxiv.org/abs/1011.0057
 """
 N = 200
 model = Model()
-Data = model.Data 
-Var = model.Var
+with model:
 
 
-x = Var('x', Normal(0, 1))
-y = Var('y', Normal(0, 1))
-N = 200
-Data(np.zeros(N), Normal(x + y**2, 1.))
-
+    x = Normal('x', 0, 1)
+    y = Normal('y', 0, 1)
+    N = 200
+    d = Normal('d', x + y**2, 1., observed = np.zeros(N))
 
 start = model.test_point
 h = np.ones(2)*np.diag(approx_hess(model, start))[0]

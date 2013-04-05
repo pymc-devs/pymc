@@ -4,15 +4,14 @@ from pymc.distributions.multivariate import Dirichlet
 
 
 model = Model()
-Var = model.Var
-Data = model.Data 
+with model:
 
-k = 5
-a = constant(np.array([2,3.,4, 2,2]))
+    k = 5
+    a = constant(np.array([2,3.,4, 2,2]))
 
-p, p_m1 = model.TransformedVar(
-                 'p', Dirichlet(k,a), 
-                 simplextransform, shape = k - 1)
+    p, p_m1 = model.TransformedVar(
+                 'p', Dirichlet(k,a, shape = k), 
+                 simplextransform)
 
 
 H = model.d2logpc()

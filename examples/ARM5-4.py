@@ -22,11 +22,11 @@ P['1'] = 1
 Pa = np.array(P)
 
 model = Model()
+with model:
+    effects = Normal('effects', mu = 0, tau = 100.**-2, shape = len(P.columns))
+    p = sigmoid(dot(Pa, effects))
 
-effects = model.Var('effects', Normal(mu = 0, tau = 100.**-2), len(P.columns))
-p = sigmoid(dot(Pa, effects))
-
-model.Data(np.array(data.switch), Bernoulli(p))
+    s = Bernoulli('s', p, observed = np.array(data.switch))
 
 
 #move the chain to the MAP which should be a good starting point

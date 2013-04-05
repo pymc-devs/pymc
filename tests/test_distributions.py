@@ -5,6 +5,7 @@ from numpy import array, inf
 
 from scipy import integrate
 from numdifftools import Gradient
+import theano.tensor as t
 
 
 R = array([-inf, -2.1, -1, -.01, .0, .01, 1, 2.1, inf])
@@ -15,10 +16,10 @@ Unit = array([0,.001,  .1, .5, .75, .99, 1])
 Runif = array([-1,-.4, 0, .4, 1] )
 Rplusunif = array([0, .5, inf] )
 
-I = array([-1000, -3,-2, -1, 0, 1, 2,3, 1000])
-Nat = array([0,1,2,3, 5000] )
-Bool = array([0,0,1, 1])
-Natbig = array([0, 3,4,5, 1000])
+I = array([-1000, -3,-2, -1, 0, 1, 2,3, 1000], 'int64')
+Nat = array([0,1,2,3, 5000] , 'int64')
+Bool = array([0,0,1, 1], 'int64')
+Natbig = array([0, 3,4,5, 1000], 'int64')
 
 
 
@@ -46,8 +47,10 @@ def checkd(distfam, valuedomain, vardomains):
 
     m = Model()
 
-    vars = dict((v , m.Var(v, Flat(), dtype = dom.dtype)) for v,dom in vardomains.iteritems())
-    value = m.Var('value', distfam(**vars),shape = [1], testval = valuedomain[len(valuedomain)//2])
+    with m: 
+        vars = dict((v , Flat(v, dtype = dom.dtype)) for v,dom in vardomains.iteritems())
+        value = distfam('value', testval = valuedomain[len(valuedomain)//2], **vars)
+
     vardomains['value'] = np.array(valuedomain)
 
     domains = [np.array(vardomains[str(v)]) for v in m.vars]
@@ -58,8 +61,6 @@ def checkd(distfam, valuedomain, vardomains):
     
 def check_int_to_1(model, value, domains): 
     pdf = compilef(exp(model.logp))
-
-    
     
     lower, upper = np.min(domains[-1]), np.max(domains[-1])
 
@@ -70,10 +71,9 @@ def check_int_to_1(model, value, domains):
         a = a + (value.tag.test_value,)
         pt = clean_point(dict( (str(var), val) for var,val in zip(model.vars, a)))
 
-        bij = DictToVarBijection(value,0 ,  pt)
+        bij = DictToVarBijection(value,() ,  pt)
         
         pdfx = bij.mapf(pdf)
-
         
         if value.dtype in continuous_types:
             area = integrate.quad(pdfx, lower, upper, epsabs = 1e-8)[0]
@@ -87,6 +87,9 @@ def check_dlogp(model, value, domains):
 
     domains = [d[1:-1] for d in domains]
     bij = DictToArrayBijection(ArrayOrdering(model.cont_vars), model.test_point)
+
+    if not model.cont_vars:
+        return 
 
     dlp = model.dlogpc()
     dlogp = bij.mapf(model.dlogpc())

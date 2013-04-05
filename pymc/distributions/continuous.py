@@ -10,7 +10,8 @@ from dist_math import *
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta','Exponential', 'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos']
 
-@quickclass
+
+@tensordist(continuous)
 def Uniform(lower=0, upper=1):
     """
     Continuous uniform log-likelihood.
@@ -25,7 +26,6 @@ def Uniform(lower=0, upper=1):
     upper : float
         Upper limit (defaults to 1)
     """
-    support = 'continuous'
 
     def logp(value):
         return bound(
@@ -35,7 +35,6 @@ def Uniform(lower=0, upper=1):
     mean = (upper + lower)/2.
     median = mean
 
-    default = mean
 
     
     logp.__doc__ = """
@@ -49,13 +48,12 @@ def Uniform(lower=0, upper=1):
     
     return locals()
 
-@quickclass
+@tensordist(continuous)
 def Flat():
     """
     Uninformative log-likelihood that returns 0 regardless of 
     the passed value.
     """
-    support = 'continuous'
     
     def logp(value):
         return zeros_like(value)
@@ -69,7 +67,7 @@ def Flat():
         
     return locals()
 
-@quickclass
+@tensordist(continuous)
 def Normal(mu=0.0, tau=1.0):
     """
     Normal log-likelihood.
@@ -90,7 +88,6 @@ def Normal(mu=0.0, tau=1.0):
     - :math:`Var(X) = 1/\tau`
 
     """
-    support = 'continuous'
 
     def logp(value):
         
@@ -115,7 +112,7 @@ def Normal(mu=0.0, tau=1.0):
     
     return locals()
 
-@quickclass
+@tensordist(continuous)
 def Beta(alpha, beta):
     """
     Beta log-likelihood. The conjugate prior for the parameter
@@ -136,7 +133,6 @@ def Beta(alpha, beta):
     - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
     """
-    support = 'continuous'
     def logp(value):
         
         return bound(
@@ -160,7 +156,7 @@ def Beta(alpha, beta):
                   
     return locals()
 
-@quickclass
+@tensordist(continuous)
 def Exponential(lam):
     """
     Exponential distribution
@@ -172,7 +168,6 @@ def Exponential(lam):
         rate or inverse scale
     """ 
 
-    support = 'continuous'
     mean = 1./lam
     median = mean * log(2)
     mode = 0
@@ -185,7 +180,7 @@ def Exponential(lam):
     return locals()
 
 
-@quickclass
+@tensordist(continuous)
 def T(nu, mu=0, lam=1):
     """
     Non-central Student's T log-likelihood.
@@ -209,7 +204,6 @@ def T(nu, mu=0, lam=1):
     lam : float
         Scale parameter (defaults to 1)
     """
-    support = 'continuous'
     
     def logp(value):
         return bound(
@@ -232,7 +226,7 @@ def T(nu, mu=0, lam=1):
     
     return locals()
     
-@quickclass
+@tensordist(continuous)
 def Cauchy(alpha, beta):
     """
     Cauchy log-likelihood. The Cauchy distribution is also known as the
@@ -252,7 +246,6 @@ def Cauchy(alpha, beta):
     Mode and median are at alpha.
 
     """
-    support = 'continuous' 
     def logp(value):
         return bound(
                   -log(pi) -log(beta) - log( 1 + ((value-alpha) / beta) ** 2 ),
@@ -268,7 +261,7 @@ def Cauchy(alpha, beta):
         """.format(alpha, beta)
     return locals()
     
-@quickclass
+@tensordist(continuous)
 def Gamma(alpha, beta):
     """
     Gamma log-likelihood.
@@ -293,10 +286,9 @@ def Gamma(alpha, beta):
     - :math:`Var(X) = \frac{\alpha}{\beta^2}`
 
     """
-    support = 'continuous' 
 
     mean = alpha/beta
-    median = max((alpha -1)/beta, 0)
+    median = maximum((alpha -1)/beta, 0)
     variance = alpha / beta**2
 
     def logp(value):
@@ -319,9 +311,8 @@ def Gamma(alpha, beta):
     return locals()
 
 
-@quickclass
+@tensordist(continuous)
 def Bound(dist, lower = -inf, upper = inf):
-    support = dist.support
     def logp(value):
         return bound(
                 dist.logp(value),
