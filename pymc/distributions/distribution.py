@@ -74,3 +74,12 @@ def discrete(shape = (), dtype = 'int64', testval = None):
     type = TensorType(dtype, shape)
     default_testvals =['mode']
     return locals()
+
+def arbitrary(shape = (), dtype = 'float64', testval = 0):
+    shape = np.atleast_1d(shape)
+    type = TensorType(dtype, shape)
+    return locals()
+
+@tensordist(arbitrary)
+def DensityDist(logp):
+    return locals()
