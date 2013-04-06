@@ -108,6 +108,9 @@ class Model(Context):
         tvar = model.Var(trans.name + '_' + name, trans.apply(dist)) 
         return trans.backward(tvar), tvar
 
+    def AddPotential(model, potential):
+        model.factors.append(potential)
+
 withmodel = withcontext(Model, 'model')
 
 
