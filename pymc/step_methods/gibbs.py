@@ -19,6 +19,7 @@ class ElemwiseCategoricalStep(ArrayStep):
     
     """
     #TODO: It would be great to come up with a way to make ElemwiseCategoricalStep  more general (handling more complex elementwise variables)
+    @withmodel
     def __init__(self, model, var, values):
         self.sh = ones(var.dshape, var.dtype)
         self.values = values

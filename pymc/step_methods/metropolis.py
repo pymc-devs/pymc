@@ -14,6 +14,7 @@ __all__ = ['Metropolis']
 
 # TODO Implement tuning for Metropolis step
 class Metropolis(ArrayStep):
+    @withmodel
     def __init__(self, model, vars, C, scaling=.25):
 
         self.potential = quad_potential(C*scaling, False)

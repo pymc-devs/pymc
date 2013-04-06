@@ -20,6 +20,7 @@ def unif(step_size, elow = .85, ehigh = 1.15):
 
 
 class HamiltonianMC(ArrayStep):
+    @withmodel
     def __init__(self, model, vars, C, step_scale = .25, path_length = 2., is_cov = False, step_rand = unif):
         """
         Parameters

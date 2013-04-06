@@ -11,6 +11,7 @@ from ..core import *
 __all__ = ['find_MAP', 'scipyminimize']
 
 
+@withmodel
 def find_MAP(model, start = None, vars=None, fmin = optimize.fmin_bfgs, return_raw = False, disp = False, *args, **kwargs):
     """
     Sets state to the local maximum a posteriori point given a model.
@@ -36,7 +37,7 @@ def find_MAP(model, start = None, vars=None, fmin = optimize.fmin_bfgs, return_r
     if vars is None: 
         vars = model.cont_vars
         
-    start = clean_point(start)
+    start = Point(start)
     bij = DictToArrayBijection(ArrayOrdering(vars), start)
     
     logp = bij.mapf(model.logpc)

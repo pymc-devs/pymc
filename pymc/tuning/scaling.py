@@ -8,6 +8,8 @@ import numpy as np
 from ..core import *
 
 __all__ = ['approx_hess']
+
+@withmodel
 def approx_hess(model, start, vars=None):
     """
     Returns an approximation of the Hessian at the current chain location.
@@ -22,7 +24,7 @@ def approx_hess(model, start, vars=None):
     if vars is None :
         vars = model.cont_vars
 
-    start = clean_point(start)
+    start = Point(start)
 
     bij = DictToArrayBijection(ArrayOrdering(vars), start)
     dlogp = bij.mapf(model.dlogpc(vars))

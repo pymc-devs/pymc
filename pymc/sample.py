@@ -2,10 +2,12 @@ from point import *
 from trace import NpTrace, MultiTrace
 import multiprocessing as mp
 from time import time
+from core import *
 
 __all__ = ['sample', 'psample']
 
-def sample(draws, step, start = None, trace = None, state = None): 
+@withmodel
+def sample(model, draws, step, start = None, trace = None, vars = None, state = None): 
     """
     Draw a number of samples using the given step method. 
     Multiple step methods supported via compound step method 
@@ -33,10 +35,13 @@ def sample(draws, step, start = None, trace = None, state = None):
     """
     if start is None: 
         start = trace.point(-1)
-    point = clean_point(start)
+    point = Point(start)
+
+    if vars is None: 
+        vars = model.vars
 
     if trace is None: 
-        trace = NpTrace(max(draws, 10000))
+        trace = NpTrace(vars)
     
 
     # Keep track of sampling time  
@@ -51,7 +56,8 @@ def argsample(args):
     """ defined at top level so it can be pickled"""
     return sample(*args)
   
-def psample(draws, step, start, mtrace = None, state = None, threads = None):
+@withmodel
+def psample(model, draws, step, start, mtrace = None, state = None, threads = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
 
@@ -69,7 +75,7 @@ def psample(draws, step, start, mtrace = None, state = None, threads = None):
 
     p = mp.Pool(threads)
 
-    argset = zip([draws]*threads, [step]*threads, start, mtrace.traces, state)
+    argset = zip([model] *threads, [draws]*threads, [step]*threads, start, mtrace.traces, state)
     
     # Keep track of sampling time  
     tstart = time() 

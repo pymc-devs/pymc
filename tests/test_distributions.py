@@ -69,7 +69,7 @@ def check_int_to_1(model, value, domains):
 
     for a in its.product(*domains):
         a = a + (value.tag.test_value,)
-        pt = clean_point(dict( (str(var), val) for var,val in zip(model.vars, a)))
+        pt = Point(dict( (str(var), val) for var,val in zip(model.vars, a)))
 
         bij = DictToVarBijection(value,() ,  pt)
         
@@ -99,6 +99,6 @@ def check_dlogp(model, value, domains):
     ndlogp = Gradient(logp)
 
     for a in its.product(*domains):
-        pt = clean_point(dict( (str(var), val) for var,val in zip(model.vars, a)))
+        pt = Point(dict( (str(var), val) for var,val in zip(model.vars, a)))
 
         pt = bij.map(pt)

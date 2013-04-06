@@ -10,42 +10,50 @@ from theano import theano, tensor as t, function
 from theano.gof.graph import inputs
 
 import numpy as np 
+from functools import wraps
 
-__all__ = ['Model', 'compilef', 'gradient', 'hessian', 'get_context'] 
+__all__ = ['Model', 'compilef', 'gradient', 'hessian', 'withmodel'] 
+
+
 
 class Context(object): 
-    def __init__(self, model): 
-        self.model = model
-
     def __enter__(self): 
-        contexts.append(self)
+        type(self).contexts.append(self)
+        return self
 
-    def __exit__(self, type, value, traceback):
-        contexts.pop()
+    def __exit__(self, typ, value, traceback):
+        type(self).contexts.pop()
 
-contexts = []
-def get_context():
-    return contexts[-1]
+def withcontext(contexttype, arg):
+    def decorator(fn):
+        n = list(fn.func_code.co_varnames).index(arg)
+
+        @wraps(fn)
+        def nfn(*args, **kwargs):
+            if not (len(args) > n and isinstance(arg[n], contexttype)):
+                context = contexttype.get_context()
+                args = args[:n] + (context,) + args[n:]
+            return fn(*args,**kwargs) 
+
+        return nfn 
+    return decorator
 
 
-class Model(object):
+class Model(Context):
     """
     Base class for encapsulation of the variables and 
     likelihood factors of a model.
     """
-    
+
+    contexts = []
+    @staticmethod
+    def get_context():
+        return Model.contexts[-1]
+
     def __init__(self):
         self.vars = []
-        self.factors = [] 
-
-        self.context = Context(self)
-
-    def __enter__(self):
-        self.context.__enter__()
-
-    def __exit__(self, type, value, traceback):
-        self.context.__exit__(type, value,traceback)
-        
+        self.factors = []
+    
     @property
     def logp(model):
         """
@@ -100,6 +108,7 @@ class Model(object):
         tvar = model.Var(trans.name + '_' + name, trans.apply(dist)) 
         return trans.backward(tvar), tvar
 
+withmodel = withcontext(Model, 'model')
 
 
 def compilef(outs, mode = None):

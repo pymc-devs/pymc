@@ -8,7 +8,7 @@ class Distribution(object):
         if args and isinstance(args[0],basestring):
             
             name, args = args[0], args[1:]
-            model = get_context().model 
+            model = Model.get_context()
 
             if 'observed' in kwargs:
                 obs = kwargs.pop('observed')
