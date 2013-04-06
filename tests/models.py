@@ -10,14 +10,22 @@ def simple_init():
 
 
 def simple_model():
-    model = Model()
-
     mu = -2.1
     tau = 1.3
-    with model:
+    with Model() as model:
         x = Normal('x', mu,tau, testval = .1)
 
     return model.test_point, model, (mu, tau**-1)
+
+def simple_2model():
+    mu = -2.1
+    tau = 1.3
+    p = .4
+    with Model() as model:
+        x = Normal('x', mu,tau, testval = .1)
+        y = Bernoulli('y', p)
+
+    return model.test_point, model
 
 def mv_simple():
     mu = np.array([-.1,.5, 1.1])
@@ -28,9 +36,8 @@ def mv_simple():
 
     tau = np.dot(p,p.T) 
 
-    model = pm.Model()
 
-    with model:
+    with pm.Model() as model:
         x = pm.multivariate.Normal('x', pm.constant(mu),pm.constant(tau), shape = 3, testval = np.array([.1, 1., .8]))
 
     H = tau

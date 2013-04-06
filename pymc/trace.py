@@ -17,7 +17,7 @@ class NpTrace(object):
         self.vars = map(str,vars)
         self.samples = dict((v, ListArray()) for v in self.vars)
     
-    def __add__(self, point):
+    def record(self, point):
         """
         records the position of a chain at a certain point in time
         """
@@ -26,7 +26,10 @@ class NpTrace(object):
         return self
         
     def __getitem__(self, key): 
-        return self.samples[str(key)].value
+        try : 
+            return self.point(key)
+        except ValueError: 
+            return self.samples[str(key)].value
 
     def point(self, index):
         return Point((k, v.value[index]) for (k,v) in self.samples.iteritems())

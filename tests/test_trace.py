@@ -1,5 +1,6 @@
 from checks import *
-from models import simple_init
+from models import *
+import pymc as pm
 
 # Test if multiprocessing is available
 import multiprocessing
@@ -57,12 +58,15 @@ def check_multi_trace(trace, n, step, start):
 
 
 def test_get_point():
-    from pymc import *
-    x = NpTrace(10)
-    p = {'a' : np.ones(5), 'm' : np.zeros((2,2))}
-    x += p
-    x += p
-    x.point(0)
+
+    p, model = simple_2model()
+    p2 = p.copy()
+    p2['x'] *= 2.
+
+    x = pm.NpTrace(model.vars)
+    x.record(p)
+    x.record(p2)
+    assert x.point(1) == x[1] 
 
 
 

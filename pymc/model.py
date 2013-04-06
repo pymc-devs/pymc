@@ -84,7 +84,7 @@ class Model(Context):
 
     @property
     def test_point(self):
-        return dict( (str(var), var.tag.test_value) for var in self.vars)
+        return Point( (var, var.tag.test_value) for var in self.vars)
 
     @property
     def cont_vars(model):

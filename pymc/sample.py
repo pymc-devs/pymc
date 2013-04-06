@@ -48,7 +48,7 @@ def sample(model, draws, step, start = None, trace = None, vars = None, state = 
     tstart = time() 
     for _ in xrange(int(draws)):
         state, point = step.step(state, point)
-        trace = trace + point
+        trace = trace.record(point)
 
     return trace, state, time() - tstart
 
