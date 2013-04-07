@@ -8,7 +8,7 @@ nodes in PyMC.
 
 from dist_math import * 
 
-__all__ = ['Uniform', 'Flat', 'Normal', 'Beta','Exponential', 'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos']
+__all__ = ['Uniform', 'Flat', 'Normal', 'Beta','Exponential', 'Laplace', 'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos']
 
 
 @tensordist(continuous)
@@ -175,10 +175,33 @@ def Exponential(lam):
     variance = lam**-2
 
     def logp(value):
-        return log(lam) - lam*value
+        return bound(log(lam) - lam*value,
+                value > 0,
+                lam > 0)
 
     return locals()
 
+@tensordist(continuous)
+def Laplace(mu, b):
+    """
+    Laplace distribution
+    
+    Parameters
+    ----------
+    mu : float 
+        mean
+    b : float
+        scale
+    """ 
+
+    mean = median = mode = mu
+
+    variance = 2*b**2
+
+    def logp(value):
+        return -log(2*b) - abs(value - mu)/b
+
+    return locals()
 
 @tensordist(continuous)
 def T(nu, mu=0, lam=1):
