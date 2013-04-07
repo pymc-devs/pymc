@@ -1,3 +1,4 @@
+from pylab import * 
 from pymc import *
 import numpy as np 
 import theano 
@@ -25,14 +26,13 @@ with model:
 
     trace = sample(1e3, step, start)
 
-from pylab import * 
 subplot(2,2,1)
 plot(trace[x][:,0,0])
 subplot(2,2,2)
 hist(trace[x][:,0,0])
 
 subplot(2,2,3)
-plot(trace[x])
+plot(trace[x][:,1,0])
 subplot(2,2,4)
-hist(trace[x][:,0,0])
+hist(trace[x][:,1,0])
 show()
