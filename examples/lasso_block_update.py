@@ -10,7 +10,7 @@
 # First we generate some fake data.
 
 # <codecell>
-
+from matplotlib.pylab import *
 from pymc import * 
 import numpy as np 
 
