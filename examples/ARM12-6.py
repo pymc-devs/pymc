@@ -46,19 +46,19 @@ with model:
 
     lr = Normal('lr', floor*floor_m + means[group], sd**-2., observed = lradon)
 
-start = {'groupmean' : obs_means.mean(),
+    start = {'groupmean' : obs_means.mean(),
          'groupsd' : obs_means.std(), 
          'sd' : data.groupby('group').lradon.std().mean(), 
          'means' : np.array(obs_means),
          'floor_m' : 0.,
          }
 
-start = find_MAP(model, start, [groupmean,sd, floor_m])
-H = model.d2logpc()
-h = np.diag(H(start))
+    start = find_MAP(start, [groupmean,sd, floor_m])
+    H = model.d2logpc()
+    h = np.diag(H(start))
 
-step = HamiltonianMC(model, model.vars, h)
+    step = HamiltonianMC(model.vars, h)
 
-trace, state, t = sample(3000, step, start)
+    trace = sample(3000, step, start)
 
-print  " took: ", t
+

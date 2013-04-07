@@ -21,7 +21,7 @@ def unif(step_size, elow = .85, ehigh = 1.15):
 
 class HamiltonianMC(ArrayStep):
     @withmodel
-    def __init__(self, model, vars, C, step_scale = .25, path_length = 2., is_cov = False, step_rand = unif):
+    def __init__(self, model, vars, C, step_scale = .25, path_length = 2., is_cov = False, step_rand = unif, state = None):
         """
         Parameters
         ----------
@@ -46,14 +46,16 @@ class HamiltonianMC(ArrayStep):
         self.path_length = path_length
         self.step_rand = step_rand
 
+        if state is None:
+            state = SamplerHist()
+        self.state = state
+
         ArrayStep.__init__(self, 
                 vars, [model.logpc, model.dlogpc(vars)]
                 )
 
-    def astep(self, state, q0, logp, dlogp):
+    def astep(self, q0, logp, dlogp):
         
-        if state is None:
-            state = SamplerHist()
             
         #randomize step size
         e = self.step_rand(self.step_size) 
@@ -77,7 +79,8 @@ class HamiltonianMC(ArrayStep):
             
         # - H(q*, p*) + H(q, p) = -H(q, p) + H(q0, p0) = -(- logp(q) + K(p)) + (-logp(q0) + K(p0))
         mr = (-logp(q0)) + self.potential.energy(p0) - ((-logp(q))  + self.potential.energy(p))
-        state.metrops.append(mr)
+
+        self.state.metrops.append(mr)
         
-        return state, metrop_select(mr, q, q0)
+        return metrop_select(mr, q, q0)
         

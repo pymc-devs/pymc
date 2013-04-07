@@ -13,14 +13,12 @@ model = Model()
 with model: 
     x = Normal('x', 0, 1., n)
 
-#start sampling at the MAP
-start = find_MAP(model)
-h = approx_hess(model, start) #find a good orientation using the hessian at the MAP
+    #start sampling at the MAP
+    start = find_MAP()
+    h = approx_hess(start) #find a good orientation using the hessian at the MAP
 
-#step_method = split_hmc_step(model, model.vars, hess, chain, hmc_cov)
-step = HamiltonianMC(model, model.vars, h, is_cov = False)
+    step = HamiltonianMC(model.vars, h, is_cov = False)
 
-ndraw = 3e3
-history, state, t = sample(ndraw, step, start)
+    ndraw = 3e3
+    trace = sample(ndraw, step, start)
 
-print "took :", t

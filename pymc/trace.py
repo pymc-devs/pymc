@@ -14,14 +14,15 @@ class NpTrace(object):
     """
     def __init__(self, vars):
         self.f = compilef(vars)
-        self.vars = map(str,vars)
-        self.samples = dict((v, ListArray()) for v in self.vars)
+        self.vars = vars
+        self.varnames =map(str, vars)
+        self.samples = dict((v, ListArray()) for v in self.varnames)
     
     def record(self, point):
         """
         records the position of a chain at a certain point in time
         """
-        for var, value in zip(self.vars, self.f(point)):
+        for var, value in zip(self.varnames, self.f(point)):
             self.samples[var].append(value)
         return self
         
@@ -29,7 +30,10 @@ class NpTrace(object):
         try : 
             return self.point(key)
         except ValueError: 
-            return self.samples[str(key)].value
+            pass
+        except TypeError:
+            pass
+        return self.samples[str(key)].value
 
     def point(self, index):
         return Point((k, v.value[index]) for (k,v) in self.samples.iteritems())
@@ -49,8 +53,13 @@ class ListArray(object):
         
 
 class MultiTrace(object): 
-    def __init__(self, traces): 
-        self.traces = traces 
+    def __init__(self, traces, vars = None): 
+        try :
+            self.traces = list(traces)
+        except TypeError: 
+            if vars is None:
+                raise ValueError("vars can't be None if trace count specified")
+            self.traces = [NpTrace(vars) for _ in xrange(traces)]
 
     def __getitem__(self, key): 
         return [h[key] for h in self.traces]
@@ -58,8 +67,7 @@ class MultiTrace(object):
         return [h.point(index) for h in self.traces]
 
     def combined(self):
-        h = NpTrace()
+        h = NpTrace(self.traces[0].vars)
         for k in self.traces[0].samples: 
-            h.samples[k] = np.concatenate([s[k] for s in self.traces])
-            h.n = h.samples[k].shape[0]
+            h.samples[k].vals = [s[k] for s in self.traces]
         return h

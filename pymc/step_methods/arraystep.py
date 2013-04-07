@@ -11,15 +11,15 @@ class ArrayStep(object):
         self.fs = fs
         self.allvars = allvars
         
-    def step(self, state, point):
+    def step(self, point):
         bij = DictToArrayBijection(self.ordering, point)
         
         inputs = map(bij.mapf, self.fs) 
         if self.allvars:
             inputs += [point]
 
-        state, apoint = self.astep(state, bij.map(point), *inputs)
-        return state, bij.rmap(apoint)
+        apoint = self.astep(bij.map(point), *inputs)
+        return bij.rmap(apoint)
 
 def metrop_select(mr, q, q0):
     if isfinite(mr) and log(uniform()) < mr:

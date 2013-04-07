@@ -25,8 +25,7 @@ Girolami and B. Calderhead
 http://arxiv.org/abs/1011.0057
 """
 N = 200
-model = Model()
-with model:
+with Model() as model:
 
 
     x = Normal('x', 0, 1)
@@ -34,17 +33,16 @@ with model:
     N = 200
     d = Normal('d', x + y**2, 1., observed = np.zeros(N))
 
-start = model.test_point
-h = np.ones(2)*np.diag(approx_hess(model, start))[0]
+    start = model.test_point
+    h = np.ones(2)*np.diag(approx_hess(start))[0]
 
 
-step = HamiltonianMC(model, model.vars, h, path_length = 4.)
+    step = HamiltonianMC(model.vars, h, path_length = 4.)
 
-history, state, t = sample(3e3, step, start)
+    trace = sample(3e3, step, start)
 
-print "took :", t
 pl.figure()
-pl.hexbin(history['x'], history['y'])
+pl.hexbin(trace['x'], trace['y'])
 
 
 

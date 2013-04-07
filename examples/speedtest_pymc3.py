@@ -46,16 +46,16 @@ y = array([(random.random()<pi) * random.poisson(theta) for i in range(n)])
 
 model = Model()
 with model:
-# Estimated occupancy
+    # Estimated occupancy
     p = Beta('b', 1,1)
 
-# Latent variable for occupancy
+    # Latent variable for occupancy
     z = Bernoulli('z', p , shape = y.shape)
 
-# Estimated mean count
+    # Estimated mean count
     theta = Uniform('theta', 0, 100)
 
-# Poisson likelihood
+    # Poisson likelihood
     z = ZeroInflatedPoisson('z', theta, z)
 
 

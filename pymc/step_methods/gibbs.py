@@ -27,9 +27,9 @@ class ElemwiseCategoricalStep(ArrayStep):
         
         ArrayStep.__init__(self, [var], [elemwise_logp(model, var)])
     
-    def astep(self, state, q, logp):
+    def astep(self, q, logp):
         p = array([logp(v * self.sh) for v in self.values])
-        return state, categorical(p, self.var.dshape)
+        return categorical(p, self.var.dshape)
 
 
 

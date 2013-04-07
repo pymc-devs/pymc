@@ -14,11 +14,11 @@ with model:
                  simplextransform)
 
 
-H = model.d2logpc()
+    H = model.d2logpc()
 
-s = find_MAP(model)
+    s = find_MAP()
 
-step = HamiltonianMC(model, model.vars, H(s))
-trace, _,t = sample(1000, step, s) 
+    step = HamiltonianMC(model.vars, H(s))
+    trace = sample(1000, step, s) 
 
 

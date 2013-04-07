@@ -30,11 +30,12 @@ with model:
 
     o = Bernoulli('o', p, observed = outcomes)
 
-#move the chain to the MAP which should be a good starting point
-start = find_MAP(model)
-h = np.diag(approx_hess(model, start)) #find a good orientation using the hessian at the MAP
+    
 
-step = HamiltonianMC(model, model.vars, h) 
+    #move the chain to the MAP which should be a good starting point
+    start = find_MAP()
+    h = np.diag(approx_hess(start)) #find a good orientation using the hessian at the MAP
 
-history, state, t = sample(3e2, step, start)
-print "took :", t
+    step = HamiltonianMC(model, model.vars, h) 
+
+    trace = psample(3e2, step, start)

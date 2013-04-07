@@ -24,13 +24,13 @@ class Context(object):
     def __exit__(self, typ, value, traceback):
         type(self).contexts.pop()
 
-def withcontext(contexttype, arg):
+def withcontext(contexttype, argname):
     def decorator(fn):
-        n = list(fn.func_code.co_varnames).index(arg)
+        n = list(fn.func_code.co_varnames).index(argname)
 
         @wraps(fn)
         def nfn(*args, **kwargs):
-            if not (len(args) > n and isinstance(arg[n], contexttype)):
+            if not (len(args) > n and isinstance(args[n], contexttype)):
                 context = contexttype.get_context()
                 args = args[:n] + (context,) + args[n:]
             return fn(*args,**kwargs) 
@@ -49,6 +49,12 @@ class Model(Context):
     @staticmethod
     def get_context():
         return Model.contexts[-1]
+        """
+        try:
+            return Model.contexts[-1]
+        except IndexError:
+            raise TypeError("No model context on context stack")
+        """
 
     def __init__(self):
         self.vars = []

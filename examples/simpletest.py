@@ -18,23 +18,21 @@ with model:
 
     d = Normal('data', mu = x, tau = .75**-2, observed = data)
 
-start = model.test_point
+    start = model.test_point
 
-h = approx_hess(model, start)
-step = HamiltonianMC(model, model.vars, h)
+    h = approx_hess(start)
+    step = HamiltonianMC(model.vars, h)
 
-history,state, t = sample(1e3, step, start)
-
-print "took :", t
+    trace = sample(1e3, step, start)
 
 from pylab import * 
 subplot(2,2,1)
-plot(history['x'][:,0,0])
+plot(trace[x][:,0,0])
 subplot(2,2,2)
-hist(history['x'][:,0,0])
+hist(trace[x][:,0,0])
 
 subplot(2,2,3)
-plot(history['z'])
+plot(trace[x])
 subplot(2,2,4)
-hist(history['x'][:,0,0])
+hist(trace[x][:,0,0])
 show()

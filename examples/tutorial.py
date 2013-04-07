@@ -35,7 +35,6 @@ zdata = normal(loc = xtrue + ytrue, scale = .75, size = (2, 20))
 
 # <codecell>
 
-model = Model()
 
 # <markdowncell>
 
@@ -49,18 +48,15 @@ model = Model()
 
 # <codecell>
 
-with model:
+with Model() as model:
     x = Normal('x', mu = 0., tau = 1)
     y = Normal('y', mu = exp(x), tau = 2.**-2, shape = (2,1))
+    
     z = Normal('z', mu = x + y, tau = .75**-2, observed = zdata)
 
 # <markdowncell>
 
 # The `Data` method adds an observed random variable to the model. It functions similar to `Var`. `Data` takes the observed data, and the distribution for that data. 
-
-# <codecell>
-
-   
 
 # <markdowncell>
 
@@ -70,7 +66,8 @@ with model:
 
 # <codecell>
 
-start = find_MAP(model)
+with model:
+    start = find_MAP()
 
 # <markdowncell>
 
@@ -88,7 +85,8 @@ start
 
 # <codecell>
 
-h = approx_hess(model, start)
+with model:
+    h = approx_hess(start)
 
 # <markdowncell>
 
@@ -96,7 +94,8 @@ h = approx_hess(model, start)
 
 # <codecell>
 
-step = HamiltonianMC(model, model.vars, h)
+with model:
+    step = HamiltonianMC(model.vars, h)
 
 # <markdowncell>
 
@@ -105,7 +104,8 @@ step = HamiltonianMC(model, model.vars, h)
 
 # <codecell>
 
-trace, state, t = sample(3e3, step, start)
+with model: 
+    trace = sample(3e3, step, start)
 
 # <markdowncell>
 
@@ -122,12 +122,9 @@ plot(trace[x])
 
 # <codecell>
 
-plot(trace[y][:,:,0])
+trace[x]
 
 # <codecell>
 
 traceplot(trace)
-
-# <codecell>
-
 

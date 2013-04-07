@@ -3,13 +3,14 @@
 
 # <codecell>
 
-from matplotlib.pylab import * 
+from matplotlib.pylab import *
 import numpy as np
 from pymc import  *
 from pymc.distributions.timeseries import *
 
 from scipy.sparse import csc_matrix
 from  scipy import optimize
+
 # <markdowncell>
 
 # Asset prices have time-varying volatility (variance of day over day `returns`). In some periods, returns are highly vaiable, and in others very stable. Stochastic volatility models model this with a latent volatility variable, modeled as a stochastic process. The following model is similar to the one described in the No-U-Turn Sampler paper, Hoffman (2011) p21.
@@ -78,7 +79,8 @@ def hessian(point, nusd):
 
 # <codecell>
 
-start = find_MAP(model, vars = [s], fmin = optimize.fmin_l_bfgs_b)
+with model:
+    start = find_MAP(model, vars = [s], fmin = optimize.fmin_l_bfgs_b)
 
 # <markdowncell>
 
@@ -86,12 +88,13 @@ start = find_MAP(model, vars = [s], fmin = optimize.fmin_l_bfgs_b)
 
 # <codecell>
 
-step = HamiltonianMC(model, model.vars, hessian(start, 6))
-trace, _,t = sample(200, step, start)
+with model: 
+    step = HamiltonianMC(model.vars, hessian(start, 6))
+    trace = sample(200, step, start) 
 
-start2 = trace.point(-1)
-step = HamiltonianMC(model, model.vars, hessian(start2, 6), path_length = 4.)
-trace, _,t = sample(8000, step, trace = trace)
+    start2 = trace.point(-1)
+    step = HamiltonianMC(model.vars, hessian(start2, 6), path_length = 4.)
+    trace = sample(8000, step, trace = trace) 
 
 # <codecell>
 

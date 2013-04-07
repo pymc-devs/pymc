@@ -49,10 +49,9 @@ with model:
 
                  
 
-start = find_MAP(model)
-h = approx_hess(model, start) #find a good orientation using the hessian at the MAP
+    start = find_MAP()
+    h = approx_hess(start) #find a good orientation using the hessian at the MAP
 
-step = HamiltonianMC(model, model.vars, h, is_cov = False)
+    step = HamiltonianMC(model.vars, h, is_cov = False)
 
-
-print "took :", sample(3e3, step, start)
+    trace = sample(3e3, step, start)
