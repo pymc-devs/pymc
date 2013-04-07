@@ -38,4 +38,4 @@ with model:
 
     step = HamiltonianMC(model, model.vars, h) 
 
-    trace = psample(3e2, step, start)
+    trace = sample(3e2, step, start)
