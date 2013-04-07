@@ -17,7 +17,7 @@ class Metropolis(ArrayStep):
     @withmodel
     def __init__(self, model, vars, C, scaling=.25, is_cov = False):
 
-        self.potential = quad_potential(C, is_cov)
+        self.potential = quad_potential(C, not is_cov)
         self.scaling = scaling
         super(Metropolis,self).__init__(vars, [model.logpc])
         
