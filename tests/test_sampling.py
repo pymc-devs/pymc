@@ -10,7 +10,7 @@ except:
     test_parallel = False
 
 def test_sample():
-    start, step,_ = simple_init()
+    model, start, step,_ = simple_init()
 
     test_samplers = [sample]
     if test_parallel:
@@ -18,7 +18,7 @@ def test_sample():
 
     for     samplr  in test_samplers: 
         for n       in [0, 10, 1000]:
-            yield samplr, n, step, start
+            yield samplr, model, n, step, start
 
 
 

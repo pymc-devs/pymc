@@ -26,7 +26,7 @@ def test_step_continuous():
     for st in steps:
         for (var, stat, val, bound) in check:
             np.random.seed(1)
-            h, _, _ = sample(8000, st, start)
+            h = sample(model, 8000, st, start)
 
             yield check_stat,repr(st), h, var, stat, val, bound  
 

@@ -6,7 +6,7 @@ def simple_init():
     start, model, moments = simple_model()
 
     step = Metropolis(model, model.vars, np.diag([1.]))
-    return start, step, moments
+    return model, start, step, moments
 
 
 def simple_model():
@@ -22,8 +22,8 @@ def simple_2model():
     tau = 1.3
     p = .4
     with Model() as model:
-        x = Normal('x', mu,tau, testval = .1)
-        y = Bernoulli('y', p)
+        x = pm.Normal('x', mu,tau, testval = .1)
+        y = pm.Bernoulli('y', p)
 
     return model.test_point, model
 

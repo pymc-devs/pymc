@@ -10,11 +10,10 @@ try:
 except:
     test_parallel = False
 
-def check_trace(trace, n, step, start):
-
+def check_trace(model, trace, n, step, start):
     #try using a trace object a few times
     for i in range(2):
-        trace, _, _ = sample(n, step, start, trace)
+        trace = sample(model, n, step, start, trace)
 
         for (var, val) in start.iteritems():
 
@@ -22,32 +21,33 @@ def check_trace(trace, n, step, start):
 
 
 def test_trace():
-    start, step,_  = simple_init()
+    model, start, step,_  = simple_init()
 
     for     h in [pm.NpTrace]:
         for n in [20, 1000]:
-            trace = h()
+            trace = h(model.vars)
 
-            yield check_trace, trace, n, step, start
+            yield check_trace, model, trace, n, step, start
 
 def test_multitrace():
     if not test_parallel:
         return
-    start, step,_  = simple_init()
+    model, start, step,_  = simple_init()
     trace = None
     for n in [20, 1000]:
 
-        yield check_multi_trace, trace, n, step, start
+        yield check_multi_trace, model, trace, n, step, start
 
 
 
-def check_multi_trace(trace, n, step, start):
+def check_multi_trace(model, trace, n, step, start):
 
-    #try using a trace object a few times
     for i in range(2):
-        trace, _, _ = psample(n, step, start, trace)
+        trace = psample(model, n, step, start, trace)
+        
 
         for (var, val) in start.iteritems():
+            print [len(tr.samples[var].vals) for tr in trace.traces]
             for t in trace[var]:
                 assert np.shape(t) == (n*(i+1),) + np.shape(val)
 
