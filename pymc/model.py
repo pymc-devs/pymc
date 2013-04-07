@@ -48,13 +48,10 @@ class Model(Context):
     contexts = []
     @staticmethod
     def get_context():
-        return Model.contexts[-1]
-        """
         try:
             return Model.contexts[-1]
         except IndexError:
             raise TypeError("No model context on context stack")
-        """
 
     def __init__(self):
         self.vars = []
