@@ -652,7 +652,8 @@ class Stochastic(StochasticBase):
                 self._mask = value.mask
 
                 # Set to value of mean of observed data
-                #value.fill_value = value.mean()
+                if value.fill_value=='?':
+                    value.fill_value = value.mean()
                 value = value.filled()
 
                 # Set observed flag to False, so that missing values will update
