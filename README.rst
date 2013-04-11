@@ -9,6 +9,7 @@ Introduction
 :Copyright: This document has been placed in the public domain.
 :License: PyMC is released under the Academic Free License.
 
+.. image:: https://secure.travis-ci.org/pymc-devs/pymc.png
 
 Purpose
 =======
