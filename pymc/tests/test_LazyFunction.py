@@ -5,105 +5,109 @@ from pymc import stochastic, observed, deterministic, ZeroProbability
 
 verbose = False
 
-@stochastic
-def A(value=1.):
-    return -10.*value
+class test_LazyFunction(TestCase):
 
-# If normcoef is positive, there will be an uncaught ZeroProbability
-normcoef = 1.
+    def test_cached(self):
 
-# B's value is a random function of A.
-@deterministic(verbose=verbose)
-def B(A=A):
-    # print 'B computing'
-    return A + normcoef * normal()
+        @stochastic
+        def A(value=1.):
+            return -10.*value
 
-# Guarantee that initial state is OK
-while B.value<0.:
-    @deterministic(verbose=verbose)
-    def B(A=A):
-        # print 'B computing'
-        return A + normcoef * normal()
+        # If normcoef is positive, there will be an uncaught ZeroProbability
+        normcoef = 1.
 
-@observed(verbose=verbose)
-def C(value = 0., B=(A,B)):
-    if B[0]<0.:
-         return -np.Inf
-    else:
-         return 0.
+        # B's value is a random function of A.
+        @deterministic(verbose=verbose)
+        def B(A=A):
+            # print 'B computing'
+            return A + normcoef * normal()
 
-L = C._logp
-C.logp
-acc = True
+        # Guarantee that initial state is OK
+        while B.value<0.:
+            @deterministic(verbose=verbose)
+            def B(A=A):
+                # print 'B computing'
+                return A + normcoef * normal()
 
-for i in range(1000):
+        @observed(verbose=verbose)
+        def C(value = 0., B=(A,B)):
+            if B[0]<0.:
+                 return -np.Inf
+            else:
+                 return 0.
 
-    # Record last values
-    last_B_value = B.value
-    last_A_count = A.counter.get_count()
-    # print B._value.get_cached_counts(), B._value.get_frame_queue(), B._value.get_ultimate_arg_counter()[A]
-    # print A.counter.count, B._value.get_cached_counts()
-    last_C_logp = C.logp
-
-    # Propose a value
-    # print A.counter.get_count(),
-    A.value = 1. + normal()
-    # print A.counter.get_count(),
-    B.value
-    # print last_A_count, A.counter.get_count(), B._value.get_cached_counts()
-
-    # Check the argument values
-    # L.refresh_argument_values()
-    # assert(L.argument_values['B'] is B.value)
-    assert(C in L.ultimate_args)
-
-    # Accept or reject values
-    acc = True
-    try:
+        L = C._logp
         C.logp
+        acc = True
 
-        # Make sure A's value and last value occupy correct places in B's
-        # cached arguments
-        cur_frame = B._value.get_frame_queue()[1]
-        assert(B._value.get_cached_counts()[0,cur_frame] == A.counter.get_count())
-        assert(B._value.get_cached_counts()[0,1-cur_frame] == last_A_count)
-        assert(B._value.ultimate_args[0] is A)
-        # print
+        for i in range(1000):
 
-    except ZeroProbability:
+            # Record last values
+            last_B_value = B.value
+            last_A_count = A.counter.get_count()
+            # print B._value.get_cached_counts(), B._value.get_frame_queue(), B._value.get_ultimate_arg_counter()[A]
+            # print A.counter.count, B._value.get_cached_counts()
+            last_C_logp = C.logp
 
-        acc = False
+            # Propose a value
+            # print A.counter.get_count(),
+            A.value = 1. + normal()
+            # print A.counter.get_count(),
+            B.value
+            # print last_A_count, A.counter.get_count(), B._value.get_cached_counts()
 
-        # Reject jump
-        A.revert()
-        # print 'reverting!', A.counter.get_count()
+            # Check the argument values
+            # L.refresh_argument_values()
+            # assert(L.argument_values['B'] is B.value)
+            assert(C in L.ultimate_args)
 
-        # Make sure A's value and last value occupy correct places in B's
-        # cached arguments
-        cur_frame = B._value.get_frame_queue()[1]
-        assert(B._value.get_cached_counts()[0,1-cur_frame] == A.counter.get_count())
-        # assert(B._value.cached_args[cur_frame] is A.last_value)
-        # assert(B._value.ultimate_args.value[0] is A.value)
-        assert(B.value is last_B_value)
+            # Accept or reject values
+            acc = True
+            try:
+                C.logp
+
+                # Make sure A's value and last value occupy correct places in B's
+                # cached arguments
+                cur_frame = B._value.get_frame_queue()[1]
+                assert(B._value.get_cached_counts()[0,cur_frame] == A.counter.get_count())
+                assert(B._value.get_cached_counts()[0,1-cur_frame] == last_A_count)
+                assert(B._value.ultimate_args[0] is A)
+                # print
+
+            except ZeroProbability:
+
+                acc = False
+
+                # Reject jump
+                A.revert()
+                # print 'reverting!', A.counter.get_count()
+
+                # Make sure A's value and last value occupy correct places in B's
+                # cached arguments
+                cur_frame = B._value.get_frame_queue()[1]
+                assert(B._value.get_cached_counts()[0,1-cur_frame] == A.counter.get_count())
+                # assert(B._value.cached_args[cur_frame] is A.last_value)
+                # assert(B._value.ultimate_args.value[0] is A.value)
+                assert(B.value is last_B_value)
 
 
-    # Check C's cache
-    cur_frame = L.get_frame_queue()[1]
+            # Check C's cache
+            cur_frame = L.get_frame_queue()[1]
 
-    # If jump was accepted:
-    if acc:
-        # C's value should be at the head of C's cache
-        assert_equal(L.get_cached_counts()[1,cur_frame], C.counter.get_count())
-        assert(L.cached_values[cur_frame] is C.logp)
+            # If jump was accepted:
+            if acc:
+                # C's value should be at the head of C's cache
+                assert_equal(L.get_cached_counts()[1,cur_frame], C.counter.get_count())
+                assert(L.cached_values[cur_frame] is C.logp)
 
-    # If jump was rejected:
-    else:
+            # If jump was rejected:
+            else:
 
-        # B's value should be at the back of C's cache.
-        assert_equal(L.get_cached_counts()[1,1-cur_frame], C.counter.get_count())
-        assert(L.cached_values[1-cur_frame] is C.logp)
+                # B's value should be at the back of C's cache.
+                assert_equal(L.get_cached_counts()[1,1-cur_frame], C.counter.get_count())
+                assert(L.cached_values[1-cur_frame] is C.logp)
 
-    # assert(L.ultimate_args.value[1] is C.value)
+            # assert(L.ultimate_args.value[1] is C.value)
 
 
 # class test_LazyFunction(TestCase):
