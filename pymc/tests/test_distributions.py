@@ -55,6 +55,8 @@ except:
     six.print_('Plotting disabled')
     PLOT = False
 
+# Set RNG seed
+_npr.seed(1)
 
 # Some python densities for comparison
 def cauchy(x, x0, gamma):
@@ -519,7 +521,7 @@ class test_noncentral_t(TestCase):
         if PLOT:
             compare_hist(figname='noncentral t', **figdata)
         assert_array_almost_equal(hist, like,1)
-        
+
     def test_vectorization(self):
         a = flib.nct([3,4,5], mu=3, lam=.1, nu=5)
         b = flib.nct([3,4,5], mu=[3,3,3], lam=.1, nu=5)
@@ -832,7 +834,7 @@ class test_pareto(TestCase):
         c = flib.pareto([3,4,5], alpha=[3,3,3], m=[1,1,1])
         assert_equal(a,b)
         assert_equal(b,c)
-        
+
 class test_truncated_pareto(TestCase):
     def test_consistency(self):
         parameters=dict(alpha=5, m = 3, b=5)
@@ -841,7 +843,7 @@ class test_truncated_pareto(TestCase):
         if PLOT:
             compare_hist(figname='truncated_pareto', **figdata)
         assert_array_almost_equal(hist, like, 1)
-        
+
     def test_random(self):
         r = rtruncated_pareto(alpha=3, m=1, b=6, size=10000)
         assert_almost_equal(r.mean(), truncated_pareto_expval(3, 1, 6), 1)
@@ -880,12 +882,12 @@ class test_truncated_poisson(TestCase):
         if PLOT:
             compare_hist(figname='poisson', **figdata)
         assert_array_almost_equal(hist, like,1)
-        
+
     def test_random(self):
         r = rtruncated_poisson(mu=5, k=1, size=10000)
         assert_almost_equal(r.mean(), truncated_poisson_expval(5, 1), 1)
         assert (r >= 1).all()
-        
+
     def test_normalization(self):
         parameters = {'mu':4., 'k':1}
         summation=discrete_normalization(flib.trpoisson,parameters,20)
@@ -983,7 +985,7 @@ class test_weibull(TestCase):
 
     def test_random(self):
         parameters = {'alpha': 2., 'beta': 3.}
-        r = rweibull(parameters['alpha'], parameters['beta'], size=100)
+        r = rweibull(parameters['alpha'], parameters['beta'], size=1000)
         assert_almost_equal(r.mean(), weibull_expval(**parameters), 1)
 
 #-------------------------------------------------------------------------------
@@ -1163,7 +1165,7 @@ True, value = data)
 
 
 if __name__ == '__main__':
-    
+
     original_filters = warnings.filters[:]
     warnings.simplefilter("ignore")
     try:
@@ -1171,7 +1173,7 @@ if __name__ == '__main__':
         nose.runmodule()
     finally:
         warnings.filters = original_filters
-    
+
     # TODO: Restore in 2.2
     # with warnings.catch_warnings():
     #         warnings.simplefilter('ignore', DeprecationWarning)
