@@ -36,7 +36,7 @@ class NpTrace(object):
         return self.samples[str(key)].value
 
     def point(self, index):
-        return Point((k, v.value[index]) for (k,v) in self.samples.iteritems())
+        return dict((k, v.value[index]) for (k,v) in self.samples.iteritems())
 
 class ListArray(object):
     def __init__(self):

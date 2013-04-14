@@ -7,7 +7,7 @@ import numdifftools as nd
 import numpy as np 
 from ..core import *
 
-__all__ = ['approx_hess']
+__all__ = ['approx_hess', 'find_hessian', 'trace_cov']
 
 @withmodel
 def approx_hess(model, start, vars=None):
@@ -24,7 +24,7 @@ def approx_hess(model, start, vars=None):
     if vars is None :
         vars = model.cont_vars
 
-    start = Point(start)
+    start = Point(model, start)
 
     bij = DictToArrayBijection(ArrayOrdering(vars), start)
     dlogp = bij.mapf(model.dlogpc(vars))
@@ -40,6 +40,10 @@ def approx_hess(model, start, vars=None):
     '''
     return -nd.Jacobian(grad_logp)(bij.map(start))
 
+@withmodel
+def find_hessian(model, point, vars = None): 
+    H = model.d2logpc(vars)
+    return H(Point(model, point))
 
 def trace_cov(trace, vars = None):
     """

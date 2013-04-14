@@ -12,7 +12,7 @@ from theano.gof.graph import inputs
 import numpy as np 
 from functools import wraps
 
-__all__ = ['Model', 'compilef', 'gradient', 'hessian', 'withmodel'] 
+__all__ = ['Model', 'compilef', 'gradient', 'hessian', 'withmodel', 'Point'] 
 
 
 
@@ -109,12 +109,32 @@ class Model(Context):
 
     def TransformedVar(model, name, dist, trans): 
         tvar = model.Var(trans.name + '_' + name, trans.apply(dist)) 
-        return trans.backward(tvar), tvar
+
+        return named(trans.backward(tvar),name), tvar
 
     def AddPotential(model, potential):
         model.factors.append(potential)
 
 withmodel = withcontext(Model, 'model')
+
+@withmodel
+def Point(model, *args,**kwargs):
+    """ 
+    Build a point. Uses same args as dict() does. 
+    Filters out variables not in the model. All keys are strings.  
+
+    Parameters
+    ----------
+        model : Model (in context) 
+        *args, **kwargs 
+            arguments to build a dict
+    """
+
+    d = dict(*args, **kwargs)
+    varnames = map(str, model.vars)
+    return dict((str(k),np.array(v)) 
+            for (k,v) in d.iteritems() 
+            if str(k) in varnames) 
 
 
 def compilef(outs, mode = None):
@@ -125,6 +145,9 @@ def compilef(outs, mode = None):
                          mode = mode)
            )
 
+def named(var, name):
+    var.name = name 
+    return var
 
 def as_iterargs(data):
     if isinstance(data, tuple): 

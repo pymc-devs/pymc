@@ -37,7 +37,7 @@ def find_MAP(model, start = None, vars=None, fmin = optimize.fmin_bfgs, return_r
     if vars is None: 
         vars = model.cont_vars
         
-    start = Point(start)
+    start = Point(model, start)
     bij = DictToArrayBijection(ArrayOrdering(vars), start)
     
     logp = bij.mapf(model.logpc)
