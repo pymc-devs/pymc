@@ -6,8 +6,10 @@ Modified from original code by Corey Goldberg (2010)
 from __future__ import print_function
 
 import sys, time
+import uuid
 try:
-    from IPython.core.display import clear_output
+    from IPython.core.display import HTML, Javascript, display
+
     have_ipython = True
 except ImportError:
     have_ipython = False
@@ -19,8 +21,22 @@ class ProgressBar:
         self.fill_char = '*'
         self.width = 40
         self.__update_amount(0)
+
+        self.start = time.time()
+        self.last = 0
         if have_ipython:
             self.animate = self.animate_ipython
+            self.divid = str(uuid.uuid4())
+            self.sec_id = str(uuid.uuid4())
+
+            pb = HTML(
+                """
+                <div style="float: left; border: 1px solid black; width:500px">
+                  <div id="%s" style="background-color:blue; width:0%%">&nbsp;</div>
+                </div> 
+                <label id="%s" style="padding-left: 10px;" text = ""/>
+                """ % (self.divid,self.sec_id))
+            display(pb)
         else:
             self.animate = self.animate_noipython
 
@@ -30,21 +46,23 @@ class ProgressBar:
         else:
             print(self)
         self.update_iteration(iter)
-        # time.sleep(0.5)
 
     def animate_ipython(self, iter):
-        try:
-            clear_output()
-        except Exception:
-            # terminal IPython has no clear_output
-            pass
-        print('\r', self, end='')
-        sys.stdout.flush()
-        self.update_iteration(iter)
+        elapsed = time.time() - self.start
+        iter = iter + 1
+        if elapsed - self.last > .5 or iter == self.iterations:
+            self.last = elapsed
+
+            self.update_iteration(iter)
+            fraction = int(100*iter/float(self.iterations))
+
+            display(Javascript("$('div#%s').width('%i%%')" % (self.divid, fraction)))
+            display(Javascript("$('label#%s').text('%i%% in %.1f sec')" % (self.sec_id, fraction, round(elapsed, 1))))
 
     def update_iteration(self, elapsed_iter):
         self.__update_amount((elapsed_iter / float(self.iterations)) * 100.0)
         self.prog_bar += '  %d of %s complete' % (elapsed_iter, self.iterations)
+
 
     def __update_amount(self, new_amount):
         percent_done = int(round((new_amount / 100.0) * 100.0))
