@@ -22,28 +22,54 @@ Bool = array([0,0,1, 1], 'int64')
 Natbig = array([0, 3,4,5, 1000], 'int64')
 
 
+def test_unif():
+    checkd(Uniform, Runif, {'lower' : -Rplusunif, 'upper' : Rplusunif})
 
-def test_distributions():
+def test_flat():
+    checkd(Flat, Runif, {}, False)
 
-    yield checkd, Uniform, Runif, {'lower' : -Rplusunif, 'upper' : Rplusunif}
-    yield checkd, Normal, R, {'mu' : R, 'tau' : Rplus}
-    yield checkd, Beta, Unit, {'alpha' : Rplus*5, 'beta' : Rplus*5}
-    yield checkd, Exponential, Rplus, {'lam' : Rplus}
-    yield checkd, T, R, {'nu' : Rplus, 'mu' : R, 'lam' : Rplus}
-    yield checkd, Cauchy, R, {'alpha' : R, 'beta' : Rplusbig}
-    yield checkd, Gamma, Rplus, {'alpha' : Rplusbig, 'beta' : Rplusbig}
+def test_normal():
+    checkd(Normal, R, {'mu' : R, 'tau' : Rplus})
+
+def test_beta():
+    checkd(Beta, Unit, {'alpha' : Rplus*5, 'beta' : Rplus*5})
+
+def test_exponential():
+    checkd(Exponential, Rplus, {'lam' : Rplus})
+
+def test_laplace():
+    checkd(Laplace, R, {'mu' : R, 'b' : Rplus})
+
+def test_t():
+    checkd(T, R, {'nu' : Rplus, 'mu' : R, 'lam' : Rplus})
+
+def test_cauchy():
+    checkd(Cauchy, R, {'alpha' : R, 'beta' : Rplusbig})
+
+def test_gamma():
+    checkd(Gamma, Rplus, {'alpha' : Rplusbig, 'beta' : Rplusbig})
+
+def test_tpos():
+    checkd(Tpos, Rplus, {'nu' : Rplus, 'mu' : R, 'lam' : Rplus}, False)
 
 
-    yield checkd, Binomial, Nat, {'n' : Natbig, 'p' : Unit}
-    yield checkd, BetaBin, Nat, {'alpha' : Rplus, 'beta' : Rplus, 'n' : Natbig}
-    yield checkd, Bernoulli, Bool, {'p' : Unit}
-    yield checkd, Poisson, Nat, {'mu' : Rplus}
-    yield checkd, ConstantDist, I, {'c' : I}
+def test_binomial():
+    checkd(Binomial, Nat, {'n' : Natbig, 'p' : Unit})
+
+def test_betabin():
+    checkd(BetaBin, Nat, {'alpha' : Rplus, 'beta' : Rplus, 'n' : Natbig})
+
+def test_bernoulli():
+    checkd(Bernoulli, Bool, {'p' : Unit})
+
+def test_poisson():
+    checkd(Poisson, Nat, {'mu' : Rplus})
+
+def test_constantdist():
+    checkd(ConstantDist, I, {'c' : I})
 
 
-
-
-def checkd(distfam, valuedomain, vardomains):
+def checkd(distfam, valuedomain, vardomains, check_int = True, check_der = True):
 
     m = Model()
 
@@ -55,8 +81,10 @@ def checkd(distfam, valuedomain, vardomains):
 
     domains = [np.array(vardomains[str(v)]) for v in m.vars]
 
-    check_int_to_1(m, value, domains)
-    check_dlogp(m, value, domains)
+    if check_int:
+        check_int_to_1(m, value, domains)
+    if check_der: 
+        check_dlogp(m, value, domains)
 
     
 def check_int_to_1(model, value, domains): 
