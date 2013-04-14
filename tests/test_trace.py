@@ -25,9 +25,10 @@ def test_trace():
 
     for     h in [pm.NpTrace]:
         for n in [20, 1000]:
-            trace = h(model.vars)
+            for [model.vars, model.vars + [model.vars[0]**2]]:
+                trace = h(model.vars)
 
-            yield check_trace, model, trace, n, step, start
+                yield check_trace, model, trace, n, step, start
 
 def test_multitrace():
     if not test_parallel:
