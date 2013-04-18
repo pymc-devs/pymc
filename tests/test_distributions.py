@@ -68,23 +68,41 @@ def test_poisson():
 def test_constantdist():
     checkd(ConstantDist, I, {'c' : I})
 
+def test_zeroinflatedpoisson():
+    checkd(ZeroInflatedPoisson, I, {'theta' : Rplus, 'z' : Bool})
+    
 
-def checkd(distfam, valuedomain, vardomains, check_int = True, check_der = True):
+def test_densitydist():
+    def logp(x):
+        return -log(2*.5) - abs(x-.5)/.5
+    
+    checkd(DensityDist,R, {}, extra_args = {'logp' : logp})
 
-    m = Model()
 
-    with m: 
+def test_addpotential():
+    with Model() as model: 
+        x = Normal('x', 1,1)
+        model.AddPotential(-x**2)
+
+        check_dlogp(model, x, [R])
+
+
+def checkd(distfam, valuedomain, vardomains, check_int = True, check_der = True, extra_args = {}):
+
+    with Model() as m: 
         vars = dict((v , Flat(v, dtype = dom.dtype)) for v,dom in vardomains.iteritems())
+        vars.update(extra_args)
+        print vars 
         value = distfam('value', testval = valuedomain[len(valuedomain)//2], **vars)
 
-    vardomains['value'] = np.array(valuedomain)
+        vardomains['value'] = np.array(valuedomain)
 
-    domains = [np.array(vardomains[str(v)]) for v in m.vars]
+        domains = [np.array(vardomains[str(v)]) for v in m.vars]
 
-    if check_int:
-        check_int_to_1(m, value, domains)
-    if check_der: 
-        check_dlogp(m, value, domains)
+        if check_int:
+            check_int_to_1(m, value, domains)
+        if check_der: 
+            check_dlogp(m, value, domains)
 
     
 def check_int_to_1(model, value, domains): 

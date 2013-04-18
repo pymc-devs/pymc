@@ -2,6 +2,7 @@ import theano.tensor as t
 import numpy as np 
 from ..quickclass import *
 from ..model import *
+__all__ = ['DensityDist', 'TensorDist', 'tensordist', 'continuous', 'discrete', 'arbitrary']
 
 class Distribution(object):
     def __new__(cls, *args, **kwargs):

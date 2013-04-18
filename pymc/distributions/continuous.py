@@ -344,10 +344,10 @@ def Bound(dist, lower = -inf, upper = inf):
 
     return locals()
 
-def Tpos(nu, mu=0, lam=1):
+def Tpos(*args, **kwargs):
     """
     Student-t distribution bounded at 0
     see T
     """
-    return Bound(T(nu, mu, lam), 0)
+    return Bound(T(*args,**kwargs), 0)
 

@@ -87,7 +87,7 @@ class Model(Context):
 
     @property
     def test_point(self):
-        return Point( (var, var.tag.test_value) for var in self.vars)
+        return Point(self, ((var, var.tag.test_value) for var in self.vars))
 
     @property
     def cont_vars(model):
@@ -175,7 +175,7 @@ def cont_inputs(f):
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
-    return t.flatten(t.grad(f, v))
+    return t.flatten(t.grad(f, v, disconnected_inputs='warn'))
 
 def gradient(f, vars = None):
     if not vars: 

@@ -38,7 +38,7 @@ def sample(model, draws, step, start = None, trace = None, progress_bar = True):
     draws = int(draws)
     if start is None: 
         start = trace[-1]
-    point = Point(start)
+    point = Point(model, start)
 
     if not hasattr(trace, 'record'):
         if trace is None: 
