@@ -4,12 +4,12 @@ import multiprocessing as mp
 from time import time
 from core import *
 import step_methods
-from progressbar import ProgressBar
+from progressbar import progress_bar
 
 __all__ = ['sample', 'psample']
 
 @withmodel
-def sample(model, draws, step, start = None, trace = None, progress_bar = True): 
+def sample(model, draws, step, start = None, trace = None, track_progress = True): 
     """
     Draw a number of samples using the given step method. 
     Multiple step methods supported via compound step method 
@@ -51,15 +51,13 @@ def sample(model, draws, step, start = None, trace = None, progress_bar = True):
     except TypeError:
         pass
 
-
-    
-    progress = ProgressBar(draws)
+    progress = progress_bar(draws)
 
     for i in xrange(draws):
         point = step.step(point)
         trace = trace.record(point)
-        if progress_bar:
-            progress.animate(i)
+        if track_progress:
+            progress.update(i)
 
     return trace
 
