@@ -18,11 +18,25 @@ __all__ = ['Model', 'compilef', 'gradient', 'hessian', 'withmodel', 'Point']
 
 class Context(object): 
     def __enter__(self): 
-        type(self).contexts.append(self)
+        type(self).get_contexts().append(self)
         return self
 
     def __exit__(self, typ, value, traceback):
-        type(self).contexts.pop()
+        type(self).get_contexts().pop()
+
+    @classmethod
+    def get_contexts(cls):
+        if not hasattr(cls, "contexts"):
+            cls.contexts = []
+            
+        return cls.contexts
+
+    @classmethod
+    def get_context(cls):
+        try:
+            return cls.get_contexts()[-1]
+        except IndexError:
+            raise TypeError("No context on context stack")
 
 def withcontext(contexttype, argname):
     def decorator(fn):
@@ -44,14 +58,6 @@ class Model(Context):
     Base class for encapsulation of the variables and 
     likelihood factors of a model.
     """
-
-    contexts = []
-    @staticmethod
-    def get_context():
-        try:
-            return Model.contexts[-1]
-        except IndexError:
-            raise TypeError("No model context on context stack")
 
     def __init__(self):
         self.vars = []
