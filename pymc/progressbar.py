@@ -104,9 +104,9 @@ def run_from_ipython():
 
 def progress_bar(iters):
     if run_from_ipython(): 
-        if in_notebook():
+        if None:
             return NotebookProgressBar(iters)
         else: 
-            return IPythonConsolePB(iters, ipythonprint)
+            return TextProgressBar(iters, ipythonprint)
     else:
         return TextProgressBar(iters, consoleprint)
