@@ -20,9 +20,9 @@ def find_MAP(model, start = None, vars=None, fmin = optimize.fmin_bfgs, return_r
     
     Parameters
     ----------
-    model : Model
+    model : Model (optional if in `with` context)
     start : dict of parameter values (Defaults to model.test_point)
-    vars : list or array
+    vars : list 
         List of variables to set to MAP point (Defaults to all continuous).
     fmin : function
         Optimization algorithm (Defaults to `scipy.optimize.fmin_l_bfgs_b`).

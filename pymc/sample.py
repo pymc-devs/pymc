@@ -18,6 +18,7 @@ def sample(model, draws, step, start = None, trace = None, track_progress = True
     Parameters
     ----------
         
+    model : Model (optional if in `with` context)
     draws : int  
         The number of samples to draw
     step : function

@@ -10,23 +10,23 @@ from ..core import *
 __all__ = ['approx_hess', 'find_hessian', 'trace_cov']
 
 @withmodel
-def approx_hess(model, start, vars=None):
+def approx_hess(model, point, vars=None):
     """
     Returns an approximation of the Hessian at the current chain location.
     
     Parameters
     ----------
-    model : Model
-    start : dict
-    vars : list or array
+    model : Model (optional if in `with` context)
+    point : dict
+    vars : list 
         Variables for which Hessian is to be calculated.
     """
     if vars is None :
         vars = model.cont_vars
 
-    start = Point(model, start)
+    point = Point(model, point)
 
-    bij = DictToArrayBijection(ArrayOrdering(vars), start)
+    bij = DictToArrayBijection(ArrayOrdering(vars), point)
     dlogp = bij.mapf(model.dlogpc(vars))
 
     
@@ -38,10 +38,20 @@ def approx_hess(model, start, vars=None):
     this should be the Hessian; invert it to find the approximate 
     covariance matrix.
     '''
-    return -nd.Jacobian(grad_logp)(bij.map(start))
+    return -nd.Jacobian(grad_logp)(bij.map(point))
 
 @withmodel
 def find_hessian(model, point, vars = None): 
+    """
+    Returns Hessian of logp at the point passed.
+    
+    Parameters
+    ----------
+    model : Model (optional if in `with` context)
+    point : dict
+    vars : list 
+        Variables for which Hessian is to be calculated.
+    """
     H = model.d2logpc(vars)
     return H(Point(model, point))
 
@@ -49,7 +59,18 @@ def trace_cov(trace, vars = None):
     """
     Calculate the flattened covariance matrix using a sample trace
 
-    Useful if you want to base your covariance on some initial samples.
+    Useful if you want to base your covariance matrix for further sampling on some initial samples.
+
+    Parameters
+    ----------
+    trace : Trace 
+    vars : list 
+        variables for which to calculate covariance matrix
+
+    Returns 
+    -------
+    r : array (n,n)
+        covariance matrix
     """
 
     if vars is None: 
