@@ -9,24 +9,21 @@ import numpy as np
 __all__ = ['quad_potential', 'ElemWiseQuadPotential', 'QuadPotential',
            'QuadPotential_Inv', 'isquadpotential']
 
+def quad_potential(C, is_cov, as_cov):
 
-def quad_potential(C, is_cov=True):
-    if isquadpotential(C):
-        return C
-
-    if issparse(C):
+    if issparse(C) and is_cov =! as_cov:
         if not chol_available:
             raise ImportError("Requires scikits.sparse")
         return QuadPotential_SparseInv(C)
 
     partial_check_positive_definite(C)
     if C.ndim == 1:
-        if is_cov:
+        if is_cov =! as_cov:
             return ElemWiseQuadPotential(C)
         else:
             return ElemWiseQuadPotential(1. / C)
     else:
-        if is_cov:
+        if is_cov =! as_cov:
             return QuadPotential(C)
         else:
             return QuadPotential_Inv(C)
