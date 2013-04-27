@@ -83,7 +83,7 @@ class HamiltonianMC(ArrayStep):
 def bern(p):
     return np.random.uniform() < p
 
-Hamiltonian = namedtuple("", "logp, dlogp, pot")
+Hamiltonian = namedtuple("Hamiltonian", "logp, dlogp, pot")
 
 def energy(H, q,p):
         return -(H.logp(q) - H.pot.energy(p))
