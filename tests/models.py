@@ -5,7 +5,7 @@ import pymc as pm
 def simple_init(): 
     start, model, moments = simple_model()
 
-    step = Metropolis(model, model.vars, np.diag([1.]))
+    step = Metropolis(model.vars, np.diag([1.]), model = model)
     return model, start, step, moments
 
 

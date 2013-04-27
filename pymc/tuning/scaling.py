@@ -9,8 +9,7 @@ from ..core import *
 
 __all__ = ['approx_hess', 'find_hessian', 'trace_cov']
 
-@withmodel
-def approx_hess(model, point, vars=None):
+def approx_hess(point, vars=None, model = None):
     """
     Returns an approximation of the Hessian at the current chain location.
     
@@ -21,6 +20,7 @@ def approx_hess(model, point, vars=None):
     vars : list 
         Variables for which Hessian is to be calculated.
     """
+    model = modelcontext(model)
     if vars is None :
         vars = model.cont_vars
 
@@ -40,8 +40,7 @@ def approx_hess(model, point, vars=None):
     '''
     return -nd.Jacobian(grad_logp)(bij.map(point))
 
-@withmodel
-def find_hessian(model, point, vars = None): 
+def find_hessian(point, vars = None, model = None): 
     """
     Returns Hessian of logp at the point passed.
     
@@ -52,6 +51,7 @@ def find_hessian(model, point, vars = None):
     vars : list 
         Variables for which Hessian is to be calculated.
     """
+    model = modelcontext(model)
     H = model.d2logpc(vars)
     return H(Point(model, point))
 

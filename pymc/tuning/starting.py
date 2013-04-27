@@ -11,8 +11,7 @@ from ..core import *
 __all__ = ['find_MAP', 'scipyminimize']
 
 
-@withmodel
-def find_MAP(model, start = None, vars=None, fmin = optimize.fmin_bfgs, return_raw = False, disp = False, *args, **kwargs):
+def find_MAP(start = None, vars=None, fmin = optimize.fmin_bfgs, return_raw = False, disp = False, model = None, model = None, *args, **kwargs):
     """
     Sets state to the local maximum a posteriori point given a model.
     Current default of fmin_Hessian does not deal well with optimizing close 
@@ -20,7 +19,6 @@ def find_MAP(model, start = None, vars=None, fmin = optimize.fmin_bfgs, return_r
     
     Parameters
     ----------
-    model : Model (optional if in `with` context)
     start : dict of parameter values (Defaults to model.test_point)
     vars : list 
         List of variables to set to MAP point (Defaults to all continuous).
@@ -28,9 +26,11 @@ def find_MAP(model, start = None, vars=None, fmin = optimize.fmin_bfgs, return_r
         Optimization algorithm (Defaults to `scipy.optimize.fmin_l_bfgs_b`).
     return_raw : Bool
         Whether to return extra value returned by fmin (Defaults to False)
+    model : Model (optional if in `with` context)
     *args, **kwargs 
         Extra args passed to fmin
     """
+    model = modelcontext(model)
     if start is None:
         start = model.test_point
 

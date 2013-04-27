@@ -20,12 +20,10 @@ def unif(step_size, elow = .85, ehigh = 1.15):
 
 
 class HamiltonianMC(ArrayStep):
-    @withmodel
-    def __init__(self, model, vars, C, step_scale = .25, path_length = 2., is_cov = False, step_rand = unif, state = None):
+    def __init__(self, vars, C, step_scale = .25, path_length = 2., is_cov = False, step_rand = unif, state = None, model = None):
         """
         Parameters
         ----------
-            model : Model
             vars : list of theano variables
             C : array_like, ndim = {1,2}
                 Scaling for momentum distribution. 1d arrays interpreted matrix diagonal.
@@ -37,7 +35,11 @@ class HamiltonianMC(ArrayStep):
                 Treat C as a covariance matrix/vector if True, else treat it as a precision matrix/vector
             step_rand : function float -> float, default=unif 
                 A function which takes the step size and returns an new one used to randomize the step size at each iteration. 
+            state 
+                State object
+            model : Model
         """
+        model = modelcontext(model)
         n = C.shape[0]
         
         self.step_size = step_scale / n**(1/4.)

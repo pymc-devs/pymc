@@ -12,7 +12,7 @@ from theano.gof.graph import inputs
 import numpy as np 
 from functools import wraps
 
-__all__ = ['Model', 'compilef', 'gradient', 'hessian', 'withmodel', 'Point'] 
+__all__ = ['Model', 'compilef', 'gradient', 'hessian', 'modelcontext', 'Point'] 
 
 
 
@@ -38,36 +38,10 @@ class Context(object):
         except IndexError:
             raise TypeError("No context on context stack")
 
-def withcontext(contexttype, argname):
-    """
-    Returns a decorator for wrapping functions so they look for an argument in a specific argument slot. 
-    If not found, the decorated function searches the for a context and inserts it in that slot. 
-
-    Parameters
-    ----------
-    contexttype : type
-        The type of context to search for
-    argname : string
-        The name of the argument slot where the context should go
-
-    Returns 
-    -------
-    decorator function
-
-    """
-    def decorator(fn):
-        n = list(fn.func_code.co_varnames).index(argname)
-
-        @wraps(fn)
-        def nfn(*args, **kwargs):
-            if not (len(args) > n and isinstance(args[n], contexttype)):
-                context = contexttype.get_context()
-                args = args[:n] + (context,) + args[n:]
-            return fn(*args,**kwargs) 
-
-        return nfn 
-    return decorator
-
+def modelcontext(model): 
+    if model is None:
+       return Model.get_context() 
+    return model
 
 class Model(Context):
     """
@@ -142,20 +116,22 @@ class Model(Context):
     def AddPotential(model, potential):
         model.factors.append(potential)
 
-withmodel = withcontext(Model, 'model')
 
-@withmodel
-def Point(model, *args,**kwargs):
+def Point(*args,**kwargs):
     """ 
     Build a point. Uses same args as dict() does. 
     Filters out variables not in the model. All keys are strings.  
 
     Parameters
     ----------
-        model : Model (in context) 
         *args, **kwargs 
             arguments to build a dict
     """
+    if 'model' in kwargs :
+        model = kwargs['model']
+        del kwargs['model']
+    else: 
+        model = Model.get_context()
 
     d = dict(*args, **kwargs)
     varnames = map(str, model.vars)

@@ -13,7 +13,7 @@ except:
 def check_trace(model, trace, n, step, start):
     #try using a trace object a few times
     for i in range(2):
-        trace = sample(model, n, step, start, trace)
+        trace = sample(n, step, start, trace, model = model)
 
         for (var, val) in start.iteritems():
 
@@ -45,7 +45,7 @@ def test_multitrace():
 def check_multi_trace(model, trace, n, step, start):
 
     for i in range(2):
-        trace = psample(model, n, step, start, trace)
+        trace = psample(n, step, start, trace, model = model)
         
 
         for (var, val) in start.iteritems():

@@ -11,8 +11,8 @@ def check_stat(name, trace, var, stat, value, bound):
 def test_step_continuous():
     start, model, (mu, C) = mv_simple()
 
-    hmc = pm.HamiltonianMC(model, model.vars,  C, is_cov = True)
-    mh = pm.Metropolis(model, model.vars , C, is_cov = True, scaling = 2)
+    hmc = pm.HamiltonianMC(model.vars,  C, is_cov = True, model = model)
+    mh = pm.Metropolis(model.vars , C, is_cov = True, scaling = 2, model = model)
     compound = pm.CompoundStep([hmc, mh])
 
     steps = [mh, hmc, compound]
@@ -23,10 +23,10 @@ def test_step_continuous():
 
     for st in steps:
         np.random.seed(1)
-        h = sample(model, 8000, st, start)
+        h = sample(8000, st, start, model = model)
         for (var, stat, val, bound) in check:
             np.random.seed(1)
-            h = sample(model, 8000, st, start)
+            h = sample(8000, st, start, model = model)
 
             yield check_stat,repr(st), h, var, stat, val, bound  
 

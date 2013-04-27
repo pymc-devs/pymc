@@ -8,8 +8,7 @@ from progressbar import progress_bar
 
 __all__ = ['sample', 'psample']
 
-@withmodel
-def sample(model, draws, step, start = None, trace = None, track_progress = True): 
+def sample(draws, step, start = None, trace = None, track_progress = True, model = None): 
     """
     Draw a number of samples using the given step method. 
     Multiple step methods supported via compound step method 
@@ -36,6 +35,7 @@ def sample(model, draws, step, start = None, trace = None, track_progress = True
     >>> an example
         
     """
+    model = modelcontext(model)
     draws = int(draws)
     if start is None: 
         start = trace[-1]
@@ -66,10 +66,11 @@ def argsample(args):
     """ defined at top level so it can be pickled"""
     return sample(*args)
   
-@withmodel
-def psample(model, draws, step, start, mtrace = None, threads = None, track = None):
+def psample(draws, step, start, mtrace = None, threads = None, track = None, model = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
+
+    model = modelcontext(model)
 
     if not threads:
         threads = max(mp.cpu_count() - 2, 1)
