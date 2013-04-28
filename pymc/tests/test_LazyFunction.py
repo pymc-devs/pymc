@@ -16,7 +16,7 @@ class test_LazyFunction(TestCase):
             return -10.*value
 
         # If normcoef is positive, there will be an uncaught ZeroProbability
-        normcoef = 1.
+        normcoef = -1.
 
         # B's value is a random function of A.
         @deterministic(verbose=verbose)
@@ -45,7 +45,6 @@ class test_LazyFunction(TestCase):
             # Record last values
             last_B_value = B.value
             last_A_count = A.counter.get_count()
-            print "B._value.get_cached_counts"
             last_C_logp = C.logp
 
             # Propose a value
