@@ -1021,6 +1021,20 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             # Assume an iterable
             vars = pymc_obj
 
+    from .diagnostics import gelman_rubin
+
+    # Calculate G-R diagnostics
+    try:
+        R = gelman_rubin(pymc_obj)
+    except ValueError:
+        try:
+            R = {}
+            for variable in vars:
+                R[variable.__name__] = gelman_rubin(variable)
+        except ValueError:
+            print 'Could not calculate Gelman-Rubin statistics. Requires multiple chains of equal length.'
+            rhat = False
+
 
     # Empty list for y-axis labels
     labels = []
@@ -1194,8 +1208,6 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     # Genenerate Gelman-Rubin plot
     if rhat and chains>1:
 
-        from .diagnostics import gelman_rubin
-
         # If there are multiple chains, calculate R-hat
         rhat_plot = subplot(gs[1])
 
@@ -1208,14 +1220,6 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         # X axis labels
         xticks((1.0,1.5,2.0), ("1", "1.5", "2+"))
         yticks([-(l+1) for l in range(len(labels))], "")
-
-        # Calculate diagnostic
-        try:
-            R = gelman_rubin(pymc_obj)
-        except ValueError:
-            R = {}
-            for variable in vars:
-                R[variable.__name__] = gelman_rubin(variable)
 
         i = 1
         for variable in vars:
