@@ -24,7 +24,7 @@ def approx_hess(point, vars=None, model = None):
     if vars is None :
         vars = model.cont_vars
 
-    point = Point(model, point)
+    point = Point(point, model = model)
 
     bij = DictToArrayBijection(ArrayOrdering(vars), point)
     dlogp = bij.mapf(model.dlogpc(vars))
@@ -53,7 +53,7 @@ def find_hessian(point, vars = None, model = None):
     """
     model = modelcontext(model)
     H = model.d2logpc(vars)
-    return H(Point(model, point))
+    return H(Point(point, model = model))
 
 def trace_cov(trace, vars = None):
     """

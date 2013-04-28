@@ -16,9 +16,10 @@ def test_sample():
     if test_parallel:
         test_samplers.append(psample)
 
-    for     samplr  in test_samplers: 
-        for n       in [0, 10, 1000]:
-            yield samplr, model, n, step, start
+    with model:
+        for     samplr  in test_samplers: 
+            for n       in [0, 10, 1000]:
+                yield samplr, n, step, start 
 
 
 

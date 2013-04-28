@@ -14,15 +14,15 @@ from  scipy import optimize
 # <markdowncell>
 
 # Asset prices have time-varying volatility (variance of day over day `returns`). In some periods, returns are highly vaiable, and in others very stable. Stochastic volatility models model this with a latent volatility variable, modeled as a stochastic process. The following model is similar to the one described in the No-U-Turn Sampler paper, Hoffman (2011) p21.
-#
+# 
 # $$ \sigma \sim Exponential(50) $$
-#
+# 
 # $$ \nu \sim Exponential(.1) $$
-#
+# 
 # $$ s_i \sim Normal(s_{i-1}, \sigma^{-2}) $$
-#
+# 
 # $$ log(\frac{y_i}{y_{i-1}}) \sim t(\nu, 0, exp(-2 s_i)) $$
-#
+# 
 # Here, $y$ is the daily return series and $s$ is the latent volatility process.
 
 # <markdowncell>
@@ -58,16 +58,16 @@ with model:
 
 # Fit Model
 # ------------
-# To get a decent scale for the hamiltonaian sampler, we find the hessian at a point. However, the 2nd derivatives for the degrees of freedom are negative and thus not very informative, so we make an educated guess. The interactions between `log_sigma`/`nu` and `s` are also not very useful, so we set them to zero.
-#
+# To get a decent scale for the hamiltonaian sampler, we find the hessian at a point. However, the 2nd derivatives for the degrees of freedom are negative and thus not very informative, so we make an educated guess. The interactions between `log_sigma`/`nu` and `s` are also not very useful, so we set them to zero. 
+# 
 # The hessian matrix is also very sparse, so we make it a sparse matrix for faster sampling.
 
 # <codecell>
 
 H = model.d2logpc()
 
-def hessian(point, nusd):
-    h = H(point)
+def hessian(point, nusd): 
+    h = H(Point(point))
     h[1,1] = nusd**-2
     h[:2,2:] = h[2:,:2] = 0
 
@@ -80,7 +80,7 @@ def hessian(point, nusd):
 # <codecell>
 
 with model:
-    start = find_MAP(model, vars = [s], fmin = optimize.fmin_l_bfgs_b)
+    start = find_MAP(vars = [s], fmin = optimize.fmin_l_bfgs_b)
 
 # <markdowncell>
 
@@ -90,7 +90,7 @@ with model:
 
 with model: 
     step = HamiltonianMC(model.vars, hessian(start, 6))
-    trace = sample(200, step, start) 
+    trace = sample(200, step, start, trace = model.vars + [sigma]) 
 
     start2 = trace.point(-1)
     step = HamiltonianMC(model.vars, hessian(start2, 6), path_length = 4.)
@@ -99,15 +99,19 @@ with model:
 # <codecell>
 
 #figsize(12,6)
-plt.title(str(s))
-plt.plot(trace[s][::10].T,'b', alpha = .01);
+title(str(s))
+plot(trace[s][::10].T,'b', alpha = .01);
 
 #figsize(12,6)
 traceplot(trace, model.vars[:-1]);
+
+# <codecell>
+
+trace.samples.keys()
 
 # <markdowncell>
 
 # References
 # -------------
-#     1. Hoffman & Gelman. (2011). The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo. http://arxiv.org/abs/1111.4246
+#     1. Hoffman & Gelman. (2011). The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo. http://arxiv.org/abs/1111.4246 
 

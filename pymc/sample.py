@@ -39,7 +39,7 @@ def sample(draws, step, start = None, trace = None, track_progress = True, model
     draws = int(draws)
     if start is None: 
         start = trace[-1]
-    point = Point(model, start)
+    point = Point(start, model = model)
 
     if not hasattr(trace, 'record'):
         if trace is None: 
@@ -66,7 +66,7 @@ def argsample(args):
     """ defined at top level so it can be pickled"""
     return sample(*args)
   
-def psample(draws, step, start, mtrace = None, threads = None, track = None, model = None):
+def psample(draws, step, start, mtrace = None, track = None, model = None, threads = None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
 
@@ -86,7 +86,7 @@ def psample(draws, step, start, mtrace = None, threads = None, track = None, mod
 
     p = mp.Pool(threads)
 
-    argset = zip([model] *threads, [draws]*threads, [step]*threads, start, mtrace.traces)
+    argset = zip([draws]*threads, [step]*threads, start, mtrace.traces, [False]*threads, [model] *threads)
     
     traces = p.map(argsample, argset)
         

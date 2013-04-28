@@ -40,7 +40,7 @@ class Context(object):
 
 def modelcontext(model): 
     if model is None:
-       return Model.get_context() 
+        return Model.get_context() 
     return model
 
 class Model(Context):
@@ -87,7 +87,7 @@ class Model(Context):
     @property
     def test_point(self):
         """Test point used to check that the model doesn't generate errors"""
-        return Point(self, ((var, var.tag.test_value) for var in self.vars))
+        return Point(((var, var.tag.test_value) for var in self.vars), model = self)
 
     @property
     def cont_vars(model):

@@ -36,6 +36,6 @@ with model:
     start = find_MAP()
     h = np.diag(approx_hess(start)) #find a good orientation using the hessian at the MAP
 
-    step = HamiltonianMC(model, model.vars, h) 
+    step = HamiltonianMC(model.vars, h) 
 
     trace = sample(3e2, step, start)
