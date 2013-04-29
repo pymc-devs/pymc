@@ -1,8 +1,8 @@
 
 bool_types = set(['int8'])
-   
+
 int_types = set(['int8',
-            'int16' ,   
+            'int16' ,
             'int32',
             'int64',
             'uint8',
@@ -16,8 +16,9 @@ complex_types = set(['complex64',
 continuous_types = float_types | complex_types
 discrete_types = bool_types | int_types
 
-default_type = {'discrete' :    'int64', 
+default_type = {'discrete' :    'int64',
                 'continuous':   'float64'}
 
 def typefilter(vars, types):
+    # Returns variables of type `types` from `vars`
     return filter(lambda v: v.dtype in types, vars)

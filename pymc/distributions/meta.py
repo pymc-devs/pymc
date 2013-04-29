@@ -1,3 +1,4 @@
+# TODO Is this still relevant? If so, please document.
 from dist_math import * 
 
 def Normal_Summary(u, tau): 
