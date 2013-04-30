@@ -14,7 +14,7 @@ from .utils import crawl_dataless
 from .six import print_
 
 # from .progressbar import ProgressBar, Percentage, Bar, ETA, Iterations
-from .progressbar import ProgressBar
+from .progressbar import progress_bar as pbar
 
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
@@ -201,7 +201,7 @@ class MCMC(Sampler):
             If True the Sampler would burn samples until all step methods are tuned.
             A tuned step methods is one that was not tuned for the last `stop_tuning_after` tuning intervals.
             The burn-in phase will have a minimum of 'burn' iterations but could be longer if
-            tuning is needed. After the phase is done the sampler will run for another 
+            tuning is needed. After the phase is done the sampler will run for another
             (iter - burn) iterations, and will tally the samples according to the 'thin' argument.
             This means that the total number of iteration is update throughout the sampling
             procedure.
@@ -244,7 +244,7 @@ class MCMC(Sampler):
         # Progress bar
         self.pbar = None
         if not verbose and progress_bar:
-            self.pbar = ProgressBar(self._iter)
+            self.pbar = pbar(self._iter)
 
         # Run sampler
         Sampler.sample(self, iter, length, verbose)
@@ -252,7 +252,7 @@ class MCMC(Sampler):
     def _loop(self):
         # Set status flag
         self.status='running'
-        
+
         try:
             while self._current_iter < self._iter and not self.status == 'halt':
                 if self.status == 'paused':
@@ -262,7 +262,7 @@ class MCMC(Sampler):
 
                 # Update progress bar
                 if not (i+1) % 100 and self.pbar:
-                    self.pbar.animate(i+1)
+                    self.pbar.update(i+1)
 
                 # Tune at interval
                 if i and not (i % self._tune_interval) and self._tuning:
@@ -273,8 +273,8 @@ class MCMC(Sampler):
                         new_burn = self._current_iter + int(self._stop_tuning_after * self._tune_interval)
                         self._burn =  max(new_burn, self._burn);
                         self._iter = self._burn + self._n_tally
-                        self.pbar = ProgressBar(self._iter)
-                        self.pbar.animate(i+1)
+                        self.pbar = pbar(self._iter)
+                        self.pbar.update(i+1)
 
                 # Manage burn-in
                 if i == self._burn:
@@ -310,7 +310,7 @@ class MCMC(Sampler):
         finally:
             # Stop progress bar
             if self.pbar:
-                self.pbar.animate(self._iter)
+                self.pbar.update(self._iter)
 
         if self.status == 'halt':
             self._halt()
