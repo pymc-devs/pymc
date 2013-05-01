@@ -10,13 +10,19 @@ __all__ = ['Metropolis', 'normal_proposal', 'cauchy_proposal', 'laplace_proposal
 
 # Available proposal distributions for Metropolis
 def normal_proposal(s):
-    return lambda: normal(scale=s)
+    def random():
+        return normal(scale=s)
+    return random
 
 def cauchy_proposal(s):
-    return lambda: standard_cauchy(size=np.size(s)) * s
+    def random():
+        return standard_cauchy(size=np.size(s)) * s
+    return random
 
 def laplace_proposal(s):
-    return lambda: (standard_exponential(size=np.size(s)) - standard_exponential(size=np.size(s))) * s
+    def random():
+        return (standard_exponential(size=np.size(s)) - standard_exponential(size=np.size(s))) * s
+    return random
 
 
 class Metropolis(ArrayStep):

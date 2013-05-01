@@ -84,5 +84,5 @@ class HamiltonianMC(ArrayStep):
 
         self.state.metrops.append(mr)
 
-        return metrop_select(mr, q, q0)[0]
+        return metrop_select(mr, q, q0)
 
