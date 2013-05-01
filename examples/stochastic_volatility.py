@@ -27,8 +27,7 @@ from  scipy import optimize
 
 # <markdowncell>
 
-# Build Model
-# --------------
+# ## Build Model
 
 # <codecell>
 
@@ -36,7 +35,11 @@ model = Model()
 
 # <markdowncell>
 
-# Its easier to sample the scale of the volatility process innovations on a log scale, so we use `TransformedVar`.
+# Specifying the model in pymc mirrors its statistical specification. 
+# 
+# However, it is easier to sample the scale of the volatility process innovations, $\sigma $, on a log scale, so we create it using `TransformedVar` and use `logtransform`. `TransformedVar` creates one variable in the transformed space and one in the normal space. The one in the transformed space (here $log(\sigma) $) is the one over which sampling will occur, and the one in the normal space is the one to use throughout the rest of the model.
+# 
+# It takes a variable name, a distribution and a transformation to use.
 
 # <codecell>
 
@@ -56,9 +59,11 @@ with model:
 
 # <markdowncell>
 
-# Fit Model
-# ------------
-# To get a decent scale for the hamiltonaian sampler, we find the hessian at a point. However, the 2nd derivatives for the degrees of freedom are negative and thus not very informative, so we make an educated guess. The interactions between `log_sigma`/`nu` and `s` are also not very useful, so we set them to zero. 
+# ## Fit Model
+# 
+# To get a decent scaling matrix for the hamiltonaian sampler, we find the hessian at a point. The method `Model.d2logpc` gives us a Theano compiled function that returns the matrix of 2nd derivatives.
+# 
+# However, the 2nd derivatives for the degrees of freedom parameter, `nu`, are negative and thus not very informative and make the matrix non-positive definite, so we replace that entry with a reasonable guess at the scale. The interactions between `log_sigma`/`nu` and `s` are also not very useful, so we set them to zero. 
 # 
 # The hessian matrix is also very sparse, so we make it a sparse matrix for faster sampling.
 
@@ -75,7 +80,9 @@ def hessian(point, nusd):
 
 # <markdowncell>
 
-# The full MAP is a degenerate case wrt to sd and nu, so we find the MAP wrt the volatility process, keeping log_sd and nu constant at their default values. We use l_bfgs_b because it is more efficient for high dimensional functions (`s` has n elements)
+# For this model, the full maximum a posteriori (MAP) point is degenerate and has infinite density. However, if we fix `log_sigma` and `nu` it is no longer degenerate, so we find the MAP with respect to the volatility process, 's', keeping `log_sigma` and `nu` constant at their default values. 
+# 
+# We use l_bfgs_b because it is more efficient for high dimensional functions (`s` has n elements).
 
 # <codecell>
 
@@ -84,7 +91,7 @@ with model:
 
 # <markdowncell>
 
-# We do a short initial run to get near the right area, then start again using a new hessian at the new starting point.
+# We do a short initial run to get near the right area, then start again using a new hessian at the new starting point to get faster sampling due to better scaling.
 
 # <codecell>
 
@@ -105,13 +112,9 @@ plot(trace[s][::10].T,'b', alpha = .01);
 #figsize(12,6)
 traceplot(trace, model.vars[:-1]);
 
-# <codecell>
-
-trace.samples.keys()
-
 # <markdowncell>
 
-# References
-# -------------
+# ## References
+# 
 #     1. Hoffman & Gelman. (2011). The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo. http://arxiv.org/abs/1111.4246 
 
