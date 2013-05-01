@@ -8,29 +8,29 @@ import numpy as np
 
 __all__ = ['quad_potential', 'ElemWiseQuadPotential', 'QuadPotential', 'QuadPotential_Inv', 'isquadpotential']
 
-def quad_potential(C, is_cov):
+def quad_potential(C, is_cov=True):
     if isquadpotential(C):
         return C
 
     if issparse(C):
         return QuadPotential_SparseInv(C)
-    
+
     partial_check_positive_definite(C)
     if C.ndim == 1:
         if is_cov:
             return ElemWiseQuadPotential(C)
-        else: 
+        else:
             return ElemWiseQuadPotential(1./C)
     else:
         if is_cov:
             return QuadPotential(C)
         else :
-            return QuadPotential_Inv(C) 
+            return QuadPotential_Inv(C)
 
 def partial_check_positive_definite(C):
     """Simple but partial check for Positive Definiteness"""
     if C.ndim == 1:
-        d = C 
+        d = C
     else :
         d = np.diag(C)
     i, = np.nonzero(np.logical_or(np.isnan(d), d<=0))
@@ -39,13 +39,13 @@ def partial_check_positive_definite(C):
         raise PositiveDefiniteError("Simple check failed. Diagonal contains negatives", i)
 
 class PositiveDefiniteError(ValueError):
-    def __init__(self, msg, idx): 
+    def __init__(self, msg, idx):
         self.idx = idx
         self.msg = msg
     def __str__(self):
         return "Scaling is not positive definite. " + self.msg + ". Check indexes " + str(self.idx)
 
-def isquadpotential(o): 
+def isquadpotential(o):
     return all(hasattr(o, attr) for attr in ["velocity", "random", "energy"])
 
 class ElemWiseQuadPotential(object):
@@ -54,7 +54,7 @@ class ElemWiseQuadPotential(object):
 
         self.s = s
         self.inv_s = 1./s
-        self.v = v 
+        self.v = v
     def velocity(self, x):
         return self.v* x
     def random(self):
@@ -65,14 +65,14 @@ class ElemWiseQuadPotential(object):
 class QuadPotential_Inv(object):
     def __init__(self, A):
         self.L = cholesky(A, lower = True)
-        
+
     def velocity(self, x ):
         return cho_solve((self.L, True), x)
-        
+
     def random(self):
         n = normal(size = self.L.shape[0])
         return dot(self.L, n)
-    
+
     def energy(self, x):
         L1x = solve(self.L, x)
         return .5 * dot(L1x.T, L1x)
@@ -82,17 +82,19 @@ class QuadPotential(object):
     def __init__(self, A):
         self.A = A
         self.L = cholesky(A, lower = True)
-    
+
     def velocity(self, x):
         return dot(self.A, x)
-    
+
     def random(self):
         n = normal(size = self.L.shape[0])
         return solve(self.L.T, n)
-    
+
     def energy(self, x):
         return .5 * dot(x, dot(self.A, x))
-    
+
+    __call__ = random
+
 try:
     import scikits.sparse.cholmod as cholmod
     chol_available = True
@@ -108,20 +110,20 @@ if chol_available:
             self.factor = factor = cholmod.cholesky(A)
             self.L = factor.L()
             self.p = np.argsort(factor.P())
-            
+
         def velocity(self, x ):
             x = np.ones((x.shape[0], 2)) * x[:,np.newaxis]
             return self.factor(x)[:,0]
-            
+
         def Ldot(self, x):
             return (self.L * x)[self.p]
-        
+
         def random(self):
             return self.Ldot(normal(size = self.n))
-        
+
         def energy(self, x):
             return .5 * dot(x,self.velocity(x))
-        
 
 
-        
+
+
