@@ -51,8 +51,8 @@ class Metropolis(ArrayStep):
             # quadpotential does not require n
             self.proposal_dist = proposal_dist(S)
         self.scaling = scaling
-        self.tune = tune
-        super(Metropolis,self).__init__(vars, [model.logpc])
+        self.accepted = 0
+        super(Metropolis,self).__init__(vars, [model.logpc], tune=tune)
 
     def astep(self, q0, logp):
 
@@ -60,4 +60,8 @@ class Metropolis(ArrayStep):
 
         q = q0 + delta
 
-        return metrop_select(logp(q) - logp(q0), q, q0)
+        q_new, accepted = metrop_select(logp(q) - logp(q0), q, q0)
+
+        self.accepted += int(accepted)
+
+        return q_new

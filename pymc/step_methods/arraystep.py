@@ -7,10 +7,11 @@ __all__ = ['ArrayStep', 'metrop_select', 'SamplerHist']
 
 # TODO Add docstrings to ArrayStep
 class ArrayStep(object):
-    def __init__(self, vars, fs, allvars = False):
+    def __init__(self, vars, fs, allvars = False, tune=False):
         self.ordering = ArrayOrdering(vars)
         self.fs = fs
         self.allvars = allvars
+        self.tune = tune
 
     def step(self, point):
         bij = DictToArrayBijection(self.ordering, point)
@@ -28,10 +29,10 @@ def metrop_select(mr, q, q0):
     # Compare acceptance ratio to uniform random number
     if isfinite(mr) and log(uniform()) < mr:
         # Accept proposed value
-        return q
+        return q, True
     else:
         # Reject proposed value
-        return q0
+        return q0, False
 
 
 class SamplerHist(object):
