@@ -1,12 +1,9 @@
-import matplotlib
-matplotlib.use('Agg')
-
 from os import path
-import os 
+import os
 import fnmatch
 import imp
 
-def test_examples(): 
+def test_examples():
 
     for path in all_matching_files(example_dir(), '*.py'):
         yield check_example, path
@@ -18,7 +15,7 @@ def all_matching_files(d, pattern):
         nfiles = fnmatch.filter(nfiles, pattern)
         nfiles = [path.join(dir,f) for f in nfiles]
         fls.extend(nfiles)
-        
+
     files = []
     path.walk(d, addfiles, files)
     return files
