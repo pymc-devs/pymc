@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 from os import path
 import os
 import fnmatch
