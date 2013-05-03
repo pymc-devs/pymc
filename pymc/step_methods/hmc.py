@@ -45,8 +45,6 @@ class HamiltonianMC(ArrayStep):
 
         self.step_size = step_scale / n**(1/4.)
 
-        if issparse(C):
-            raise ValueError("Cannot use sparse matrix for scaling without scikits.sparse installed")
         self.potential = quad_potential(C, is_cov)
 
         self.path_length = path_length
