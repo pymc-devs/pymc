@@ -297,7 +297,8 @@ class MCMC(Sampler):
                     self.commit()
 
                 # Update progress bar
-                self.pbar.update(i)
+                if self.pbar:
+                    self.pbar.update(i)
 
                 # Increment interation
                 self._current_iter += 1
