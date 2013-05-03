@@ -8,6 +8,7 @@ from quadpotential import *
 from arraystep import *
 from ..core import *
 import numpy as np
+from scipy.sparse import issparse
 
 __all__ = ['HamiltonianMC']
 
@@ -45,6 +46,7 @@ class HamiltonianMC(ArrayStep):
         self.step_size = step_scale / n**(1/4.)
 
         self.potential = quad_potential(C, is_cov)
+
         self.path_length = path_length
         self.step_rand = step_rand
 
