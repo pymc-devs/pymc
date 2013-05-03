@@ -9,11 +9,11 @@ from pymc import  *
 from pymc.distributions.timeseries import *
 
 from scipy.sparse import csc_matrix
-from  scipy import optimize
+from scipy import optimize
 
 # <markdowncell>
 
-# Asset prices have time-varying volatility (variance of day over day `returns`). In some periods, returns are highly vaiable, and in others very stable. Stochastic volatility models model this with a latent volatility variable, modeled as a stochastic process. The following model is similar to the one described in the No-U-Turn Sampler paper, Hoffman (2011) p21.
+# Asset prices have time-varying volatility (variance of day over day `returns`). In some periods, returns are highly variable, while in others very stable. Stochastic volatility models model this with a latent volatility variable, modeled as a stochastic process. The following model is similar to the one described in the No-U-Turn Sampler paper, Hoffman (2011) p21.
 # 
 # $$ \sigma \sim Exponential(50) $$
 # 
@@ -31,28 +31,27 @@ from  scipy import optimize
 
 # <codecell>
 
-model = Model()
+# Load 400 returns from the S&P 500.
+n = 400
+returns = np.genfromtxt("data/SP500.csv")[-n:]
 
 # <markdowncell>
 
 # Specifying the model in pymc mirrors its statistical specification. 
 # 
-# However, it is easier to sample the scale of the volatility process innovations, $\sigma $, on a log scale, so we create it using `TransformedVar` and use `logtransform`. `TransformedVar` creates one variable in the transformed space and one in the normal space. The one in the transformed space (here $log(\sigma) $) is the one over which sampling will occur, and the one in the normal space is the one to use throughout the rest of the model.
+# However, it is easier to sample the scale of the volatility process innovations, $\sigma$, on a log scale, so we create it using `TransformedVar` and use `logtransform`. `TransformedVar` creates one variable in the transformed space and one in the normal space. The one in the transformed space (here $\text{log}(\sigma) $) is the one over which sampling will occur, and the one in the normal space is the one to use throughout the rest of the model.
 # 
 # It takes a variable name, a distribution and a transformation to use.
 
 # <codecell>
 
-n = 400
-returns = np.genfromtxt("data/SP500.csv")[-n:]
-
+model = Model()
 with model: 
     sigma, log_sigma = model.TransformedVar('sigma', Exponential(1./.02, testval = .1),
-                 logtransform)
+                                            logtransform)
 
     nu = Exponential('nu', 1./10)
 
-    
     s = GaussianRandomWalk('s', sigma**-2, shape = n)
 
     r = T('r', nu, lam = exp(-2*s), observed = returns)
@@ -61,11 +60,11 @@ with model:
 
 # ## Fit Model
 # 
-# To get a decent scaling matrix for the hamiltonaian sampler, we find the hessian at a point. The method `Model.d2logpc` gives us a Theano compiled function that returns the matrix of 2nd derivatives.
+# To get a decent scaling matrix for the Hamiltonian sampler, we find the Hessian at a point. The method `Model.d2logpc` gives us a `Theano` compiled function that returns the matrix of 2nd derivatives.
 # 
-# However, the 2nd derivatives for the degrees of freedom parameter, `nu`, are negative and thus not very informative and make the matrix non-positive definite, so we replace that entry with a reasonable guess at the scale. The interactions between `log_sigma`/`nu` and `s` are also not very useful, so we set them to zero. 
+# However, the 2nd derivatives for the degrees of freedom parameter, `nu`, are negative and thus not very informative and make the matrix non-positive definite, so we replace that entry with a reasonable guess at the scale. The interactions between `log_sigma`/`nu` and `s` are also not very useful, so we set them to zero.
 # 
-# The hessian matrix is also very sparse, so we make it a sparse matrix for faster sampling.
+# The Hessian matrix is also very sparse, so we make it a sparse matrix for faster sampling.
 
 # <codecell>
 
@@ -87,11 +86,11 @@ def hessian(point, nusd):
 # <codecell>
 
 with model:
-    start = find_MAP(vars = [s], fmin = optimize.fmin_l_bfgs_b)
+    start = find_MAP(vars=[s], fmin = optimize.fmin_l_bfgs_b)
 
 # <markdowncell>
 
-# We do a short initial run to get near the right area, then start again using a new hessian at the new starting point to get faster sampling due to better scaling.
+# We do a short initial run to get near the right area, then start again using a new Hessian at the new starting point to get faster sampling due to better scaling.
 
 # <codecell>
 
@@ -99,20 +98,23 @@ with model:
     step = HamiltonianMC(model.vars, hessian(start, 6))
     trace = sample(200, step, start, trace = model.vars + [sigma]) 
 
+    # Start next run at the last sampled position.
     start2 = trace.point(-1)
     step = HamiltonianMC(model.vars, hessian(start2, 6), path_length = 4.)
-    trace = sample(8000, step, trace = trace) 
+    trace = sample(8000, step, trace=trace) 
 
 # <codecell>
 
 #figsize(12,6)
 title(str(s))
-plot(trace[s][::10].T,'b', alpha = .01);
+plot(trace[s][::10].T,'b', alpha=.01)
+xlabel('time')
+ylabel('volatility')
 
 #figsize(12,6)
-traceplot(trace, model.vars[:-1]);
+traceplot(trace, model.vars[:-1])
 
-# <markdowncell>
+# <rawcell>
 
 # ## References
 # 

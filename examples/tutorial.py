@@ -12,13 +12,24 @@ from numpy.random import normal, beta
 
 # Model
 # -----
-# We consider the following generative model
+# Consider the following true generative model:
+#     
+# $$ x_{true} \sim \textrm{Normal}(2,1) $$
+# $$ y_{true} \sim \textrm{Normal}(\textrm{exp}(x_{true}),1)$$
+# $$ z_{data} \sim \textrm{Normal}(x_{true} + y_{true},0.75)$$
+# 
+# Where $x_{true}$ is a scalar, $y_{true}$ is a vector of length 2, and $z_{data}$ is a $2\times 20$ matrix.
+# 
+# We can simulate this using Numpy:
 
 # <codecell>
 
+ndims = 2
+nobs = 20
+
 xtrue = normal(scale = 2., size = 1)
-ytrue = normal(loc = np.exp(xtrue), scale = 1, size = (2,1))
-zdata = normal(loc = xtrue + ytrue, scale = .75, size = (2, 20))
+ytrue = normal(loc = np.exp(xtrue), scale = 1, size = (ndims,1))
+zdata = normal(loc = xtrue + ytrue, scale = .75, size = (ndims, nobs))
 
 # <markdowncell>
 
@@ -27,7 +38,16 @@ zdata = normal(loc = xtrue + ytrue, scale = .75, size = (2, 20))
 # <markdowncell>
 
 # Build Model
-# ----------- 
+# -----------
+# 
+# Now we want to do inference assuming the following model:
+# 
+# $$ x \sim \textrm{Normal}(0,1) $$
+# $$ y \sim \textrm{Normal}(\textrm{exp}(x),2)$$
+# $$ z \sim \textrm{Normal}(x + y,0.75)$$
+# 
+# The aim here is to get posteriors over $x$ and $y$ given the data we have about $z$ (`zdata`).
+# 
 # We create a new `Model` objects, and do operations within its context. The `with` lets PyMC know this model is the current model of interest. 
 # 
 # We construct new random variables with the constructor for its prior distribution such as `Normal` while within a model context (inside the `with`). When you make a random variable it is automatically added to the model. The constructor returns a Theano variable.
@@ -38,15 +58,20 @@ zdata = normal(loc = xtrue + ytrue, scale = .75, size = (2, 20))
 
 with Model() as model:
     x = Normal('x', mu = 0., tau = 1)
-    y = Normal('y', mu = exp(x), tau = 2.**-2, shape = (2,1))
-    
-    z = Normal('z', mu = x + y, tau = .75**-2, observed = zdata)
+    y = Normal('y', mu = exp(x), tau = 2.**-2, shape = (ndims,1)) # here, shape is telling us it's a vector rather than a scalar.
+    z = Normal('z', mu = x + y, tau = .75**-2, observed = zdata) # shape is inferred from zdata
+
+# <markdowncell>
+
+# A parenthetical note on the parameters for the normal. Variance is encoded as `tau`, indicating precision, which is simply inverse variance (so $\tau=\sigma^{-2}$ ). This is used because the gamma function is the conjugate prior for precision, and must be inverted to get variance. Encoding in terms of precision saves the inversion step in cases where variance is actually modeled using gamma as a prior.
 
 # <markdowncell>
 
 # Fit Model
 # ---------
-# We need a starting point for our sampling. The `find_MAP` function finds the maximum a posteriori point (MAP), which is often a good choice for starting point. `find_MAP` uses an optimization algorithm to find the local maximum of the log posterior. 
+# We need a starting point for our sampling. The `find_MAP` function finds the maximum a posteriori point (MAP), which is often a good choice for starting point. `find_MAP` uses an optimization algorithm (`scipy.optimize.fmin_l_bfgs_b`, or [BFGS](http://en.wikipedia.org/wiki/BFGS_method), by default) to find the local maximum of the log posterior.
+# 
+# Note that this `with` construction is used again. Functions like `find_MAP` and `HamiltonianMC` need to have a model in their context. `with` activates the context of a particular model within its block.
 
 # <codecell>
 
@@ -59,7 +84,13 @@ with model:
 
 # <codecell>
 
-start
+print "MAP found:"
+print "x:", start['x']
+print "y:", start['y']
+
+print "Compare with true values:"
+print "ytrue", ytrue
+print "xtrue", xtrue
 
 # <markdowncell>
 
@@ -109,7 +140,7 @@ trace[y].shape == (3000, 2,1)
 
 # <codecell>
 
-traceplot(trace)
+traceplot(trace);
 
 # <markdowncell>
 
@@ -129,4 +160,11 @@ traceplot(trace)
 # 
 # * Without a name argument, it simply constructs a distribution object and returns it. It won't construct a random variable. This object has properties like `logp` (density function) and `expectation`.
 # * With a name argument, it constructs a random variable using the distrubtion object as the prior distribution and inserts this random variable into the current model. Then the constructor returns the random variable. 
+
+# <codecell>
+
+help(model)
+
+# <codecell>
+
 
