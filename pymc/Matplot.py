@@ -721,7 +721,7 @@ def gof_plot(simdata, trueval, name=None, bins=None, format='png', suffix='-gof'
         # Iterate over more than one set of data
         for i in range(len(trueval)):
             n = name or 'MCMC'
-            gof_plot(simdata[:,i], trueval[i], '%s[%i]' % (n, i), bins=bins, format=format, suffix=suffix, path=path, fontmap=fontmap)
+            gof_plot(simdata[:,i], trueval[i], '%s[%i]' % (n, i), bins=bins, format=format, suffix=suffix, path=path, fontmap=fontmap, verbose=verbose)
         return
 
     if verbose>0:
@@ -769,7 +769,7 @@ def gof_plot(simdata, trueval, name=None, bins=None, format='png', suffix='-gof'
     #close()
 
 @plotwrapper
-def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='./',
+def autocorrelation(data, name, maxlags=100, format='png', reflected=False, suffix='-acf', path='./',
     fontmap = None, new=True, last=True, rows=1, columns=1, num=1, verbose=1):
     """
     Generate bar plot of the autocorrelation function for a series (usually an MCMC trace).
@@ -823,7 +823,7 @@ def autocorrelation(data, name, maxlags=100, format='png', suffix='-acf', path='
 
         # Set axis bounds
         ylim(-.1, 1.1)
-        xlim(-maxlags, maxlags)
+        xlim(-maxlags*reflected or 0, maxlags)
 
         # Plot options
         title('\n\n   %s acorr'%name, x=0., y=1., ha='left', va='top', fontsize='small')

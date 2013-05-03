@@ -386,11 +386,11 @@ class Sampler(Model):
         outfile.write(header + '\n')
 
         stats = self.stats(variables=variables, alpha=alpha, start=start, batches=batches, chain=chain, quantiles=quantiles)
-        
+
         if variables is None:
             variables = stats.keys()
             variables.sort()
-        
+
         buffer = str()
         for param in variables:
 

@@ -260,10 +260,6 @@ class MCMC(Sampler):
 
                 i = self._current_iter
 
-                # Update progress bar
-                if not (i+1) % 100 and self.pbar:
-                    self.pbar.update(i+1)
-
                 # Tune at interval
                 if i and not (i % self._tune_interval) and self._tuning:
                     self.tune()
@@ -273,8 +269,6 @@ class MCMC(Sampler):
                         new_burn = self._current_iter + int(self._stop_tuning_after * self._tune_interval)
                         self._burn =  max(new_burn, self._burn);
                         self._iter = self._burn + self._n_tally
-                        self.pbar = pbar(self._iter)
-                        self.pbar.update(i+1)
 
                 # Manage burn-in
                 if i == self._burn:
@@ -302,17 +296,14 @@ class MCMC(Sampler):
                 if not i % 1000:
                     self.commit()
 
+                # Update progress bar
+                self.pbar.update(i)
+
                 # Increment interation
                 self._current_iter += 1
 
         except KeyboardInterrupt:
             self.status='halt'
-        finally:
-            # Stop progress bar
-            if self.pbar:
-                self.pbar.update(self._iter)
-
-        if self.status == 'halt':
             self._halt()
 
 

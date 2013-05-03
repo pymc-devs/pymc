@@ -27,9 +27,11 @@ class ProgressBar(object):
         elapsed = time.time() - self.start
         i = i + 1
 
-        if elapsed - self.last > self.animation_interval or i == self.iterations:
-             self.animate(i+1, elapsed)
-             self.last = elapsed
+        if elapsed - self.last > self.animation_interval:
+            self.animate(i+1, elapsed)
+            self.last = elapsed
+        elif i == self.iterations:
+            self.animate(i, elapsed)
 
 class TextProgressBar(ProgressBar):
     def __init__(self, iterations, printer):
