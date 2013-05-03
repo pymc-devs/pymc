@@ -1,5 +1,5 @@
 import itertools as its
-from checks import * 
+from checks import *
 from pymc import *
 from numpy import array, inf
 
@@ -70,17 +70,17 @@ def test_constantdist():
 
 def test_zeroinflatedpoisson():
     checkd(ZeroInflatedPoisson, I, {'theta' : Rplus, 'z' : Bool})
-    
+
 
 def test_densitydist():
     def logp(x):
         return -log(2*.5) - abs(x-.5)/.5
-    
+
     checkd(DensityDist,R, {}, extra_args = {'logp' : logp})
 
 
 def test_addpotential():
-    with Model() as model: 
+    with Model() as model:
         x = Normal('x', 1,1)
         model.AddPotential(-x**2)
 
@@ -89,10 +89,10 @@ def test_addpotential():
 
 def checkd(distfam, valuedomain, vardomains, check_int = True, check_der = True, extra_args = {}):
 
-    with Model() as m: 
+    with Model() as m:
         vars = dict((v , Flat(v, dtype = dom.dtype)) for v,dom in vardomains.iteritems())
         vars.update(extra_args)
-        print vars 
+        # print vars
         value = distfam('value', testval = valuedomain[len(valuedomain)//2], **vars)
 
         vardomains['value'] = np.array(valuedomain)
@@ -101,13 +101,13 @@ def checkd(distfam, valuedomain, vardomains, check_int = True, check_der = True,
 
         if check_int:
             check_int_to_1(m, value, domains)
-        if check_der: 
+        if check_der:
             check_dlogp(m, value, domains)
 
-    
-def check_int_to_1(model, value, domains): 
+
+def check_int_to_1(model, value, domains):
     pdf = compilef(exp(model.logp))
-    
+
     lower, upper = np.min(domains[-1]), np.max(domains[-1])
 
     domains = [d[1:-1] for d in domains[:-1]]
@@ -118,28 +118,28 @@ def check_int_to_1(model, value, domains):
         pt = Point(dict( (str(var), val) for var,val in zip(model.vars, a)), model = model)
 
         bij = DictToVarBijection(value,() ,  pt)
-        
+
         pdfx = bij.mapf(pdf)
-        
+
         if value.dtype in continuous_types:
             area = integrate.quad(pdfx, lower, upper, epsabs = 1e-8)[0]
-        else: 
+        else:
             area = np.sum(map(pdfx, np.arange(lower, upper + 1)))
 
         assert_almost_equal(area, 1, err_msg = str(pt))
 
 
-def check_dlogp(model, value, domains): 
+def check_dlogp(model, value, domains):
 
     domains = [d[1:-1] for d in domains]
     bij = DictToArrayBijection(ArrayOrdering(model.cont_vars), model.test_point)
 
     if not model.cont_vars:
-        return 
+        return
 
     dlp = model.dlogpc()
     dlogp = bij.mapf(model.dlogpc())
-    
+
     lp = model.logpc
     logp = bij.mapf(model.logpc)
     ndlogp = Gradient(logp)
