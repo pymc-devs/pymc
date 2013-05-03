@@ -14,24 +14,26 @@ except ImportError:
 
 __all__ = ['progress_bar']
 
-class ProgressBar(object): 
+class ProgressBar(object):
     def __init__(self, iterations, animation_interval = .5):
         self.iterations = iterations
         self.start = time.time()
         self.last = 0
         self.animation_interval = animation_interval
 
-    def percentage(self, i): 
+    def percentage(self, i):
         return 100*i/float(self.iterations)
 
     def update(self, i):
         elapsed = time.time() - self.start
-        i = i + 1
-        
-        if elapsed - self.last > self.animation_interval or i == self.iterations:
-             self.animate(i+1, elapsed)
-             self.last = elapsed
-        
+        i += 1
+
+        if elapsed - self.last > self.animation_interval:
+            self.animate(i+1, elapsed)
+            self.last = elapsed
+        elif i == self.iterations:
+            self.animate(i, elapsed)
+
 class TextProgressBar(ProgressBar):
     def __init__(self, iterations, printer):
         self.fill_char = '-'
@@ -45,16 +47,16 @@ class TextProgressBar(ProgressBar):
         self.printer(self.progbar(i, elapsed))
 
 
-    def progbar(self,i, elapsed): 
+    def progbar(self,i, elapsed):
         bar = self.bar(self.percentage(i))
         return "[%s] %i of %i complete in %.1f sec" % (bar, i, self.iterations, round(elapsed,1))
- 
+
     def bar(self, percent):
         all_full = self.width - 2
         num_hashes = int(percent/100 * all_full)
-        
+
         bar = self.fill_char * num_hashes + ' ' * (all_full - num_hashes)
-        
+
         info = '%d%%' % percent
         loc = (  len(bar) - len(info)  )/2
         return replace_at(bar, info, loc, loc + len(info))
@@ -68,7 +70,7 @@ def consoleprint(s):
         print(s, '\r', end='')
     else:
         print(s)
-    
+
 def ipythonprint(s):
     print('\r', s, end='')
     sys.stdout.flush()
@@ -82,7 +84,7 @@ class IPythonNotebookPB(ProgressBar):
             """
             <div style="float: left; border: 1px solid black; width:500px">
               <div id="%s" style="background-color:blue; width:0%%">&nbsp;</div>
-            </div> 
+            </div>
             <label id="%s" style="padding-left: 10px;" text = ""/>
             """ % (self.divid,self.sec_id))
         display(pb)
@@ -103,10 +105,10 @@ def run_from_ipython():
             return False
 
 def progress_bar(iters):
-    if run_from_ipython(): 
+    if run_from_ipython():
         if None:
             return NotebookProgressBar(iters)
-        else: 
+        else:
             return TextProgressBar(iters, ipythonprint)
     else:
         return TextProgressBar(iters, consoleprint)

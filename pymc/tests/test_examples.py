@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg', warn=False)
 
 from os import path
 import os
