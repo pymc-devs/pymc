@@ -102,7 +102,7 @@ def Normal(mu=0.0, tau=1.0):
     mode = mean
     
     logp.__doc__ = """
-        Normal log-likelihood with paraemters mu={0} and tau={1}.
+        Normal log-likelihood with parameters mu={0} and tau={1}.
         
         Parameters
         ----------

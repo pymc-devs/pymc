@@ -13,6 +13,8 @@ def quad_potential(C, is_cov):
         return C
 
     if issparse(C):
+        if not chol_available:
+            raise ImportError, "Requires scikits.sparse"
         return QuadPotential_SparseInv(C)
     
     partial_check_positive_definite(C)
