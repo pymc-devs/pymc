@@ -68,7 +68,7 @@ def Flat():
     return locals()
 
 @tensordist(continuous)
-def Normal(mu=0.0, tau=1.0):
+def Normal(mu=0.0, tau=None, sd=None):
     """
     Normal log-likelihood.
 
@@ -82,12 +82,23 @@ def Normal(mu=0.0, tau=1.0):
     tau : float
         Precision of the distribution, which corresponds to
         :math:`1/\sigma^2` (tau > 0).
+    sd : float 
+        Standard deviation of the distribution. Alternative parameterization.
 
     .. note::
     - :math:`E(X) = \mu`
     - :math:`Var(X) = 1/\tau`
 
     """
+
+    if tau is None :
+        if sd is None:
+            tau = 1.
+        else: 
+            tau = sd**-2 
+    else:
+        if sd is not None: 
+            raise ValueError("Can't pass both tau and sd")
 
     def logp(value):
         
