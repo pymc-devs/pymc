@@ -8,41 +8,41 @@ from progressbar import progress_bar
 
 __all__ = ['sample', 'psample']
 
-def sample(draws, step, start = None, trace = None, track_progress = True, model = None): 
+def sample(draws, step, start=None, trace=None, track_progress=True, model=None):
     """
-    Draw a number of samples using the given step method. 
-    Multiple step methods supported via compound step method 
+    Draw a number of samples using the given step method.
+    Multiple step methods supported via compound step method
     returns the amount of time taken.
-        
+
     Parameters
     ----------
-        
+
     model : Model (optional if in `with` context)
-    draws : int  
+    draws : int
         The number of samples to draw
     step : function
         A step function
-    start : dict 
+    start : dict
         Starting point in parameter space (Defaults to trace.point(-1))
     trace : NpTrace
         A trace of past values (defaults to None)
     track : list of vars
         The variables to follow
-        
+
     Examples
     --------
-        
+
     >>> an example
-        
+
     """
     model = modelcontext(model)
     draws = int(draws)
-    if start is None: 
+    if start is None:
         start = trace[-1]
     point = Point(start, model = model)
 
     if not hasattr(trace, 'record'):
-        if trace is None: 
+        if trace is None:
             trace = model.vars
         trace = NpTrace(list(trace))
 
@@ -65,8 +65,8 @@ def sample(draws, step, start = None, trace = None, track_progress = True, model
 def argsample(args):
     """ defined at top level so it can be pickled"""
     return sample(*args)
-  
-def psample(draws, step, start, mtrace = None, track = None, model = None, threads = None):
+
+def psample(draws, step, start, mtrace=None, track=None, model=None, threads=None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
     returns the amount of time taken"""
 
@@ -78,7 +78,7 @@ def psample(draws, step, start, mtrace = None, track = None, model = None, threa
     if isinstance(start, dict) :
         start = threads * [start]
 
-    if track is None: 
+    if track is None:
         track = model.vars
 
     if not mtrace:
@@ -87,7 +87,7 @@ def psample(draws, step, start, mtrace = None, track = None, model = None, threa
     p = mp.Pool(threads)
 
     argset = zip([draws]*threads, [step]*threads, start, mtrace.traces, [False]*threads, [model] *threads)
-    
+
     traces = p.map(argsample, argset)
-        
+
     return MultiTrace(traces)
