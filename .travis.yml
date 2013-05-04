@@ -3,7 +3,7 @@ python:
   - "2.7"
 before_install:
   - sudo apt-get install liblapack-dev gfortran python-scipy libblas-dev libsuitesparse-dev swig
-install: 
+install:
   - pip install git+https://github.com/numpy/numpy.git
   - pip install scipy
   - pip install matplotlib
@@ -13,5 +13,5 @@ install:
   - pip install Cython
   - pip install scikits.sparse
   - python setup.py build_ext --inplace
-script: 
-  - nosetests -s tests/
+script:
+  - nosetests -s pymc/tests/

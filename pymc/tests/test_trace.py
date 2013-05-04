@@ -13,7 +13,7 @@ except:
 def check_trace(model, trace, n, step, start):
     #try using a trace object a few times
     for i in range(2):
-        trace = sample(n, step, start, trace, model = model)
+        trace = sample(n, step, start, trace, track_progress=False, model = model)
 
         for (var, val) in start.iteritems():
 
@@ -23,11 +23,11 @@ def check_trace(model, trace, n, step, start):
 def test_trace():
     model, start, step,_  = simple_init()
 
-    for     h in [pm.NpTrace]:
+    for h in [pm.NpTrace]:
         for n in [20, 1000]:
             for vars in [model.vars, model.vars + [model.vars[0]**2]]:
                 trace = h(vars)
-                
+
 
                 yield check_trace, model, trace, n, step, start
 
@@ -45,8 +45,8 @@ def test_multitrace():
 def check_multi_trace(model, trace, n, step, start):
 
     for i in range(2):
-        trace = psample(n, step, start, trace, model = model)
-        
+        trace = psample(n, step, start, trace, track_progress=False, model = model)
+
 
         for (var, val) in start.iteritems():
             print [len(tr.samples[var].vals) for tr in trace.traces]
@@ -68,7 +68,7 @@ def test_get_point():
     x = pm.NpTrace(model.vars)
     x.record(p)
     x.record(p2)
-    assert x.point(1) == x[1] 
+    assert x.point(1) == x[1]
 
 
 
