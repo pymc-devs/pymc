@@ -13,9 +13,10 @@ def test_step_continuous():
 
     hmc = pm.HamiltonianMC(model.vars,  C, is_cov = True, model = model)
     mh = pm.Metropolis(model.vars , C, is_cov = True, scaling = 2, model = model)
+    slicer = pm.Slice(model.vars, model=model)
     compound = pm.CompoundStep([hmc, mh])
 
-    steps = [mh, hmc, compound]
+    steps = [mh, hmc, compound, slicer]
 
     unc = np.diag(C)**.5
     check = [('x', np.mean, mu, unc/10.),
@@ -29,7 +30,6 @@ def test_step_continuous():
             h = sample(8000, st, start, track_progess=False, model = model)
 
             yield check_stat,repr(st), h, var, stat, val, bound
-
 
 
 
