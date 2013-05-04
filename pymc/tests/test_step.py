@@ -18,6 +18,7 @@ def test_step_continuous():
 
     steps = [mh, hmc, compound, slicer]
 
+
     unc = np.diag(C)**.5
     check = [('x', np.mean, mu, unc/10.),
              ('x', np.std , unc, unc/10.)]
@@ -34,3 +35,7 @@ def test_step_continuous():
 
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> Temporarily reverting test_step
