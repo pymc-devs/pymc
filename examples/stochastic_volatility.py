@@ -29,9 +29,12 @@ from scipy import optimize
 
 # ## Build Model
 
+# <markdowncell>
+
+# First we load some daily returns of the S&P 500.
+
 # <codecell>
 
-# Load 400 returns from the S&P 500.
 n = 400
 returns = np.genfromtxt("data/SP500.csv")[-n:]
 
@@ -64,7 +67,7 @@ with model:
 # 
 # However, the 2nd derivatives for the degrees of freedom parameter, `nu`, are negative and thus not very informative and make the matrix non-positive definite, so we replace that entry with a reasonable guess at the scale. The interactions between `log_sigma`/`nu` and `s` are also not very useful, so we set them to zero.
 # 
-# The Hessian matrix is also very sparse, so we make it a sparse matrix for faster sampling.
+# The Hessian matrix is also sparse, so we can get faster sampling by using a sparse scaling matrix. If you have `scikits.sparse` installed, convert the Hessian to a csc matrixs by uncommenting the appropriate line below.
 
 # <codecell>
 
@@ -75,13 +78,14 @@ def hessian(point, nusd):
     h[1,1] = nusd**-2
     h[:2,2:] = h[2:,:2] = 0
 
-    return csc_matrix(h)
+    #h = csc_matrix(h)
+    return h
 
 # <markdowncell>
 
 # For this model, the full maximum a posteriori (MAP) point is degenerate and has infinite density. However, if we fix `log_sigma` and `nu` it is no longer degenerate, so we find the MAP with respect to the volatility process, 's', keeping `log_sigma` and `nu` constant at their default values. 
 # 
-# We use l_bfgs_b because it is more efficient for high dimensional functions (`s` has n elements).
+# We use [l_bfgs_b](http://en.wikipedia.org/wiki/Limited-memory_BFGS) because it is more efficient for high dimensional functions (`s` has n elements).
 
 # <codecell>
 
@@ -107,14 +111,14 @@ with model:
 
 #figsize(12,6)
 title(str(s))
-plot(trace[s][::10].T,'b', alpha=.01)
+plot(trace[s][::10].T,'b', alpha=.01);
 xlabel('time')
 ylabel('volatility')
 
 #figsize(12,6)
-traceplot(trace, model.vars[:-1])
+traceplot(trace, model.vars[:-1]);
 
-# <rawcell>
+# <markdowncell>
 
 # ## References
 # 
