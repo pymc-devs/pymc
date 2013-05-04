@@ -31,11 +31,3 @@ def test_step_continuous():
             h = sample(8000, st, start, track_progess=False, model = model)
 
             yield check_stat,repr(st), h, var, stat, val, bound
-
-
-
-
-<<<<<<< HEAD
-=======
-
->>>>>>> Temporarily reverting test_step
