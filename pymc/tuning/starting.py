@@ -23,7 +23,7 @@ def find_MAP(start = None, vars=None, fmin = optimize.fmin_bfgs, return_raw = Fa
     vars : list 
         List of variables to set to MAP point (Defaults to all continuous).
     fmin : function
-        Optimization algorithm (Defaults to `scipy.optimize.fmin_l_bfgs_b`).
+        Optimization algorithm (Defaults to `scipy.optimize.fmin_bfgs`).
     return_raw : Bool
         Whether to return extra value returned by fmin (Defaults to False)
     model : Model (optional if in `with` context)
