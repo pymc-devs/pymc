@@ -1,13 +1,6 @@
 from pymc import Model, Normal, Metropolis
-import numpy as np 
+import numpy as np
 import pymc as pm
-
-def simple_init(): 
-    start, model, moments = simple_model()
-
-    step = Metropolis(model.vars, np.diag([1.]), model = model)
-    return model, start, step, moments
-
 
 def simple_model():
     mu = -2.1
@@ -16,6 +9,12 @@ def simple_model():
         x = Normal('x', mu,tau, testval = .1)
 
     return model.test_point, model, (mu, tau**-1)
+
+def simple_init():
+    start, model, moments = simple_model()
+
+    step = Metropolis(model.vars, np.diag([1.]), model = model)
+    return model, start, step, moments
 
 def simple_2model():
     mu = -2.1
@@ -34,7 +33,7 @@ def mv_simple():
         [.05 , .1,  0],
         [1. ,-0.05,5.5]])
 
-    tau = np.dot(p,p.T) 
+    tau = np.dot(p,p.T)
 
 
     with pm.Model() as model:

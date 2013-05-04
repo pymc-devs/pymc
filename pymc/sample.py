@@ -17,7 +17,6 @@ def sample(draws, step, start=None, trace=None, track_progress=True, model=None)
     Parameters
     ----------
 
-    model : Model (optional if in `with` context)
     draws : int
         The number of samples to draw
     step : function
@@ -26,8 +25,9 @@ def sample(draws, step, start=None, trace=None, track_progress=True, model=None)
         Starting point in parameter space (Defaults to trace.point(-1))
     trace : NpTrace
         A trace of past values (defaults to None)
-    track : list of vars
-        The variables to follow
+    track_progress : bool
+        Flag for progress bar
+    model : Model (optional if in `with` context)
 
     Examples
     --------

@@ -17,9 +17,9 @@ def test_sample():
         test_samplers.append(psample)
 
     with model:
-        for     samplr  in test_samplers: 
-            for n       in [0, 10, 1000]:
-                yield samplr, n, step, start 
+        for samplr in test_samplers:
+            for n in [0, 10, 1000]:
+                yield samplr, n, step, start
 
 
 
