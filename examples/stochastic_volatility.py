@@ -94,7 +94,7 @@ with model:
 
 # <markdowncell>
 
-# We do a short initial run to get near the right area, then start again using a new Hessian at the new starting point to get faster sampling due to better scaling.
+# We do a short initial run to get near the right area, then start again using a new Hessian at the new starting point to get faster sampling due to better scaling. We do a short run since this is an interactive example.
 
 # <codecell>
 
@@ -105,13 +105,13 @@ with model:
     # Start next run at the last sampled position.
     start2 = trace.point(-1)
     step = HamiltonianMC(model.vars, hessian(start2, 6), path_length = 4.)
-    trace = sample(8000, step, trace=trace) 
+    trace = sample(2000, step, trace=trace) 
 
 # <codecell>
 
 #figsize(12,6)
 title(str(s))
-plot(trace[s][::10].T,'b', alpha=.01);
+plot(trace[s][::10].T,'b', alpha=.03);
 xlabel('time')
 ylabel('volatility')
 
