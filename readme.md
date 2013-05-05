@@ -6,10 +6,11 @@ PyMC is a python module for Bayesian statistical modeling and model fitting whic
 
 ## Features 
 
- * Powerful sampling algorithms such as [Hamiltonian Monte Carlo](http://en.wikipedia.org/wiki/Hybrid_Monte_Carlo)
  * Intuitive model specification syntax, for example, `x ~ N(0,1)` translates to `x = Normal(0,1)`
- * All [Theano](http://deeplearning.net/software/theano/) features 
-  * Numpy indexing and broadcasting
+ * Powerful sampling algorithms such as [Hamiltonian Monte Carlo](http://en.wikipedia.org/wiki/Hybrid_Monte_Carlo)
+ * Easy optimization for finding the *maximum a posteriori* point
+ * [Theano](http://deeplearning.net/software/theano/) features 
+  * Numpy broadcasting and advanced indexing 
   * Linear algebra operators
   * Computation optimization and dynamic C compilation
  * Simple extensibility
