@@ -22,8 +22,7 @@ PyMC is a python module for Bayesian statistical modeling and model fitting whic
 ## Installation 
 
 ```
-git clone -b pymc3 git@github.com:pymc-devs/pymc.git
-python pymc/setup.py install
+pip install git+https://github.com/pymc-devs/pymc@pymc3
 ```
 
 ### Optional

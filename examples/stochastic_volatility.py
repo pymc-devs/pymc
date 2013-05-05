@@ -23,7 +23,7 @@ from scipy import optimize
 # 
 # $$ log(\frac{y_i}{y_{i-1}}) \sim t(\nu, 0, exp(-2 s_i)) $$
 # 
-# Here, $y$ is the daily return series and $s$ is the latent volatility process.
+# Here, $y$ is the daily return series and $s$ is the latent log volatility process.
 
 # <markdowncell>
 
@@ -37,12 +37,13 @@ from scipy import optimize
 
 n = 400
 returns = np.genfromtxt("data/SP500.csv")[-n:]
+returns[:5]
 
 # <markdowncell>
 
 # Specifying the model in pymc mirrors its statistical specification. 
 # 
-# However, it is easier to sample the scale of the volatility process innovations, $\sigma$, on a log scale, so we create it using `TransformedVar` and use `logtransform`. `TransformedVar` creates one variable in the transformed space and one in the normal space. The one in the transformed space (here $\text{log}(\sigma) $) is the one over which sampling will occur, and the one in the normal space is the one to use throughout the rest of the model.
+# However, it is easier to sample the scale of the log volatility process innovations, $\sigma$, on a log scale, so we create it using `TransformedVar` and use `logtransform`. `TransformedVar` creates one variable in the transformed space and one in the normal space. The one in the transformed space (here $\text{log}(\sigma) $) is the one over which sampling will occur, and the one in the normal space is the one to use throughout the rest of the model.
 # 
 # It takes a variable name, a distribution and a transformation to use.
 
@@ -85,7 +86,7 @@ def hessian(point, nusd):
 
 # For this model, the full maximum a posteriori (MAP) point is degenerate and has infinite density. However, if we fix `log_sigma` and `nu` it is no longer degenerate, so we find the MAP with respect to the volatility process, 's', keeping `log_sigma` and `nu` constant at their default values. 
 # 
-# We use [l_bfgs_b](http://en.wikipedia.org/wiki/Limited-memory_BFGS) because it is more efficient for high dimensional functions (`s` has n elements).
+# We use L-BFGS because it is more efficient for high dimensional functions (`s` has n elements).
 
 # <codecell>
 
@@ -113,7 +114,7 @@ with model:
 title(str(s))
 plot(trace[s][::10].T,'b', alpha=.03);
 xlabel('time')
-ylabel('volatility')
+ylabel('log volatility')
 
 #figsize(12,6)
 traceplot(trace, model.vars[:-1]);
@@ -122,5 +123,5 @@ traceplot(trace, model.vars[:-1]);
 
 # ## References
 # 
-#     1. Hoffman & Gelman. (2011). The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo. http://arxiv.org/abs/1111.4246 
+# 1. Hoffman & Gelman. (2011). [The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo](http://arxiv.org/abs/1111.4246). 
 
