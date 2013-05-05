@@ -8,7 +8,7 @@ from progressbar import progress_bar
 
 __all__ = ['sample', 'psample']
 
-def sample(draws, step, start=None, trace=None, track_progress=True, model=None):
+def sample(draws, step, start=None, trace=None, progressbar=True, model=None):
     """
     Draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -25,7 +25,7 @@ def sample(draws, step, start=None, trace=None, track_progress=True, model=None)
         Starting point in parameter space (Defaults to trace.point(-1))
     trace : NpTrace
         A trace of past values (defaults to None)
-    track_progress : bool
+    progressbar : bool
         Flag for progress bar
     model : Model (optional if in `with` context)
 
@@ -57,7 +57,7 @@ def sample(draws, step, start=None, trace=None, track_progress=True, model=None)
     for i in xrange(draws):
         point = step.step(point)
         trace = trace.record(point)
-        if track_progress:
+        if progressbar:
             progress.update(i)
 
     return trace
