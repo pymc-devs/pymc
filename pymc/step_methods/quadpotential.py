@@ -23,7 +23,7 @@ def quad_potential(C, is_cov, as_cov):
         else:
             return ElemWiseQuadPotential(1. / C)
     else:
-        if is_cov != as_co:
+        if is_cov != as_cov:
             return QuadPotential(C)
         else:
             return QuadPotential_Inv(C)
