@@ -6,18 +6,23 @@ from quadpotential import quad_potential
 from arraystep import *
 from numpy.random import normal, standard_cauchy, standard_exponential
 
-__all__ = ['Metropolis', 'normal_proposal', 'cauchy_proposal', 'laplace_proposal']
+__all__ = ['Metropolis', 'normal_proposal', 'cauchy_proposal',
+           'laplace_proposal']
 
 # Available proposal distributions for Metropolis
+
+
 def normal_proposal(s):
     def random():
         return normal(scale=s)
     return random
 
+
 def cauchy_proposal(s):
     def random():
         return standard_cauchy(size=np.size(s)) * s
     return random
+
 
 def laplace_proposal(s):
     def random():
@@ -47,25 +52,26 @@ class Metropolis(ArrayStep):
 
     """
     def __init__(self, vars, S=None, proposal_dist=normal_proposal, scaling=1.,
-            tune=True, tune_interval=100, model=None):
+                 tune=True, tune_interval=100, model=None):
 
         model = modelcontext(model)
 
         if S is None:
-            S = [1]*len(vars)
+            S = [1] * len(vars)
         self.proposal_dist = proposal_dist(S)
         self.scaling = scaling
         self.tune = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.accepted = 0
-        super(Metropolis,self).__init__(vars, [model.logpc])
+        super(Metropolis, self).__init__(vars, [model.logpc])
 
     def astep(self, q0, logp):
 
         if self.tune and not self.steps_until_tune:
             # Tune scaling parameter
-            self.scaling = tune(self.scaling, self.accepted/float(self.tune_interval))
+            self.scaling = tune(
+                self.scaling, self.accepted / float(self.tune_interval))
             # Reset counter
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
@@ -76,12 +82,13 @@ class Metropolis(ArrayStep):
 
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
-        if (any(q_new!=q0) or all(q0==q)):
+        if (any(q_new != q0) or all(q0 == q)):
             self.accepted += 1
 
         self.steps_until_tune -= 1
 
         return q_new
+
 
 def tune(scale, acc_rate):
     """
@@ -100,22 +107,22 @@ def tune(scale, acc_rate):
     """
 
     # Switch statement
-    if acc_rate<0.001:
+    if acc_rate < 0.001:
         # reduce by 90 percent
         scale *= 0.1
-    elif acc_rate<0.05:
+    elif acc_rate < 0.05:
         # reduce by 50 percent
         scale *= 0.5
-    elif acc_rate<0.2:
+    elif acc_rate < 0.2:
         # reduce by ten percent
         scale *= 0.9
-    elif acc_rate>0.95:
+    elif acc_rate > 0.95:
         # increase by factor of ten
         scale *= 10.0
-    elif acc_rate>0.75:
+    elif acc_rate > 0.75:
         # increase by double
         scale *= 2.0
-    elif acc_rate>0.5:
+    elif acc_rate > 0.5:
         # increase by ten percent
         scale *= 1.1
 

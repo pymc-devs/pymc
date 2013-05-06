@@ -8,6 +8,7 @@ from progressbar import progress_bar
 
 __all__ = ['sample', 'psample']
 
+
 def sample(draws, step, start=None, trace=None, progressbar=True, model=None):
     """
     Draw a number of samples using the given step method.
@@ -39,13 +40,12 @@ def sample(draws, step, start=None, trace=None, progressbar=True, model=None):
     draws = int(draws)
     if start is None:
         start = trace[-1]
-    point = Point(start, model = model)
+    point = Point(start, model=model)
 
     if not hasattr(trace, 'record'):
         if trace is None:
             trace = model.vars
         trace = NpTrace(list(trace))
-
 
     try:
         step = step_methods.CompoundStep(step)
@@ -62,9 +62,11 @@ def sample(draws, step, start=None, trace=None, progressbar=True, model=None):
 
     return trace
 
+
 def argsample(args):
     """ defined at top level so it can be pickled"""
     return sample(*args)
+
 
 def psample(draws, step, start, mtrace=None, track=None, model=None, threads=None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
@@ -75,7 +77,7 @@ def psample(draws, step, start, mtrace=None, track=None, model=None, threads=Non
     if not threads:
         threads = max(mp.cpu_count() - 2, 1)
 
-    if isinstance(start, dict) :
+    if isinstance(start, dict):
         start = threads * [start]
 
     if track is None:
@@ -86,7 +88,8 @@ def psample(draws, step, start, mtrace=None, track=None, model=None, threads=Non
 
     p = mp.Pool(threads)
 
-    argset = zip([draws]*threads, [step]*threads, start, mtrace.traces, [False]*threads, [model] *threads)
+    argset = zip([draws] * threads, [step] * threads, start, mtrace.traces,
+                 [False] * threads, [model] * threads)
 
     traces = p.map(argsample, argset)
 

@@ -11,6 +11,8 @@ __all__ = ['ArrayOrdering', 'DictToArrayBijection', 'DictToVarBijection']
 VarMap = collections.namedtuple('VarMap', 'var, slc, shp')
 
 # TODO Classes and methods need to be fully documented.
+
+
 class ArrayOrdering(object):
     """
     An ordering for an array space
@@ -19,13 +21,13 @@ class ArrayOrdering(object):
         self.vmap = []
         dim = 0
 
-        for var in vars:       
+        for var in vars:
             slc = slice(dim, dim + var.dsize)
-            self.vmap.append( VarMap(str(var), slc, var.dshape)  )
+            self.vmap.append(VarMap(str(var), slc, var.dshape))
             dim += var.dsize
 
         self.dimensions = dim
-            
+
 
 class DictToArrayBijection(object):
     """
@@ -38,46 +40,46 @@ class DictToArrayBijection(object):
     def map(self, dpt):
         """
         Maps value from dict space to array space
-        
+
         Parameters
         ----------
-        dpt : dict 
+        dpt : dict
         """
         apt = np.empty(self.ordering.dimensions)
         for var, slc, _ in self.ordering.vmap:
                 apt[slc] = np.ravel(dpt[var])
         return apt
 
-    def rmap(self, apt): 
+    def rmap(self, apt):
         """
-        Maps value from array space to dict space 
+        Maps value from array space to dict space
 
         Parameters
         ----------
         apt : array
         """
         dpt = self.dpt.copy()
-            
+
         for var, slc, shp in self.ordering.vmap:
             dpt[var] = np.reshape(apt[slc], shp)
-                
-            
+
         return dpt
 
     def mapf(self, f):
         """
          function f : DictSpace -> T to ArraySpace -> T
-        
+
         Parameters
         ----------
 
-        f : dict -> T 
+        f : dict -> T
 
         Returns
         -------
-        f : array -> T 
+        f : array -> T
         """
         return Compose(f, self.rmap)
+
 
 class DictToVarBijection(object):
     """
@@ -98,8 +100,9 @@ class DictToVarBijection(object):
         dvar[self.idx] = apt
 
         dpt[self.var] = dvar
-        
-        return dpt 
+
+        return dpt
+
     def mapf(self, f):
         return Compose(f, self.rmap)
 
@@ -108,7 +111,7 @@ class Compose(object):
     """
     Compose two functions in a pickleable way
     """
-    def __init__(self, fa, fb): 
+    def __init__(self, fa, fb):
         self.fa = fa
         self.fb = fb
 

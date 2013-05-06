@@ -9,11 +9,11 @@ from theano.tensor import dot
 @tensordist(continuous)
 def Normal(mu, Tau):
     """
-    Multivariate normal 
+    Multivariate normal
 
     :Parameters:
         mu : vector of means
-        Tau : precision matrix 
+        Tau : precision matrix
 
     .. math::
         f(x \mid \pi, T) = \frac{|T|^{1/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
@@ -22,20 +22,19 @@ def Normal(mu, Tau):
         2 array of floats
     """
 
-
-    def logp(value): 
+    def logp(value):
         delta = value - mu
-        return 1/2. * ( log(det(Tau)) - dot(delta.T,dot(Tau, delta)))
+        return 1 / 2. * (log(det(Tau)) - dot(delta.T, dot(Tau, delta)))
 
     mean = median = mode = mu
-        
+
     return locals()
 
 
 @tensordist(continuous)
-def Dirichlet(k, a): 
+def Dirichlet(k, a):
     """
-    Dirichlet 
+    Dirichlet
 
     This is a multivariate continuous distribution.
 
@@ -46,36 +45,37 @@ def Dirichlet(k, a):
     :Parameters:
         k : scalar int
             k > 1
-        a : float tensor 
+        a : float tensor
             a > 0
             concentration parameters
             last index is the k index
 
-    :Support: 
-        x : vector 
-            sum(x) == 1 and x > 0 
+    :Support:
+        x : vector
+            sum(x) == 1 and x > 0
 
     .. note::
         Only the first `k-1` elements of `x` are expected. Can be used
         as a parent of Multinomial and Categorical nevertheless.
     """
 
-
     a = ones([k]) * a
+
     def logp(value):
 
-        #only defined for sum(value) == 1 
+        # only defined for sum(value) == 1
         return bound(
-                sum(logpow(value, a -1) - gammaln(a), axis = 0) + gammaln(sum(a)),
+            sum(logpow(
+                value, a - 1) - gammaln(a), axis=0) + gammaln(sum(a)),
 
-                k > 1,
-                a > 0)
-    
-    mean = a/sum(a)
+            k > 1,
+            a > 0)
 
-    mode = switch(all(a > 1), 
-            (a-1)/sum(a-1), 
-            nan)
+    mean = a / sum(a)
+
+    mode = switch(all(a > 1),
+                 (a - 1) / sum(a - 1),
+                  nan)
 
     return locals()
 
@@ -110,18 +110,16 @@ def Multinomial(n, p):
         - :math:`Cov(X_i,X_j) = -n p_i p_j`
     """
 
+    def logp(x):
+        # only defined for sum(p) == 1
+        return bound(
+            factln(n) + sum(x * log(p) - factln(x)),
+            n > 0,
+            0 <= x, x <= n)
 
-    def logp(x): 
-        #only defined for sum(p) == 1
-        return bound( 
-                factln(n) + sum(x*log(p) - factln(x)), 
-                n > 0, 
-                0 <= x, x <= n)
-
-    mean = n*p
+    mean = n * p
 
     return locals()
-
 
 
 @tensordist(continuous)
@@ -151,18 +149,18 @@ def Wishart(n, p, V):
         Symmetric, positive definite.
     """
 
-    def logp(X): 
-        IVI  = det(V)
-        return bound( 
-                ((n-p-1)*log( IVI ) - trace(solve(V, X)) - n*p *log(2) - n*log( IVI ) -2*multigammaln(p, n/2))/2, 
+    def logp(X):
+        IVI = det(V)
+        return bound(
+            ((n - p - 1) * log(IVI) - trace(solve(V, X)) -
+             n * p * log(
+             2) - n * log(IVI) - 2 * multigammaln(p, n / 2)) / 2,
 
-                n > p -1)
+            n > p - 1)
 
-    mean = n*V
-    mode = switch(n >= p+1, 
-            (n-p-1)*V,
-            nan)
+    mean = n * V
+    mode = switch(n >= p + 1,
+                 (n - p - 1) * V,
+                  nan)
 
     return locals()
-
-
