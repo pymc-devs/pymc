@@ -35,7 +35,7 @@ from pymc import *
 from numpy import random, array, arange, ones
 import theano.tensor as t
 # Sample size
-n = 100000
+n = 100
 # True mean count, given occupancy
 theta = 2.1
 # True occupancy
@@ -71,7 +71,7 @@ def pymc3_dlogp():
     _pymc3_dlogp(point)
 
 with model:
-    start = {'p':0.5, 'z':(y>0).astype(int), 'theta':50}
+    start = {'p':0.5, 'z':(y>0).astype(int), 'theta':5}
 
     step1 = Metropolis([theta, p])
 
