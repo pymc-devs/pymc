@@ -5,7 +5,7 @@ from quadpotential import quad_potential
 
 from arraystep import *
 from numpy.random import normal, standard_cauchy, standard_exponential, poisson, random
-from numpy import round, exp
+from numpy import round, exp, copy, where
 
 __all__ = ['Metropolis', 'BinaryMetropolis', 'normal_proposal', 'cauchy_proposal', 'laplace_proposal', 'poisson_proposal']
 
@@ -140,9 +140,15 @@ def tune(scale, acc_rate):
 
 class BinaryMetropolis(ArrayStep):
     """Metropolis-Hastings optimized for binary variables"""
-    def __init__(self, vars, model=None):
+    def __init__(self, vars, scaling=1., tune=True, tune_interval=100, model=None):
 
         model = modelcontext(model)
+
+        self.scaling = scaling
+        self.tune = tune
+        self.tune_interval = tune_interval
+        self.steps_until_tune = tune_interval
+        self.accepted = 0
 
         if not all([v.dtype.startswith('int') for v in vars]):
             raise ValueError('All variables must be Bernoulli for BinaryMetropolis')
@@ -151,14 +157,21 @@ class BinaryMetropolis(ArrayStep):
 
     def astep(self, q0, logp):
         """docstring for astep"""
+        # import pdb; pdb.set_trace()
+        # Convert adaptive_scale_factor to a jump probability
+        p_jump = 1.-.5**self.scaling
 
-        # Calculate probabilities of each value
-        logp_true = logp([True]*len(q0))
-        logp_false = logp([False]*len(q0))
+        rand_array = random(q0.shape)
+        q = copy(q0)
+        # Locations where switches occur, according to p_jump
+        switch_locs = where(rand_array<p_jump)
+        q[switch_locs] = True - q[switch_locs]
 
-        p_true = exp(logp_true)
-        p_false = exp(logp_false)
+        q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
-        # Stochastically set value according to relative
-        # probabilities of True and False
-        return (random(len(q0)) < p_true / (p_true + p_false)).astype(int)
+        return q_new
+
+def subst(a, val, index):
+    ap = a.copy()
+    ap[index]=val
+    return ap
