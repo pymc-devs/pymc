@@ -66,9 +66,9 @@ class Metropolis(ArrayStep):
         self.accepted = 0
 
         # Determine type of variables
-        if all([v.dtype=='int64' for v in vars]):
+        if all([v.dtype in discrete_types for v in vars]):
             self.discrete = True
-        elif all([v.dtype=='float64' for v in vars]):
+        elif all([v.dtype in continuous_types for v in vars]):
             self.discrete = False
         else:
             raise ValueError('All variables in vars must be of the same dtype for Metropolis')
@@ -150,14 +150,13 @@ class BinaryMetropolis(ArrayStep):
         self.steps_until_tune = tune_interval
         self.accepted = 0
 
-        if not all([v.dtype.startswith('int') for v in vars]):
+        if not all([v.dtype in discrete_types for v in vars]):
             raise ValueError('All variables must be Bernoulli for BinaryMetropolis')
 
         super(BinaryMetropolis,self).__init__(vars, [model.logpc])
 
     def astep(self, q0, logp):
-        """docstring for astep"""
-        # import pdb; pdb.set_trace()
+
         # Convert adaptive_scale_factor to a jump probability
         p_jump = 1.-.5**self.scaling
 
@@ -170,8 +169,3 @@ class BinaryMetropolis(ArrayStep):
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
         return q_new
-
-def subst(a, val, index):
-    ap = a.copy()
-    ap[index]=val
-    return ap
