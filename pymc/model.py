@@ -10,7 +10,6 @@ from functools import wraps
 __all__ = ['Model', 'compilef', 'gradient', 'hessian', 'modelcontext', 'Point']
 
 
-
 class Context(object):
     def __enter__(self):
         type(self).get_contexts().append(self)
@@ -33,10 +32,12 @@ class Context(object):
         except IndexError:
             raise TypeError("No context on context stack")
 
+
 def modelcontext(model):
     if model is None:
         return Model.get_context()
     return model
+
 
 class Model(Context):
     """
@@ -71,18 +72,18 @@ class Model(Context):
         """Compiled log probability density function"""
         return compilef(model.logp)
 
-    def dlogpc(model, vars = None):
+    def dlogpc(model, vars=None):
         """Compiled log probability density gradient function"""
         return compilef(gradient(model.logp, vars))
 
-    def d2logpc(model, vars = None):
+    def d2logpc(model, vars=None):
         """Compiled log probability density hessian function"""
         return compilef(hessian(model.logp, vars))
 
     @property
     def test_point(self):
         """Test point used to check that the model doesn't generate errors"""
-        return Point(((var, var.tag.test_value) for var in self.vars), model = self)
+        return Point(((var, var.tag.test_value) for var in self.vars), model=self)
 
     @property
     def cont_vars(model):
@@ -106,13 +107,13 @@ class Model(Context):
     def TransformedVar(model, name, dist, trans):
         tvar = model.Var(trans.name + '_' + name, trans.apply(dist))
 
-        return named(trans.backward(tvar),name), tvar
+        return named(trans.backward(tvar), name), tvar
 
     def AddPotential(model, potential):
         model.factors.append(potential)
 
 
-def Point(*args,**kwargs):
+def Point(*args, **kwargs):
     """
     Build a point. Uses same args as dict() does.
     Filters out variables not in the model. All keys are strings.
@@ -122,7 +123,7 @@ def Point(*args,**kwargs):
         *args, **kwargs
             arguments to build a dict
     """
-    if 'model' in kwargs :
+    if 'model' in kwargs:
         model = kwargs['model']
         del kwargs['model']
     else:
@@ -130,12 +131,12 @@ def Point(*args,**kwargs):
 
     d = dict(*args, **kwargs)
     varnames = map(str, model.vars)
-    return dict((str(k),np.array(v))
-            for (k,v) in d.iteritems()
-            if str(k) in varnames)
+    return dict((str(k), np.array(v))
+                for (k, v) in d.iteritems()
+                if str(k) in varnames)
 
 
-def compilef(outs, mode = None):
+def compilef(outs, mode=None):
     """
     Compiles a Theano function which returns `outs` and takes the variable ancestors of `outs` as inputs.
 
@@ -149,29 +150,33 @@ def compilef(outs, mode = None):
     Compiled Theano function
     """
     return PointFunc(
-                function(inputvars(outs), outs,
-                         allow_input_downcast = True,
-                         on_unused_input = 'ignore',
-                         mode = mode)
-           )
+        function(inputvars(outs), outs,
+                 allow_input_downcast=True,
+                 on_unused_input='ignore',
+                 mode=mode)
+    )
+
 
 def named(var, name):
     var.name = name
     return var
 
+
 def as_iterargs(data):
     if isinstance(data, tuple):
         return data
-    if hasattr(data, 'columns'): #data frames
+    if hasattr(data, 'columns'):  # data frames
         return [np.asarray(data[c]) for c in data.columns]
     else:
         return [data]
 
+
 def makeiter(a):
     if isinstance(a, (tuple, list)):
         return a
-    else :
+    else:
         return [a]
+
 
 def inputvars(a):
     return [v for v in inputs(makeiter(a)) if isinstance(v, t.TensorVariable)]
@@ -180,18 +185,22 @@ def inputvars(a):
 Theano derivative functions
 """
 
+
 def cont_inputs(f):
     return typefilter(inputvars(f), continuous_types)
+
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
     return t.flatten(t.grad(f, v, disconnected_inputs='warn'))
 
-def gradient(f, vars = None):
+
+def gradient(f, vars=None):
     if not vars:
         vars = cont_inputs(f)
 
-    return t.concatenate([gradient1(f, v) for v in vars], axis = 0)
+    return t.concatenate([gradient1(f, v) for v in vars], axis=0)
+
 
 def jacobian1(f, v):
     """jacobian of f wrt v"""
@@ -203,16 +212,18 @@ def jacobian1(f, v):
 
     return theano.map(grad_i, idx)[0]
 
-def jacobian(f, vars = None):
+
+def jacobian(f, vars=None):
     if not vars:
         vars = cont_inputs(f)
 
-    return t.concatenate([jacobian1(f, v) for v in vars], axis = 1)
+    return t.concatenate([jacobian1(f, v) for v in vars], axis=1)
 
-def hessian(f, vars = None):
+
+def hessian(f, vars=None):
     return -jacobian(gradient(f, vars), vars)
 
 
-#theano stuff
+# theano stuff
 theano.config.warn.sum_div_dimshuffle_bug = False
 theano.config.compute_test_value = 'raise'

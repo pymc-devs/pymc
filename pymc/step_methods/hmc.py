@@ -12,16 +12,17 @@ from scipy.sparse import issparse
 
 __all__ = ['HamiltonianMC']
 
-#TODO:
-#add constraint handling via page 37 of Radford's http://www.cs.utoronto.ca/~radford/ham-mcmc.abstract.html
+# TODO:
+# add constraint handling via page 37 of Radford's
+# http://www.cs.utoronto.ca/~radford/ham-mcmc.abstract.html
 
-def unif(step_size, elow = .85, ehigh = 1.15):
+
+def unif(step_size, elow=.85, ehigh=1.15):
     return np.random.uniform(elow, ehigh) * step_size
 
 
-
 class HamiltonianMC(ArrayStep):
-    def __init__(self, vars, C, step_scale = .25, path_length = 2., is_cov = False, step_rand = unif, state = None, model = None):
+    def __init__(self, vars, C, step_scale=.25, path_length=2., is_cov=False, step_rand=unif, state=None, model=None):
         """
         Parameters
         ----------
@@ -43,7 +44,7 @@ class HamiltonianMC(ArrayStep):
         model = modelcontext(model)
         n = C.shape[0]
 
-        self.step_size = step_scale / n**(1/4.)
+        self.step_size = step_scale / n ** (1 / 4.)
 
         self.potential = quad_potential(C, is_cov)
 
@@ -55,36 +56,36 @@ class HamiltonianMC(ArrayStep):
         self.state = state
 
         ArrayStep.__init__(self,
-                vars, [model.logpc, model.dlogpc(vars)]
-                )
+                           vars, [model.logpc, model.dlogpc(vars)]
+                           )
 
     def astep(self, q0, logp, dlogp):
 
-
-        #randomize step size
+        # randomize step size
         e = self.step_rand(self.step_size)
         nstep = int(floor(self.path_length / self.step_size))
 
         q = q0
         p = p0 = self.potential.random()
 
-        #use the leapfrog method
-        p = p - (e/2) * -dlogp(q) # half momentum update
+        # use the leapfrog method
+        p = p - (e / 2) * -dlogp(q)  # half momentum update
 
         for i in range(nstep):
-            #alternate full variable and momentum updates
+            # alternate full variable and momentum updates
             q = q + e * self.potential.velocity(p)
             if i != nstep - 1:
                 p = p - e * -dlogp(q)
 
-        p = p - (e/2) * -dlogp(q)  # do a half step momentum update to finish off
+        p = p - (e / 2) * -dlogp(q)
+                 # do a half step momentum update to finish off
 
         p = -p
 
         # - H(q*, p*) + H(q, p) = -H(q, p) + H(q0, p0) = -(- logp(q) + K(p)) + (-logp(q0) + K(p0))
-        mr = (-logp(q0)) + self.potential.energy(p0) - ((-logp(q))  + self.potential.energy(p))
+        mr = (-logp(q0)) + self.potential.energy(
+            p0) - ((-logp(q)) + self.potential.energy(p))
 
         self.state.metrops.append(mr)
 
         return metrop_select(mr, q, q0)
-

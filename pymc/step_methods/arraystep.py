@@ -1,13 +1,15 @@
 from ..core import *
 import numpy as np
 from numpy.random import uniform
-from numpy import log , isfinite
+from numpy import log, isfinite
 
 __all__ = ['ArrayStep', 'metrop_select', 'SamplerHist']
 
 # TODO Add docstrings to ArrayStep
+
+
 class ArrayStep(object):
-    def __init__(self, vars, fs, allvars = False):
+    def __init__(self, vars, fs, allvars=False):
         self.ordering = ArrayOrdering(vars)
         self.fs = fs
         self.allvars = allvars
@@ -21,6 +23,7 @@ class ArrayStep(object):
 
         apoint = self.astep(bij.map(point), *inputs)
         return bij.rmap(apoint)
+
 
 def metrop_select(mr, q, q0):
     # Perform rejection/acceptance step for Metropolis class samplers
@@ -36,6 +39,7 @@ def metrop_select(mr, q, q0):
 
 class SamplerHist(object):
     def __init__(self):
-        self.metrops =[]
+        self.metrops = []
+
     def acceptr(self):
         return np.minimum(np.exp(self.metrops), 1)
