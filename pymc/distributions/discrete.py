@@ -1,13 +1,13 @@
 from dist_math import *
 
-__all__ = ['Binomial', 'BetaBin', 'Bernoulli', 'Poisson',  'ConstantDist', 'ZeroInflatedPoisson']  
-
+__all__ = ['Binomial', 'BetaBin', 'Bernoulli', 'Poisson', 'ConstantDist',
+           'ZeroInflatedPoisson']
 
 
 @tensordist(discrete)
 def Binomial(n, p):
     """
-    Binomial log-likelihood.  The discrete probability distribution 
+    Binomial log-likelihood.  The discrete probability distribution
     of the number of successes in a sequence of n independent yes/no
     experiments, each of which yields success with probability p.
 
@@ -16,7 +16,7 @@ def Binomial(n, p):
 
     Parameters
     ----------
-    n : int 
+    n : int
         Number of Bernoulli trials, n > x
     p : float
         Probability of success in each trial, :math:`p \in [0,1]`
@@ -27,24 +27,27 @@ def Binomial(n, p):
 
     """
     def logp(value):
-        
-        return bound(
-                logpow(p,value) + logpow(1-p,n-value) + factln(n)-factln(value)-factln(n-value),
 
-                0 <= value, value <= n, 
-                0 <= p, p <= 1)
+        return bound(
+            logpow(p, value) + logpow(
+                1 - p, n - value) + factln(
+                    n) - factln(value) - factln(n - value),
+
+            0 <= value, value <= n,
+            0 <= p, p <= 1)
 
     logp.__doc__ = """
         Binomial log-likelihood with parameters n={0} and p={1}.
-        
+
         Parameters
         ----------
-        value : int 
+        value : int
             Number of successes, x > 0
-        """.format(n,p)
-    
+        """.format(n, p)
+
     return locals()
-    
+
+
 @tensordist(discrete)
 def BetaBin(alpha, beta, n):
     """
@@ -69,28 +72,29 @@ def BetaBin(alpha, beta, n):
     - :math:`Var(X)=n\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
     """
-    
-    def logp(value):
-        
-        return bound(
-                gammaln(alpha+beta) - gammaln(alpha) - gammaln(beta)+ gammaln(n+1)- gammaln(value+1)- gammaln(n-value +1) + gammaln(alpha+value)+ gammaln(n+beta-value)- gammaln(beta+alpha+n),
 
-                0 <= value, value <= n,
-                alpha > 0, 
-                beta > 0)
-                   
+    def logp(value):
+
+        return bound(
+            gammaln(alpha + beta) - gammaln(alpha) - gammaln(beta) + gammaln(n + 1) - gammaln(value + 1) - gammaln(n - value + 1) + gammaln(alpha + value) + gammaln(n + beta - value) - gammaln(beta + alpha + n),
+
+            0 <= value, value <= n,
+            alpha > 0,
+            beta > 0)
+
     logp.__doc__ = """
         Beta-binomial log-likelihood with parameters alpha={0}, beta={1},
         and n={2}.
-        
+
         Parameters
         ----------
         value : int
             x=0,1,\ldots,n
         """.format(alpha, beta, n)
-    
+
     return locals()
-    
+
+
 @tensordist(discrete)
 def Bernoulli(p):
     """Bernoulli log-likelihood
@@ -115,21 +119,22 @@ def Bernoulli(p):
 
     def logp(value):
         return bound(
-                  switch(value, log(p), log(1-p)),
-                  0 <= p, p <= 1)
-    
+            switch(value, log(p), log(1 - p)),
+            0 <= p, p <= 1)
+
     mode = cast(round(p), 'int8')
 
     logp.__doc__ = """
         Bernoulli log-likelihood with parameter p={0}.
-        
+
         Parameters
         ----------
         value : int
             Series of successes (1) and failures (0). :math:`x=0,1`
         """.format(p)
-    
+
     return locals()
+
 
 @tensordist(discrete)
 def Poisson(mu):
@@ -157,13 +162,13 @@ def Poisson(mu):
     """
     def logp(value):
         return bound(
-                logpow(mu, value) - factln(value) - mu,
+            logpow(mu, value) - factln(value) - mu,
 
-                mu > 0)
-               
+            mu > 0)
+
     logp.__doc__ = """
         Poisson log-likelihood with parameters mu={0}.
-        
+
         Parameters
         ----------
         x : int
@@ -173,17 +178,18 @@ def Poisson(mu):
     mode = floor(mu).astype('int32')
     return locals()
 
+
 @tensordist(discrete)
 def ConstantDist(c):
     def logp(value):
         return bound(
-                0,
+            0,
 
-                eq(value,c))
-        
+            eq(value, c))
+
     logp.__doc__ = """
         Constant log-likelihood with parameter c={0}.
-        
+
         Parameters
         ----------
         value : float or int
@@ -191,13 +197,15 @@ def ConstantDist(c):
         """.format(c)
     return locals()
 
+
 @tensordist(discrete)
 def ZeroInflatedPoisson(theta, z):
     pois = Poisson(theta)
     const = ConstantDist(0)
+
     def logp(value):
-        return switch(z, 
-                      pois.logp(value), 
+        return switch(z,
+                      pois.logp(value),
                       const.logp(value))
     mode = pois.mode
     return locals()

@@ -6,6 +6,7 @@ import os
 import fnmatch
 import imp
 
+
 def test_examples():
 
     for path in all_matching_files(example_dir(), '*.py'):
@@ -16,12 +17,13 @@ def all_matching_files(d, pattern):
 
     def addfiles(fls, dir, nfiles):
         nfiles = fnmatch.filter(nfiles, pattern)
-        nfiles = [path.join(dir,f) for f in nfiles]
+        nfiles = [path.join(dir, f) for f in nfiles]
         fls.extend(nfiles)
 
     files = []
     path.walk(d, addfiles, files)
     return files
+
 
 def example_dir():
     import pymc

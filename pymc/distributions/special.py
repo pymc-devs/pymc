@@ -3,12 +3,13 @@ Created on Mar 17, 2011
 
 @author: jsalvatier
 '''
-from theano import scalar,tensor
-import numpy 
+from theano import scalar, tensor
+import numpy
 from scipy import special, misc
 from dist_math import *
 
 __all__ = ['gammaln', 'multigammaln', 'psi', 'trigamma', 'factln']
+
 
 class GammaLn(scalar.UnaryScalarOp):
     """
@@ -17,8 +18,10 @@ class GammaLn(scalar.UnaryScalarOp):
     @staticmethod
     def st_impl(x):
         return special.gammaln(x)
+
     def impl(self, x):
         return GammaLn.st_impl(x)
+
     def grad(self, inp, grads):
         x, = inp
         gz, = grads
@@ -31,66 +34,69 @@ class GammaLn(scalar.UnaryScalarOp):
             return """%(z)s =
                 lgamma(%(x)s);""" % locals()
         raise NotImplementedError('only floatingpoint is implemented')
+
     def __eq__(self, other):
         return type(self) == type(other)
+
     def __hash__(self):
         return hash(type(self))
-    
-scalar_gammaln  = GammaLn(scalar.upgrade_to_float, name='scalar_gammaln')
+
+scalar_gammaln = GammaLn(scalar.upgrade_to_float, name='scalar_gammaln')
 gammaln = tensor.Elemwise(scalar_gammaln, name='gammaln')
 
 
 def multigammaln(a, p):
     """Multivariate Log Gamma
 
-    :Parameters: 
+    :Parameters:
         a : tensor like
         p : int degrees of freedom
-            p > 0 
+            p > 0
     """
     a = t.shape_padright(a)
     i = arange(p)
 
-    return p*(p-1) * log(pi)/4.   +  t.sum(gammaln(a+i/2.), axis = a.ndim-1)
+    return p * (p - 1) * log(pi) / 4. + t.sum(gammaln(a + i / 2.), axis=a.ndim - 1)
 
-    
+
 cpsifunc = """
 #ifndef _PSIFUNCDEFINED
 #define _PSIFUNCDEFINED
 double _psi(double x){
 
-    /*taken from 
-    Bernardo, J. M. (1976). Algorithm AS 103: Psi (Digamma) Function. Applied Statistics. 25 (3), 315-317. 
+    /*taken from
+    Bernardo, J. M. (1976). Algorithm AS 103: Psi (Digamma) Function. Applied Statistics. 25 (3), 315-317.
     http://www.uv.es/~bernardo/1976AppStatist.pdf */
-    
+
     double y, R, psi_ = 0;
     double S  = 1.0e-5;
     double C = 8.5;
     double S3 = 8.333333333e-2;
     double S4 = 8.333333333e-3;
     double S5 = 3.968253968e-3;
-    double D1 = -0.5772156649  ;   
+    double D1 = -0.5772156649  ;
 
     y = x;
-    
+
     if (y <= 0.0)
         return psi_;
-        
+
     if (y <= S )
         return D1 - 1.0/y;
-    
+
     while (y < C){
         psi_ = psi_ - 1.0 / y;
         y = y + 1;}
-    
+
     R = 1.0 / y;
     psi_ = psi_ + log(y) - .5 * R ;
     R= R*R;
     psi_ = psi_ - R * (S3 - R * (S4 - R * S5));
-    
+
     return psi_;}
     #endif
-        """ 
+        """
+
 
 class Psi(scalar.UnaryScalarOp):
     """
@@ -99,16 +105,18 @@ class Psi(scalar.UnaryScalarOp):
     @staticmethod
     def st_impl(x):
         return special.psi(x)
+
     def impl(self, x):
         return Psi.st_impl(x)
-    
+
     def grad(self, inp, grads):
         x, = inp
         gz, = grads
         return [gz * scalar_trigamma(x)]
-    
+
     def c_support_code(self):
         return cpsifunc
+
     def c_code(self, node, name, inp, out, sub):
         x, = inp
         z, = out
@@ -116,14 +124,16 @@ class Psi(scalar.UnaryScalarOp):
             return """%(z)s =
                 _psi(%(x)s);""" % locals()
         raise NotImplementedError('only floatingpoint is implemented')
-    
+
     def __eq__(self, other):
         return type(self) == type(other)
+
     def __hash__(self):
         return hash(type(self))
-    
+
 scalar_psi = Psi(scalar.upgrade_to_float, name='scalar_psi')
 psi = tensor.Elemwise(scalar_psi, name='psi')
+
 
 class Trigamma(scalar.UnaryScalarOp):
     """
@@ -132,15 +142,17 @@ class Trigamma(scalar.UnaryScalarOp):
     @staticmethod
     def st_impl(x):
         return special.polygamma(1, x)
+
     def impl(self, x):
         return Psi.st_impl(x)
-    
-    #def grad()  no gradient now 
-    
+
+    # def grad()  no gradient now
+
     def __eq__(self, other):
         return type(self) == type(other)
+
     def __hash__(self):
         return hash(type(self))
-    
+
 scalar_trigamma = Trigamma(scalar.upgrade_to_float, name='scalar_trigamma')
 trigamma = tensor.Elemwise(scalar_trigamma, name='trigamma')
