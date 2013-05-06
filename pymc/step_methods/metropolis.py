@@ -4,9 +4,10 @@ from ..core import *
 from quadpotential import quad_potential
 
 from arraystep import *
-from numpy.random import normal, standard_cauchy, standard_exponential
+from numpy.random import normal, standard_cauchy, standard_exponential, poisson, random
+from numpy import round, exp
 
-__all__ = ['Metropolis', 'normal_proposal', 'cauchy_proposal', 'laplace_proposal']
+__all__ = ['Metropolis', 'BinaryMetropolis', 'normal_proposal', 'cauchy_proposal', 'laplace_proposal', 'poisson_proposal']
 
 # Available proposal distributions for Metropolis
 def normal_proposal(s):
@@ -24,6 +25,10 @@ def laplace_proposal(s):
         return (standard_exponential(size=np.size(s)) - standard_exponential(size=np.size(s))) * s
     return random
 
+def poisson_proposal(s):
+    def random():
+        return poisson(lam=s, size=np.size(s)) - s
+    return random
 
 class Metropolis(ArrayStep):
     """
@@ -59,6 +64,15 @@ class Metropolis(ArrayStep):
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.accepted = 0
+
+        # Determine type of variables
+        if all([v.dtype=='int64' for v in vars]):
+            self.discrete = True
+        elif all([v.dtype=='float64' for v in vars]):
+            self.discrete = False
+        else:
+            raise ValueError('All variables in vars must be of the same dtype for Metropolis')
+
         super(Metropolis,self).__init__(vars, [model.logpc])
 
     def astep(self, q0, logp):
@@ -73,6 +87,8 @@ class Metropolis(ArrayStep):
         delta = self.proposal_dist() * self.scaling
 
         q = q0 + delta
+        if self.discrete:
+            q = round(q, 0).astype(int)
 
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
@@ -82,6 +98,7 @@ class Metropolis(ArrayStep):
         self.steps_until_tune -= 1
 
         return q_new
+
 
 def tune(scale, acc_rate):
     """
@@ -120,3 +137,28 @@ def tune(scale, acc_rate):
         scale *= 1.1
 
     return scale
+
+class BinaryMetropolis(ArrayStep):
+    """Metropolis-Hastings optimized for binary variables"""
+    def __init__(self, vars, model=None):
+
+        model = modelcontext(model)
+
+        if not all([v.dtype.startswith('int') for v in vars]):
+            raise ValueError('All variables must be Bernoulli for BinaryMetropolis')
+
+        super(BinaryMetropolis,self).__init__(vars, [model.logpc])
+
+    def astep(self, q0, logp):
+        """docstring for astep"""
+
+        # Calculate probabilities of each value
+        logp_true = logp([True]*len(q0))
+        logp_false = logp([False]*len(q0))
+
+        p_true = exp(logp_true)
+        p_false = exp(logp_false)
+
+        # Stochastically set value according to relative
+        # probabilities of True and False
+        return (random(len(q0)) < p_true / (p_true + p_false)).astype(int)

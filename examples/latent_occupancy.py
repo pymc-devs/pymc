@@ -3,15 +3,15 @@ From the PyMC example list
 latent_occupancy.py
 
 Simple model demonstrating the estimation of occupancy, using latent variables. Suppose
-a population of n sites, with some proportion pi being occupied. Each site is surveyed, 
+a population of n sites, with some proportion pi being occupied. Each site is surveyed,
 yielding an array of counts, y:
 
 y = [3, 0, 0, 2, 1, 0, 1, 0, ..., ]
 
 This is a classic zero-inflated count problem, where more zeros appear in the data than would
 be predicted by a simple Poisson model. We have, in fact, a mixture of models; one, conditional
-on occupancy, with a poisson mean of theta, and another, conditional on absence, with mean zero. 
-One way to tackle the problem is to model the latent state of 'occupancy' as a Bernoulli variable 
+on occupancy, with a poisson mean of theta, and another, conditional on absence, with mean zero.
+One way to tackle the problem is to model the latent state of 'occupancy' as a Bernoulli variable
 at each site, with some unknown probability:
 
 z_i ~ Bern(pi)
@@ -32,7 +32,7 @@ Copyright (c) 2008 University of Otago. All rights reserved.
 
 # Import statements
 from pymc import *
-from numpy import random, array, arange, ones 
+from numpy import random, array, arange, ones
 import theano.tensor as t
 # Sample size
 n = 100000
@@ -51,7 +51,7 @@ with model:
     p = Beta('p', 1,1)
 
     # Latent variable for occupancy
-    z = Bernoulli('z',p , y.shape)
+    z = Bernoulli('z', p, y.shape)
 
     # Estimated mean count
     theta = Uniform('theta', 0, 100)
@@ -64,8 +64,17 @@ point = model.test_point
 
 _pymc3_logp = model.logpc
 def pymc3_logp():
-    _pymc3_logp(point) 
+    _pymc3_logp(point)
 
 _pymc3_dlogp = model.dlogpc()
 def pymc3_dlogp():
-    _pymc3_dlogp(point) 
+    _pymc3_dlogp(point)
+
+with model:
+    start = {'p':0.5, 'z':(y>0).astype(int), 'theta':50}
+
+    step1 = Metropolis([theta, p])
+
+    step2 = BinaryMetropolis([z])
+
+    trace = sample(5000, [step1, step2], start)
