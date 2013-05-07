@@ -2,6 +2,27 @@
 
 import numpy as np
 
+def autocorr(x, lag=1):
+    """Sample autocorrelation at specified lag.
+    The autocorrelation is the correlation of x_i with x_{i+lag}.
+    """
+
+    S = autocov(x, lag)
+    return S[0,1]/np.sqrt(np.prod(np.diag(S)))
+
+def autocov(x, lag=1):
+    """
+    Sample autocovariance at specified lag.
+    The autocovariance is a 2x2 matrix with the variances of
+    x[:-lag] and x[lag:] in the diagonal and the autocovariance
+    on the off-diagonal.
+    """
+
+    if not lag: return 1
+    if lag<0:
+        raise ValueError("Autocovariance lag must be a positive integer")
+    return np.cov(x[:-lag], x[lag:], bias=1)
+
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
 
