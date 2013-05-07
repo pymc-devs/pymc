@@ -251,8 +251,7 @@ def calc_min_interval(x, alpha):
     interval_width = x[interval_idx_inc:] - x[:n_intervals]
 
     if len(interval_width)==0:
-        print('Too few elements for interval calculation')
-        return [None,None]
+        raise ValueError('Too few elements for interval calculation')
 
     min_idx = np.argmin(interval_width)
     hdi_min = x[min_idx]
