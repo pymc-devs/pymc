@@ -95,9 +95,18 @@ def buildtree(H, q, p, u, v, j,e, Emax):
         return q1, p1, q1, p1, q1, n1, s1
     else:
         qn,pn,qp,pp, q1,n1,s1 = buildtree(H, q,p,u, v,j - 1,e, Emax)
-        if v == -1:
-            qn,pn,_,_, q1,n1,s1 = buildtree(H, qn,pn,u, v,j - 1,e, Emax)
-        else:
-            _,_,qp,pp, q1,n1,s1 = buildtree(H, qp,pp,u, v,j - 1,e, Emax)
+        if s == 1:
+            if v == -1:
+                qn,pn,_,_, q11,n11,s11 = buildtree(H, qn,pn,u, v,j - 1,e, Emax)
+            else:
+                _,_,qp,pp, q11,n11,s11 = buildtree(H, qp,pp,u, v,j - 1,e, Emax)
 
-        if bern():
+            if bern(n11/(n1 + n11)):
+                q1 = q11
+
+
+            span = qp - qn
+            s1 = s11 * (span.dot(pn) >= 0) * (span.dot(pp) >= 0)
+            n1 = n1 + n11
+        return qn, pn, qp, pp, q1, n1, s1
+    return
