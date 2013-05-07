@@ -236,6 +236,32 @@ class MultiTrace(object):
             h.samples[k].vals = [s[k] for s in self.traces]
         return h
 
+def make_indices(dimensions):
+    # Generates complete set of indices for given dimensions
+
+    level = len(dimensions)
+
+    if level==1: return range(dimensions[0])
+
+    indices = [[]]
+
+    while level:
+
+        _indices = []
+
+        for j in range(dimensions[level-1]):
+
+            _indices += [[j]+i for i in indices]
+
+        indices = _indices
+
+        level -= 1
+
+    try:
+        return [tuple(i) for i in indices]
+    except TypeError:
+        return indices
+
 def calc_min_interval(x, alpha):
     """Internal method to determine the minimum interval of
     a given width
@@ -277,7 +303,7 @@ def hpd(x, alpha):
     if x.ndim>1:
 
         # Transpose first, then sort
-        tx = tr(x, range(x.ndim)[1:]+[0])
+        tx = np.transpose(x, range(x.ndim)[1:]+[0])
         dims = np.shape(tx)
 
         # Container list for intervals
