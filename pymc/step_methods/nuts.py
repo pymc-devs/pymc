@@ -2,16 +2,17 @@
 Created on Mar 7, 2011
 
 @author: johnsalvatier
-''' 
+'''
 from numpy import floor
 from quadpotential import *
 from arraystep import *
-from ..core import * 
+from ..core import *
 import numpy as np
+import numpy.random.uniform
 
-__all__ = ['HamiltonianMC']
+__all__ = ['NoUTurn']
 
-#TODO: 
+#TODO:
 #add constraint handling via page 37 of Radford's http://www.cs.utoronto.ca/~radford/ham-mcmc.abstract.html
 
 def unif(step_size, elow = .85, ehigh = 1.15):
@@ -19,8 +20,8 @@ def unif(step_size, elow = .85, ehigh = 1.15):
 
 
 
-class HamiltonianMC(ArrayStep):
-    def __init__(self, vars, C, step_scale = .25, path_length = 2., is_cov = False, step_rand = unif, state = None, model = None):
+class NoUTurn(ArrayStep):
+    def __init__(self, vars, C, step_scale = .25, is_cov = False, state = None, model = None):
         """
         Parameters
         ----------
@@ -30,57 +31,73 @@ class HamiltonianMC(ArrayStep):
             step_scale : float, default=.25
                 Size of steps to take, automatically scaled down by 1/n**(1/4) (defaults to .25)
             path_length : float, default=2
-                total length to travel 
+                total length to travel
             is_cov : bool, default=False
                 Treat C as a covariance matrix/vector if True, else treat it as a precision matrix/vector
-            step_rand : function float -> float, default=unif 
-                A function which takes the step size and returns an new one used to randomize the step size at each iteration. 
+            step_rand : function float -> float, default=unif
+                A function which takes the step size and returns an new one used to randomize the step size at each iteration.
             model : Model
         """
         model = modelcontext(model)
         n = C.shape[0]
-        
+
         self.step_size = step_scale / n**(1/4.)
-        
+
         self.potential = quad_potential(C, is_cov)
-        self.path_length = path_length
         self.step_rand = step_rand
 
         if state is None:
             state = SamplerHist()
         self.state = state
 
-        ArrayStep.__init__(self, 
+        ArrayStep.__init__(self,
                 vars, [model.logpc, model.dlogpc(vars)]
                 )
 
     def astep(self, q0, logp, dlogp):
-        
-            
-        #randomize step size
-        e = self.step_rand(self.step_size) 
-        nstep = int(floor(self.path_length / self.step_size))
-        
-        q = q0 
-        p = p0 = self.potential.random()
-        
-        #use the leapfrog method
-        p = p - (e/2) * -dlogp(q) # half momentum update
-        
-        for i in range(nstep): 
-            #alternate full variable and momentum updates
-            q = q + e * self.potential.velocity(p)
-            if i != nstep - 1:
-                p = p - e * -dlogp(q)
-             
-        p = p - (e/2) * -dlogp(q)  # do a half step momentum update to finish off
-        
-        p = -p 
-            
-        # - H(q*, p*) + H(q, p) = -H(q, p) + H(q0, p0) = -(- logp(q) + K(p)) + (-logp(q0) + K(p0))
-        mr = (-logp(q0)) + self.potential.energy(p0) - ((-logp(q))  + self.potential.energy(p))
+        H = Hamiltonian(logp, dlogp, self.pot)
 
-        self.state.metrops.append(mr)
-        
-        return metrop_select(mr, q, q0)
-        
+        p0 = H.pot.random()
+
+        u = uniform(0, exp(energy(H,q,p)))
+
+        q = qn = qp = q0
+        p = pn = pp = p0
+
+        n=1, s=1, j=0
+
+        while s == 1:
+            v = bern(.5) * 2 -1
+
+            if v == -1:
+                qn,pn,_,_, q1,n1,s1 = buildtree(H, qn,pn,u, v,j,e, Emax)
+            else:
+                _,_,qp,pp, q1,n1,s1 = buildtree(H, qp,pp,u, v,j,e, Emax)
+
+            if s1 == 1 and bern(min(1, n1/n)):
+                q = q1
+
+            n = n + n1
+
+            span = qp - qn
+            s = s1 * (span.dot(pn) >= 0) * (span.dot(pp) >= 0)
+            j = j + 1
+
+        p = -p
+        return q
+
+def buildtree(H, q, p, u, v, j,e, Emax):
+    if j == 0:
+        q1, p1 = leapfrog(H, q, p, 1, e)
+        E = energy(H, p,q)
+        n1 = u <= exp(E)
+        s1 = u <  exp(E + Emax)
+        return q1, p1, q1, p1, q1, n1, s1
+    else:
+        qn,pn,qp,pp, q1,n1,s1 = buildtree(H, q,p,u, v,j - 1,e, Emax)
+        if v == -1:
+            qn,pn,_,_, q1,n1,s1 = buildtree(H, qn,pn,u, v,j - 1,e, Emax)
+        else:
+            _,_,qp,pp, q1,n1,s1 = buildtree(H, qp,pp,u, v,j - 1,e, Emax)
+
+        if bern():
