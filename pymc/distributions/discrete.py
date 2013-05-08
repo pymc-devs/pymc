@@ -36,6 +36,8 @@ def Binomial(n, p):
             0 <= value, value <= n,
             0 <= p, p <= 1)
 
+    mode = cast(round(n*p), 'int8')
+
     logp.__doc__ = """
         Binomial log-likelihood with parameters n={0} and p={1}.
 
@@ -81,6 +83,8 @@ def BetaBin(alpha, beta, n):
             0 <= value, value <= n,
             alpha > 0,
             beta > 0)
+
+    mode = cast(round(alpha/(alpha+beta)), 'int8')
 
     logp.__doc__ = """
         Beta-binomial log-likelihood with parameters alpha={0}, beta={1},
