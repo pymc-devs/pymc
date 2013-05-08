@@ -2,6 +2,8 @@
 
 import numpy as np
 
+__all__ = ['hpd', 'quantiles', 'batchsd']
+
 def autocorr(x, lag=1):
     """Sample autocorrelation at specified lag.
     The autocorrelation is the correlation of x_i with x_{i+lag}.
@@ -119,36 +121,43 @@ def hpd(x, alpha):
         return np.array(calc_min_interval(sx, alpha))
 
 
-def batchsd(trace, batches=5):
+def batchsd(x, batches=5):
     """
     Calculates the simulation standard error, accounting for non-independent
     samples. The trace is divided into batches, and the standard deviation of
     the batch means is calculated.
+
+    :Arguments:
+      x : Numpy array
+          An array containing MCMC samples
+      batches : integer
+          Number of batchas
     """
 
-    if len(np.shape(trace)) > 1:
+    if x.ndim > 1:
 
-        dims = np.shape(trace)
+        dims = np.shape(x)
         #ttrace = np.transpose(np.reshape(trace, (dims[0], sum(dims[1:]))))
-        ttrace = np.transpose([t.ravel() for t in trace])
+        trace = np.transpose([t.ravel() for t in x])
 
-        return np.reshape([batchsd(t, batches) for t in ttrace], dims[1:])
+        return np.reshape([batchsd(t, batches) for t in trace], dims[1:])
 
     else:
-        if batches == 1: return np.std(trace)/np.sqrt(len(trace))
+        if batches == 1: return np.std(x)/np.sqrt(len(x))
 
         try:
-            batched_traces = np.resize(trace, (batches, len(trace)/batches))
+            batched_traces = np.resize(x, (batches, len(x)/batches))
         except ValueError:
             # If batches do not divide evenly, trim excess samples
-            resid = len(trace) % batches
-            batched_traces = np.resize(trace[:-resid], (batches, len(trace)/batches))
+            resid = len(x) % batches
+            batched_traces = np.resize(x[:-resid], (batches, len(x)/batches))
 
         means = np.mean(batched_traces, 1)
 
         return np.std(means)/np.sqrt(batches)
 
-def calc_quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
+
+def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
     """Returns a dictionary of requested quantiles from array
 
     :Arguments:

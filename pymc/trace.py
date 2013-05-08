@@ -2,7 +2,7 @@ import numpy as np
 from .core import *
 from .utilities import *
 
-__all__ = ['NpTrace', 'MultiTrace', 'stats', 'summary']
+__all__ = ['NpTrace', 'MultiTrace', 'summary']
 
 class NpTrace(object):
     """
@@ -34,78 +34,19 @@ class NpTrace(object):
     def point(self, index):
         return dict((k, v.value[index]) for (k,v) in self.samples.iteritems())
 
-def stats(trace, alpha=0.05, start=0, batches=100, chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
-    """
-    Generate posterior statistics from trace.
 
-    :Parameters:
-    name : string
-      The name of the tallyable object.
-
-    alpha : float
-      The alpha level for generating posterior intervals. Defaults to
-      0.05.
-
-    start : int
-      The starting index from which to summarize (each) chain. Defaults
-      to zero.
-
-    batches : int
-      Batch size for calculating standard deviation for non-independent
-      samples. Defaults to 100.
-
-    chain : int
-      The index for which chain to summarize. Defaults to None (all
-      chains).
-
-    quantiles : tuple or list
-      The desired quantiles to be calculated. Defaults to (2.5, 25, 50, 75, 97.5).
-    """
-
-    def var_stats(trace):
-
-
-            x = trace[start:]
-
-            n = len(x)
-            if not n:
-                print('Cannot generate statistics for zero-length trace.')
-                return
-
-            stats =  {
-                'n': n,
-                'standard deviation': x.std(0),
-                'mean': x.mean(0),
-                '%s%s HPD interval' % (int(100*(1-alpha)),'%'): hpd(x, alpha),
-                'mc error': batchsd(x, batches),
-                'quantiles': calc_quantiles(x, qlist=quantiles)
-            }
-
-            return stats
-
-
-
-
-    try:
-        # For entire Trace object
-        stats = {}
-        for v in trace.varnames:
-            try:
-                stats[v] = var_stats(trace[v])
-            except:
-                print('Could not generate output statistics for ' + v)
-        return stats
-
-    except AttributeError:
-        # For trace of single variable
-        return var_stats(trace)
-
-
-def summary(trace, alpha=0.05, start=0, batches=100, roundto=3):
+def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
     """
     Generate a pretty-printed summary of the node.
 
     :Parameters:
+    trace : Trace object
+      Trace containing MCMC sample
+
+    vars : list of strings
+      List of variables to summarize. Defaults to None, which results
+      in all variables summarized.
+
     alpha : float
       The alpha level for generating posterior intervals. Defaults to
       0.05.
@@ -120,21 +61,31 @@ def summary(trace, alpha=0.05, start=0, batches=100, roundto=3):
 
     roundto : int
       The number of digits to round posterior statistics.
+
     """
 
-    def var_summary(statdict):
+    if vars is None:
+        vars = trace.varnames
 
-        size = np.size(statdict['mean'])
+    for var in vars:
+
+        print('\n%s:' % var)
+        print(' ')
+
+        # Extract sampled values
+        sample = trace[var][start:]
+
+        shape = sample.shape
+        if len(shape)>1:
+            size = shape[1]
+        else:
+            size = 1
 
         # Initialize buffer
         buffer = []
 
-        # Index to interval label
-        iindex = [key.split()[-1] for key in statdict.keys()].index('interval')
-        interval = statdict.keys()[iindex]
-
         # Print basic stats
-        buffer += ['Mean             SD               MC Error        %s' % interval]
+        buffer += ['Mean             SD               MC Error        {0}% HPD interval'.format((int(100*(1-alpha))))]
         buffer += ['-'*len(buffer[-1])]
 
         indices = range(size)
@@ -143,16 +94,16 @@ def summary(trace, alpha=0.05, start=0, batches=100, roundto=3):
 
         for index in indices:
             # Extract statistics and convert to string
-            m = str(round(statdict['mean'][index], roundto))
-            sd = str(round(statdict['standard deviation'][index], roundto))
-            mce = str(round(statdict['mc error'][index], roundto))
-            hpd = str(statdict[interval][index].squeeze().round(roundto))
+            m = str(round(sample.mean(0)[index], roundto))
+            sd = str(round(sample.std(0)[index], roundto))
+            mce = str(round(batchsd(sample, batches)[index], roundto))
+            interval = str(hpd(sample, alpha)[index].squeeze().round(roundto))
 
             # Build up string buffer of values
             valstr = m
             valstr += ' '*(17-len(m)) + sd
             valstr += ' '*(17-len(sd)) + mce
-            valstr += ' '*(len(buffer[-1]) - len(valstr) - len(hpd)) + hpd
+            valstr += ' '*(len(buffer[-1]) - len(valstr) - len(interval)) + interval
 
             buffer += [valstr]
 
@@ -160,42 +111,20 @@ def summary(trace, alpha=0.05, start=0, batches=100, roundto=3):
 
         # Print quantiles
         buffer += ['Posterior quantiles:','']
-
-        buffer += ['2.5             25              50              75             97.5']
+        lo,hi = 100*alpha/2, 100*(1.-alpha/2)
+        buffer += ['{0}             25              50              75             {1}'.format(lo, hi)]
         buffer += [' |---------------|===============|===============|---------------|']
 
         for index in indices:
             quantile_str = ''
-            for i,q in enumerate((2.5, 25, 50, 75, 97.5)):
-                qstr = str(round(statdict['quantiles'][q][index], roundto))
+            for i,q in enumerate((lo, 25, 50, 75, hi)):
+                qstr = str(round(quantiles(sample, qlist=(lo, 25, 50, 75, hi))[q][index], roundto))
                 quantile_str += qstr + ' '*(17-i-len(qstr))
             buffer += [quantile_str.strip()]
 
         buffer += ['']
 
         print('\t' + '\n\t'.join(buffer))
-
-
-    # Calculate statistics
-    s = stats(trace, alpha=alpha, start=start, batches=batches)
-
-    try:
-        for var in trace.varnames:
-
-            try:
-                vstats = s[var]
-
-                print('\n%s:' % var)
-                print(' ')
-
-                var_summary(vstats)
-            except KeyError:
-
-                pass
-
-    except AttributeError:
-
-        var_summary(s)
 
 
 class ListArray(object):
