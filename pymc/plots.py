@@ -1,4 +1,4 @@
-import matplotlib.pyplot as p
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import kde
 
@@ -10,17 +10,17 @@ def traceplot(trace, vars=None):
         vars = trace.samples.keys()
 
     n = len(vars)
-    f, ax = p.subplots(2, n, squeeze=False)
+    f, ax = plt.subplots(n, 2, squeeze=False)
 
     for i, v in enumerate(vars):
         d = np.squeeze(trace[v])
 
-        kdeplot_op(ax[0, i], d)
-        ax[0, i].set_title(str(v))
-        ax[1, i].plot(d, alpha=.35)
+        kdeplot_op(ax[i, 0], d)
+        ax[i, 0].set_title(str(v))
+        ax[i, 1].plot(d, alpha=.35)
 
-    ax[0, 0].set_ylabel("frequency")
-    ax[1, 0].set_ylabel("sample value")
+        ax[i, 0].set_ylabel("frequency")
+        ax[i, 1].set_ylabel("sample value")
 
     return f
 
@@ -50,17 +50,17 @@ def kde2plot_op(ax, x, y, grid=200):
     kernel = kde.gaussian_kde(values)
     Z = np.reshape(kernel(positions).T, X.shape)
 
-    ax.imshow(np.rot90(Z), cmap=p.cm.gist_earth_r,
+    ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
               extent=[xmin, xmax, ymin, ymax])
 
 
 def kdeplot(data):
-    f, ax = p.subplots(1, 1, squeeze=True)
+    f, ax = plt.subplots(1, 1, squeeze=True)
     kdeplot_op(ax, data)
     return f
 
 
 def kde2plot(x, y, grid=200):
-    f, ax = p.subplots(1, 1, squeeze=True)
+    f, ax = plt.subplots(1, 1, squeeze=True)
     kde2plot_op(ax, x, y, grid)
     return f
