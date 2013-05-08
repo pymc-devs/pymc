@@ -5,11 +5,12 @@ from time import time
 from core import *
 import step_methods
 from progressbar import progress_bar
+from numpy.random import seed
 
 __all__ = ['sample', 'psample']
 
 
-def sample(draws, step, start=None, trace=None, progressbar=True, model=None):
+def sample(draws, step, start=None, trace=None, progressbar=True, model=None, random_seed=None):
     """
     Draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -38,6 +39,7 @@ def sample(draws, step, start=None, trace=None, progressbar=True, model=None):
     """
     model = modelcontext(model)
     draws = int(draws)
+    seed(random_seed)
     if start is None:
         start = trace[-1]
     point = Point(start, model=model)
