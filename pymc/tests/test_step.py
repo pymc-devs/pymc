@@ -13,7 +13,7 @@ def test_step_continuous():
     start, model, (mu, C) = mv_simple()
 
     hmc = pm.HamiltonianMC(model.vars, C, is_cov=True, model=model)
-    mh = pm.Metropolis(model.vars, model=model)
+    mh = pm.Metropolis(model.vars, model=model, S = C, proposal_dist= pm.MultivariateNormalProposal)
     slicer = pm.Slice(model.vars, model=model)
     compound = pm.CompoundStep([hmc, mh])
 
