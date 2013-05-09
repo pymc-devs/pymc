@@ -198,7 +198,7 @@ def DiscreteUniform(lower, upper):
     def logp(value):
 
         return bound(
-            -log(upper-lower+1)
+            -log(upper-lower+1),
 
             lower <= value, value <= upper)
 
