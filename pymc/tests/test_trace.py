@@ -15,7 +15,7 @@ def check_trace(model, trace, n, step, start):
     # try using a trace object a few times
     for i in range(2):
         trace = sample(
-            n, step, start, trace, track_progress=False, model=model)
+            n, step, start, trace, progressbar=False, model=model)
 
         for (var, val) in start.iteritems():
 
@@ -47,7 +47,7 @@ def check_multi_trace(model, trace, n, step, start):
 
     for i in range(2):
         trace = psample(
-            n, step, start, trace, track_progress=False, model=model)
+            n, step, start, trace, model=model)
 
         for (var, val) in start.iteritems():
             print [len(tr.samples[var].vals) for tr in trace.traces]
