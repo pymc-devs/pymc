@@ -1,6 +1,6 @@
 import numpy as np
 from .core import *
-from .utilities import *
+from .stats import *
 
 __all__ = ['NpTrace', 'MultiTrace', 'summary']
 
