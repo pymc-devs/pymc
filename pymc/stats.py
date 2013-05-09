@@ -2,7 +2,7 @@
 
 import numpy as np
 
-__all__ = ['hpd', 'quantiles', 'batchsd']
+__all__ = ['autocorr', 'autocov', 'hpd', 'quantiles', 'mc_error']
 
 def statfunc(f):
     """
@@ -165,7 +165,7 @@ def hpd(x, alpha=0.05):
         return np.array(calc_min_interval(sx, alpha))
 
 @statfunc
-def batchsd(x, batches=5):
+def mc_error(x, batches=5):
     """
     Calculates the simulation standard error, accounting for non-independent
     samples. The trace is divided into batches, and the standard deviation of
@@ -184,7 +184,7 @@ def batchsd(x, batches=5):
         #ttrace = np.transpose(np.reshape(trace, (dims[0], sum(dims[1:]))))
         trace = np.transpose([t.ravel() for t in x])
 
-        return np.reshape([batchsd(t, batches) for t in trace], dims[1:])
+        return np.reshape([mc_error(t, batches) for t in trace], dims[1:])
 
     else:
         if batches == 1: return np.std(x)/np.sqrt(len(x))

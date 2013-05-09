@@ -96,7 +96,7 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
             # Extract statistics and convert to string
             m = str(round(sample.mean(0)[index], roundto))
             sd = str(round(sample.std(0)[index], roundto))
-            mce = str(round(batchsd(sample, batches)[index], roundto))
+            mce = str(round(mc_error(sample, batches)[index], roundto))
             interval = str(hpd(sample, alpha)[index].squeeze().round(roundto))
 
             # Build up string buffer of values
