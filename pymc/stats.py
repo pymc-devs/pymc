@@ -4,6 +4,48 @@ import numpy as np
 
 __all__ = ['hpd', 'quantiles', 'batchsd']
 
+def statfunc(f):
+    """
+    Decorator for statistical utility function to automatically
+    extract the trace array from whatever object is passed.
+    """
+
+    def wrapped_f(pymc_obj, *args, **kwargs):
+
+        try:
+            # MultiTrace
+            traces = pymc_obj.traces
+
+            try:
+                vars = kwargs.pop('vars')
+            except KeyError:
+                vars = traces[0].varnames
+
+            return [{v:f(trace[v], *args, **kwargs) for v in vars} for trace in traces]
+
+        except AttributeError:
+            pass
+
+        try:
+            # NpTrace
+            try:
+                vars = kwargs.pop('vars')
+            except KeyError:
+                vars = pymc_obj.varnames
+
+            return {v:f(pymc_obj[v], *args, **kwargs) for v in vars}
+        except AttributeError:
+            pass
+
+        # If others fail, assume that raw data is passed
+        return f(pymc_obj, *args, **kwargs)
+
+    wrapped_f.__doc__ = f.__doc__
+    wrapped_f.__name__ = f.__name__
+
+    return wrapped_f
+
+@statfunc
 def autocorr(x, lag=1):
     """Sample autocorrelation at specified lag.
     The autocorrelation is the correlation of x_i with x_{i+lag}.
@@ -12,6 +54,7 @@ def autocorr(x, lag=1):
     S = autocov(x, lag)
     return S[0,1]/np.sqrt(np.prod(np.diag(S)))
 
+@statfunc
 def autocov(x, lag=1):
     """
     Sample autocovariance at specified lag.
@@ -73,7 +116,8 @@ def calc_min_interval(x, alpha):
     hdi_max = x[min_idx+interval_idx_inc]
     return hdi_min, hdi_max
 
-def hpd(x, alpha):
+@statfunc
+def hpd(x, alpha=0.05):
     """Calculate highest posterior density (HPD) of array for given alpha. The HPD is the
     minimum width Bayesian credible interval (BCI).
 
@@ -81,7 +125,7 @@ def hpd(x, alpha):
       x : Numpy array
           An array containing MCMC samples
       alpha : float
-          Desired probability of type I error
+          Desired probability of type I error (defaults to 0.05)
 
     """
 
@@ -120,7 +164,7 @@ def hpd(x, alpha):
 
         return np.array(calc_min_interval(sx, alpha))
 
-
+@statfunc
 def batchsd(x, batches=5):
     """
     Calculates the simulation standard error, accounting for non-independent
@@ -156,7 +200,7 @@ def batchsd(x, batches=5):
 
         return np.std(means)/np.sqrt(batches)
 
-
+@statfunc
 def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
     """Returns a dictionary of requested quantiles from array
 
