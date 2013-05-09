@@ -13,5 +13,8 @@ install:
   - pip install Cython
   - pip install scikits.sparse
   - python setup.py build_ext --inplace
+env: 
+  - TESTCMD="nosetests -v -e test_examples"
+  - TESTCMD="nosetests -v pymc.tests.test_examples"
 script:
-  - nosetests -v pymc/tests/
+  - $TESTCMD
