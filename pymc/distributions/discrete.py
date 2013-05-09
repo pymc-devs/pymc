@@ -1,7 +1,7 @@
 from dist_math import *
 
 __all__ = ['Binomial', 'BetaBin', 'Bernoulli', 'Poisson', 'ConstantDist',
-           'ZeroInflatedPoisson']
+           'ZeroInflatedPoisson', 'DiscreteUniform']
 
 
 @tensordist(discrete)
@@ -110,8 +110,6 @@ def Bernoulli(p):
 
     Parameters
     ----------
-    x : int
-        Series of successes (1) and failures (0). :math:`x=0,1`
     p : float
         Probability of success. :math:`0 < p < 1`.
 
@@ -180,6 +178,41 @@ def Poisson(mu):
         """.format(mu)
 
     mode = floor(mu).astype('int32')
+    return locals()
+
+
+@tensordist(discrete)
+def DiscreteUniform(lower, upper):
+    """
+    Discrete uniform distribution.
+
+    .. math::
+        f(x \mid lower, upper) = \frac{1}{upper-lower}
+
+    :Parameters:
+      - `lower` : Lower limit.
+      - `upper` : Upper limit (upper > lower).
+
+    """
+
+    def logp(value):
+
+        return bound(
+            -log(upper-lower+1)
+
+            lower <= value, value <= upper)
+
+
+    logp.__doc__ = """
+        Discrete uniform log-likelihood with bounds ({0},{1}).
+
+        Parameters
+        ----------
+        x : int
+            :math:`lower \leq x \leq upper`
+        """.format(upper, lower)
+
+    mode = floor((upper - lower) / 2.).astype('int32')
     return locals()
 
 
