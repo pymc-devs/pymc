@@ -2,7 +2,7 @@ language: python
 python:
   - "2.7"
 before_install:
-  - sudo apt-get install liblapack-dev libblas-dev libsuitesparse-dev swig
+  - sudo apt-get install liblapack-dev gfortran libblas-dev libsuitesparse-dev swig
 install:
   - pip install git+https://github.com/numpy/numpy.git
   - pip install matplotlib
