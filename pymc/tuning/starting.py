@@ -34,8 +34,12 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False, d
     if start is None:
         start = model.test_point
 
+
+
     if vars is None:
         vars = model.cont_vars
+
+    allinmodel(vars, model)
 
     start = Point(start, model=model)
     bij = DictToArrayBijection(ArrayOrdering(vars), start)
@@ -59,7 +63,8 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False, d
     if (not allfinite(mx) or
         not allfinite(logp(mx)) or
             not allfinite(dlogp(mx))):
-            raise ValueError("Optimization error: max, logp or dlogp at max have bad values. max: " + repr(mx) + " logp: " + repr(logp(mx)) + " dlogp: " + repr(dlogp(mx)))
+            raise ValueError("Optimization error: max, logp or dlogp at max have bad values. max: " + repr(mx) + " logp: " + repr(logp(mx)) + " dlogp: " + repr(dlogp(mx)) +
+                             "Check that 1) you don't have hierarchical parameters, these will lead to points with infinite density. 2) your distribution logp's are properly specified.")
 
     mx = bij.rmap(mx)
     if return_raw:
@@ -79,3 +84,8 @@ def nan_to_high(x):
 def scipyminimize(f, x0, fprime, *args, **kwargs):
     r = scipy.optimize.minimize(f, x0, jac=fprime, *args, **kwargs)
     return r.x, r
+
+def allinmodel(vars, model):
+    notin = [v for v in vars if v not in model.vars]
+    if notin:
+        raise ValueError("Some variables not in the model: " + str(notin))
