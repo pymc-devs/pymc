@@ -45,7 +45,8 @@ class TensorDist(Distribution):
             for val in self.default_testvals:
                 if hasattr(self, val):
                     return getattr(self, val)
-            raise AttributeError(str(self) + " does not have a value for any of: " + str(self.default_testvals))
+            raise AttributeError(str(self) + " has no default value to use, checked for: " +
+                                 str(self.default_testvals) + " pass testval argument or provide one of these.")
         return testval
 
     def makevar(self, name):

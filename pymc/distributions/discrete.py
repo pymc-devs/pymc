@@ -191,6 +191,7 @@ def ConstantDist(c):
 
             eq(value, c))
 
+    mean = median = mode = c
     logp.__doc__ = """
         Constant log-likelihood with parameter c={0}.
 
