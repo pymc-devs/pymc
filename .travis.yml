@@ -14,4 +14,4 @@ install:
   - pip install scikits.sparse
   - python setup.py build_ext --inplace
 script:
-  - nosetests -s pymc/tests/
+  - nosetests -v pymc/tests/
