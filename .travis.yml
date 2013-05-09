@@ -16,5 +16,4 @@ install:
 env: 
   - TESTCMD="nosetests -v -e test_examples"
   - TESTCMD="nosetests -v pymc.tests.test_examples"
-script:
-  - $TESTCMD
+script: "$TESTCMD"
