@@ -50,10 +50,10 @@ class Slice(ArrayStep):
 
         while(y_new < y):
             # Shrink bounds of uniform
-            if (q_new < q0):
-                L = q_new
-            else:
-                R = q_new
+            smaller = q_new < q0
+            L[smaller] = q_new[smaller]
+            R[smaller-True] = q_new[smaller-True]
+
             q_new = atleast_1d(uniform(L, R))
             y_new = logp(q_new)
 

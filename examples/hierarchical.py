@@ -1,15 +1,15 @@
 from pymc import *
-import theano.tensor as T 
+import theano.tensor as T
 from numpy import random, sum as nsum, ones, concatenate, newaxis, dot, arange
 from __builtin__ import map
-import numpy as np 
+import numpy as np
 
 
 
 random.seed(1)
 
 n_groups = 10
-no_pergroup = 30 
+no_pergroup = 30
 n_observed = no_pergroup * n_groups
 n_group_predictors = 1
 n_predictors = 3
@@ -36,7 +36,7 @@ with model:
     sg = Uniform("sg", .05, 10, testval = 2.)
 
     #m ~ N(mg * pg, sg)
-    effects = Normal("effects", 
+    effects = Normal("effects",
                  sum(group_predictors[:, :, newaxis] * group_effects ,1)  ,sg**-2,
                  shape = (n_groups, n_predictors))
 
@@ -47,7 +47,7 @@ with model:
     #y ~ Normal(m[g] * p, s)
     yd = Normal('y', sum(effects[g] * predictors, 1),s[g]**-2, observed = y)
 
-                 
+
 
     start = find_MAP()
     h = approx_hess(start) #find a good orientation using the hessian at the MAP
@@ -55,3 +55,5 @@ with model:
     step = HamiltonianMC(model.vars, h, is_cov = False)
 
     trace = sample(3e3, step, start)
+
+    traceplot(trace, vars=[early_mean, late_mean])
