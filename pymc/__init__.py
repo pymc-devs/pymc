@@ -9,6 +9,8 @@ from tuning import *
 
 from debug import *
 
+from diagnostics import *
+
 from plots import *
 
 from .tests import test

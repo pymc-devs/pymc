@@ -56,4 +56,4 @@ with model:
 
     trace = sample(3e3, step, start)
 
-    traceplot(trace, vars=[early_mean, late_mean])
+    traceplot(trace, vars=[s])

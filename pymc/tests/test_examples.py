@@ -29,7 +29,7 @@ def example_dir():
     import pymc
     d = path.dirname(pymc.__file__)
 
-    return path.join(d, '../examples/')
+    return path.join(d, 'examples/')
 
 
 def check_example(p):
