@@ -48,7 +48,7 @@ class HamiltonianMC(ArrayStep):
 
         self.step_size = step_scale / n ** (1 / 4.)
 
-        self.potential = find_scaling(C, is_cov)
+        self.potential = quad_potential(C, is_cov, as_cov = False)
 
         self.path_length = path_length
         self.step_rand = step_rand
@@ -64,20 +64,20 @@ class HamiltonianMC(ArrayStep):
     def astep(self, q0, logp, dlogp):
         H = Hamiltonian(logp, dlogp, self.potential)
 
-        e = self.step_rand(self.step_size) 
+        e = self.step_rand(self.step_size)
         nstep = int(self.path_length / e)
-        
+
         p0 = H.pot.random()
-        
-        q, p = leapfrog(H, q0, p0, nstep, e) 
-        p = -p 
-            
+
+        q, p = leapfrog(H, q0, p0, nstep, e)
+        p = -p
+
         mr = energy(H, q0, p0) - energy(H, q, p)
 
         self.state.metrops.append(mr)
-    
+
         return metrop_select(mr, q, q0)
-        
+
 
 
 def bern(p):
@@ -92,14 +92,14 @@ def leapfrog(H, q, p, n, e):
     _, dlogp, pot = H
 
     p = p - (e/2) * -dlogp(q) # half momentum update
-    
-    for i in range(n): 
+
+    for i in range(n):
         #alternate full variable and momentum updates
         q = q + e * pot.velocity(p)
 
         if i != n - 1:
             p = p - e * -dlogp(q)
-         
+
     p = p - (e/2) * -dlogp(q)  # do a half step momentum update to finish off
-    return q, p 
+    return q, p
 

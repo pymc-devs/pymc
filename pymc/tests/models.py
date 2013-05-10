@@ -47,3 +47,12 @@ def mv_simple():
     C = np.linalg.inv(H)
 
     return model.test_point, model, (mu, C)
+
+def non_normal(n = 2):
+
+    with pm.Model() as model :
+        x = pm.Beta('x', 3,3, shape = n)
+
+    return model.test_point, model, None
+
+    return
