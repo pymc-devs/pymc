@@ -8,32 +8,41 @@ from numpy.random import normal, standard_cauchy, standard_exponential, poisson,
 from numpy import round, exp, copy, where
 
 
-__all__ = ['Metropolis', 'BinaryMetropolis', 'normal_proposal', 'cauchy_proposal', 'laplace_proposal', 'poisson_proposal']
+__all__ = ['Metropolis', 'BinaryMetropolis', 'NormalProposal', 'CauchyProposal', 'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal']
 
 # Available proposal distributions for Metropolis
 
 
-def normal_proposal(s):
-    def random():
-        return normal(scale=s)
-    return random
+class Proposal(object):
+    def __init__(self, s):
+        self.s = s
 
 
-def cauchy_proposal(s):
-    def random():
-        return standard_cauchy(size=np.size(s)) * s
-    return random
+class NormalProposal(Proposal):
+    def __call__(self):
+        return normal(scale=self.s)
 
 
-def laplace_proposal(s):
-    def random():
-        return (standard_exponential(size=np.size(s)) - standard_exponential(size=np.size(s))) * s
-    return random
+class CauchyProposal(Proposal):
+    def __call__(self):
+        return standard_cauchy(size=np.size(self.s)) * self.s
 
-def poisson_proposal(s):
-    def random():
-        return poisson(lam=s, size=np.size(s)) - s
-    return random
+
+class LaplaceProposal(Proposal):
+    def __call__(self):
+        size = np.size(self.s)
+        return (standard_exponential(size=size) - standard_exponential(size=size)) * self.s
+
+
+class PoissonProposal(Proposal):
+    def __call__(self):
+        return poisson(lam=self.s, size=np.size(self.s)) - self.s
+
+
+class MultivariateNormalProposal(Proposal):
+    def __call__(self):
+        return np.random.multivariate_normal(mean=np.zeros(self.s.shape[0]), cov=self.s)
+
 
 class Metropolis(ArrayStep):
     """
@@ -56,13 +65,13 @@ class Metropolis(ArrayStep):
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
-    def __init__(self, vars, S=None, proposal_dist=normal_proposal, scaling=1.,
+    def __init__(self, vars, S=None, proposal_dist=NormalProposal, scaling=1.,
                  tune=True, tune_interval=100, model=None):
 
         model = modelcontext(model)
 
         if S is None:
-            S = [1] * len(vars)
+            S = np.ones(sum(v.dsize for v in vars))
         self.proposal_dist = proposal_dist(S)
         self.scaling = scaling
         self.tune = tune
@@ -73,7 +82,7 @@ class Metropolis(ArrayStep):
         # Determine type of variables
         self.discrete = np.array([v.dtype in discrete_types for v in vars])
 
-        super(Metropolis,self).__init__(vars, [model.logpc])
+        super(Metropolis, self).__init__(vars, [model.logpc])
 
     def astep(self, q0, logp):
 
@@ -153,19 +162,20 @@ class BinaryMetropolis(ArrayStep):
         self.accepted = 0
 
         if not all([v.dtype in discrete_types for v in vars]):
-            raise ValueError('All variables must be Bernoulli for BinaryMetropolis')
+            raise ValueError(
+                'All variables must be Bernoulli for BinaryMetropolis')
 
-        super(BinaryMetropolis,self).__init__(vars, [model.logpc])
+        super(BinaryMetropolis, self).__init__(vars, [model.logpc])
 
     def astep(self, q0, logp):
 
         # Convert adaptive_scale_factor to a jump probability
-        p_jump = 1.-.5**self.scaling
+        p_jump = 1. - .5 ** self.scaling
 
         rand_array = random(q0.shape)
         q = copy(q0)
         # Locations where switches occur, according to p_jump
-        switch_locs = where(rand_array<p_jump)
+        switch_locs = where(rand_array < p_jump)
         q[switch_locs] = True - q[switch_locs]
 
         q_new = metrop_select(logp(q) - logp(q0), q, q0)

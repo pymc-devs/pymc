@@ -17,7 +17,7 @@ import numpy as np
 d = np.random.normal(size=(3, 30))
 d1 = d[0] + 4
 d2 = d[1] + 4
-yd = .2*d1 +.3*d2 + d[2]
+yd = .2 * d1 + .3 * d2 + d[2]
 
 # <markdowncell>
 
@@ -30,13 +30,15 @@ with Model() as model:
     m1 = Laplace('m1', 0, 100)
     m2 = Laplace('m2', 0, 100)
 
-    p = d1*m1 + d2*m2
+    p = d1 * m1 + d2 * m2
 
-    y = Normal('y', p, s**-2, observed = yd)
+    y = Normal('y', p, s ** -2, observed=yd)
 
 # <markdowncell>
 
-# For most samplers, including Metropolis and HamiltonianMC, simply pass a list of variables to sample as a block. This works with both scalar and array parameters.
+# For most samplers, including Metropolis and HamiltonianMC, simply pass a
+# list of variables to sample as a block. This works with both scalar and
+# array parameters.
 
 # <codecell>
 
@@ -45,18 +47,16 @@ with model:
 
     step1 = Metropolis([m1, m2])
 
-    step2 = Metropolis([s], laplace_proposal)
+    step2 = Metropolis([s], proposal_dist=LaplaceProposal)
 
     trace = sample(5000, [step1, step2], start)
 
 # <codecell>
 
-traceplot(trace);
+traceplot(trace)
 
 # <codecell>
 
-hexbin(trace[m1],trace[m2], gridsize = 50)
+hexbin(trace[m1], trace[m2], gridsize=50)
 
 # <codecell>
-
-
