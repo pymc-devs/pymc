@@ -2,8 +2,11 @@ import theano.tensor as t
 import numpy as np
 from ..quickclass import *
 from ..model import *
+import warnings
+
 __all__ = ['DensityDist', 'TensorDist', 'tensordist', 'continuous',
            'discrete', 'arbitrary']
+
 
 
 class Distribution(object):
@@ -11,7 +14,10 @@ class Distribution(object):
         if args and isinstance(args[0], basestring):
 
             name, args = args[0], args[1:]
-            model = Model.get_context()
+            try:
+                model = Model.get_context()
+            except TypeError:
+                raise TypeError("No model on context stack, which is needed to use the Normal('x', 0,1) syntax. Add a 'with model:' block")
 
             if 'observed' in kwargs:
                 obs = kwargs.pop('observed')
@@ -21,6 +27,7 @@ class Distribution(object):
                 dist = cls(*args, **kwargs)
                 return model.Var(name, dist)
         else:
+
             return object.__new__(cls, *args, **kwargs)
 
 
@@ -45,7 +52,8 @@ class TensorDist(Distribution):
             for val in self.default_testvals:
                 if hasattr(self, val):
                     return getattr(self, val)
-            raise AttributeError(str(self) + " does not have a value for any of: " + str(self.default_testvals))
+            raise AttributeError(str(self) + " has no default value to use, checked for: " +
+                                 str(self.default_testvals) + " pass testval argument or provide one of these.")
         return testval
 
     def makevar(self, name):

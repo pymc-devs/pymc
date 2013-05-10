@@ -45,7 +45,7 @@ with model:
 
     step1 = Metropolis([m1, m2])
 
-    step2 = Metropolis([s], laplace_proposal)
+    step2 = Metropolis([s], proposal_dist=LaplaceProposal)
 
     trace = sample(5000, [step1, step2], start)
 
