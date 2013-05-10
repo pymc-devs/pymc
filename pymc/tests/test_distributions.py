@@ -109,7 +109,7 @@ def checkd(distfam, valuedomain, vardomains, check_int=True, check_der=True, ext
         vars.update(extra_args)
         # print vars
         value = distfam(
-            'value', testval=valuedomain[len(valuedomain) // 2], **vars)
+            'value', **vars)
 
         vardomains['value'] = np.array(valuedomain)
 
