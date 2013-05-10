@@ -39,8 +39,9 @@ with Model() as model:
 
     start = {'early_mean':2., 'late_mean':3., 'switchpoint':50}
 
-    step1 = Metropolis(model.vars)
+    step1 = Slice([early_mean, late_mean])
+    step2 = Metropolis([switchpoint])
 
-    trace = sample(10000, step1, start)
+    trace = sample(10000, [step1,step2], start)
 
-    print trace['early_mean'].mean()
+    traceplot(trace)
