@@ -14,9 +14,10 @@ import theano.tensor as t
 from numpy import arange, array, ones, concatenate
 from numpy.random import randint
 
-__all__ = ['disasters_data', 'switchpoint', 'early_mean', 'late_mean', 'rate', 'disasters']
+__all__ = ['disasters_data', 'switchpoint', 'early_mean', 'late_mean', 'rate',
+             'disasters']
 
-disasters_data =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+disasters_data = array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
                             2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
                             1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
@@ -37,11 +38,11 @@ with Model() as model:
 
     disasters = Poisson('disasters', rate, observed=disasters_data)
 
-    start = {'early_mean':2., 'late_mean':3., 'switchpoint':50}
+    start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
 
     step1 = Slice([early_mean, late_mean])
     step2 = Metropolis([switchpoint])
 
-    trace = sample(10000, [step1,step2], start)
+    trace = sample(10000, [step1, step2], start)
 
     traceplot(trace)
