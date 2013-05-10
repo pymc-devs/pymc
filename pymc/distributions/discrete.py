@@ -194,7 +194,7 @@ def DiscreteUniform(lower, upper):
       - `upper` : Upper limit (upper > lower).
 
     """
-    lower, upper = lower.astype('int32'), upper.astype('int32')
+    lower, upper = floor(lower).astype('int32'), floor(upper).astype('int32')
 
     def logp(value):
 
