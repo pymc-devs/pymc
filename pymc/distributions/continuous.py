@@ -289,6 +289,7 @@ def Cauchy(alpha, beta):
     """
 
     median = mode = alpha
+
     def logp(value):
         return bound(
             -log(pi) - log(beta) - log(1 + ((

@@ -8,7 +8,6 @@ __all__ = ['DensityDist', 'TensorDist', 'tensordist', 'continuous',
            'discrete', 'arbitrary']
 
 
-
 class Distribution(object):
     def __new__(cls, *args, **kwargs):
         if args and isinstance(args[0], basestring):
