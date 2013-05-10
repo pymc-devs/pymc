@@ -11,7 +11,7 @@ disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 from pymc import *
 
 import theano.tensor as t
-from numpy import array, ones, concatenate
+from numpy import arange, array, ones, concatenate
 from numpy.random import randint
 
 __all__ = ['disasters_data', 'switchpoint', 'early_mean', 'late_mean', 'rate', 'disasters']
@@ -27,31 +27,20 @@ disasters_data =   array([ 4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 with Model() as model:
 
     # Define data and stochastics
-    years = 110
+    years = 111
     switchpoint = DiscreteUniform('switchpoint', lower=0, upper=years)
     early_mean = Exponential('early_mean', lam=1.)
     late_mean = Exponential('late_mean', lam=1.)
 
-    @tensordist(discrete)
-    def PoissonMixture(early, late, s):
-        pois_early = Poisson(early)
-        pois_late = Poisson(late)
+    idx = arange(years)
+    rate = switch(switchpoint >= idx, early_mean, late_mean)
 
-        def logp(value):
-            return switch(value <= s,
-                          pois_early.logp(value),
-                          pois_late.logp(value))
-
-        mode = floor((pois_early.mode*s + pois_late.mode*(years-s))/years)
-
-        return locals()
-
-    disasters = PoissonMixture('disasters', early_mean, late_mean, switchpoint, observed=disasters_data)
+    disasters = Poisson('disasters', rate, observed=disasters_data)
 
     start = {'early_mean':2., 'late_mean':3., 'switchpoint':50}
 
-    step1 = Metropolis([switchpoint, early_mean, late_mean])
+    step1 = Metropolis(model.vars)
 
-    trace = sample(3000, step1, start)
+    trace = sample(10000, step1, start)
 
     print trace['early_mean'].mean()
