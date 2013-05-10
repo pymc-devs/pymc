@@ -2,6 +2,7 @@ from pymc import *
 
 from pymc.examples import disaster_model as dm
 
+
 def test_gelman_rubin(n=1000):
 
     with dm.model:
@@ -10,7 +11,8 @@ def test_gelman_rubin(n=1000):
 
     rhat = gelman_rubin(ptrace)
 
-    assert np.all([r<1.5 for r in rhat.values()])
+    assert np.all([r < 1.5 for r in rhat.values()])
+
 
 def test_geweke(n=1000):
 
@@ -24,7 +26,7 @@ def test_geweke(n=1000):
     assert len(z_switch) == 20
 
     # Ensure `last` argument is honored
-    assert z_switch[-1,0] < (n/2)
+    assert z_switch[-1, 0] < (n / 2)
 
     # These should all be z-scores
-    assert max(abs(z_switch[:,1])) < 1
+    assert max(abs(z_switch[:, 1])) < 1

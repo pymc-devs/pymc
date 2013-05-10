@@ -50,12 +50,15 @@ def geweke(x, first=.1, last=.5, intervals=20):
     Geweke (1992)
     """
 
-    if np.rank(x)>1:
+    if np.rank(x) > 1:
         return [geweke(y, first, last, intervals) for y in np.transpose(x)]
 
     # Filter out invalid intervals
     if first + last >= 1:
-        raise ValueError("Invalid intervals for Geweke convergence analysis",(first,last))
+        raise ValueError(
+            "Invalid intervals for Geweke convergence analysis",
+            (first,
+             last))
 
     # Initialize list of z-scores
     zscores = []
@@ -64,17 +67,17 @@ def geweke(x, first=.1, last=.5, intervals=20):
     end = len(x) - 1
 
     # Calculate starting indices
-    sindices = np.arange(0, end/2, step = int((end / 2) / (intervals-1)))
+    sindices = np.arange(0, end / 2, step=int((end / 2) / (intervals - 1)))
 
     # Loop over start indices
     for start in sindices:
 
         # Calculate slices
-        first_slice = x[start : start + int(first * (end - start))]
+        first_slice = x[start: start + int(first * (end - start))]
         last_slice = x[int(end - last * (end - start)):]
 
         z = (first_slice.mean() - last_slice.mean())
-        z /= np.sqrt(first_slice.std()**2 + last_slice.std()**2)
+        z /= np.sqrt(first_slice.std() ** 2 + last_slice.std() ** 2)
 
         zscores.append([start, z])
 
@@ -125,7 +128,8 @@ def gelman_rubin(mtrace):
 
     m = len(mtrace.traces)
     if m < 2:
-        raise ValueError('Gelman-Rubin diagnostic requires multiple chains of the same length.')
+        raise ValueError(
+            'Gelman-Rubin diagnostic requires multiple chains of the same length.')
 
     varnames = mtrace.traces[0].varnames
     n = len(mtrace.traces[0][varnames[0]])
@@ -137,19 +141,21 @@ def gelman_rubin(mtrace):
         x = np.array([mtrace.traces[i][var] for i in range(m)])
 
         # Calculate between-chain variance
-        B_over_n = np.sum((np.mean(x,1) - np.mean(x))**2)/(m-1)
+        B_over_n = np.sum((np.mean(x, 1) - np.mean(x)) ** 2) / (m - 1)
 
         # Calculate within-chain variances
-        W = np.sum([(x[i] - xbar)**2 for i,xbar in enumerate(np.mean(x,1))]) / (m*(n-1))
+        W = np.sum(
+            [(x[i] - xbar) ** 2 for i,
+             xbar in enumerate(np.mean(x,
+                                       1))]) / (m * (n - 1))
 
         # (over) estimate of variance
-        s2 = W*(n-1)/n + B_over_n
+        s2 = W * (n - 1) / n + B_over_n
 
         # Pooled posterior variance estimate
-        V = s2 + B_over_n/m
+        V = s2 + B_over_n / m
 
         # Calculate PSRF
-        Rhat[var] = V/W
+        Rhat[var] = V / W
 
     return Rhat
-
