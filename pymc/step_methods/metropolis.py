@@ -15,7 +15,8 @@ __all__ = ['Metropolis', 'BinaryMetropolis', 'NormalProposal', 'CauchyProposal',
 
 class Proposal(object):
     def __init__(self, s):
-        self.s =s
+        self.s = s
+
 
 class NormalProposal(Proposal):
     def __call__(self):
@@ -26,10 +27,12 @@ class CauchyProposal(Proposal):
     def __call__(self):
         return standard_cauchy(size=np.size(self.s)) * self.s
 
+
 class LaplaceProposal(Proposal):
     def __call__(self):
         size = np.size(self.s)
         return (standard_exponential(size=size) - standard_exponential(size=size)) * self.s
+
 
 class PoissonProposal(Proposal):
     def __call__(self):
@@ -38,7 +41,7 @@ class PoissonProposal(Proposal):
 
 class MultivariateNormalProposal(Proposal):
     def __call__(self):
-        return np.random.multivariate_normal(mean = np.zeros(self.s.shape[0]),  cov=self.s)
+        return np.random.multivariate_normal(mean=np.zeros(self.s.shape[0]), cov=self.s)
 
 
 class Metropolis(ArrayStep):
@@ -84,7 +87,7 @@ class Metropolis(ArrayStep):
         else:
             raise ValueError('All variables in vars must be of the same dtype for Metropolis')
 
-        super(Metropolis,self).__init__(vars, [model.logpc])
+        super(Metropolis, self).__init__(vars, [model.logpc])
 
     def astep(self, q0, logp):
 
@@ -164,19 +167,20 @@ class BinaryMetropolis(ArrayStep):
         self.accepted = 0
 
         if not all([v.dtype in discrete_types for v in vars]):
-            raise ValueError('All variables must be Bernoulli for BinaryMetropolis')
+            raise ValueError(
+                'All variables must be Bernoulli for BinaryMetropolis')
 
-        super(BinaryMetropolis,self).__init__(vars, [model.logpc])
+        super(BinaryMetropolis, self).__init__(vars, [model.logpc])
 
     def astep(self, q0, logp):
 
         # Convert adaptive_scale_factor to a jump probability
-        p_jump = 1.-.5**self.scaling
+        p_jump = 1. - .5 ** self.scaling
 
         rand_array = random(q0.shape)
         q = copy(q0)
         # Locations where switches occur, according to p_jump
-        switch_locs = where(rand_array<p_jump)
+        switch_locs = where(rand_array < p_jump)
         q[switch_locs] = True - q[switch_locs]
 
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
