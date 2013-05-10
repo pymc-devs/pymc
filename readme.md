@@ -2,7 +2,9 @@
 
 [![Build Status](https://travis-ci.org/pymc-devs/pymc.png)](https://travis-ci.org/pymc-devs/pymc)
 
-PyMC is a python module for Bayesian statistical modeling and model fitting which focuses on advanced Markov chain Monte Carlo fitting algorithms. Its flexibility and extensibility make it applicable to a large suite of problems.
+PyMC is a python module for Bayesian statistical modeling and model fitting which focuses on advanced Markov chain Monte Carlo fitting algorithms. Its flexibility and extensibility make it applicable to a large suite of problems. 
+
+Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/examples/tutorial.ipynb)!
 
 ## Features 
 
@@ -15,9 +17,10 @@ PyMC is a python module for Bayesian statistical modeling and model fitting whic
   * Computation optimization and dynamic C compilation
  * Simple extensibility
 
-## Guided Examples
- * [Tutorial model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/examples/tutorial.ipynb)
- * More advanced [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/examples/stochastic_volatility.ipynb)
+## Getting started
+ * [PyMC 3 Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/examples/tutorial.ipynb)
+ * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc/blob/pymc3/examples/disaster_model.py) 
+ * [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/examples/stochastic_volatility.ipynb) guided example
 
 ## Installation 
 
@@ -27,9 +30,7 @@ pip install git+https://github.com/pymc-devs/pymc@pymc3
 
 ### Optional
 
-[`scikits.sparse`](https://github.com/njsmith/scikits-sparse) enables sparse scaling matrices which are useful for large problems.
-
-Ubuntu:
+[`scikits.sparse`](https://github.com/njsmith/scikits-sparse) enables sparse scaling matrices which are useful for large problems. Installation on Ubuntu is easy:
 
 ```
 sudo apt-get install libsuitesparse-dev 
