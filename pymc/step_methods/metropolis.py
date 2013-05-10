@@ -71,12 +71,7 @@ class Metropolis(ArrayStep):
         self.accepted = 0
 
         # Determine type of variables
-        if all([v.dtype in discrete_types for v in vars]):
-            self.discrete = True
-        elif all([v.dtype in continuous_types for v in vars]):
-            self.discrete = False
-        else:
-            raise ValueError('All variables in vars must be of the same dtype for Metropolis')
+        self.discrete = np.array([v.dtype in discrete_types for v in vars])
 
         super(Metropolis,self).__init__(vars, [model.logpc])
 
@@ -93,8 +88,8 @@ class Metropolis(ArrayStep):
         delta = self.proposal_dist() * self.scaling
 
         q = q0 + delta
-        if self.discrete:
-            q = round(q, 0).astype(int)
+        if np.any(self.discrete):
+            q[self.discrete] = round(q[self.discrete], 0).astype(int)
 
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
 

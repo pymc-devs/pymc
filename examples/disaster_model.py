@@ -50,10 +50,8 @@ with Model() as model:
 
     start = {'early_mean':2., 'late_mean':3., 'switchpoint':50}
 
-    step1 = Metropolis([early_mean, late_mean])
+    step1 = Metropolis([switchpoint, early_mean, late_mean])
 
-    step2 = Metropolis([switchpoint])
+    trace = sample(3000, step1, start)
 
-    trace = sample(3000, [step1, step2], start)
-
-    traceplot(trace)
+    print trace['early_mean'].mean()
