@@ -34,8 +34,6 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False, d
     if start is None:
         start = model.test_point
 
-
-
     if vars is None:
         vars = model.cont_vars
 
@@ -84,6 +82,7 @@ def nan_to_high(x):
 def scipyminimize(f, x0, fprime, *args, **kwargs):
     r = scipy.optimize.minimize(f, x0, jac=fprime, *args, **kwargs)
     return r.x, r
+
 
 def allinmodel(vars, model):
     notin = [v for v in vars if v not in model.vars]

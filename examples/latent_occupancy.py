@@ -42,13 +42,13 @@ theta = 2.1
 pi = 0.4
 
 # Simulate some data data
-y = array([(random.random()<pi) * random.poisson(theta) for i in range(n)])
+y = array([(random.random() < pi) * random.poisson(theta) for i in range(n)])
 
 model = Model()
 with model:
     # Estimated occupancy
 
-    p = Beta('p', 1,1)
+    p = Beta('p', 1, 1)
 
     # Latent variable for occupancy
     z = Bernoulli('z', p, y.shape)
@@ -57,21 +57,25 @@ with model:
     theta = Uniform('theta', 0, 100)
 
     # Poisson likelihood
-    yd = ZeroInflatedPoisson('y', theta, z, observed = y)
+    yd = ZeroInflatedPoisson('y', theta, z, observed=y)
 
 
 point = model.test_point
 
 _pymc3_logp = model.logpc
+
+
 def pymc3_logp():
     _pymc3_logp(point)
 
 _pymc3_dlogp = model.dlogpc()
+
+
 def pymc3_dlogp():
     _pymc3_dlogp(point)
 
 with model:
-    start = {'p':0.5, 'z':(y>0).astype(int), 'theta':5}
+    start = {'p': 0.5, 'z': (y > 0).astype(int), 'theta': 5}
 
     step1 = Metropolis([theta, p])
 
