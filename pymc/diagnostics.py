@@ -1,6 +1,6 @@
 # Convergence diagnostics and model validation
 import numpy as np
-from .stats import autocorr, autocov, statfunc
+from stats import autocorr, autocov, statfunc
 from copy import copy
 
 __all__ = ['geweke', 'gelman_rubin', 'discrepancy']
