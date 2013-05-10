@@ -1,9 +1,10 @@
-# Convergence diagnostics and model validation
+"""Convergence diagnostics and model validation"""
+
 import numpy as np
 from stats import autocorr, autocov, statfunc
 from copy import copy
 
-__all__ = ['geweke', 'gelman_rubin', 'discrepancy']
+__all__ = ['geweke', 'gelman_rubin']
 
 
 @statfunc
@@ -78,41 +79,9 @@ def geweke(x, first=.1, last=.5, intervals=20):
         zscores.append([start, z])
 
     if intervals is None:
-        return zscores[0]
+        return np.array(zscores[0])
     else:
-        return zscores
-
-
-def discrepancy(observed, simulated, expected):
-    """Calculates Freeman-Tukey statistics (Freeman and Tukey 1950) as
-    a measure of discrepancy between observed and r replicates of simulated data. This
-    is a convenient method for assessing goodness-of-fit (see Brooks et al. 2000).
-
-    D(x|\theta) = \sum_j (\sqrt{x_j} - \sqrt{e_j})^2
-
-    :Parameters:
-      observed : Iterable of observed values (size=(n,))
-      simulated : Iterable of simulated values (size=(r,n))
-      expected : Iterable of expected values (size=(r,) or (r,n))
-
-    :Returns:
-      D_obs : Discrepancy of observed values
-      D_sim : Discrepancy of simulated values
-
-    """
-    simulated = np.array(simulated, float)
-    expected = np.array(expected, float)
-    # Ensure expected values are rxn
-    expected = np.resize(expected, simulated.shape)
-
-    D_obs = np.sum([(np.sqrt(observed)-np.sqrt(e))**2 for e in expected], 1)
-    D_sim = np.sum([(np.sqrt(s)-np.sqrt(e))**2 for s,e in zip(simulated, expected)], 1)
-
-    # Print p-value
-    count = sum(s>o for o,s in zip(D_obs, D_sim))
-    print_('Bayesian p-value: p=%.3f' % (1.*count/len(D_obs)))
-
-    return D_obs, D_sim
+        return np.array(zscores)
 
 
 def gelman_rubin(mtrace):
@@ -154,18 +123,18 @@ def gelman_rubin(mtrace):
     Brooks and Gelman (1998)
     Gelman and Rubin (1992)"""
 
-    m = len(mtrace)
+    m = len(mtrace.traces)
     if m < 2:
         raise ValueError('Gelman-Rubin diagnostic requires multiple chains of the same length.')
 
-    varnames = mtrace[0].varnames
-    n = len(mtrace[0][varnames[0]])
+    varnames = mtrace.traces[0].varnames
+    n = len(mtrace.traces[0][varnames[0]])
 
     Rhat = {}
     for var in varnames:
 
         # Get all traces for var
-        x = np.array([mtrace[i][var] for i in range(m)])
+        x = np.array([mtrace.traces[i][var] for i in range(m)])
 
         # Calculate between-chain variance
         B_over_n = np.sum((np.mean(x,1) - np.mean(x))**2)/(m-1)
