@@ -70,6 +70,51 @@ def kde2plot(x, y, grid=200):
     kde2plot_op(ax, x, y, grid)
     return f
 
+def autocorrplot(trace, vars=None, fontmap = None, max_lag=100):
+    """Bar plot of the autocorrelation function for a trace"""
+
+    try:
+        # MultiTrace
+        traces = trace.traces
+
+    except AttributeError:
+
+        # NpTrace
+        traces = [trace]
+
+    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
+
+    if vars is None:
+        vars = traces[0].varnames
+
+    # Extract sample data
+    samples = [{v:trace[v] for v in vars} for trace in traces]
+
+    chains = len(traces)
+
+    n = len(samples[0])
+    f, ax = subplots(n, chains, squeeze=False)
+
+    max_lag = min(len(samples[0][vars[0]])-1, max_lag)
+
+    for i, v in enumerate(vars):
+
+        for j in xrange(chains):
+
+            d = np.squeeze(samples[j][v])
+
+            acorr(d, detrend=mlab.detrend_mean, maxlags=max_lag)
+
+        if not j:
+            ax[i, j].set_ylabel("correlation")
+        ax[i, j].set_xlabel("lag")
+
+    # Smaller tick labels
+    tlabels = gca().get_xticklabels()
+    setp(tlabels, 'fontsize', fontmap[1])
+
+    tlabels = gca().get_yticklabels()
+    setp(tlabels, 'fontsize', fontmap[1])
 
 def var_str(name, shape):
     """Return a sequence of strings naming the element of the tallyable object.
@@ -92,7 +137,7 @@ def var_str(name, shape):
 
 
 def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
-               main=None, xtitle=None, xrange=None, ylabels=None, spacing=0.05, vline=0):
+               main=None, xtitle=None, xrange=None, ylabels=None, chain_spacing=0.05, vline=0):
     """ Forest plot (model summary plot)
 
     Generates a "forest plot" of 100*(1-alpha)% credible intervals for either the
@@ -131,7 +176,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             User-defined labels for each variable. If not provided, the node
             __name__ attributes are used.
 
-        spacing (optional): float
+        chain_spacing (optional): float
             Plot spacing between chains (defaults to 0.05).
 
         vline (optional): numeric
@@ -249,8 +294,8 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                     # labels.append('\n'.join(varname.split('_')))
 
             # Add spacing for each chain, if more than one
-            e = [0] + [(spacing * ((i + 2) / 2)) * (
-                -1) ** i for i in range(chains - 1)]
+            e = [0] + [(chain_spacing * ((i + 2) / 2)) *
+                (-1) ** i for i in range(chains - 1)]
 
             # Deal with multivariate nodes
             if k > 1:
