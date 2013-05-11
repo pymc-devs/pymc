@@ -20,7 +20,10 @@ def traceplot(trace, vars=None):
     for i, v in enumerate(vars):
         d = np.squeeze(trace[v])
 
-        kdeplot_op(ax[i, 0], d)
+        if var.dtype in discrete_types:
+            ax[i, 0].hist(d)
+        else:
+            kdeplot_op(ax[i, 0], d)
         ax[i, 0].set_title(str(v))
         ax[i, 1].plot(d, alpha=.35)
 
