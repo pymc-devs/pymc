@@ -119,6 +119,7 @@ def autocorrplot(trace, vars=None, fontmap = None, max_lag=100):
     tlabels = gca().get_yticklabels()
     setp(tlabels, 'fontsize', fontmap[1])
 
+
 def var_str(name, shape):
     """Return a sequence of strings naming the element of the tallyable object.
     This is a support function for forestplot.
@@ -223,6 +224,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                 R = {v: R[v] for v in vars}
 
         else:
+
             rhat = False
 
     except AttributeError:
