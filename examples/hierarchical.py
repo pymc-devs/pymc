@@ -55,5 +55,3 @@ with model:
     step = HamiltonianMC(model.vars, h, is_cov=False)
 
     trace = sample(3e3, step, start)
-
-    traceplot(trace, vars=[early_mean, late_mean])
