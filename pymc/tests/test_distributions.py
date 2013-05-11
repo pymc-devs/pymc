@@ -19,7 +19,7 @@ Rplusunif = array([0, .5, inf])
 Rplusdunif = array([2, 10, 100])
 
 I = array([-1000, -3, -2, -1, 0, 1, 2, 3, 1000], 'int64')
-Nat = array([0, 1, 2, 3, 5000], 'int64')
+Nat = array([0, 1, 2, 3, 5000, 50000], 'int64')
 Bool = array([0, 0, 1, 1], 'int64')
 Natbig = array([0, 3, 4, 5, 1000], 'int64')
 
@@ -27,8 +27,10 @@ Natbig = array([0, 3, 4, 5, 1000], 'int64')
 def test_unif():
     checkd(Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif})
 
-def test_unif():
+
+def test_discrete_unif():
     checkd(DiscreteUniform, Rdunif, {'lower': -Rplusdunif, 'upper': Rplusdunif})
+
 
 def test_flat():
     checkd(Flat, Runif, {}, False)
@@ -44,6 +46,14 @@ def test_beta():
 
 def test_exponential():
     checkd(Exponential, Rplus, {'lam': Rplus})
+
+
+def test_geometric():
+    checkd(Geometric, Nat, {'p': Unit})
+
+
+def test_negative_binomial():
+    checkd(NegativeBinomial, Nat, {'mu': Rplusbig, 'alpha': Rplusbig})
 
 
 def test_laplace():

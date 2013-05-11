@@ -1,7 +1,7 @@
 from dist_math import *
 
-__all__ = ['Binomial', 'BetaBin', 'Bernoulli', 'Poisson', 'ConstantDist',
-           'ZeroInflatedPoisson', 'DiscreteUniform']
+__all__  = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson', 'NegativeBinomial',
+'ConstantDist', 'ZeroInflatedPoisson', 'DiscreteUniform', 'Geometric']
 
 
 @tensordist(discrete)
@@ -67,7 +67,7 @@ def BetaBin(alpha, beta, n):
     beta : float
         beta > 0
     n : int
-        n=x,x+1,\ldots
+        n=x,x+1,...
 
     .. note::
     - :math:`E(X)=n\frac{\alpha}{\alpha+\beta}`
@@ -77,8 +77,9 @@ def BetaBin(alpha, beta, n):
 
     def logp(value):
 
-        return bound(
-            gammaln(alpha + beta) - gammaln(alpha) - gammaln(beta) + gammaln(n + 1) - gammaln(value + 1) - gammaln(n - value + 1) + gammaln(alpha + value) + gammaln(n + beta - value) - gammaln(beta + alpha + n),
+          return bound(gammaln(alpha + beta) -  gammaln(alpha) - gammaln(beta) +
+          gammaln(n  + 1) - gammaln(value + 1) - gammaln(n - value + 1) +
+          gammaln(alpha + value) + gammaln(n + beta - value) - gammaln(beta + alpha + n),
 
             0 <= value, value <= n,
             alpha > 0,
@@ -93,7 +94,7 @@ def BetaBin(alpha, beta, n):
         Parameters
         ----------
         value : int
-            x=0,1,\ldots,n
+            x=0,1,...,n
         """.format(alpha, beta, n)
 
     return locals()
@@ -166,7 +167,7 @@ def Poisson(mu):
         return bound(
             logpow(mu, value) - factln(value) - mu,
 
-            mu > 0)
+            mu > 0, value >= 0)
 
     logp.__doc__ = """
         Poisson log-likelihood with parameters mu={0}.
@@ -178,6 +179,86 @@ def Poisson(mu):
         """.format(mu)
 
     mode = floor(mu).astype('int32')
+    return locals()
+
+
+@tensordist(discrete)
+def NegativeBinomial(mu, alpha):
+    """
+    Negative binomial log-likelihood.
+
+     The negative binomial distribution  describes a Poisson random variable
+     whose rate parameter is gamma distributed. PyMC's chosen parameterization
+     is based on this mixture interpretation.
+
+    .. math::
+        f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
+
+    :Parameters:
+      - `mu` : mu > 0
+      - `alpha` : alpha > 0
+
+    .. note::
+      - :math:`E[x]=\mu`
+
+    """
+    def logp(value):
+        # Return Poisson when alpha gets very large
+        return switch(alpha > 1e10,
+
+            bound(logpow(mu, value) - factln(value) - mu,
+            mu > 0, value >= 0),
+
+            bound(gammaln(value + alpha) - factln(value) - gammaln(alpha) +
+            logpow(mu / (mu + alpha), value) + logpow(alpha / (mu + alpha), alpha),
+            mu > 0, alpha > 0, value >= 0))
+
+    logp.__doc__ = """
+        Negative binomial log-likelihood with parameters ({0},{1}).
+
+        Parameters
+        ----------
+        x : int
+            :math:`x \in {{0,1,2,...}}`
+        """.format(mu, alpha)
+
+    mode = floor(mu).astype('int32')
+    return locals()
+
+
+@tensordist(discrete)
+def Geometric(p):
+    """
+    Geometric log-likelihood. The probability that the first success in a
+    sequence of Bernoulli trials occurs on the x'th trial.
+
+    .. math::
+        f(x \mid p) = p(1-p)^{x-1}
+
+    :Parameters:
+      - `p` : Probability of success on an individual trial, :math:`p \in [0,1]`
+
+    .. note::
+      - :math:`E(X)=1/p`
+      - :math:`Var(X)=\frac{1-p}{p^2}`
+
+    """
+
+    def logp(value):
+        return bound(log(p) + logpow(1 - p, value - 1),
+                     0 <= p, p <= 1, value >= 1)
+
+    logp.__doc__ = """
+        Geometric log-likelihood with parameter {0}.
+
+        Parameters
+        ----------
+        x : int
+            :math:`x \in {{1,2,...}}`
+        """.format(p)
+
+    mode = 1
+
     return locals()
 
 
@@ -199,10 +280,9 @@ def DiscreteUniform(lower, upper):
     def logp(value):
 
         return bound(
-            -log(upper-lower+1),
+            -log(upper - lower + 1),
 
             lower <= value, value <= upper)
-
 
     logp.__doc__ = """
         Discrete uniform log-likelihood with bounds ({0},{1}).
@@ -220,10 +300,7 @@ def DiscreteUniform(lower, upper):
 @tensordist(discrete)
 def ConstantDist(c):
     def logp(value):
-        return bound(
-            0,
-
-            eq(value, c))
+        return bound(0, eq(value, c))
 
     mean = median = mode = c
     logp.__doc__ = """
