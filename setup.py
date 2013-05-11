@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from setuptools import setup
 
 
@@ -9,16 +10,19 @@ MAINTAINER_EMAIL = 'jsalvati@u.washington.edu'
 AUTHOR = 'John Salvatier and Christopher Fonnesbeck'
 AUTHOR_EMAIL = 'chris.fonnesbeck@vanderbilt.edu'
 URL = "http://github.com/pymc-devs/pymc"
-LICENSE = "BSD"
+LICENSE = "Apache License, Version 2.0"
 VERSION = "3.0"
 
 classifiers = ['Development Status :: 3 - Alpha',
                'Programming Language :: Python',
-               'License :: OSI Approved :: BSD License',
+               'License :: OSI Approved :: Apache Software License',
                'Intended Audience :: Science/Research',
                'Topic :: Scientific/Engineering',
                'Topic :: Scientific/Engineering :: Mathematics',
                'Operating System :: OS Independent']
+
+with open('requirements.txt') as f:
+    required = f.read().splitlines()
 
 if __name__ == "__main__":
 
@@ -33,4 +37,4 @@ if __name__ == "__main__":
           packages=['pymc', 'pymc.distributions',
                     'pymc.step_methods', 'pymc.tuning', 'pymc.tests'],
           classifiers=classifiers,
-          install_requires=['theano', 'numpy', 'scipy', 'numdifftools'])
+          install_requires=required)
