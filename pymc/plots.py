@@ -9,7 +9,6 @@ from .stats import *
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot']
 
-
 def traceplot(trace, vars=None):
     if vars is None:
         vars = trace.samples.keys()
@@ -20,8 +19,8 @@ def traceplot(trace, vars=None):
     for i, v in enumerate(vars):
         d = np.squeeze(trace[v])
 
-        if var.dtype in discrete_types:
-            ax[i, 0].hist(d)
+        if trace[v].dtype in [int64, int32, int16, int8]:
+            ax[i, 0].hist(d, bins=sqrt(d.size))
         else:
             kdeplot_op(ax[i, 0], d)
         ax[i, 0].set_title(str(v))
