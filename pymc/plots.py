@@ -92,7 +92,7 @@ def var_str(name, shape):
 
 
 def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
-               main=None, xtitle=None, xrange=None, labels=None, spacing=0.05, vline=0):
+               main=None, xtitle=None, xrange=None, ylabels=None, spacing=0.05, vline=0):
     """ Forest plot (model summary plot)
 
     Generates a "forest plot" of 100*(1-alpha)% credible intervals for either the
@@ -127,7 +127,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
         xrange (optional): list or tuple
             Range for x-axis. Defaults to matplotlib's best guess.
 
-        labels (optional): list
+        ylabels (optional): list
             User-defined labels for each variable. If not provided, the node
             __name__ attributes are used.
 
@@ -175,8 +175,6 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                 R = {v: R[v] for v in vars}
 
         else:
-            print 'Could not calculate Gelman-Rubin statistics. Requires multiple chains \
-                of equal length.'
             rhat = False
 
     except AttributeError:
@@ -319,8 +317,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             # Increment index
             var += k
 
-    if labels is not None:
-        labels = labels
+    labels = ylabels or labels
 
     # Update margins
     left_margin = max([len(x) for x in labels]) * 0.015
