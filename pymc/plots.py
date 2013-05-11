@@ -19,7 +19,7 @@ def traceplot(trace, vars=None):
     for i, v in enumerate(vars):
         d = np.squeeze(trace[v])
 
-        if trace[v].dtype in [int64, int32, int16, int8]:
+        if trace[v].dtype.kind == 'i':
             ax[i, 0].hist(d, bins=sqrt(d.size))
         else:
             kdeplot_op(ax[i, 0], d)
