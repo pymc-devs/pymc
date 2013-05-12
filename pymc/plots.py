@@ -19,8 +19,8 @@ def traceplot(trace, vars=None):
         ax[0, i].set_title(str(v))
         ax[1, i].plot(d, alpha=.35)
 
-    ax[0, 0].set_ylabel("densities")
-    ax[1, 0].set_ylabel("traces")
+    ax[0, 0].set_ylabel("frequency")
+    ax[1, 0].set_ylabel("sample value")
 
     return f
 
