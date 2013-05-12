@@ -8,6 +8,7 @@ def test_leapfrog_reversible():
     n=3
     start, model, _ = models.non_normal(n)
 
+    print start
 
     with model:
         h = pm.find_hessian(start, model = model)
@@ -16,7 +17,7 @@ def test_leapfrog_reversible():
     bij = pm.DictToArrayBijection(step.ordering, start)
 
     logp, dlogp = map(bij.mapf, step.fs)
-    H = Hamiltonian(logp, dlogp, self.potential)
+    H = Hamiltonian(logp, dlogp, step.potential)
 
 
     q0 = bij.map(start)
@@ -29,5 +30,5 @@ def test_leapfrog_reversible():
             q,p = leapfrog(H, q,p,L, e)
             q,p = leapfrog(H, q,-p,L,e)
 
-            check(q, q0, (L, e))
-            check(p, p0, (L, e))
+            close_to(q, q0, 1e-8, str((L, e)))
+            close_to(-p, p0, 1e-8, str((L, e)))
