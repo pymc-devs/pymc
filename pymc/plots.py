@@ -7,7 +7,7 @@ import numpy as np
 from scipy.stats import kde
 from .stats import *
 
-__all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot']
+__all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
 def traceplot(trace, vars=None):
     if vars is None:
@@ -105,11 +105,14 @@ def autocorrplot(trace, vars=None, fontmap = None, max_lag=100):
 
             d = np.squeeze(samples[j][v])
 
-            acorr(d, detrend=mlab.detrend_mean, maxlags=max_lag)
+            ax[i,j].acorr(d, detrend=mlab.detrend_mean, maxlags=max_lag)
 
-        if not j:
-            ax[i, j].set_ylabel("correlation")
-        ax[i, j].set_xlabel("lag")
+            if not j:
+                ax[i, j].set_ylabel("correlation")
+            ax[i, j].set_xlabel("lag")
+
+            if chains > 1:
+                ax[i, j].set_title("chain {0}".format(j+1))
 
     # Smaller tick labels
     tlabels = gca().get_xticklabels()
