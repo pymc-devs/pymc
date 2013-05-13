@@ -21,9 +21,6 @@ class Distribution(object):
             if 'observed' in kwargs:
                 obs = kwargs.pop('observed')
                 dist = cls(*args, **kwargs)
-                if hasattr(obs, 'values'):
-                    # Incase obs is a Series or DataFrame
-                    return model.Data(obs.values, dist)
                 return model.Data(obs, dist)
             else:
                 dist = cls(*args, **kwargs)

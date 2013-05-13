@@ -94,6 +94,9 @@ class Model(Context):
     these functions add random variables
     """
     def Data(model, data, dist):
+        if  hasattr(data, 'values'):
+            # Incase obs is a Series or DataFrame
+            data = data.values
         args = map(t.constant, as_iterargs(data))
         model.factors.append(dist.logp(*args))
 
