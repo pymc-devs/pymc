@@ -50,3 +50,5 @@ with Model() as model:
     step1 = Slice([early_mean, late_mean])
     # Use Metropolis for switchpoint, since it accomodates discrete variables
     step2 = Metropolis([switchpoint])
+
+    trace = sample(10000, [step1, step2], start)
