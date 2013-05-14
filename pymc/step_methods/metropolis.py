@@ -94,11 +94,11 @@ class Metropolis(ArrayStep):
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
 
-        delta = self.proposal_dist() * self.scaling
+        delta = np.atleast_1d(self.proposal_dist() * self.scaling)
+        if np.any(self.discrete):
+            delta[self.discrete] = round(delta[self.discrete], 0).astype(int)
 
         q = q0 + delta
-        if np.any(self.discrete):
-            q[self.discrete] = round(q[self.discrete], 0).astype(int)
 
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
