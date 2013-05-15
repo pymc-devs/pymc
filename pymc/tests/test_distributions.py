@@ -5,7 +5,6 @@ from numpy import array, inf
 
 from scipy import integrate
 from numdifftools import Gradient
-import theano.tensor as t
 
 
 R = array([-inf, -2.1, -1, -.01, .0, .01, 1, 2.1, inf])
@@ -19,9 +18,12 @@ Rplusunif = array([0, .5, inf])
 Rplusdunif = array([2, 10, 100])
 
 I = array([-1000, -3, -2, -1, 0, 1, 2, 3, 1000], 'int64')
-Nat = array([0, 1, 2, 3, 5000, 50000], 'int64')
+
+NatSmall = array([0, 3, 4, 5, 1000], 'int64')
+Nat = array([0, 1, 2, 3, 2000], 'int64')
+NatBig = array([0, 1, 2, 3, 5000, 50000], 'int64')
+
 Bool = array([0, 0, 1, 1], 'int64')
-Natbig = array([0, 3, 4, 5, 1000], 'int64')
 
 
 def test_unif():
@@ -29,7 +31,8 @@ def test_unif():
 
 
 def test_discrete_unif():
-    checkd(DiscreteUniform, Rdunif, {'lower': -Rplusdunif, 'upper': Rplusdunif})
+    checkd(DiscreteUniform, Rdunif,
+           {'lower': -Rplusdunif, 'upper': Rplusdunif})
 
 
 def test_flat():
@@ -49,7 +52,7 @@ def test_exponential():
 
 
 def test_geometric():
-    checkd(Geometric, Nat, {'p': Unit})
+    checkd(Geometric, NatBig, {'p': Unit})
 
 
 def test_negative_binomial():
@@ -77,11 +80,11 @@ def test_tpos():
 
 
 def test_binomial():
-    checkd(Binomial, Nat, {'n': Natbig, 'p': Unit})
+    checkd(Binomial, Nat, {'n': NatSmall, 'p': Unit})
 
 
 def test_betabin():
-    checkd(BetaBin, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': Natbig})
+    checkd(BetaBin, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': NatSmall})
 
 
 def test_bernoulli():
@@ -115,7 +118,8 @@ def test_addpotential():
         check_dlogp(model, x, [R])
 
 
-def checkd(distfam, valuedomain, vardomains, check_int=True, check_der=True, extra_args={}):
+def checkd(distfam, valuedomain, vardomains,
+           check_int=True, check_der=True, extra_args={}):
 
     with Model() as m:
         vars = dict((v, Flat(
