@@ -174,10 +174,8 @@ def check_dlogp(model, value, domains):
     if not model.cont_vars:
         return
 
-    dlp = model.dlogpc()
     dlogp = bij.mapf(model.dlogpc())
 
-    lp = model.logpc
     logp = bij.mapf(model.logpc)
     ndlogp = Gradient(logp)
 
@@ -186,3 +184,6 @@ def check_dlogp(model, value, domains):
             str(var), val) for var, val in zip(model.vars, a)), model=model)
 
         pt = bij.map(pt)
+
+        assert_almost_equal(dlogp(pt), ndlogp(pt),
+                            decimal=6, err_msg=str(pt))
