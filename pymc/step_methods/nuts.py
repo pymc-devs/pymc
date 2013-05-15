@@ -57,8 +57,6 @@ class NoUTurn(ArrayStep):
         q = qn = qp = q0
         p = pn = pp = p0
 
-
-
         n=1
         s=1
         j=0
@@ -87,8 +85,8 @@ def buildtree(H, q, p, u, v, j,e, Emax):
     if j == 0:
         q1, p1 = leapfrog(H, q, p, 1, v*e)
         E = energy(H, q1,p1)
-        n1 = u <= exp(-E)
-        s1 = u <  exp(Emax -E)
+        n1 = (u <= exp(-E))
+        s1 = (u <  exp(Emax -E))
         return q1, p1, q1, p1, q1, n1, s1
     else:
         qn,pn,qp,pp, q1,n1,s1 = buildtree(H, q,p,u, v,j - 1,e, Emax)
