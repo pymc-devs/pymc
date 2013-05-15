@@ -1,4 +1,5 @@
 from functools import wraps
+from inspect import getargspec
 
 
 def quickclass(baseclass):
@@ -15,12 +16,14 @@ def quickclass(baseclass):
     return decorator
 
 
-def argnames(f):
-    return set(f.func_code.co_varnames)
+
+def ksplit(ks, d):
+    in_ks = dict((k, v) for k, v in d.iteritems() if k in ks)
+    rest = dict((k, v) for k, v in d.iteritems() if k not in ks)
+    return in_ks, rest
 
 
-def kfilter(ks, d):
-    return dict((k, v) for k, v in d.iteritems() if k in ks)
+
 
 dicterr = TypeError(
     "function should return a dict perhaps forgot 'return locals()'")
@@ -30,19 +33,22 @@ def withdefaults(d):
     def decorator(f):
         @wraps(f)
         def fn(*args, **kwargs):
-            dvar = argnames(d)
-            fvar = argnames(f)
+            dspec = getargspec(d)
+            fspec = getargspec(f)
 
-            if set(kwargs) - dvar - fvar:
-                raise ValueError("not all arguments used")
+            dvar = set(dspec.args)
+            fvar = set(fspec.args)
 
-            narg = f.func_code.co_argcount
+            narg = len(fspec.args)
             largs, rargs = args[:narg], args[narg:]
-            u = f(*largs, **kfilter(fvar, kwargs))
+
+            dkwargs,fkwargs = ksplit(dvar, kwargs)
+
+            u = f(*largs, **fkwargs)
             if not u:
                 raise dicterr
 
-            r = d(*rargs, **kfilter(dvar, kwargs))
+            r = d(*rargs, **dkwargs)
             if not r:
                 raise dicterr
             r.update(u)
