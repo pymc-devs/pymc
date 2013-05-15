@@ -316,8 +316,8 @@ def ConstantDist(c):
 
 @tensordist(discrete)
 def ZeroInflatedPoisson(theta, z):
-    pois = Poisson(theta)
-    const = ConstantDist(0)
+    pois = Poisson.dist(theta)
+    const = ConstantDist.dist(0)
 
     def logp(value):
         return switch(z,
