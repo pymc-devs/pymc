@@ -253,6 +253,9 @@ def T(nu, mu=0, lam=1):
             nu > 0)
 
     mean = mu
+    median = mu
+    mode = mu
+
     variance = switch((nu > 2) * 1, nu / (nu - 2) / lam, inf)
 
     logp.__doc__ = """
@@ -358,20 +361,24 @@ def Gamma(alpha, beta):
     return locals()
 
 
-@tensordist(continuous)
-def Bound(dist, lower=-inf, upper=inf):
-    def logp(value):
-        return bound(
-            dist.logp(value),
+def Bound(distribution, lower=-inf, upper=inf):
+    @tensordist(continuous)
+    def Bounded(*args, **kwargs):
+        """A bounded distribution."""
+        dist = distribution.dist(*args,**kwargs)
 
-            lower <= value, value <= upper)
+        def logp(value):
+            return bound(
+                dist.logp(value),
 
-    return locals()
+                lower <= value, value <= upper)
+
+        if hasattr(dist,'mode'):
+            mode = dist.mode
+
+        return locals()
+    return Bounded
 
 
-def Tpos(*args, **kwargs):
-    """
-    Student-t distribution bounded at 0
-    see T
-    """
-    return Bound(T.dist(*args, **kwargs), 0)
+Tpos = Bound(T, 0)
+
