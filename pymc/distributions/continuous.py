@@ -374,4 +374,4 @@ def Tpos(*args, **kwargs):
     Student-t distribution bounded at 0
     see T
     """
-    return Bound(T(*args, **kwargs), 0)
+    return Bound(T.dist(*args, **kwargs), 0)
