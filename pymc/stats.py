@@ -13,6 +13,11 @@ def statfunc(f):
     def wrapped_f(pymc_obj, *args, **kwargs):
 
         try:
+            burn = kwargs.pop('burn')
+        except KeyError:
+            burn = 0
+
+        try:
             # MultiTrace
             traces = pymc_obj.traces
 
@@ -21,7 +26,7 @@ def statfunc(f):
             except KeyError:
                 vars = traces[0].varnames
 
-            return [{v:f(trace[v], *args, **kwargs) for v in vars} for trace in traces]
+            return [{v:f(trace[v][burn:], *args, **kwargs) for v in vars} for trace in traces]
 
         except AttributeError:
             pass
@@ -33,7 +38,7 @@ def statfunc(f):
             except KeyError:
                 vars = pymc_obj.varnames
 
-            return {v:f(pymc_obj[v], *args, **kwargs) for v in vars}
+            return {v:f(pymc_obj[v][burn:], *args, **kwargs) for v in vars}
         except AttributeError:
             pass
 
