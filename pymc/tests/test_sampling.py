@@ -5,7 +5,7 @@ from models import simple_init
 import multiprocessing
 try:
     multiprocessing.Pool(2)
-    test_parallel = True
+    test_parallel = False
 except:
     test_parallel = False
 

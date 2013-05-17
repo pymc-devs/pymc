@@ -6,7 +6,7 @@ import pymc as pm
 import multiprocessing
 try:
     multiprocessing.Pool(2)
-    test_parallel = True
+    test_parallel = False
 except:
     test_parallel = False
 
