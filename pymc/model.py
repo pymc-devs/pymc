@@ -133,7 +133,7 @@ def Point(*args, **kwargs):
         model = Model.get_context()
     try:
         d = dict(*args, **kwargs)
-    except e:
+    except Exception as e:
         raise TypeError(
             "can't turn " + str(args) + " and " + str(kwargs) +
             " into a dict. " + str(e))
