@@ -131,8 +131,13 @@ def Point(*args, **kwargs):
         del kwargs['model']
     else:
         model = Model.get_context()
+    try:
+        d = dict(*args, **kwargs)
+    except e:
+        raise TypeError(
+            "can't turn " + str(args) + " and " + str(kwargs) +
+            " into a dict. " + str(e))
 
-    d = dict(*args, **kwargs)
     varnames = map(str, model.vars)
     return dict((str(k), np.array(v))
                 for (k, v) in d.iteritems()
