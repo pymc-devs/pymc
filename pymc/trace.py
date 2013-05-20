@@ -35,7 +35,7 @@ class NpTrace(object):
         return dict((k, v.value[index]) for (k,v) in self.samples.iteritems())
 
 
-def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
+def summary(trace, vars=None, alpha=0.05, burn=0, batches=100, roundto=3):
     """
     Generate a pretty-printed summary of the node.
 
@@ -51,7 +51,7 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
       The alpha level for generating posterior intervals. Defaults to
       0.05.
 
-    start : int
+    burn : int
       The starting index from which to summarize (each) chain. Defaults
       to zero.
 
@@ -73,7 +73,7 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
         print(' ')
 
         # Extract sampled values
-        sample = trace[var][start:]
+        sample = trace[var][burn:]
 
         shape = sample.shape
         if len(shape)>1:
