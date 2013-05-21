@@ -25,8 +25,8 @@ def sample(draws, step, start=None, trace=None, progressbar=True, model=None, ra
         A step function
     start : dict
         Starting point in parameter space (Defaults to trace.point(-1))
-    trace : NpTrace
-        A trace of past values (defaults to None)
+    trace : NpTrace or list
+        Either a trace of past values or a list of variables to track (defaults to None)
     progressbar : bool
         Flag for progress bar
     model : Model (optional if in `with` context)
@@ -70,9 +70,31 @@ def argsample(args):
     return sample(*args)
 
 
-def psample(draws, step, start, mtrace=None, track=None, model=None, threads=None):
+def psample(draws, step, start, trace=None, model=None, threads=None):
     """draw a number of samples using the given step method. Multiple step methods supported via compound step method
-    returns the amount of time taken"""
+    returns the amount of time taken
+
+    Parameters
+    ----------
+
+    draws : int
+        The number of samples to draw
+    step : function
+        A step function
+    start : dict
+        Starting point in parameter space (Defaults to trace.point(-1))
+    trace : MultiTrace or list
+        Either a trace of past values or a list of variables to track (defaults to None)
+    model : Model (optional if in `with` context)
+    threads : int
+        Number of parallel traces to start
+
+    Examples
+    --------
+
+    >>> an example
+
+    """
 
     model = modelcontext(model)
 
@@ -82,11 +104,13 @@ def psample(draws, step, start, mtrace=None, track=None, model=None, threads=Non
     if isinstance(start, dict):
         start = threads * [start]
 
-    if track is None:
-        track = model.vars
+    if trace is None:
+        trace = model.vars
 
-    if not mtrace:
-        mtrace = MultiTrace(threads, track)
+    if type(trace) is MultiTrace:
+        mtrace = trace
+    else:
+        mtrace = MultiTrace(threads, trace)
 
     p = mp.Pool(threads)
 
