@@ -96,3 +96,8 @@ def test_slice():
     # Original trace did not change
     assert np.all([tr[v].size==(iterations) for v in tr.varnames])
 
+    # Now take more burn-in from the burned trace
+    burned_again = burned[burn:]
+    assert np.all([burned_again[v].size==(iterations-2*burn) for v in burned_again.varnames])
+    assert np.all([burned[v].size==(iterations-burn) for v in burned.varnames])
+

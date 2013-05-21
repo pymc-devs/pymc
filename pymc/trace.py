@@ -37,7 +37,7 @@ class NpTrace(object):
 
             sliced_trace = self.copy()
             for v in sliced_trace.varnames:
-                sliced_trace.samples[v].vals = [s[index_value] for s in self.samples[v].vals]
+                sliced_trace.samples[v].vals = [sliced_trace.samples[v].value[index_value]]
 
             return sliced_trace
 
