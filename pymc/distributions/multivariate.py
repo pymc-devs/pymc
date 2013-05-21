@@ -1,13 +1,13 @@
 from dist_math import *
 
-__all__ = ['Normal', 'Dirichlet', 'Multinomial', 'Wishart']
+__all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
 
 from theano.sandbox.linalg import det, solve
 from theano.tensor import dot
 
 
 @tensordist(continuous)
-def Normal(mu, Tau):
+def MvNormal(mu, Tau):
     """
     Multivariate normal
 

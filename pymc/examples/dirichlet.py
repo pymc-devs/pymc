@@ -1,7 +1,5 @@
 import numpy as np
 from pymc import *
-from pymc.distributions.multivariate import Dirichlet
-
 
 model = Model()
 with model:

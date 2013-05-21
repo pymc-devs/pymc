@@ -1,4 +1,4 @@
-from pymc import Model, Normal, Metropolis
+from pymc import Model, Normal, Metropolis, MvNormal
 import numpy as np
 import pymc as pm
 
@@ -40,7 +40,7 @@ def mv_simple():
     tau = np.dot(p, p.T)
 
     with pm.Model() as model:
-        x = pm.multivariate.Normal('x', pm.constant(mu), pm.constant(
+        x = pm.MvNormal('x', pm.constant(mu), pm.constant(
             tau), shape=3, testval=np.array([.1, 1., .8]))
 
     H = tau
