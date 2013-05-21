@@ -1,6 +1,7 @@
 from checks import *
 from models import *
 import pymc as pm
+import numpy as np
 
 # Test if multiprocessing is available
 import multiprocessing
@@ -20,7 +21,6 @@ def check_trace(model, trace, n, step, start):
         for (var, val) in start.iteritems():
 
             assert np.shape(trace[var]) == (n * (i + 1),) + np.shape(val)
-
 
 def test_trace():
     model, start, step, _ = simple_init()
@@ -71,3 +71,28 @@ def test_get_point():
     x.record(p)
     x.record(p2)
     assert x.point(1) == x[1]
+
+def test_slice():
+
+    model, start, step, moments = simple_init()
+
+    iterations = 100
+    burn = 10
+
+    with model:
+        tr = sample(iterations, start=start, step=step, progressbar=False)
+
+    burned = tr[burn:]
+
+    # Slicing returns a trace
+    assert type(burned) is pm.trace.NpTrace
+
+    # Indexing returns an array
+    assert type(tr[tr.varnames[0]]) is np.ndarray
+
+    # Burned trace is of the correct length
+    assert np.all([burned[v].size==(iterations-burn) for v in burned.varnames])
+
+    # Original trace did not change
+    assert np.all([tr[v].size==(iterations) for v in tr.varnames])
+
