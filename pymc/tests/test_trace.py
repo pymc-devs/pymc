@@ -7,7 +7,7 @@ import numpy as np
 import multiprocessing
 try:
     multiprocessing.Pool(2)
-    test_parallel = True
+    test_parallel = False
 except:
     test_parallel = False
 
