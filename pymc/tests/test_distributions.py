@@ -31,7 +31,6 @@ def test_unif():
     checkd(Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif})
 
 
-@knownfailure("int32 in Rdunif causes this to fail but not int64")
 def test_discrete_unif():
     checkd(DiscreteUniform, Rdunif,
            {'lower': -Rplusdunif, 'upper': Rplusdunif})
