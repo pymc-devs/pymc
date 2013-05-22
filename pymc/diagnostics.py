@@ -87,7 +87,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
         return np.array(zscores)
 
 
-def gelman_rubin(mtrace):
+def gelman_rubin(mtrace, burn=0):
     """ Returns estimate of R for a set of traces.
 
     The Gelman-Rubin diagnostic tests for lack of convergence by comparing
@@ -102,6 +102,8 @@ def gelman_rubin(mtrace):
     mtrace : MultiTrace
       A MultiTrace object containing parallel traces (minimum 2)
       of one or more stochastic parameters.
+    burn : int
+      Burn-in interval (defaults to zero)
 
     Returns
     -------
@@ -132,13 +134,13 @@ def gelman_rubin(mtrace):
             'Gelman-Rubin diagnostic requires multiple chains of the same length.')
 
     varnames = mtrace.traces[0].varnames
-    n = len(mtrace.traces[0][varnames[0]])
+    n = len(mtrace.traces[0][varnames[0]]) - burn
 
     Rhat = {}
     for var in varnames:
 
         # Get all traces for var
-        x = np.array([mtrace.traces[i][var] for i in range(m)])
+        x = np.array([mtrace.traces[i][var][burn:] for i in range(m)])
 
         # Calculate between-chain variance
         B_over_n = np.sum((np.mean(x, 1) - np.mean(x)) ** 2) / (m - 1)

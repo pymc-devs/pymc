@@ -9,7 +9,7 @@ from .stats import *
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
-def traceplot(trace, vars=None):
+def traceplot(trace, vars=None, burn=0):
     if vars is None:
         vars = trace.samples.keys()
 
@@ -17,7 +17,7 @@ def traceplot(trace, vars=None):
     f, ax = subplots(n, 2, squeeze=False)
 
     for i, v in enumerate(vars):
-        d = np.squeeze(trace[v])
+        d = np.squeeze(trace[v][burn:])
 
         if trace[v].dtype.kind == 'i':
             ax[i, 0].hist(d, bins=sqrt(d.size))
@@ -72,7 +72,7 @@ def kde2plot(x, y, grid=200):
     kde2plot_op(ax, x, y, grid)
     return f
 
-def autocorrplot(trace, vars=None, fontmap = None, max_lag=100):
+def autocorrplot(trace, vars=None, burn=0, fontmap = None, max_lag=100):
     """Bar plot of the autocorrelation function for a trace"""
 
     try:
@@ -90,7 +90,7 @@ def autocorrplot(trace, vars=None, fontmap = None, max_lag=100):
         vars = traces[0].varnames
 
     # Extract sample data
-    samples = [{v:trace[v] for v in vars} for trace in traces]
+    samples = [{v:trace[v][burn:] for v in vars} for trace in traces]
 
     chains = len(traces)
 
@@ -142,7 +142,7 @@ def var_str(name, shape):
     return names
 
 
-def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
+def forestplot(trace_obj, vars=None, burn=0, alpha=0.05, quartiles=True, rhat=True,
                main=None, xtitle=None, xrange=None, ylabels=None, chain_spacing=0.05, vline=0):
     """ Forest plot (model summary plot)
 
@@ -221,7 +221,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
 
             from .diagnostics import gelman_rubin
 
-            R = gelman_rubin(trace_obj)
+            R = gelman_rubin(trace_obj, burn)
             if vars is not None:
                 R = {v: R[v] for v in vars}
 
@@ -260,8 +260,8 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
     for j, trace in enumerate(traces):
 
         # Get quantiles
-        trace_quantiles = quantiles(trace, qlist)
-        hpd_intervals = hpd(trace, alpha)
+        trace_quantiles = quantiles(trace, qlist, burn=burn)
+        hpd_intervals = hpd(trace, alpha, burn=burn)
 
         # Counter for current variable
         var = 1

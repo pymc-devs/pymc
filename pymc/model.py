@@ -7,7 +7,7 @@ from theano.gof.graph import inputs
 import numpy as np
 from functools import wraps
 
-__all__ = ['Model', 'compilef', 'gradient', 'hessian', 'modelcontext', 'Point']
+__all__ = ['Model', 'compilef', 'gradient', 'hessian', 'modelcontext', 'Point', 'named']
 
 
 class Context(object):
