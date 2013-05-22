@@ -7,7 +7,7 @@ def simple_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        x = Normal('x', mu, tau, testval=.1)
+        x = Normal('x', mu, tau, shape=2, testval=[.1]*2)
 
     return model.test_point, model, (mu, tau ** -1)
 
