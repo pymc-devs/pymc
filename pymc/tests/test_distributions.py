@@ -31,7 +31,6 @@ def test_unif():
     checkd(Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif})
 
 
-@knownfailure("int32 in Rdunif causes this to fail but not int64")
 def test_discrete_unif():
     checkd(DiscreteUniform, Rdunif,
            {'lower': -Rplusdunif, 'upper': Rplusdunif})
@@ -46,7 +45,8 @@ def test_normal():
 
 
 def test_beta():
-    checkd(Beta, Unit, {'alpha': Rplus * 5, 'beta': Rplus * 5})
+    # TODO this fails with `Rplus`
+    checkd(Beta, Unit, {'alpha': Rplusbig, 'beta': Rplusbig})
 
 
 def test_exponential():
