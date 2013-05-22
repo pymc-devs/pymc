@@ -1,5 +1,5 @@
 from point import *
-from types import *
+from vartypes import *
 
 from theano import theano, tensor as t, function
 from theano.gof.graph import inputs

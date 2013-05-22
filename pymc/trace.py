@@ -1,6 +1,8 @@
 import numpy as np
 from .core import *
 from .stats import *
+import copy
+import types
 
 __all__ = ['NpTrace', 'MultiTrace', 'summary']
 
@@ -16,20 +18,39 @@ class NpTrace(object):
 
     def record(self, point):
         """
-        records the position of a chain at a certain point in time
+        Records the position of a chain at a certain point in time.
         """
         for var, value in zip(self.varnames, self.f(point)):
             self.samples[var].append(value)
         return self
 
-    def __getitem__(self, key):
-        try :
-            return self.point(key)
-        except ValueError:
-            pass
-        except TypeError:
-            pass
-        return self.samples[str(key)].value
+    def copy(self):
+        return copy.deepcopy(self)
+
+    def __getitem__(self, index_value):
+        """
+        Return copy NpTrace with sliced sample values if a slice is passed,
+        or the array of samples if a varname is passed.
+        """
+
+        if type(index_value) is types.SliceType:
+
+            sliced_trace = self.copy()
+            for v in sliced_trace.varnames:
+                sliced_trace.samples[v].vals = [sliced_trace.samples[v].value[index_value]]
+
+            return sliced_trace
+
+        else:
+            try :
+                return self.point(index_value)
+            except ValueError:
+                pass
+            except TypeError:
+                pass
+
+            return self.samples[str(index_value)].value
+
 
     def point(self, index):
         return dict((k, v.value[index]) for (k,v) in self.samples.iteritems())
