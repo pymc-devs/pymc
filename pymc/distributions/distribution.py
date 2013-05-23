@@ -5,7 +5,7 @@ from ..model import *
 import warnings
 
 __all__ = ['DensityDist', 'TensorDist', 'tensordist', 'continuous',
-           'discrete', 'arbitrary']
+           'discrete', 'arbitrary', 'evaluate']
 
 
 class Distribution(object):
@@ -44,6 +44,10 @@ def get_test_val(dist, val):
         return val.tag.test_value
     else:
         return val
+
+
+# Convenience function for evaluating distributions at test point
+evaluate = lambda dist: dist.tag.test_value
 
 
 class TensorDist(Distribution):
