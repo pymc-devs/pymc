@@ -20,7 +20,7 @@ def test_geweke(n=2000):
         # Run sampler
         trace = sample(n, [dm.step1, dm.step2], dm.start, progressbar=False)
 
-    z_switch = geweke(trace, last=.5, intervals=20)['switchpoint']
+    z_switch = geweke(trace['switchpoint'], last=.5, intervals=20)
 
     # Ensure `intervals` argument is honored
     assert len(z_switch) == 20

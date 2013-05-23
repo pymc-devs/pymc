@@ -33,7 +33,7 @@ class NpTrace(object):
         or the array of samples if a varname is passed.
         """
 
-        if type(index_value) is types.SliceType:
+        if isinstance(index_value, slice):
 
             sliced_trace = self.copy()
             for v in sliced_trace.varnames:
