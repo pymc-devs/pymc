@@ -25,7 +25,7 @@ with a distribution called 'dist' are:
 # TODO: categorical, mvhypergeometric
 # TODO: __all__
 
-__docformat__='reStructuredText'
+__docformat__ = 'reStructuredText'
 
 from . import flib, utils
 import numpy as np
@@ -45,7 +45,7 @@ xrange = six.moves.xrange
 def poiscdf(a, x):
     x = np.atleast_1d(x)
     a = np.resize(a, x.shape)
-    values = np.array([flib.gammq(b,y) for b, y in zip(a.ravel(), x.ravel())])
+    values = np.array([flib.gammq(b, y) for b, y in zip(a.ravel(), x.ravel())])
     return values.reshape(x.shape)
 
 # Import utility functions
@@ -103,7 +103,7 @@ capitalize = lambda name: ''.join([s.capitalize() for s in name.split('_')])
 def bind_size(randfun, shape):
     def newfun(*args, **kwargs):
         try:
-            return np.reshape(randfun(size=shape, *args, **kwargs),shape)
+            return np.reshape(randfun(size=shape, *args, **kwargs), shape)
         except ValueError:
             # Account for non-array return values
             return randfun(size=shape, *args, **kwargs)
@@ -147,7 +147,7 @@ def new_dist_class(*new_class_args):
 
         def __init__(self, *args, **kwds):
             (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
-            parents=parents_default
+            parents = parents_default
 
             # Figure out what argument names are needed.
             arg_keys = ['name', 'parents', 'value', 'observed', 'size', 'trace', 'rseed', 'doc', 'debug', 'plot', 'verbose']
@@ -196,7 +196,7 @@ def new_dist_class(*new_class_args):
 
             # Remaining unrecognized arguments raise an error.
             if len(kwds) > 0:
-                raise TypeError('Keywords '+ str(kwds.keys()) + ' not recognized. Arguments recognized are ' + str(args_needed))
+                raise TypeError('Keywords ' + str(kwds.keys()) + ' not recognized. Arguments recognized are ' + str(args_needed))
 
         # Determine size desired for scalar variables.
         # Notes
@@ -250,7 +250,7 @@ def new_dist_class(*new_class_args):
                     # Uncomment to leave broadcasting completely up to NumPy's random functions
                     # if bindshape[-np.alen(parents_shape):]!=parents_shape:
                     # Uncomment to limit broadcasting flexibility to what the Fortran likelihoods can handle.
-                    if bindshape<parents_shape:
+                    if bindshape < parents_shape:
                         shape_error()
 
                 if random is not None:
@@ -323,17 +323,19 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
     # Build docstring from distribution
     parents_str = ''
     if parent_names:
-        parents_str = ', '.join(parent_names) + ', ' 
+        parents_str = ', '.join(parent_names) + ', '
     docstr = name[0]+' = '+name + '(name, '+parents_str+'value=None, observed=False,'
     if not mv:
         docstr += ' size=1,'
     docstr += ' trace=True, rseed=True, doc=None, verbose=-1, debug=False)\n\n'
     docstr += 'Stochastic variable with '+name+' distribution.\nParents are: '+', '.join(parent_names) + '.\n\n'
     docstr += 'Docstring of log-probability function:\n'
-    try: docstr += logp.__doc__
-    except TypeError: pass  # This will happen when logp doesn't have a docstring
+    try:
+        docstr += logp.__doc__
+    except TypeError:
+        pass  # This will happen when logp doesn't have a docstring
 
-    logp=valuewrapper(logp)
+    logp = valuewrapper(logp)
     distribution_arguments = logp.__dict__
 
     wrapped_logp_partial_gradients = {}
@@ -342,7 +344,7 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
         wrapped_logp_partial_gradients[parameter] = valuewrapper(logp_partial_gradients[parameter], arguments = distribution_arguments)
 
     return new_dist_class(dtype, name, parent_names, parents_default, docstr,
-						 logp, random, mv, wrapped_logp_partial_gradients)
+                                                 logp, random, mv, wrapped_logp_partial_gradients)
 
 
 #-------------------------------------------------------------
@@ -379,7 +381,7 @@ def randomwrap(func):
 
     # Find the order of the arguments.
     refargs, varargs, varkw, defaults = inspect.getargspec(func)
-    #vfunc = np.vectorize(self.func)
+    # vfunc = np.vectorize(self.func)
     npos = len(refargs)-len(defaults) # Number of pos. arg.
     nkwds = len(defaults) # Number of kwds args.
     mv = func.__name__[1:] in mv_continuous_distributions + mv_discrete_distributions
@@ -393,17 +395,20 @@ def randomwrap(func):
         n = len(args)
         if nkwds > 0:
             args = list(args)
-            for i,k in enumerate(refargs[n:]):
+            for i, k in enumerate(refargs[n:]):
                 if k in kwds.keys():
                     args.append(kwds[k])
                 else:
                     args.append(defaults[n-npos+i])
 
-        r = [];s=[];largs=[];nr = args[-1]
+        r = []
+        s = []
+        largs = []
+        nr = args[-1]
         length = [np.atleast_1d(a).shape[0] for a in args]
         dimension = [np.atleast_1d(a).ndim for a in args]
         N = max(length)
-        if len(set(dimension))>2:
+        if len(set(dimension)) > 2:
             raise('Dimensions do not agree.')
         # Make sure all elements are iterable and have consistent lengths, ie
         # 1 or n, but not m and n.
@@ -419,7 +424,7 @@ def randomwrap(func):
                 raise RuntimeError('Arguments size not allowed: %s.' % s)
             largs.append(arr)
 
-        if mv and N >1 and max(dimension)>1 and nr>1:
+        if mv and N > 1 and max(dimension) > 1 and nr > 1:
             raise ValueError('Multivariate distributions cannot take s>1 and multiple values.')
 
         if mv:
@@ -430,7 +435,7 @@ def randomwrap(func):
             r.append(func(*arg))
 
         size = arg[-1]
-        vec_stochastics = len(r)>1
+        vec_stochastics = len(r) > 1
         if mv:
             if nr == 1:
                 return r[0]
@@ -488,7 +493,7 @@ def standardize(x, loc=0, scale=1):
     Return (x-loc)/scale
     """
 
-    return flib.standardize(x,loc,scale)
+    return flib.standardize(x, loc, scale)
 
 # ==================================
 # = vectorize causes memory leaks. =
@@ -501,7 +506,7 @@ def gammaln(x):
 
     return flib.gamfun(x)
 
-def expand_triangular(X,k):
+def expand_triangular(X, k):
     """
     Expand flattened triangular matrix.
     """
@@ -519,15 +524,15 @@ def expand_triangular(X,k):
 
 # Loss functions
 
-absolute_loss = lambda o,e: absolute(o - e)
+absolute_loss = lambda o, e: absolute(o - e)
 
-squared_loss = lambda o,e: (o - e)**2
+squared_loss = lambda o, e: (o - e)**2
 
-chi_square_loss = lambda o,e: (1.*(o - e)**2)/e
+chi_square_loss = lambda o, e: (1.*(o - e)**2)/e
 
-loss_functions = {'absolute':absolute_loss, 'squared':squared_loss, 'chi_square':chi_square_loss}
+loss_functions = {'absolute': absolute_loss, 'squared': squared_loss, 'chi_square': chi_square_loss}
 
-def GOFpoints(x,y,expval,loss):
+def GOFpoints(x, y, expval, loss):
     # Return pairs of points for GOF calculation
     return np.sum(np.transpose([loss(x, expval), loss(y, expval)]), 0)
 
@@ -618,12 +623,12 @@ def arlognormal_like(x, a, sigma, rho):
 
 # Bernoulli----------------------------------------------
 @randomwrap
-def rbernoulli(p,size=None):
+def rbernoulli(p, size=None):
     """
     Random Bernoulli variates.
     """
 
-    return np.random.random(size)<p
+    return np.random.random(size) < p
 
 def bernoulli_expval(p):
     """
@@ -667,7 +672,7 @@ def rbeta(alpha, beta, size=None):
     Random beta variates.
     """
 
-    return np.random.beta(alpha, beta,size)
+    return np.random.beta(alpha, beta, size)
 
 def beta_expval(alpha, beta):
     """
@@ -720,7 +725,7 @@ def rbinomial(n, p, size=None):
     Random binomial variates.
     """
     # return np.random.binomial(n,p,size)
-    return np.random.binomial(np.ravel(n),np.ravel(p),size)
+    return np.random.binomial(np.ravel(n), np.ravel(p), size)
 
 def binomial_expval(n, p):
     """
@@ -749,7 +754,7 @@ def binomial_like(x, n, p):
 
     """
 
-    return flib.binomial(x,n,p)
+    return flib.binomial(x, n, p)
 
 
 binomial_grad_like = {'p' : flib.binomial_gp}
@@ -762,7 +767,7 @@ def rbetabin(alpha, beta, n, size=None):
     """
 
     phi = np.random.beta(alpha, beta, size)
-    return np.random.binomial(n,phi)
+    return np.random.binomial(n, phi)
 
 def betabin_expval(alpha, beta, n):
     """
@@ -831,10 +836,10 @@ def categorical_like(x, p):
     """
 
     p = np.atleast_2d(p)
-    if np.any(abs(np.sum(p, 1)-1)>0.0001):
+    if np.any(abs(np.sum(p, 1)-1) > 0.0001):
         print_("Probabilities in categorical_like sum to", np.sum(p, 1))
     if np.array(x).dtype != int:
-        #print_("Non-integer values in categorical_like")
+        # print_("Non-integer values in categorical_like")
         return -inf
     return flib.categorical(x, p)
 
@@ -873,7 +878,7 @@ def cauchy_like(x, alpha, beta):
 
     """
 
-    return flib.cauchy(x,alpha,beta)
+    return flib.cauchy(x, alpha, beta)
 
 cauchy_grad_like = {'value' : flib.cauchy_grad_x,
                  'alpha' : flib.cauchy_grad_a,
@@ -914,10 +919,10 @@ def chi2_like(x, nu):
 
     return flib.gamma(x, 0.5*nu, 1./2)
 
-chi2_grad_like = {'value'  : lambda x, nu : flib.gamma_grad_x    (x, 0.5* nu, 1./2),
-                  'nu' : lambda x, nu : flib.gamma_grad_alpha(x, 0.5* nu, 1./2) * .5}
+chi2_grad_like = {'value'  : lambda x, nu : flib.gamma_grad_x    (x, 0.5 * nu, 1./2),
+                  'nu' : lambda x, nu : flib.gamma_grad_alpha(x, 0.5 * nu, 1./2) * .5}
 
-#chi2_grad_like = {'x'  : lambda x, nu : (nu / 2 - 1) / x -.5,
+# chi2_grad_like = {'x'  : lambda x, nu : (nu / 2 - 1) / x -.5,
 #                  'nu' : flib.chi2_grad_nu }
 
 # Degenerate---------------------------------------------
@@ -947,9 +952,9 @@ def degenerate_like(x, k):
 
     """
     x = np.atleast_1d(x)
-    return sum(np.log([i==k for i in x]))
+    return sum(np.log([i == k for i in x]))
 
-#def degenerate_grad_like(x, k):
+# def degenerate_grad_like(x, k):
 #    R"""
 #    degenerate_grad_like(x, k)
 #
@@ -970,10 +975,10 @@ def rdirichlet(theta, size=1):
     """
     Dirichlet random variates.
     """
-    gammas = np.vstack([rgamma(theta,1) for i in xrange(size)])
+    gammas = np.vstack([rgamma(theta, 1) for i in xrange(size)])
     if size > 1 and np.size(theta) > 1:
         return (gammas.T/gammas.sum(1))[:-1].T
-    elif np.size(theta)>1:
+    elif np.size(theta) > 1:
         return (gammas[0]/gammas[0].sum())[:-1]
     else:
         return 1.
@@ -1011,7 +1016,7 @@ def dirichlet_like(x, theta):
     theta = np.atleast_2d(theta)
     if (np.shape(x)[-1]+1) != np.shape(theta)[-1]:
         raise ValueError('The dimension of x in dirichlet_like must be k-1.')
-    return flib.dirichlet(x,theta)
+    return flib.dirichlet(x, theta)
 
 # Exponential----------------------------------------------
 @randomwrap
@@ -1020,7 +1025,7 @@ def rexponential(beta, size=None):
     Exponential random variates.
     """
 
-    return np.random.exponential(1./beta,size)
+    return np.random.exponential(1./beta, size)
 
 def exponential_expval(beta):
     """
@@ -1062,7 +1067,7 @@ def rexponweib(alpha, k, loc=0, scale=1, size=None):
     """
 
     q = np.random.uniform(size=size)
-    r = flib.exponweib_ppf(q,alpha,k)
+    r = flib.exponweib_ppf(q, alpha, k)
     return loc + r*scale
 
 def exponweib_expval(alpha, k, loc, scale):
@@ -1090,7 +1095,7 @@ def exponweib_like(x, alpha, k, loc=0, scale=1):
       - `scale` : Scale parameter (scale > 0).
 
     """
-    return flib.exponweib(x,alpha,k,loc,scale)
+    return flib.exponweib(x, alpha, k, loc, scale)
 
 """
 commented out because tests fail
@@ -1107,7 +1112,7 @@ def rgamma(alpha, beta, size=None):
     Random gamma variates.
     """
 
-    return np.random.gamma(shape=alpha,scale=1./beta,size=size)
+    return np.random.gamma(shape=alpha, scale=1./beta, size=size)
 
 def gamma_expval(alpha, beta):
     """
@@ -1152,7 +1157,7 @@ def rgev(xi, mu=0, sigma=1, size=None):
     """
 
     q = np.random.uniform(size=size)
-    z = flib.gev_ppf(q,xi)
+    z = flib.gev_ppf(q, xi)
     return z*sigma + mu
 
 def gev_expval(xi, mu=0, sigma=1):
@@ -1249,8 +1254,9 @@ def half_cauchy_like(x, alpha, beta):
     """
 
     x = np.atleast_1d(x)
-    if sum(x<0): return -inf
-    return flib.cauchy(x,alpha,beta) + len(x)*np.log(2)
+    if sum(x < 0):
+        return -inf
+    return flib.cauchy(x, alpha, beta) + len(x)*np.log(2)
 
 # Half-normal----------------------------------------------
 @randomwrap
@@ -1292,10 +1298,10 @@ def rhypergeometric(n, m, N, size=None):
     """
     Returns hypergeometric random variates.
     """
-    if n==0:
-        return np.zeros(size,dtype=int)
-    elif n==N:
-        out = np.empty(size,dtype=int)
+    if n == 0:
+        return np.zeros(size, dtype=int)
+    elif n == N:
+        out = np.empty(size, dtype=int)
         out.fill(m)
         return out
     return np.random.hypergeometric(n, N-n, m, size)
@@ -1336,7 +1342,7 @@ def hypergeometric_like(x, n, m, N):
 
 # Inverse gamma----------------------------------------------
 @randomwrap
-def rinverse_gamma(alpha, beta,size=None):
+def rinverse_gamma(alpha, beta, size=None):
     """
     Random inverse gamma variates.
     """
@@ -1506,9 +1512,9 @@ def laplace_like(x, mu, tau):
 
     return flib.gamma(np.abs(x-mu), 1, tau) - np.log(2)
 
-laplace_grad_like = {'value'   : lambda x, mu, tau: flib.gamma_grad_x(np.abs(x- mu), 1, tau) * np.sign(x - mu),
-                     'mu'  : lambda x, mu, tau: -flib.gamma_grad_x(np.abs(x- mu), 1, tau) * np.sign(x - mu),
-                     'tau' : lambda x, mu, tau: flib.gamma_grad_beta(np.abs(x- mu), 1, tau)}
+laplace_grad_like = {'value'   : lambda x, mu, tau: flib.gamma_grad_x(np.abs(x - mu), 1, tau) * np.sign(x - mu),
+                     'mu'  : lambda x, mu, tau: -flib.gamma_grad_x(np.abs(x - mu), 1, tau) * np.sign(x - mu),
+                     'tau' : lambda x, mu, tau: flib.gamma_grad_beta(np.abs(x - mu), 1, tau)}
 
 
 dexponential_like = laplace_like
@@ -1557,12 +1563,12 @@ def logistic_like(x, mu, tau):
 
 # Lognormal----------------------------------------------
 @randomwrap
-def rlognormal(mu, tau,size=None):
+def rlognormal(mu, tau, size=None):
     """
     Return random lognormal variates.
     """
 
-    return np.random.lognormal(mu, np.sqrt(1./tau),size)
+    return np.random.lognormal(mu, np.sqrt(1./tau), size)
 
 def lognormal_expval(mu, tau):
     """
@@ -1593,7 +1599,7 @@ def lognormal_like(x, mu, tau):
        :math:`Var(X)=(e^{1/\tau}-1)e^{2\mu+\frac{1}{\tau}}`
 
     """
-    return flib.lognormal(x,mu,tau)
+    return flib.lognormal(x, mu, tau)
 
 lognormal_grad_like = {'value'   : flib.lognormal_gradx,
                        'mu'  : flib.lognormal_gradmu,
@@ -1602,7 +1608,7 @@ lognormal_grad_like = {'value'   : flib.lognormal_gradx,
 
 # Multinomial----------------------------------------------
 #@randomwrap
-def rmultinomial(n,p,size=None):
+def rmultinomial(n, p, size=None):
     """
     Random multinomial variates.
     """
@@ -1610,18 +1616,18 @@ def rmultinomial(n,p,size=None):
     # if not specified-- nicer.
 
     # Single value for p:
-    if len(np.shape(p))==1:
-        return np.random.multinomial(n,p,size)
+    if len(np.shape(p)) == 1:
+        return np.random.multinomial(n, p, size)
 
     # Multiple values for p:
     if np.isscalar(n):
-        n = n * np.ones(np.shape(p)[0],dtype=np.int)
+        n = n * np.ones(np.shape(p)[0], dtype=np.int)
     out = np.empty(np.shape(p))
     for i in xrange(np.shape(p)[0]):
-        out[i,:] = np.random.multinomial(n[i],p[i,:],size)
+        out[i,:] = np.random.multinomial(n[i], p[i,:], size)
     return out
 
-def multinomial_expval(n,p):
+def multinomial_expval(n, p):
     """
     Expected value of multinomial distribution.
     """
@@ -1682,12 +1688,12 @@ def rmultivariate_hypergeometric(n, m, size=None):
         draw = np.array([[urn[i] for i in np.random.permutation(len(urn))[:n]]
                          for j in range(size)])
 
-        r = [[np.sum(draw[j]==i) for i in range(len(m))]
+        r = [[np.sum(draw[j] == i) for i in range(len(m))]
              for j in range(size)]
     else:
         draw = np.array([urn[i] for i in np.random.permutation(len(urn))[:n]])
 
-        r = [np.sum(draw==i) for i in range(len(m))]
+        r = [np.sum(draw == i) for i in range(len(m))]
     return np.asarray(r)
 
 def multivariate_hypergeometric_expval(n, m):
@@ -1698,7 +1704,7 @@ def multivariate_hypergeometric_expval(n, m):
       - `n` : Number of draws.
       - `m` : Number of items in each categoy.
     """
-    m= np.asarray(m, float)
+    m = np.asarray(m, float)
     return n * (m / m.sum())
 
 
@@ -1734,22 +1740,22 @@ def rmv_normal(mu, tau, size=1):
     sig = np.linalg.cholesky(tau)
     mu_size = np.shape(mu)
 
-    if size==1:
+    if size == 1:
         out = np.random.normal(size=mu_size)
         try:
-            flib.dtrsm_wrap(sig , out, 'L', 'T', 'L', 1.)
+            flib.dtrsm_wrap(sig, out, 'L', 'T', 'L', 1.)
         except:
             out = np.linalg.solve(sig, out)
-        out+=mu
+        out += mu
         return out
     else:
-        if not hasattr(size,'__iter__'):
+        if not hasattr(size, '__iter__'):
             size = (size,)
         tot_size = np.prod(size)
         out = np.random.normal(size = (tot_size,) + mu_size)
         for i in xrange(tot_size):
             try:
-                flib.dtrsm_wrap(sig , out[i,:], 'L', 'T', 'L', 1.)
+                flib.dtrsm_wrap(sig, out[i,:], 'L', 'T', 'L', 1.)
             except:
                 out[i,:] = np.linalg.solve(sig, out[i,:])
             out[i,:] += mu
@@ -1777,10 +1783,10 @@ def mv_normal_like(x, mu, tau):
 
     """
     # TODO: Vectorize in Fortran
-    if len(np.shape(x))>1:
-        return np.sum([flib.prec_mvnorm(r,mu,tau) for r in x])
+    if len(np.shape(x)) > 1:
+        return np.sum([flib.prec_mvnorm(r, mu, tau) for r in x])
     else:
-        return flib.prec_mvnorm(x,mu,tau)
+        return flib.prec_mvnorm(x, mu, tau)
 
 # Multivariate normal, parametrized with covariance---------------------------
 def rmv_normal_cov(mu, C, size=1):
@@ -1788,7 +1794,7 @@ def rmv_normal_cov(mu, C, size=1):
     Random multivariate normal variates.
     """
     mu_size = np.shape(mu)
-    if size==1:
+    if size == 1:
         return np.random.multivariate_normal(mu, C, size).reshape(mu_size)
     else:
         return np.random.multivariate_normal(mu, C, size).reshape((size,)+mu_size)
@@ -1816,10 +1822,10 @@ def mv_normal_cov_like(x, mu, C):
 
     """
     # TODO: Vectorize in Fortran
-    if len(np.shape(x))>1:
-        return np.sum([flib.cov_mvnorm(r,mu,C) for r in x])
+    if len(np.shape(x)) > 1:
+        return np.sum([flib.cov_mvnorm(r, mu, C) for r in x])
     else:
-        return flib.cov_mvnorm(x,mu,C)
+        return flib.cov_mvnorm(x, mu, C)
 
 
 # Multivariate normal, parametrized with Cholesky factorization.----------
@@ -1829,22 +1835,22 @@ def rmv_normal_chol(mu, sig, size=1):
     """
     mu_size = np.shape(mu)
 
-    if size==1:
+    if size == 1:
         out = np.random.normal(size=mu_size)
         try:
-            flib.dtrmm_wrap(sig , out, 'L', 'N', 'L', 1.)
+            flib.dtrmm_wrap(sig, out, 'L', 'N', 'L', 1.)
         except:
             out = np.dot(sig, out)
-        out+=mu
+        out += mu
         return out
     else:
-        if not hasattr(size,'__iter__'):
+        if not hasattr(size, '__iter__'):
             size = (size,)
         tot_size = np.prod(size)
         out = np.random.normal(size = (tot_size,) + mu_size)
         for i in xrange(tot_size):
             try:
-                flib.dtrmm_wrap(sig , out[i,:], 'L', 'N', 'L', 1.)
+                flib.dtrmm_wrap(sig, out[i,:], 'L', 'N', 'L', 1.)
             except:
                 out[i,:] = np.dot(sig, out[i,:])
             out[i,:] += mu
@@ -1873,10 +1879,10 @@ def mv_normal_chol_like(x, mu, sig):
 
     """
     # TODO: Vectorize in Fortran
-    if len(np.shape(x))>1:
-        return np.sum([flib.chol_mvnorm(r,mu,sig) for r in x])
+    if len(np.shape(x)) > 1:
+        return np.sum([flib.chol_mvnorm(r, mu, sig) for r in x])
     else:
-        return flib.chol_mvnorm(x,mu,sig)
+        return flib.chol_mvnorm(x, mu, sig)
 
 
 
@@ -1930,7 +1936,7 @@ def negative_binomial_like(x, mu, alpha):
         if (alpha > 1e10).all():
             # Return Poisson when alpha gets very large
             return flib.poisson(x, mu)
-        
+
         # Split big and small dispersion values
         big = alpha > 1e10
         return flib.poisson(x[big], mu[big]) + flib.negbin2(x[big-True],
@@ -1980,18 +1986,18 @@ def normal_like(x, mu, tau):
     return flib.normal(x, mu, tau)
 
 def t_normal_grad_x(x, mu, tau):
-    return flib.normal_grad_x(x,mu, tau)
+    return flib.normal_grad_x(x, mu, tau)
 
 def t_normal_grad_mu(x, mu, tau):
-    return flib.normal_grad_mu(x,mu, tau)
+    return flib.normal_grad_mu(x, mu, tau)
 def t_normal_grad_tau(x, mu, tau):
-    return flib.normal_grad_tau(x,mu, tau)
+    return flib.normal_grad_tau(x, mu, tau)
 
 normal_grad_like = {'value' : t_normal_grad_x,
              'mu' : t_normal_grad_mu,
              'tau' : t_normal_grad_tau}
 
-#normal_grad_like = {'x' : flib.normal_grad_x,
+# normal_grad_like = {'x' : flib.normal_grad_x,
 #             'mu' : flib.normal_grad_mu,
 #             'tau' : flib.normal_grad_tau}
 
@@ -2116,7 +2122,7 @@ def rpoisson(mu, size=None):
     Random poisson variates.
     """
 
-    return np.random.poisson(mu,size)
+    return np.random.poisson(mu, size)
 
 
 def poisson_expval(mu):
@@ -2127,7 +2133,7 @@ def poisson_expval(mu):
     return mu
 
 
-def poisson_like(x,mu):
+def poisson_like(x, mu):
     R"""
     Poisson log-likelihood.
 
@@ -2149,7 +2155,7 @@ def poisson_like(x,mu):
        - :math:`Var(x)=\mu`
 
     """
-    return flib.poisson(x,mu)
+    return flib.poisson(x, mu)
 
 poisson_grad_like = {'mu' : flib.poisson_gmu}
 
@@ -2167,8 +2173,8 @@ def rtruncated_poisson(mu, k, size=None):
     except (TypeError, ValueError):
         # More than one mu
         return np.array([rtruncated_poisson(x, i)
-                         for x,i in zip(mu, np.resize(k, np.size(mu)))]).squeeze()
-    k-=1
+                         for x, i in zip(mu, np.resize(k, np.size(mu)))]).squeeze()
+    k -= 1
 
     # Calculate constant for acceptance probability
     C = np.exp(flib.factln(k+1)-flib.factln(k+1-m))
@@ -2178,7 +2184,7 @@ def rtruncated_poisson(mu, k, size=None):
 
     total_size = np.prod(size or 1)
 
-    while(len(rvs)<total_size):
+    while(len(rvs) < total_size):
 
         # Propose values by sampling from untruncated Poisson with mean mu + m
         proposals = np.random.poisson(mu+m, (total_size*4, np.size(m))).squeeze()
@@ -2191,7 +2197,7 @@ def rtruncated_poisson(mu, k, size=None):
         # Uniform random variates
         u = np.random.random(total_size*4)
 
-        rvs = np.append(rvs, proposals[u<a])
+        rvs = np.append(rvs, proposals[u < a])
 
     return np.reshape(rvs[:total_size], size)
 
@@ -2204,7 +2210,7 @@ def truncated_poisson_expval(mu, k):
     return mu/(1.-poiscdf(k, mu))
 
 
-def truncated_poisson_like(x,mu,k):
+def truncated_poisson_like(x, mu, k):
     R"""
     Truncated Poisson log-likelihood.
 
@@ -2228,7 +2234,7 @@ def truncated_poisson_like(x,mu,k):
        - :math:`Var(x)=\frac{\mu}{1-F(k|\mu)}`
 
     """
-    return flib.trpoisson(x,mu,k)
+    return flib.trpoisson(x, mu, k)
 
 truncated_poisson_grad_like = {'mu' : flib.trpoisson_gmu}
 
@@ -2308,13 +2314,15 @@ def truncated_normal_like(x, mu, tau, a=None, b=None):
       - `b` : Right bound of the distribution.
     """
     x = np.atleast_1d(x)
-    if a is None: a = -np.inf
+    if a is None:
+        a = -np.inf
     a = np.atleast_1d(a)
-    if b is None: b = np.inf
+    if b is None:
+        b = np.inf
     b = np.atleast_1d(b)
     mu = np.atleast_1d(mu)
     sigma = (1./np.atleast_1d(np.sqrt(tau)))
-    if (x < a).any() or (x>b).any():
+    if (x < a).any() or (x > b).any():
         return -np.inf
     else:
         n = len(x)
@@ -2344,16 +2352,16 @@ def rskew_normal(mu,tau,alpha,size=()):
     """
     size_ = size or (1,)
     len_ = np.prod(size_)
-    return flib.rskewnorm(len_,mu,tau,alpha,np.random.normal(size=2*len_)).reshape(size)
+    return flib.rskewnorm(len_, mu, tau, alpha, np.random.normal(size=2*len_)).reshape(size)
 
-def skew_normal_expval(mu,tau,alpha):
+def skew_normal_expval(mu, tau, alpha):
     """
     Expectation of skew-normal random variables.
     """
     delta = alpha / np.sqrt(1.+alpha**2)
     return mu + np.sqrt(2/pi/tau) * delta
 
-def skew_normal_like(x,mu,tau,alpha):
+def skew_normal_like(x, mu, tau, alpha):
     R"""
     Azzalini's skew-normal log-likelihood
 
@@ -2380,7 +2388,7 @@ def rt(nu, size=None):
     """
     Student's t random variates.
     """
-    return rnormal(0,1,size) / np.sqrt(rchi2(nu,size)/nu)
+    return rnormal(0, 1, size) / np.sqrt(rchi2(nu, size)/nu)
 
 def t_expval(nu):
     """
@@ -2423,7 +2431,7 @@ def noncentral_t_expval(mu, lam, nu):
     Expectation of non-central Student's t random variables. Only defined
     for nu>1.
     """
-    if nu>1:
+    if nu > 1:
         return mu
     return inf
 
@@ -2472,7 +2480,7 @@ def noncentral_t_expval(mu, lam, nu):
     Expectation of non-central Student's t random variables. Only defined
     for nu>1.
     """
-    if nu>1:
+    if nu > 1:
         return mu
     return inf
 
@@ -2513,7 +2521,7 @@ def discrete_uniform_expval(lower, upper):
     """
     return (upper - lower) / 2.
 
-def discrete_uniform_like(x,lower, upper):
+def discrete_uniform_like(x, lower, upper):
     R"""
     Discrete uniform log-likelihood.
 
@@ -2543,7 +2551,7 @@ def uniform_expval(lower, upper):
     """
     return (upper - lower) / 2.
 
-def uniform_like(x,lower, upper):
+def uniform_like(x, lower, upper):
     R"""
     Uniform log-likelihood.
 
@@ -2572,7 +2580,7 @@ def rweibull(alpha, beta,size=None):
     tmp = -np.log(runiform(0, 1, size))
     return beta * (tmp ** (1. / alpha))
 
-def weibull_expval(alpha,beta):
+def weibull_expval(alpha, beta):
     """
     Expected value of weibull distribution.
     """
@@ -2612,15 +2620,15 @@ def rwishart(n, Tau):
     """
     p = np.shape(Tau)[0]
     sig = np.linalg.cholesky(Tau)
-    if n<p:
+    if n < p:
         raise ValueError('Wishart parameter n must be greater '
                          'than size of matrix.')
     norms = np.random.normal(size=p*(p-1)/2)
-    chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
+    chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n, n-p, -1)))
     A = flib.expand_triangular(chi_sqs, norms)
 
     flib.dtrsm_wrap(sig, A, side='L', uplo='L', transa='T', alpha=1.)
-    w = np.asmatrix(np.dot(A,A.T))
+    w = np.asmatrix(np.dot(A, A.T))
     flib.symmetrize(w)
     return w
 
@@ -2660,7 +2668,7 @@ def wishart_like(X, n, Tau):
       Step method MatrixMetropolis will preserve the symmetry of Wishart variables.
 
     """
-    return flib.blas_wishart(X,n,Tau)
+    return flib.blas_wishart(X, n, Tau)
 
 # Wishart, parametrized by covariance ------------------------------------
 def rwishart_cov(n, C):
@@ -2679,16 +2687,16 @@ def rwishart_cov(n, C):
     # Need cholesky decomposition of precision matrix C^-1?
     sig = np.linalg.cholesky(C)
 
-    if n<p:
+    if n < p:
         raise ValueError('Wishart parameter n must be greater '
                          'than size of matrix.')
 
     norms = np.random.normal(size=p*(p-1)/2)
-    chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n,n-p,-1)))
+    chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n, n-p, -1)))
     A = flib.expand_triangular(chi_sqs, norms)
 
     flib.dtrmm_wrap(sig, A, side='L', uplo='L', transa='N', alpha=1.)
-    w = np.asmatrix(np.dot(A,A.T))
+    w = np.asmatrix(np.dot(A, A.T))
     flib.symmetrize(w)
     return w
 
@@ -2730,7 +2738,7 @@ def wishart_cov_like(X, n, C):
         Symmetric and positive definite
 
     """
-    return flib.blas_wishart_cov(X,n,C)
+    return flib.blas_wishart_cov(X, n, C)
 
 
 # -----------------------------------------------------------
@@ -2738,15 +2746,15 @@ def wishart_cov_like(X, n, C):
 # -----------------------------------------------------------
 
 def name_to_funcs(name, module):
-    if type(module) is types.ModuleType:
+    if isinstance(module, types.ModuleType):
         module = copy(module.__dict__)
-    elif type(module) is dict:
+    elif isinstance(module, dict):
         module = copy(module)
     else:
         raise AttributeError
 
     try:
-       logp = module[name+"_like"]
+        logp = module[name+"_like"]
     except:
         raise KeyError("No likelihood found with this name ", name+"_like")
 
@@ -2810,9 +2818,9 @@ def _inject_dist(distname, kwargs={}, ns=locals()):
 
     dist_logp, dist_random, grad_logp = name_to_funcs(distname, ns)
     classname = capitalize(distname)
-    ns[classname]= stochastic_from_dist(distname, dist_logp,
+    ns[classname] = stochastic_from_dist(distname, dist_logp,
                                         dist_random,
-										grad_logp, **kwargs)
+                                                                                grad_logp, **kwargs)
 
 
 for dist in sc_continuous_distributions:
@@ -2844,7 +2852,7 @@ def one_over_x_like(x):
     """
     returns -np.Inf if x<0, -np.log(x) otherwise.
     """
-    if np.any(x<0):
+    if np.any(x < 0):
         return -np.Inf
     else:
         return -np.sum(np.log(x))
@@ -2864,13 +2872,13 @@ def extend_dirichlet(p):
 
     Concatenates 1-sum(p) to the end of p and returns.
     """
-    if len(np.shape(p))>1:
+    if len(np.shape(p)) > 1:
         return np.hstack((p, np.atleast_2d(1.-np.sum(p))))
     else:
-        return np.hstack((p,1.-np.sum(p)))
+        return np.hstack((p, 1.-np.sum(p)))
 
 
-def mod_categorical_like(x,p):
+def mod_categorical_like(x, p):
     """
     Categorical log-likelihood with parent p of length k-1.
 
@@ -2892,7 +2900,7 @@ def mod_categorical_like(x,p):
       step : integer
         :math: `s \ge 1`
     """
-    return categorical_like(x,extend_dirichlet(p))
+    return categorical_like(x, extend_dirichlet(p))
 
 
 def mod_categorical_expval(p):
@@ -3012,12 +3020,12 @@ Docstring of categorical_like (case where P is a Dirichlet):
 #                 parents={'p':p,'minval':minval,'step':step}, random=bind_size(rmod_categorical, self.size), trace=trace, value=value, dtype=dtype,
 #                 rseed=rseed, observed=observed, cache_depth=cache_depth, plot=plot, verbose=verbose, **kwds)
 
-def mod_rmultinom(n,p):
-    return rmultinomial(n,extend_dirichlet(p))
+def mod_rmultinom(n, p):
+    return rmultinomial(n, extend_dirichlet(p))
 
 
-def mod_multinom_like(x,n,p):
-    return multinomial_like(x,n,extend_dirichlet(p))
+def mod_multinom_like(x, n, p):
+    return multinomial_like(x, n, extend_dirichlet(p))
 
 class Multinomial(Stochastic):
     """
@@ -3080,7 +3088,7 @@ def Impute(name, dist_class, imputable, **parents):
     dims = np.shape(imputable)
     masked_values = np.ravel(imputable)
 
-    if not type(masked_values) == np.ma.core.MaskedArray:
+    if not isinstance(masked_values, np.ma.core.MaskedArray):
         # Generate mask
 
         mask = [v is None or np.isnan(v) for v in masked_values]
@@ -3128,6 +3136,3 @@ ImputeMissing = Impute
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-
-
-

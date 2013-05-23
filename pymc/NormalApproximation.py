@@ -1,4 +1,4 @@
-__docformat__='reStructuredText'
+__docformat__ = 'reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 __all__ = ['NormApproxMu', 'NormApproxC', 'MAP', 'NormApprox']
@@ -24,6 +24,7 @@ except ImportError:
 
 
 class NormApproxMu(object):
+
     """
     Returns the mean vector of some variables.
 
@@ -41,7 +42,8 @@ class NormApproxMu(object):
     def __getitem__(self, *stochastics):
 
         if not self.owner.fitted:
-            raise ValueError('NormApprox object must be fitted before mu can be accessed.')
+            raise ValueError(
+                'NormApprox object must be fitted before mu can be accessed.')
 
         tot_len = 0
 
@@ -59,13 +61,15 @@ class NormApproxMu(object):
 
         start_index = 0
         for p in stochastic_tuple:
-            mu[start_index:(start_index + self.owner.stochastic_len[p])] = self.owner._mu[self.owner._slices[p]]
+            mu[start_index:(start_index + self.owner.stochastic_len[
+                            p])] = self.owner._mu[self.owner._slices[p]]
             start_index += self.owner.stochastic_len[p]
 
         return mu
 
 
 class NormApproxC(object):
+
     """
     Returns the covariance matrix of some variables.
 
@@ -83,7 +87,8 @@ class NormApproxC(object):
     def __getitem__(self, *stochastics):
 
         if not self.owner.fitted:
-            raise ValueError('NormApprox object must be fitted before C can be accessed.')
+            raise ValueError(
+                'NormApprox object must be fitted before C can be accessed.')
 
         tot_len = 0
 
@@ -103,9 +108,13 @@ class NormApproxC(object):
         for p1 in stochastic_tuple:
             start_index2 = 0
             for p2 in stochastic_tuple:
-                C[start_index1:(start_index1 + self.owner.stochastic_len[p1]), \
-                start_index2:(start_index2 + self.owner.stochastic_len[p2])] = \
-                self.owner._C[self.owner._slices[p1],self.owner._slices[p2]]
+                C[start_index1:(start_index1 + self.owner.stochastic_len[p1]),
+                  start_index2:(start_index2 + self.owner.stochastic_len[p2])] = \
+                    self.owner._C[
+                        self.owner._slices[
+                            p1],
+                        self.owner._slices[
+                            p2]]
 
                 start_index2 += self.owner.stochastic_len[p2]
 
@@ -113,7 +122,9 @@ class NormApproxC(object):
 
         return C
 
+
 class MAP(Model):
+
     """
     N = MAP(input, eps=.001, diff_order = 5)
 
@@ -139,9 +150,10 @@ class MAP(Model):
 
     :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
-    def __init__(self, input=None, eps=.001, diff_order = 5, verbose=-1):
+    def __init__(self, input=None, eps=.001, diff_order=5, verbose=-1):
         if not scipy_imported:
-            raise ImportError('Scipy must be installed to use NormApprox and MAP.')
+            raise ImportError(
+                'Scipy must be installed to use NormApprox and MAP.')
 
         Model.__init__(self, input, verbose=verbose)
 
@@ -166,15 +178,20 @@ class MAP(Model):
             self.stochastic_type_dict[stochastic] = type_now
 
             if not type_now is float:
-                print_("Warning: Stochastic " + stochastic.__name__ + "'s value is neither numerical nor array with " + \
-                            "floating-point dtype. Recommend fitting method fmin (default).")
+                print_("Warning: Stochastic " + stochastic.__name__ + "'s value is neither numerical nor array with " +
+                       "floating-point dtype. Recommend fitting method fmin (default).")
 
             # Inspect shapes of all stochastics and create stochastic slices.
             if isinstance(stochastic.value, ndarray):
                 self.stochastic_len[stochastic] = len(ravel(stochastic.value))
             else:
                 self.stochastic_len[stochastic] = 1
-            self._slices[stochastic] = slice(self.len, self.len + self.stochastic_len[stochastic])
+            self._slices[
+                stochastic] = slice(
+                    self.len,
+                    self.len +
+                    self.stochastic_len[
+                        stochastic])
             self.len += self.stochastic_len[stochastic]
 
             # Record indices that correspond to each stochastic.
@@ -187,8 +204,8 @@ class MAP(Model):
             self.data_len += len(ravel(datum.value))
 
         # Unpack step
-        self.eps = zeros(self.len,dtype=float)
-        if isinstance(eps,dict):
+        self.eps = zeros(self.len, dtype=float)
+        if isinstance(eps, dict):
             for stochastic in self.stochastics:
                 self.eps[self._slices[stochastic]] = eps[stochastic]
         else:
@@ -216,7 +233,7 @@ class MAP(Model):
 
         self.func_for_diff = func_for_diff
 
-    def fit(self, method = 'fmin', iterlim=1000, tol=.0001, verbose=0):
+    def fit(self, method='fmin', iterlim=1000, tol=.0001, verbose=0):
         """
         N.fit(method='fmin', iterlim=1000, tol=.001):
 
@@ -233,7 +250,7 @@ class MAP(Model):
         self.method = method
         self.verbose = verbose
 
-        p = zeros(self.len,dtype=float)
+        p = zeros(self.len, dtype=float)
         for stochastic in self.stochastics:
             p[self._slices[stochastic]] = ravel(stochastic.value)
 
@@ -252,27 +269,27 @@ class MAP(Model):
                 pass
 
         if self.method == 'fmin_ncg':
-            p=fmin_ncg( f = self.func,
-                        x0 = p,
-                        fprime = self.gradfunc,
-                        fhess = self.hessfunc,
-                        epsilon=self.eps,
-                        maxiter=iterlim,
-                        callback=callback,
-                        avextol=tol,
-                        disp=verbose)
+            p = fmin_ncg(f=self.func,
+                         x0=p,
+                         fprime=self.gradfunc,
+                         fhess=self.hessfunc,
+                         epsilon=self.eps,
+                         maxiter=iterlim,
+                         callback=callback,
+                         avextol=tol,
+                         disp=verbose)
 
         elif self.method == 'fmin':
 
-            p=fmin( func = self.func,
-                    x0=p,
-                    callback=callback,
-                    maxiter=iterlim,
-                    ftol=tol,
-                    disp=verbose)
+            p = fmin(func=self.func,
+                     x0=p,
+                     callback=callback,
+                     maxiter=iterlim,
+                     ftol=tol,
+                     disp=verbose)
 
         elif self.method == 'fmin_powell':
-            p=fmin_powell(  func = self.func,
+            p = fmin_powell(func=self.func,
                             x0=p,
                             callback=callback,
                             maxiter=iterlim,
@@ -280,8 +297,8 @@ class MAP(Model):
                             disp=verbose)
 
         elif self.method == 'fmin_cg':
-            p=fmin_cg(  f = self.func, x0 = p,
-                        fprime = self.gradfunc,
+            p = fmin_cg(f=self.func, x0=p,
+                        fprime=self.gradfunc,
                         epsilon=self.eps,
                         callback=callback,
                         maxiter=iterlim,
@@ -289,13 +306,13 @@ class MAP(Model):
                         disp=verbose)
 
         elif self.method == 'fmin_l_bfgs_b':
-            p=fmin_l_bfgs_b(func = self.func,
-                            x0 = p,
-                            fprime = self.gradfunc,
-                            epsilon = self.eps,
-                            # callback=callback,
-                            pgtol=tol,
-                            iprint=verbose-1)[0]
+            p = fmin_l_bfgs_b(func=self.func,
+                              x0=p,
+                              fprime=self.gradfunc,
+                              epsilon=self.eps,
+                              # callback=callback,
+                              pgtol=tol,
+                              iprint=verbose - 1)[0]
 
         else:
             raise ValueError('Method unknown.')
@@ -306,12 +323,15 @@ class MAP(Model):
         try:
             self.logp_at_max = self.logp
         except:
-            raise RuntimeError('Posterior probability optimization converged to value with zero probability.')
+            raise RuntimeError(
+                'Posterior probability optimization converged to value with zero probability.')
 
-        lnL = sum([x.logp for x in self.observed_stochastics]) # log-likelihood of observed stochastics
-        self.AIC = 2. * (self.len - lnL) # 2k - 2 ln(L)
+        lnL = sum([x.logp for x in self.observed_stochastics]
+                  )  # log-likelihood of observed stochastics
+        self.AIC = 2. * (self.len - lnL)  # 2k - 2 ln(L)
         try:
-            self.BIC = self.len * log(self.data_len) - 2. * lnL # k ln(n) - 2 ln(L)
+            self.BIC = self.len * log(
+                self.data_len) - 2. * lnL  # k ln(n) - 2 ln(L)
         except FloatingPointError:
             self.BIC = -Inf
 
@@ -338,13 +358,16 @@ class MAP(Model):
 
         return -1 * self.grad
 
-
     def _set_stochastics(self, p):
         for stochastic in self.stochastics:
             if self.stochastic_type_dict[stochastic] is int:
-                stochastic.value = round_array(reshape(ravel(p)[self._slices[stochastic]],shape(stochastic.value)))
+                stochastic.value = round_array(
+                    reshape(ravel(p)[self._slices[stochastic]],
+                            shape(stochastic.value)))
             else:
-                stochastic.value = reshape(ravel(p)[self._slices[stochastic]],shape(stochastic.value))
+                stochastic.value = reshape(
+                    ravel(p)[self._slices[stochastic]],
+                    shape(stochastic.value))
 
     def __setitem__(self, index, value):
         p, i = self.stochastic_indices[index]
@@ -363,7 +386,7 @@ class MAP(Model):
         a stochastic owning a particular index.
         """
         all_relevant_stochastics = set()
-        p,i = self.stochastic_indices[index]
+        p, i = self.stochastic_indices[index]
         try:
             return p.logp + logp_of_set(p.extended_children)
         except ZeroProbability:
@@ -377,7 +400,13 @@ class MAP(Model):
         """
 
         old_val = copy(self[i])
-        d = derivative(func=self.func_for_diff, x0=old_val, dx=self.eps[i], n=order, args=[i], order=self.diff_order)
+        d = derivative(
+            func=self.func_for_diff,
+            x0=old_val,
+            dx=self.eps[i],
+            n=order,
+            args=[i],
+            order=self.diff_order)
         self[i] = old_val
         return d
 
@@ -397,7 +426,12 @@ class MAP(Model):
             self[j] = val
             return self.diff(i)
 
-        d = derivative(func=diff_for_diff, x0=old_val, dx=self.eps[j], n=1, order=self.diff_order)
+        d = derivative(
+            func=diff_for_diff,
+            x0=old_val,
+            dx=self.eps[j],
+            n=1,
+            order=self.diff_order)
 
         self[j] = old_val
         return d
@@ -412,15 +446,15 @@ class MAP(Model):
 
             di = self.diff(i)
             self.grad[i] = di
-            self.hess[i,i] = self.diff(i,2)
+            self.hess[i, i] = self.diff(i, 2)
 
             if i < self.len - 1:
 
-                for j in xrange(i+1, self.len):
-                    dij = self.diff2(i,j)
+                for j in xrange(i + 1, self.len):
+                    dij = self.diff2(i, j)
 
-                    self.hess[i,j] = dij
-                    self.hess[j,i] = dij
+                    self.hess[i, j] = dij
+                    self.hess[j, i] = dij
 
     def hessfunc(self, p):
         """
@@ -431,15 +465,15 @@ class MAP(Model):
         for i in xrange(self.len):
 
             di = self.diff(i)
-            self.hess[i,i] = self.diff(i,2)
+            self.hess[i, i] = self.diff(i, 2)
 
             if i < self.len - 1:
 
-                for j in xrange(i+1, self.len):
-                    dij = self.diff2(i,j)
+                for j in xrange(i + 1, self.len):
+                    dij = self.diff2(i, j)
 
-                    self.hess[i,j] = dij
-                    self.hess[j,i] = dij
+                    self.hess[i, j] = dij
+                    self.hess[j, i] = dij
 
         return -1. * self.hess
 
@@ -451,7 +485,9 @@ class MAP(Model):
         """
         self._set_stochastics(self.mu[self.stochastics])
 
+
 class NormApprox(MAP, Sampler):
+
     """
     N = NormApprox(input, db='ram', eps=.001, diff_order = 5, **kwds)
 
@@ -481,9 +517,10 @@ class NormApprox(MAP, Sampler):
 
     :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
-    def __init__(self, input=None, db='ram', eps=.001, diff_order = 5, **kwds):
+    def __init__(self, input=None, db='ram', eps=.001, diff_order=5, **kwds):
         if not scipy_imported:
-            raise ImportError('Scipy must be installed to use NormApprox and MAP.')
+            raise ImportError(
+                'Scipy must be installed to use NormApprox and MAP.')
 
         MAP.__init__(self, input, eps, diff_order)
 
@@ -508,5 +545,5 @@ class NormApprox(MAP, Sampler):
         the normal approximation to the posterior.
         """
         devs = normal(size=self._sig.shape[1])
-        p = inner(self._sig,devs) + self._mu
+        p = inner(self._sig, devs) + self._mu
         self._set_stochastics(p)

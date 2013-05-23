@@ -45,7 +45,15 @@ import pdb
 from . import six
 xrange = six.moves.xrange
 
-__all__ = ['Container', 'DictContainer', 'TupleContainer', 'ListContainer', 'SetContainer', 'ObjectContainer', 'ArrayContainer']
+__all__ = [
+    'Container',
+    'DictContainer',
+    'TupleContainer',
+    'ListContainer',
+    'SetContainer',
+    'ObjectContainer',
+    'ArrayContainer']
+
 
 def filter_dict(obj):
     filtered_dict = {}
@@ -53,6 +61,7 @@ def filter_dict(obj):
         if isinstance(item[1], Node) or isinstance(item[1], ContainerBase):
             filtered_dict[item[0]] = item[1]
     return filtered_dict
+
 
 def Container(*args):
     """
@@ -126,7 +135,7 @@ def Container(*args):
       ObjectContainer
     """
 
-    if len(args)==1:
+    if len(args) == 1:
         iterable = args[0]
     else:
         iterable = args
@@ -143,12 +152,17 @@ def Container(*args):
     #     return ObjectContainer(iterable.__dict__)
 
     # Otherwise raise an error.
-    raise ValueError('No container classes available for class ' + iterable.__class__.__name__ + ', see Container.py for examples on how to write one.')
+    raise ValueError(
+        'No container classes available for class ' +
+        iterable.__class__.__name__ +
+        ', see Container.py for examples on how to write one.')
+
 
 class _A(object):
     pass
 dict_proxy_type = type(_A.__dict__)
 del _A
+
 
 def file_items(container, iterable):
     """
@@ -167,7 +181,7 @@ def file_items(container, iterable):
     # containers needs to be a list to hold unhashable items.
     container.containers = []
 
-    i=-1
+    i = -1
 
     for item in iterable:
 
@@ -177,14 +191,14 @@ def file_items(container, iterable):
             item = iterable[key]
         # Item counter
         else:
-    	    i += 1
+            i += 1
 
         # If the item isn't iterable, file it away.
         if isinstance(item, Variable):
             container.variables.add(item)
             if isinstance(item, StochasticBase):
                 if item.observed or not getattr(item, 'mask', None) is None:
-                    container.observed_stochastics.add(item)                    
+                    container.observed_stochastics.add(item)
                 if not item.observed:
                     container.stochastics.add(item)
             elif isinstance(item, DeterministicBase):
@@ -201,7 +215,7 @@ def file_items(container, iterable):
 
             # If this is a non-object-valued ndarray, don't container-ize it.
             if isinstance(item, ndarray):
-                if item.dtype!=dtype('object'):
+                if item.dtype != dtype('object'):
                     continue
 
             # If the item is iterable, wrap it in a container. Replace the item
@@ -218,7 +232,7 @@ def file_items(container, iterable):
             if isinstance(container, dict):
                 container.replace(key, new_container)
             elif isinstance(container, tuple):
-                return container[:i] + (new_container,) + container[i+1:]
+                return container[:i] + (new_container,) + container[i + 1:]
             else:
                 container.replace(item, new_container, i)
 
@@ -233,6 +247,7 @@ def file_items(container, iterable):
             getattr(container, attr)[s] = getattr(s, attr)
 
 value_doc = 'A copy of self, with all variables replaced by their values.'
+
 
 def sort_list(container, _value):
     val_ind = []
@@ -259,7 +274,9 @@ def sort_list(container, _value):
     container.nonval_obj = array(nonval_obj, dtype=object)
     container.LCValue = LCValue(container)
 
+
 class SetContainer(ContainerBase, frozenset):
+
     """
     SetContainers are containers that wrap sets.
 
@@ -291,9 +308,10 @@ class SetContainer(ContainerBase, frozenset):
       Container, ListContainer, DictContainer, ArrayContainer, TupleContainer,
       ObjectContainer
     """
-    register=True
+    register = True
     change_methods = []
     containing_classes = [set, frozenset]
+
     def __init__(self, iterable):
         self.new_iterable = set(iterable)
         file_items(self, self.new_iterable)
@@ -309,9 +327,11 @@ class SetContainer(ContainerBase, frozenset):
         self.LCValue.run()
         return set(self._value)
 
-    value = property(fget = get_value, doc=value_doc)
+    value = property(fget=get_value, doc=value_doc)
+
 
 class TupleContainer(ContainerBase, tuple):
+
     """
     TupleContainers are containers that wrap tuples.
 
@@ -343,13 +363,13 @@ class TupleContainer(ContainerBase, tuple):
       Container, ListContainer, DictContainer, ArrayContainer, SetContainer,
       ObjectContainer
     """
-    register=True
+    register = True
     change_methods = []
     containing_classes = [tuple]
 
     def __init__(self, iterable):
         new_tup = file_items(self, iterable)
-        if len(self.containers)>0:
+        if len(self.containers) > 0:
             raise NotImplementedError("""We have not figured out how to satisfactorily implement nested TupleContainers.
 The reason is there is no way to change an element of a tuple after it has been created.
 Even the Python-C API makes this impossible by checking that a tuple is new
@@ -366,9 +386,11 @@ before allowing you to change one of its elements.""")
         self.LCValue.run()
         return tuple(self._value)
 
-    value = property(fget = get_value, doc=value_doc)
+    value = property(fget=get_value, doc=value_doc)
+
 
 class ListContainer(ContainerBase, list):
+
     """
     ListContainers are containers that wrap lists.
 
@@ -400,9 +422,23 @@ class ListContainer(ContainerBase, list):
       Container, TupleContainer, DictContainer, ArrayContainer, SetContainer,
       ObjectContainer
     """
-    change_methods = ['__setitem__', '__delitem__', '__setslice__', '__delslice__', '__iadd__', '__imul__', 'append', 'extend', 'insert', 'pop', 'remove', 'reverse', 'sort']
+    change_methods = [
+        '__setitem__',
+        '__delitem__',
+        '__setslice__',
+        '__delslice__',
+        '__iadd__',
+        '__imul__',
+        'append',
+        'extend',
+        'insert',
+        'pop',
+        'remove',
+        'reverse',
+        'sort']
     containing_classes = [list]
-    register=True
+    register = True
+
     def __init__(self, iterable):
         list.__init__(self, iterable)
         ContainerBase.__init__(self, iterable)
@@ -417,9 +453,11 @@ class ListContainer(ContainerBase, list):
         self.LCValue.run()
         return self._value
 
-    value = property(fget = get_value, doc=value_doc)
+    value = property(fget=get_value, doc=value_doc)
+
 
 class DictContainer(ContainerBase, dict):
+
     """
     DictContainers are containers that wrap dictionaries.
     Modules are converted into DictContainers, and variables' and potentials'
@@ -453,9 +491,16 @@ class DictContainer(ContainerBase, dict):
       Container, ListContainer, TupleContainer, ArrayContainer, SetContainer,
       ObjectContainer
     """
-    change_methods = ['__setitem__', '__delitem__', 'clear', 'pop', 'popitem', 'update']
+    change_methods = [
+        '__setitem__',
+        '__delitem__',
+        'clear',
+        'pop',
+        'popitem',
+        'update']
     containing_classes = [dict]
-    register=True
+    register = True
+
     def __init__(self, iterable):
         dict.__init__(self, iterable)
         ContainerBase.__init__(self, iterable)
@@ -495,7 +540,8 @@ class DictContainer(ContainerBase, dict):
         self.DCValue.run()
         return self._value
 
-    value = property(fget = get_value, doc=value_doc)
+    value = property(fget=get_value, doc=value_doc)
+
 
 def conservative_update(obj, dict):
     for k in dict:
@@ -505,7 +551,9 @@ def conservative_update(obj, dict):
             except:
                 pass
 
+
 class ObjectContainer(ContainerBase):
+
     """
     ObjectContainers wrap non-iterable objects.
 
@@ -540,7 +588,8 @@ class ObjectContainer(ContainerBase):
       Container, ListContainer, DictContainer, ArrayContainer, SetContainer,
       TupleContainer
     """
-    register=False
+    register = False
+
     def __init__(self, input):
 
         if isinstance(input, dict):
@@ -548,18 +597,18 @@ class ObjectContainer(ContainerBase):
             conservative_update(self, input_to_file)
             # self.__dict__.update(input_to_file)
 
-        elif hasattr(input,'__iter__'):
+        elif hasattr(input, '__iter__'):
             input_to_file = input
 
-        else: # Modules, objects, etc.
+        else:  # Modules, objects, etc.
             input_to_file = input.__dict__
             conservative_update(self, input_to_file)
             # self.__dict__.update(input_to_file)
-        
+
         dictpop = copy(self.__dict__)
         if 'self' in dictpop:
             dictpop.pop('self')
-        
+
         self._dict_container = DictContainer(dictpop)
         file_items(self, input_to_file)
 
@@ -567,17 +616,17 @@ class ObjectContainer(ContainerBase):
         ContainerBase.__init__(self, input)
         self.OCValue = OCValue(self)
 
-
     def replace(self, item, new_container, key):
         dict.__setitem__(self.__dict__, key, new_container)
 
     def _get_value(self):
         self.OCValue.run()
         return self._value
-    value = property(fget = _get_value, doc=value_doc)
+    value = property(fget=_get_value, doc=value_doc)
 
 
 class ArrayContainer(ContainerBase, ndarray):
+
     """
     ArrayContainers wrap Numerical Python ndarrays. These are full
     ndarray subclasses, and should support all of ndarrays'
@@ -612,12 +661,14 @@ class ArrayContainer(ContainerBase, ndarray):
       TupleContainer
     """
 
-    register=True
+    register = True
     change_methods = []
     containing_classes = [ndarray]
+
     def __new__(subtype, array_in):
         if not array_in.dtype == dtype('object'):
-            raise ValueError('Cannot create container from array whose dtype is not object.')
+            raise ValueError(
+                'Cannot create container from array whose dtype is not object.')
 
         C = array(array_in, copy=True).view(subtype)
         C_ravel = C.ravel()
@@ -652,7 +703,6 @@ class ArrayContainer(ContainerBase, ndarray):
         C.nonval_obj = array(nonval_obj, dtype=object)
         C.n_nonval = len(nonval_ind)
 
-
         C.flags['W'] = False
         C.ACValue = ACValue(C)
 
@@ -666,5 +716,4 @@ class ArrayContainer(ContainerBase, ndarray):
         self.ACValue.run()
         return self._value
 
-    value = property(fget = get_value, doc=value_doc)
-
+    value = property(fget=get_value, doc=value_doc)

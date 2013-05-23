@@ -9,16 +9,25 @@ from . import six
 from .six import print_
 xrange = six.moves.xrange
 
-__all__ = ['geweke', 'gelman_rubin', 'raftery_lewis', 'validate', 'discrepancy', 'iat']
+__all__ = [
+    'geweke',
+    'gelman_rubin',
+    'raftery_lewis',
+    'validate',
+    'discrepancy',
+    'iat']
+
 
 def open01(x, limit=1.e-6):
     """Constrain numbers to (0,1) interval"""
     try:
-        return np.array([min(max(y, limit), 1.-limit) for y in x])
+        return np.array([min(max(y, limit), 1. - limit) for y in x])
     except TypeError:
-        return min(max(x, limit), 1.-limit)
+        return min(max(x, limit), 1. - limit)
+
 
 class diagnostic(object):
+
     """
     This decorator allows for PyMC arguments of various types to be passed to
     the diagnostic functions. It identifies the type of object and locates its
@@ -62,7 +71,7 @@ class diagnostic(object):
                     data = pymc_obj.trace()
                 name = pymc_obj.__name__
                 return f(data, *args, **kwargs)
-            except (AttributeError,ValueError):
+            except (AttributeError, ValueError):
                 pass
 
             # If others fail, assume that raw data is passed
@@ -74,7 +83,8 @@ class diagnostic(object):
         return wrapped_f
 
 
-def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, deterministic=False, db='ram', plot=True, verbose=0):
+def validate(sampler, replicates=20, iterations=10000, burn=5000,
+             thin=1, deterministic=False, db='ram', plot=True, verbose=0):
     """
     Model validation method, following Cook et al. (Journal of Computational and
     Graphical Statistics, 2006, DOI: 10.1198/106186006X136976).
@@ -168,7 +178,7 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
                     # Initialize dict
                     quantiles[s.__name__] = []
                 trace = s.trace()
-                q = sum(trace<param_values[s], 0)/float(len(trace))
+                q = sum(trace < param_values[s], 0) / float(len(trace))
                 quantiles[s.__name__].append(open01(q))
 
             # Replace data values
@@ -186,7 +196,6 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
         if not i % 10 and i and verbose:
             print_("\tCompleted validation replicate", i)
 
-
     # Replace backend
     sampler._assign_database_backend(original_backend)
 
@@ -195,7 +204,7 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000, thin=1, determ
     for param in quantiles:
         q = quantiles[param]
         # Calculate chi-square statistics
-        X2 = sum(sp.special.ndtri(q)**2)
+        X2 = sum(sp.special.ndtri(q) ** 2)
         # Calculate p-value
         p = sp.special.chdtrc(replicates, X2)
 
@@ -254,12 +263,15 @@ def geweke(x, first=.1, last=.5, intervals=20):
     Geweke (1992)
     """
 
-    if np.rank(x)>1:
+    if np.rank(x) > 1:
         return [geweke(y, first, last, intervals) for y in np.transpose(x)]
 
     # Filter out invalid intervals
     if first + last >= 1:
-        raise ValueError("Invalid intervals for Geweke convergence analysis",(first,last))
+        raise ValueError(
+            "Invalid intervals for Geweke convergence analysis",
+            (first,
+             last))
 
     # Initialize list of z-scores
     zscores = []
@@ -268,26 +280,28 @@ def geweke(x, first=.1, last=.5, intervals=20):
     end = len(x) - 1
 
     # Calculate starting indices
-    sindices = np.arange(0, end/2, step = int((end / 2) / (intervals-1)))
+    sindices = np.arange(0, end / 2, step=int((end / 2) / (intervals - 1)))
 
     # Loop over start indices
     for start in sindices:
 
         # Calculate slices
-        first_slice = x[start : start + int(first * (end - start))]
+        first_slice = x[start: start + int(first * (end - start))]
         last_slice = x[int(end - last * (end - start)):]
 
         z = (first_slice.mean() - last_slice.mean())
-        z /= np.sqrt(first_slice.std()**2 + last_slice.std()**2)
+        z /= np.sqrt(first_slice.std() ** 2 + last_slice.std() ** 2)
 
         zscores.append([start, z])
 
-    if intervals == None:
+    if intervals is None:
         return zscores[0]
     else:
         return zscores
 
 # From StatLib -- gibbsit.f
+
+
 @diagnostic()
 def raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1):
     """
@@ -337,10 +351,11 @@ def raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1):
 
         See the fortran source file `gibbsit.f` for more details and references.
     """
-    if np.rank(x)>1:
+    if np.rank(x) > 1:
         return [raftery_lewis(y, q, r, s, epsilon, verbose) for y in np.transpose(x)]
 
-    output = nmin, kthin, nburn, nprec, kmind = flib.gibbmain(x, q, r, s, epsilon)
+    output = nmin, kthin, nburn, nprec, kmind = flib.gibbmain(
+        x, q, r, s, epsilon)
 
     if verbose:
 
@@ -348,19 +363,28 @@ def raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1):
         print_("Raftery-Lewis Diagnostic")
         print_("========================")
         print_()
-        print_("%s iterations required (assuming independence) to achieve %s accuracy with %i percent probability." % (nmin, r, 100*s))
+        print_(
+            "%s iterations required (assuming independence) to achieve %s accuracy with %i percent probability." %
+            (nmin, r, 100 * s))
         print_()
-        print_("Thinning factor of %i required to produce a first-order Markov chain." % kthin)
+        print_(
+            "Thinning factor of %i required to produce a first-order Markov chain." %
+            kthin)
         print_()
-        print_("%i iterations to be discarded at the beginning of the simulation (burn-in)." % nburn)
+        print_(
+            "%i iterations to be discarded at the beginning of the simulation (burn-in)." %
+            nburn)
         print_()
         print_("%s subsequent iterations required." % nprec)
         print_()
-        print_("Thinning factor of %i required to produce an independence chain." % kmind)
+        print_(
+            "Thinning factor of %i required to produce an independence chain." %
+            kmind)
 
     return output
 
-def batch_means(x, f=lambda y:y, theta=.5, q=.95, burn=0):
+
+def batch_means(x, f=lambda y: y, theta=.5, q=.95, burn=0):
     """
     TODO: Use Bayesian CI.
 
@@ -395,19 +419,20 @@ def batch_means(x, f=lambda y:y, theta=.5, q=.95, burn=0):
     except ImportError:
         raise ImportError('SciPy must be installed to use batch_means.')
 
-    x=x[burn:]
+    x = x[burn:]
 
     n = len(x)
 
-    b = np.int(n**theta)
-    a = n/b
+    b = np.int(n ** theta)
+    a = n / b
 
-    t_quant = stats.t.isf(1-q,a-1)
+    t_quant = stats.t.isf(1 - q, a - 1)
 
-    Y = np.array([np.mean(f(x[i*b:(i+1)*b])) for i in xrange(a)])
-    sig = b / (a-1.) * sum((Y - np.mean(f(x))) ** 2)
+    Y = np.array([np.mean(f(x[i * b:(i + 1) * b])) for i in xrange(a)])
+    sig = b / (a - 1.) * sum((Y - np.mean(f(x))) ** 2)
 
     return t_quant * sig / np.sqrt(n)
+
 
 def discrepancy(observed, simulated, expected):
     """Calculates Freeman-Tukey statistics (Freeman and Tukey 1950) as
@@ -437,14 +462,20 @@ def discrepancy(observed, simulated, expected):
     # Ensure expected values are rxn
     expected = np.resize(expected, simulated.shape)
 
-    D_obs = np.sum([(np.sqrt(observed)-np.sqrt(e))**2 for e in expected], 1)
-    D_sim = np.sum([(np.sqrt(s)-np.sqrt(e))**2 for s,e in zip(simulated, expected)], 1)
+    D_obs = np.sum([(np.sqrt(observed) - np.sqrt(
+        e)) ** 2 for e in expected], 1)
+    D_sim = np.sum(
+        [(np.sqrt(s) - np.sqrt(e)) ** 2 for s,
+         e in zip(simulated,
+                  expected)],
+        1)
 
     # Print p-value
-    count = sum(s>o for o,s in zip(D_obs,D_sim))
-    print_('Bayesian p-value: p=%.3f' % (1.*count/len(D_obs)))
+    count = sum(s > o for o, s in zip(D_obs, D_sim))
+    print_('Bayesian p-value: p=%.3f' % (1. * count / len(D_obs)))
 
     return D_obs, D_sim
+
 
 @diagnostic(all_chains=True)
 def gelman_rubin(x):
@@ -487,27 +518,31 @@ def gelman_rubin(x):
     Gelman and Rubin (1992)"""
 
     if np.shape(x) < (2,):
-        raise ValueError('Gelman-Rubin diagnostic requires multiple chains of the same length.')
+        raise ValueError(
+            'Gelman-Rubin diagnostic requires multiple chains of the same length.')
 
     try:
-        m,n = np.shape(x)
+        m, n = np.shape(x)
     except ValueError:
         return [gelman_rubin(np.transpose(y)) for y in np.transpose(x)]
 
     # Calculate between-chain variance
-    B_over_n = np.sum((np.mean(x,1) - np.mean(x))**2)/(m-1)
+    B_over_n = np.sum((np.mean(x, 1) - np.mean(x)) ** 2) / (m - 1)
 
     # Calculate within-chain variances
-    W = np.sum([(x[i] - xbar)**2 for i,xbar in enumerate(np.mean(x,1))]) / (m*(n-1))
+    W = np.sum(
+        [(x[i] - xbar) ** 2 for i,
+         xbar in enumerate(np.mean(x,
+                                   1))]) / (m * (n - 1))
 
     # (over) estimate of variance
-    s2 = W*(n-1)/n + B_over_n
+    s2 = W * (n - 1) / n + B_over_n
 
     # Pooled posterior variance estimate
-    V = s2 + B_over_n/m
+    V = s2 + B_over_n / m
 
     # Calculate PSRF
-    R = V/W
+    R = V / W
 
     return R
 
@@ -518,29 +553,29 @@ def _find_max_lag(x, rho_limit=0.05, maxmaxlag=20000, verbose=0):
     # Fetch autocovariance matrix
     acv = autocov(x)
     # Calculate rho
-    rho = acv[0,1]/acv[0,0]
+    rho = acv[0, 1] / acv[0, 0]
 
-    lam = -1./np.log(abs(rho))
+    lam = -1. / np.log(abs(rho))
 
     # Initial guess at 1.5 times lambda (i.e. 3 times mean life)
-    maxlag = int(np.floor(3.*lam)) + 1
+    maxlag = int(np.floor(3. * lam)) + 1
 
     # Jump forward 1% of lambda to look for rholimit threshold
-    jump = int(np.ceil(0.01*lam)) + 1
+    jump = int(np.ceil(0.01 * lam)) + 1
 
     T = len(x)
 
-    while ((abs(rho) > rho_limit) & (maxlag < min(T/2, maxmaxlag))):
+    while ((abs(rho) > rho_limit) & (maxlag < min(T / 2, maxmaxlag))):
 
         acv = autocov(x, maxlag)
-        rho = acv[0,1]/acv[0,0]
+        rho = acv[0, 1] / acv[0, 0]
         maxlag += jump
 
     # Add 30% for good measure
-    maxlag = int(np.floor(1.3*maxlag))
+    maxlag = int(np.floor(1.3 * maxlag))
 
-    if maxlag >= min(T/2, maxmaxlag):
-        maxlag = min(min(T/2, maxlag), maxmaxlag)
+    if maxlag >= min(T / 2, maxmaxlag):
+        maxlag = min(min(T / 2, maxlag), maxmaxlag)
         "maxlag fixed to %d" % maxlag
         return maxlag
 
@@ -552,15 +587,18 @@ def _find_max_lag(x, rho_limit=0.05, maxmaxlag=20000, verbose=0):
         print_("maxlag = %d" % maxlag)
     return maxlag
 
+
 def _cut_time(gammas):
     """Support function for iat().
     Find cutting time, when gammas become negative."""
 
-    for i in range(len(gammas)-1):
+    for i in range(len(gammas) - 1):
 
-        if not ((gammas[i+1]>0.0) & (gammas[i+1]<gammas[i])): return i
+        if not ((gammas[i + 1] > 0.0) & (gammas[i + 1] < gammas[i])):
+            return i
 
     return i
+
 
 @diagnostic()
 def iat(x, maxlag=None):
@@ -570,15 +608,14 @@ def iat(x, maxlag=None):
         # Calculate maximum lag to which autocorrelation is calculated
         maxlag = _find_max_lag(x)
 
-    acr = [autocorr(x, lag) for lag in range(1, maxlag+1)]
+    acr = [autocorr(x, lag) for lag in range(1, maxlag + 1)]
 
     # Calculate gamma values
-    gammas = [(acr[2*i]+acr[2*i+1]) for i in range(maxlag//2)]
+    gammas = [(acr[2 * i] + acr[2 * i + 1]) for i in range(maxlag // 2)]
 
     cut = _cut_time(gammas)
 
-    if cut+1 == len(gammas):
+    if cut + 1 == len(gammas):
         print_("Not enough lag to calculate IAT")
 
-    return np.sum(2*gammas[:cut+1]) - 1.0
-
+    return np.sum(2 * gammas[:cut + 1]) - 1.0

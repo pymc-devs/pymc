@@ -27,7 +27,7 @@ from pymc import Normal, Lambda, observed
 from .melanoma_data import *
 
 # Convert censoring indicators to indicators for failure event
-failure = (censored==0).astype(int)
+failure = (censored == 0).astype(int)
 
 # Intercept for survival rate
 beta0 = Normal('beta0', mu=0.0, tau=0.0001, value=0.0)
@@ -35,12 +35,13 @@ beta0 = Normal('beta0', mu=0.0, tau=0.0001, value=0.0)
 beta1 = Normal('beta1', mu=0.0, tau=0.0001, value=0.0)
 
 # Survival rates
-lam = Lambda('lam', lambda b0=beta0, b1=beta1, t=treat: exp(b0 + b1*t))
+lam = Lambda('lam', lambda b0=beta0, b1=beta1, t=treat: exp(b0 + b1 * t))
+
 
 @observed
 def survival(value=t, lam=lam, f=failure):
     """Exponential survival likelihood, accounting for censoring"""
-    return sum(f*log(lam) - lam*value)
+    return sum(f * log(lam) - lam * value)
 
 if __name__ == '__main__':
     from pymc import MCMC, Matplot

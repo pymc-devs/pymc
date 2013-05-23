@@ -32,8 +32,9 @@ from . import six
 from .six import print_
 
 __all__ = ['func_quantiles', 'func_envelopes', 'func_sd_envelope',
-'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace',
-'geweke_plot', 'gof_plot', 'pair_posterior', 'summary_plot']
+           'centered_envelope', 'get_index_list', 'plot', 'histogram', 'trace',
+           'geweke_plot', 'gof_plot', 'pair_posterior', 'summary_plot']
+
 
 def get_index_list(shape, j):
     """
@@ -53,11 +54,11 @@ def get_index_list(shape, j):
 
     for i in r:
         if i < len(shape):
-            prodshape = prod(shape[i+1:])
+            prodshape = prod(shape[i + 1:])
         else:
-            prodshape=0
-        index_list[i] = int(floor(j/prodshape))
-        if index_list[i]>shape[i]:
+            prodshape = 0
+        index_list[i] = int(floor(j / prodshape))
+        if index_list[i] > shape[i]:
             raise IndexError('Requested index too large')
         j %= prodshape
 
@@ -85,7 +86,7 @@ def func_quantiles(node, qlist=(.025, .25, .5, .75, .975)):
     else:
         func_stacks = node
 
-    if any(qlist<0.) or any(qlist>1.):
+    if any(qlist < 0.) or any(qlist > 1.):
         raise TypeError('The elements of qlist must be between 0 and 1')
 
     func_stacks = func_stacks.copy()
@@ -95,13 +96,14 @@ def func_quantiles(node, qlist=(.025, .25, .5, .75, .975)):
 
     func_stacks.sort(axis=0)
 
-    quants = zeros((len(qlist),func_len),dtype=float)
-    alphas = 1.-abs(array(qlist)-.5)/.5
+    quants = zeros((len(qlist), func_len), dtype=float)
+    alphas = 1. - abs(array(qlist) - .5) / .5
 
     for i in range(len(qlist)):
-        quants[i,] = func_stacks[int(qlist[i]*N_samp),]
+        quants[i, ] = func_stacks[int(qlist[i] * N_samp), ]
 
     return quants, alphas
+
 
 def func_envelopes(node, CI=(.25, .5, .95)):
     """
@@ -136,13 +138,18 @@ def func_envelopes(node, CI=(.25, .5, .95)):
     qsort = sort(CI)
 
     for i in range(len(qsort)):
-        envelopes.append(centered_envelope(func_stacks, qsort[len(qsort)-i-1]))
+        envelopes.append(
+            centered_envelope(func_stacks,
+                              qsort[len(qsort) - i - 1]))
     envelopes.append(centered_envelope(func_stacks, 0.))
 
     return envelopes
 
 # FIXME: Not sure of the best way to bring these two into PlotFactory...
+
+
 class func_sd_envelope(object):
+
     """
     F = func_sd_envelope(func_stacks)
     F.display(axes,xlab=None,ylab=None,name=None)
@@ -158,68 +165,75 @@ class func_sd_envelope(object):
         else:
             func_stacks = node
         self.name = node.__name__
-        self._format=format
-        self._plotpath=plotpath
-        self.suffix=suffix
+        self._format = format
+        self._plotpath = plotpath
+        self.suffix = suffix
 
-        self.mean = mean(func_stacks,axis=0)
+        self.mean = mean(func_stacks, axis=0)
         self.std = std(func_stacks, axis=0)
 
         self.lo = self.mean - self.std
         self.hi = self.mean + self.std
 
-        self.ndim = len(shape(func_stacks))-1
+        self.ndim = len(shape(func_stacks)) - 1
 
-
-    def display(self,axes,xlab=None,ylab=None,name=None,new=True):
+    def display(self, axes, xlab=None, ylab=None, name=None, new=True):
         if name:
             name_str = name
         else:
             name_str = ''
 
-        if self.ndim==1:
+        if self.ndim == 1:
             if new:
                 figure()
-            pyplot(axes,self.lo,'k-.',label=name_str+' mean-sd')
-            pyplot(axes,self.hi,'k-.',label=name_str+'mean+sd')
-            pyplot(axes,self.mean,'k-',label=name_str+'mean')
+            pyplot(axes, self.lo, 'k-.', label=name_str + ' mean-sd')
+            pyplot(axes, self.hi, 'k-.', label=name_str + 'mean+sd')
+            pyplot(axes, self.mean, 'k-', label=name_str + 'mean')
             if name:
                 title(name)
 
-        elif self.ndim==2:
+        elif self.ndim == 2:
             if new:
-                figure(figsize=(14,4))
-            subplot(1,3,1)
-            contourf(axes[0],axes[1],self.lo,cmap=cm.bone)
-            title(name_str+' mean-sd')
+                figure(figsize=(14, 4))
+            subplot(1, 3, 1)
+            contourf(axes[0], axes[1], self.lo, cmap=cm.bone)
+            title(name_str + ' mean-sd')
             if xlab:
                 xlabel(xlab)
             if ylab:
                 ylabel(ylab)
             colorbar()
 
-            subplot(1,3,2)
-            contourf(axes[0],axes[1],self.mean,cmap=cm.bone)
-            title(name_str+' mean')
+            subplot(1, 3, 2)
+            contourf(axes[0], axes[1], self.mean, cmap=cm.bone)
+            title(name_str + ' mean')
             if xlab:
                 xlabel(xlab)
             if ylab:
                 ylabel(ylab)
             colorbar()
 
-            subplot(1,3,3)
-            contourf(axes[0],axes[1],self.hi,cmap=cm.bone)
-            title(name_str+' mean+sd')
+            subplot(1, 3, 3)
+            contourf(axes[0], axes[1], self.hi, cmap=cm.bone)
+            title(name_str + ' mean+sd')
             if xlab:
                 xlabel(xlab)
             if ylab:
                 ylabel(ylab)
             colorbar()
         else:
-            raise ValueError('Only 1- and 2- dimensional functions can be displayed')
-        savefig("%s%s%s.%s" % (self._plotpath,self.name,self.suffix,self._format))
+            raise ValueError(
+                'Only 1- and 2- dimensional functions can be displayed')
+        savefig(
+            "%s%s%s.%s" % (
+                self._plotpath,
+                self.name,
+                self.suffix,
+                self._format))
+
 
 class centered_envelope(object):
+
     """
     E = centered_envelope(sorted_func_stack, mass)
 
@@ -236,18 +250,18 @@ class centered_envelope(object):
     :SeeAlso: func_envelopes
     """
     def __init__(self, sorted_func_stack, mass):
-        if mass<0 or mass>1:
+        if mass < 0 or mass > 1:
             raise ValueError('mass must be between 0 and 1')
         N_samp = shape(sorted_func_stack)[0]
         self.mass = mass
-        self.ndim = len(sorted_func_stack.shape)-1
+        self.ndim = len(sorted_func_stack.shape) - 1
 
         if self.mass == 0:
-            self.value = sorted_func_stack[int(N_samp*.5),]
+            self.value = sorted_func_stack[int(N_samp * .5), ]
         else:
-            quandiff = .5*(1.-self.mass)
-            self.lo = sorted_func_stack[int(N_samp*quandiff),]
-            self.hi = sorted_func_stack[int(N_samp*(1.-quandiff)),]
+            quandiff = .5 * (1. - self.mass)
+            self.lo = sorted_func_stack[int(N_samp * quandiff), ]
+            self.hi = sorted_func_stack[int(N_samp * (1. - quandiff)), ]
 
     def display(self, xaxis, alpha, new=True):
         """
@@ -264,22 +278,35 @@ class centered_envelope(object):
         if new:
             figure()
         if self.ndim == 1:
-            if self.mass>0.:
-                x = concatenate((xaxis,xaxis[::-1]))
+            if self.mass > 0.:
+                x = concatenate((xaxis, xaxis[::-1]))
                 y = concatenate((self.lo, self.hi[::-1]))
-                fill(x,y,facecolor='%f' % self.mass,alpha=alpha, label = ('centered CI ' + str(self.mass)))
+                fill(
+                    x,
+                    y,
+                    facecolor='%f' % self.mass,
+                    alpha=alpha,
+                    label=(
+                        'centered CI ' + str(
+                            self.mass)))
             else:
-                pyplot(xaxis,self.value,'k-',alpha=alpha, label = ('median'))
+                pyplot(
+                    xaxis,
+                    self.value,
+                    'k-',
+                    alpha=alpha,
+                    label=(
+                        'median'))
         else:
-            if self.mass>0.:
-                subplot(1,2,1)
-                contourf(xaxis[0],xaxis[1],self.lo,cmap=cm.bone)
+            if self.mass > 0.:
+                subplot(1, 2, 1)
+                contourf(xaxis[0], xaxis[1], self.lo, cmap=cm.bone)
                 colorbar()
-                subplot(1,2,2)
-                contourf(xaxis[0],xaxis[1],self.hi,cmap=cm.bone)
+                subplot(1, 2, 2)
+                contourf(xaxis[0], xaxis[1], self.hi, cmap=cm.bone)
                 colorbar()
             else:
-                contourf(xaxis[0],xaxis[1],self.value,cmap=cm.bone)
+                contourf(xaxis[0], xaxis[1], self.value, cmap=cm.bone)
                 colorbar()
 
 
@@ -302,9 +329,9 @@ def plotwrapper(f):
             # First try Model type
             for variable in pymc_obj._variables_to_tally:
                 # Plot object
-                if variable._plot!=False:
+                if variable._plot:
                     data = pymc_obj.trace(variable.__name__)[start:]
-                    if size(data[-1])>=10 and variable._plot!=True:
+                    if size(data[-1]) >= 10 and variable._plot != True:
                         continue
                     elif variable.dtype is dtype('object'):
                         continue
@@ -327,7 +354,7 @@ def plotwrapper(f):
 
         try:
             # Then try Node type
-            if pymc_obj._plot!=False:
+            if pymc_obj._plot:
                 data = pymc_obj.trace()[start:]  # This is deprecated. DH
                 name = pymc_obj.__name__
                 f(data, name, *args, **kwargs)
@@ -335,7 +362,7 @@ def plotwrapper(f):
         except AttributeError:
             pass
 
-        if type(pymc_obj) == dict:
+        if isinstance(pymc_obj, dict):
             # Then try dictionary
             for i in pymc_obj:
                 data = pymc_obj[i][start:]
@@ -354,8 +381,9 @@ def plotwrapper(f):
 
 
 @plotwrapper
-def plot(data, name, format='png', suffix='', path='./', common_scale=True, datarange=(None, None),
-    new=True, last=True, rows=1, num=1, fontmap=None, verbose=1):
+def plot(
+    data, name, format='png', suffix='', path='./', common_scale=True, datarange=(None, None),
+        new=True, last=True, rows=1, num=1, fontmap=None, verbose=1):
     """
     Generates summary plots for nodes of a given PyMC object.
 
@@ -381,12 +409,13 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
 
     """
 
-    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
+    if fontmap is None:
+        fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
     # If there is only one data array, go ahead and plot it ...
-    if rank(data)==1:
+    if rank(data) == 1:
 
-        if verbose>0:
+        if verbose > 0:
             print_('Plotting', name)
 
         # If new plot, generate new frame
@@ -395,11 +424,35 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
             figure(figsize=(10, 6))
 
         # Call trace
-        trace(data, name, datarange=datarange, rows=rows*2, columns=2, num=num+3*(num-1), last=last, fontmap=fontmap)
+        trace(
+            data,
+            name,
+            datarange=datarange,
+            rows=rows * 2,
+            columns=2,
+            num=num + 3 * (num - 1),
+            last=last,
+            fontmap=fontmap)
         # Call autocorrelation
-        autocorrelation(data, name, rows=rows*2, columns=2, num=num+3*(num-1)+2, last=last, fontmap=fontmap)
+        autocorrelation(
+            data,
+            name,
+            rows=rows * 2,
+            columns=2,
+            num=num + 3 * (
+                num - 1) + 2,
+            last=last,
+            fontmap=fontmap)
         # Call histogram
-        histogram(data, name, datarange=datarange, rows=rows, columns=2, num=num*2, last=last, fontmap=fontmap)
+        histogram(
+            data,
+            name,
+            datarange=datarange,
+            rows=rows,
+            columns=2,
+            num=num * 2,
+            last=last,
+            fontmap=fontmap)
 
         if last:
             if not os.path.exists(path):
@@ -427,19 +480,33 @@ def plot(data, name, format='png', suffix='', path='./', common_scale=True, data
             # Current subplot number
             _num = i % _rows + 1
             # Final subplot of current figure?
-            _last = (_num==_rows) or (i==len(tdata)-1)
+            _last = (_num == _rows) or (i == len(tdata) - 1)
 
-            plot(tdata[i], name+'_'+str(i), format=format, path=path, common_scale=common_scale, datarange=datarange, suffix=suffix, new=_new, last=_last, rows=_rows, num=_num)
+            plot(
+                tdata[i],
+                name + '_' + str(i),
+                format=format,
+                path=path,
+                common_scale=common_scale,
+                datarange=datarange,
+                suffix=suffix,
+                new=_new,
+                last=_last,
+                rows=_rows,
+                num=_num)
 
 _sturges = lambda n: log2(n) + 1
 
-_doanes = lambda data, n: 1 + log(n) + log(1 + kurtosis(data)*(n/6.)**0.5)
+_doanes = lambda data, n: 1 + log(n) + log(
+    1 + kurtosis(data) * (n / 6.) ** 0.5)
 
 _sqrt_choice = lambda n: sqrt(n)
 
+
 @plotwrapper
-def histogram(data, name, bins='sturges', datarange=(None, None), format='png', suffix='', path='./', rows=1,
-    columns=1, num=1, last=True, fontmap = None, verbose=1):
+def histogram(
+    data, name, bins='sturges', datarange=(None, None), format='png', suffix='', path='./', rows=1,
+        columns=1, num=1, last=True, fontmap = None, verbose=1):
     """
     Generates histogram from an array of data.
 
@@ -470,39 +537,42 @@ def histogram(data, name, bins='sturges', datarange=(None, None), format='png', 
             Font map for plot.
     """
 
-
     # Internal histogram specification for handling nested arrays
     try:
 
-        if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
+        if fontmap is None:
+            fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
         # Stand-alone plot or subplot?
-        standalone = rows==1 and columns==1 and num==1
+        standalone = rows == 1 and columns == 1 and num == 1
         if standalone:
-            if verbose>0:
+            if verbose > 0:
                 print_('Generating histogram of', name)
             figure()
 
         subplot(rows, columns, num)
 
-        #Specify number of bins
+        # Specify number of bins
         uniquevals = len(unique(data))
         if isinstance(bins, int):
             pass
-        if bins=='sturges':
-            bins = uniquevals*(uniquevals<=25) or _sturges(len(data))
-        elif bins=='doanes':
-            bins = uniquevals*(uniquevals<=25) or _doanes(data, len(data))
-        elif bins=='sqrt':
-            bins = uniquevals*(uniquevals<=25) or _sqrt_choice(len(data))
+        if bins == 'sturges':
+            bins = uniquevals * (uniquevals <= 25) or _sturges(len(data))
+        elif bins == 'doanes':
+            bins = uniquevals * (uniquevals <= 25) or _doanes(data, len(data))
+        elif bins == 'sqrt':
+            bins = uniquevals * (uniquevals <= 25) or _sqrt_choice(len(data))
         elif isinstance(bins, int):
             bins = bins
         else:
             raise ValueError('Invalid bins argument in histogram')
 
         if isnan(bins):
-            bins = uniquevals*(uniquevals<=25) or int(4 + 1.5*log(len(data)))
-            print_('Bins could not be calculated using selected method. Setting bins to %i.' % bins)
+            bins = uniquevals * (uniquevals <= 25) or int(
+                4 + 1.5 * log(len(data)))
+            print_(
+                'Bins could not be calculated using selected method. Setting bins to %i.' %
+                bins)
 
         # Generate histogram
         hist(data.tolist(), bins, histtype='stepfilled')
@@ -510,7 +580,14 @@ def histogram(data, name, bins='sturges', datarange=(None, None), format='png', 
         xlim(datarange)
 
         # Plot options
-        title('\n\n   %s hist'%name, x=0., y=1., ha='left', va='top', fontsize='medium')
+        title(
+            '\n\n   %s hist' %
+            name,
+            x=0.,
+            y=1.,
+            ha='left',
+            va='top',
+            fontsize='medium')
 
         ylabel("Frequency", fontsize='x-small')
 
@@ -533,15 +610,16 @@ def histogram(data, name, bins='sturges', datarange=(None, None), format='png', 
                 path += '/'
             # Save to file
             savefig("%s%s%s.%s" % (path, name, suffix, format))
-            #close()
+            # close()
 
     except OverflowError:
         print_('... cannot generate histogram')
 
 
 @plotwrapper
-def trace(data, name, format='png', datarange=(None, None), suffix='', path='./', rows=1, columns=1,
-    num=1, last=True, fontmap = None, verbose=1):
+def trace(
+    data, name, format='png', datarange=(None, None), suffix='', path='./', rows=1, columns=1,
+        num=1, last=True, fontmap = None, verbose=1):
     """
     Generates trace plot from an array of data.
 
@@ -569,13 +647,14 @@ def trace(data, name, format='png', datarange=(None, None), suffix='', path='./'
 
     """
 
-    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
+    if fontmap is None:
+        fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
     # Stand-alone plot or subplot?
-    standalone = rows==1 and columns==1 and num==1
+    standalone = rows == 1 and columns == 1 and num == 1
 
     if standalone:
-        if verbose>0:
+        if verbose > 0:
             print_('Plotting', name)
         figure()
 
@@ -584,14 +663,21 @@ def trace(data, name, format='png', datarange=(None, None), suffix='', path='./'
     ylim(datarange)
 
     # Plot options
-    title('\n\n   %s trace'%name, x=0., y=1., ha='left', va='top', fontsize='small')
+    title(
+        '\n\n   %s trace' %
+        name,
+        x=0.,
+        y=1.,
+        ha='left',
+        va='top',
+        fontsize='small')
 
     # Smaller tick labels
     tlabels = gca().get_xticklabels()
-    setp(tlabels, 'fontsize', fontmap[max(rows/2,1)])
+    setp(tlabels, 'fontsize', fontmap[max(rows / 2, 1)])
 
     tlabels = gca().get_yticklabels()
-    setp(tlabels, 'fontsize', fontmap[max(rows/2,1)])
+    setp(tlabels, 'fontsize', fontmap[max(rows / 2, 1)])
 
     if standalone:
         if not os.path.exists(path):
@@ -600,14 +686,17 @@ def trace(data, name, format='png', datarange=(None, None), suffix='', path='./'
             path += '/'
         # Save to file
         savefig("%s%s%s.%s" % (path, name, suffix, format))
-        #close()
+        # close()
+
 
 @plotwrapper
-def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontmap = None,
-    verbose=1):
+def geweke_plot(
+    data, name, format='png', suffix='-diagnostic', path='./', fontmap=None,
+        verbose=1):
     # Generate Geweke (1992) diagnostic plots
 
-    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
+    if fontmap is None:
+        fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
     # Generate new scatter plot
     figure()
@@ -632,17 +721,20 @@ def geweke_plot(data, name, format='png', suffix='-diagnostic', path='./', fontm
     if not path.endswith('/'):
         path += '/'
     savefig("%s%s%s.%s" % (path, name, suffix, format))
-    #close()
+    # close()
+
 
 @plotwrapper
-def discrepancy_plot(data, name='discrepancy', report_p=True, format='png', suffix='-gof', path='./',
-    fontmap = None, verbose=1):
+def discrepancy_plot(
+    data, name='discrepancy', report_p=True, format='png', suffix='-gof', path='./',
+        fontmap=None, verbose=1):
     # Generate goodness-of-fit deviate scatter plot
 
-    if verbose>0:
-        print_('Plotting', name+suffix)
+    if verbose > 0:
+        print_('Plotting', name + suffix)
 
-    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
+    if fontmap is None:
+        fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
     # Generate new scatter plot
     figure()
@@ -655,9 +747,9 @@ def discrepancy_plot(data, name='discrepancy', report_p=True, format='png', suff
     # Plot x=y line
     lo = nmin(ravel(data))
     hi = nmax(ravel(data))
-    datarange = hi-lo
-    lo -= 0.1*datarange
-    hi += 0.1*datarange
+    datarange = hi - lo
+    lo -= 0.1 * datarange
+    hi += 0.1 * datarange
     pyplot((lo, hi), (lo, hi))
 
     # Plot options
@@ -666,9 +758,9 @@ def discrepancy_plot(data, name='discrepancy', report_p=True, format='png', suff
 
     if report_p:
         # Put p-value in legend
-        count = sum(s>o for o,s in zip(x,y))
-        text(lo+0.1*datarange, hi-0.1*datarange,
-             'p=%.3f' % (count/len(x)), horizontalalignment='center',
+        count = sum(s > o for o, s in zip(x, y))
+        text(lo + 0.1 * datarange, hi - 0.1 * datarange,
+             'p=%.3f' % (count / len(x)), horizontalalignment='center',
              fontsize=10)
 
     # Save to file
@@ -677,10 +769,12 @@ def discrepancy_plot(data, name='discrepancy', report_p=True, format='png', suff
     if not path.endswith('/'):
         path += '/'
     savefig("%s%s%s.%s" % (path, name, suffix, format))
-    #close()
+    # close()
 
-def gof_plot(simdata, trueval, name=None, bins=None, format='png', suffix='-gof', path='./',
-    fontmap = None, verbose=1):
+
+def gof_plot(
+    simdata, trueval, name=None, bins=None, format='png', suffix='-gof', path='./',
+        fontmap=None, verbose=1):
     """
     Plots histogram of replicated data, indicating the location of the observed data
 
@@ -709,39 +803,54 @@ def gof_plot(simdata, trueval, name=None, bins=None, format='png', suffix='-gof'
 
     """
 
-
-    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
+    if fontmap is None:
+        fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
     try:
-        if ndim(simdata)==1:
+        if ndim(simdata) == 1:
             simdata = simdata.trace()
     except ValueError:
         pass
 
-    if ndim(trueval)==1 and ndim(simdata==2):
+    if ndim(trueval) == 1 and ndim(simdata == 2):
         # Iterate over more than one set of data
         for i in range(len(trueval)):
             n = name or 'MCMC'
-            gof_plot(simdata[:,i], trueval[i], '%s[%i]' % (n, i), bins=bins, format=format, suffix=suffix, path=path, fontmap=fontmap, verbose=verbose)
+            gof_plot(
+                simdata[
+                    :,
+                    i],
+                trueval[
+                    i],
+                '%s[%i]' % (
+                n,
+                    i),
+                bins=bins,
+                format=format,
+                suffix=suffix,
+                path=path,
+                fontmap=fontmap,
+                verbose=verbose)
         return
 
-    if verbose>0:
+    if verbose > 0:
         print_('Plotting', (name or 'MCMC') + suffix)
 
     figure()
 
-    #Specify number of bins
+    # Specify number of bins
     uniquevals = len(unique(simdata))
-    if bins=='sturges':
-        bins = uniquevals*(uniquevals<=25) or _sturges(len(simdata))
-    elif bins=='doanes':
-        bins = uniquevals*(uniquevals<=25) or _doanes(simdata, len(simdata))
-    elif bins=='sqrt':
-        bins = uniquevals*(uniquevals<=25) or _sqrt_choice(len(simdata))
+    if bins == 'sturges':
+        bins = uniquevals * (uniquevals <= 25) or _sturges(len(simdata))
+    elif bins == 'doanes':
+        bins = uniquevals * (
+            uniquevals <= 25) or _doanes(simdata,
+                                         len(simdata))
+    elif bins == 'sqrt':
+        bins = uniquevals * (uniquevals <= 25) or _sqrt_choice(len(simdata))
     elif isinstance(bins, int):
         bins = bins
     else:
         raise ValueError('Invalid bins argument in gof_plot')
-
 
     # Generate histogram
     hist(simdata, bins)
@@ -766,11 +875,13 @@ def gof_plot(simdata, trueval, name=None, bins=None, format='png', suffix='-gof'
         path += '/'
     # Save to file
     savefig("%s%s%s.%s" % (path, name or 'MCMC', suffix, format))
-    #close()
+    # close()
+
 
 @plotwrapper
-def autocorrelation(data, name, maxlags=100, format='png', reflected=False, suffix='-acf', path='./',
-    fontmap = None, new=True, last=True, rows=1, columns=1, num=1, verbose=1):
+def autocorrelation(
+    data, name, maxlags=100, format='png', reflected=False, suffix='-acf', path='./',
+        fontmap=None, new=True, last=True, rows=1, columns=1, num=1, verbose=1):
     """
     Generate bar plot of the autocorrelation function for a series (usually an MCMC trace).
 
@@ -802,19 +913,20 @@ def autocorrelation(data, name, maxlags=100, format='png', reflected=False, suff
     """
     # Internal plotting specification for handling nested arrays
 
-    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
+    if fontmap is None:
+        fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
     # Stand-alone plot or subplot?
-    standalone = rows==1 and columns==1 and num==1
+    standalone = rows == 1 and columns == 1 and num == 1
 
     if standalone:
-        if verbose>0:
+        if verbose > 0:
             print_('Plotting', name)
         figure()
 
     subplot(rows, columns, num)
     if ndim(data) == 1:
-        maxlags = min(len(data)-1, maxlags)
+        maxlags = min(len(data) - 1, maxlags)
         try:
             acorr(data, detrend=mlab.detrend_mean, maxlags=maxlags)
         except:
@@ -823,10 +935,17 @@ def autocorrelation(data, name, maxlags=100, format='png', reflected=False, suff
 
         # Set axis bounds
         ylim(-.1, 1.1)
-        xlim(-maxlags*reflected or 0, maxlags)
+        xlim(-maxlags * reflected or 0, maxlags)
 
         # Plot options
-        title('\n\n   %s acorr'%name, x=0., y=1., ha='left', va='top', fontsize='small')
+        title(
+            '\n\n   %s acorr' %
+            name,
+            x=0.,
+            y=1.,
+            ha='left',
+            va='top',
+            fontsize='small')
 
         # Smaller tick labels
         tlabels = gca().get_xticklabels()
@@ -838,9 +957,19 @@ def autocorrelation(data, name, maxlags=100, format='png', reflected=False, suff
         # generate acorr plot for each dimension
         rows = data.shape[1]
         for j in range(rows):
-            autocorrelation(data[:, j], '%s_%d' % (name, j), maxlags, fontmap=fontmap, rows=rows, columns=1, num=j+1)
+            autocorrelation(
+                data[:,
+                     j],
+                '%s_%d' % (name,
+                           j),
+                maxlags,
+                fontmap=fontmap,
+                rows=rows,
+                columns=1,
+                num=j + 1)
     else:
-        raise ValueError('Only 1- and 2- dimensional functions can be displayed')
+        raise ValueError(
+            'Only 1- and 2- dimensional functions can be displayed')
 
     if standalone:
         if not os.path.exists(path):
@@ -849,21 +978,23 @@ def autocorrelation(data, name, maxlags=100, format='png', reflected=False, suff
             path += '/'
         # Save to fiel
         savefig("%s%s%s.%s" % (path, name, suffix, format))
-        #close()
+        # close()
 
 
-def zplot(pvalue_dict, name='', format='png', path='./', fontmap = None, verbose=1):
+def zplot(pvalue_dict, name='',
+          format='png', path='./', fontmap=None, verbose=1):
     """Plots absolute values of z-scores for model validation output from
     diagnostics.validate()."""
 
     if verbose:
         print_('\nGenerating model validation plot')
 
-    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
+    if fontmap is None:
+        fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
-    x,y,labels = [],[],[]
+    x, y, labels = [], [], []
 
-    for i,var in enumerate(pvalue_dict):
+    for i, var in enumerate(pvalue_dict):
 
         # Get p-values
         pvals = pvalue_dict[var]
@@ -871,7 +1002,7 @@ def zplot(pvalue_dict, name='', format='png', path='./', fontmap = None, verbose
         zvals = abs(special.ndtri(pvals))
 
         x = append(x, zvals)
-        y = append(y, ones(size(zvals))*(i+1))
+        y = append(y, ones(size(zvals)) * (i + 1))
 
         vname = var
         vname += " (%i)" % size(zvals)
@@ -884,10 +1015,10 @@ def zplot(pvalue_dict, name='', format='png', path='./', fontmap = None, verbose
     # Plot scores
     pyplot(x, y, 'o')
     # Set range on axes
-    ylim(0, size(pvalue_dict)+2)
+    ylim(0, size(pvalue_dict) + 2)
     xlim(xmin=0)
     # Tick labels for y-axis
-    yticks(arange(len(labels)+2), append(append("", labels), ""))
+    yticks(arange(len(labels) + 2), append(append("", labels), ""))
     # X label
     xlabel("Absolute z transformation of p-values")
 
@@ -913,7 +1044,7 @@ def var_str(name, shape):
 
     size = prod(shape)
     ind = (indices(shape) + 1).reshape(-1, size)
-    names = ['['+','.join(map(str, i))+']' for i in zip(*ind)]
+    names = ['[' + ','.join(map(str, i)) + ']' for i in zip(*ind)]
     # if len(name)>12:
     #     name = '\n'.join(name.split('_'))
     #     name += '\n'
@@ -921,9 +1052,10 @@ def var_str(name, shape):
     return names
 
 
-def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path='./',
+def summary_plot(
+    pymc_obj, name='model', format='png', suffix='-summary', path='./',
     alpha=0.05, quartiles=True, hpd=True, rhat=True, main=None, xlab=None, x_range=None,
-    custom_labels=None, chain_spacing=0.05, vline_pos=0):
+        custom_labels=None, chain_spacing=0.05, vline_pos=0):
     """
     Model summary plot
 
@@ -984,13 +1116,14 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
     """
 
     if not gridspec:
-        print_('\nYour installation of matplotlib is not recent enough to support summary_plot; this function is disabled until matplotlib is updated.')
+        print_(
+            '\nYour installation of matplotlib is not recent enough to support summary_plot; this function is disabled until matplotlib is updated.')
         return
 
     # Quantiles to be calculated
-    quantiles = [100*alpha/2, 50, 100*(1-alpha/2)]
+    quantiles = [100 * alpha / 2, 50, 100 * (1 - alpha / 2)]
     if quartiles:
-        quantiles = [100*alpha/2, 25, 50, 75, 100*(1-alpha/2)]
+        quantiles = [100 * alpha / 2, 25, 50, 75, 100 * (1 - alpha / 2)]
 
     # Range for x-axis
     plotrange = None
@@ -1035,21 +1168,20 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             print 'Could not calculate Gelman-Rubin statistics. Requires multiple chains of equal length.'
             rhat = False
 
-
     # Empty list for y-axis labels
     labels = []
     # Counter for current variable
     var = 1
 
     # Make sure there is something to print
-    if all([v._plot==False for v in vars]):
+    if all([v._plot == False for v in vars]):
         print_('No variables to plot')
         return
 
     for variable in vars:
 
         # If plot flag is off, do not print
-        if variable._plot==False:
+        if variable._plot == False:
             continue
 
         # Extract name
@@ -1059,19 +1191,19 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         i = 0
         traces = []
         while True:
-           try:
-               #traces.append(pymc_obj.trace(varname, chain=i)[:])
-               traces.append(variable.trace(chain=i))
-               i+=1
-           except (KeyError, IndexError):
-               break
+            try:
+                # traces.append(pymc_obj.trace(varname, chain=i)[:])
+                traces.append(variable.trace(chain=i))
+                i += 1
+            except (KeyError, IndexError):
+                break
 
         chains = len(traces)
 
         if gs is None:
             # Initialize plot
-            if rhat and chains>1:
-                gs = gridspec.GridSpec(1, 2, width_ratios=[3,1])
+            if rhat and chains > 1:
+                gs = gridspec.GridSpec(1, 2, width_ratios=[3, 1])
 
             else:
 
@@ -1084,7 +1216,7 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         data = [calc_quantiles(d, quantiles) for d in traces]
         if hpd:
             # Substitute HPD interval
-            for i,d in enumerate(traces):
+            for i, d in enumerate(traces):
                 hpd_interval = calc_hpd(d, alpha).T
                 data[i][quantiles[0]] = hpd_interval[0]
                 data[i][quantiles[-1]] = hpd_interval[1]
@@ -1092,7 +1224,11 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         data = [[d[q] for q in quantiles] for d in data]
         # Ensure x-axis contains range of current interval
         if plotrange:
-            plotrange = [min(plotrange[0], nmin(data)), max(plotrange[1], nmax(data))]
+            plotrange = [min(
+                         plotrange[0],
+                         nmin(data)),
+                         max(plotrange[1],
+                             nmax(data))]
         else:
             plotrange = [nmin(data), nmax(data)]
 
@@ -1107,39 +1243,52 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         k = size(value)
 
         # Append variable name(s) to list
-        if k>1:
+        if k > 1:
             names = var_str(varname, shape(value))
             labels += names
         else:
             labels.append(varname)
-            #labels.append('\n'.join(varname.split('_')))
+            # labels.append('\n'.join(varname.split('_')))
 
         # Add spacing for each chain, if more than one
-        e = [0] + [(chain_spacing * ((i+2)/2))*(-1)**i for i in range(chains-1)]
+        e = [0] + [(chain_spacing * ((i + 2) / 2)) * (
+            -1) ** i for i in range(chains - 1)]
 
         # Loop over chains
-        for j,quants in enumerate(data):
+        for j, quants in enumerate(data):
 
             # Deal with multivariate nodes
-            if k>1:
+            if k > 1:
 
-                for i,q in enumerate(transpose(quants)):
+                for i, q in enumerate(transpose(quants)):
 
                     # Y coordinate with jitter
-                    y = -(var+i) + e[j]
+                    y = -(var + i) + e[j]
 
                     if quartiles:
                         # Plot median
                         pyplot(q[2], y, 'bo', markersize=4)
                         # Plot quartile interval
-                        errorbar(x=(q[1],q[3]), y=(y,y), linewidth=2, color="blue")
+                        errorbar(
+                            x=(q[1],
+                                q[3]),
+                            y=(y,
+                                y),
+                            linewidth=2,
+                            color="blue")
 
                     else:
                         # Plot median
                         pyplot(q[1], y, 'bo', markersize=4)
 
                     # Plot outer interval
-                    errorbar(x=(q[0],q[-1]), y=(y,y), linewidth=1, color="blue")
+                    errorbar(
+                        x=(q[0],
+                            q[-1]),
+                        y=(y,
+                            y),
+                        linewidth=1,
+                        color="blue")
 
             else:
 
@@ -1150,13 +1299,25 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
                     # Plot median
                     pyplot(quants[2], y, 'bo', markersize=4)
                     # Plot quartile interval
-                    errorbar(x=(quants[1],quants[3]), y=(y,y), linewidth=2, color="blue")
+                    errorbar(
+                        x=(quants[1],
+                            quants[3]),
+                        y=(y,
+                            y),
+                        linewidth=2,
+                        color="blue")
                 else:
                     # Plot median
                     pyplot(quants[1], y, 'bo', markersize=4)
 
                 # Plot outer interval
-                errorbar(x=(quants[0],quants[-1]), y=(y,y), linewidth=1, color="blue")
+                errorbar(
+                    x=(quants[0],
+                        quants[-1]),
+                    y=(y,
+                        y),
+                    linewidth=1,
+                    color="blue")
 
         # Increment index
         var += k
@@ -1165,21 +1326,22 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         labels = custom_labels
 
     # Update margins
-    left_margin = max([len(x) for x in labels])*0.015
+    left_margin = max([len(x) for x in labels]) * 0.015
     gs.update(left=left_margin, right=0.95, top=0.9, bottom=0.05)
 
     # Define range of y-axis
-    ylim(-var+0.5, -0.5)
+    ylim(-var + 0.5, -0.5)
 
     datarange = plotrange[1] - plotrange[0]
-    xlim(plotrange[0] - 0.05*datarange, plotrange[1] + 0.05*datarange)
+    xlim(plotrange[0] - 0.05 * datarange, plotrange[1] + 0.05 * datarange)
 
     # Add variable labels
-    yticks([-(l+1) for l in range(len(labels))], labels)
+    yticks([-(l + 1) for l in range(len(labels))], labels)
 
     # Add title
     if main is not False:
-        plot_title = main or str(int((1-alpha)*100)) + "% Credible Intervals"
+        plot_title = main or str(int((
+            1 - alpha) * 100)) + "% Credible Intervals"
         title(plot_title)
 
     # Add x-axis label
@@ -1196,17 +1358,17 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
         ticks.tick2On = False
 
     for loc, spine in six.iteritems(interval_plot.spines):
-        if loc in ['bottom','top']:
+        if loc in ['bottom', 'top']:
             pass
-            #spine.set_position(('outward',10)) # outward by 10 points
-        elif loc in ['left','right']:
-            spine.set_color('none') # don't draw spine
+            # spine.set_position(('outward',10)) # outward by 10 points
+        elif loc in ['left', 'right']:
+            spine.set_color('none')  # don't draw spine
 
     # Reference line
     axvline(vline_pos, color='k', linestyle='--')
 
     # Genenerate Gelman-Rubin plot
-    if rhat and chains>1:
+    if rhat and chains > 1:
 
         # If there are multiple chains, calculate R-hat
         rhat_plot = subplot(gs[1])
@@ -1215,16 +1377,16 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             title("R-hat")
 
         # Set x range
-        xlim(0.9,2.1)
+        xlim(0.9, 2.1)
 
         # X axis labels
-        xticks((1.0,1.5,2.0), ("1", "1.5", "2+"))
-        yticks([-(l+1) for l in range(len(labels))], "")
+        xticks((1.0, 1.5, 2.0), ("1", "1.5", "2+"))
+        yticks([-(l + 1) for l in range(len(labels))], "")
 
         i = 1
         for variable in vars:
 
-            if variable._plot==False:
+            if variable._plot == False:
                 continue
 
             # Extract name
@@ -1237,15 +1399,16 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
 
             k = size(value)
 
-            if k>1:
-                pyplot([min(r, 2) for r in R[varname]], [-(j+i) for j in range(k)], 'bo', markersize=4)
+            if k > 1:
+                pyplot([min(r, 2) for r in R[varname]], [-(j + i)
+                       for j in range(k)], 'bo', markersize=4)
             else:
                 pyplot(min(R[varname], 2), -i, 'bo', markersize=4)
 
             i += k
 
         # Define range of y-axis
-        ylim(-i+0.5, -0.5)
+        ylim(-i + 0.5, -0.5)
 
         # Remove ticklines on y-axes
         for ticks in rhat_plot.yaxis.get_major_ticks():
@@ -1253,10 +1416,10 @@ def summary_plot(pymc_obj, name='model', format='png',  suffix='-summary', path=
             ticks.tick2On = False
 
         for loc, spine in six.iteritems(rhat_plot.spines):
-            if loc in ['bottom','top']:
+            if loc in ['bottom', 'top']:
                 pass
-                #spine.set_position(('outward',10)) # outward by 10 points
-            elif loc in ['left','right']:
-                spine.set_color('none') # don't draw spine
+                # spine.set_position(('outward',10)) # outward by 10 points
+            elif loc in ['left', 'right']:
+                spine.set_color('none')  # don't draw spine
 
     savefig("%s%s%s.%s" % (path, name, suffix, format))

@@ -13,7 +13,7 @@ import numpy as np
 
 
 class BinaryTestModel:
-    series = np.array([0,0,1,1,0,0,0,1,1,1])
+    series = np.array([0, 0, 1, 1, 0, 0, 0, 1, 1, 1])
 
     fair = pymc.Bernoulli('fair', p=.5, value=1)
 
@@ -35,13 +35,13 @@ class BinaryTestModel:
 
 
 class TestBinary(TestCase):
+
     def test(self):
-        S = pymc.MCMC(input = BinaryTestModel)
-        S.sample(1000,500, progress_bar=0)
+        S = pymc.MCMC(input=BinaryTestModel)
+        S.sample(1000, 500, progress_bar=0)
         f = S.fair.trace()
-        assert(1.0*f.sum()/len(f) > .5)
+        assert(1.0 * f.sum() / len(f) > .5)
 
 if __name__ == '__main__':
     import unittest
     unittest.main()
-

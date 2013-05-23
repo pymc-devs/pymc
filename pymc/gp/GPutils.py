@@ -1,8 +1,8 @@
 # Copyright (c) Anand Patil, 2007
 
-__docformat__='reStructuredText'
+__docformat__ = 'reStructuredText'
 __all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', 'trimult', 'trisolve', 'vecs_to_datmesh', 'caching_call', 'caching_callable',
-            'fast_matrix_copy', 'point_predict','square_and_sum','point_eval']
+            'fast_matrix_copy', 'point_predict', 'square_and_sum', 'point_eval']
 
 
 # TODO: Implement lintrans, allow obs_V to be a huge matrix or an ndarray in observe().
@@ -37,12 +37,12 @@ def fast_matrix_copy(f, t=None, n_threads=1):
         raise RuntimeError('This will not be fast unless input array f is Fortran-contiguous.')
 
     if t is None:
-        t=asmatrix(empty(f.shape, order='F'))
+        t = asmatrix(empty(f.shape, order='F'))
     elif not t.flags['F_CONTIGUOUS']:
         raise RuntimeError('This will not be fast unless input array t is Fortran-contiguous.')
 
     # Figure out how to divide job up between threads.
-    dcopy_wrap(ravel(asarray(f.T)),ravel(asarray(t.T)))
+    dcopy_wrap(ravel(asarray(f.T)), ravel(asarray(t.T)))
     return t
 
 def zero_lower_triangle(C):
@@ -55,12 +55,12 @@ def caching_call(f, x, x_sofar, f_sofar):
     """
     lenx = x.shape[0]
 
-    nr,rf,rt,nu,xu,ui = remove_duplicates(x)
+    nr, rf, rt, nu, xu, ui = remove_duplicates(x)
 
-    unique_indices=ui[:nu]
-    x_unique=xu[:nu]
-    repeat_from=rf[:nr]
-    repeat_to=rt[:nr]
+    unique_indices = ui[:nu]
+    x_unique = xu[:nu]
+    repeat_from = rf[:nr]
+    repeat_to = rt[:nr]
 
     # Check which observations have already been made.
     if x_sofar is not None:
@@ -68,7 +68,7 @@ def caching_call(f, x, x_sofar, f_sofar):
         f_unique, new_indices, N_new_indices  = check_repeats(x_unique, x_sofar, f_sofar)
 
         # If there are any new input points, draw values over them.
-        if N_new_indices>0:
+        if N_new_indices > 0:
 
             x_new = x_unique[new_indices[:N_new_indices]]
             f_new = f(x_new)
@@ -79,7 +79,7 @@ def caching_call(f, x, x_sofar, f_sofar):
             x_sofar = vstack((x_sofar, x_new))
             f_sofar = hstack((f_sofar, f_new))
         else:
-            f=f_unique
+            f = f_unique
 
     # If no observations have been made, don't check.
     else:
@@ -87,18 +87,18 @@ def caching_call(f, x, x_sofar, f_sofar):
         x_sofar = x_unique
         f_sofar = f_unique
 
-    f=empty(lenx)
-    f[unique_indices]=f_unique
-    f[repeat_to]=f[repeat_from]
+    f = empty(lenx)
+    f[unique_indices] = f_unique
+    f[repeat_to] = f[repeat_from]
 
     return f, x_sofar, f_sofar
     
-def square_and_sum(a,s):
+def square_and_sum(a, s):
     """
     Writes np.sum(a**2,axis=0) into s
     """
     cmin, cmax = thread_partition_array(a)
-    map_noreturn(asqs, [(a,s,cmin[i],cmax[i]) for i in xrange(len(cmax))])
+    map_noreturn(asqs, [(a, s, cmin[i], cmax[i]) for i in xrange(len(cmax))])
     return a
 
 class caching_callable(object):
@@ -138,10 +138,10 @@ def vecs_to_datmesh(x, y):
     Converts input arguments x and y to a 2d meshgrid,
     suitable for calling Means, Covariances and Realizations.
     """
-    x,y = meshgrid(x,y)
+    x, y = meshgrid(x, y)
     out = zeros(x.shape + (2,), dtype=float)
-    out[:,:,0] = x
-    out[:,:,1] = y
+    out[:,:, 0] = x
+    out[:,:, 1] = y
     return out
 
 def trimult(U,x,uplo='U',transa='N',alpha=1.,inplace=False):
@@ -153,10 +153,10 @@ def trimult(U,x,uplo='U',transa='N',alpha=1.,inplace=False):
     or lower triangular if uplo = 'L'.
     """
     if inplace:
-        b=x
+        b = x
     else:
         b = x.copy('F')
-    dtrmm_wrap(a=U,b=b,uplo=uplo,transa=transa,alpha=alpha)
+    dtrmm_wrap(a=U, b=b, uplo=uplo, transa=transa, alpha=alpha)
     return b
 
 
@@ -172,12 +172,12 @@ def trisolve(U,b,uplo='U',transa='N',alpha=1.,inplace=False):
     If a degenerate column is found, an error is raised.
     """
     if inplace:
-        x=b
+        x = b
     else:
         x = b.copy('F')
     if U.shape[0] == 0:
         raise ValueError('Attempted to solve zero-rank triangular system')
-    dtrsm_wrap(a=U,b=x,side='L',uplo=uplo,transa=transa,alpha=alpha)
+    dtrsm_wrap(a=U, b=x, side='L', uplo=uplo, transa=transa, alpha=alpha)
     return x
 
 def regularize_array(A):
@@ -195,24 +195,24 @@ def regularize_array(A):
     number of spatial dimensions.
     """
     # Make sure A is an array.
-    if not isinstance(A,ndarray):
+    if not isinstance(A, ndarray):
         A = array(A, dtype=float)
     elif A.__class__ is not ndarray:
         A = asarray(A, dtype=float)
 
     # If A is one-dimensional, interpret it as an array of points on the line.
     if len(A.shape) <= 1:
-        return A.reshape(-1,1)
+        return A.reshape(-1, 1)
 
     # Otherwise, interpret it as an array of n-dimensional points, where n
     # is the size of A along its last index.
-    elif A.shape[-1]>1 and len(A.shape) > 2:
+    elif A.shape[-1] > 1 and len(A.shape) > 2:
         return A.reshape(-1, A.shape[-1])
 
     else:
         return A
 
-def plot_envelope(M,C,mesh):
+def plot_envelope(M, C, mesh):
     """
     plot_envelope(M,C,mesh)
 
@@ -232,13 +232,13 @@ def plot_envelope(M,C,mesh):
 
     try:
         from pylab import fill, plot, clf, axis
-        x=concatenate((mesh, mesh[::-1]))
-        mean, var = point_eval(M,C,mesh)
+        x = concatenate((mesh, mesh[::-1]))
+        mean, var = point_eval(M, C, mesh)
         sig = sqrt(var)
         mean = M(mesh)
-        y=concatenate((mean-sig, (mean+sig)[::-1]))
+        y = concatenate((mean-sig, (mean+sig)[::-1]))
         # clf()
-        fill(x,y,facecolor='.8',edgecolor='1.')
+        fill(x, y, facecolor='.8', edgecolor='1.')
         plot(mesh, mean, 'k-.')
     except ImportError:
         print_("Matplotlib is not installed; plotting is disabled.")
@@ -312,11 +312,11 @@ def predictive_check(obs_vals, obs_mesh, M, posdef_indices, tolerance):
         -   `tolerance`: The maximum allowable deviation at M(obs_mesh[non_posdef_indices]).
     """
 
-    non_posdef_indices = array(list(set(range(len(obs_vals))) - set(posdef_indices)),dtype=int)
-    if len(non_posdef_indices)>0:
+    non_posdef_indices = array(list(set(range(len(obs_vals))) - set(posdef_indices)), dtype=int)
+    if len(non_posdef_indices) > 0:
         M_under = M(obs_mesh[non_posdef_indices,:]).ravel()
         dev = abs((M_under - obs_vals[non_posdef_indices]))
-        if dev.max()>tolerance:
+        if dev.max() > tolerance:
             return False
 
     return True
@@ -336,8 +336,8 @@ def point_predict(f, x, size=1, nugget=None):
     V = f.C_internal(x, regularize=False)
     if nugget is not None:
         V += nugget
-    out= random.normal(size=(size, x.shape[0])) * sqrt(V) + mu
-    return out.reshape((size,)+ orig_shape[:-1]).squeeze()
+    out = random.normal(size=(size, x.shape[0])) * sqrt(V) + mu
+    return out.reshape((size,) + orig_shape[:-1]).squeeze()
 
 
 def point_eval(M, C, x):
@@ -364,10 +364,10 @@ def point_eval(M, C, x):
         y_size = 1
     
     n_chunks = ceil(y_size*x_.shape[0]/float(chunksize))
-    bounds = array(linspace(0,x_.shape[0],n_chunks+1),dtype='int')
-    cmin=bounds[:-1]
-    cmax=bounds[1:]
-    for (cmin,cmax) in zip(bounds[:-1],bounds[1:]):           
+    bounds = array(linspace(0, x_.shape[0], n_chunks+1), dtype='int')
+    cmin = bounds[:-1]
+    cmax = bounds[1:]
+    for (cmin, cmax) in zip(bounds[:-1], bounds[1:]):           
         x__ = x_[cmin:cmax] 
         V_out[cmin:cmax], Uo_Cxo = C(x__, regularize=False, return_Uo_Cxo=True)
         M_out[cmin:cmax] = M(x__, regularize=False, Uo_Cxo=Uo_Cxo)

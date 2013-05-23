@@ -2,11 +2,13 @@
 Base classes are defined here.
 """
 
-__docformat__='reStructuredText'
+__docformat__ = 'reStructuredText'
 
 __author__ = 'Anand Patil, anand.prabhakar.patil@gmail.com'
 
-import os, sys, pdb
+import os
+import sys
+import pdb
 import numpy as np
 import types
 from . import six
@@ -36,7 +38,8 @@ def logp_of_set(s):
     else:
         six.reraise(*exc)
 
-def logp_gradient_of_set(variable_set, calculation_set = None):
+
+def logp_gradient_of_set(variable_set, calculation_set=None):
     """
     Calculates the gradient of the joint log posterior with respect to all the variables in variable_set.
     Calculation of the log posterior is restricted to the variables in calculation_set.
@@ -50,20 +53,23 @@ def logp_gradient_of_set(variable_set, calculation_set = None):
 
     return logp_gradients
 
-def logp_gradient(variable, calculation_set = None):
+
+def logp_gradient(variable, calculation_set=None):
     """
     Calculates the gradient of the joint log posterior with respect to variable.
     Calculation of the log posterior is restricted to the variables in calculation_set.
     """
-    return variable.logp_partial_gradient(variable, calculation_set) + sum([child.logp_partial_gradient(variable, calculation_set) for child in variable.children] )
+    return variable.logp_partial_gradient(variable, calculation_set) + sum([child.logp_partial_gradient(variable, calculation_set) for child in variable.children])
 
 
 class ZeroProbability(ValueError):
+
     "Log-probability is undefined or negative infinity"
     pass
 
 
 class Node(object):
+
     """
     The base class for Stochastic, Deterministic and Potential.
 
@@ -106,7 +112,9 @@ class Node(object):
         # Name and docstrings
         self.__doc__ = doc
         if not isinstance(name, str):
-            raise ValueError('The name argument must be a string, but received %s.'%name)
+            raise ValueError(
+                'The name argument must be a string, but received %s.' %
+                name)
         self.__name__ = name
 
         # Level of feedback verbosity
@@ -131,7 +139,9 @@ class Node(object):
         #             self._parents.detach_children()
 
         # Specify new parents
-        self._parents = self.ParentDict(regular_dict = new_parents, owner = self)
+        self._parents = self.ParentDict(
+            regular_dict=new_parents,
+            owner=self)
 
         # Add self as child of parents
         self._parents.attach_parents()
@@ -139,19 +149,23 @@ class Node(object):
         # Get new lazy function
         self.gen_lazy_function()
 
-    parents = property(_get_parents, _set_parents, doc="Self's parents: the variables referred to in self's declaration.")
+    parents = property(
+        _get_parents,
+        _set_parents,
+        doc="Self's parents: the variables referred to in self's declaration.")
 
     def __str__(self):
         return self.__repr__()
 
     def __repr__(self):
-        return object.__repr__(self).replace(' object ', " '%s' "%self.__name__)
+        return object.__repr__(self).replace(' object ', " '%s' " % self.__name__)
 
     def gen_lazy_function(self):
         pass
 
 
 class Variable(Node):
+
     """
     The base class for Stochastics and Deterministics.
 
@@ -190,11 +204,12 @@ class Variable(Node):
 
     __array_priority__ = 10
 
-    def __init__(self, doc, name, parents, cache_depth, trace=False, dtype=None, plot=None, verbose=-1):
+    def __init__(self, doc, name, parents, cache_depth,
+                 trace=False, dtype=None, plot=None, verbose=-1):
 
-        self.dtype=dtype
-        self.keep_trace=trace
-        self._plot=plot
+        self.dtype = dtype
+        self.keep_trace = trace
+        self._plot = plot
         self.children = set()
         self.extended_children = set()
 
@@ -217,9 +232,13 @@ class Variable(Node):
         # Set plotting flag
         self._plot = true_or_false
 
-    plot = property(_get_plot, _set_plot, doc='A flag indicating whether self should be plotted.')
+    plot = property(
+        _get_plot,
+        _set_plot,
+        doc='A flag indicating whether self should be plotted.')
 
-    def stats(self, alpha=0.05, start=0, batches=100, chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
+    def stats(self, alpha=0.05, start=0, batches=100,
+              chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
         """
         Generate posterior statistics for node.
 
@@ -243,9 +262,8 @@ class Variable(Node):
         quantiles : tuple or list
           The desired quantiles to be calculated. Defaults to (2.5, 25, 50, 75, 97.5).
         """
-        return self.trace.stats(alpha=alpha, start=start, batches=batches, 
-            chain=chain, quantiles=quantiles)
-
+        return self.trace.stats(alpha=alpha, start=start, batches=batches,
+                                chain=chain, quantiles=quantiles)
 
     def summary(self, alpha=0.05, start=0, batches=100, chain=None, roundto=3):
         """
@@ -273,7 +291,11 @@ class Variable(Node):
         """
 
         # Calculate statistics for Node
-        statdict = self.stats(alpha=alpha, start=start, batches=batches, chain=chain)
+        statdict = self.stats(
+            alpha=alpha,
+            start=start,
+            batches=batches,
+            chain=chain)
         size = np.size(statdict['mean'])
 
         print_('\n%s:' % self.__name__)
@@ -292,11 +314,13 @@ class Variable(Node):
         interval = statdict.keys()[iindex]
 
         # Print basic stats
-        buffer += ['Mean             SD               MC Error        %s' % interval]
-        buffer += ['-'*len(buffer[-1])]
+        buffer += [
+            'Mean             SD               MC Error        %s' %
+            interval]
+        buffer += ['-' * len(buffer[-1])]
 
         indices = range(size)
-        if len(indices)==1:
+        if len(indices) == 1:
             indices = [None]
 
         for index in indices:
@@ -308,25 +332,27 @@ class Variable(Node):
 
             # Build up string buffer of values
             valstr = m
-            valstr += ' '*(17-len(m)) + sd
-            valstr += ' '*(17-len(sd)) + mce
-            valstr += ' '*(len(buffer[-1]) - len(valstr) - len(hpd)) + hpd
+            valstr += ' ' * (17 - len(m)) + sd
+            valstr += ' ' * (17 - len(sd)) + mce
+            valstr += ' ' * (len(buffer[-1]) - len(valstr) - len(hpd)) + hpd
 
             buffer += [valstr]
 
-        buffer += ['']*2
+        buffer += [''] * 2
 
         # Print quantiles
-        buffer += ['Posterior quantiles:','']
+        buffer += ['Posterior quantiles:', '']
 
-        buffer += ['2.5             25              50              75             97.5']
-        buffer += [' |---------------|===============|===============|---------------|']
+        buffer += [
+            '2.5             25              50              75             97.5']
+        buffer += [
+            ' |---------------|===============|===============|---------------|']
 
         for index in indices:
             quantile_str = ''
-            for i,q in enumerate((2.5, 25, 50, 75, 97.5)):
+            for i, q in enumerate((2.5, 25, 50, 75, 97.5)):
                 qstr = str(round(statdict['quantiles'][q][index], roundto))
-                quantile_str += qstr + ' '*(17-i-len(qstr))
+                quantile_str += qstr + ' ' * (17 - i - len(qstr))
             buffer += [quantile_str.strip()]
 
         buffer += ['']
@@ -336,7 +362,9 @@ class Variable(Node):
 
 ContainerRegistry = []
 
+
 class ContainerMeta(type):
+
     def __init__(cls, name, bases, dict):
         type.__init__(cls, name, bases, dict)
 
@@ -348,10 +376,11 @@ class ContainerMeta(type):
 
             for meth in cls.change_methods:
                 setattr(cls, meth, UnboundMethodType(change_method, None, cls))
-        cls.register=False
+        cls.register = False
 
 
 class ContainerBase(object):
+
     """
     Abstract base class.
 
@@ -390,16 +419,24 @@ class ContainerBase(object):
         return logp_of_set(self.stochastics | self.potentials | self.observed_stochastics)
 
     # Define log-probability property
-    logp = property(_get_logp, doc='The summed log-probability of all stochastic variables (data\nor otherwise) and factor potentials in self.')
+    logp = property(
+        _get_logp,
+        doc='The summed log-probability of all stochastic variables (data\nor otherwise) and factor potentials in self.')
 
 ContainerBase = six.with_metaclass(ContainerMeta, ContainerBase)
 
 StochasticRegistry = []
+
+
 class StochasticMeta(type):
+
     def __init__(cls, name, bases, dict):
         type.__init__(cls, name, bases, dict)
         StochasticRegistry.append(cls)
+
+
 class StochasticBase(six.with_metaclass(StochasticMeta, Variable)):
+
     """
     Abstract base class.
 
@@ -408,11 +445,17 @@ class StochasticBase(six.with_metaclass(StochasticMeta, Variable)):
     """
 
 DeterministicRegistry = []
+
+
 class DeterministicMeta(type):
+
     def __init__(cls, name, bases, dict):
         type.__init__(cls, name, bases, dict)
         DeterministicRegistry.append(cls)
+
+
 class DeterministicBase(six.with_metaclass(DeterministicMeta, Variable)):
+
     """
     Abstract base class.
 
@@ -421,11 +464,17 @@ class DeterministicBase(six.with_metaclass(DeterministicMeta, Variable)):
     """
 
 PotentialRegistry = []
+
+
 class PotentialMeta(type):
+
     def __init__(cls, name, bases, dict):
         type.__init__(cls, name, bases, dict)
         PotentialRegistry.append(cls)
+
+
 class PotentialBase(six.with_metaclass(PotentialMeta, Node)):
+
     """
     Abstract base class.
 

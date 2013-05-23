@@ -11,7 +11,9 @@ versions. Users should use this backend only for shortlived projects.
 """
 
 from . import ram, no_trace, base
-import os, datetime, numpy
+import os
+import datetime
+import numpy
 import string
 
 try:
@@ -23,10 +25,13 @@ from pymc import six
 
 __all__ = ['Trace', 'Database', 'load']
 
+
 class Trace(ram.Trace):
     pass
 
+
 class Database(base.Database):
+
     """Pickle database backend.
 
     Save the trace to a pickle file.
@@ -45,17 +50,18 @@ class Database(base.Database):
         self.__name__ = 'pickle'
         self.filename = dbname
         self.__Trace__ = Trace
-        self.trace_names = []   # A list of sequences of names of the objects to tally.
-        self._traces = {} # A dictionary of the Trace objects.
+        self.trace_names = []
+            # A list of sequences of names of the objects to tally.
+        self._traces = {}  # A dictionary of the Trace objects.
         self.chains = 0
 
         if os.path.exists(dbname):
-            if dbmode=='w':
+            if dbmode == 'w':
                 os.remove(dbname)
 
     def _finalize(self):
         """Dump traces using cPickle."""
-        container={}
+        container = {}
         try:
             for name in self._traces:
                 container[name] = self._traces[name]._trace
@@ -79,9 +85,9 @@ def load(filename):
     db = Database(file.name)
     chains = 0
     funs = set()
-    for k,v in six.iteritems(container):
+    for k, v in six.iteritems(container):
         if k == '_state_':
-           db._state_ = v
+            db._state_ = v
         else:
             db._traces[k] = Trace(name=k, value=v, db=db)
             setattr(db, k, db._traces[k])
@@ -89,8 +95,6 @@ def load(filename):
             funs.add(k)
 
     db.chains = chains
-    db.trace_names = chains*[list(funs)]
+    db.trace_names = chains * [list(funs)]
 
     return db
-
-

@@ -5,19 +5,20 @@ from numpy.testing import *
 # Generate some data with missing observations
 fake_data = rnormal(0, 1, size=100)
 m = ma.masked_array(fake_data)
-m[[3,6]] = ma.masked
+m[[3, 6]] = ma.masked
 m.fill_value = -4
 
-class TestMissing(TestCase):
-    """Unit test for missing data imputation"""
 
+class TestMissing(TestCase):
+
+    """Unit test for missing data imputation"""
 
     def test_simple(self):
 
         # Priors
         mu = Normal('mu', mu=0, tau=0.0001)
         s = Uniform('s', lower=0, upper=100, value=10)
-        tau = s**-2
+        tau = s ** -2
 
         # Likelihood with missing data
         x = Normal('x', mu=mu, tau=tau, value=m, observed=True)
@@ -37,4 +38,4 @@ class TestMissing(TestCase):
         sd2 = [-2 < i < 2 for i in ravel(tr)]
 
         # Check for standard normal output
-        assert_almost_equal(sum(sd2)/10000., 0.95, decimal=1)
+        assert_almost_equal(sum(sd2) / 10000., 0.95, decimal=1)

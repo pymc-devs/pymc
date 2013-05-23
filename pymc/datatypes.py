@@ -7,7 +7,21 @@ from numpy import csingle, complex_, clongfloat
 
 # These are only used for membership tests, but things break if they are sets
 # rather than lists. TK, Jan 2012.
-integer_dtypes = [int, uint, byte, short, intc, int_, longlong, intp, ubyte, ushort, uintc, uint, ulonglong, uintp]
+integer_dtypes = [
+    int,
+    uint,
+    byte,
+    short,
+    intc,
+    int_,
+    longlong,
+    intp,
+    ubyte,
+    ushort,
+    uintc,
+    uint,
+    ulonglong,
+    uintp]
 try:
     integer_dtypes.append(long)
 except NameError:
@@ -15,6 +29,7 @@ except NameError:
 float_dtypes = [float, single, float_, longfloat]
 complex_dtypes = [complex, csingle, complex_, clongfloat]
 bool_dtypes = [bool, bool_]
+
 
 def check_type(stochastic):
     """
@@ -26,7 +41,7 @@ def check_type(stochastic):
     is scalar, or a nontrivial tuple otherwise.
     """
     val = stochastic.value
-    
+
     if val.__class__ in bool_dtypes:
         return bool, ()
     elif val.__class__ in integer_dtypes:
@@ -48,8 +63,9 @@ def check_type(stochastic):
             return 'object', val.shape
     else:
         return 'object', ()
-    
+
 continuous_types = [float, complex]
+
 
 def is_continuous(stochastic):
     dtype, shape = check_type(stochastic)
@@ -57,4 +73,3 @@ def is_continuous(stochastic):
         return True
     else:
         return False
-    

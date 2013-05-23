@@ -13,12 +13,14 @@ psi_true = 0.75
 n = 100
 
 # Simulate some data
-data = np.array([rpoisson(mu_true)*(np.random.random()<psi_true) for i in range(n)])
+data = np.array([rpoisson(mu_true) * (np.random.random() < psi_true)
+                for i in range(n)])
 
 # Uniorm prior on Poisson mean
 mu = Uniform('mu', 0, 20)
 # Beta prior on psi
 psi = Beta('psi', alpha=1, beta=1)
+
 
 @observed(dtype=int, plot=False)
 def zip(value=data, mu=mu, psi=psi):
@@ -32,7 +34,7 @@ def zip(value=data, mu=mu, psi=psi):
 
         if not x:
             # Zero values
-            like += np.log((1.-psi) + psi*np.exp(-mu))
+            like += np.log((1. - psi) + psi * np.exp(-mu))
 
         else:
             # Non-zero values
@@ -40,7 +42,7 @@ def zip(value=data, mu=mu, psi=psi):
 
     return like
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
     from pymc import MCMC, Matplot
 

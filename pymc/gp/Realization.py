@@ -1,6 +1,6 @@
 # Copyright (c) Anand Patil, 2007
 
-__docformat__='reStructuredText'
+__docformat__ = 'reStructuredText'
 __all__ = ['Realization', 'StandardRealization', 'BasisRealization']
 
 
@@ -46,7 +46,9 @@ def Realization(M, C, *args, **kwargs):
     else:
         return StandardRealization(M, C, *args, **kwargs)
 
+
 class StandardRealization(object):
+
     """
     f = Realization(M, C[, init_mesh, init_vals, check_repeats = True, regularize = True])
 
@@ -81,7 +83,8 @@ class StandardRealization(object):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    def __init__(self, M, C, init_mesh = None, init_vals = None, check_repeats = True, regularize = True):
+    def __init__(self, M, C, init_mesh=None,
+                 init_vals=None, check_repeats=True, regularize=True):
 
         self.M = M
         self.C = C
@@ -100,7 +103,7 @@ class StandardRealization(object):
 
         self.M_internal = M_internal
         self.C_internal = C_internal
-        
+
         self.x_sofar = None
         self.f_sofar = None
 
@@ -117,21 +120,20 @@ class StandardRealization(object):
                     self.C_internal,
                     obs_mesh=self.init_mesh,
                     obs_vals=self.init_vals,
-                    obs_V=zeros(len(self.init_vals),dtype=float),
+                    obs_V=zeros(len(self.init_vals), dtype=float),
                     lintrans=None,
-                    cross_validate = False)
+                    cross_validate=False)
 
             # Store init_mesh.
             if self.check_repeats:
                 self.x_sofar = self.init_mesh
                 self.f_sofar = self.init_vals
-        
+
         self.need_init_obs = False
-        
 
     def __call__(self, x, regularize=True):
         # TODO: check repeats for basis covariances too.
-        
+
         # If initial values were passed in, observe on them.
         if self.need_init_obs:
             self._init_obs()
@@ -139,12 +141,13 @@ class StandardRealization(object):
         # Record original shape of x and regularize it.
         orig_shape = shape(x)
 
-        if len(orig_shape)>1:
+        if len(orig_shape) > 1:
             orig_shape = orig_shape[:-1]
 
         if regularize:
             if any(isnan(x)):
-                raise ValueError('Input argument to Realization contains NaNs.')
+                raise ValueError(
+                    'Input argument to Realization contains NaNs.')
             x = regularize_array(x)
 
         if x is self.x_sofar:
@@ -152,7 +155,8 @@ class StandardRealization(object):
 
         if self.check_repeats:
             # use caching_call to save duplicate calls.
-            f, self.x_sofar, self.f_sofar = caching_call(self.draw_vals, x, self.x_sofar, self.f_sofar)
+            f, self.x_sofar, self.f_sofar = caching_call(
+                self.draw_vals, x, self.x_sofar, self.f_sofar)
         else:
             # Call to self.draw_vals.
             f = self.draw_vals(x)
@@ -165,22 +169,27 @@ class StandardRealization(object):
     def draw_vals(self, x):
 
         # First observe the internal covariance on x.
-        relevant_slice, obs_mesh_new, U, Uo_Cxo = self.C_internal.observe(x, zeros(x.shape[0]), output_type='r')
+        relevant_slice, obs_mesh_new, U, Uo_Cxo = self.C_internal.observe(
+            x, zeros(x.shape[0]), output_type='r')
 
         # Then evaluate self's mean on x.
         M = self.M_internal(x, regularize=False, Uo_Cxo=Uo_Cxo)
 
         # Then draw new values for self(x).
-        q = dot(U.T , normal(size = U.shape[0]))
-        f = asarray((M.T+q)).ravel()
+        q = dot(U.T, normal(size=U.shape[0]))
+        f = asarray((M.T + q)).ravel()
 
         # Then observe self's mean using the new values.
-        self.M_internal.observe(self.C_internal, obs_mesh_new, f[relevant_slice])
+        self.M_internal.observe(
+            self.C_internal,
+            obs_mesh_new,
+            f[relevant_slice])
 
         return f
 
 
 class BasisRealization(StandardRealization):
+
     """
     f = BasisRealization(M, C[, init_mesh, init_vals, check_repeats = True, regularize = True])
 
@@ -207,11 +216,21 @@ class BasisRealization(StandardRealization):
     :SeeAlso: Mean, Covariance, BasisCovariance, observe, GP
     """
 
-    def __init__(self, M, C, init_mesh = None, init_vals = None, regularize = True):
+    def __init__(self, M, C, init_mesh=None,
+                 init_vals=None, regularize=True):
 
-        StandardRealization.__init__(self, M, C, init_mesh, init_vals, False, regularize)
-        self.coef_vals = asarray(dot(self.C_internal.coef_U.T,normal(size=self.C_internal.m)))
-        
+        StandardRealization.__init__(
+            self,
+            M,
+            C,
+            init_mesh,
+            init_vals,
+            False,
+            regularize)
+        self.coef_vals = asarray(
+            dot(self.C_internal.coef_U.T,
+                normal(size=self.C_internal.m)))
+
     def draw_vals(self, x):
 
         # If C is a BasisCovariance, just evaluate the basis over x, multiply by self's
@@ -223,6 +242,12 @@ class BasisRealization(StandardRealization):
         # a vector addition.
 
         basis_x = self.C_internal.eval_basis(x)
-        f = (self.M_internal(x, regularize=False, Uo_Cxo=basis_x) + dot(self.coef_vals, basis_x))
+        f = (
+            self.M_internal(
+                x,
+                regularize=False,
+                Uo_Cxo=basis_x) + dot(
+                    self.coef_vals,
+                    basis_x))
 
         return f

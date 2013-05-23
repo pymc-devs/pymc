@@ -13,14 +13,16 @@ We would need to catch MemoryError exceptions though.
 """
 
 import pymc
-from numpy import zeros,shape,concatenate, ndarray,dtype
+from numpy import zeros, shape, concatenate, ndarray, dtype
 from . import base
 import warnings
 import numpy as np
 
 __all__ = ['Trace', 'Database']
 
+
 class Trace(base.Trace):
+
     """RAM Trace
 
     Store the samples in memory. No data is written to disk.
@@ -58,7 +60,6 @@ class Trace(base.Trace):
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
 
-
         # First, see if the object has an explicit dtype.
         value = np.array(self._getfunc())
 
@@ -66,16 +67,19 @@ class Trace(base.Trace):
             self._trace[chain] = zeros(length, dtype=object)
 
         elif value.dtype is not None:
-            self._trace[chain] = zeros ((length,) + shape(value), value.dtype)
+            self._trace[chain] = zeros((length,) + shape(value), value.dtype)
 
         # Otherwise, if it's an array, read off its value's dtype.
         elif isinstance(value, ndarray):
-            self._trace[chain] = zeros ((length,) + shape(value), value.dtype)
+            self._trace[chain] = zeros((length,) + shape(value), value.dtype)
 
         # Otherwise, let numpy type its value. If the value is a scalar, the trace will be of the
         # corresponding type. Otherwise it'll be an object array.
         else:
-            self._trace[chain] = zeros ((length,) + shape(value), dtype=value.__class__)
+            self._trace[chain] = zeros(
+                (length,
+                 ) + shape(value),
+                dtype=value.__class__)
 
         self._index[chain] = 0
 
@@ -125,7 +129,6 @@ class Trace(base.Trace):
         else:
             return concatenate(self._trace.values())[slicing]
 
-
     def __getitem__(self, index):
         chain = self._chain
         if chain is None:
@@ -135,9 +138,7 @@ class Trace(base.Trace):
                 chain = range(self.db.chains)[chain]
             return self._trace[chain][index]
 
-
     __call__ = gettrace
-
 
     def length(self, chain=-1):
         """Return the length of the trace.
@@ -153,7 +154,9 @@ class Trace(base.Trace):
         else:
             return sum([t.shape[0] for t in self._trace.values()])
 
+
 class Database(base.Database):
+
     """RAM database.
 
     Store the samples in memory. No data is written to disk.
@@ -164,6 +167,7 @@ class Database(base.Database):
         self.__name__ = 'ram'
         self.__Trace__ = Trace
         self.dbname = dbname
-        self.trace_names = []   # A list of sequences of names of the objects to tally.
-        self._traces = {} # A dictionary of the Trace objects.
+        self.trace_names = []
+            # A list of sequences of names of the objects to tally.
+        self._traces = {}  # A dictionary of the Trace objects.
         self.chains = 0

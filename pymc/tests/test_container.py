@@ -5,17 +5,17 @@ from pymc import Container, Normal
 
 class test_Container(TestCase):
     def test_container_parents(self):
-        A = Normal('A',0,1)
-        B = Normal('B',0,1)
+        A = Normal('A', 0, 1)
+        B = Normal('B', 0, 1)
 
-        C = Normal('C',[A,B],1)
+        C = Normal('C', [A, B], 1)
 
 
-        assert_equal(Container([A,B]).value, [A.value, B.value])
+        assert_equal(Container([A, B]).value, [A.value, B.value])
         assert_equal(C.parents.value['mu'], [A.value, B.value])
 
     def test_nested_tuple_container(self):
-        A = Normal('A',0,1)
+        A = Normal('A', 0, 1)
         try:
             Container(([A],))
             raise AssertionError('A NotImplementedError should have resulted.')
@@ -59,7 +59,7 @@ class test_Container(TestCase):
 
         # Test array container:
 
-        B = ndarray((3,3),dtype=object)
+        B = ndarray((3, 3), dtype=object)
         B[0,:] = DM.early_mean
         B[1,:] = 1.
         B[2,:] = A
@@ -67,10 +67,10 @@ class test_Container(TestCase):
 
 
         for i in range(2):
-            assert(D[0,i] == DM.early_mean)
-            assert(D.value[0,i] == DM.early_mean.value)
-            assert(D[1,i] == 1.)
-            assert(D.value[1,i] == 1.)
+            assert(D[0, i] == DM.early_mean)
+            assert(D.value[0, i] == DM.early_mean.value)
+            assert(D[1, i] == 1.)
+            assert(D.value[1, i] == 1.)
 
         P = D[2,:]
         Q = D.value[2,:]

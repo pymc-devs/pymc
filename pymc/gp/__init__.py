@@ -4,16 +4,16 @@
 # kept below this limit.
 chunksize = 1e8
 
-__modules__ = [ 'GPutils',
-                'Mean',
-                'Covariance',
-                'BasisCovariance',
-                'FullRankCovariance',
-                'NearlyFullRankCovariance',
-                'Realization',
-                'cov_funs',
-                'gp_submodel',
-                'step_methods']
+__modules__ = ['GPutils',
+               'Mean',
+               'Covariance',
+               'BasisCovariance',
+               'FullRankCovariance',
+               'NearlyFullRankCovariance',
+               'Realization',
+               'cov_funs',
+               'gp_submodel',
+               'step_methods']
 
 __optmodules__ = ['gpplots']
 
@@ -37,4 +37,3 @@ try:
     import SparseCovariance
 except ImportError:
     pass
-    

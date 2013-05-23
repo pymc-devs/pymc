@@ -58,7 +58,7 @@ import threading
 try:
     import queue    # Python 3
 except ImportError:
-    import Queue as queue # Python 2
+    import Queue as queue  # Python 2
 import traceback
 import os
 import numpy as np
@@ -66,11 +66,16 @@ import numpy as np
 from . import six
 
 # exceptions
+
+
 class NoResultsPending(Exception):
+
     """All work requests have been processed."""
     pass
 
+
 class NoWorkersAvailable(Exception):
+
     """No worker threads available to process remaining requests."""
     pass
 
@@ -82,13 +87,13 @@ def _handle_thread_exception(request, exc_info):
     This just prints the exception info via ``traceback.print_exception``.
 
     """
-    #print exc_info
+    # print exc_info
     traceback.print_exception(*exc_info)
 
 
 # utility functions
 def makeRequests(callable_, args_list, callback=None,
-        exc_callback=_handle_thread_exception):
+                 exc_callback=_handle_thread_exception):
     """Create several work requests for same callable with different arguments.
 
     Convenience function for creating several work requests for the same
@@ -109,18 +114,19 @@ def makeRequests(callable_, args_list, callback=None,
         if isinstance(item, tuple):
             requests.append(
                 WorkRequest(callable_, item[0], item[1], callback=callback,
-                    exc_callback=exc_callback)
+                            exc_callback=exc_callback)
             )
         else:
             requests.append(
                 WorkRequest(callable_, [item], None, callback=callback,
-                    exc_callback=exc_callback)
+                            exc_callback=exc_callback)
             )
     return requests
 
 
 # classes
 class WorkerThread(threading.Thread):
+
     """Background thread connected to the requests/results queues.
 
     A worker thread sits in the background and picks up work requests from
@@ -178,6 +184,7 @@ class WorkerThread(threading.Thread):
 
 
 class WorkRequest:
+
     """A request to execute a callable for putting in the request queue later.
 
     See the module function ``makeRequests`` for the common case
@@ -187,7 +194,7 @@ class WorkRequest:
     """
 
     def __init__(self, callable_, args=None, kwds=None, requestID=None,
-            callback=None, exc_callback=_handle_thread_exception):
+                 callback=None, exc_callback=_handle_thread_exception):
         """Create a work request for a callable and attach callbacks.
 
         A work request consists of the a callable to be executed by a
@@ -241,7 +248,9 @@ class WorkRequest:
         for attr in ['exception', 'callback', 'exc_callback', 'callable', 'args', 'kwds']:
             delattr(self, attr)
 
+
 class ThreadPool:
+
     """A thread pool, distributing work requests and collecting results.
 
     See the module docstring for more information.
@@ -308,29 +317,32 @@ class ThreadPool:
         self.workRequests[request.requestID] = request
 
 
-
-
 try:
     __PyMCThreadPool__ = ThreadPool(int(os.environ['OMP_NUM_THREADS']))
 except:
     try:
         import multiprocessing
     except ImportError:
-        raise ImportError('The multiprocessing module is not available. If you are using Python 2.5, please install the backport of multiprocessing before continuing.')
+        raise ImportError(
+            'The multiprocessing module is not available. If you are using Python 2.5, please install the backport of multiprocessing before continuing.')
     __PyMCThreadPool__ = ThreadPool(multiprocessing.cpu_count())
 
+
 class CountDownLatch(object):
+
     def __init__(self, n):
         self.n = n
         self.main_lock = threading.Lock()
         self.counter_lock = threading.Lock()
         self.main_lock.acquire()
+
     def countdown(self):
         self.counter_lock.acquire()
         self.n -= 1
         if self.n == 0:
             self.main_lock.release()
         self.counter_lock.release()
+
     def await(self):
         self.main_lock.acquire()
         self.main_lock.release()
@@ -347,8 +359,9 @@ def map_noreturn(targ, argslist):
     Does [targ(*args) for args in argslist] using the threadpool.
     """
 
-    # Thanks to Anne Archibald's handythread.py for the exception handling mechanism.
-    exceptions=[]
+    # Thanks to Anne Archibald's handythread.py for the exception handling
+    # mechanism.
+    exceptions = []
     n_threads = len(argslist)
 
     exc_lock = threading.Lock()
@@ -365,7 +378,12 @@ def map_noreturn(targ, argslist):
         dl.countdown()
 
     for args in argslist:
-        __PyMCThreadPool__.putRequest(WorkRequest(targ, callback = cb, exc_callback=eb, args=args, requestID = id(args)))
+        __PyMCThreadPool__.putRequest(
+            WorkRequest(targ,
+                        callback=cb,
+                        exc_callback=eb,
+                        args=args,
+                        requestID=id(args)))
     done_lock.await()
 
     if exceptions:
@@ -376,20 +394,22 @@ def set_threadpool_size(n):
     if n > 0:
         __PyMCThreadPool__.setNumWorkers(n)
 
+
 def get_threadpool_size():
     return len(__PyMCThreadPool__.workers)
-    
+
+
 def thread_partition_array(x):
     "Partition work arrays for multithreaded addition and multiplication"
     n_threads = get_threadpool_size()
-    if len(x.shape)>1:
+    if len(x.shape) > 1:
         maxind = x.shape[1]
     else:
         maxind = x.shape[0]
-    bounds = np.array(np.linspace(0, maxind, n_threads+1),dtype='int')
+    bounds = np.array(np.linspace(0, maxind, n_threads + 1), dtype='int')
     cmin = bounds[:-1]
     cmax = bounds[1:]
-    return cmin,cmax
+    return cmin, cmax
 
 
 __PyMCLock__ = threading.Lock()

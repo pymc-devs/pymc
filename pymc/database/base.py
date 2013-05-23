@@ -48,15 +48,19 @@ done explicitly by the user.
 import pymc
 import numpy as np
 import types
-import sys, traceback, warnings
+import sys
+import traceback
+import warnings
 import copy
-__all__=['Trace', 'Database']
+__all__ = ['Trace', 'Database']
 
 from pymc import six
 from pymc import utils
 from pymc.six import print_
 
+
 class Trace(object):
+
     """Base class for Trace objects.
 
     Each tallyable pymc object is given a trace attribute, which is a Trace
@@ -88,7 +92,6 @@ class Trace(object):
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
 
-
     def tally(self, chain):
         """Appends the object's value to a chain.
 
@@ -113,7 +116,6 @@ class Trace(object):
         """
         warnings.warn('Use Sampler.trace method instead.', DeprecationWarning)
 
-
     # By convention, the __call__ method is assigned to gettrace.
     __call__ = gettrace
 
@@ -121,10 +123,10 @@ class Trace(object):
         """Return the trace corresponding to item (or slice) i for the chain
         defined by self._chain.
         """
-        if type(i) == types.SliceType:
+        if isinstance(i, slice):
             return self.gettrace(slicing=i, chain=self._chain)
         else:
-            return self.gettrace(slicing=slice(i,i+1), chain=self._chain)
+            return self.gettrace(slicing=slice(i, i + 1), chain=self._chain)
 
     def _finalize(self, chain):
         """Execute task necessary when tallying is over for this trace."""
@@ -139,7 +141,8 @@ class Trace(object):
         """
         pass
 
-    def stats(self, alpha=0.05, start=0, batches=100, chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
+    def stats(self, alpha=0.05, start=0, batches=100,
+              chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
         """
         Generate posterior statistics for node.
 
@@ -168,19 +171,26 @@ class Trace(object):
         """
 
         try:
-            trace = np.squeeze(np.array(self.db.trace(self.name)(chain=chain), float))[start:]
+            trace = np.squeeze(
+                np.array(
+                    self.db.trace(
+                        self.name)(
+                            chain=chain),
+                    float))[
+                        start:]
 
             n = len(trace)
             if not n:
-                print_('Cannot generate statistics for zero-length trace in', self.__name__)
+                print_(
+                    'Cannot generate statistics for zero-length trace in',
+                    self.__name__)
                 return
-
 
             return {
                 'n': n,
                 'standard deviation': trace.std(0),
                 'mean': trace.mean(0),
-                '%s%s HPD interval' % (int(100*(1-alpha)),'%'): utils.hpd(trace, alpha),
+                '%s%s HPD interval' % (int(100 * (1 - alpha)), '%'): utils.hpd(trace, alpha),
                 'mc error': batchsd(trace, batches),
                 'quantiles': utils.quantiles(trace, qlist=quantiles)
             }
@@ -190,6 +200,7 @@ class Trace(object):
 
 
 class Database(object):
+
     """Base Database class.
 
     The Database job is to create a database on disk and communicate
@@ -213,8 +224,9 @@ class Database(object):
         self.__Trace__ = Trace
         self.__name__ = 'base'
         self.dbname = dbname
-        self.trace_names = []   # A list of sequences of names of the objects to tally.
-        self._traces = {} # A dictionary of the Trace objects.
+        self.trace_names = []
+            # A list of sequences of names of the objects to tally.
+        self._traces = {}  # A dictionary of the Trace objects.
         self.chains = 0
 
     def _initialize(self, funs_to_tally, length=None):
@@ -233,7 +245,11 @@ class Database(object):
 
         for name, fun in six.iteritems(funs_to_tally):
             if name not in self._traces:
-                self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
+                self._traces[
+                    name] = self.__Trace__(
+                        name=name,
+                        getfunc=fun,
+                        db=self)
 
             self._traces[name]._initialize(self.chains, length)
 
@@ -263,9 +279,8 @@ as were tallyable last time you used the database file?
 
 Error:
 
-%s"""%(name, ''.join(traceback.format_exception(cls, inst, tb))))
+%s""" % (name, ''.join(traceback.format_exception(cls, inst, tb))))
                 self.trace_names[chain].remove(name)
-
 
     def connect_model(self, model):
         """Link the Database to the Model instance.
@@ -300,14 +315,19 @@ Error:
                     self._traces[name]._getfunc = fun
                     names.discard(name)
             # if len(names) > 0:
-            #     print_("Some objects from the database have not been assigned a getfunc", names)
+            # print_("Some objects from the database have not been assigned a
+            # getfunc", names)
 
         # Create a fresh new state.
         # We will be able to remove this when we deprecate traces on objects.
         else:
             for name, fun in six.iteritems(model._funs_to_tally):
                 if name not in self._traces:
-                    self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
+                    self._traces[
+                        name] = self.__Trace__(
+                            name=name,
+                            getfunc=fun,
+                            db=self)
 
     def _finalize(self, chain=-1):
         """Finalize the chain for all tallyable objects."""
@@ -382,21 +402,25 @@ def batchsd(trace, batches=5):
     if len(np.shape(trace)) > 1:
 
         dims = np.shape(trace)
-        #ttrace = np.transpose(np.reshape(trace, (dims[0], sum(dims[1:]))))
+        # ttrace = np.transpose(np.reshape(trace, (dims[0], sum(dims[1:]))))
         ttrace = np.transpose([t.ravel() for t in trace])
 
         return np.reshape([batchsd(t, batches) for t in ttrace], dims[1:])
 
     else:
-        if batches == 1: return np.std(trace)/np.sqrt(len(trace))
+        if batches == 1:
+            return np.std(trace) / np.sqrt(len(trace))
 
         try:
-            batched_traces = np.resize(trace, (batches, len(trace)/batches))
+            batched_traces = np.resize(trace, (batches, len(trace) / batches))
         except ValueError:
             # If batches do not divide evenly, trim excess samples
             resid = len(trace) % batches
-            batched_traces = np.resize(trace[:-resid], (batches, len(trace)/batches))
+            batched_traces = np.resize(
+                trace[:-resid],
+                (batches,
+                 len(trace) / batches))
 
         means = np.mean(batched_traces, 1)
 
-        return np.std(means)/np.sqrt(batches)
+        return np.std(means) / np.sqrt(batches)

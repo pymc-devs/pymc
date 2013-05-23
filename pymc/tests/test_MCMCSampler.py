@@ -6,17 +6,20 @@ from __future__ import with_statement
 from numpy.testing import *
 from pymc import MCMC, database
 from pymc.examples import disaster_model
-import nose,  warnings, os
+import nose
+import warnings
+import os
 
-PLOT=True
+PLOT = True
 try:
     from pymc.Matplot import plot, autocorrelation
 except:
-    PLOT=False
+    PLOT = False
     pass
 
 
 DIR = 'testresults/'
+
 
 class test_tiny_MCMC(TestCase):
 
@@ -41,14 +44,17 @@ class test_MCMC(TestCase):
     M = MCMC(disaster_model, db='pickle')
 
     # Sample
-    M.sample(4000,2000,verbose=0, progress_bar=False)
+    M.sample(4000, 2000, verbose=0, progress_bar=False)
     M.db.close()
+
     def test_instantiation(self):
 
         # Check stochastic arrays
         assert_equal(len(self.M.stochastics), 3)
-        assert_equal(len(self.M.observed_stochastics),1)
-        assert_array_equal(self.M.disasters.value, disaster_model.disasters_array)
+        assert_equal(len(self.M.observed_stochastics), 1)
+        assert_array_equal(
+            self.M.disasters.value,
+            disaster_model.disasters_array)
 
     def test_plot(self):
         if not PLOT:
@@ -62,7 +68,7 @@ class test_MCMC(TestCase):
             raise nose.SkipTest
 
         # Plot samples
-        autocorrelation(self.M.early_mean, path=DIR,  verbose=0)
+        autocorrelation(self.M.early_mean, path=DIR, verbose=0)
 
     def test_stats(self):
         S = self.M.early_mean.stats()
@@ -77,7 +83,7 @@ class test_MCMC(TestCase):
 
 
 if __name__ == '__main__':
-    
+
     original_filters = warnings.filters[:]
     warnings.simplefilter("ignore")
     try:
@@ -85,9 +91,8 @@ if __name__ == '__main__':
         nose.runmodule()
     finally:
         warnings.filters = original_filters
-    
-    # TODO: Restore in 2.2    
+
+    # TODO: Restore in 2.2
     # with warnings.catch_warnings():
     #         warnings.simplefilter('ignore',  FutureWarning)
     #         nose.runmodule()
-    

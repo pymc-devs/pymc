@@ -5,7 +5,10 @@
 # Author: David Huard, 2006
 
 import numpy as np
-import sys, select, os,  time
+import sys
+import select
+import os
+import time
 from copy import copy
 from .PyMCObjects import Variable
 from . import flib
@@ -18,6 +21,7 @@ from .datatypes import *
 
 from . import six
 from .six import print_
+from functools import reduce
 reduce = six.moves.reduce
 
 from numpy import (sqrt, ndarray, asmatrix, array, prod,
@@ -30,11 +34,12 @@ __all__ = ['append', 'check_list', 'autocorr', 'calc_min_interval',
            'check_type', 'ar1',
            'ar1_gen', 'draw_random', 'histogram', 'hpd', 'invcdf',
            'make_indices', 'normcdf', 'quantiles', 'rec_getattr',
-           'rec_setattr', 'round_array', 'trace_generator','msqrt','safe_len',
-           'log_difference', 'find_generations','crawl_dataless', 'logit',
-           'invlogit','stukel_logit','stukel_invlogit','symmetrize','value']
+           'rec_setattr', 'round_array', 'trace_generator', 'msqrt', 'safe_len',
+           'log_difference', 'find_generations', 'crawl_dataless', 'logit',
+           'invlogit', 'stukel_logit', 'stukel_invlogit', 'symmetrize', 'value']
 
 symmetrize = flib.symmetrize
+
 
 def value(a):
     """
@@ -52,14 +57,18 @@ def value(a):
 def logit(theta):
     return flib.logit(ravel(theta)).reshape(shape(theta))
 
+
 def invlogit(ltheta):
     return flib.invlogit(ravel(ltheta)).reshape(shape(ltheta))
 
-def stukel_invlogit(ltheta,a1,a2):
-    return flib.stukel_invlogit(ravel(ltheta),a1,a2).reshape(shape(ltheta))
 
-def stukel_logit(theta,a1,a2):
-    return flib.stukel_logit(ravel(theta),a1,a2).reshape(shape(theta))
+def stukel_invlogit(ltheta, a1, a2):
+    return flib.stukel_invlogit(ravel(ltheta), a1, a2).reshape(shape(ltheta))
+
+
+def stukel_logit(theta, a1, a2):
+    return flib.stukel_logit(ravel(theta), a1, a2).reshape(shape(theta))
+
 
 def check_list(thing, label):
     if thing is not None:
@@ -92,6 +101,7 @@ def round_array(array_in):
 
 try:
     from .flib import dchdc_wrap
+
     def msqrt(C):
         """
         U=incomplete_chol(C)
@@ -108,9 +118,10 @@ try:
         """
         chol = C.copy()
         piv, N = dchdc_wrap(a=chol)
-        if N<0:
-            raise ValueError("Matrix does not appear to be positive semidefinite")
-        return asmatrix(chol[:N,argsort(piv)])
+        if N < 0:
+            raise ValueError(
+                "Matrix does not appear to be positive semidefinite")
+        return asmatrix(chol[:N, argsort(piv)])
 
 except:
     def msqrt(cov):
@@ -129,12 +140,14 @@ except:
             val, vec = eigh(cov)
             sig = np.zeros(vec.shape)
             for i in range(len(val)):
-                if val[i]<0.:
-                    val[i]=0.
-                sig[:,i] = vec[:,i]*sqrt(val[i])
+                if val[i] < 0.:
+                    val[i] = 0.
+                sig[:, i] = vec[:, i] * sqrt(val[i])
         return np.asmatrix(sig).T
 
-def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, strategy=None):
+
+def histogram(a, bins=10, range=None, normed=False,
+              weights=None, axis=None, strategy=None):
     """histogram(a, bins=10, range=None, normed=False, weights=None, axis=None)
                                                                    -> H, dict
 
@@ -189,7 +202,7 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
         range = [mn, mx]
 
     # Find the optimal number of bins.
-    if bins is None or type(bins) == str:
+    if bins is None or isinstance(bins, str):
         bins = _optimize_binning(a, range, bins)
 
     # Compute the bin edges if they are not given explicitely.
@@ -197,19 +210,19 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
     # edge to be counted in the last bin, and not as an outlier.
     # Hence, we shift the last bin by a tiny amount.
     if not iterable(bins):
-        dr = diff(range)/bins*1e-10
-        edges = linspace(range[0], range[1]+dr, bins+1, endpoint=True)
+        dr = diff(range) / bins * 1e-10
+        edges = linspace(range[0], range[1] + dr, bins + 1, endpoint=True)
     else:
         edges = asarray(bins, float)
 
     dedges = diff(edges)
-    bincenters = edges[:-1] + dedges/2.
+    bincenters = edges[:-1] + dedges / 2.
 
     # Number of bins
-    nbin = len(edges)-1
+    nbin = len(edges) - 1
 
         # Measure of bin precision.
-    decimal = int(-log10(dedges.min())+10)
+    decimal = int(-log10(dedges.min()) + 10)
 
     # Choose the fastest histogramming method
     even = (len(set(around(dedges, decimal))) == 1)
@@ -217,7 +230,7 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
         if even:
             strategy = 'binsize'
         else:
-            if nbin > 30: # approximative threshold
+            if nbin > 30:  # approximative threshold
                 strategy = 'searchsort'
             else:
                 strategy = 'digitize'
@@ -225,7 +238,8 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
         if strategy not in ['binsize', 'digitize', 'searchsort']:
             raise ValueError('Unknown histogramming strategy.', strategy)
         if strategy == 'binsize' and not even:
-            raise ValueError('This binsize strategy cannot be used for uneven bins.')
+            raise ValueError(
+                'This binsize strategy cannot be used for uneven bins.')
 
     # Stochastics for the fixed_binsize functions.
     start = float(edges[0])
@@ -233,29 +247,40 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
 
     # Looping to reduce memory usage
     block = 66600
-    slices = [slice(None)]*a.ndim
-    for i in arange(0,len(a),block):
-        slices[axis] = slice(i,i+block)
+    slices = [slice(None)] * a.ndim
+    for i in arange(0, len(a), block):
+        slices[axis] = slice(i, i + block)
         at = a[slices]
         if weighted:
             at = concatenate((at, weights[slices]), axis)
             if strategy == 'binsize':
-                count = apply_along_axis(_splitinmiddle,axis,at,
-                    flib.weighted_fixed_binsize,start,binwidth,nbin)
+                count = apply_along_axis(_splitinmiddle, axis, at,
+                                         flib.weighted_fixed_binsize, start, binwidth, nbin)
             elif strategy == 'searchsort':
-                count = apply_along_axis(_splitinmiddle,axis,at, \
-                        _histogram_searchsort_weighted, edges)
+                count = apply_along_axis(_splitinmiddle, axis, at,
+                                         _histogram_searchsort_weighted, edges)
             elif strategy == 'digitize':
-                    count = apply_along_axis(_splitinmiddle,axis,at,\
-                        _histogram_digitize,edges,normed)
+                    count = apply_along_axis(_splitinmiddle, axis, at,
+                                             _histogram_digitize, edges, normed)
         else:
             if strategy == 'binsize':
-                count = apply_along_axis(flib.fixed_binsize,axis,at,start,binwidth,nbin)
+                count = apply_along_axis(
+                    flib.fixed_binsize,
+                    axis,
+                    at,
+                    start,
+                    binwidth,
+                    nbin)
             elif strategy == 'searchsort':
-                count = apply_along_axis(_histogram_searchsort,axis,at,edges)
+                count = apply_along_axis(
+                    _histogram_searchsort,
+                    axis,
+                    at,
+                    edges)
             elif strategy == 'digitize':
-                count = apply_along_axis(_histogram_digitize,axis,at,None,edges,
-                        normed)
+                count = apply_along_axis(
+                    _histogram_digitize, axis, at, None, edges,
+                    normed)
 
         if i == 0:
             total = count
@@ -267,17 +292,16 @@ def histogram(a, bins=10, range=None, normed=False, weights=None, axis=None, str
     lower = total.take(array([0]), axis)
 
     # Non-outlier count
-    core = a.ndim*[slice(None)]
+    core = a.ndim * [slice(None)]
     core[axis] = slice(1, -1)
     hist = total[core]
 
     if normed:
-        normalize = lambda x: atleast_1d(x/(x*dedges).sum())
+        normalize = lambda x: atleast_1d(x / (x * dedges).sum())
         hist = apply_along_axis(normalize, axis, hist)
 
-    return hist, {'edges':edges, 'lower':lower, 'upper':upper, \
-        'bincenters':bincenters, 'strategy':strategy}
-
+    return hist, {'edges': edges, 'lower': lower, 'upper': upper,
+                  'bincenters': bincenters, 'strategy': strategy}
 
 
 def _histogram_fixed_binsize(a, start, width, n):
@@ -334,23 +358,27 @@ def _histogram_binsize_weighted(a, w, start, width, n):
     """
     return flib.weighted_fixed_binsize(a, w, start, width, n)
 
+
 def _histogram_searchsort(a, bins):
     n = sort(a).searchsorted(bins)
     n = concatenate([n, [len(a)]])
-    count = concatenate([[n[0]], n[1:]-n[:-1]])
+    count = concatenate([[n[0]], n[1:] - n[:-1]])
     return count
+
 
 def _histogram_searchsort_weighted(a, w, bins):
     i = sort(a).searchsorted(bins)
     sw = w[argsort(a)]
     i = concatenate([i, [len(a)]])
-    n = concatenate([[0],sw.cumsum()])[i]
-    count = concatenate([[n[0]], n[1:]-n[:-1]])
+    n = concatenate([[0], sw.cumsum()])[i]
+    count = concatenate([[n[0]], n[1:] - n[:-1]])
     return count
 
+
 def _splitinmiddle(x, function, *args, **kwds):
-    x1,x2 = hsplit(x, 2)
-    return function(x1,x2,*args, **kwds)
+    x1, x2 = hsplit(x, 2)
+    return function(x1, x2, *args, **kwds)
+
 
 def _histogram_digitize(a, w, edges, normed):
     """Internal routine to compute the 1d weighted histogram for uneven bins.
@@ -361,12 +389,12 @@ def _histogram_digitize(a, w, edges, normed):
     Return the bin count or frequency if normed.
     """
     weighted = w is not None
-    nbin = edges.shape[0]+1
+    nbin = edges.shape[0] + 1
     if weighted:
         count = zeros(nbin, dtype=w.dtype)
         if normed:
             count = zeros(nbin, dtype=float)
-            w = w/w.mean()
+            w = w / w.mean()
     else:
         count = zeros(nbin, int)
 
@@ -386,16 +414,18 @@ def _optimize_binning(x, range, method='Freedman'):
     Available methods : Freedman, Scott
     """
     N = x.shape[0]
-    if method.lower()=='freedman':
-        s=sort(x)
-        IQR = s[int(N*.75)] - s[int(N*.25)] # Interquantile range (75% -25%)
-        width = 2* IQR*N**(-1./3)
+    if method.lower() == 'freedman':
+        s = sort(x)
+        IQR = s[int(N * .75)] - s[int(
+            N * .25)]  # Interquantile range (75% -25%)
+        width = 2 * IQR * N ** (-1. / 3)
 
-    elif method.lower()=='scott':
-        width = 3.49 * x.std()* N**(-1./3)
+    elif method.lower() == 'scott':
+        width = 3.49 * x.std() * N ** (-1. / 3)
     else:
         raise ValueError('Method must be Scott or Freedman', method)
-    return int(diff(range)/width)
+    return int(diff(range) / width)
+
 
 def normcdf(x, log=False):
     """Normal cumulative density function."""
@@ -406,15 +436,18 @@ def normcdf(x, log=False):
         return np.array([-np.inf if not yi else np.log(yi) for yi in y])
     return y
 
+
 def lognormcdf(x, mu, tau):
     """Log-normal cumulative density function"""
     x = np.atleast_1d(x)
-    return np.array([0.5*(1-flib.derf(-(np.sqrt(tau/2))*(np.log(y)-mu))) for y in x])
+    return np.array([0.5 * (1 - flib.derf(-(np.sqrt(tau / 2)) * (np.log(y) - mu))) for y in x])
+
 
 def invcdf(x):
     """Inverse of normal cumulative density function."""
     x = np.atleast_1d(x)
-    return np.array([flib.ppnd16(y,1) for y in x])
+    return np.array([flib.ppnd16(y, 1) for y in x])
+
 
 def ar1_gen(rho, mu, sigma, size=1):
     """Create an autoregressive series of order one AR(1) generator.
@@ -434,15 +467,16 @@ def ar1_gen(rho, mu, sigma, size=1):
     mu = np.asarray(mu, float)
     mu = np.resize(mu, size)
     r = mu.copy()
-    r += np.random.randn(size)*sigma
-    r[0] = np.random.randn(1)*sigma/np.sqrt(1-rho**2)
+    r += np.random.randn(size) * sigma
+    r[0] = np.random.randn(1) * sigma / np.sqrt(1 - rho ** 2)
     i = 0
     while True:
         yield r[i]
-        i+=1
-        if i==size:
+        i += 1
+        if i == size:
             break
-        r[i] += rho*(r[i-1]-mu[i-1])
+        r[i] += rho * (r[i - 1] - mu[i - 1])
+
 
 def ar1(rho, mu, sigma, size=1):
     """Return an autoregressive series of order one AR(1).
@@ -461,19 +495,23 @@ def ar1(rho, mu, sigma, size=1):
     """
     return np.array([x for x in ar1_gen(rho, mu, sigma, size)])
 
+
 def autocorr(x, lag=1):
     """Sample autocorrelation at specified lag.
     The autocorrelation is the correlation of x_i with x_{i+lag}.
     """
 
-    if not lag: return 1
-    if lag<0: return
+    if not lag:
+        return 1
+    if lag < 0:
+        return
     # x = np.squeeze(asarray(x))
     #     mu = x.mean()
     #     v = x.var()
     #     return ((x[:-lag]-mu)*(x[lag:]-mu)).sum()/v/(len(x) - lag)
     S = autocov(x, lag)
-    return S[0,1]/sqrt(prod(diag(S)))
+    return S[0, 1] / sqrt(prod(diag(S)))
+
 
 def autocov(x, lag=1):
     """
@@ -483,9 +521,12 @@ def autocov(x, lag=1):
     on the off-diagonal.
     """
 
-    if not lag: return 1
-    if lag<0: return
+    if not lag:
+        return 1
+    if lag < 0:
+        return
     return cov(x[:-lag], x[lag:], bias=1)
+
 
 def trace_generator(trace, start=0, stop=None, step=1):
     """Return a generator returning values from the object's trace.
@@ -499,9 +540,10 @@ def trace_generator(trace, start=0, stop=None, step=1):
     stop = stop or np.inf
     size = min(trace.length(), stop)
     while i < size:
-        index = slice(i, i+1)
+        index = slice(i, i + 1)
         yield trace.gettrace(slicing=index)[0]
-        i+=step
+        i += step
+
 
 def draw_random(obj, **kwds):
     """Draw random variates from obj.random method.
@@ -514,9 +556,10 @@ def draw_random(obj, **kwds):
     R.next()
     """
     while True:
-        for k,v in six.iteritems(kwds):
+        for k, v in six.iteritems(kwds):
             obj.parents[k] = v.next()
         yield obj.random()
+
 
 def rec_getattr(obj, attr):
     """Get object's attribute. May use dot notation.
@@ -529,6 +572,7 @@ def rec_getattr(obj, attr):
     4
     """
     return reduce(getattr, attr.split('.'), obj)
+
 
 def rec_setattr(obj, attr, value):
     """Set object's attribute. May use dot notation.
@@ -543,6 +587,7 @@ def rec_setattr(obj, attr, value):
     """
     attrs = attr.split('.')
     setattr(reduce(getattr, attrs[:-1], obj), attrs[-1], value)
+
 
 def hpd(x, alpha):
     """Calculate highest posterior density (HPD) of array for given alpha. The HPD is the
@@ -560,14 +605,14 @@ def hpd(x, alpha):
     x = x.copy()
 
     # For multivariate node
-    if x.ndim>1:
+    if x.ndim > 1:
 
         # Transpose first, then sort
-        tx = tr(x, range(x.ndim)[1:]+[0])
+        tx = tr(x, range(x.ndim)[1:] + [0])
         dims = shape(tx)
 
         # Container list for intervals
-        intervals = np.resize(0.0, dims[:-1]+(2,))
+        intervals = np.resize(0.0, dims[:-1] + (2,))
 
         for index in make_indices(dims[:-1]):
 
@@ -591,12 +636,14 @@ def hpd(x, alpha):
 
         return array(calc_min_interval(sx, alpha))
 
+
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
 
     level = len(dimensions)
 
-    if level==1: return range(dimensions[0])
+    if level == 1:
+        return range(dimensions[0])
 
     indices = [[]]
 
@@ -604,9 +651,9 @@ def make_indices(dimensions):
 
         _indices = []
 
-        for j in range(dimensions[level-1]):
+        for j in range(dimensions[level - 1]):
 
-            _indices += [[j]+i for i in indices]
+            _indices += [[j] + i for i in indices]
 
         indices = _indices
 
@@ -617,6 +664,7 @@ def make_indices(dimensions):
     except TypeError:
         return indices
 
+
 def calc_min_interval(x, alpha):
     """Internal method to determine the minimum interval of
     a given width
@@ -625,20 +673,21 @@ def calc_min_interval(x, alpha):
     """
 
     n = len(x)
-    cred_mass = 1.0-alpha
+    cred_mass = 1.0 - alpha
 
-    interval_idx_inc = int(np.floor( cred_mass*n ))
+    interval_idx_inc = int(np.floor(cred_mass * n))
     n_intervals = n - interval_idx_inc
     interval_width = x[interval_idx_inc:] - x[:n_intervals]
 
-    if len(interval_width)==0:
+    if len(interval_width) == 0:
         print_('Too few elements for interval calculation')
-        return [None,None]
+        return [None, None]
 
     min_idx = np.argmin(interval_width)
     hdi_min = x[min_idx]
-    hdi_max = x[min_idx+interval_idx_inc]
+    hdi_max = x[min_idx + interval_idx_inc]
     return [hdi_min, hdi_max]
+
 
 def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
     """Returns a dictionary of requested quantiles from array
@@ -655,7 +704,7 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
     x = x.copy()
 
     # For multivariate node
-    if x.ndim>1:
+    if x.ndim > 1:
         # Transpose first, then sort, then transpose back
         sx = sort(x.T).T
     else:
@@ -664,12 +713,13 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
 
     try:
         # Generate specified quantiles
-        quants = [sx[int(len(sx)*q/100.0)] for q in qlist]
+        quants = [sx[int(len(sx) * q / 100.0)] for q in qlist]
 
         return dict(zip(qlist, quants))
 
     except IndexError:
         print_("Too few elements for quantile calculation")
+
 
 def coda_output(pymc_object, name=None, chain=-1):
     """Generate output files that are compatible with CODA
@@ -682,16 +732,16 @@ def coda_output(pymc_object, name=None, chain=-1):
 
     print_()
     print_("Generating CODA output")
-    print_('='*50)
+    print_('=' * 50)
 
     if name is None:
         name = pymc_object.__name__
 
     # Open trace file
-    trace_file = open(name+'_coda.out', 'w')
+    trace_file = open(name + '_coda.out', 'w')
 
     # Open index file
-    index_file = open(name+'_coda.ind', 'w')
+    index_file = open(name + '_coda.ind', 'w')
 
     variables = [pymc_object]
     if hasattr(pymc_object, 'stochastics'):
@@ -706,7 +756,12 @@ def coda_output(pymc_object, name=None, chain=-1):
         vname = v.__name__
         print_("Processing", vname)
         try:
-            index = _process_trace(trace_file, index_file, v.trace(chain=chain), vname, index)
+            index = _process_trace(
+                trace_file,
+                index_file,
+                v.trace(chain=chain),
+                vname,
+                index)
         except TypeError:
             pass
 
@@ -717,10 +772,11 @@ def coda_output(pymc_object, name=None, chain=-1):
 # Lazy shortcut
 coda = coda_output
 
+
 def _process_trace(trace_file, index_file, trace, name, index):
     """Support function for coda_output(); writes output to files"""
 
-    if ndim(trace)>1:
+    if ndim(trace) > 1:
         trace = swapaxes(trace, 0, 1)
         for i, seq in enumerate(trace):
             _name = '%s_%s' % (name, i)
@@ -728,29 +784,32 @@ def _process_trace(trace_file, index_file, trace, name, index):
     else:
         index_buffer = '%s\t%s\t' % (name, index)
         for i, val in enumerate(trace):
-            trace_file.write('%s\t%s\r\n' % (i+1, val))
+            trace_file.write('%s\t%s\r\n' % (i + 1, val))
             index += 1
-        index_file.write('%s%s\r\n' % (index_buffer, index-1))
+        index_file.write('%s%s\r\n' % (index_buffer, index - 1))
 
     return index
+
 
 def log_difference(lx, ly):
     """Returns log(exp(lx) - exp(ly)) without leaving log space."""
 
     # Negative log of double-precision infinity
-    li=-709.78271289338397
+    li = -709.78271289338397
     diff = ly - lx
     # Make sure log-difference can succeed
-    if np.any(diff>=0):
-        raise ValueError('Cannot compute log(x-y), because y>=x for some elements.')
+    if np.any(diff >= 0):
+        raise ValueError(
+            'Cannot compute log(x-y), because y>=x for some elements.')
     # Otherwise evaluate log-difference
-    return lx + np.log(1.-np.exp(diff))
+    return lx + np.log(1. - np.exp(diff))
+
 
 def getInput():
     """Read the input buffer without blocking the system."""
     input = ''
 
-    if sys.platform=='win32':
+    if sys.platform == 'win32':
         import msvcrt
         if msvcrt.kbhit():  # Check for a keyboard hit.
             input += msvcrt.getch()
@@ -758,8 +817,7 @@ def getInput():
         else:
             time.sleep(.1)
 
-
-    else: # Other platforms
+    else:  # Other platforms
         # Posix will work with sys.stdin or sys.stdin.fileno()
         # Mac needs the file descriptor.
         # This solution does not work for windows since select
@@ -767,8 +825,8 @@ def getInput():
         # socket from standard input.
         sock = sys.stdin.fileno()
 
-        #select(rlist, wlist, xlist, timeout)
-        while len(select.select([sock], [], [], 0.1)[0])>0:
+        # select(rlist, wlist, xlist, timeout)
+        while len(select.select([sock], [], [], 0.1)[0]) > 0:
             input += os.read(sock, 4096)
 
     return input
@@ -787,9 +845,9 @@ def crawl_dataless(sofar, gens):
 
     for p in all_ext_parents:
         if p._random is not None and not p.observed:
-            if len(p.extended_children-sofar) == 0:
+            if len(p.extended_children - sofar) == 0:
                 new_gen.add(p)
-    if len(new_gen)==0:
+    if len(new_gen) == 0:
         return sofar, gens
     else:
         sofar |= new_gen
@@ -797,7 +855,7 @@ def crawl_dataless(sofar, gens):
         return crawl_dataless(sofar, gens)
 
 
-def find_generations(container, with_data = False):
+def find_generations(container, with_data=False):
     """
     A generation is the set of stochastic variables that only has parents in
     previous generations.
@@ -822,24 +880,24 @@ def find_generations(container, with_data = False):
     while children_remaining:
         gen_num += 1
 
-
         # Find children of last generation
         generations.append(set())
-        for s in generations[gen_num-1]:
-            generations[gen_num].update(s.extended_children & stochastics_to_iterate)
-
+        for s in generations[gen_num - 1]:
+            generations[gen_num].update(
+                s.extended_children & stochastics_to_iterate)
 
         # Take away stochastics that have parents in the current generation.
         thisgen_children = set()
         for s in generations[gen_num]:
-            thisgen_children.update(s.extended_children & stochastics_to_iterate)
+            thisgen_children.update(
+                s.extended_children & stochastics_to_iterate)
         generations[gen_num] -= thisgen_children
-
 
         # Stop when no subsequent _generations remain
         if len(thisgen_children) == 0:
             children_remaining = False
     return generations
+
 
 def append(nodelist, node, label=None, sep='_'):
     """
@@ -874,24 +932,22 @@ def append(nodelist, node, label=None, sep='_'):
     return nodelist
 
 
-
-#deterministic related utilities
-
+# deterministic related utilities
 def find_element(names, modules, error_on_fail):
     element = None
     found = False
 
-    if type(names) is str:
+    if isinstance(names, str):
         names = [names]
 
-    if type(modules) is dict or type(modules) is types.ModuleType:
+    if isinstance(modules, dict) or isinstance(modules, types.ModuleType):
         modules = [modules]
 
     for module in modules:
 
-        if type(module) is types.ModuleType:
+        if isinstance(module, types.ModuleType):
             module = copy(module.__dict__)
-        elif type(module) is dict:
+        elif isinstance(module, dict):
             module = copy(module)
         else:
             raise AttributeError
@@ -904,6 +960,9 @@ def find_element(names, modules, error_on_fail):
                 pass
 
     if not found and error_on_fail:
-        raise NameError("no function or variable " + str(names) + " in " + str(modules))
+        raise NameError(
+            "no function or variable " + str(
+                names) + " in " + str(
+            modules))
 
     return function

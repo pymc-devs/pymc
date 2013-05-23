@@ -7,13 +7,14 @@ verbose = False
 
 np.random.seed(1)
 
+
 class test_LazyFunction(TestCase):
 
     def test_cached(self):
 
         @stochastic
         def A(value=1.):
-            return -10.*value
+            return -10. * value
 
         # If normcoef is positive, there will be an uncaught ZeroProbability
         normcoef = -1.
@@ -24,17 +25,17 @@ class test_LazyFunction(TestCase):
             return A + normcoef * normal()
 
         # Guarantee that initial state is OK
-        while B.value<0.:
+        while B.value < 0.:
             @deterministic(verbose=verbose)
             def B(A=A):
                 return A + normcoef * normal()
 
         @observed(verbose=verbose)
-        def C(value = 0., B=(A,B)):
-            if B[0]<0.:
-                 return -np.Inf
+        def C(value=0., B=(A, B)):
+            if B[0] < 0.:
+                return -np.Inf
             else:
-                 return 0.
+                return 0.
 
         L = C._logp
         C.logp
@@ -63,8 +64,12 @@ class test_LazyFunction(TestCase):
                 # Make sure A's value and last value occupy correct places in B's
                 # cached arguments
                 cur_frame = B._value.get_frame_queue()[1]
-                assert(B._value.get_cached_counts()[a_loc,cur_frame] == A.counter.get_count())
-                assert(B._value.get_cached_counts()[a_loc,1-cur_frame] == last_A_count)
+                assert(
+                    B._value.get_cached_counts()[a_loc,
+                                                 cur_frame] == A.counter.get_count())
+                assert(
+                    B._value.get_cached_counts()[a_loc,
+                                                 1 - cur_frame] == last_A_count)
                 assert(B._value.ultimate_args[a_loc] is A)
 
             except ZeroProbability:
@@ -77,9 +82,10 @@ class test_LazyFunction(TestCase):
                 # Make sure A's value and last value occupy correct places in B's
                 # cached arguments
                 cur_frame = B._value.get_frame_queue()[1]
-                assert(B._value.get_cached_counts()[a_loc, 1-cur_frame] == A.counter.get_count())
+                assert(
+                    B._value.get_cached_counts()[a_loc,
+                                                 1 - cur_frame] == A.counter.get_count())
                 assert(B.value is last_B_value)
-
 
             # Check C's cache
             cur_frame = L.get_frame_queue()[1]
@@ -87,15 +93,21 @@ class test_LazyFunction(TestCase):
             # If jump was accepted:
             if acc:
                 # C's value should be at the head of C's cache
-                assert_equal(L.get_cached_counts()[c_loc, cur_frame], C.counter.get_count())
+                assert_equal(
+                    L.get_cached_counts()[c_loc,
+                                          cur_frame],
+                    C.counter.get_count())
                 assert(L.cached_values[cur_frame] is C.logp)
 
             # If jump was rejected:
             else:
 
                 # B's value should be at the back of C's cache.
-                assert_equal(L.get_cached_counts()[c_loc, 1-cur_frame], C.counter.get_count())
-                assert(L.cached_values[1-cur_frame] is C.logp)
+                assert_equal(
+                    L.get_cached_counts()[c_loc,
+                                          1 - cur_frame],
+                    C.counter.get_count())
+                assert(L.cached_values[1 - cur_frame] is C.logp)
 
 if __name__ == '__main__':
     import unittest

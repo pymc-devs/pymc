@@ -34,11 +34,11 @@ a = Uniform('a', lower=0, upper=10, value=5, doc='Weibull alpha parameter')
 b = Uniform('b', lower=0, upper=10, value=5, doc='Weibull beta parameter')
 like = Weibull('like', alpha=a, beta=b, value=dataset, observed=True)
 
-if __name__=='__main__':
+if __name__ == '__main__':
 
     from pymc import MCMC, Matplot
 
     # Sample the parameters a and b and analyze the results
-    M = MCMC([a,b,like])
-    M.sample(10000,5000)
+    M = MCMC([a, b, like])
+    M.sample(10000, 5000)
     Matplot.plot(M)

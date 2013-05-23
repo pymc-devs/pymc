@@ -4,9 +4,10 @@ Base classes Model and Sampler are defined here.
 
 # Changeset history
 # 22/03/2007 -DH- Added methods to query the StepMethod's state and pass it to database.
-# 20/03/2007 -DH- Separated Model from Sampler. Removed _prepare(). Commented __setattr__ because it breaks properties.
+# 20/03/2007 -DH- Separated Model from Sampler. Removed _prepare().
+# Commented __setattr__ because it breaks properties.
 
-__docformat__='reStructuredText'
+__docformat__ = 'reStructuredText'
 __all__ = ['Model', 'Sampler']
 
 """ Summary"""
@@ -16,14 +17,16 @@ from numpy.random import randint
 from . import database
 from .PyMCObjects import Stochastic, Deterministic, Node, Variable, Potential
 from .Container import Container, ObjectContainer
-import sys,os
+import sys
+import os
 from copy import copy
 from threading import Thread
 from .Node import ContainerBase
 from time import sleep
 import pdb
 from . import utils
-import warnings, traceback
+import warnings
+import traceback
 import itertools
 
 from .six import print_, reraise
@@ -31,11 +34,13 @@ from .six import print_, reraise
 GuiInterrupt = 'Computation halt'
 Paused = 'Computation paused'
 
+
 class EndofSampling(Exception):
     pass
 
 
 class Model(ObjectContainer):
+
     """
     The base class for all objects that fit probability models. Model is initialized with:
 
@@ -84,7 +89,8 @@ class Model(ObjectContainer):
         # Get stochastics, deterministics, etc.
         if input is None:
             import warnings
-            warnings.warn('The MCMC() syntax is deprecated. Please pass in nodes explicitly via M = MCMC(input).')
+            warnings.warn(
+                'The MCMC() syntax is deprecated. Please pass in nodes explicitly via M = MCMC(input).')
             import __main__
             __main__.__dict__.update(self.__class__.__dict__)
             input = __main__
@@ -131,8 +137,8 @@ class Model(ObjectContainer):
                 return node
 
 
-
 class Sampler(Model):
+
     """
     The base class for all objects that fit probability models using Monte Carlo methods.
     Sampler is initialized with:
@@ -165,7 +171,8 @@ class Sampler(Model):
 
     :SeeAlso: Model, MCMC.
     """
-    def __init__(self, input=None, db='ram', name='Sampler', reinit_model=True, calc_deviance=False, verbose=0, **kwds):
+    def __init__(self, input=None, db='ram', name='Sampler',
+                 reinit_model=True, calc_deviance=False, verbose=0, **kwds):
         """Initialize a Sampler instance.
 
         :Parameters:
@@ -182,7 +189,6 @@ class Sampler(Model):
           - **kwds :
               Keywords arguments to be passed to the database instantiation method.
         """
-
 
         # Initialize superclass
         if reinit_model:
@@ -214,13 +220,13 @@ class Sampler(Model):
     def _sum_deviance(self):
         # Sum deviance from all stochastics
 
-        return -2*sum([v.get_logp() for v in self.observed_stochastics])
+        return -2 * sum([v.get_logp() for v in self.observed_stochastics])
 
     def sample(self, iter, length=None, verbose=0):
         """
         Draws iter samples from the posterior.
         """
-        self._cur_trace_index=0
+        self._cur_trace_index = 0
         self.max_trace_length = iter
         self._iter = iter
         self.verbose = verbose or 0
@@ -269,7 +275,7 @@ class Sampler(Model):
             as it is safe to do so.
         - 'running': Sampling is in progress.
         """
-        self.status='running'
+        self.status = 'running'
 
         try:
             while self._current_iter < self._iter and not self.status == 'halt':
@@ -288,7 +294,7 @@ class Sampler(Model):
                 self._current_iter += 1
 
         except KeyboardInterrupt:
-            self.status='halt'
+            self.status = 'halt'
 
         if self.status == 'halt':
             self._halt()
@@ -299,7 +305,8 @@ class Sampler(Model):
         """
         pass
 
-    def stats(self, variables=None, alpha=0.05, start=0, batches=100, chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
+    def stats(self, variables=None, alpha=0.05, start=0,
+              batches=100, chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
         """
         Statistical output for variables.
 
@@ -330,20 +337,25 @@ class Sampler(Model):
         if variables is None:
             variables = self._variables_to_tally
         else:
-            variables = [self.__dict__[i] for i in variables if self.__dict__[i] in self._variables_to_tally]
+            variables = [
+                self.__dict__[
+                    i] for i in variables if self.__dict__[
+                        i] in self._variables_to_tally]
 
         stat_dict = {}
 
         # Loop over nodes
         for variable in variables:
             # Plot object
-            stat_dict[variable.__name__] = self.trace(variable.__name__).stats(alpha=alpha, start=start,
-                batches=batches, chain=chain, quantiles=quantiles)
+            stat_dict[variable.__name__] = self.trace(
+                variable.__name__).stats(alpha=alpha, start=start,
+                                         batches=batches, chain=chain, quantiles=quantiles)
 
         return stat_dict
 
-    def write_csv(self, filename, variables=None, alpha=0.05, start=0, batches=100,
-        chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
+    def write_csv(
+        self, filename, variables=None, alpha=0.05, start=0, batches=100,
+            chain=None, quantiles=(2.5, 25, 50, 75, 97.5)):
         """
         Save summary statistics to a csv table.
 
@@ -385,11 +397,16 @@ class Sampler(Model):
         header += ', '.join(['q%s' % i for i in quantiles])
         outfile.write(header + '\n')
 
-        stats = self.stats(variables=variables, alpha=alpha, start=start, batches=batches, chain=chain, quantiles=quantiles)
+        stats = self.stats(
+            variables=variables,
+            alpha=alpha,
+            start=start,
+            batches=batches,
+            chain=chain,
+            quantiles=quantiles)
 
         if variables is None:
-            variables = stats.keys()
-            variables.sort()
+            variables = sorted(stats.keys())
 
         buffer = str()
         for param in variables:
@@ -421,13 +438,13 @@ class Sampler(Model):
         else:
             buffer += '_' + '_'.join([str(i) for i in index]) + ', '
 
-        for stat in ('mean','standard deviation','mc error'):
+        for stat in ('mean', 'standard deviation', 'mc error'):
             buffer += str(stats[stat][index]) + ', '
 
         # Index to interval label
         iindex = [key.split()[-1] for key in stats.keys()].index('interval')
         interval = stats.keys()[iindex]
-        buffer +=  ', '.join(stats[interval][index].astype(str))
+        buffer += ', '.join(stats[interval][index].astype(str))
 
         # Process quantiles
         qvalues = stats['quantiles']
@@ -436,9 +453,8 @@ class Sampler(Model):
 
         return buffer + '\n'
 
-
     def summary(self, variables=None, alpha=0.05, start=0, batches=100,
-        chain=None, roundto=3):
+                chain=None, roundto=3):
         """
         Generate a pretty-printed summary of the model's variables.
 
@@ -466,23 +482,25 @@ class Sampler(Model):
           The desired quantiles to be calculated. Defaults to (2.5, 25, 50, 75, 97.5).
         """
 
-
         # If no names provided, run them all
         if variables is None:
             variables = self._variables_to_tally
         else:
-            variables = [self.__dict__[i] for i in variables if self.__dict__[i] in self._variables_to_tally]
+            variables = [
+                self.__dict__[
+                    i] for i in variables if self.__dict__[
+                        i] in self._variables_to_tally]
 
         # Loop over nodes
         for variable in variables:
-            variable.summary(alpha=alpha, start=start, batches=batches, chain=chain,
+            variable.summary(
+                alpha=alpha, start=start, batches=batches, chain=chain,
                 roundto=roundto)
-
 
     # Property --- status : the sampler state.
     def status():
         doc = \
-        """Status of sampler. May be one of running, paused, halt or ready.
+            """Status of sampler. May be one of running, paused, halt or ready.
           - `running` : The model is currently sampling.
           - `paused` : The model has been interrupted during sampling. It is
             ready to be restarted by `continuesample`.
@@ -490,16 +508,17 @@ class Sampler(Model):
             If sample is called again, a new chain will be initiated.
           - `ready` : The model is ready to sample.
         """
+
         def fget(self):
             return self.__status
+
         def fset(self, value):
             if value in ['running', 'paused', 'halt', 'ready']:
-                self.__status=value
+                self.__status = value
             else:
                 raise AttributeError(value)
         return locals()
     status = property(**status())
-
 
     def _assign_database_backend(self, db):
         """Assign Trace instance to stochastics and deterministics and Database instance
@@ -531,8 +550,10 @@ class Sampler(Model):
                         # Standard stochastic
                         self._funs_to_tally[object.__name__] = object.get_value
                     else:
-                        # Has missing values, so only fetch stochastic elements using mask
-                        self._funs_to_tally[object.__name__] = object.get_stoch_value
+                        # Has missing values, so only fetch stochastic elements
+                        # using mask
+                        self._funs_to_tally[
+                            object.__name__] = object.get_stoch_value
                 except AttributeError:
                     # Not a stochastic object, so no mask
                     self._funs_to_tally[object.__name__] = object.get_value
@@ -543,7 +564,7 @@ class Sampler(Model):
 
         # If not already done, load the trace backend from the database
         # module, and assign a database instance to Model.
-        if type(db) is str:
+        if isinstance(db, str):
             if db in dir(database):
                 module = getattr(database, db)
 
@@ -553,11 +574,11 @@ class Sampler(Model):
 
                 self.db = module.Database(**self._db_args)
             elif db in database.__modules__:
-                raise ImportError(\
+                raise ImportError(
                     'Database backend `%s` is not properly installed. Please see the documentation for instructions.' % db)
             else:
-                raise AttributeError(\
-                    'Database backend `%s` is not defined in pymc.database.'%db)
+                raise AttributeError(
+                    'Database backend `%s` is not defined in pymc.database.' % db)
         elif isinstance(db, database.base.Database):
             self.db = db
             self.restore_sampler_state()
@@ -592,19 +613,19 @@ class Sampler(Model):
     # Tally
     #
     def tally(self):
-       """
-       tally()
+        """
+        tally()
 
-       Records the value of all tracing variables.
-       """
-       if self.verbose > 2:
-           print_(self.__name__ + ' tallying.')
-       if self._cur_trace_index < self.max_trace_length:
-           self.db.tally()
+        Records the value of all tracing variables.
+        """
+        if self.verbose > 2:
+            print_(self.__name__ + ' tallying.')
+        if self._cur_trace_index < self.max_trace_length:
+            self.db.tally()
 
-       self._cur_trace_index += 1
-       if self.verbose > 2:
-           print_(self.__name__ + ' done tallying.')
+        self._cur_trace_index += 1
+        if self.verbose > 2:
+            print_(self.__name__ + ' done tallying.')
 
     def commit(self):
         """
@@ -613,21 +634,24 @@ class Sampler(Model):
 
         self.db.commit()
 
-
     def isample(self, *args, **kwds):
         """
         Samples in interactive mode. Main thread of control stays in this function.
         """
         self._exc_info = None
-        out = kwds.pop('out',  sys.stdout)
+        out = kwds.pop('out', sys.stdout)
         kwds['progress_bar'] = False
+
         def samp_targ(*args, **kwds):
             try:
                 self.sample(*args, **kwds)
             except:
                 self._exc_info = sys.exc_info()
 
-        self._sampling_thread = Thread(target=samp_targ, args=args, kwargs=kwds)
+        self._sampling_thread = Thread(
+            target=samp_targ,
+            args=args,
+            kwargs=kwds)
         self.status = 'running'
         self._sampling_thread.start()
         self.iprompt(out=out)
@@ -637,7 +661,8 @@ class Sampler(Model):
         Restarts thread in interactive mode
         """
         if self.status != 'paused':
-            print_("No sampling to continue. Please initiate sampling with isample.")
+            print_(
+                "No sampling to continue. Please initiate sampling with isample.")
             return
 
         def sample_and_finalize():
@@ -678,40 +703,41 @@ class Sampler(Model):
         try:
             while self.status in ['running', 'paused']:
                     # sys.stdout.write('pymc> ')
-                    if prompt:
-                        out.write('pymc > ')
-                        out.flush()
+                if prompt:
+                    out.write('pymc > ')
+                    out.flush()
 
-                    if self._exc_info is not None:
-                        a,b,c = self._exc_info
-                        reraise(a, b, c)
+                if self._exc_info is not None:
+                    a, b, c = self._exc_info
+                    reraise(a, b, c)
 
-                    cmd = utils.getInput().strip()
-                    if cmd == 'i':
-                        print_('Current iteration: %i of %i' % (self._current_iter, self._iter), file=out)
-                        prompt = True
-                    elif cmd == 'p':
-                        self.status = 'paused'
-                        break
-                    elif cmd == 'h':
-                        self.status = 'halt'
-                        break
-                    elif cmd == 'b':
-                        return
-                    elif cmd == '\n':
-                        prompt = True
-                        pass
-                    elif cmd == '':
-                        prompt = False
-                    else:
-                        print_('Unknown command: ', cmd, file=out)
-                        print_(cmds, file=out)
-                        prompt = True
+                cmd = utils.getInput().strip()
+                if cmd == 'i':
+                    print_(
+                        'Current iteration: %i of %i' %
+                        (self._current_iter, self._iter), file=out)
+                    prompt = True
+                elif cmd == 'p':
+                    self.status = 'paused'
+                    break
+                elif cmd == 'h':
+                    self.status = 'halt'
+                    break
+                elif cmd == 'b':
+                    return
+                elif cmd == '\n':
+                    prompt = True
+                    pass
+                elif cmd == '':
+                    prompt = False
+                else:
+                    print_('Unknown command: ', cmd, file=out)
+                    print_(cmds, file=out)
+                    prompt = True
 
         except KeyboardInterrupt:
             if not self.status == 'ready':
                 self.status = 'halt'
-
 
         if self.status == 'ready':
             print_("Sampling terminated successfully.", file=out)
@@ -721,8 +747,9 @@ class Sampler(Model):
                 sleep(.1)
             print_('Exiting interactive prompt...', file=out)
             if self.status == 'paused':
-                print_('Call icontinue method to continue, or call halt method to truncate traces and stop.', file=out)
-
+                print_(
+                    'Call icontinue method to continue, or call halt method to truncate traces and stop.',
+                    file=out)
 
     def get_state(self):
         """
@@ -768,12 +795,13 @@ class Sampler(Model):
             try:
                 sm.value = stoch_state[sm.__name__]
             except:
-                warnings.warn('Failed to restore state of stochastic %s from %s backend'%(sm.__name__, self.db.__name__))
-                #print_('Error message:')
-                #traceback.print_exc()
+                warnings.warn(
+                    'Failed to restore state of stochastic %s from %s backend' %
+                    (sm.__name__, self.db.__name__))
+                # print_('Error message:')
+                # traceback.print_exc()
 
-
-    def remember(self, chain=-1, trace_index = None):
+    def remember(self, chain=-1, trace_index=None):
         """
         remember(chain=-1, trace_index = randint(trace length to date))
 
@@ -786,10 +814,14 @@ class Sampler(Model):
         for variable in self._variables_to_tally:
             if isinstance(variable, Stochastic):
                 try:
-                    variable.value = self.trace(variable.__name__, chain=chain)[trace_index]
+                    variable.value = self.trace(
+                        variable.__name__,
+                        chain=chain)[trace_index]
                 except:
                     cls, inst, tb = sys.exc_info()
-                    warnings.warn('Unable to remember value of variable %s. Original error: \n\n%s: %s'%(variable,cls.__name__,inst.message))
+                    warnings.warn(
+                        'Unable to remember value of variable %s. Original error: \n\n%s: %s' %
+                        (variable, cls.__name__, inst.message))
 
     def trace(self, name, chain=-1):
         """Return the trace of a tallyable object stored in the database.
@@ -801,22 +833,27 @@ class Sampler(Model):
           The trace index. Setting `chain=i` will return the trace created by
           the ith call to `sample`.
         """
-        if type(name) is str:
+        if isinstance(name, str):
             return self.db.trace(name, chain)
         elif isinstance(name, Variable):
             return self.db.trace(name.__name__, chain)
         else:
-            raise ValueError('Name argument must be string or Variable, got %s.'%name)
+            raise ValueError(
+                'Name argument must be string or Variable, got %s.' %
+                name)
 
     def _get_deviance(self):
         return self._sum_deviance()
     deviance = property(_get_deviance)
+
 
 def check_valid_object_name(sequence):
     """Check that the names of the objects are all different."""
     names = []
     for o in sequence:
         if o.__name__ in names:
-            raise ValueError('A tallyable PyMC object called %s already exists. This will cause problems for some database backends.'%o.__name__)
+            raise ValueError(
+                'A tallyable PyMC object called %s already exists. This will cause problems for some database backends.' %
+                o.__name__)
         else:
             names.append(o.__name__)

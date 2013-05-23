@@ -1,6 +1,6 @@
 # Copyright (c) Anand Patil, 2007
 
-__docformat__='reStructuredText'
+__docformat__ = 'reStructuredText'
 __all__ = ['FullRankCovariance']
 
 
@@ -55,14 +55,13 @@ class FullRankCovariance(Covariance):
 
         self.eval_fun = eval_fun
         self.params = params
-        self.nugget=nugget
+        self.nugget = nugget
 
-        # # Sorry... the diagonal calls are done using f2py for speed.
+        # Sorry... the diagonal calls are done using f2py for speed.
         # def diag_cov_fun(xe):
         #     return self.eval_fun(xe,xe,**self.params)
         #
         # self.diag_cov_fun = diag_cov_fun
-
 
     def cholesky(self, x, observed=True, nugget=None, return_eval_also=False):
         """
@@ -86,26 +85,29 @@ class FullRankCovariance(Covariance):
         # Number of points in x.
         N_new = x.shape[0]
 
-        U=self.__call__(x, x, regularize = False, observed = observed)
+        U = self.__call__(x, x, regularize=False, observed=observed)
         if return_eval_also:
             C_eval = U.copy('F')
 
         if nugget is not None:
             for i in xrange(N_new):
-                U[i,i] += nugget[i]
+                U[i, i] += nugget[i]
 
         # print self.params, x.shape, observed, nugget
 
         info = dpotrf_wrap(U)
-        if info>0:
-            raise LinAlgError("Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." % info)
+        if info > 0:
+            raise LinAlgError(
+                "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." %
+                info)
 
         if return_eval_also:
             return U, C_eval
         else:
             return U
 
-    def continue_cholesky(self, x, x_old, U_old, observed=True, nugget=None, return_eval_also=False):
+    def continue_cholesky(
+            self, x, x_old, U_old, observed=True, nugget=None, return_eval_also=False):
         """
 
         U = C.continue_cholesky(x, x_old, U_old[, observed=True, nugget=None])
@@ -131,7 +133,7 @@ class FullRankCovariance(Covariance):
         """
 
         # Concatenation of the old points and new points.
-        xtot = vstack((x_old,x))
+        xtot = vstack((x_old, x))
 
         # Number of old points.
         N_old = x_old.shape[0]
@@ -144,40 +146,57 @@ class FullRankCovariance(Covariance):
         # not really implemented yet.
         if nugget is not None:
             for i in xrange(N_new):
-                U_new[i,i] += nugget[i]
+                U_new[i, i] += nugget[i]
 
-        U = asmatrix(zeros((N_new + N_old, N_old + N_new), dtype=float, order='F'))
+        U = asmatrix(
+            zeros((N_new + N_old,
+                   N_old + N_new),
+                  dtype=float,
+                  order='F'))
         U[:N_old, :N_old] = U_old
 
-        offdiag = self.__call__(x=x_old, y=x, observed=observed, regularize=False)
-        trisolve(U_old,offdiag,uplo='U',transa='T', inplace=True)
+        offdiag = self.__call__(
+            x=x_old,
+            y=x,
+            observed=observed,
+            regularize=False)
+        trisolve(U_old, offdiag, uplo='U', transa='T', inplace=True)
         U[:N_old, N_old:] = offdiag
 
-        U_new -= offdiag.T*offdiag
+        U_new -= offdiag.T * offdiag
         if return_eval_also:
             C_eval = U_new.copy('F')
 
         info = dpotrf_wrap(U_new)
-        if info>0:
-            raise LinAlgError("Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." %info)
+        if info > 0:
+            raise LinAlgError(
+                "Matrix does not appear to be positive definite by row %i. Consider another Covariance subclass, such as NearlyFullRankCovariance." %
+                info)
 
-        U[N_old:,N_old:] = U_new
+        U[N_old:, N_old:] = U_new
         if return_eval_also:
             return U, U_new, C_eval
         else:
             return U
 
-    def __call__(self, x, y=None, observed=True, regularize=True, return_Uo_Cxo=False):
-        out = Covariance.__call__(self,x,y,observed,regularize,return_Uo_Cxo=return_Uo_Cxo)
+    def __call__(self, x, y=None, observed=True,
+                 regularize=True, return_Uo_Cxo=False):
+        out = Covariance.__call__(
+            self,
+            x,
+            y,
+            observed,
+            regularize,
+            return_Uo_Cxo=return_Uo_Cxo)
 
         if self.nugget is None:
             return out
-        
+
         if return_Uo_Cxo:
             out, Uo_Cxo = out
         if x is y:
             for i in xrange(out.shape[0]):
-                out[i,i] += self.nugget
+                out[i, i] += self.nugget
         elif y is None:
             out += self.nugget
         if return_Uo_Cxo:
@@ -189,7 +208,7 @@ class FullRankCovariance(Covariance):
         """
         Observes self on obs_mesh with observation variance obs_V.
         Output_type controls the information returned:
-        
+
         'r' : returns information needed by Realization objects.
         'o' : returns information needed by function observe.
         's' : returns information needed by the Gaussian process
@@ -200,8 +219,9 @@ class FullRankCovariance(Covariance):
         ndim = obs_mesh.shape[1]
 
         if self.ndim is not None:
-            if not ndim==self.ndim:
-                raise ValueError("Dimension of observation mesh is not equal to dimension of base mesh.")
+            if not ndim == self.ndim:
+                raise ValueError(
+                    "Dimension of observation mesh is not equal to dimension of base mesh.")
         else:
             self.ndim = ndim
 
@@ -219,11 +239,12 @@ class FullRankCovariance(Covariance):
             N_old = 0
             N_new = obs_mesh.shape[0]
 
-            if output_type=='s':
-                U, C_eval = self.cholesky(obs_mesh, nugget=obs_V, observed=False, return_eval_also=True)
+            if output_type == 's':
+                U, C_eval = self.cholesky(
+                    obs_mesh, nugget=obs_V, observed=False, return_eval_also=True)
                 U_new = U
             else:
-                U = self.cholesky(obs_mesh, nugget = obs_V, observed=False)
+                U = self.cholesky(obs_mesh, nugget=obs_V, observed=False)
 
             # Upper-triangular Cholesky factor of self(obs_mesh, obs_mesh)
             self.full_Uo = U
@@ -237,13 +258,13 @@ class FullRankCovariance(Covariance):
             # Remember full observation mesh.
             self.full_obs_mesh = obs_mesh
 
-            # relevant slice is the positive-definite indices, which get into obs_mesh_*. See documentation.
+            # relevant slice is the positive-definite indices, which get into
+            # obs_mesh_*. See documentation.
             relevant_slice = self.obs_piv
 
             self.obs_mesh = obs_mesh
             self.obs_V = obs_V
             self.obs_len = N_new
-
 
         # =======================================
         # = If self has been observed already:  =
@@ -251,7 +272,8 @@ class FullRankCovariance(Covariance):
         else:
 
             # If self has been observed, get the Cholesky factor of the _full_ observation mesh (new
-            # and old observations) using continue_cholesky, along with side information, and store it.
+            # and old observations) using continue_cholesky, along with side
+            # information, and store it.
 
             # Number of observations so far.
             N_old = self.full_obs_mesh.shape[0]
@@ -260,26 +282,28 @@ class FullRankCovariance(Covariance):
             N_new = obs_mesh.shape[0]
 
             # Call to self.continue_cholesky.
-            if output_type=='s':
-                U, U_new, C_eval = self.continue_cholesky( x=obs_mesh,
-                                                        x_old = self.full_obs_mesh,
-                                                        U_old = self.full_Uo,
-                                                        observed = False,
-                                                        nugget = obs_V,
-                                                        return_eval_also=True)
-                
-            else:
-                U = self.continue_cholesky( x=obs_mesh,
-                                            x_old = self.full_obs_mesh,
-                                            U_old = self.full_Uo,
-                                            observed = False,
-                                            nugget = obs_V)
+            if output_type == 's':
+                U, U_new, C_eval = self.continue_cholesky(x=obs_mesh,
+                                                          x_old=self.full_obs_mesh,
+                                                          U_old=self.full_Uo,
+                                                          observed=False,
+                                                          nugget=obs_V,
+                                                          return_eval_also=True)
 
-            # Full Cholesky factor of self(obs_mesh, obs_mesh), where obs_mesh is the combined observation mesh.
+            else:
+                U = self.continue_cholesky(x=obs_mesh,
+                                           x_old=self.full_obs_mesh,
+                                           U_old=self.full_Uo,
+                                           observed=False,
+                                           nugget=obs_V)
+
+            # Full Cholesky factor of self(obs_mesh, obs_mesh), where obs_mesh
+            # is the combined observation mesh.
             self.full_Uo = U
 
-            # Square upper-triangular Cholesky factor of self(obs_mesh_*, obs_mesh_*). See documentation.
-            self.Uo=self.full_Uo
+            # Square upper-triangular Cholesky factor of self(obs_mesh_*,
+            # obs_mesh_*). See documentation.
+            self.Uo = self.full_Uo
 
             # Pivots.
             piv_new = arange(N_old + N_new)
@@ -297,13 +321,12 @@ class FullRankCovariance(Covariance):
         self.observed = True
         # Output expected by Realization
         if output_type == 'r':
-            return slice(None, None, None), obs_mesh, self.full_Uo[N_old:N_new+N_old, N_old:N_new+N_old], self.full_Uo[:N_old, N_old:N_new+N_old]
-            
+            return slice(None, None, None), obs_mesh, self.full_Uo[N_old:N_new + N_old, N_old:N_new + N_old], self.full_Uo[:N_old, N_old:N_new + N_old]
+
         # Ouptut expected by observe
         if output_type == 'o':
             return slice(None, None, None), obs_mesh
-            
+
         # Output expected by the GP submodel
-        if output_type=='s':
-            return U_new, C_eval, self.full_Uo[:N_old, N_old:N_new+N_old]
-        
+        if output_type == 's':
+            return U_new, C_eval, self.full_Uo[:N_old, N_old:N_new + N_old]

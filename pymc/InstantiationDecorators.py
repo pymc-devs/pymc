@@ -3,9 +3,23 @@ The decorators stochastic, deterministic, discrete_stochastic, binary_stochastic
 are defined here, but the actual objects are defined in PyMCObjects.py
 """
 
-__all__ = ['stochastic', 'stoch', 'deterministic', 'dtrm', 'potential', 'pot', 'data', 'observed', 'robust_init','disable_special_methods','enable_special_methods','check_special_methods']
+__all__ = [
+    'stochastic',
+    'stoch',
+    'deterministic',
+    'dtrm',
+    'potential',
+    'pot',
+    'data',
+    'observed',
+    'robust_init',
+    'disable_special_methods',
+    'enable_special_methods',
+    'check_special_methods']
 
-import sys, inspect, pdb
+import sys
+import inspect
+import pdb
 from imp import load_dynamic
 from .PyMCObjects import Stochastic, Deterministic, Potential
 from .Node import ZeroProbability, ContainerBase, Node, StochasticMeta
@@ -13,14 +27,21 @@ from .Container import Container
 import numpy as np
 
 special_methods_available = [True]
+
+
 def disable_special_methods(sma=special_methods_available):
-    sma[0]=False
+    sma[0] = False
+
+
 def enable_special_methods(sma=special_methods_available):
-    sma[0]=True
+    sma[0] = True
+
+
 def check_special_methods(sma=special_methods_available):
     return sma[0]
 
 from . import six
+
 
 def _extract(__func__, kwds, keys, classname, probe=True):
     """
@@ -41,25 +62,28 @@ def _extract(__func__, kwds, keys, classname, probe=True):
         cur_status = check_special_methods()
         disable_special_methods()
         # Define global tracing function (I assume this is for debugging??)
-        # No, it's to get out the logp and random functions, if they're in there.
+        # No, it's to get out the logp and random functions, if they're in
+        # there.
+
         def probeFunc(frame, event, arg):
             if event == 'return':
                 locals = frame.f_locals
-                kwds.update(dict((k,locals.get(k)) for k in keys))
+                kwds.update(dict((k, locals.get(k)) for k in keys))
                 sys.settrace(None)
             return probeFunc
 
         sys.settrace(probeFunc)
 
         # Get the functions logp and random (complete interface).
-        # Disable special methods to prevent the formation of a hurricane of Deterministics
+        # Disable special methods to prevent the formation of a hurricane of
+        # Deterministics
         try:
             __func__()
         except:
             if 'logp' in keys:
-                kwds['logp']=__func__
+                kwds['logp'] = __func__
             else:
-                kwds['eval'] =__func__
+                kwds['eval'] = __func__
         # Reenable special methods.
         if cur_status:
             enable_special_methods()
@@ -82,10 +106,11 @@ def _extract(__func__, kwds, keys, classname, probe=True):
     # Make sure all parents were defined
     arg_deficit = (len(args) - ('value' in args)) - len(defaults)
     if arg_deficit > 0:
-        err_str =  classname + ' ' + __func__.__name__ + ': no parent provided for the following labels:'
+        err_str =  classname + ' ' + __func__.__name__ + \
+            ': no parent provided for the following labels:'
         for i in range(arg_deficit):
-            err_str +=  " " + args[i + ('value' in args)]
-            if i < arg_deficit-1:
+            err_str += " " + args[i + ('value' in args)]
+            if i < arg_deficit - 1:
                 err_str += ','
         raise ValueError(err_str)
 
@@ -99,7 +124,9 @@ def _extract(__func__, kwds, keys, classname, probe=True):
 
     return (value, parents)
 
-def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False, **kwds):
+
+def stochastic(__func__=None, __class__=Stochastic,
+               binary=False, discrete=False, **kwds):
     """
     Decorator function for instantiating stochastic variables. Usages:
 
@@ -145,10 +172,10 @@ def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False
     """
 
     def instantiate_p(__func__):
-        value, parents = _extract(__func__, kwds, keys, 'Stochastic') 
+        value, parents = _extract(__func__, kwds, keys, 'Stochastic')
         return __class__(value=value, parents=parents, **kwds)
 
-    keys = ['logp','random','rseed']
+    keys = ['logp', 'random', 'rseed']
 
     instantiate_p.kwds = kwds
 
@@ -160,7 +187,8 @@ def stochastic(__func__=None, __class__=Stochastic, binary=False, discrete=False
 # Shortcut alias
 stoch = stochastic
 
-def potential(__func__ = None, **kwds):
+
+def potential(__func__=None, **kwds):
     """
     Decorator function instantiating potentials. Usage:
 
@@ -175,7 +203,8 @@ def potential(__func__ = None, **kwds):
       Deterministic, deterministic, Stochastic, Potential, stochastic, data, Model
     """
     def instantiate_pot(__func__):
-        junk, parents = _extract(__func__, kwds, keys, 'Potential', probe=False)
+        junk, parents = _extract(
+            __func__, kwds, keys, 'Potential', probe=False)
         return Potential(parents=parents, **kwds)
 
     keys = ['logp']
@@ -188,7 +217,8 @@ def potential(__func__ = None, **kwds):
     return instantiate_pot
 pot = potential
 
-def deterministic(__func__ = None, **kwds):
+
+def deterministic(__func__=None, **kwds):
     """
     Decorator function instantiating deterministic variables. Usage:
 
@@ -208,7 +238,8 @@ def deterministic(__func__ = None, **kwds):
       CommonDeterministics
     """
     def instantiate_n(__func__):
-        junk, parents = _extract(__func__, kwds, keys, 'Deterministic', probe=False)
+        junk, parents = _extract(
+            __func__, kwds, keys, 'Deterministic', probe=False)
         return Deterministic(parents=parents, **kwds)
 
     keys = ['eval']
@@ -222,6 +253,7 @@ def deterministic(__func__ = None, **kwds):
 
 # Shortcut alias
 dtrm = deterministic
+
 
 def observed(obj=None, **kwds):
     """
@@ -248,19 +280,21 @@ def observed(obj=None, **kwds):
 
     if obj is not None:
         if isinstance(obj, Stochastic):
-            obj._observed=True
+            obj._observed = True
             return obj
         else:
             p = stochastic(__func__=obj, observed=True, **kwds)
             return p
 
-    kwds['observed']=True
+    kwds['observed'] = True
+
     def instantiate_observed(func):
         return stochastic(func, **kwds)
 
     return instantiate_observed
 
 data = observed
+
 
 def robust_init(stochclass, tries, *args, **kwds):
     """Robust initialization of a Stochastic.
@@ -286,8 +320,8 @@ def robust_init(stochclass, tries, *args, **kwds):
     >>> pymc.robust_init(pymc.Uniform, 100, 'data', lower=lower, upper=5, value=[1,2,3,4], observed=True)
     """
     # Find the direct parents
-    stochs = [arg for arg in (list(args) + list(kwds.values())) \
-                                if isinstance(arg.__class__, StochasticMeta)]
+    stochs = [arg for arg in (list(args) + list(kwds.values()))
+              if isinstance(arg.__class__, StochasticMeta)]
 
     # Find the extended parents
     parents = stochs
@@ -297,7 +331,10 @@ def robust_init(stochclass, tries, *args, **kwds):
     extended_parents = set(parents)
 
     # Select the parents with a random method.
-    random_parents = [p for p in extended_parents if p.rseed is True and hasattr(p, 'random')]
+    random_parents = [
+        p for p in extended_parents if p.rseed is True and hasattr(
+            p,
+            'random')]
 
     for i in range(tries):
         try:
@@ -311,4 +348,3 @@ def robust_init(stochclass, tries, *args, **kwds):
                     six.reraise(*exc)
 
     six.reraise(*exc)
-

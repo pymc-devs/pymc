@@ -1,6 +1,6 @@
 # Copyright (c) Anand Patil, 2007
 
-__docformat__='reStructuredText'
+__docformat__ = 'reStructuredText'
 __all__ = ['Covariance']
 
 
@@ -91,7 +91,7 @@ class Covariance(object):
         """
 
         if regularize:
-            x=regularize_array(x)
+            x = regularize_array(x)
 
         # Number of points in x.
         N_new = x.shape[0]
@@ -103,8 +103,8 @@ class Covariance(object):
             diag += nugget.ravel()
 
         # Special fast version for single points.
-        if N_new==1:
-            U=asmatrix(sqrt(diag))
+        if N_new == 1:
+            U = asmatrix(sqrt(diag))
             # print U
             if not apply_pivot:
                 return {'pivots': array([0]), 'U': U}
@@ -118,11 +118,11 @@ class Covariance(object):
 
         # get-row function
         # TODO: Forbid threading here due to callbacks.
-        def rowfun(i,xpiv,rowvec):
+        def rowfun(i, xpiv, rowvec):
             """
             A function that can be used to overwrite an input array with rows.
             """
-            rowvec[i:]=self.__call__(x=xpiv[i-1,:].reshape((1,-1)), y=xpiv[i:,:], regularize=False, observed=observed)
+            rowvec[i:] = self.__call__(x=xpiv[i-1,:].reshape((1, -1)), y=xpiv[i:,:], regularize=False, observed=observed)
 
 
         # ==================================
@@ -130,12 +130,12 @@ class Covariance(object):
         # ==================================
         if rank_limit == 0:
             rank_limit = N_new
-        U, m, piv = ichol(diag=diag, reltol=self.relative_precision, rowfun=rowfun, x=x, rl=min(rank_limit,N_new))
+        U, m, piv = ichol(diag=diag, reltol=self.relative_precision, rowfun=rowfun, x=x, rl=min(rank_limit, N_new))
         U = asmatrix(U)
 
 
         # Arrange output matrix and return.
-        if m<0:
+        if m < 0:
             raise ValueError("Matrix does not appear to be positive semidefinite")
 
         if not apply_pivot:
@@ -144,7 +144,7 @@ class Covariance(object):
             return {'pivots': piv, 'U': U}
         else:
             # Useful for users. U.T*U = C(x,x)
-            return U[:m,argsort(piv)]
+            return U[:m, argsort(piv)]
 
 
     def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank = False, rank_limit=0):
@@ -192,10 +192,10 @@ class Covariance(object):
         """
 
         if regularize:
-            x=regularize_array(x)
+            x = regularize_array(x)
 
         # Concatenation of the old points and new points.
-        xtot = vstack((x_old,x))
+        xtot = vstack((x_old, x))
 
         # Extract information from chol_dict_old.
         U_old = chol_dict_old['U']
@@ -210,15 +210,15 @@ class Covariance(object):
         if rank_limit == 0:
             m_new_max = N_new
         else:
-            m_new_max = min(N_new,max(0,rank_limit-m_old))
+            m_new_max = min(N_new, max(0, rank_limit-m_old))
 
 
         # get-row function
-        def rowfun(i,xpiv,rowvec):
+        def rowfun(i, xpiv, rowvec):
             """
             A function that can be used to overwrite an input array with superdiagonal rows.
             """
-            rowvec[i:] = self.__call__(x=xpiv[i-1,:].reshape(1,-1), y=xpiv[i:,:], regularize=False, observed = observed)
+            rowvec[i:] = self.__call__(x=xpiv[i-1,:].reshape(1, -1), y=xpiv[i:,:], regularize=False, observed = observed)
 
 
         # diagonal
@@ -232,11 +232,11 @@ class Covariance(object):
 
         # Arrange U for input to ichol. See documentation.
         U = asmatrix(zeros((m_new_max + m_old, N_old + N_new), dtype=float, order='F'))
-        U[:m_old, :m_old] = U_old[:,:m_old]
-        U[:m_old,N_new+m_old:] = U_old[:,m_old:]
+        U[:m_old, :m_old] = U_old[:, :m_old]
+        U[:m_old, N_new+m_old:] = U_old[:, m_old:]
 
         offdiag = self.__call__(x=x_old[piv_old[:m_old],:], y=x, observed=observed, regularize=False)
-        trisolve(U_old[:,:m_old],offdiag,uplo='U',transa='T', inplace=True)
+        trisolve(U_old[:, :m_old], offdiag, uplo='U', transa='T', inplace=True)
         U[:m_old, m_old:N_new+m_old] = offdiag
 
 
@@ -266,14 +266,14 @@ class Covariance(object):
                 m, piv = ichol_continue(U, diag = diag, reltol = self.relative_precision, rowfun = rowfun, piv=piv, x=xtot[piv,:], mold=m_old)
             else:
                 m = m_old + N_new
-                C_eval = self.__call__(x,x,observed=True,regularize=False)
+                C_eval = self.__call__(x, x, observed=True, regularize=False)
                 U2 = cholesky(C_eval).T
-                U[m_old:,m_old:N_new+m_old] = U2
+                U[m_old:, m_old:N_new+m_old] = U2
 
                 if m_old < N_old:
                     offdiag2 = self.__call__(x=x, y=x_old[piv_old[m_old:]], observed=observed, regularize=False)
-                    trisolve(U2,offdiag2,uplo='U',transa='T',inplace=True)
-                    U[m_old:,N_new+m_old:] = offdiag2
+                    trisolve(U2, offdiag2, uplo='U', transa='T', inplace=True)
+                    U[m_old:, N_new+m_old:] = offdiag2
 
         else:
             m = m_old
@@ -281,7 +281,7 @@ class Covariance(object):
 
 
         # Arrange output matrix and return.
-        if m<0:
+        if m < 0:
             raise ValueError('Matrix does not appear positive semidefinite.')
 
         if not apply_pivot:
@@ -294,7 +294,7 @@ class Covariance(object):
 
         else:
             # Useful for the user. U.T * U = C(x,x).
-            return U[:m,argsort(piv)]
+            return U[:m, argsort(piv)]
 
 
     def observe(self, obs_mesh, obs_V, output_type='r'):
@@ -314,7 +314,7 @@ class Covariance(object):
         ndim = obs_mesh.shape[1]
 
         if self.ndim is not None:
-            if not ndim==self.ndim:
+            if not ndim == self.ndim:
                 raise ValueError("Dimension of observation mesh is not equal to dimension of base mesh.")
         else:
             self.ndim = ndim
@@ -338,13 +338,13 @@ class Covariance(object):
             if output_type != 's':
                 obs_dict = self.cholesky(obs_mesh, apply_pivot = False, nugget = obs_V, regularize=False, rank_limit = self.rank_limit)
             else:
-                C_eval = self.__call__(obs_mesh,obs_mesh,regularize=False)
+                C_eval = self.__call__(obs_mesh, obs_mesh, regularize=False)
                 U = C_eval.copy('F')
                 for i in xrange(U.shape[0]):
-                    U[i,i] += obs_V[i]
+                    U[i, i] += obs_V[i]
                 info = dpotrf_wrap(U)
-                if info>0:
-                    raise LinAlgError("Matrix does not appear to be positive definite by row %i. Could not observe with assume_full_rank=True." %info)
+                if info > 0:
+                    raise LinAlgError("Matrix does not appear to be positive definite by row %i. Could not observe with assume_full_rank=True." % info)
                 obs_dict = {'U': U,'pivots': arange(U.shape[0]),'U_new':U,'C_eval':C_eval}
             obs_dict_new = obs_dict
 
@@ -357,7 +357,7 @@ class Covariance(object):
 
 
             # Upper-triangular square Cholesky factor of self(obs_mesh_*, obs_mesh_*). See documentation.
-            self.Uo = obs_dict['U'][:,:m_new]
+            self.Uo = obs_dict['U'][:, :m_new]
 
 
             # Pivots.
@@ -409,10 +409,10 @@ class Covariance(object):
                                                 observed = False,
                                                 regularize=False,
                                                 nugget = obs_V,
-                                                assume_full_rank = output_type=='s',
+                                                assume_full_rank = output_type == 's',
                                                 rank_limit = self.rank_limit)
 
-            if output_type=='s':
+            if output_type == 's':
                 C_eval = obs_dict_new['C_eval']
 
             # Full Cholesky factor of self(obs_mesh, obs_mesh), where obs_mesh is the combined observation mesh.
@@ -422,7 +422,7 @@ class Covariance(object):
             m_new = self.full_Uo.shape[0]
 
             # Square upper-triangular Cholesky factor of self(obs_mesh_*, obs_mesh_*). See documentation.
-            self.Uo=self.full_Uo[:,:m_new]
+            self.Uo = self.full_Uo[:, :m_new]
 
             # Pivots.
             piv_new = obs_dict_new['pivots']
@@ -444,14 +444,14 @@ class Covariance(object):
         self.observed = True
         # Output expected by Realization
         if output_type == 'r':
-            return relevant_slice, obs_mesh_new, self.full_Uo[m_old:,argsort(piv_new)[N_old:]], self.full_Uo[:m_old, argsort(piv_new)[N_old:]]
+            return relevant_slice, obs_mesh_new, self.full_Uo[m_old:, argsort(piv_new)[N_old:]], self.full_Uo[:m_old, argsort(piv_new)[N_old:]]
 
         # Ouptut expected by observe
         if output_type == 'o':
             return relevant_slice, obs_mesh_new
 
         # Output expected by the GP submodel
-        if output_type=='s':
+        if output_type == 's':
             return obs_dict_new['U_new'], obs_dict_new['C_eval'], self.full_Uo[:m_old, argsort(piv_new)[N_old:]]
 
 
@@ -459,17 +459,17 @@ class Covariance(object):
     def __call__(self, x, y=None, observed=True, regularize=True, return_Uo_Cxo=False):
 
         if y is x:
-            symm=True
+            symm = True
         else:
-            symm=False
+            symm = False
 
         # Remember shape of x, and then 'regularize' it.
         orig_shape = shape(x)
-        if len(orig_shape)>1:
+        if len(orig_shape) > 1:
             orig_shape = orig_shape[:-1]
 
         if regularize:
-            x=regularize_array(x)
+            x = regularize_array(x)
 
         ndimx = x.shape[-1]
         lenx = x.shape[0]
@@ -480,9 +480,9 @@ class Covariance(object):
         # Safety
         if self.ndim is not None:
             if not self.ndim == ndimx:
-                raise ValueError("The number of spatial dimensions of x, "+\
-                                    ndimx.__str__()+\
-                                    ", does not match the number of spatial dimensions of the Covariance instance's base mesh, "+\
+                raise ValueError("The number of spatial dimensions of x, " +\
+                                    ndimx.__str__() +\
+                                    ", does not match the number of spatial dimensions of the Covariance instance's base mesh, " +\
                                     self.ndim.__str__()+".")
 
 
@@ -500,12 +500,12 @@ class Covariance(object):
                 V = self.eval_fun.diag_call(x, **self.params)
             # Otherwise, evaluate the diagonal in a loop.
             else:
-                V=empty(lenx,dtype=float)
+                V = empty(lenx, dtype=float)
                 for i in xrange(lenx):
-                    this_x = x[i].reshape((1,-1))
+                    this_x = x[i].reshape((1, -1))
                     V[i] = self.eval_fun(this_x, this_x, **self.params)
             if self.observed and observed:
-                sqpart = empty(lenx,dtype=float)
+                sqpart = empty(lenx, dtype=float)
                 Cxo = self.eval_fun(self.obs_mesh, x, **self.params)
                 Uo_Cxo = trisolve(self.Uo, Cxo, uplo='U', transa='T')
                 square_and_sum(Uo_Cxo, sqpart)
@@ -522,7 +522,7 @@ class Covariance(object):
             # = # If x and y are the same array, save some work: =
             # ====================================================
             if symm:
-                C=self.eval_fun(x,x,symm=True,**self.params)
+                C = self.eval_fun(x,x,symm=True,**self.params)
                 # Update return value using observations.
                 if self.observed and observed:
                     Cxo = self.eval_fun(self.obs_mesh, x, **self.params)
@@ -541,12 +541,12 @@ class Covariance(object):
             else:
 
                 if regularize:
-                    y=regularize_array(y)
+                    y = regularize_array(y)
 
                 ndimy = y.shape[-1]
                 leny = y.shape[0]
 
-                if not ndimx==ndimy:
+                if not ndimx == ndimy:
                     raise ValueError('The last dimension of x and y (the number of spatial dimensions) must be the same.')
 
                 C = self.eval_fun(x,y,**self.params)
@@ -559,7 +559,7 @@ class Covariance(object):
                     Cxo = self.eval_fun(self.obs_mesh, x, **self.params)
                     Uo_Cxo = trisolve(self.Uo, Cxo, uplo='U', transa='T')
                     Cyo = self.eval_fun(self.obs_mesh, y, **self.params)
-                    Uo_Cyo = trisolve(self.Uo, Cyo,uplo='U', transa='T')
+                    Uo_Cyo = trisolve(self.Uo, Cyo, uplo='U', transa='T')
                     C -= Uo_Cxo.T * Uo_Cyo
 
                 return C
@@ -569,19 +569,19 @@ class Covariance(object):
 
     def _unobs_reg(self, M):
         # reg_mat = chol(C(obs_mesh_*, obs_mesh_*)).T.I * M.dev
-        return asmatrix(trisolve(self.Uo, M.dev.T, uplo='U',transa='T')).T
+        return asmatrix(trisolve(self.Uo, M.dev.T, uplo='U', transa='T')).T
 
     def _obs_reg(self, M, dev_new, m_old):
         # reg_mat = chol(C(obs_mesh_*, obs_mesh_*)).T.I * M.dev
-        reg_mat_new = -1.*dot(self.Uo[:m_old,m_old:].T , trisolve(self.Uo[:m_old,:m_old], M.dev, uplo='U', transa='T')).T
-        trisolve(self.Uo[m_old:,m_old:].T, reg_mat_new, 'L', inplace=True)
-        reg_mat_new += asmatrix(trisolve(self.Uo[m_old:,m_old:], dev_new.T, uplo='U', transa='T')).T
-        return asmatrix(vstack((M.reg_mat,reg_mat_new)))
+        reg_mat_new = -1.*dot(self.Uo[:m_old, m_old:].T, trisolve(self.Uo[:m_old, :m_old], M.dev, uplo='U', transa='T')).T
+        trisolve(self.Uo[m_old:, m_old:].T, reg_mat_new, 'L', inplace=True)
+        reg_mat_new += asmatrix(trisolve(self.Uo[m_old:, m_old:], dev_new.T, uplo='U', transa='T')).T
+        return asmatrix(vstack((M.reg_mat, reg_mat_new)))
 
     def _obs_eval(self, M, M_out, x, Uo_Cxo=None):
         if Uo_Cxo is None:
             Uo_Cxo = trisolve(M.Uo, self(M.obs_mesh, x, observed = False), uplo='U', transa='T')
-        M_out += dot(asarray(M.reg_mat).squeeze(),asarray(Uo_Cxo)).squeeze()
+        M_out += dot(asarray(M.reg_mat).squeeze(), asarray(Uo_Cxo)).squeeze()
         return M_out
 
     def _mean_under_new(self, M, obs_mesh_new):

@@ -20,7 +20,10 @@ For each distribution:
 from __future__ import with_statement
 from unittest import TestCase
 import unittest
-import os, pdb, warnings, nose
+import os
+import pdb
+import warnings
+import nose
 
 from numpy import exp, log, array, sqrt
 from numpy.linalg import cholesky, det, inv
@@ -32,7 +35,7 @@ from ..distributions import *
 from .. import flib, utils, six, deterministic
 xrange = six.moves.xrange
 
-PLOT=True
+PLOT = True
 DIR = 'testresults'
 if PLOT is True:
     try:
@@ -59,16 +62,21 @@ except:
 _npr.seed(1)
 
 # Some python densities for comparison
+
+
 def cauchy(x, x0, gamma):
-    return 1/pi * gamma/((x-x0)**2 + gamma**2)
+    return 1 / pi * gamma / ((x - x0) ** 2 + gamma ** 2)
+
 
 def gamma(x, alpha, beta):
-    return x**(alpha-1) * exp(-x/beta)/(special.gamma(alpha) * beta**alpha)
+    return x ** (alpha - 1) * exp(-x / beta) / (special.gamma(alpha) * beta ** alpha)
+
 
 def multinomial_beta(alpha):
     nom = (special.gamma(alpha)).prod(0)
     den = special.gamma(alpha.sum(0))
-    return nom/den
+    return nom / den
+
 
 def dirichlet(x, theta):
     """Dirichlet multivariate probability density.
@@ -81,11 +89,13 @@ def dirichlet(x, theta):
     """
     # x = np.atleast_2d(x)
     # theta = np.atleast_2d(theta)
-    f = (x**(theta-1)).prod(0)
-    return f/multinomial_beta(theta)
+    f = (x ** (theta - 1)).prod(0)
+    return f / multinomial_beta(theta)
+
 
 def geometric(x, p):
-    return p*(1.-p)**(x-1)
+    return p * (1. - p) ** (x - 1)
+
 
 def hypergeometric(x, n, m, N):
     """
@@ -94,25 +104,28 @@ def hypergeometric(x, n, m, N):
     m : number of successes in total
     N : successes + failures in total.
     """
-    if x < max(0, n-(N-m)):
+    if x < max(0, n - (N - m)):
         return 0.
     elif x > min(n, m):
         return 0.
     else:
-        return comb(N-m, x) * comb(m, n-x) / comb(N,n)
+        return comb(N - m, x) * comb(m, n - x) / comb(N, n)
 
-def mv_hypergeometric(x,m):
+
+def mv_hypergeometric(x, m):
     """
     x : number of draws for each category.
     m : size of each category.
     """
     x = np.asarray(x)
     m = np.asarray(m)
-    return log(comb(m,x).prod()/comb(m.sum(), x.sum()))
+    return log(comb(m, x).prod() / comb(m.sum(), x.sum()))
 
-def multinomial(x,n,p):
+
+def multinomial(x, n, p):
     x = np.atleast_2d(x)
-    return factorial(n)/factorial(x).prod(1)*(p**x).prod(1)
+    return factorial(n) / factorial(x).prod(1) * (p ** x).prod(1)
+
 
 def mv_normal(x, mu, C):
     N = len(x)
@@ -120,10 +133,11 @@ def mv_normal(x, mu, C):
     mu = np.asmatrix(mu)
     C = np.asmatrix(C)
 
-    I = (N/2.)*log(2.*pi) + .5*log(det(C))
-    z = (x-mu)
+    I = (N / 2.) * log(2. * pi) + .5 * log(det(C))
+    z = (x - mu)
 
-    return -(I +.5 * z * np.linalg.inv(C) * z.T).A[0][0]
+    return -(I + .5 * z * np.linalg.inv(C) * z.T).A[0][0]
+
 
 def multivariate_lognormal(x, mu, C):
     N = len(x)
@@ -131,14 +145,14 @@ def multivariate_lognormal(x, mu, C):
     mu = np.asmatrix(mu)
     C = np.asmatrix(C)
 
-    I = (2*pi)**(N/2.) * sqrt(det(C))
-    z = (np.log(x)-mu)
-    return (1./I * exp(-.5 * z * inv(C) * z.T)).A[0][0]
+    I = (2 * pi) ** (N / 2.) * sqrt(det(C))
+    z = (np.log(x) - mu)
+    return (1. / I * exp(-.5 * z * inv(C) * z.T)).A[0][0]
 
 
-
-def consistency(randomf, likef, parameters, nbins=10, nrandom=1000, nintegration=15,\
-    range=None, plot=None):
+def consistency(
+    randomf, likef, parameters, nbins=10, nrandom=1000, nintegration=15,
+        range=None, plot=None):
     """Check the random generator is consistent with the likelihood.
 
     :Stochastics:
@@ -157,26 +171,28 @@ def consistency(randomf, likef, parameters, nbins=10, nrandom=1000, nintegration
     # Samples values and compute histogram.
     samples = randomf(size=nrandom, **parameters)
 
-    hist, output = utils.histogram(samples, range=range, bins=nbins, normed=True)
+    hist, output = utils.histogram(
+        samples, range=range, bins=nbins, normed=True)
 
     # Compute likelihood along x axis.
     if range is None:
         range = samples.min(), samples.max()
-    x = np.linspace(range[0], range[1], nbins*nintegration)
+    x = np.linspace(range[0], range[1], nbins * nintegration)
     l = []
     for z in x:
         l.append(likef(z, **parameters))
     L = np.exp(np.array(l))
 
-    figuredata = {'hist':hist, 'bins':output['edges'][:-1], \
-        'like':L.copy(), 'x':x}
+    figuredata = {'hist': hist, 'bins': output['edges'][:-1],
+                  'like': L.copy(), 'x': x}
 
     L = L.reshape(nbins, nintegration)
     like = L.mean(1)
     return hist, like, figuredata
 
-def discrete_consistency(randomf, likef, parameters,nrandom=1000, \
-    range=None,plot=None):
+
+def discrete_consistency(randomf, likef, parameters, nrandom=1000,
+                         range=None, plot=None):
     """Check the random generator is consistent with the likelihood for
     discrete distributions.
 
@@ -193,19 +209,20 @@ def discrete_consistency(randomf, likef, parameters,nrandom=1000, \
       - `like`: likelihood of histogram bins.
     """
     samples = randomf(size=nrandom, **parameters)
-    hist = np.bincount(samples)*1./nrandom
+    hist = np.bincount(samples) * 1. / nrandom
     x = np.arange(len(hist))
     l = []
     for z in x:
         l.append(likef(z, **parameters))
     like = np.exp(np.array(l))
-    figuredata = {'hist':hist, 'bins':x-1, \
-        'like':like.copy(), 'x':x, 'discrete':True}
+    figuredata = {'hist': hist, 'bins': x - 1,
+                  'like': like.copy(), 'x': x, 'discrete': True}
     return hist, like, figuredata
 
 
-def mv_consistency(random, like, parameters, nbins=10, nrandom=1000, nintegration=15,\
-    range=None, plot=None):
+def mv_consistency(
+    random, like, parameters, nbins=10, nrandom=1000, nintegration=15,
+        range=None, plot=None):
     """Check consistency for multivariate distributions."""
     samples = random(n=nrandom, **parameters)
     hist, edges = np.histogramdd(samples.T, nbins, range, True)
@@ -213,6 +230,7 @@ def mv_consistency(random, like, parameters, nbins=10, nrandom=1000, nintegratio
     for s in samples:
         z.append(like(s, **parameters))
     P = np.exp(np.array(z))
+
 
 def compare_hist(hist, bins, like, x, figname, discrete=False):
     """Plot and save a figure comparing the histogram with the
@@ -226,7 +244,7 @@ def compare_hist(hist, bins, like, x, figname, discrete=False):
       - `figname`: Name of figure to save.
     """
     ax = P.subplot(111)
-    width = 0.9*(bins[1]-bins[0])
+    width = 0.9 * (bins[1] - bins[0])
     ax.bar(bins, hist, width)
     P.setp(ax.patches, alpha=.5)
     if discrete:
@@ -235,6 +253,7 @@ def compare_hist(hist, bins, like, x, figname, discrete=False):
         ax.plot(x, like, 'k')
     P.savefig(os.path.join(DIR, figname))
     P.close()
+
 
 def normalization(like, parameters, domain, N=100):
     """Integrate the distribution over domain.
@@ -258,12 +277,15 @@ def normalization(like, parameters, domain, N=100):
         x = np.linspace(domain[0], domain[1], N)
         for i in x:
             y.append(f(i))
-        return np.trapz(y,x)
+        return np.trapz(y, x)
+
 
 def discrete_normalization(like, parameters, N):
-    return sum(exp([like(x,**parameters) for x in np.arange(N)]))
+    return sum(exp([like(x, **parameters) for x in np.arange(N)]))
+
 
 class test_arlognormal(TestCase):
+
     def like(self, parameters, r):
         a = parameters[2:]
         sigma = parameters[1]
@@ -272,124 +294,144 @@ class test_arlognormal(TestCase):
         return -like.sum()
 
     def test_random(self):
-        a = (1,2)
+        a = (1, 2)
         sigma = .1
         rho = 0
         r = rarlognormal(a, sigma, rho, size=1000)
-        assert_array_almost_equal(np.median(r, axis=0), [1,2],1)
+        assert_array_almost_equal(np.median(r, axis=0), [1, 2], 1)
 
-        rho =.8
+        rho = .8
         sigma = .1
         r = rarlognormal(1, sigma, rho, size=1000)
         corr = utils.autocorr(np.log(r))
         assert_almost_equal(corr, rho, 1)
-        assert_almost_equal(r.std(), sigma/sqrt(1-rho**2),1)
+        assert_almost_equal(r.std(), sigma / sqrt(1 - rho ** 2), 1)
 
     def test_consistency(self):
         if not SP:
             raise nose.SkipTest("SciPy not installed.")
         # 1D case
         a = 1
-        rho =.8
+        rho = .8
         sigma = .1
         r = rarlognormal(a, sigma, rho, size=1000)
         opt = fmin(self.like, (.8, .4, .9), args=([r],), disp=0)
         assert_array_almost_equal(opt, [rho, sigma, a], 1)
 
         # 2D case
-        a = (1,2)
+        a = (1, 2)
         sigma = .1
         rho = .7
         r = rarlognormal(a, sigma, rho, size=1000)
-        opt = fmin(self.like, (.75, .15, 1.1, 2.1), xtol=.05, args=(r,), disp=0)
-        assert_array_almost_equal(opt, (rho, sigma)+a, 1)
+        opt = fmin(
+            self.like,
+            (.75,
+             .15,
+             1.1,
+             2.1),
+            xtol=.05,
+            args=(r,
+                  ),
+            disp=0)
+        assert_array_almost_equal(opt, (rho, sigma) + a, 1)
 
 
 class test_bernoulli(TestCase):
+
     def test_consistency(self):
         N = 5000
-        parameters = {'p':.6}
+        parameters = {'p': .6}
         samples = []
         for i in range(N):
             samples.append(rbernoulli(**parameters))
-        H = np.bincount(samples)*1./N
+        H = np.bincount(samples) * 1. / N
         l0 = exp(flib.bernoulli(0, **parameters))
         l1 = exp(flib.bernoulli(1, **parameters))
-        assert_array_almost_equal(H, [l0,l1], 1)
+        assert_array_almost_equal(H, [l0, l1], 1)
         # Check normalization
-        assert_almost_equal(l0+l1, 1, 4)
+        assert_almost_equal(l0 + l1, 1, 4)
 
     def test_calling(self):
-        a = flib.bernoulli([0,1,1,0], .4)
-        b = flib.bernoulli([0,1,1,0], [.4, .4, .4, .4])
-        assert_array_equal(b,a)
+        a = flib.bernoulli([0, 1, 1, 0], .4)
+        b = flib.bernoulli([0, 1, 1, 0], [.4, .4, .4, .4])
+        assert_array_equal(b, a)
+
 
 class test_beta(TestCase):
+
     def test_consistency(self):
-        parameters ={'alpha':3, 'beta':5}
-        hist, like, figdata = consistency(rbeta, flib.beta_like, parameters, nrandom=5000, range=[0,1])
-        assert_array_almost_equal(hist, like,1)
+        parameters = {'alpha': 3, 'beta': 5}
+        hist, like, figdata = consistency(
+            rbeta, flib.beta_like, parameters, nrandom=5000, range=[0, 1])
+        assert_array_almost_equal(hist, like, 1)
         if PLOT:
             compare_hist(figname='beta', **figdata)
 
     def test_calling(self):
-        a = flib.beta_like([.3,.4,.5], 2,3)
-        b = flib.beta_like([.3,.4,.5], [2,2,2],[3,3,3])
-        assert_array_equal(a,b)
+        a = flib.beta_like([.3, .4, .5], 2, 3)
+        b = flib.beta_like([.3, .4, .5], [2, 2, 2], [3, 3, 3])
+        assert_array_equal(a, b)
 
     def test_normalization(self):
-        parameters ={'alpha':3, 'beta':5}
-        integral = normalization(flib.beta_like, parameters, [0,1], 200)
+        parameters = {'alpha': 3, 'beta': 5}
+        integral = normalization(flib.beta_like, parameters, [0, 1], 200)
         assert_almost_equal(integral, 1, 3)
 
+
 class test_binomial(TestCase):
+
     def test_consistency(self):
-        parameters={'n':7, 'p':.7}
-        hist, like, figdata = discrete_consistency(rbinomial, flib.binomial, \
-            parameters, nrandom=2000)
-        assert_array_almost_equal(hist, like,1)
+        parameters = {'n': 7, 'p': .7}
+        hist, like, figdata = discrete_consistency(rbinomial, flib.binomial,
+                                                   parameters, nrandom=2000)
+        assert_array_almost_equal(hist, like, 1)
         if PLOT:
             compare_hist(figname='binomial', **figdata)
         # test_normalization
         assert_almost_equal(like.sum(), 1, 4)
 
     def test_normalization(self):
-        parameters = {'n':20,'p':.1}
+        parameters = {'n': 20, 'p': .1}
         summation = discrete_normalization(flib.binomial, parameters, 21)
 
     def test_calling(self):
-        a = flib.binomial([3,4,5], 7, .7)
-        b = flib.binomial([3,4,5], [7,7,7], .7)
-        c = flib.binomial([3,4,5], [7,7,7], [.7,.7,.7])
-        assert_equal(a,b)
-        assert_equal(a,c)
+        a = flib.binomial([3, 4, 5], 7, .7)
+        b = flib.binomial([3, 4, 5], [7, 7, 7], .7)
+        c = flib.binomial([3, 4, 5], [7, 7, 7], [.7, .7, .7])
+        assert_equal(a, b)
+        assert_equal(a, c)
+
 
 class test_betabin(TestCase):
+
     def test_consistency(self):
-        parameters={'n':7, 'alpha':1, 'beta':2}
-        hist, like, figdata = discrete_consistency(rbetabin, flib.betabin_like, \
-            parameters, nrandom=2000)
-        assert_array_almost_equal(hist, like,1)
+        parameters = {'n': 7, 'alpha': 1, 'beta': 2}
+        hist, like, figdata = discrete_consistency(rbetabin, flib.betabin_like,
+                                                   parameters, nrandom=2000)
+        assert_array_almost_equal(hist, like, 1)
         if PLOT:
             compare_hist(figname='beta-binomial', **figdata)
         # test_normalization
         assert_almost_equal(like.sum(), 1, 4)
 
     def test_normalization(self):
-        parameters = {'n':20, 'alpha':1, 'beta':2}
+        parameters = {'n': 20, 'alpha': 1, 'beta': 2}
         summation = discrete_normalization(flib.betabin_like, parameters, 21)
 
     def test_calling(self):
-        a = flib.betabin_like([3,4,5], 7., 3., 7,)
-        b = flib.betabin_like([3,4,5], 7., 3., [7,7,7])
-        c = flib.betabin_like([3,4,5], [7.,7.,7.], [3.,3.,3.], [7,7,7])
-        assert_equal(a,b)
-        assert_equal(a,c)
+        a = flib.betabin_like([3, 4, 5], 7., 3., 7,)
+        b = flib.betabin_like([3, 4, 5], 7., 3., [7, 7, 7])
+        c = flib.betabin_like([3, 4, 5], [7., 7., 7.], [3., 3., 3.], [7, 7, 7])
+        assert_equal(a, b)
+        assert_equal(a, c)
+
 
 class test_categorical(TestCase):
+
     def test_consistency(self):
-        parameters={'p':[0.5,0.3,.2]}
-        hist, like, figdata = discrete_consistency(rcategorical, categorical_like, \
+        parameters = {'p': [0.5, 0.3, .2]}
+        hist, like, figdata = discrete_consistency(
+            rcategorical, categorical_like,
             parameters, nrandom=2000)
         assert_array_almost_equal(hist, like, 1)
         if PLOT:
@@ -399,64 +441,69 @@ class test_categorical(TestCase):
 
     def test_support(self):
         """Check to make sure values outside support are -inf"""
-        assert categorical_like([-1], [[0.4,0.4,0.2]]) < -1e300
-        assert categorical_like([3], [[0.4,0.4,0.2]]) < -1e300
-        assert categorical_like([1.3], [[0.4,0.4,0.2]]) < -1e300
+        assert categorical_like([-1], [[0.4, 0.4, 0.2]]) < -1e300
+        assert categorical_like([3], [[0.4, 0.4, 0.2]]) < -1e300
+        assert categorical_like([1.3], [[0.4, 0.4, 0.2]]) < -1e300
+
 
 class test_cauchy(TestCase):
+
     def test_consistency(self):
-        parameters={'alpha':0, 'beta':.5}
-        hist, like, figdata = consistency(rcauchy, flib.cauchy, parameters, \
-        nrandom=5000, range=[-10,10], nbins=21)
+        parameters = {'alpha': 0, 'beta': .5}
+        hist, like, figdata = consistency(rcauchy, flib.cauchy, parameters,
+                                          nrandom=5000, range=[-10, 10], nbins=21)
         if PLOT:
             compare_hist(figname='cauchy', **figdata)
-        assert_array_almost_equal(hist, like,1)
-
+        assert_array_almost_equal(hist, like, 1)
 
     def test_calling(self):
-        a = flib.cauchy([3,4], 2, 6)
-        b = flib.cauchy([3,4], [2,2], [6,6])
-        assert_equal(a,b)
+        a = flib.cauchy([3, 4], 2, 6)
+        b = flib.cauchy([3, 4], [2, 2], [6, 6])
+        assert_equal(a, b)
 
     def test_normalization(self):
-        parameters={'alpha':0, 'beta':.5}
-        integral = normalization(flib.cauchy, parameters, [-100,100], 600)
+        parameters = {'alpha': 0, 'beta': .5}
+        integral = normalization(flib.cauchy, parameters, [-100, 100], 600)
         assert_almost_equal(integral, 1, 2)
 
+
 class test_chi2(TestCase):
+
     """Based on flib.gamma, so no need to make the calling check and
     normalization check."""
     def test_consistency(self):
-        parameters = {'nu':2}
-        hist, like, figdata = consistency(rchi2, chi2_like, parameters, range=[0,15])
+        parameters = {'nu': 2}
+        hist, like, figdata = consistency(
+            rchi2, chi2_like, parameters, range=[0, 15])
         if PLOT:
             compare_hist(figname='chi2', **figdata)
         assert_array_almost_equal(hist, like, 1)
 
 
 class test_dirichlet(TestCase):
+
     """Multivariate Dirichlet distribution"""
     def test_random(self):
-        theta = np.array([2.,3.,5.])
+        theta = np.array([2., 3., 5.])
         r = rdirichlet(theta, 2000)
 
         s = theta.sum()
         m = r.mean(0)
-        m = np.append(m, 1-sum(m))
-        cov_ex = np.cov(np.append(r.T, 1.-sum(r.T,0)))
+        m = np.append(m, 1 - sum(m))
+        cov_ex = np.cov(np.append(r.T, 1. - sum(r.T, 0)))
 
         # Theoretical mean
-        M = theta/s
+        M = theta / s
         # Theoretical covariance
-        cov_th = -np.outer(theta, theta)/s**2/(s+1.)
+        cov_th = -np.outer(theta, theta) / s ** 2 / (s + 1.)
         assert_array_almost_equal(m, M, 2)
-        assert_array_almost_equal(cov_ex, cov_th,1)
+        assert_array_almost_equal(cov_ex, cov_th, 1)
 
     def test_like(self):
         if not SP:
             raise nose.SkipTest("SciPy not installed.")
-        theta = np.array([2.,3.,5.])
-        x = np.array([.4,.2,.4])
+        theta = np.array([2., 3., 5.])
+        x = np.array([.4, .2, .4])
         l = flib.dirichlet(np.atleast_2d(x[:-1]), np.atleast_2d(theta))
         f = dirichlet(x, theta)
         assert_almost_equal(l, np.sum(np.log(f)), 5)
@@ -472,70 +519,82 @@ class test_dirichlet(TestCase):
     def normalization_2d(self):
         pass
 
+
 class test_exponential(TestCase):
+
     """Based on gamma."""
     def test_consistency(self):
-        parameters={'beta':4}
+        parameters = {'beta': 4}
         hist, like, figdata = consistency(rexponential, exponential_like,
-            parameters, nrandom=6000)
+                                          parameters, nrandom=6000)
         if PLOT:
             compare_hist(figname='exponential', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
+
 
 class test_laplace(TestCase):
+
     """Based on gamma."""
     def test_consistency(self):
-        parameters={'mu':1, 'tau':0.5}
+        parameters = {'mu': 1, 'tau': 0.5}
         hist, like, figdata = consistency(rlaplace, laplace_like,
-            parameters, nrandom=5000)
+                                          parameters, nrandom=5000)
         if PLOT:
             compare_hist(figname='laplace', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
+
 
 class test_logistic(TestCase):
+
     """Based on gamma."""
     def test_consistency(self):
-        parameters={'mu':1, 'tau':0.5}
+        parameters = {'mu': 1, 'tau': 0.5}
         hist, like, figdata = consistency(rlogistic, logistic_like,
-            parameters, nrandom=5000)
+                                          parameters, nrandom=5000)
         if PLOT:
             compare_hist(figname='logistic', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
+
 
 class test_t(TestCase):
+
     """Based on gamma."""
     def test_consistency(self):
-        parameters={'nu':5}
+        parameters = {'nu': 5}
         hist, like, figdata = consistency(rt, t_like,
-            parameters, nrandom=5000)
+                                          parameters, nrandom=5000)
         if PLOT:
             compare_hist(figname='Student t', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
+
 
 class test_noncentral_t(TestCase):
+
     """Based on gamma."""
     def test_consistency(self):
-        parameters={'mu':-10, 'lam':0.2, 'nu':5}
+        parameters = {'mu': -10, 'lam': 0.2, 'nu': 5}
         hist, like, figdata = consistency(rnoncentral_t, noncentral_t_like,
-            parameters, nrandom=5000)
+                                          parameters, nrandom=5000)
         if PLOT:
             compare_hist(figname='noncentral t', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_vectorization(self):
-        a = flib.nct([3,4,5], mu=3, lam=.1, nu=5)
-        b = flib.nct([3,4,5], mu=[3,3,3], lam=.1, nu=5)
-        c = flib.nct([3,4,5], mu=[3,3,3], lam=[.1,.1,.1], nu=5)
-        d = flib.nct([3,4,5], mu=[3,3,3], lam=[.1,.1,.1], nu=[5,5,5])
-        assert_equal(a,b)
-        assert_equal(b,c)
-        assert_equal(c,d)
+        a = flib.nct([3, 4, 5], mu=3, lam=.1, nu=5)
+        b = flib.nct([3, 4, 5], mu=[3, 3, 3], lam=.1, nu=5)
+        c = flib.nct([3, 4, 5], mu=[3, 3, 3], lam=[.1, .1, .1], nu=5)
+        d = flib.nct([3, 4, 5], mu=[3, 3, 3], lam=[.1, .1, .1], nu=[5, 5, 5])
+        assert_equal(a, b)
+        assert_equal(b, c)
+        assert_equal(c, d)
+
 
 class test_exponweib(TestCase):
+
     def test_consistency(self):
-        parameters = {'alpha':2, 'k':2, 'loc':1, 'scale':3}
-        hist,like,figdata=consistency(rexponweib, exponweib_like,
-            parameters, nrandom=5000)
+        parameters = {'alpha': 2, 'k': 2, 'loc': 1, 'scale': 3}
+        hist, like, figdata = consistency(rexponweib, exponweib_like,
+                                          parameters, nrandom=5000)
         if PLOT:
             compare_hist(figname='exponweib', **figdata)
         assert_array_almost_equal(hist, like, 1)
@@ -548,214 +607,259 @@ class test_exponweib(TestCase):
     def test_with_scipy(self):
         if not SP:
             raise nose.SkipTest("SciPy not installed.")
-        parameters = {'alpha':2, 'k':.3, 'loc':1, 'scale':3}
+        parameters = {'alpha': 2, 'k': .3, 'loc': 1, 'scale': 3}
         r = rexponweib(size=10, **parameters)
-        a = exponweib.pdf(r, 2,.3, 1, 3)
+        a = exponweib.pdf(r, 2, .3, 1, 3)
         b = exponweib_like(r, **parameters)
         assert_almost_equal(log(a).sum(), b, 5)
 
+
 class test_gamma(TestCase):
+
     def test_consistency(self):
-        parameters={'alpha':3, 'beta':2}
-        hist, like, figdata = consistency(rgamma, flib.gamma, parameters,\
-            nrandom=5000)
+        parameters = {'alpha': 3, 'beta': 2}
+        hist, like, figdata = consistency(rgamma, flib.gamma, parameters,
+                                          nrandom=5000)
         if PLOT:
             compare_hist(figname='gamma', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_calling(self):
-        a = flib.gamma(array([4,5],dtype=float),array(3,dtype=float),array(2,dtype=float))
-        b = flib.gamma(array([4,5],dtype=float), array([3,3],dtype=float),array([2,2],dtype=float))
-        assert_equal(a,b)
+        a = flib.gamma(
+            array([4,
+                   5],
+                  dtype=float),
+            array(3,
+                  dtype=float),
+            array(2,
+                  dtype=float))
+        b = flib.gamma(
+            array([4,
+                   5],
+                  dtype=float),
+            array([3,
+                   3],
+                  dtype=float),
+            array([2,
+                   2],
+                  dtype=float))
+        assert_equal(a, b)
 
     def test_normalization(self):
-        parameters={'alpha':3, 'beta':2}
-        integral = normalization(flib.gamma, parameters, array([.01,20]), 200)
+        parameters = {'alpha': 3, 'beta': 2}
+        integral = normalization(flib.gamma, parameters, array([.01, 20]), 200)
         assert_almost_equal(integral, 1, 2)
 
+
 class test_geometric(TestCase):
+
     """Based on gamma."""
     def test_consistency(self):
-        parameters={'p':.6}
-        hist, like, figdata = discrete_consistency(rgeometric, geometric_like, parameters,\
+        parameters = {'p': .6}
+        hist, like, figdata = discrete_consistency(
+            rgeometric, geometric_like, parameters,
             nrandom=5000)
         if PLOT:
             compare_hist(figname='geometric', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
+
 
 class test_gev(TestCase):
+
     def test_consistency(self):
         parameters = dict(xi=.1, mu=4, sigma=3)
-        hist, like, figdata = consistency(rgev, flib.gev, parameters,\
-            nbins=20, nrandom=5000)
+        hist, like, figdata = consistency(rgev, flib.gev, parameters,
+                                          nbins=20, nrandom=5000)
         if PLOT:
             compare_hist(figname='gev', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_with_scipy(self):
         if not SP:
             raise nose.SkipTest("SciPy not installed.")
-        x = [1,2,3,4]
+        x = [1, 2, 3, 4]
         scipy_y = log(genextreme.pdf(x, -.3, 4, 2))
         flib_y = []
         for i in x:
             flib_y.append(flib.gev(i, .3, 4, 2))
-        assert_array_almost_equal(scipy_y,flib_y,5)
+        assert_array_almost_equal(scipy_y, flib_y, 5)
 
     def test_limit(self):
-        x = [1,2,3]
+        x = [1, 2, 3]
         a = flib.gev(x, 0.00001, 0, 1)
         b = flib.gev(x, 0, 0, 1)
-        assert_almost_equal(a,b,4)
+        assert_almost_equal(a, b, 4)
 
     def test_vectorization(self):
-        a = flib.gev([4,5,6], xi=.2,mu=4,sigma=1)
-        b = flib.gev([4,5,6], xi=[.2,.2,.2],mu=4,sigma=1)
-        c = flib.gev([4,5,6], xi=.2,mu=[4,4,4],sigma=1)
-        d = flib.gev([4,5,6], xi=.2,mu=4,sigma=[1,1,1])
-        assert_equal(a,b)
-        assert_equal(b,c)
-        assert_equal(c,d)
+        a = flib.gev([4, 5, 6], xi=.2, mu=4, sigma=1)
+        b = flib.gev([4, 5, 6], xi=[.2, .2, .2], mu=4, sigma=1)
+        c = flib.gev([4, 5, 6], xi=.2, mu=[4, 4, 4], sigma=1)
+        d = flib.gev([4, 5, 6], xi=.2, mu=4, sigma=[1, 1, 1])
+        assert_equal(a, b)
+        assert_equal(b, c)
+        assert_equal(c, d)
+
 
 class test_half_normal(TestCase):
+
     def test_consistency(self):
-        parameters={'tau':.5}
-        hist, like, figdata = consistency(rhalf_normal, flib.hnormal, parameters,\
+        parameters = {'tau': .5}
+        hist, like, figdata = consistency(
+            rhalf_normal, flib.hnormal, parameters,
             nrandom=5000)
         if PLOT:
             compare_hist(figname='hnormal', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_normalization(self):
-        parameters = {'tau':2.}
+        parameters = {'tau': 2.}
         integral = normalization(flib.hnormal, parameters, [0, 20], 200)
         assert_almost_equal(integral, 1, 3)
 
     def test_vectorization(self):
-        a = flib.hnormal([2,3], .5)
-        b = flib.hnormal([2,3], tau=[.5,.5])
-        assert_equal(a,b)
+        a = flib.hnormal([2, 3], .5)
+        b = flib.hnormal([2, 3], tau=[.5, .5])
+        assert_equal(a, b)
+
 
 class test_hypergeometric(TestCase):
+
     def test_consistency(self):
-        parameters=dict(n=10, m=12, N=20)
-        hist, like, figdata = discrete_consistency(rhypergeometric, \
-        hypergeometric_like, parameters, nrandom=5000)
+        parameters = dict(n=10, m=12, N=20)
+        hist, like, figdata = discrete_consistency(rhypergeometric,
+                                                   hypergeometric_like, parameters, nrandom=5000)
         if PLOT:
             compare_hist(figname='hypergeometric', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
+
 
 class test_inverse_gamma(TestCase):
+
     def test_consistency(self):
-        parameters=dict(alpha=1.5, beta=.5)
-        hist, like, figdata = consistency(rinverse_gamma, flib.igamma, parameters,\
+        parameters = dict(alpha=1.5, beta=.5)
+        hist, like, figdata = consistency(
+            rinverse_gamma, flib.igamma, parameters,
             nrandom=5000)
         if PLOT:
             compare_hist(figname='inverse_gamma', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_consistency_with_gamma(self):
-        parameters=dict(alpha=1.5, beta=.5)
-        rspecial_gamma = lambda *args, **kwargs: 1./rinverse_gamma(*args, **kwargs)
-        rspecial_igamma = lambda *args, **kwargs: 1./rgamma(*args, **kwargs)
+        parameters = dict(alpha=1.5, beta=.5)
+        rspecial_gamma = lambda *args, **kwargs: 1. / \
+            rinverse_gamma(*args, **kwargs)
+        rspecial_igamma = lambda *args, **kwargs: 1. / rgamma(*args, **kwargs)
 
-        hist, like, figdata = consistency(rspecial_igamma, flib.igamma, parameters,\
+        hist, like, figdata = consistency(
+            rspecial_igamma, flib.igamma, parameters,
             nrandom=5000)
         if PLOT:
             compare_hist(figname='inverse_gamma', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
-        hist, like, figdata = consistency(rspecial_gamma, flib.gamma, parameters,\
+        hist, like, figdata = consistency(
+            rspecial_gamma, flib.gamma, parameters,
             nrandom=5000)
         if PLOT:
             compare_hist(figname='gamma', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_normalization(self):
-        parameters=dict(alpha=1.5, beta=0.25)
+        parameters = dict(alpha=1.5, beta=0.25)
         integral = normalization(flib.igamma, parameters, [0, 10], 200)
         assert_almost_equal(integral, 1, 2)
 
     def test_vectorization(self):
-        x = [2,3]
+        x = [2, 3]
         a = flib.igamma(x, alpha=[1.5, 1.5], beta=.5)
         b = flib.igamma(x, alpha=[1.5, 1.5], beta=[.5, .5])
-        assert_almost_equal(a,b,6)
+        assert_almost_equal(a, b, 6)
+
 
 class test_lognormal(TestCase):
+
     def test_consistency(self):
-        parameters=dict(mu=3, tau = .5)
-        hist, like, figdata = consistency(rlognormal, flib.lognormal, parameters,\
+        parameters = dict(mu=3, tau=.5)
+        hist, like, figdata = consistency(
+            rlognormal, flib.lognormal, parameters,
             nrandom=5000)
         if PLOT:
             compare_hist(figname='lognormal', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_normalization(self):
-        parameters=dict(mu=1, tau = 1)
+        parameters = dict(mu=1, tau=1)
         integral = normalization(flib.lognormal, parameters, [0, 50], 200)
         assert_almost_equal(integral, 1, 2)
 
     def test_vectorization(self):
         r = rlognormal(3, .5, 2)
         a = lognormal_like(r, 3, .5)
-        b = lognormal_like(r, [3,3], [.5,.5])
-        assert_array_almost_equal(a,b)
+        b = lognormal_like(r, [3, 3], [.5, .5])
+        assert_array_almost_equal(a, b)
+
 
 class test_multinomial(TestCase):
+
     def test_random(self):
-        p = array([.2,.3,.5])
+        p = array([.2, .3, .5])
         n = 10
         r = rmultinomial(n=10, p=p, size=5000)
         rmean = r.mean(0)
-        assert_array_almost_equal(rmean, n*p, 1)
+        assert_array_almost_equal(rmean, n * p, 1)
         rvar = r.var(0)
-        assert_array_almost_equal(rvar, n*p*(1-p),1)
+        assert_array_almost_equal(rvar, n * p * (1 - p), 1)
 
     def test_consistency(self):
         if not SP:
             raise nose.SkipTest("SciPy not installed.")
-        p = array([.2,.3,.5])
+        p = array([.2, .3, .5])
         n = 10
         x = rmultinomial(n, p, size=5)
-        a = multinomial_like(x,n,p)
-        b = log(multinomial(x,n,p).prod())
-        assert_almost_equal(a,b,4)
+        a = multinomial_like(x, n, p)
+        b = log(multinomial(x, n, p).prod())
+        assert_almost_equal(a, b, 4)
 
     def test_vectorization(self):
-        p = array([[.2,.3,.5], [.2,.3,.5]])
+        p = array([[.2, .3, .5], [.2, .3, .5]])
         r = rmultinomial(10, p=p[0], size=2)
-        a = multinomial_like(r,10,p[0])
-        b = multinomial_like(r,[10,10],p)
-        assert_equal(a,b)
+        a = multinomial_like(r, 10, p[0])
+        b = multinomial_like(r, [10, 10], p)
+        assert_equal(a, b)
+
 
 class test_multivariate_hypergeometric(TestCase):
+
     def test_random(self):
-        m = [10,15]
+        m = [10, 15]
         N = 1000
         n = 6
         r = rmultivariate_hypergeometric(n, m, N)
-        assert_array_almost_equal(r.mean(0), multivariate_hypergeometric_expval(n,m),1)
+        assert_array_almost_equal(
+            r.mean(0),
+            multivariate_hypergeometric_expval(n,
+                                               m),
+            1)
 
     def test_likelihood(self):
         if not SP:
             raise nose.SkipTest("SciPy not installed.")
-        m = [10,15]
-        x = [3,4]
+        m = [10, 15]
+        x = [3, 4]
         a = multivariate_hypergeometric_like(x, m)
         b = mv_hypergeometric(x, m)
-        assert_almost_equal(a,b,4)
+        assert_almost_equal(a, b, 4)
 
 
 class test_mv_normal(TestCase):
 
     def test_random(self):
-        mu = array([3,4])
-        C = np.matrix([[1, .5],[.5,1]])
+        mu = array([3, 4])
+        C = np.matrix([[1, .5], [.5, 1]])
 
         r = rmv_normal(mu, np.linalg.inv(C), 5000)
-        rC = rmv_normal_cov(mu,C,5000)
-        rchol = rmv_normal_chol(mu,cholesky(C),5000)
+        rC = rmv_normal_cov(mu, C, 5000)
+        rchol = rmv_normal_chol(mu, cholesky(C), 5000)
 
         assert_array_almost_equal(mu, r.mean(0), 1)
         assert_array_almost_equal(C, np.cov(r.T), 1)
@@ -767,9 +871,8 @@ class test_mv_normal(TestCase):
         assert_array_almost_equal(C, np.cov(rchol.T), 1)
 
     def test_likelihood(self):
-        mu = array([3,4])
-        C = np.matrix([[1, .5],[.5,1]])
-
+        mu = array([3, 4])
+        C = np.matrix([[1, .5], [.5, 1]])
 
         tau = np.linalg.inv(C)
         r = rmv_normal(mu, tau, 2)
@@ -778,67 +881,77 @@ class test_mv_normal(TestCase):
         a = sum([mv_normal_like(x, mu, tau) for x in r])
         b = sum([mv_normal_cov_like(x, mu, C) for x in r])
 
-        # mv_normal_like_chol is expecting a Cholesky factor as the last argument.
-        c = sum([mv_normal_chol_like(x,mu,cholesky(C)) for x in r])
+        # mv_normal_like_chol is expecting a Cholesky factor as the last
+        # argument.
+        c = sum([mv_normal_chol_like(x, mu, cholesky(C)) for x in r])
         d = sum([mv_normal(x, mu, C) for x in r])
 
-        assert_almost_equal(a, d,6)
-        assert_almost_equal(a,b,6)
-        assert_almost_equal(b,c,6)
+        assert_almost_equal(a, d, 6)
+        assert_almost_equal(a, b, 6)
+        assert_almost_equal(b, c, 6)
 
 
 class test_normal(TestCase):
+
     def test_consistency(self):
-        parameters=dict(mu=3, tau = .5)
-        hist, like, figdata = consistency(rnormal, flib.normal, parameters,\
-            nrandom=5000)
+        parameters = dict(mu=3, tau=.5)
+        hist, like, figdata = consistency(rnormal, flib.normal, parameters,
+                                          nrandom=5000)
         if PLOT:
             compare_hist(figname='normal', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_vectorization(self):
-        a = flib.normal([3,4,5], mu=3, tau=.5)
-        b = flib.normal([3,4,5], mu=[3,3,3], tau=.5)
-        c = flib.normal([3,4,5], mu=[3,3,3], tau=[.5,.5,.5])
-        assert_equal(a,b)
-        assert_equal(b,c)
+        a = flib.normal([3, 4, 5], mu=3, tau=.5)
+        b = flib.normal([3, 4, 5], mu=[3, 3, 3], tau=.5)
+        c = flib.normal([3, 4, 5], mu=[3, 3, 3], tau=[.5, .5, .5])
+        assert_equal(a, b)
+        assert_equal(b, c)
+
 
 class test_von_mises(TestCase):
+
     def test_consistency(self):
-        parameters=dict(mu=3, kappa = .5)
-        hist, like, figdata = consistency(rvon_mises, flib.vonmises, parameters,\
+        parameters = dict(mu=3, kappa=.5)
+        hist, like, figdata = consistency(
+            rvon_mises, flib.vonmises, parameters,
             nrandom=5000)
         if PLOT:
             compare_hist(figname='von_mises', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_vectorization(self):
-        a = flib.vonmises([3,4,5], mu=3, kappa=.5)
-        b = flib.vonmises([3,4,5], mu=[3,3,3], kappa=.5)
-        c = flib.vonmises([3,4,5], mu=[3,3,3], kappa=[.5,.5,.5])
-        assert_equal(a,b)
-        assert_equal(b,c)
+        a = flib.vonmises([3, 4, 5], mu=3, kappa=.5)
+        b = flib.vonmises([3, 4, 5], mu=[3, 3, 3], kappa=.5)
+        c = flib.vonmises([3, 4, 5], mu=[3, 3, 3], kappa=[.5, .5, .5])
+        assert_equal(a, b)
+        assert_equal(b, c)
+
 
 class test_pareto(TestCase):
+
     def test_consistency(self):
-        parameters=dict(alpha=5, m = 3)
-        hist, like, figdata = consistency(rpareto, flib.pareto, parameters,\
-            nrandom=5000)
+        parameters = dict(alpha=5, m=3)
+        hist, like, figdata = consistency(rpareto, flib.pareto, parameters,
+                                          nrandom=5000)
         if PLOT:
             compare_hist(figname='pareto', **figdata)
         assert_array_almost_equal(hist, like, 1)
 
     def test_vectorization(self):
-        a = flib.pareto([3,4,5], alpha=3, m=1)
-        b = flib.pareto([3,4,5], alpha=[3,3,3], m=1)
-        c = flib.pareto([3,4,5], alpha=[3,3,3], m=[1,1,1])
-        assert_equal(a,b)
-        assert_equal(b,c)
+        a = flib.pareto([3, 4, 5], alpha=3, m=1)
+        b = flib.pareto([3, 4, 5], alpha=[3, 3, 3], m=1)
+        c = flib.pareto([3, 4, 5], alpha=[3, 3, 3], m=[1, 1, 1])
+        assert_equal(a, b)
+        assert_equal(b, c)
+
 
 class test_truncated_pareto(TestCase):
+
     def test_consistency(self):
-        parameters=dict(alpha=5, m = 3, b=5)
-        hist, like, figdata = consistency(rtruncated_pareto, flib.truncated_pareto, parameters,\
+        parameters = dict(alpha=5, m=3, b=5)
+        hist, like, figdata = consistency(
+            rtruncated_pareto, flib.truncated_pareto, parameters,
             nrandom=5000)
         if PLOT:
             compare_hist(figname='truncated_pareto', **figdata)
@@ -851,37 +964,55 @@ class test_truncated_pareto(TestCase):
         assert (r < 6).all()
 
     def test_vectorization(self):
-        a = flib.truncated_pareto([3,4,5], alpha=3, m=1, b=6)
-        b = flib.truncated_pareto([3,4,5], alpha=[3,3,3], m=1, b=6)
-        c = flib.truncated_pareto([3,4,5], alpha=[3,3,3], m=[1,1,1], b=[6,6,6])
-        assert_equal(a,b)
-        assert_equal(b,c)
+        a = flib.truncated_pareto([3, 4, 5], alpha=3, m=1, b=6)
+        b = flib.truncated_pareto([3, 4, 5], alpha=[3, 3, 3], m=1, b=6)
+        c = flib.truncated_pareto(
+            [3,
+             4,
+             5],
+            alpha=[3,
+                   3,
+                   3],
+            m=[1,
+               1,
+               1],
+            b=[6,
+               6,
+               6])
+        assert_equal(a, b)
+        assert_equal(b, c)
+
 
 class test_poisson(TestCase):
+
     def test_consistency(self):
-        parameters = {'mu':2.}
-        hist,like, figdata = discrete_consistency(rpoisson, flib.poisson, parameters, nrandom=5000, range=[0,10])
+        parameters = {'mu': 2.}
+        hist, like, figdata = discrete_consistency(
+            rpoisson, flib.poisson, parameters, nrandom=5000, range=[0, 10])
         if PLOT:
             compare_hist(figname='poisson', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_normalization(self):
-        parameters = {'mu':2.}
-        summation=discrete_normalization(flib.poisson,parameters,20)
+        parameters = {'mu': 2.}
+        summation = discrete_normalization(flib.poisson, parameters, 20)
         assert_almost_equal(summation, 1, 2)
 
     def test_calling(self):
-        a = flib.poisson([1,2,3], 2)
-        b = flib.poisson([1,2,3], [2,2,2])
-        assert_equal(a,b)
+        a = flib.poisson([1, 2, 3], 2)
+        b = flib.poisson([1, 2, 3], [2, 2, 2])
+        assert_equal(a, b)
+
 
 class test_truncated_poisson(TestCase):
+
     def test_consistency(self):
-        parameters = {'mu':4., 'k':1}
-        hist,like, figdata = discrete_consistency(rtruncated_poisson, flib.trpoisson, parameters, nrandom=5000, range=[1,10])
+        parameters = {'mu': 4., 'k': 1}
+        hist, like, figdata = discrete_consistency(
+            rtruncated_poisson, flib.trpoisson, parameters, nrandom=5000, range=[1, 10])
         if PLOT:
             compare_hist(figname='poisson', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_random(self):
         r = rtruncated_poisson(mu=5, k=1, size=10000)
@@ -889,49 +1020,59 @@ class test_truncated_poisson(TestCase):
         assert (r >= 1).all()
 
     def test_normalization(self):
-        parameters = {'mu':4., 'k':1}
-        summation=discrete_normalization(flib.trpoisson,parameters,20)
+        parameters = {'mu': 4., 'k': 1}
+        summation = discrete_normalization(flib.trpoisson, parameters, 20)
         assert_almost_equal(summation, 1, 2)
 
     def test_calling(self):
-        a = flib.trpoisson([3,4,5], 4, 1)
-        b = flib.trpoisson([3,4,5], [4,4,4], [1,1,1])
-        assert_equal(a,b)
+        a = flib.trpoisson([3, 4, 5], 4, 1)
+        b = flib.trpoisson([3, 4, 5], [4, 4, 4], [1, 1, 1])
+        assert_equal(a, b)
+
 
 class test_skew_normal(TestCase):
+
     def test_consistency(self):
         parameters = dict(mu=10, tau=10, alpha=-5)
-        hist,like, figdata = consistency(rskew_normal, skew_normal_like, parameters, nrandom=5000)
+        hist, like, figdata = consistency(
+            rskew_normal, skew_normal_like, parameters, nrandom=5000)
         if PLOT:
             compare_hist(figname='truncnorm', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_normalization(self):
         parameters = dict(mu=10, tau=10, alpha=-5)
-        integral = normalization(skew_normal_like, parameters, [8.5, 10.5], 200)
+        integral = normalization(
+            skew_normal_like,
+            parameters,
+            [8.5,
+             10.5],
+            200)
         assert_almost_equal(integral, 1, 2)
 
     def test_calling(self):
-        a = skew_normal_like([1,2,3], 2, 1, 5)
-        b = skew_normal_like([1,2,3], [2,2,2], 1, 5)
-        c = skew_normal_like([1,2,3], [2,2,2], [1,1,1], 5)
-        d = skew_normal_like([1,2,3], [2,2,2], [1,1,1], [5,5,5])
+        a = skew_normal_like([1, 2, 3], 2, 1, 5)
+        b = skew_normal_like([1, 2, 3], [2, 2, 2], 1, 5)
+        c = skew_normal_like([1, 2, 3], [2, 2, 2], [1, 1, 1], 5)
+        d = skew_normal_like([1, 2, 3], [2, 2, 2], [1, 1, 1], [5, 5, 5])
 
-        assert_equal(a,b)
-        assert_equal(a,c)
-        assert_equal(a,d)
+        assert_equal(a, b)
+        assert_equal(a, c)
+        assert_equal(a, d)
+
 
 class test_truncnorm(TestCase):
+
     def test_consistency(self):
         parameters = dict(mu=1, tau=1, a=0, b=5)
-        hist,like, figdata = consistency(rtruncnorm, truncnorm_like, parameters, nrandom=5000)
+        hist, like, figdata = consistency(
+            rtruncnorm, truncnorm_like, parameters, nrandom=5000)
         if PLOT:
             compare_hist(figname='truncnorm', **figdata)
-        assert_array_almost_equal(hist, like,1)
-
+        assert_array_almost_equal(hist, like, 1)
 
     def test_random(self):
-        r = rtruncnorm(mu=-1,tau=1,a=-20,b=20,size=10000)
+        r = rtruncnorm(mu=-1, tau=1, a=-20, b=20, size=10000)
         assert_almost_equal(r.mean(), truncnorm_expval(-1, .1, -20., 20.), 1)
         assert (r > -20).all()
         assert (r < 20).all()
@@ -941,8 +1082,9 @@ class test_truncnorm(TestCase):
             raise nose.SkipTest("SciPy not installed.")
         mu = 3.
         sigma = 2.
-        tau = 1./sigma**2
-        a=2;b=4;
+        tau = 1. / sigma ** 2
+        a = 2
+        b = 4
         x = 3.5
         y1 = truncnorm_like(x, mu, tau, a, b)
         y2 = scipy.stats.truncnorm.pdf(x, -.5, .5, mu, sigma)
@@ -954,34 +1096,37 @@ class test_truncnorm(TestCase):
         assert_almost_equal(integral, 1, 2)
 
     def test_calling(self):
-        a = truncnorm_like([0,1,2], 2, 1, 0, 2)
-        b = truncnorm_like([0,1,2], [2,2,2], 1, 0, 2)
-        c = truncnorm_like([0,1,2], [2,2,2], [1,1,1], 0,2)
-        #d = truncnorm_like([0,1,2], [2,2,2], [1,1,1], [0,0,0], 2)
-        #e = truncnorm_like([0,1,2], [2,2,2], [1,1,1], 0, [2,2,2])
-        assert_equal(a,b)
-        assert_equal(a,b)
-        assert_equal(a,c)
-        #assert_equal(a,d)
-        #assert_equal(a,e)
+        a = truncnorm_like([0, 1, 2], 2, 1, 0, 2)
+        b = truncnorm_like([0, 1, 2], [2, 2, 2], 1, 0, 2)
+        c = truncnorm_like([0, 1, 2], [2, 2, 2], [1, 1, 1], 0, 2)
+        # d = truncnorm_like([0,1,2], [2,2,2], [1,1,1], [0,0,0], 2)
+        # e = truncnorm_like([0,1,2], [2,2,2], [1,1,1], 0, [2,2,2])
+        assert_equal(a, b)
+        assert_equal(a, b)
+        assert_equal(a, c)
+        # assert_equal(a,d)
+        # assert_equal(a,e)
+
 
 class test_weibull(TestCase):
+
     def test_consistency(self):
         parameters = {'alpha': 2., 'beta': 3.}
-        hist,like, figdata = consistency(rweibull, flib.weibull, parameters, nrandom=5000, range=[0,10])
+        hist, like, figdata = consistency(
+            rweibull, flib.weibull, parameters, nrandom=5000, range=[0, 10])
         if PLOT:
             compare_hist(figname='weibull', **figdata)
-        assert_array_almost_equal(hist, like,1)
+        assert_array_almost_equal(hist, like, 1)
 
     def test_normalization(self):
         parameters = {'alpha': 2., 'beta': 3.}
-        integral = normalization(flib.weibull, parameters, [0,10], N=200)
+        integral = normalization(flib.weibull, parameters, [0, 10], N=200)
         assert_almost_equal(integral, 1, 2)
 
     def test_calling(self):
-        a = flib.weibull([1,2], 2,3)
-        b = flib.weibull([1,2], [2,2], [3,3])
-        assert_equal(a,b)
+        a = flib.weibull([1, 2], 2, 3)
+        b = flib.weibull([1, 2], [2, 2], [3, 3])
+        assert_equal(a, b)
 
     def test_random(self):
         parameters = {'alpha': 2., 'beta': 3.}
@@ -990,11 +1135,13 @@ class test_weibull(TestCase):
 
 #-------------------------------------------------------------------------------
 # Test Wishart / Inverse Wishart distributions
-_Tau_test = np.matrix([[ 209.47883244,   10.88057915,   13.80581557],
-                       [  10.88057915,  213.58694978,   11.18453854],
-                       [  13.80581557,   11.18453854,  209.89396417]])
+_Tau_test = np.matrix([[209.47883244, 10.88057915, 13.80581557],
+                       [10.88057915, 213.58694978, 11.18453854],
+                       [13.80581557, 11.18453854, 209.89396417]])
+
 
 class test_wishart(TestCase):
+
     """
     There are results out there on the asymptotic distribution of
     eigenvalues of very large Wishart matrices that we could use to
@@ -1004,7 +1151,7 @@ class test_wishart(TestCase):
     Tau_test = _Tau_test / 100
 
     # def test_samples(self):
-    #     # test consistency between precision and cov-based
+    # test consistency between precision and cov-based
     #     _npr.seed(1)
     #     sample_a = rwishart(100, self.Tau_test)
 
@@ -1019,24 +1166,24 @@ class test_wishart(TestCase):
         except:
             raise nose.SkipTest("SciPy not installed.")
 
-        W_test = rwishart(100,self.Tau_test)
+        W_test = rwishart(100, self.Tau_test)
 
-        def slo_wishart_cov(W,n,V):
+        def slo_wishart_cov(W, n, V):
             p = W.shape[0]
 
-            logp = ((n-p-1)*.5 * np.log(det(W)) - n*p*.5*np.log(2)
-                    - n*.5*np.log(det(V)) - p*(p-1)/4.*np.log(pi))
-            for i in xrange(1,p+1):
-                logp -= gammaln((n+1-i)*.5)
-            logp -= np.trace(np.linalg.solve(V,W)*.5)
+            logp = ((n - p - 1) * .5 * np.log(det(W)) - n * p * .5 * np.log(2)
+                    - n * .5 * np.log(det(V)) - p * (p - 1) / 4. * np.log(pi))
+            for i in xrange(1, p + 1):
+                logp -= gammaln((n + 1 - i) * .5)
+            logp -= np.trace(np.linalg.solve(V, W) * .5)
             return logp
 
-        for i in [5,10,100,10000]:
-            right_answer = slo_wishart_cov(W_test,i,self.Tau_test.I)
-            assert_array_almost_equal(wishart_like(W_test,i,self.Tau_test),
+        for i in [5, 10, 100, 10000]:
+            right_answer = slo_wishart_cov(W_test, i, self.Tau_test.I)
+            assert_array_almost_equal(wishart_like(W_test, i, self.Tau_test),
                                       right_answer, decimal=5)
             assert_array_almost_equal(
-                wishart_cov_like(W_test,i,self.Tau_test.I),
+                wishart_cov_like(W_test, i, self.Tau_test.I),
                 right_answer, decimal=5)
 
     def test_expval(self):
@@ -1044,37 +1191,37 @@ class test_wishart(TestCase):
         n = 1000
         N = 1000
 
-        A = 0.*self.Tau_test
+        A = 0. * self.Tau_test
         for i in xrange(N):
-            A += rwishart(n,self.Tau_test)
+            A += rwishart(n, self.Tau_test)
         A /= N
-        delta=A-wishart_expval(n,self.Tau_test)
-        assert(np.abs(np.asarray(delta)/np.asarray(A)).max()<.1)
+        delta = A - wishart_expval(n, self.Tau_test)
+        assert(np.abs(np.asarray(delta) / np.asarray(A)).max() < .1)
 
-        A = 0.*self.Tau_test
+        A = 0. * self.Tau_test
         for i in xrange(N):
-            A += rwishart_cov(n,self.Tau_test.I)
+            A += rwishart_cov(n, self.Tau_test.I)
         A /= N
-        delta=A-wishart_cov_expval(n,self.Tau_test.I)
-        assert(np.abs(np.asarray(delta)/np.asarray(A)).max()<.1)
+        delta = A - wishart_cov_expval(n, self.Tau_test.I)
+        assert(np.abs(np.asarray(delta) / np.asarray(A)).max() < .1)
 
 
 # class test_inverse_wishart(TestCase):
 #     """
 #     Adapted from test_wishart
 #     """
-#     # Covariance matrix (!)
+# Covariance matrix (!)
 #     C_test = _Tau_test.I
 
-#     # def test_samples(self):
-#     #     # test consistency between precision and cov-based
-#     #     _npr.seed(1)
-#     #     sample_a = rinverse_wishart(100, self.C_test)
+# def test_samples(self):
+# test consistency between precision and cov-based
+# _npr.seed(1)
+# sample_a = rinverse_wishart(100, self.C_test)
 
-#     #     _npr.seed(1)
-#     #     sample_b = rinverse_wishart_prec(100, self.C_test.I)
+# _npr.seed(1)
+# sample_b = rinverse_wishart_prec(100, self.C_test.I)
 
-#     #     assert_array_almost_equal(sample_a, sample_b)
+# assert_array_almost_equal(sample_a, sample_b)
 
 #     def test_likelihoods(self):
 #         try:
@@ -1104,14 +1251,14 @@ class test_wishart(TestCase):
 #             calculated = inverse_wishart_prec_like(IW_test,i,self.C_test.I)
 #             assert_array_almost_equal(calculated, right_answer, decimal=1)
 
-#     # def test_wishart_equivalence(self):
+# def test_wishart_equivalence(self):
 
-#     #     IW_test = rinverse_wishart(100,self.C_test)
+# IW_test = rinverse_wishart(100,self.C_test)
 
-#     #     iwlike = inverse_wishart_like(IW_test, 100, self.C_test)
-#     #     wlike = wishart_like(np.linalg.inv(IW_test), 100, np.linalg.inv(self.C_test))
+# iwlike = inverse_wishart_like(IW_test, 100, self.C_test)
+# wlike = wishart_like(np.linalg.inv(IW_test), 100, np.linalg.inv(self.C_test))
 
-#     #     assert_almost_equal(iwlike, wlike, decimal=6)
+# assert_almost_equal(iwlike, wlike, decimal=6)
 
 #     """
 #     def test_expval(self):
@@ -1129,9 +1276,10 @@ class test_wishart(TestCase):
 #     """
 
 class test_Stochastic_generator(TestCase):
+
     def test_randomwrap(self):
-        for s in ( (1,), (10,), (10,2)):
-            B = Bernoulli('x', np.ones(s)*.5)
+        for s in ((1,), (10,), (10, 2)):
+            B = Bernoulli('x', np.ones(s) * .5)
             B.random()
             assert_equal(B.value.shape, s)
 
@@ -1149,19 +1297,19 @@ class test_Stochastic_generator(TestCase):
 
 
 class test_shape_consistency(TestCase):
+
     def test(self):
         shape = (10, 5)
         data = np.zeros(shape)
-        mean = Normal("mean",mu = 0, tau = 1)
+        mean = Normal("mean", mu=0, tau=1)
 
         @deterministic
-        def means (mean = mean):
+        def means(mean=mean):
             return (np.ones(shape) * mean).ravel()
 
-        #data has shape (10,5) but means returns an array of shape (10 * 5,)
-        assert_raises(ValueError, Normal, "obs", mu = means, tau = 1, observed =
-True, value = data)
-
+        # data has shape (10,5) but means returns an array of shape (10 * 5,)
+        assert_raises(ValueError, Normal, "obs", mu=means, tau=1, observed=
+                      True, value=data)
 
 
 if __name__ == '__main__':

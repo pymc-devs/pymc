@@ -42,11 +42,11 @@ Error:
 %s"""
 
 
-###############################################################################
+#
 
 class Trace(base.Trace):
-    """HDF5 trace."""
 
+    """HDF5 trace."""
 
     def tally(self, chain):
         """Adds current value to trace."""
@@ -55,26 +55,20 @@ class Trace(base.Trace):
         arr = arr.reshape((1,) + arr.shape)
         self.db._arrays[chain, self.name].append(arr)
 
-
     # def __getitem__(self, index):
     #     """Mimic NumPy indexing for arrays."""
     #     chain = self._chain
-        
     #     if chain is not None:
     #         tables = [self.db._gettables()[chain],]
     #     else:
     #         tables = self.db._gettables()
-
     #     out = []
     #     for table in tables:
     #         out.append(table.col(self.name))
-            
     #     if np.isscalar(chain):
     #         return out[0][index]
     #     else:
     #         return np.hstack(out)[index]
-
-
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
 
@@ -123,16 +117,16 @@ class Trace(base.Trace):
     #     return n.sum()
 
 
-###############################################################################
+#
 
 class Database(pickle.Database):
+
     """HDF5 database.
 
     Create an HDF5 file <model>.h5.  Each chain is stored in a group,
     and the stochastics and deterministics are stored as extendable
     arrays in each group.
     """
-    
 
     def __init__(self, dbname, dbmode='a',
                  dbcomplevel=0, dbcomplib='zlib',
@@ -157,18 +151,20 @@ class Database(pickle.Database):
             ratio.
           * bzip2 has an excellent compression ratio but requires more CPU.
         """
-        
-        self.__name__  = 'hdf5ea'
+
+        self.__name__ = 'hdf5ea'
         self.__Trace__ = Trace
 
         self.dbname = dbname
-        self.mode   = dbmode
+        self.mode = dbmode
 
         db_exists = os.path.exists(self.dbname)
         self._h5file = tables.openFile(self.dbname, self.mode)
 
-        default_filter = tables.Filters(complevel=dbcomplevel, complib=dbcomplib)
-        if self.mode =='r' or (self.mode=='a' and db_exists):
+        default_filter = tables.Filters(
+            complevel=dbcomplevel,
+            complib=dbcomplib)
+        if self.mode == 'r' or (self.mode == 'a' and db_exists):
             self.filter = getattr(self._h5file, 'filters', default_filter)
         else:
             self.filter = default_filter
@@ -180,8 +176,8 @@ class Database(pickle.Database):
         self._arrays = {}
 
         # load existing data
-        existing_chains = [ gr for gr in self._h5file.listNodes("/") 
-                            if gr._v_name[:5] == 'chain' ]
+        existing_chains = [gr for gr in self._h5file.listNodes("/")
+                           if gr._v_name[:5] == 'chain']
 
         for chain in existing_chains:
             nchain = int(chain._v_name[5:])
@@ -199,41 +195,33 @@ class Database(pickle.Database):
 
             self.trace_names.append(names)
 
-
     @property
     def chains(self):
         return range(len(self._chains))
-
 
     @property
     def nchains(self):
         return len(self._chains)
 
-
     # def connect_model(self, model):
     #     """Link the Database to the Model instance.
-
     #     In case a new database is created from scratch, ``connect_model``
     #     creates Trace objects for all tallyable pymc objects defined in
     #     `model`.
-
     #     If the database is being loaded from an existing file, ``connect_model``
     #     restore the objects trace to their stored value.
-
     #     :Parameters:
     #     model : pymc.Model instance
     #       An instance holding the pymc objects defining a statistical
     #       model (stochastics, deterministics, data, ...)
     #     """
-
-    #     # Changed this to allow non-Model models. -AP
+    # Changed this to allow non-Model models. -AP
     #     if isinstance(model, pymc.Model):
     #         self.model = model
     #     else:
     #         raise AttributeError('Not a Model instance.')
-
-    #     # Restore the state of the Model from an existing Database.
-    #     # The `load` method will have already created the Trace objects.
+    # Restore the state of the Model from an existing Database.
+    # The `load` method will have already created the Trace objects.
     #     if hasattr(self, '_state_'):
     #         names = set()
     #         for morenames in self.trace_names:
@@ -244,10 +232,8 @@ class Database(pickle.Database):
     #                 names.remove(name)
     #         if len(names) > 0:
     #             raise RuntimeError("Some objects from the database"
-    #                                + "have not been assigned a getfunc: %s" 
+    #                                + "have not been assigned a getfunc: %s"
     #                                   % ', '.join(names))
-
-
     def _initialize(self, funs_to_tally, length):
         """Create a group named ``chain#`` to store all data for this chain."""
 
@@ -272,7 +258,6 @@ class Database(pickle.Database):
 
         self.trace_names.append(funs_to_tally.keys())
 
-
     def tally(self, chain=-1):
         chain = self.chains[chain]
         for name in self.trace_names[chain]:
@@ -281,16 +266,13 @@ class Database(pickle.Database):
                 self._arrays[chain, name].flush()
             except:
                 cls, inst, tb = sys.exc_info()
-                warnings.warn(warn_tally 
+                warnings.warn(warn_tally
                               % (name, ''.join(traceback.format_exception(cls, inst, tb))))
                 self.trace_names[chain].remove(name)
-
-
 
     # def savestate(self, state, chain=-1):
     #     """Store a dictionnary containing the state of the Model and its
     #     StepMethods."""
-        
     #     chain = self.chains[chain]
     #     if chain in self._states:
     #         self._states[chain] = state
@@ -298,8 +280,6 @@ class Database(pickle.Database):
     #         s = self._h5file.createVLArray(chain,'_state_',tables.ObjectAtom(),title='The saved state of the sampler',filters=self.filter)
     #         s.append(state)
     #     self._h5file.flush()
-
-
     # def getstate(self, chain=-1):
     #     if len(self._chains)==0:
     #         return {}
@@ -310,15 +290,11 @@ class Database(pickle.Database):
     #             return {}
     #     else:
     #         return {}
-
-
     def _finalize(self, chain=-1):
         self._h5file.flush()
 
     def close(self):
         self._h5file.close()
-
-
 
 
 def load(dbname, dbmode='a'):
