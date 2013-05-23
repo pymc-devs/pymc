@@ -52,6 +52,8 @@ class test_LazyFunction(TestCase):
 
             # Check the argument values
             assert(C in L.ultimate_args)
+            a_loc = L.ultimate_args.index(A)
+            c_loc = L.ultimate_args.index(C)
 
             # Accept or reject values
             acc = True
@@ -61,9 +63,9 @@ class test_LazyFunction(TestCase):
                 # Make sure A's value and last value occupy correct places in B's
                 # cached arguments
                 cur_frame = B._value.get_frame_queue()[1]
-                assert(B._value.get_cached_counts()[0,cur_frame] == A.counter.get_count())
-                assert(B._value.get_cached_counts()[0,1-cur_frame] == last_A_count)
-                assert(B._value.ultimate_args[0] is A)
+                assert(B._value.get_cached_counts()[a_loc,cur_frame] == A.counter.get_count())
+                assert(B._value.get_cached_counts()[a_loc,1-cur_frame] == last_A_count)
+                assert(B._value.ultimate_args[a_loc] is A)
 
             except ZeroProbability:
 
@@ -75,7 +77,7 @@ class test_LazyFunction(TestCase):
                 # Make sure A's value and last value occupy correct places in B's
                 # cached arguments
                 cur_frame = B._value.get_frame_queue()[1]
-                assert(B._value.get_cached_counts()[0,1-cur_frame] == A.counter.get_count())
+                assert(B._value.get_cached_counts()[a_loc, 1-cur_frame] == A.counter.get_count())
                 assert(B.value is last_B_value)
 
 
@@ -85,15 +87,14 @@ class test_LazyFunction(TestCase):
             # If jump was accepted:
             if acc:
                 # C's value should be at the head of C's cache
-                #print L.get_cached_counts()[1,cur_frame], C.counter.get_count()
-                assert_equal(L.get_cached_counts()[1,cur_frame], C.counter.get_count())
+                assert_equal(L.get_cached_counts()[c_loc, cur_frame], C.counter.get_count())
                 assert(L.cached_values[cur_frame] is C.logp)
 
             # If jump was rejected:
             else:
 
                 # B's value should be at the back of C's cache.
-                assert_equal(L.get_cached_counts()[1,1-cur_frame], C.counter.get_count())
+                assert_equal(L.get_cached_counts()[c_loc, 1-cur_frame], C.counter.get_count())
                 assert(L.cached_values[1-cur_frame] is C.logp)
 
 if __name__ == '__main__':

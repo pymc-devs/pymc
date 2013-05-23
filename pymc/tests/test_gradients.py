@@ -126,7 +126,7 @@ def check_gradients( stochastic):
 
             numeric_gradient = get_numeric_gradient(stochastics, s)
 
-            assert_array_almost_equal(numeric_gradient, analytic_gradient,4,
+            assert_array_almost_equal(numeric_gradient, analytic_gradient,3,
                                      "analytic gradient for " + str(stochastic) +
                                      " with respect to parameter " + str(s) +
                                      " is not correct.")
@@ -206,7 +206,7 @@ class test_gradients(TestCase):
         indexing3 = a[::-1,:]
         check_jacobians(indexing3)
 
-        # this currently does not work because scalars use the Index deterministic 
+        # this currently does not work because scalars use the Index deterministic
         # which is special and needs more thought
         indexing2 = a[0]
         check_jacobians(indexing2)
