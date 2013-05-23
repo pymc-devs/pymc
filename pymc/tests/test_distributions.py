@@ -985,7 +985,7 @@ class test_weibull(TestCase):
 
     def test_random(self):
         parameters = {'alpha': 2., 'beta': 3.}
-        r = rweibull(parameters['alpha'], parameters['beta'], size=1000)
+        r = rweibull(parameters['alpha'], parameters['beta'], size=100000)
         assert_almost_equal(r.mean(), weibull_expval(**parameters), 1)
 
 #-------------------------------------------------------------------------------
