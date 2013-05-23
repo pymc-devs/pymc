@@ -14,7 +14,7 @@ def test_gelman_rubin(n=1000):
     assert np.all([r < 1.5 for r in rhat.values()])
 
 
-def test_geweke(n=2000):
+def test_geweke(n=3000):
 
     with dm.model:
         # Run sampler
