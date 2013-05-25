@@ -31,7 +31,7 @@ def transform(name, forward, backward, jacobian_det, getshape=None):
 
             return locals()
 
-        return TransformedDistribtuion()
+        return TransformedDistribtuion.dist()
 
     def __str__():
         return name + " transform"

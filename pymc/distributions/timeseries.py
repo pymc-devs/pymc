@@ -22,9 +22,9 @@ def AR1(k, tau_e):
     def logp(x):
         x_im1 = x[:-1]
         x_i = x[1:]
-        boundary = Normal(0, tau).logp
+        boundary = Normal.dist(0, tau).logp
 
-        innov_like = Normal(k * x_im1, tau_e).logp(x_i)
+        innov_like = Normal.dist(k * x_im1, tau_e).logp(x_i)
         return boundary(x[0]) + sum(innov_like) + boundary(x[-1])
 
     mode = 0.
@@ -33,7 +33,7 @@ def AR1(k, tau_e):
 
 
 @tensordist(continuous)
-def GaussianRandomWalk(tau, init=Flat()):
+def GaussianRandomWalk(tau, init=Flat.dist()):
     """
     Random Walk with Normal innovations
 
@@ -49,7 +49,7 @@ def GaussianRandomWalk(tau, init=Flat()):
         x_im1 = x[:-1]
         x_i = x[1:]
 
-        innov_like = Normal(x_im1, tau).logp(x_i)
+        innov_like = Normal.dist(x_im1, tau).logp(x_i)
         return init.logp(x[0]) + sum(innov_like)
 
     mean = 0.
