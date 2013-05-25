@@ -7,6 +7,7 @@ nodes in PyMC.
 """
 
 from dist_math import *
+from numpy.random import uniform as runiform, normal as rnormal
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos']
@@ -32,6 +33,9 @@ def Uniform(lower=0, upper=1):
         return bound(
             -log(upper - lower),
             lower <= value, value <= upper)
+
+    def random(size=None):
+        return runiform(upper, lower, size)
 
     mean = (upper + lower) / 2.
     median = mean
