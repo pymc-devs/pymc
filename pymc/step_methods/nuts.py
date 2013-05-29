@@ -1,7 +1,7 @@
 from quadpotential import *
 from arraystep import *
 from ..core import *
-from numpy import exp
+from numpy import exp, log
 from numpy.random import uniform
 from hmc import *
 
@@ -47,7 +47,8 @@ class NoUTurn(ArrayStep):
         self.gamma = .05
         self.t0 = 10
         self.k = .75
-        self.u = log(step_size*10)
+        self.u = log(self.step_size*10)
+        self.m = 0
 
 
 
@@ -73,9 +74,9 @@ class NoUTurn(ArrayStep):
             v = bern(.5) * 2 -1
 
             if v == -1:
-                qn,pn,_,_, q1,n1,s1,a,na = buildtree(H, qn,pn,u, v,j,e, Emax)
+                qn,pn,_,_, q1,n1,s1,a,na = buildtree(H, qn,pn,u, v,j,e, Emax, q0, p0)
             else:
-                _,_,qp,pp, q1,n1,s1,a,na = buildtree(H, qp,pp,u, v,j,e, Emax)
+                _,_,qp,pp, q1,n1,s1,a,na = buildtree(H, qp,pp,u, v,j,e, Emax, q0, p0)
 
             if s1 == 1 and bern(min(1, n1*1./n)):
                 q = q1
@@ -89,9 +90,10 @@ class NoUTurn(ArrayStep):
         p = -p
 
         w = 1./(self.m+self.t0)
-        self.Hbar = (1 - w)* self.Hbar + w*(self.delta - a/na)
+        self.Hbar = (1 - w)* self.Hbar + w*(self.delta - a*1./na)
 
-        self.step_size = exp(self.u - sqrt(self.m)/self.gamma*Hbar)
+        self.step_size = exp(self.u - (self.m**.5/self.gamma)*self.Hbar)
+        self.m += 1
 
 
 
@@ -106,14 +108,14 @@ def buildtree(H, q, p, u, v, j,e, Emax, q0, p0):
         E0 = energy(H, q0,p0)
         return q1, p1, q1, p1, q1, n1, s1, min(1, exp(E0 - E)), 1
     else:
-        qn,pn,qp,pp, q1,n1,s1 = buildtree(H, q,p,u, v,j - 1,e, Emax, q0, p0)
+        qn,pn,qp,pp, q1,n1,s1,a1, na1 = buildtree(H, q,p,u, v,j - 1,e, Emax, q0, p0)
         if s1 == 1:
             if v == -1:
                 qn,pn,_,_, q11,n11,s11,a11,na11 = buildtree(H, qn,pn,u, v,j - 1,e, Emax, q0, p0)
             else:
                 _,_,qp,pp, q11,n11,s11,a11,na11 = buildtree(H, qp,pp,u, v,j - 1,e, Emax, q0, p0)
 
-            if bern(n11*1./(n1 + n11)):
+            if bern(n11*1./(max(n1 + n11, 1))):
                 q1 = q11
 
             a1 = a1 + a11
