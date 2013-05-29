@@ -85,8 +85,8 @@ def buildtree(H, q, p, u, v, j,e, Emax):
     if j == 0:
         q1, p1 = leapfrog(H, q, p, 1, v*e)
         E = energy(H, q1,p1)
-        n1 = (u <= exp(-E))
-        s1 = (u <  exp(Emax -E))
+        n1 = (u <= exp(-E)) *1
+        s1 = (u <  exp(Emax -E)) * 1
         return q1, p1, q1, p1, q1, n1, s1
     else:
         qn,pn,qp,pp, q1,n1,s1 = buildtree(H, q,p,u, v,j - 1,e, Emax)
