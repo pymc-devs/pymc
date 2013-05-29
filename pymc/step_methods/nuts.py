@@ -42,6 +42,14 @@ class NoUTurn(ArrayStep):
         self.state = state
         self.Emax = 1000
 
+        self.delta = .65
+        self.Hbar = 0
+        self.gamma = .05
+        self.t0 = 10
+        self.k = .75
+        self.u = log(step_size*10)
+
+
 
         ArrayStep.__init__(self,
                 vars, [model.logpc, model.dlogpc(vars)]
@@ -65,9 +73,9 @@ class NoUTurn(ArrayStep):
             v = bern(.5) * 2 -1
 
             if v == -1:
-                qn,pn,_,_, q1,n1,s1 = buildtree(H, qn,pn,u, v,j,e, Emax)
+                qn,pn,_,_, q1,n1,s1,a,na = buildtree(H, qn,pn,u, v,j,e, Emax)
             else:
-                _,_,qp,pp, q1,n1,s1 = buildtree(H, qp,pp,u, v,j,e, Emax)
+                _,_,qp,pp, q1,n1,s1,a,na = buildtree(H, qp,pp,u, v,j,e, Emax)
 
             if s1 == 1 and bern(min(1, n1*1./n)):
                 q = q1
@@ -79,29 +87,40 @@ class NoUTurn(ArrayStep):
             j = j + 1
 
         p = -p
+
+        w = 1./(self.m+self.t0)
+        self.Hbar = (1 - w)* self.Hbar + w*(self.delta - a/na)
+
+        self.step_size = exp(self.u - sqrt(self.m)/self.gamma*Hbar)
+
+
+
         return q
 
-def buildtree(H, q, p, u, v, j,e, Emax):
+def buildtree(H, q, p, u, v, j,e, Emax, q0, p0):
     if j == 0:
         q1, p1 = leapfrog(H, q, p, 1, v*e)
         E = energy(H, q1,p1)
-        n1 = (u <= exp(-E)) *1
-        s1 = (u <  exp(Emax -E)) * 1
-        return q1, p1, q1, p1, q1, n1, s1
+        n1 = int(u <= exp(-E))
+        s1 = int(u <  exp(Emax -E))
+        E0 = energy(H, q0,p0)
+        return q1, p1, q1, p1, q1, n1, s1, min(1, exp(E0 - E)), 1
     else:
-        qn,pn,qp,pp, q1,n1,s1 = buildtree(H, q,p,u, v,j - 1,e, Emax)
+        qn,pn,qp,pp, q1,n1,s1 = buildtree(H, q,p,u, v,j - 1,e, Emax, q0, p0)
         if s1 == 1:
             if v == -1:
-                qn,pn,_,_, q11,n11,s11 = buildtree(H, qn,pn,u, v,j - 1,e, Emax)
+                qn,pn,_,_, q11,n11,s11,a11,na11 = buildtree(H, qn,pn,u, v,j - 1,e, Emax, q0, p0)
             else:
-                _,_,qp,pp, q11,n11,s11 = buildtree(H, qp,pp,u, v,j - 1,e, Emax)
+                _,_,qp,pp, q11,n11,s11,a11,na11 = buildtree(H, qp,pp,u, v,j - 1,e, Emax, q0, p0)
 
             if bern(n11*1./(n1 + n11)):
                 q1 = q11
 
+            a1 = a1 + a11
+            na1 = na1 + na11
 
             span = qp - qn
             s1 = s11 * (span.dot(pn) >= 0) * (span.dot(pp) >= 0)
             n1 = n1 + n11
-        return qn, pn, qp, pp, q1, n1, s1
+        return qn, pn, qp, pp, q1, n1, s1, a1, na1
     return
