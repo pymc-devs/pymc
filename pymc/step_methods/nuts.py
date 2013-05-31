@@ -91,6 +91,8 @@ class NoUTurn(ArrayStep):
 
         w = 1./(self.m+self.t0)
         self.Hbar = (1 - w)* self.Hbar + w*(self.delta - a*1./na)
+        if self.m % 50 ==0:
+            print self.delta, self.step_size, a *1./na, j
 
         self.step_size = exp(self.u - (self.m**.5/self.gamma)*self.Hbar)
         self.m += 1
@@ -103,8 +105,8 @@ def buildtree(H, q, p, u, v, j,e, Emax, q0, p0):
     if j == 0:
         q1, p1 = leapfrog(H, q, p, 1, v*e)
         E = energy(H, q1,p1)
-        n1 = int(u <= exp(-E))
-        s1 = int(u <  exp(Emax -E))
+        n1 = int(log(u) <= -E)
+        s1 = int(log(u) <  Emax -E)
         E0 = energy(H, q0,p0)
         return q1, p1, q1, p1, q1, n1, s1, min(1, exp(E0 - E)), 1
     else:
