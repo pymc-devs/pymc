@@ -20,7 +20,7 @@ with Model() as model:
 
     step = NoUTurn(model.vars, h)
 
-    trace = sample(3e3, step, start)
+    trace = sample(10, step, start)
 
 # <markdowncell>
 
