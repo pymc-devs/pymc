@@ -10,7 +10,6 @@ def test_leapfrog_reversible():
 
     with model:
         h = pm.find_hessian(start, model = model)
-        print h
         step = pm.HamiltonianMC(model.vars, h, model = model)
 
     bij = pm.DictToArrayBijection(step.ordering, start)
