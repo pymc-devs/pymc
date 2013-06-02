@@ -7,12 +7,22 @@ from hmc import *
 
 __all__ = ['NoUTurn']
 
-#TODO:
-#add constraint handling via page 37 of Radford's http://www.cs.utoronto.ca/~radford/ham-mcmc.abstract.html
-
-
 class NoUTurn(ArrayStep):
-    def __init__(self, vars, C, step_scale = .25, is_cov = False, state = None, model = None):
+    """
+    Automatically tunes step size and adjust number of steps for good performance.
+
+    Implements "Algorithm 6: Efficient No-U-Turn Sampler with Dual Averaging" in:
+
+    Hoffman, Matthew D., & Gelman, Andrew. (2011).
+    The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
+    """
+    def __init__(self, vars, C, step_scale = .25, is_cov = False, state = None,
+                 Emax = 1000,
+                 target_accept = .65,
+                 gamma = .05,
+                 k =.75,
+                 t0 = 10,
+                 model = None):
         """
         Parameters
         ----------
@@ -20,14 +30,20 @@ class NoUTurn(ArrayStep):
             C : array_like, ndim = {1,2}
                 Scaling for momentum distribution. 1d arrays interpreted matrix diagonal.
             step_scale : float, default=.25
-                Size of steps to take, automatically scaled down by 1/n**(1/4) (defaults to .25)
-            path_length : float, default=2
-
-                total length to travel
+                Size of steps to take, automatically scaled down by 1/n**(1/4)
             is_cov : bool, default=False
                 Treat C as a covariance matrix/vector if True, else treat it as a precision matrix/vector
-            step_rand : function float -> float, default=unif
-                A function which takes the step size and returns an new one used to randomize the step size at each iteration.
+            state
+                state to start from
+            Emax : float, default 1000
+                maximum energy
+            target_accept : float (0,1) default .65
+                target for avg accept probability between final branch and initial position
+            gamma : float, default .05
+            k : float (.5,1) default .75
+                scaling of speed of adaptation
+            t0 : int, default 10
+                slows inital adapatation
             model : Model
         """
         model = modelcontext(model)
@@ -40,13 +56,14 @@ class NoUTurn(ArrayStep):
         if state is None:
             state = SamplerHist()
         self.state = state
-        self.Emax = 1000
+        self.Emax = Emax
 
-        self.delta = .65
+        self.target_accept = target_accept
+        self.gamma = gamma
+        self.t0 = t0
+        self.k = k
+
         self.Hbar = 0
-        self.gamma = .05
-        self.t0 = 10
-        self.k = .75
         self.u = log(self.step_size*10)
         self.m = 0
 
@@ -90,7 +107,7 @@ class NoUTurn(ArrayStep):
         p = -p
 
         w = 1./(self.m+self.t0)
-        self.Hbar = (1 - w)* self.Hbar + w*(self.delta - a*1./na)
+        self.Hbar = (1 - w)* self.Hbar + w*(self.target_accept - a*1./na)
 
         self.step_size = exp(self.u - (self.m**.5/self.gamma)*self.Hbar)
         self.m += 1
