@@ -8,10 +8,9 @@ def test_leapfrog_reversible():
     n=3
     start, model, _ = models.non_normal(n)
 
-    print start
-
     with model:
         h = pm.find_hessian(start, model = model)
+        print h
         step = pm.HamiltonianMC(model.vars, h, model = model)
 
     bij = pm.DictToArrayBijection(step.ordering, start)
