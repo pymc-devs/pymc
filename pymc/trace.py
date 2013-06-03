@@ -14,7 +14,7 @@ class NpTrace(object):
         self.f = compilef(vars)
         self.vars = vars
         self.varnames =map(str, vars)
-        self.samples = dict((str(v), ListArray(v.dshape)) for v in self.vars)
+        self.samples = dict((v, ListArray()) for v in self.varnames)
 
     def record(self, point):
         """
@@ -151,8 +151,8 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
 
 
 class ListArray(object):
-    def __init__(self, shape):
-        self.vals = [np.ones((0,) + shape)]
+    def __init__(self):
+        self.vals = []
 
     @property
     def value(self):
@@ -165,7 +165,10 @@ class ListArray(object):
         self.vals.append(v[np.newaxis])
 
     def __len__(self):
-        return self.value.shape[0]
+        if self.vals:
+            return self.value.shape[0]
+        else:
+            return 0
 
 
 class MultiTrace(object):
