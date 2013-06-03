@@ -110,7 +110,7 @@ with model:
 # <codecell>
 
 with model:
-    step = NoUTurn(model.vars, hessian(start, 6))
+    step = NUTS(model.vars, hessian(start, 6))
     trace = sample(5, step, start, trace=model.vars + [sigma])
 
     # Start next run at the last sampled position.

@@ -5,9 +5,9 @@ from numpy import exp, log
 from numpy.random import uniform
 from hmc import leapfrog, Hamiltonian, bern, energy
 
-__all__ = ['NoUTurn']
+__all__ = ['NUTS']
 
-class NoUTurn(ArrayStep):
+class NUTS(ArrayStep):
     """
     Automatically tunes step size and adjust number of steps for good performance.
 

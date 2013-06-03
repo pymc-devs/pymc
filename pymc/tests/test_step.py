@@ -17,7 +17,7 @@ def test_step_continuous():
         mh = pm.Metropolis(model.vars, S=C,
                            proposal_dist=pm.MultivariateNormalProposal)
         # slicer = pm.Slice(model.vars, model=model)
-        nuts = pm.NoUTurn(model.vars, C, is_cov = True)
+        nuts = pm.NUTS(model.vars, C, is_cov = True)
         compound = pm.CompoundStep([hmc, mh])
 
     steps = [mh, hmc, compound]

@@ -18,7 +18,7 @@ with Model() as model:
     start = model.test_point
     h = approx_hess(start)
 
-    step = NoUTurn(model.vars, h)
+    step = NUTS(model.vars, h)
 
     trace = sample(10, step, start)
 
