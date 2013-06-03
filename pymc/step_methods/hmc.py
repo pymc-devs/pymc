@@ -10,6 +10,8 @@ from ..core import *
 import numpy as np
 from scipy.sparse import issparse
 
+from collections import namedtuple
+
 __all__ = ['HamiltonianMC']
 
 # TODO:
@@ -46,7 +48,7 @@ class HamiltonianMC(ArrayStep):
 
         self.step_size = step_scale / n ** (1 / 4.)
 
-        self.potential = quad_potential(C, is_cov)
+        self.potential = quad_potential(C, is_cov, as_cov = False)
 
         self.path_length = path_length
         self.step_rand = step_rand
@@ -60,32 +62,44 @@ class HamiltonianMC(ArrayStep):
                            )
 
     def astep(self, q0, logp, dlogp):
+        H = Hamiltonian(logp, dlogp, self.potential)
 
-        # randomize step size
         e = self.step_rand(self.step_size)
-        nstep = int(floor(self.path_length / self.step_size))
+        nstep = int(self.path_length / e)
 
-        q = q0
-        p = p0 = self.potential.random()
+        p0 = H.pot.random()
 
-        # use the leapfrog method
-        p = p - (e / 2) * -dlogp(q)  # half momentum update
-
-        for i in range(nstep):
-            # alternate full variable and momentum updates
-            q = q + e * self.potential.velocity(p)
-            if i != nstep - 1:
-                p = p - e * -dlogp(q)
-
-        p = p - (e / 2) * -dlogp(q)
-                 # do a half step momentum update to finish off
-
+        q, p = leapfrog(H, q0, p0, nstep, e)
         p = -p
 
-        # - H(q*, p*) + H(q, p) = -H(q, p) + H(q0, p0) = -(- logp(q) + K(p)) + (-logp(q0) + K(p0))
-        mr = (-logp(q0)) + self.potential.energy(
-            p0) - ((-logp(q)) + self.potential.energy(p))
+        mr = energy(H, q0, p0) - energy(H, q, p)
 
         self.state.metrops.append(mr)
 
         return metrop_select(mr, q, q0)
+
+
+
+def bern(p):
+    return np.random.uniform() < p
+
+Hamiltonian = namedtuple("Hamiltonian", "logp, dlogp, pot")
+
+def energy(H, q,p):
+        return -(H.logp(q) - H.pot.energy(p))
+
+def leapfrog(H, q, p, n, e):
+    _, dlogp, pot = H
+
+    p = p - (e/2) * -dlogp(q) # half momentum update
+
+    for i in range(n):
+        #alternate full variable and momentum updates
+        q = q + e * pot.velocity(p)
+
+        if i != n - 1:
+            p = p - e * -dlogp(q)
+
+    p = p - (e/2) * -dlogp(q)  # do a half step momentum update to finish off
+    return q, p
+

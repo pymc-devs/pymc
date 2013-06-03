@@ -110,13 +110,13 @@ with model:
 # <codecell>
 
 with model:
-    step = HamiltonianMC(model.vars, hessian(start, 6))
-    trace = sample(200, step, start, trace=model.vars + [sigma])
+    step = NoUTurn(model.vars, hessian(start, 6))
+    trace = sample(5, step, start, trace=model.vars + [sigma])
 
     # Start next run at the last sampled position.
-    start2 = trace.point(-1)
-    step = HamiltonianMC(model.vars, hessian(start2, 6), path_length=4.)
-    trace = sample(2000, step, trace=trace)
+    #start2 = trace.point(-1)
+    #step = HamiltonianMC(model.vars, hessian(start2, 6), path_length=4.)
+    #trace = sample(2000, step, trace=trace)
 
 # <codecell>
 
