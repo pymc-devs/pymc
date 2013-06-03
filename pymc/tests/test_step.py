@@ -12,11 +12,13 @@ def check_stat(name, trace, var, stat, value, bound):
 def test_step_continuous():
     start, model, (mu, C) = mv_simple()
 
-    hmc = pm.HamiltonianMC(model.vars, C, is_cov=True, model=model)
-    mh = pm.Metropolis(model.vars, model=model, S=C,
-                       proposal_dist=pm.MultivariateNormalProposal)
-    # slicer = pm.Slice(model.vars, model=model)
-    compound = pm.CompoundStep([hmc, mh])
+    with model:
+        hmc = pm.HamiltonianMC(model.vars, C, is_cov=True)
+        mh = pm.Metropolis(model.vars, S=C,
+                           proposal_dist=pm.MultivariateNormalProposal)
+        # slicer = pm.Slice(model.vars, model=model)
+        nuts = pm.NoUTurn(model.vars, C, is_cov = True)
+        compound = pm.CompoundStep([hmc, mh])
 
     steps = [mh, hmc, compound]
 
