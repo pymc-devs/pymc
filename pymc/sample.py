@@ -24,7 +24,9 @@ def sample(draws, step, start=None, trace=None, progressbar=True, model=None, ra
     step : function
         A step function
     start : dict
-        Starting point in parameter space (Defaults to trace.point(-1))
+        Starting point in parameter space
+        Defaults to trace.point(-1)) if there is a trace provided and
+        model.test_point if not
     trace : NpTrace or list
         Either a trace of past values or a list of variables to track (defaults to None)
     progressbar : bool
@@ -40,9 +42,7 @@ def sample(draws, step, start=None, trace=None, progressbar=True, model=None, ra
     model = modelcontext(model)
     draws = int(draws)
     seed(random_seed)
-    if start is None:
-        start = trace[-1]
-    point = Point(start, model=model)
+
 
     if not hasattr(trace, 'record'):
         if trace is None:
@@ -53,6 +53,15 @@ def sample(draws, step, start=None, trace=None, progressbar=True, model=None, ra
         step = step_methods.CompoundStep(step)
     except TypeError:
         pass
+
+
+    if start is None and trace is not None and len(trace) > 0:
+        start = trace.point(-1)
+
+    if start is None:
+        start = model.test_point
+
+    point = Point(start, model=model)
 
     progress = progress_bar(draws)
 
