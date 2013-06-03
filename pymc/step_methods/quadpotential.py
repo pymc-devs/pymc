@@ -10,6 +10,22 @@ __all__ = ['quad_potential', 'ElemWiseQuadPotential', 'QuadPotential',
            'QuadPotential_Inv', 'isquadpotential']
 
 def quad_potential(C, is_cov, as_cov):
+    """
+    Parameters
+    ----------
+        C : arraylike, 0 <= ndim <= 2
+            scaling matrix for the potential
+            vector treated as diagonal matrix
+        is_cov : Boolean
+            whether C is provided as a covariance matrix or hessian
+        as_cov : Boolean
+            whether the random draws should come from the normal dist
+            using the covariance matrix above or the inverse
+
+    Returns
+    -------
+        q : Quadpotential
+    """
 
     if issparse(C) and is_cov != as_cov:
         if not chol_available:

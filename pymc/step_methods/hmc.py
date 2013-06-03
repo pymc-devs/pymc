@@ -12,7 +12,7 @@ from scipy.sparse import issparse
 
 from collections import namedtuple
 
-__all__ = ['HamiltonianMC', 'leapfrog','energy', 'Hamiltonian', 'bern']
+__all__ = ['HamiltonianMC']
 
 # TODO:
 # add constraint handling via page 37 of Radford's

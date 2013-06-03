@@ -3,7 +3,7 @@ from arraystep import *
 from ..core import *
 from numpy import exp, log
 from numpy.random import uniform
-from hmc import *
+from hmc import leapfrog, Hamiltonian, bern, energy
 
 __all__ = ['NoUTurn']
 
@@ -51,7 +51,7 @@ class NoUTurn(ArrayStep):
 
         self.step_size = step_scale / n**(1/4.)
 
-        self.potential = quad_potential(C, is_cov, as_cov = False)
+        self.potential = quad_potential(C, is_cov, as_cov=False)
 
         if state is None:
             state = SamplerHist()
