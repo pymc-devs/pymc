@@ -43,6 +43,12 @@ def sample(draws, step, start=None, trace=None, progressbar=True, model=None, ra
     draws = int(draws)
     seed(random_seed)
 
+    if start is None and trace is not None and len(trace) > 0:
+
+        start = trace.point(-1)
+
+    if start is None:
+        start = model.test_point
 
     if not hasattr(trace, 'record'):
         if trace is None:
@@ -53,13 +59,6 @@ def sample(draws, step, start=None, trace=None, progressbar=True, model=None, ra
         step = step_methods.CompoundStep(step)
     except TypeError:
         pass
-
-
-    if start is None and trace is not None and len(trace) > 0:
-        start = trace.point(-1)
-
-    if start is None:
-        start = model.test_point
 
     point = Point(start, model=model)
 
