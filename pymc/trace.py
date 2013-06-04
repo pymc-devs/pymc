@@ -51,6 +51,8 @@ class NpTrace(object):
 
             return self.samples[str(index_value)].value
 
+    def __len__(self):
+        return len(self.samples[self.varnames[0]])
 
     def point(self, index):
         return dict((k, v.value[index]) for (k,v) in self.samples.iteritems())
@@ -156,10 +158,17 @@ class ListArray(object):
     def value(self):
         if len(self.vals) > 1:
             self.vals = [np.concatenate(self.vals, axis =0)]
+
         return self.vals[0]
 
     def append(self, v):
         self.vals.append(v[np.newaxis])
+
+    def __len__(self):
+        if self.vals:
+            return self.value.shape[0]
+        else:
+            return 0
 
 
 class MultiTrace(object):
