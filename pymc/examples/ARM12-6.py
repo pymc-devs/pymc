@@ -46,17 +46,20 @@ with model:
     lr = Normal(
         'lr', floor * floor_m + means[group], sd ** -2., observed=lradon)
 
-    start = {'groupmean': obs_means.mean(),
-             'groupsd': obs_means.std(),
-             'sd': data.groupby('group').lradon.std().mean(),
-             'means': np.array(obs_means),
-             'floor_m': 0.,
-             }
+if __name__ == '__main__':
 
-    start = find_MAP(start, [groupmean, sd, floor_m])
-    H = model.d2logpc()
-    h = np.diag(H(start))
+    with model:
+        start = {'groupmean': obs_means.mean(),
+                 'groupsd': obs_means.std(),
+                 'sd': data.groupby('group').lradon.std().mean(),
+                 'means': np.array(obs_means),
+                 'floor_m': 0.,
+                 }
 
-    step = HamiltonianMC(model.vars, h)
+        start = find_MAP(start, [groupmean, sd, floor_m])
+        H = model.d2logpc()
+        h = np.diag(H(start))
 
-    trace = sample(3000, step, start)
+        step = HamiltonianMC(model.vars, h)
+
+        trace = sample(3000, step, start)

@@ -43,10 +43,17 @@ with Model() as model:
     # Data likelihood
     disasters = Poisson('disasters', rate, observed=disasters_data)
 
-    # Initial values for stochastic nodes
-    start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
 
-    # Use slice sampler for means
-    step1 = Slice([early_mean, late_mean])
-    # Use Metropolis for switchpoint, since it accomodates discrete variables
-    step2 = Metropolis([switchpoint])
+if __name__ == '__main__':
+
+    with model:
+
+        # Initial values for stochastic nodes
+        start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
+
+        # Use slice sampler for means
+        step1 = Slice([early_mean, late_mean])
+        # Use Metropolis for switchpoint, since it accomodates discrete variables
+        step2 = Metropolis([switchpoint])
+
+        tr = sample(1000, start=start, step=[step1, step2])
