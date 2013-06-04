@@ -43,8 +43,8 @@ with Model() as model:
     # Data likelihood
     disasters = Poisson('disasters', rate, observed=disasters_data)
 
-    # Initial values for stochastic nodes
-    start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
+    # Initial values for some stochastic nodes
+    start = {'early_mean': 2., 'late_mean': 3.}
 
     # Use slice sampler for means
     step1 = Slice([early_mean, late_mean])
