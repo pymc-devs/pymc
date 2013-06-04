@@ -10,7 +10,7 @@ from numpy.random import seed
 __all__ = ['sample', 'psample']
 
 
-def sample(draws, step, start=None, trace=None, progressbar=True, model=None, random_seed=None):
+def sample(draws, step, start={}, trace=None, progressbar=True, model=None, random_seed=None):
     """
     Draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -24,38 +24,28 @@ def sample(draws, step, start=None, trace=None, progressbar=True, model=None, ra
     step : function
         A step function
     start : dict
-        Starting point in parameter space
+        Starting point in parameter space (or partial point)
         Defaults to trace.point(-1)) if there is a trace provided and
-        model.test_point if not
+        model.test_point if not (defaults to empty dict)
     trace : NpTrace or list
-        Either a trace of past values or a list of variables to track (defaults to None)
+        Either a trace of past values or a list of variables to track
+        (defaults to None)
     progressbar : bool
         Flag for progress bar
     model : Model (optional if in `with` context)
-
-    Examples
-    --------
-
-    >>> an example
 
     """
     model = modelcontext(model)
     draws = int(draws)
     seed(random_seed)
 
-    if start is None:
+    if trace is not None and len(trace) > 0:
 
-        if trace is not None and len(trace) > 0:
-
-            start = trace.point(-1)
-
-        else:
-
-            start = model.test_point
+        start = trace.point(-1)
 
     else:
 
-        test_point = model.test_point
+        test_point = model.test_point.copy()
         test_point.update(start)
         start = test_point
 
