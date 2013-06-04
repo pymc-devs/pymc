@@ -12,6 +12,7 @@ except:
 
 
 def test_sample():
+
     model, start, step, _ = simple_init()
 
     test_samplers = [sample]
@@ -27,8 +28,8 @@ def test_sample():
             for samplr in test_samplers:
                 for n in [0,1, 10, 300]:
 
-                    yield samplr, n, step, None
-                    yield samplr, n, step, None, trace
+                    yield samplr, n, step, {}
+                    yield samplr, n, step, {}, trace
                     yield samplr, n, step, start
 
 

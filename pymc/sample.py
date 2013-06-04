@@ -39,7 +39,7 @@ def sample(draws, step, start={}, trace=None, progressbar=True, model=None, rand
     draws = int(draws)
     seed(random_seed)
 
-    if trace is not None and len(trace) > 0:
+    if isinstance(trace, NpTrace) and len(trace) > 0:
 
         start = trace.point(-1)
 
@@ -49,7 +49,6 @@ def sample(draws, step, start={}, trace=None, progressbar=True, model=None, rand
         test_point.update(start)
         start = test_point
 
-    if not hasattr(trace, 'record'):
         if trace is None:
             trace = model.vars
         trace = NpTrace(list(trace))
