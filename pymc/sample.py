@@ -41,7 +41,9 @@ def sample(draws, step, start={}, trace=None, progressbar=True, model=None, rand
 
     if isinstance(trace, NpTrace) and len(trace) > 0:
 
-        start = trace.point(-1)
+        trace_point = trace.point(-1)
+        trace_point.update(start)
+        start = trace_point
 
     else:
 
@@ -49,9 +51,10 @@ def sample(draws, step, start={}, trace=None, progressbar=True, model=None, rand
         test_point.update(start)
         start = test_point
 
-        if trace is None:
-            trace = model.vars
-        trace = NpTrace(list(trace))
+        if not isinstance(trace, NpTrace):
+            if trace is None:
+                trace = model.vars
+            trace = NpTrace(list(trace))
 
     try:
         step = step_methods.CompoundStep(step)
