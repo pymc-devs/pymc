@@ -11,9 +11,12 @@ with model:
         'p', Dirichlet.dist(k, a, shape=k),
         simplextransform)
 
-    H = model.d2logpc()
+if __name__ == '__main__':
 
-    s = find_MAP()
+    with model:
+        H = model.d2logpc()
 
-    step = HamiltonianMC(model.vars, H(s))
-    trace = sample(1000, step, s)
+        s = find_MAP()
+
+        step = HamiltonianMC(model.vars, H(s))
+        trace = sample(1000, step, s)
