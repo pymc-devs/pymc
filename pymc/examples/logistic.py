@@ -31,11 +31,18 @@ with model:
 
     o = Bernoulli('o', p, observed=outcomes)
 
-    # move the chain to the MAP which should be a good starting point
-    start = find_MAP()
-    h = np.diag(approx_hess(
-        start))  # find a good orientation using the hessian at the MAP
+def run():
 
-    step = HamiltonianMC(model.vars, h)
+    with model:
+        # move the chain to the MAP which should be a good starting point
+        start = find_MAP()
+        h = np.diag(approx_hess(
+            start))  # find a good orientation using the hessian at the MAP
 
-    trace = sample(3e2, step, start)
+        step = HamiltonianMC(model.vars, h)
+
+        trace = sample(3e2, step, start)
+
+if __name__ == '__main__':
+
+    run()

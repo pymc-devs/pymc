@@ -11,7 +11,11 @@ with Model() as model:
 
     x = DensityDist('x', logp, observed=(failure, value))
 
-    start = model.test_point
-    h = find_hessian(start)
-    step = Metropolis(model.vars, h)
-    trace = sample(3000, step, start)
+if __name__ == "__main__":
+
+    with model:
+
+        start = model.test_point
+        h = find_hessian(start)
+        step = Metropolis(model.vars, h)
+        trace = sample(3000, step, start)
