@@ -54,31 +54,47 @@ def find_hessian(point, vars=None, model=None):
     vars : list
         Variables for which Hessian is to be calculated.
     """
+    model=modelcontext(model)
     H = model.d2logpc(vars)
     return H(Point(point, model=model))
 
+def find_hessian_diag(point, vars=None, model=None):
+    """
+    Returns Hessian of logp at the point passed.
 
-def guess_scaling(point=None, vars = None, model=None):
+    Parameters
+    ----------
+    model : Model (optional if in `with` context)
+    point : dict
+    vars : list
+        Variables for which Hessian is to be calculated.
+    """
+    model=modelcontext(model)
+    H = compilef(hessian_diag(model.logp, vars))
+    return H(Point(point, model=model))
+
+def guess_scaling(point, model=None):
     model = modelcontext(model)
-    H = find_hessian(point,vars,model)
+    h = find_hessian_diag(point)
+    return adjust_scaling(h)
 
-    val, vec = np.linalg.eigh(H)
+def adjust_scaling(s):
+    if s.ndim < 2:
+        return adjust_precision(s)
+    else:
+        val, vec = np.linalg.eigh(s)
+        val = adjust_precision(val)
+        return eig_recompose(val,vec)
 
-    mag = sqrt(abs(val))
+def adjust_precision(tau):
+    mag = sqrt(abs(tau))
 
     bounded = bound(log(mag), log(1e-10), log(1e10))
-    val = exp(bounded)**2
+    return exp(bounded)**2
 
-    return eig_recompose(val,vec)
 
 def bound(a, l, u):
     return np.maximum(np.minimum(a,u), l)
-def soft_bound(a, l, u):
-    d = u - l
-    x = (a-l)/d + .5
-
-    return d*(1./(1+exp(-x))) + l
-
 
 def eig_recompose(val, vec):
     return vec.dot(np.diag(val)).dot(vec.T)
