@@ -1,13 +1,15 @@
 '''
 Created on Mar 12, 2011
 
+from __future__ import division
 @author: johnsalvatier
 '''
 import numdifftools as nd
 import numpy as np
+from numpy import exp, log, sqrt
 from ..core import *
 
-__all__ = ['approx_hess', 'find_hessian', 'trace_cov']
+__all__ = ['approx_hess', 'find_hessian', 'trace_cov', 'guess_scaling']
 
 
 def approx_hess(point, vars=None, model=None):
@@ -52,9 +54,34 @@ def find_hessian(point, vars=None, model=None):
     vars : list
         Variables for which Hessian is to be calculated.
     """
-    model = modelcontext(model)
     H = model.d2logpc(vars)
     return H(Point(point, model=model))
+
+
+def guess_scaling(point=None, vars = None, model=None):
+    model = modelcontext(model)
+    H = find_hessian(point,vars,model)
+
+    val, vec = np.linalg.eigh(H)
+
+    mag = sqrt(abs(val))
+
+    bounded = bound(log(mag), log(1e-10), log(1e10))
+    val = exp(bounded)**2
+
+    return eig_recompose(val,vec)
+
+def bound(a, l, u):
+    return np.maximum(np.minimum(a,u), l)
+def soft_bound(a, l, u):
+    d = u - l
+    x = (a-l)/d + .5
+
+    return d*(1./(1+exp(-x))) + l
+
+
+def eig_recompose(val, vec):
+    return vec.dot(np.diag(val)).dot(vec.T)
 
 
 def trace_cov(trace, vars=None):
