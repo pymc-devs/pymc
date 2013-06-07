@@ -90,6 +90,9 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
     if vars is None:
         vars = trace.varnames
 
+    if isinstance(trace, MultiTrace):
+        trace = trace.combined()
+
     for var in vars:
 
         print('\n%s:' % var)
@@ -191,6 +194,7 @@ class MultiTrace(object):
         return [h.point(index) for h in self.traces]
 
     def combined(self):
+        # Returns a trace consisting of concatenated MultiTrace elements
         h = NpTrace(self.traces[0].vars)
         for k in self.traces[0].samples:
             h.samples[k].vals = [s[k] for s in self.traces]

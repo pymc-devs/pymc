@@ -6,12 +6,16 @@ except ImportError:
 import numpy as np
 from scipy.stats import kde
 from .stats import *
+from .trace import *
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
 def traceplot(trace, vars=None):
     if vars is None:
-        vars = trace.samples.keys()
+        vars = trace.varnames
+
+    if isinstance(trace, MultiTrace):
+        trace = trace.combined()
 
     n = len(vars)
     f, ax = subplots(n, 2, squeeze=False)
