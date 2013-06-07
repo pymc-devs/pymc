@@ -74,11 +74,13 @@ _pymc3_dlogp = model.dlogpc()
 def pymc3_dlogp():
     _pymc3_dlogp(point)
 
-with model:
-    start = {'p': 0.5, 'z': (y > 0).astype(int), 'theta': 5}
+if __name__ == '__main__':
 
-    step1 = Metropolis([theta, p])
+    with model:
+        start = {'p': 0.5, 'z': (y > 0).astype(int), 'theta': 5}
 
-    step2 = BinaryMetropolis([z])
+        step1 = Metropolis([theta, p])
 
-    trace = sample(5000, [step1, step2], start)
+        step2 = BinaryMetropolis([z])
+
+        trace = sample(5000, [step1, step2], start)
