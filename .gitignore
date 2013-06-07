@@ -2,3 +2,4 @@
 examples/*.png
 build/*
 *.egg-info/
+.ipynb_checkpoints

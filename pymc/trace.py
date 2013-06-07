@@ -182,6 +182,11 @@ class MultiTrace(object):
 
     def __getitem__(self, key):
         return [h[key] for h in self.traces]
+
+    @property
+    def varnames(self):
+        return self.traces[0].varnames
+
     def point(self, index):
         return [h.point(index) for h in self.traces]
 

@@ -257,11 +257,11 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
         # Subplot for confidence intervals
         interval_plot = subplot(gs[0])
 
-    for j, trace in enumerate(traces):
+    for j, tr in enumerate(traces):
 
         # Get quantiles
-        trace_quantiles = quantiles(trace, qlist)
-        hpd_intervals = hpd(trace, alpha)
+        trace_quantiles = quantiles(tr, qlist)
+        hpd_intervals = hpd(tr, alpha)
 
         # Counter for current variable
         var = 1
@@ -288,7 +288,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                 plotrange = [np.min(quants), np.max(quants)]
 
             # Number of elements in current variable
-            value = trace[varname][0]
+            value = tr[varname][0]
             k = np.size(value)
 
             # Append variable name(s) to list
