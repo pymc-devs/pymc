@@ -7,6 +7,8 @@ import numpy as np
 from functools import wraps
 from theanof import *
 
+from memoize import memoize
+
 __all__ = ['Model', 'compilef', 'modelcontext', 'Point']
 
 
@@ -50,6 +52,7 @@ class Model(Context):
         self.factors = []
 
     @property
+    @memoize
     def logp(model):
         """
         log-probability of the model

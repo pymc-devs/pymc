@@ -1,6 +1,7 @@
 from vartypes import typefilter, continuous_types
 from theano import theano, tensor as t
 from theano.gof.graph import inputs
+from memoize import memoize
 
 __all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars', 'cont_inputs', 'named']
 
@@ -56,6 +57,7 @@ def gradient1(f, v):
     return t.flatten(t.grad(f, v, disconnected_inputs='warn'))
 
 
+@memoize
 def gradient(f, vars=None):
     if not vars:
         vars = cont_inputs(f)
@@ -74,6 +76,7 @@ def jacobian1(f, v):
     return theano.map(grad_i, idx)[0]
 
 
+@memoize
 def jacobian(f, vars=None):
     if not vars:
         vars = cont_inputs(f)
@@ -81,6 +84,7 @@ def jacobian(f, vars=None):
     return t.concatenate([jacobian1(f, v) for v in vars], axis=1)
 
 
+@memoize
 def hessian(f, vars=None):
     return -jacobian(gradient(f, vars), vars)
 
@@ -96,6 +100,7 @@ def hessian_diag1(f, v):
     return theano.map(hess_ii, idx)[0]
 
 
+@memoize
 def hessian_diag(f, vars=None):
 
     if not vars:
