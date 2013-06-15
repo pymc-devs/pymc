@@ -14,3 +14,5 @@ from diagnostics import *
 from plots import *
 
 from .tests import test
+
+import glm
