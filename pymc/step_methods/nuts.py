@@ -49,6 +49,9 @@ class NUTS(ArrayStep):
         """
         model = modelcontext(model)
 
+        if vars is None:
+            vars = model.cont_vars
+
         if scaling is None:
             scaling = model.test_point
 
