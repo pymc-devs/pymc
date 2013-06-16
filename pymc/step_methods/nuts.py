@@ -17,7 +17,7 @@ class NUTS(ArrayStep):
     Hoffman, Matthew D., & Gelman, Andrew. (2011).
     The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
-    def __init__(self, vars, scaling, step_scale = .25, is_cov = False, state = None,
+    def __init__(self, vars=None, scaling=None, step_scale = .25, is_cov = False, state = None,
                  Emax = 1000,
                  target_accept = .65,
                  gamma = .05,
@@ -27,8 +27,8 @@ class NUTS(ArrayStep):
         """
         Parameters
         ----------
-            vars : list of Theano variables
-            scaling : array_like, ndim = {1,2} or point, default None
+            vars : list of Theano variables, default continuous vars
+            scaling : array_like, ndim = {1,2} or point
                 Scaling for momentum distribution. 1d arrays interpreted matrix diagonal.
             step_scale : float, default=.25
                 Size of steps to take, automatically scaled down by 1/n**(1/4)
