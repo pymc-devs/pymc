@@ -146,7 +146,7 @@ def Point(*args, **kwargs):
                 for (k, v) in d.iteritems()
                 if str(k) in varnames)
 
-
+@memoize
 def compilef(outs, mode=None):
     """
     Compiles a Theano function which returns `outs` and takes the variable ancestors of `outs` as inputs.
