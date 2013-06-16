@@ -9,11 +9,10 @@ def memoize(obj):
     @functools.wraps(obj)
     def memoizer(*args, **kwargs):
         key = (hashable(args), hashable(kwargs))
+
         if key not in cache:
-            print "miss"
             cache[key] = obj(*args, **kwargs)
-        else:
-            print "hit"
+
         return cache[key]
     return memoizer
 
