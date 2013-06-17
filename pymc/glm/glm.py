@@ -101,7 +101,7 @@ def glm(*args, **kwargs):
 
     kwargs['family'] = family.sm_family()
     y_est, coeffs = linear_component(*args, **kwargs)
-    family.likelihood(y_est, y_data)
+    family.make_model(y_est, y_data)
 
     non_init_vars = set(model.vars).difference(set(coeffs))
     start = find_MAP(vars=non_init_vars)

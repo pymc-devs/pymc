@@ -21,3 +21,11 @@ class Identity(LinkFunction):
 class Logit(LinkFunction):
     theano = theano.tensor.nnet.sigmoid
     sm = sm.families.links.logit
+
+class Inverse(LinkFunction):
+    theano = theano.tensor.inv
+    sm = sm.families.links.inverse_power
+
+class Log(LinkFunction):
+    theano = theano.tensor.log
+    sm = sm.families.links.log
