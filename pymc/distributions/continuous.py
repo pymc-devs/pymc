@@ -9,18 +9,21 @@ from __future__ import division
 
 from dist_math import *
 
-__all__ = ['Uniform', 'Flat', 'Normal','LogNormal', 'Beta', 'Exponential', 'Laplace',
+__all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos']
 
 def get_tau(tau=None, sd=None):
     if tau is None:
         if sd is None:
-            tau = 1.
+            return 1.
         else:
-            tau = sd ** -2
+            return sd ** -2
+
     else:
         if sd is not None:
             raise ValueError("Can't pass both tau and sd")
+        else:
+            return tau
 
 @tensordist(continuous)
 def Uniform(lower=0, upper=1):

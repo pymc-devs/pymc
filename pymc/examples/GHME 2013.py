@@ -3,7 +3,6 @@
 
 # <codecell>
 
-import dismod_mr
 import pandas as pd
 from pymc import * 
 from pymc.distributions.timeseries import *
@@ -15,7 +14,7 @@ from pymc.distributions.timeseries import *
 
 # <codecell>
 
-data = dismod_mr.data.load('data/pancreatitis/').input_data
+data = pd.read_csv('data/pancreatitis/input_data.csv')
 countries = ['CYP', 'DNK', 'ESP', 'FIN','GBR', 'ISL']
 data = data[data.area.isin(countries)]
 
@@ -34,6 +33,8 @@ for i, country in enumerate(countries):
     title(country)
     d = data[data.area == country]
     plot(d.age, d.value, '.')
+    
+    ylim(0,rate.max())
 
 # <markdowncell>
 
@@ -66,7 +67,7 @@ with Model() as model:
     
     p = interpolate(knots, y, age, group)
     
-    sd = T('sd', 10, 2, 5)
+    sd = T('sd', 10, 2, 5**-2)
     
     vals = Normal('vals', p, sd=sd, observed = rate)
 
@@ -105,5 +106,9 @@ for i, country in enumerate(countries):
 # <codecell>
 
 figsize(15, 6)
-traceplot(trace[100:], vars = [coeff_sd]);
+traceplot(trace[100:], vars = [coeff_sd,sd ]);
+
+# <codecell>
+
+autocorrplot(trace, vars = [coeff_sd,sd ])
 
