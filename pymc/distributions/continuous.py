@@ -12,6 +12,15 @@ from dist_math import *
 __all__ = ['Uniform', 'Flat', 'Normal','LogNormal', 'Beta', 'Exponential', 'Laplace',
            'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos']
 
+def get_tau(tau=None, sd=None):
+    if tau is None:
+        if sd is None:
+            tau = 1.
+        else:
+            tau = sd ** -2
+    else:
+        if sd is not None:
+            raise ValueError("Can't pass both tau and sd")
 
 @tensordist(continuous)
 def Uniform(lower=0, upper=1):
@@ -93,14 +102,7 @@ def Normal(mu=0.0, tau=None, sd=None):
 
     """
 
-    if tau is None:
-        if sd is None:
-            tau = 1.
-        else:
-            tau = sd ** -2
-    else:
-        if sd is not None:
-            raise ValueError("Can't pass both tau and sd")
+    tau = get_tau(tau=tau, sd=sd)
 
     def logp(value):
 
@@ -124,60 +126,6 @@ def Normal(mu=0.0, tau=None, sd=None):
         """.format(mu, tau)
 
     return locals()
-
-@tensordist(continuous)
-def LogNormal(mu=0.0, tau=None, sd=None):
-    """
-    Log Normal log-likelihood.
-
-    Parameters
-    ----------
-    mu : float
-        Mean of the distribution.
-    tau : float
-        Precision of the distribution, which corresponds to
-        :math:`1/\sigma^2` (tau > 0).
-    sd : float
-        Standard deviation of the distribution. Alternative parameterization.
-
-    .. note::
-    - :math:`E(X) = \mu`
-    - :math:`Var(X) = 1/\tau`
-
-    """
-
-    if tau is None:
-        if sd is None:
-            tau = 1.
-        else:
-            tau = sd ** -2
-    else:
-        if sd is not None:
-            raise ValueError("Can't pass both tau and sd")
-
-    def logp(value):
-
-        return bound(
-            (-tau * (log(value) - mu) ** 2 + log(tau / pi / 2.)) / 2. -log(value),
-            tau > 0)
-
-    mean = exp(mu + 1/tau/2)
-    variance = 1. / tau
-
-    median = exp(mu)
-    mode = exp(mu - 1/tau)
-
-    logp.__doc__ = """
-        Normal log-likelihood with parameters mu={0} and tau={1}.
-
-        Parameters
-        ----------
-        value : float
-            Input data.
-        """.format(mu, tau)
-
-    return locals()
-
 
 @tensordist(continuous)
 def Beta(alpha, beta):
