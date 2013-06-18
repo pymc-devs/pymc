@@ -44,6 +44,10 @@ def test_normal():
     checkd(Normal, R, {'mu': R, 'tau': Rplus})
 
 
+def test_lognormal():
+    checkd(LogNormal, Rplus, {'mu': Rplus, 'tau': Rplusbig})
+
+
 def test_beta():
     # TODO this fails with `Rplus`
     checkd(Beta, Unit, {'alpha': Rplusbig, 'beta': Rplusbig})
