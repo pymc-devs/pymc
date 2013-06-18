@@ -13,6 +13,6 @@ def test_adjust_precision():
 def test_guess_scaling():
 
     start, model,_ = models.non_normal(n = 5)
-    a1 = scaling.guess_scaling(start)
+    a1 = scaling.guess_scaling(start, model=model)
 
     assert all((a1 > 0) & (a1 < 1e200))
