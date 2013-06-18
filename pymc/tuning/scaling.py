@@ -75,7 +75,7 @@ def find_hessian_diag(point, vars=None, model=None):
 
 def guess_scaling(point, model=None):
     model = modelcontext(model)
-    h = find_hessian_diag(point)
+    h = find_hessian_diag(point, model=model)
     return adjust_scaling(h)
 
 def adjust_scaling(s):
