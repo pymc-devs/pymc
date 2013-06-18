@@ -1,15 +1,19 @@
+import numpy as np
+from numpy import inf
 from pymc.tuning import scaling
-from import models
+import models
 
 
 a = np.array([-10, -.01, 0, 10, 1e300, -inf, inf])
 def test_adjust_precision():
-    a1 = adjust_precision(a)
+    a1 = scaling.adjust_precision(a)
 
-    assert all(a1 > 0 && a1 < 1e200)
+    assert all((a1 > 0) & (a1 < 1e200))
 
 def test_guess_scaling():
 
-    model = models.non_normal(n = 5)
+    start, model,_ = models.non_normal(n = 5)
+    with model:
+        a1 = scaling.guess_scaling(start)
 
-    assert all(a1 > 0 && a1 < 1e200)
+    assert all((a1 > 0) & (a1 < 1e200))
