@@ -20,7 +20,7 @@ def hashable(a):
     """
     Turn some unhashable objects into hashable ones.
     """
-    if isinstance(a, dict): 
+    if isinstance(a, dict):
         return hashable(a.iteritems())
     try:
         return tuple(map(hashable,a))
