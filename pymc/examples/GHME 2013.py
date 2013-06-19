@@ -2,7 +2,7 @@
 # <nbformat>3.0</nbformat>
 
 # <codecell>
-
+from pylab import *
 import pandas as pd
 from pymc import *
 from pymc.distributions.timeseries import *
