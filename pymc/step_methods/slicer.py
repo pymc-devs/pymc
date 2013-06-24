@@ -57,7 +57,7 @@ class Slice(ArrayStep):
             q_new = atleast_1d(uniform(L, R))
             y_new = logp(q_new)
 
-        if (len(self.w_tune) > self.n_tune):
+        if (len(self.w_tune) < self.n_tune):
             # Tune sampler parameters
             self.w_tune.append(abs(q0 - q_new))
             self.w = 2 * sum(self.w_tune) / len(self.w_tune)
