@@ -12,7 +12,7 @@ from pandas.tools.plotting import scatter_matrix
 import links
 import families
 
-def linear_component(formula, data,
+def linear_component(formula, data, priors=None,
                      intercept_prior=None,
                      regressor_prior=None,
                      init=True, init_vals=None, family=None,
@@ -25,11 +25,14 @@ def linear_component(formula, data,
         Patsy linear model descriptor.
     data : array
         Labeled array (e.g. pandas DataFrame, recarray).
+    priors : dict
+        Mapping prior name to prior distribution.
+        E.g. {'Intercept': Normal.dist(mu=0, sd=1)}
     intercept_prior : pymc distribution
         Prior to use for the intercept.
     	Default: Normal.dist(mu=0, tau=1.0E-12)
     regressor_prior : pymc distribution
-        Prior to use for the regressor(s).
+        Prior to use for all regressor(s).
 	    Default: Normal.dist(mu=0, tau=1.0E-12)
     init : bool
         Whether to set the starting values via statsmodels
@@ -59,6 +62,9 @@ def linear_component(formula, data,
     if regressor_prior is None:
         regressor_prior = Normal.dist(mu=0, tau=1.0E-12)
 
+    if priors is None:
+        priors = defaultdict(None)
+
     # Build patsy design matrix and get regressor names.
     _, dmatrix = patsy.dmatrices(formula, data)
     reg_names = dmatrix.design_info.column_names
@@ -78,12 +84,14 @@ def linear_component(formula, data,
 
     if reg_names[0] == 'Intercept':
         intercept_prior.testval = init_vals['Intercept']
-        coeff = model.Var(reg_names.pop(0), intercept_prior)
+        prior = priors.get('Intercept', intercept_prior)
+        coeff = model.Var(reg_names.pop(0), prior)
         coeffs.append(coeff)
 
     for reg_name in reg_names:
     	regressor_prior.testval = init_vals[reg_name]
-        coeff = model.Var(reg_name, regressor_prior)
+        prior = priors.get(reg_name, regressor_prior)
+        coeff = model.Var(reg_name, prior)
         coeffs.append(coeff)
 
     y_est = theano.dot(np.asarray(dmatrix), theano.tensor.stack(*coeffs)).reshape((1, -1))
