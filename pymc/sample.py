@@ -10,7 +10,7 @@ from numpy.random import seed
 __all__ = ['sample', 'psample']
 
 
-def sample(draws, step, start={}, trace=None, progressbar=True, model=None, random_seed=None):
+def sample(draws, step, start={}, trace=None, tune=None, progressbar=True, model=None, random_seed=None):
     """
     Draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -30,6 +30,8 @@ def sample(draws, step, start={}, trace=None, progressbar=True, model=None, rand
     trace : NpTrace or list
         Either a trace of past values or a list of variables to track
         (defaults to None)
+    tune : int
+        Number of iterations to tune, if applicable (defaults to None)
     progressbar : bool
         Flag for progress bar
     model : Model (optional if in `with` context)
@@ -66,12 +68,25 @@ def sample(draws, step, start={}, trace=None, progressbar=True, model=None, rand
     progress = progress_bar(draws)
 
     for i in xrange(draws):
+        if (i == tune):
+            step = stop_tuning(step)
         point = step.step(point)
         trace = trace.record(point)
         if progressbar:
             progress.update(i)
 
     return trace
+
+def stop_tuning(step):
+    """ stop tuning the current step method """
+
+    if hasattr(step, 'tune'):
+        step.tune = False
+
+    elif hasattr(step, 'methods'):
+        step.methods = [stop_tuning(s) for s in step.methods]
+
+    return step
 
 
 def argsample(args):
