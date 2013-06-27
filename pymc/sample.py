@@ -10,7 +10,7 @@ from numpy.random import seed
 __all__ = ['sample', 'psample']
 
 
-def sample(draws, step, start={}, trace=None, progressbar=True, model=None, random_seed=None):
+def sample(draws, step, start={}, trace=None, tune=None, progressbar=True, model=None, random_seed=None):
     """
     Draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -30,6 +30,8 @@ def sample(draws, step, start={}, trace=None, progressbar=True, model=None, rand
     trace : NpTrace or list
         Either a trace of past values or a list of variables to track
         (defaults to None)
+    tune : int
+        Number of iterations to tune, if applicable (defaults to None)
     progressbar : bool
         Flag for progress bar
     model : Model (optional if in `with` context)
@@ -66,6 +68,8 @@ def sample(draws, step, start={}, trace=None, progressbar=True, model=None, rand
     progress = progress_bar(draws)
 
     for i in xrange(draws):
+        if (i == tune):
+            step = stop_tuning(step)
         point = step.step(point)
         trace = trace.record(point)
         if progressbar:
@@ -73,13 +77,24 @@ def sample(draws, step, start={}, trace=None, progressbar=True, model=None, rand
 
     return trace
 
+def stop_tuning(step):
+    """ stop tuning the current step method """
+
+    if hasattr(step, 'tune'):
+        step.tune = False
+
+    elif hasattr(step, 'methods'):
+        step.methods = [stop_tuning(s) for s in step.methods]
+
+    return step
+
 
 def argsample(args):
     """ defined at top level so it can be pickled"""
     return sample(*args)
 
 
-def psample(draws, step, start, trace=None, model=None, threads=None,
+def psample(draws, step, start, trace=None, tune=None, model=None, threads=None,
     random_seeds=None):
     """draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -129,7 +144,8 @@ def psample(draws, step, start, trace=None, model=None, threads=None,
         random_seeds = [None] * threads
 
     argset = zip([draws] * threads, [step] * threads, start, mtrace.traces,
-                 [False] * threads, [model] * threads, random_seeds)
+                 [tune] * threads, [False] * threads, [model] * threads,
+                 random_seeds)
 
     traces = p.map(argsample, argset)
 

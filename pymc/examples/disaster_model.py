@@ -56,4 +56,4 @@ if __name__ == '__main__':
         # Use Metropolis for switchpoint, since it accomodates discrete variables
         step2 = Metropolis([switchpoint])
 
-        tr = sample(1000, start=start, step=[step1, step2])
+        tr = sample(1000, tune=500, start=start, step=[step1, step2])
