@@ -79,7 +79,7 @@ def argsample(args):
     return sample(*args)
 
 
-def psample(draws, step, start, trace=None, model=None, threads=None,
+def psample(draws, step, start={}, trace=None, model=None, threads=None,
     random_seeds=None):
     """draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
