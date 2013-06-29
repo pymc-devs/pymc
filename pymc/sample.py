@@ -10,7 +10,7 @@ from numpy.random import seed
 __all__ = ['sample', 'psample']
 
 
-def sample(draws, step, start={}, trace=None, tune=None, progressbar=True, model=None, random_seed=None):
+def sample(draws, step, start=None, trace=None, progressbar=True, model=None, random_seed=None):
     """
     Draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -40,6 +40,9 @@ def sample(draws, step, start={}, trace=None, tune=None, progressbar=True, model
     model = modelcontext(model)
     draws = int(draws)
     seed(random_seed)
+
+    if start is None:
+        start = {}
 
     if isinstance(trace, NpTrace) and len(trace) > 0:
 
@@ -94,7 +97,7 @@ def argsample(args):
     return sample(*args)
 
 
-def psample(draws, step, start, trace=None, tune=None, model=None, threads=None,
+def psample(draws, step, start=None, trace=None, model=None, threads=None,
     random_seeds=None):
     """draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -126,6 +129,9 @@ def psample(draws, step, start, trace=None, tune=None, model=None, threads=None,
 
     if not threads:
         threads = max(mp.cpu_count() - 2, 1)
+
+    if start is None:
+        start = {}
 
     if isinstance(start, dict):
         start = threads * [start]
