@@ -1,13 +1,15 @@
 '''
 Created on Mar 12, 2011
 
+from __future__ import division
 @author: johnsalvatier
 '''
 import numdifftools as nd
 import numpy as np
+from numpy import exp, log, sqrt
 from ..core import *
 
-__all__ = ['approx_hess', 'find_hessian', 'trace_cov']
+__all__ = ['approx_hess', 'find_hessian', 'trace_cov', 'guess_scaling']
 
 
 def approx_hess(point, vars=None, model=None):
@@ -52,9 +54,50 @@ def find_hessian(point, vars=None, model=None):
     vars : list
         Variables for which Hessian is to be calculated.
     """
-    model = modelcontext(model)
+    model=modelcontext(model)
     H = model.d2logpc(vars)
     return H(Point(point, model=model))
+
+def find_hessian_diag(point, vars=None, model=None):
+    """
+    Returns Hessian of logp at the point passed.
+
+    Parameters
+    ----------
+    model : Model (optional if in `with` context)
+    point : dict
+    vars : list
+        Variables for which Hessian is to be calculated.
+    """
+    model=modelcontext(model)
+    H = compilef(hessian_diag(model.logp, vars))
+    return H(Point(point, model=model))
+
+def guess_scaling(point, model=None):
+    model = modelcontext(model)
+    h = find_hessian_diag(point, model=model)
+    return adjust_scaling(h)
+
+def adjust_scaling(s):
+    if s.ndim < 2:
+        return adjust_precision(s)
+    else:
+        val, vec = np.linalg.eigh(s)
+        val = adjust_precision(val)
+        return eig_recompose(val,vec)
+
+def adjust_precision(tau):
+    mag = sqrt(abs(tau))
+
+    bounded = bound(log(mag), log(1e-10), log(1e10))
+    return exp(bounded)**2
+
+
+def bound(a, l, u):
+    return np.maximum(np.minimum(a,u), l)
+
+def eig_recompose(val, vec):
+    return vec.dot(np.diag(val)).dot(vec.T)
 
 
 def trace_cov(trace, vars=None):

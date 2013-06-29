@@ -50,6 +50,36 @@ with model:
     step2 = Metropolis([s], proposal_dist=LaplaceProposal)
 
     trace = sample(5000, [step1, step2], start)
+    
+from pymc.model import cont_inputs
+import theano.tensor as t
+
+
+def gradient1(f, v):
+    """flat gradient of f wrt v"""
+    return t.flatten(t.grad(f, v, disconnected_inputs='warn'))
+
+
+def hessian_diag1(f, v):
+
+    g = gradient1(f, v)
+    idx = t.arange(g.shape[0])
+
+    def hess_ii(i):
+        return gradient1(g[i], v)[i]
+
+    return theano.map(hess_ii, idx)[0]
+
+
+def hessian_diag(f, vars=None):
+
+    if not vars:
+        vars = cont_inputs(f)
+
+    return t.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+
+
+dh = compilef(hessian_diag(model.logp))
 
 # <codecell>
 

@@ -12,6 +12,18 @@ from dist_math import *
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos']
 
+def get_tau(tau=None, sd=None):
+    if tau is None:
+        if sd is None:
+            return 1.
+        else:
+            return sd ** -2
+
+    else:
+        if sd is not None:
+            raise ValueError("Can't pass both tau and sd")
+        else:
+            return tau
 
 @tensordist(continuous)
 def Uniform(lower=0, upper=1):
@@ -93,14 +105,7 @@ def Normal(mu=0.0, tau=None, sd=None):
 
     """
 
-    if tau is None:
-        if sd is None:
-            tau = 1.
-        else:
-            tau = sd ** -2
-    else:
-        if sd is not None:
-            raise ValueError("Can't pass both tau and sd")
+    tau = get_tau(tau=tau, sd=sd)
 
     def logp(value):
 
@@ -124,7 +129,6 @@ def Normal(mu=0.0, tau=None, sd=None):
         """.format(mu, tau)
 
     return locals()
-
 
 @tensordist(continuous)
 def Beta(alpha, beta):
