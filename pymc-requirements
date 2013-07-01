@@ -1,5 +1,5 @@
 pymc
-numpy>=1.3
+numpy>=1.9
 matplotlib>=0.9
 scipy>=0.8
 nose==0.11

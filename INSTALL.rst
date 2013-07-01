@@ -23,7 +23,7 @@ freely available online.
 
 * `Python`_ version 2.5 or 2.6.
 
-* `NumPy`_ (1.4 or newer): The fundamental scientific programming package, it provides a
+* `NumPy`_ (1.8 or newer): The fundamental scientific programming package, it provides a
   multidimensional array type and many useful functions for numerical analysis.
 
 * `Matplotlib (optional)`_ : 2D plotting library which produces publication
@@ -49,7 +49,7 @@ freely available online.
 
 There are prebuilt distributions that include all required dependencies. For
 Mac OS X users, we recommend the `MacPython`_ distribution or the
-`Enthought Python Distribution`_ on OS X 10.5 (Leopard) and Python 2.6.1 that 
+`Enthought Python Distribution`_ on OS X 10.5 (Leopard) and Python 2.6.1 that
 ships with OS X 10.6 (Snow Leopard). Windows users should download and install the
 `Enthought Python Distribution`_. The Enthought Python Distribution comes
 bundled with these prerequisites. Note that depending on the currency of these
@@ -165,7 +165,7 @@ In a terminal, type::
     python setup.py config_fc --fcompiler gnu95 build
     python setup.py install
 
-The above syntax also assumes that you have gFortran installed and available. The 
+The above syntax also assumes that you have gFortran installed and available. The
 `sudo` command may be required to install PyMC into the Python ``site-packages``
 directory if it has restricted privileges.
 
@@ -206,7 +206,7 @@ installed. The tests are launched from a python shell::
 
 In case of failures, messages detailing the nature of these failures will
 appear. In case this happens (it shouldn't), please report
-the problems on the `issue tracker`_ (the issues tab on the Google Code page), 
+the problems on the `issue tracker`_ (the issues tab on the Google Code page),
 specifying the version you are using and the environment.
 
 .. _`nose`: http://somethingaboutorange.com/mrl/projects/nose/
