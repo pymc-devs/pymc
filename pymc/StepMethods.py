@@ -1370,7 +1370,7 @@ class AdaptiveMetropolis(StepMethod):
 
         # Update each stochastic individually.
         for stochastic in self.stochastics:
-            jump = arrayjump[self._slices[stochastic]]
+            jump = arrayjump[self._slices[stochastic]].squeeze()
             if np.iterable(stochastic.value):
                 jump = np.reshape(
                     arrayjump[
