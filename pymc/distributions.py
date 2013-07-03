@@ -29,6 +29,7 @@ __docformat__ = 'reStructuredText'
 
 from . import flib, utils
 import numpy as np
+from scipy.stats.kde import gaussian_kde
 from .Node import ZeroProbability
 from .PyMCObjects import Stochastic, Deterministic
 from .CommonDeterministics import Lambda
@@ -135,9 +136,10 @@ def new_dist_class(*new_class_args):
 
       .. note::
         stochastic_from_dist provides a higher-level version.
+        stochastic_from_data is suited for non-parametric distributions.
 
       :SeeAlso:
-        stochastic_from_dist
+        stochastic_from_dist, stochastic_from_data
     """
 
     (dtype, name, parent_names, parents_default, docstr, logp, random, mv, logp_partial_gradients) = new_class_args
@@ -306,9 +308,10 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
     .. note::
       new_dist_class is a more flexible class factory. Also consider
       subclassing Stochastic directly.
+      stochastic_from_data is suited for non-parametric distributions.
 
     :SeeAlso:
-      new_dist_class
+      new_dist_class, stochastic_from_data
     """
 
     (args, varargs, varkw, defaults) = inspect.getargspec(logp)
@@ -346,6 +349,63 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
     return new_dist_class(dtype, name, parent_names, parents_default, docstr,
                                                  logp, random, mv, wrapped_logp_partial_gradients)
 
+
+def stochastic_from_data(name, data, lower=-np.inf, upper=np.inf,
+                         value=None, observed=False, size=1, trace=True, verbose=-1, debug=False):
+    """
+    Return a Stochastic subclass made from arbitrary data.
+
+    The histogram for the data is fitted with Kernel Density Estimation.
+
+    :Parameters:
+      - `data`  : An array with samples (e.g. trace[:])
+      - `lower` : Lower bound on possible outcomes
+      - `upper` : Upper bound on possible outcomes
+
+    :Example:
+       >>> from pymc import stochastic_from_data
+       >>> pos = stochastic_from_data('posterior', posterior_samples)
+       >>> prior = pos # update the prior with arbitrary distributions
+    """
+    if size != 1:
+        # TODO: requires a newer version of SciPy, mine is 0.10.1
+        raise NotImplementedError('Not implemented yet. Sorry.')
+
+    pdf = gaussian_kde(data) # automatic bandwidth selection
+
+    # account for tail contribution
+    lower_tail = upper_tail = 0.
+    if lower > -np.inf: lower_tail = pdf.integrate_box(-np.inf, lower)
+    if upper <  np.inf: upper_tail = pdf.integrate_box(upper, np.inf)
+    factor = 1./(1. - (lower_tail + upper_tail))
+
+    def logp(value):
+        prob = factor*pdf(value)
+        if value < lower or value > upper:
+            return -np.inf
+        elif prob <= 0.:
+            return -np.inf
+        else:
+            return np.log(prob)
+
+    def random():
+        res = pdf.resample(1)[0][0]
+        while res < lower or res > upper:
+            res = pdf.resample(1)[0][0]
+        return res
+
+    if value == None: value = random()
+
+    return Stochastic(logp     = logp,
+                      doc      = 'Non-parametric density with Gaussian Kernels.',
+                      name     = name,
+                      parents  = {},
+                      random   = random,
+                      trace    = trace,
+                      value    = value,
+                      dtype    = float,
+                      observed = observed,
+                      verbose  = verbose)
 
 #-------------------------------------------------------------
 # Light decorators
