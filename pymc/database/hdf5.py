@@ -144,20 +144,17 @@ class Trace(base.Trace):
     def __getitem__(self, index):
         """Mimic NumPy indexing for arrays."""
         chain = self._chain
-
+        
         if chain is not None:
             tables = [self.db._gettables()[chain], ]
         else:
             tables = self.db._gettables()
-
-        out = []
-        for table in tables:
-            out.append(table.col(self.name))
-
-        if np.isscalar(chain):
-            return out[0][index]
-        else:
-            return np.hstack(out)[index]
+        
+        out = np.asarray(tables[0].col(self.name))      
+        for table in tables[1:]:
+            out = np.append(out, table.col(self.name), axis=0)
+        
+        return out[index]
 
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
         """Return the trace (last by default).
@@ -188,7 +185,7 @@ class Trace(base.Trace):
             if i == 0:
                 data = np.asarray(col)
             else:
-                data = hstack((data, col))
+                data = np.append(data, col, axis=0)
 
         return data
 
