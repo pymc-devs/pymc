@@ -1,57 +1,82 @@
-from functools import wraps
-from inspect import getargspec
+import functools
+import inspect
 
+__all__ = ['wraps_with_spec', 'quickclass', 'withdefaults']
 
 def quickclass(baseclass):
-    def decorator(fn):
+    def decorator(f):
 
         def __init__(self, *args, **kwargs):
-            self.__dict__.update(fn(*args, **kwargs))
+            self.__dict__.update(f(*args, **kwargs))
 
         clsdict = {
             '__init__': __init__,
-            '__doc__': fn.__doc__}
+            '__doc__': f.__doc__}
 
-        return type(fn.__name__, (baseclass,), clsdict)
+        cls = type(f.__name__, (baseclass,), clsdict)
+        cls._spec = getargspec_wrapped(f)
+        return cls 
+    
     return decorator
 
 
-
-def ksplit(ks, d):
-    in_ks = dict((k, v) for k, v in d.iteritems() if k in ks)
-    rest = dict((k, v) for k, v in d.iteritems() if k not in ks)
-    return in_ks, rest
+def remove_keys(d, ks):
+    return dict((k, v) for k, v in d.iteritems() if k not in ks)
 
 
+def allowed_args(f, args, kwargs):
+    spec = getargspec_wrapped(f)
+    varnames = set(spec.args)
+    narg = len(spec.args)
 
+    if spec.varargs:
+        args_a = args
+    else:
+        args_a = args[:narg]
 
-dicterr = TypeError(
-    "function should return a dict perhaps forgot 'return locals()'")
+    if spec.keywords:
+        kwargs_a = kwargs
+    else:
+        unused = set(kwargs.keys()) - varnames
+        kwargs_a = remove_keys(kwargs, unused)
 
+    return args_a, kwargs_a, args[narg:], remove_keys(kwargs, varnames)
 
-def withdefaults(d):
+"""
+These custom definitions of wrap and getargspec allow access to the
+getargspec of the original function
+"""
+
+def wraps_with_spec(wrapped):
     def decorator(f):
-        @wraps(f)
-        def fn(*args, **kwargs):
-            dspec = getargspec(d)
-            fspec = getargspec(f)
+        g = functools.wraps(wrapped)(f)
+        g._spec = getargspec_wrapped(wrapped)
+        return g
+    return decorator
 
-            dvar = set(dspec.args)
-            fvar = set(fspec.args)
+def getargspec_wrapped(f):
+    if hasattr(f, '_spec'):
+        return f._spec
+    else:
+        return inspect.getargspec(f)
 
-            narg = len(fspec.args)
-            largs, rargs = args[:narg], args[narg:]
+def check_dict(d):
+    if not isinstance(d, dict):
+        raise TypeError(
+        "function should return a dict perhaps forgot 'return locals()'")
 
-            dkwargs,fkwargs = ksplit(dvar, kwargs)
 
-            u = f(*largs, **fkwargs)
-            if not u:
-                raise dicterr
-
-            r = d(*rargs, **dkwargs)
-            if not r:
-                raise dicterr
-            r.update(u)
+def withdefaults(g):
+    def decorator(f):
+        @wraps_with_spec(f)
+        def newf(*args, **kwargs):
+            args_a, kwargs_a, args_left, kwargs_left = allowed_args(f, args,kwargs)
+            r = g(*args_left, **kwargs_left)
+            check_dict(r)
+            r1 = f(*args_a, **kwargs_a)
+            check_dict(r1)
+            r.update(r1)
             return r
-        return fn
+
+        return newf
     return decorator

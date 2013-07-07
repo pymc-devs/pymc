@@ -120,6 +120,15 @@ def test_addpotential():
         check_dlogp(model, x, [R])
 
 
+
+def test_bound():
+    with Model() as model:
+        PositiveNormal = Bound(Normal, -.2)
+        x = PositiveNormal('x', 1, 1)
+
+        check_dlogp(model, x, [Rplus - .2])
+
+
 def checkd(distfam, valuedomain, vardomains,
            check_int=True, check_der=True, extra_args={}):
 
