@@ -33,7 +33,7 @@ def AR1(k, tau_e):
 
 
 @tensordist(continuous)
-def GaussianRandomWalk(tau, init=Flat.dist()):
+def GaussianRandomWalk(tau =None, init=Flat.dist(), sd=None):
     """
     Random Walk with Normal innovations
 
@@ -49,7 +49,7 @@ def GaussianRandomWalk(tau, init=Flat.dist()):
         x_im1 = x[:-1]
         x_i = x[1:]
 
-        innov_like = Normal.dist(x_im1, tau).logp(x_i)
+        innov_like = Normal.dist(x_im1, tau, sd=sd).logp(x_i)
         return init.logp(x[0]) + sum(innov_like)
 
     mean = 0.

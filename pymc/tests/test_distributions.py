@@ -14,9 +14,9 @@ Rplusbig = array([0, .5, .9, .99, 1, 1.5, 2, 20, inf])
 Unit = array([0, .001, .1, .5, .75, .99, 1])
 
 Runif = array([-1, -.4, 0, .4, 1])
-Rdunif = array([-10, 0, 10])
+Rdunif = array([-10, 0, 10.])
 Rplusunif = array([0, .5, inf])
-Rplusdunif = array([2, 10, 100])
+Rplusdunif = array([2, 10, 100], 'int64')
 
 I = array([-1000, -3, -2, -1, 0, 1, 2, 3, 1000], 'int64')
 

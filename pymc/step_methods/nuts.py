@@ -4,6 +4,7 @@ from ..core import *
 from numpy import exp, log
 from numpy.random import uniform
 from hmc import leapfrog, Hamiltonian, bern, energy
+from ..tuning import guess_scaling
 
 __all__ = ['NUTS']
 
@@ -16,7 +17,7 @@ class NUTS(ArrayStep):
     Hoffman, Matthew D., & Gelman, Andrew. (2011).
     The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
-    def __init__(self, vars, C, step_scale = .25, is_cov = False, state = None,
+    def __init__(self, vars=None, scaling=None, step_scale = .25, is_cov = False, state = None,
                  Emax = 1000,
                  target_accept = .65,
                  gamma = .05,
@@ -26,8 +27,8 @@ class NUTS(ArrayStep):
         """
         Parameters
         ----------
-            vars : list of Theano variables
-            C : array_like, ndim = {1,2}
+            vars : list of Theano variables, default continuous vars
+            scaling : array_like, ndim = {1,2} or point
                 Scaling for momentum distribution. 1d arrays interpreted matrix diagonal.
             step_scale : float, default=.25
                 Size of steps to take, automatically scaled down by 1/n**(1/4)
@@ -47,11 +48,24 @@ class NUTS(ArrayStep):
             model : Model
         """
         model = modelcontext(model)
-        n = C.shape[0]
+
+        if vars is None:
+            vars = model.cont_vars
+
+        if scaling is None:
+            scaling = model.test_point
+
+        if isinstance(scaling, dict):
+            scaling = guess_scaling(Point(scaling, model=model), model=model)
+
+
+
+        n = scaling.shape[0]
 
         self.step_size = step_scale / n**(1/4.)
 
-        self.potential = quad_potential(C, is_cov, as_cov=False)
+
+        self.potential = quad_potential(scaling, is_cov, as_cov=False)
 
         if state is None:
             state = SamplerHist()
