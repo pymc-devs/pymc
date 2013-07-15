@@ -17,7 +17,7 @@ def linear_component(formula, data, priors=None,
                      regressor_prior=None,
                      init=True, init_vals=None, family=None,
                      model=None):
-    """Create GLM coefficients.
+    """Create linear model according to patsy specification.
 
     Parameters
     ----------
@@ -83,15 +83,15 @@ def linear_component(formula, data, priors=None,
     coeffs = []
 
     if reg_names[0] == 'Intercept':
-        intercept_prior.testval = init_vals['Intercept']
         prior = priors.get('Intercept', intercept_prior)
         coeff = model.Var(reg_names.pop(0), prior)
+        coeff.tag.test_value = init_vals['Intercept']
         coeffs.append(coeff)
 
     for reg_name in reg_names:
-    	regressor_prior.testval = init_vals[reg_name]
         prior = priors.get(reg_name, regressor_prior)
         coeff = model.Var(reg_name, prior)
+    	coeff.tag.test_value = init_vals[reg_name]
         coeffs.append(coeff)
 
     y_est = theano.dot(np.asarray(dmatrix), theano.tensor.stack(*coeffs)).reshape((1, -1))
@@ -100,6 +100,48 @@ def linear_component(formula, data, priors=None,
 
 
 def glm(*args, **kwargs):
+    """Create GLM coefficients.
+
+    Parameters
+    ----------
+    formula : str
+        Patsy linear model descriptor.
+    data : array
+        Labeled array (e.g. pandas DataFrame, recarray).
+
+    priors : dict
+        Mapping prior name to prior distribution.
+        E.g. {'Intercept': Normal.dist(mu=0, sd=1)}
+    intercept_prior : pymc distribution
+        Prior to use for the intercept.
+    	Default: Normal.dist(mu=0, tau=1.0E-12)
+    regressor_prior : pymc distribution
+        Prior to use for all regressor(s).
+	    Default: Normal.dist(mu=0, tau=1.0E-12)
+    init : bool
+        Whether to set the starting values via statsmodels
+        Default: True
+    init_vals : dict
+        Set starting values externally: parameter -> value
+        Default: None
+    family : statsmodels.family
+        Link function, see pymc.glm.families (init has to be True).
+	See `statsmodels.api.families`
+        Default: identity
+
+    Output
+    ------
+    (y_est, coeffs) : Estimate for y, list of coefficients
+
+    Example
+    -------
+    # Logistic regression
+    y_est, coeffs = glm('male ~ height + weight',
+                        htwt_data, family=sm.families.Binomial(),
+                        link_func=theano.tensor.nnet.sigmoid)
+    y_data = Bernoulli('y', y_est, observed=data.male)
+    """
+
     family = kwargs.pop('family', families.Normal())
 
     formula = args[0]
@@ -107,11 +149,15 @@ def glm(*args, **kwargs):
     y_data = np.asarray(patsy.dmatrices(formula, data)[0]).T
     model = modelcontext(kwargs.get('model'))
 
+    # Create GLM
     kwargs['family'] = family.sm_family()
     y_est, coeffs = linear_component(*args, **kwargs)
     family.make_model(y_est, y_data)
 
+    # Find vars we have not initialized yet
     non_init_vars = set(model.vars).difference(set(coeffs))
     start = find_MAP(vars=non_init_vars)
+    for var in non_init_vars:
+        var.tag.test_value = start[var.name]
 
-    return start
+    return [y_est] + coeffs + list(non_init_vars)
