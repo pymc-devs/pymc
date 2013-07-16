@@ -131,14 +131,7 @@ def gelman_rubin(mtrace):
         raise ValueError(
             'Gelman-Rubin diagnostic requires multiple chains of the same length.')
 
-    varnames = mtrace.traces[0].varnames
-    n = len(mtrace.traces[0][varnames[0]])
-
-    Rhat = {}
-    for var in varnames:
-
-        # Get all traces for var
-        x = np.array([mtrace.traces[i][var] for i in range(m)])
+    def calc_rhat(x, m, n):
 
         # Calculate between-chain variance
         B_over_n = np.sum((np.mean(x, 1) - np.mean(x)) ** 2) / (m - 1)
@@ -155,7 +148,19 @@ def gelman_rubin(mtrace):
         # Pooled posterior variance estimate
         V = s2 + B_over_n / m
 
-        # Calculate PSRF
-        Rhat[var] = V / W
+        return V / W
+
+    Rhat = {}
+    for var in mtrace.varnames:
+
+        # Get all traces for var
+        x = np.array([mtrace.traces[i][var] for i in range(m)])
+
+        try:
+            m, n = x.shape
+            Rhat[var] = calc_rhat(x, m, n)
+        except ValueError:
+            m, n = x.shape[:2]
+            Rhat[var] = [calc_rhat(y.transpose(), m, n) for y in x.transpose()]
 
     return Rhat

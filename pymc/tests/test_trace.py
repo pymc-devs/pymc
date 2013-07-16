@@ -14,6 +14,7 @@ except:
 
 def check_trace(model, trace, n, step, start):
     # try using a trace object a few times
+
     for i in range(2):
         trace = sample(
             n, step, start, trace, progressbar=False, model=model)

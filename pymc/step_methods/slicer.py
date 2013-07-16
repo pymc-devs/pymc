@@ -10,18 +10,15 @@ __all__ = ['Slice']
 
 class Slice(ArrayStep):
     """Slice sampler"""
-    def __init__(self, vars, w=1, m=20, n_tune=0,
-                 tune=True, tune_interval=100, model=None):
+    def __init__(self, vars, w=1, m=20, tune=True, model=None):
 
         model = modelcontext(model)
 
         self.vars = vars
         self.w = w
         self.m = m
-        self.n_tune = n_tune
-        self.w_tune = []
         self.tune = tune
-        self.tune_interval = tune_interval
+        self.w_tune = []
         self.model = model
 
         super(Slice, self).__init__(vars, [model.logpc])
@@ -57,7 +54,7 @@ class Slice(ArrayStep):
             q_new = atleast_1d(uniform(L, R))
             y_new = logp(q_new)
 
-        if (len(self.w_tune) > self.n_tune):
+        if self.tune:
             # Tune sampler parameters
             self.w_tune.append(abs(q0 - q_new))
             self.w = 2 * sum(self.w_tune) / len(self.w_tune)

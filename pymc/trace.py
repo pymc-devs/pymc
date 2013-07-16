@@ -51,6 +51,8 @@ class NpTrace(object):
 
             return self.samples[str(index_value)].value
 
+    def __len__(self):
+        return len(self.samples[self.varnames[0]])
 
     def point(self, index):
         return dict((k, v.value[index]) for (k,v) in self.samples.iteritems())
@@ -87,6 +89,9 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
 
     if vars is None:
         vars = trace.varnames
+
+    if isinstance(trace, MultiTrace):
+        trace = trace.combined()
 
     for var in vars:
 
@@ -156,10 +161,17 @@ class ListArray(object):
     def value(self):
         if len(self.vals) > 1:
             self.vals = [np.concatenate(self.vals, axis =0)]
+
         return self.vals[0]
 
     def append(self, v):
         self.vals.append(v[np.newaxis])
+
+    def __len__(self):
+        if self.vals:
+            return self.value.shape[0]
+        else:
+            return 0
 
 
 class MultiTrace(object):
@@ -173,10 +185,16 @@ class MultiTrace(object):
 
     def __getitem__(self, key):
         return [h[key] for h in self.traces]
+
+    @property
+    def varnames(self):
+        return self.traces[0].varnames
+
     def point(self, index):
         return [h.point(index) for h in self.traces]
 
     def combined(self):
+        # Returns a trace consisting of concatenated MultiTrace elements
         h = NpTrace(self.traces[0].vars)
         for k in self.traces[0].samples:
             h.samples[k].vals = [s[k] for s in self.traces]

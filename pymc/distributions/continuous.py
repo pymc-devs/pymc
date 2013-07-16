@@ -5,6 +5,7 @@ A collection of common probability distributions for stochastic
 nodes in PyMC.
 
 """
+from __future__ import division
 
 from dist_math import *
 from numpy.random import uniform as runiform, normal as rnormal
@@ -12,6 +13,18 @@ from numpy.random import uniform as runiform, normal as rnormal
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos']
 
+def get_tau(tau=None, sd=None):
+    if tau is None:
+        if sd is None:
+            return 1.
+        else:
+            return sd ** -2
+
+    else:
+        if sd is not None:
+            raise ValueError("Can't pass both tau and sd")
+        else:
+            return tau
 
 @tensordist(continuous)
 def Uniform(lower=0, upper=1):
@@ -96,14 +109,7 @@ def Normal(mu=0.0, tau=None, sd=None):
 
     """
 
-    if tau is None:
-        if sd is None:
-            tau = 1.
-        else:
-            tau = sd ** -2
-    else:
-        if sd is not None:
-            raise ValueError("Can't pass both tau and sd")
+    tau = get_tau(tau=tau, sd=sd)
 
     def logp(value):
 
@@ -127,7 +133,6 @@ def Normal(mu=0.0, tau=None, sd=None):
         """.format(mu, tau)
 
     return locals()
-
 
 @tensordist(continuous)
 def Beta(alpha, beta):
@@ -257,6 +262,9 @@ def T(nu, mu=0, lam=1):
             nu > 0)
 
     mean = mu
+    median = mu
+    mode = mu
+
     variance = switch((nu > 2) * 1, nu / (nu - 2) / lam, inf)
 
     logp.__doc__ = """
@@ -362,20 +370,24 @@ def Gamma(alpha, beta):
     return locals()
 
 
-@tensordist(continuous)
-def Bound(dist, lower=-inf, upper=inf):
-    def logp(value):
-        return bound(
-            dist.logp(value),
+def Bound(distribution, lower=-inf, upper=inf):
+    @tensordist(continuous)
+    def Bounded(*args, **kwargs):
+        """A bounded distribution."""
+        dist = distribution.dist(*args,**kwargs)
 
-            lower <= value, value <= upper)
+        def logp(value):
+            return bound(
+                dist.logp(value),
 
-    return locals()
+                lower <= value, value <= upper)
+
+        if hasattr(dist,'mode'):
+            mode = dist.mode
+
+        return locals()
+    return Bounded
 
 
-def Tpos(*args, **kwargs):
-    """
-    Student-t distribution bounded at 0
-    see T
-    """
-    return Bound(T(*args, **kwargs), 0)
+Tpos = Bound(T, 0)
+
