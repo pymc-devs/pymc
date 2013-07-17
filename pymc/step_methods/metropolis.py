@@ -65,11 +65,13 @@ class Metropolis(ArrayStep):
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
-    def __init__(self, vars, S=None, proposal_dist=NormalProposal, scaling=1.,
+    def __init__(self, vars=None, S=None, proposal_dist=NormalProposal, scaling=1.,
                  tune=True, tune_interval=100, model=None):
 
         model = modelcontext(model)
 
+        if vars is None:
+            vars = model.cont_vars
         if S is None:
             S = np.ones(sum(v.dsize for v in vars))
         self.proposal_dist = proposal_dist(S)

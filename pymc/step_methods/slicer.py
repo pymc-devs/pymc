@@ -17,10 +17,13 @@ def sub(x, i, val):
 class Slice(ArrayStep):
 
     """Slice sampler"""
-    def __init__(self, vars, w=1, tune=True, model=None):
+    def __init__(self, vars=None, w=1, tune=True, model=None):
 
         model = modelcontext(model)
-        self.vars = vars
+
+        if vars is None:
+            vars = model.cont_vars
+
         self.w = w
         self.tune = tune
         self.w_tune = []

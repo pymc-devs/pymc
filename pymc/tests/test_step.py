@@ -14,10 +14,10 @@ def test_step_continuous():
 
     with model:
         hmc = pm.HamiltonianMC(model.vars, C, is_cov=True)
-        mh = pm.Metropolis(model.vars, S=C,
+        mh = pm.Metropolis(S=C,
                            proposal_dist=pm.MultivariateNormalProposal)
-        slicer = pm.Slice(model.vars, model=model)
-        nuts = pm.NUTS(model.vars, C, is_cov = True)
+        slicer = pm.Slice()
+        nuts = pm.NUTS(scaling=C, is_cov = True)
         compound = pm.CompoundStep([hmc, mh])
 
     steps = [mh, hmc, slicer, nuts, compound]
