@@ -8,12 +8,6 @@ from numpy.random import standard_exponential, random, uniform
 __all__ = ['Slice']
 
 
-def sub(x, i, val):
-    y = x.copy()
-    y[i] = val
-    return y
-
-
 class Slice(ArrayStep):
 
     """Slice sampler"""

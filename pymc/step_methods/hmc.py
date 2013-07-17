@@ -24,19 +24,19 @@ def unif(step_size, elow=.85, ehigh=1.15):
 
 
 class HamiltonianMC(ArrayStep):
-    def __init__(self, vars, C, step_scale=.25, path_length=2., is_cov=False, step_rand=unif, state=None, model=None):
+    def __init__(self, vars=None, scaling=None, step_scale=.25, path_length=2., is_cov=False, step_rand=unif, state=None, model=None):
         """
         Parameters
         ----------
             vars : list of theano variables
-            C : array_like, ndim = {1,2}
+            scaling : array_like, ndim = {1,2}
                 Scaling for momentum distribution. 1d arrays interpreted matrix diagonal.
             step_scale : float, default=.25
                 Size of steps to take, automatically scaled down by 1/n**(1/4) (defaults to .25)
             path_length : float, default=2
                 total length to travel
             is_cov : bool, default=False
-                Treat C as a covariance matrix/vector if True, else treat it as a precision matrix/vector
+                Treat scaling as a covariance matrix/vector if True, else treat it as a precision matrix/vector
             step_rand : function float -> float, default=unif
                 A function which takes the step size and returns an new one used to randomize the step size at each iteration.
             state
@@ -44,11 +44,21 @@ class HamiltonianMC(ArrayStep):
             model : Model
         """
         model = modelcontext(model)
-        n = C.shape[0]
+
+        if vars is None:
+            vars = model.cont_vars
+
+        if scaling is None:
+            scaling = model.test_point
+
+        if isinstance(scaling, dict):
+            scaling = guess_scaling(Point(scaling, model=model), model=model)
+
+        n = scaling.shape[0]
 
         self.step_size = step_scale / n ** (1 / 4.)
 
-        self.potential = quad_potential(C, is_cov, as_cov = False)
+        self.potential = quad_potential(scaling, is_cov, as_cov = False)
 
         self.path_length = path_length
         self.step_rand = step_rand

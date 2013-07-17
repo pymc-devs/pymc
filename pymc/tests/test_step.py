@@ -13,7 +13,7 @@ def test_step_continuous():
     start, model, (mu, C) = mv_simple()
 
     with model:
-        hmc = pm.HamiltonianMC(model.vars, C, is_cov=True)
+        hmc = pm.HamiltonianMC(scaling=C, is_cov=True)
         mh = pm.Metropolis(S=C,
                            proposal_dist=pm.MultivariateNormalProposal)
         slicer = pm.Slice()
@@ -29,6 +29,4 @@ def test_step_continuous():
     for st in steps:
         h = sample(8000, st, start, model=model, random_seed=1)
         for (var, stat, val, bound) in check:
-            # h = sample(8000, st, start, model=model, random_seed=1)
-
             yield check_stat, repr(st), h, var, stat, val, bound
