@@ -7,7 +7,7 @@ import statsmodels.api as sm
 from .links import *
 import pymc
 
-__all__ = ['Normal', 'T', 'Binomial']
+__all__ = ['Normal', 'T', 'Binomial', 'Poisson']
 
 class Family(object):
     __metaclass__ = ABCMeta
@@ -72,7 +72,7 @@ class Binomial(Family):
     parent = 'p'
 
 class Poisson(Family):
-    #link = Log
+    link = Log
     sm_family = sm.families.Poisson
     likelihood = pymc.Poisson
     parent = ''

@@ -3,7 +3,7 @@ import theano.tensor
 
 from abc import ABCMeta
 
-__all__ = ['Identity', 'Logit']
+__all__ = ['Identity', 'Logit', 'Inverse', 'Log']
 
 class LinkFunction(object):
     __metaclass__ = ABCMeta
