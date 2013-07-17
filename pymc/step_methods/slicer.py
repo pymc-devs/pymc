@@ -2,21 +2,26 @@
 
 from ..core import *
 from arraystep import *
-from numpy import floor, abs, atleast_1d
+from numpy import floor, abs, atleast_1d, empty, isfinite, sum
 from numpy.random import standard_exponential, random, uniform
 
 __all__ = ['Slice']
 
 
+def sub(x, i, val):
+    y = x.copy()
+    y[i] = val
+    return y
+
+
 class Slice(ArrayStep):
+
     """Slice sampler"""
-    def __init__(self, vars, w=1, m=20, tune=True, model=None):
+    def __init__(self, vars, w=1, tune=True, model=None):
 
         model = modelcontext(model)
-
         self.vars = vars
         self.w = w
-        self.m = m
         self.tune = tune
         self.w_tune = []
         self.model = model
@@ -25,38 +30,50 @@ class Slice(ArrayStep):
 
     def astep(self, q0, logp):
 
-        y = logp(q0) - standard_exponential()
+        q = q0.copy()
+        k = q0.size
+        self.w = np.resize(self.w, k)
 
-        # Stepping out procedure
-        L = q0 - self.w * random()
-        R = L + self.w
-        J = floor(self.m * random())
-        K = (self.m - 1) - J
+        for i in range(k):
+            y = logp(q0) - standard_exponential()
 
-        while(J > 0 and y < logp(L)):
-            L = L - self.w
-            J = J - 1
+            # Stepping out procedure
+            ql = q0.copy()
+            ql[i] -= uniform(0, self.w[i])
+            qr = q0.copy()
+            qr[i] = ql[i] + self.w[i]
 
-        while(K > 0 and y < logp(R)):
-            R = R + self.w
-            K = K - 1
+            yl = logp(ql)
+            yr = logp(qr)
 
-        # Sample uniformly from slice
-        q_new = atleast_1d(uniform(L, R))
-        y_new = logp(q_new)
+            while(y < yl):
+                ql[i] -= self.w[i]
+                yl = logp(ql)
 
-        while(y_new < y):
-            # Shrink bounds of uniform
-            smaller = q_new < q0
-            L[smaller] = q_new[smaller]
-            R[smaller-True] = q_new[smaller-True]
+            while(y < yr):
+                qr[i] += self.w[i]
+                yr = logp(qr)
 
-            q_new = atleast_1d(uniform(L, R))
-            y_new = logp(q_new)
+            q_next = q0.copy()
+            while True:
+
+                # Sample uniformly from slice
+                qi = uniform(ql[i], qr[i])
+                q_next[i] = qi
+
+                yi = logp(q_next)
+
+                if yi > y:
+                    q[i] = qi
+                    break
+                elif qi > q[i]:
+                    qr[i] = qi
+                elif qi < q[i]:
+                    ql[i] = qi
 
         if self.tune:
             # Tune sampler parameters
-            self.w_tune.append(abs(q0 - q_new))
-            self.w = 2 * sum(self.w_tune) / len(self.w_tune)
+            self.w_tune.append(abs(q0 - q))
+            self.w = 2 * sum(self.w_tune, 0) / len(self.w_tune)
 
-        return q_new
+        return q
