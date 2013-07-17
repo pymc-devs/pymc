@@ -29,6 +29,6 @@ def test_step_continuous():
     for st in steps:
         h = sample(8000, st, start, model=model, random_seed=1)
         for (var, stat, val, bound) in check:
-            h = sample(8000, st, start, model=model, random_seed=1)
+            # h = sample(8000, st, start, model=model, random_seed=1)
 
             yield check_stat, repr(st), h, var, stat, val, bound

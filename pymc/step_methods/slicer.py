@@ -31,45 +31,42 @@ class Slice(ArrayStep):
     def astep(self, q0, logp):
 
         q = q0.copy()
-        k = q0.size
-        self.w = np.resize(self.w, k)
+        self.w = np.resize(self.w, len(q))
 
-        for i in range(k):
-            y = logp(q0) - standard_exponential()
+        y = logp(q0) - standard_exponential()
 
-            # Stepping out procedure
-            ql = q0.copy()
-            ql[i] -= uniform(0, self.w[i])
-            qr = q0.copy()
-            qr[i] = ql[i] + self.w[i]
+        # Stepping out procedure
+        ql = q0.copy()
+        ql -= uniform(0, self.w)
+        qr = q0.copy()
+        qr = ql + self.w
 
+        yl = logp(ql)
+        yr = logp(qr)
+
+        while((y < yl).all()):
+            ql -= self.w
             yl = logp(ql)
+
+        while((y < yr).all()):
+            qr += self.w
             yr = logp(qr)
 
-            while(y < yl):
-                ql[i] -= self.w[i]
-                yl = logp(ql)
+        q_next = q0.copy()
+        while True:
 
-            while(y < yr):
-                qr[i] += self.w[i]
-                yr = logp(qr)
+            # Sample uniformly from slice
+            qi = uniform(ql, qr)
 
-            q_next = q0.copy()
-            while True:
+            yi = logp(qi)
 
-                # Sample uniformly from slice
-                qi = uniform(ql[i], qr[i])
-                q_next[i] = qi
-
-                yi = logp(q_next)
-
-                if yi > y:
-                    q[i] = qi
-                    break
-                elif qi > q[i]:
-                    qr[i] = qi
-                elif qi < q[i]:
-                    ql[i] = qi
+            if yi > y:
+                q = qi
+                break
+            elif (qi > q).all():
+                qr = qi
+            elif (qi < q).all():
+                ql = qi
 
         if self.tune:
             # Tune sampler parameters
