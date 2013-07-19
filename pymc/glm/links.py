@@ -4,7 +4,7 @@ import theano.tensor
 
 try:
     # Statsmodels is optional
-    from statsmodels.api.families.links import (identity, logit, inverse_power, log)
+    from statsmodels.genmod.families.links import (identity, logit, inverse_power, log)
 except:
     identity, logit, inverse_power, log = [None] * 4
 

@@ -53,8 +53,8 @@ def linear_component(formula, data, priors=None,
     -------
     # Logistic regression
     y_est, coeffs = glm('male ~ height + weight',
-                        htwt_data, family=sm.families.Binomial(),
-                        link_func=theano.tensor.nnet.sigmoid)
+                        htwt_data,
+                        family=glm.families.Binomial(links=glm.link.Logit))
     y_data = Bernoulli('y', y_est, observed=data.male)
     """
     if intercept_prior is None:
@@ -72,9 +72,9 @@ def linear_component(formula, data, priors=None,
     if init_vals is None and init:
         try:
             from statsmodels.formula.api import glm as glm_sm
-	except ImportError:
-	    raise ImportError("Can't initialize -- statsmodels not found. Set init=False and run find_MAP().")
-        init_vals = glm_sm(formula, data, family=family).fit().params
+            init_vals = glm_sm(formula, data, family=family).fit().params
+        except ImportError:
+            raise ImportError("Can't initialize -- statsmodels not found. Set init=False and run find_MAP().")
     else:
         init_vals = defaultdict(lambda: None)
 
@@ -136,7 +136,7 @@ def glm(*args, **kwargs):
     # Logistic regression
     vars = glm('male ~ height + weight',
                data,
-               family=sm.families.Binomial(link=theano.tensor.nnet.sigmoid))
+               family=glm.families.Binomial(link=glm.links.Logit))
     """
 
     model = modelcontext(kwargs.get('model'))
@@ -149,6 +149,7 @@ def glm(*args, **kwargs):
 
     # Create GLM
     kwargs['family'] = family.create_statsmodel_family()
+
     y_est, coeffs = linear_component(*args, **kwargs)
     family.create_likelihood(y_est, y_data)
 

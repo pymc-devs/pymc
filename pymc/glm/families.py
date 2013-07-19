@@ -3,7 +3,7 @@ import numbers
 from copy import copy
 
 try:
-    from statsmodels.api.families import (Gaussian, Binomial, Poisson)
+    from statsmodels.genmod.families.family import (Gaussian, Binomial, Poisson)
 except ImportError:
     Gaussian = None
     Binomial = None
@@ -71,7 +71,7 @@ class Family(object):
         if self.sm_family is None:
             return None
         else:
-            return self.sm_family(self.link.sm())
+            return self.sm_family(self.link.sm)
 
     def __repr__(self):
         return """Family {klass}:
