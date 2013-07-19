@@ -1,11 +1,20 @@
-import statsmodels.api as sm
+from abc import ABCMeta
+
 import theano.tensor
 
-from abc import ABCMeta
+try:
+    # Statsmodels is optional
+    from statsmodels.api.families.links import (identity, logit, inverse_power, log)
+except:
+    identity, logit, inverse_power, log = [None] * 4
 
 __all__ = ['Identity', 'Logit', 'Inverse', 'Log']
 
 class LinkFunction(object):
+    """Base class to define link functions.
+
+    If initialization via statsmodels is desired, define sm.
+    """
     __metaclass__ = ABCMeta
 
     def __init__(self, theano_link=None, sm_link=None):
@@ -16,16 +25,16 @@ class LinkFunction(object):
 
 class Identity(LinkFunction):
     theano = lambda self, x: x
-    sm = sm.families.links.identity
+    sm = identity
 
 class Logit(LinkFunction):
     theano = theano.tensor.nnet.sigmoid
-    sm = sm.families.links.logit
+    sm = logit
 
 class Inverse(LinkFunction):
     theano = theano.tensor.inv
-    sm = sm.families.links.inverse_power
+    sm = inverse_power
 
 class Log(LinkFunction):
     theano = theano.tensor.log
-    sm = sm.families.links.log
+    sm = log

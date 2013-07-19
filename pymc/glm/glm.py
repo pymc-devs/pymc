@@ -100,7 +100,7 @@ def linear_component(formula, data, priors=None,
 
 
 def glm(*args, **kwargs):
-    """Create GLM coefficients.
+    """Create GLM after Patsy model specification string.
 
     Parameters
     ----------
@@ -108,7 +108,6 @@ def glm(*args, **kwargs):
         Patsy linear model descriptor.
     data : array
         Labeled array (e.g. pandas DataFrame, recarray).
-
     priors : dict
         Mapping prior name to prior distribution.
         E.g. {'Intercept': Normal.dist(mu=0, sd=1)}
@@ -119,40 +118,39 @@ def glm(*args, **kwargs):
         Prior to use for all regressor(s).
 	    Default: Normal.dist(mu=0, tau=1.0E-12)
     init : bool
-        Whether to set the starting values via statsmodels
+        Whether initialize test values via statsmodels
         Default: True
     init_vals : dict
         Set starting values externally: parameter -> value
         Default: None
     family : statsmodels.family
-        Link function, see pymc.glm.families (init has to be True).
-	See `statsmodels.api.families`
-        Default: identity
+        Distribution of likelihood, see pymc.glm.families
+        (init has to be True).
 
     Output
     ------
-    (y_est, coeffs) : Estimate for y, list of coefficients
+    vars : List of created random variables (y_est, coefficients etc)
 
     Example
     -------
     # Logistic regression
-    y_est, coeffs = glm('male ~ height + weight',
-                        htwt_data, family=sm.families.Binomial(),
-                        link_func=theano.tensor.nnet.sigmoid)
-    y_data = Bernoulli('y', y_est, observed=data.male)
+    vars = glm('male ~ height + weight',
+               data,
+               family=sm.families.Binomial(link=theano.tensor.nnet.sigmoid))
     """
+
+    model = modelcontext(kwargs.get('model'))
 
     family = kwargs.pop('family', families.Normal())
 
     formula = args[0]
     data = args[1]
     y_data = np.asarray(patsy.dmatrices(formula, data)[0]).T
-    model = modelcontext(kwargs.get('model'))
 
     # Create GLM
-    kwargs['family'] = family.sm_family()
+    kwargs['family'] = family.create_statsmodel_family()
     y_est, coeffs = linear_component(*args, **kwargs)
-    family.make_model(y_est, y_data)
+    family.create_likelihood(y_est, y_data)
 
     # Find vars we have not initialized yet
     non_init_vars = set(model.vars).difference(set(coeffs))

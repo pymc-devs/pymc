@@ -2,7 +2,12 @@ from abc import ABCMeta
 import numbers
 from copy import copy
 
-import statsmodels.api as sm
+try:
+    from statsmodels.api.families import (Gaussian, Binomial, Poisson)
+except ImportError:
+    Gaussian = None
+    Binomial = None
+    Poisson = None
 
 from .links import *
 import pymc
@@ -10,6 +15,8 @@ import pymc
 __all__ = ['Normal', 'T', 'Binomial', 'Poisson']
 
 class Family(object):
+    """Base class for Family of likelihood distribution and link functions.
+    """
     __metaclass__ = ABCMeta
     priors = {}
     link = Identity
@@ -26,7 +33,13 @@ class Family(object):
         # Instantiate link function
         self.link_func = self.link()
 
-    def get_priors(self, model=None):
+    def _get_priors(self, model=None):
+        """Return prior distributions of the likelihood.
+
+        Returns
+        -------
+        dict : mapping name -> pymc distribution
+        """
         model = pymc.modelcontext(model)
         priors = {}
         for key, val in self.priors.iteritems():
@@ -37,27 +50,46 @@ class Family(object):
 
         return priors
 
-    def make_model(self, y_est, y_data, model=None):
-        priors = self.get_priors(model=model)
+    def create_likelihood(self, y_est, y_data, model=None):
+        """Create likelihood distribution of observed data.
+
+        Parameters
+        ----------
+        y_est : theano.tensor
+            Estimate of dependent variable
+        y_data : array
+            Observed dependent variable
+        """
+        priors = self._get_priors(model=model)
+        # Wrap y_est in link function
         priors[self.parent] = self.link_func.theano(y_est)
         return self.likelihood('y', observed=y_data, **priors)
 
-    def sm_family(self):
-        return self.sm_family(self.link.sm())
+    def create_statsmodel_family(self):
+        """Instantiate and return statsmodel family object.
+        """
+        if self.sm_family is None:
+            return None
+        else:
+            return self.sm_family(self.link.sm())
 
     def __repr__(self):
-        return "{0} Family({1})".format(self.__class__, self.__dict__)
+        return """Family {klass}:
+    Likelihood   : {likelihood}({parent})
+    Priors       : {priors}
+    Link function: {link}.""".format(klass=self.__class__, likelihood=self.likelihood.__name__, parent=self.parent, priors=self.priors, link=self.link)
 
 
 class Normal(Family):
-    sm_family = sm.families.Gaussian
+    sm_family = Gaussian
     link = Identity
     likelihood = pymc.Normal
     parent = 'mu'
     priors = {'sd': ('sigma', pymc.Uniform.dist(0, 100))}
 
+
 class T(Family):
-    sm_family = sm.families.Gaussian
+    sm_family = Gaussian
     link = Identity
     likelihood = pymc.T
     parent = 'mu'
@@ -67,12 +99,13 @@ class T(Family):
 
 class Binomial(Family):
     link = Logit
-    sm_family = sm.families.Binomial
+    sm_family = Binomial
     likelihood = pymc.Bernoulli
     parent = 'p'
 
+
 class Poisson(Family):
     link = Log
-    sm_family = sm.families.Poisson
+    sm_family = Poisson
     likelihood = pymc.Poisson
     parent = ''
