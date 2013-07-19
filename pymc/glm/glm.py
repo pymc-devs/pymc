@@ -159,3 +159,11 @@ def glm(*args, **kwargs):
         var.tag.test_value = start[var.name]
 
     return [y_est] + coeffs + list(non_init_vars)
+
+
+def plot_posterior_predictive(trace):
+    for rand_loc in np.random.randint(0, len(trace), 30):
+        rand_sample = trace[rand_loc]
+        plt.plot([0, 1], [rand_sample['Intercept'],
+                          rand_sample['Intercept'] + rand_sample['x']], lw=.2, c='k')
+    plt.title('Posterior predictive')
