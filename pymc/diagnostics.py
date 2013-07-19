@@ -4,7 +4,7 @@ import numpy as np
 from stats import autocorr, autocov, statfunc
 from copy import copy
 
-__all__ = ['geweke', 'gelman_rubin']
+__all__ = ['geweke', 'gelman_rubin', 'trace_to_dataframe']
 
 
 @statfunc
@@ -164,3 +164,10 @@ def gelman_rubin(mtrace):
             Rhat[var] = [calc_rhat(y.transpose(), m, n) for y in x.transpose()]
 
     return Rhat
+
+def trace_to_dataframe(trace):
+    """Convert a PyMC trace consisting of 1-D variables to a pandas DataFrame
+    """
+    import pandas as pd
+    return pd.DataFrame({name: np.squeeze(trace_var.vals)
+			             for name, trace_var in trace.samples.iteritems()})

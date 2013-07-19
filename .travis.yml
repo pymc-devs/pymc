@@ -14,6 +14,8 @@ install:
   - pip install numdifftools
   - pip install Cython
   - pip install scikits.sparse
+  - pip install patsy
+  - pip install statsmodels
   - python setup.py build_ext --inplace
 env: 
   - TESTCMD="nosetests -v -e test_examples"
