@@ -13,11 +13,11 @@ def test_step_continuous():
     start, model, (mu, C) = mv_simple()
 
     with model:
-        hmc = pm.HamiltonianMC(model.vars, C, is_cov=True)
-        mh = pm.Metropolis(model.vars, S=C,
+        hmc = pm.HamiltonianMC(scaling=C, is_cov=True)
+        mh = pm.Metropolis(S=C,
                            proposal_dist=pm.MultivariateNormalProposal)
-        slicer = pm.Slice(model.vars, model=model)
-        nuts = pm.NUTS(model.vars, C, is_cov = True)
+        slicer = pm.Slice()
+        nuts = pm.NUTS(scaling=C, is_cov = True)
         compound = pm.CompoundStep([hmc, mh])
 
     steps = [mh, hmc, slicer, nuts, compound]
@@ -29,6 +29,4 @@ def test_step_continuous():
     for st in steps:
         h = sample(8000, st, start, model=model, random_seed=1)
         for (var, stat, val, bound) in check:
-            # h = sample(8000, st, start, model=model, random_seed=1)
-
             yield check_stat, repr(st), h, var, stat, val, bound
