@@ -43,7 +43,7 @@ def bound(logp, *conditions):
 def alltrue(vals):
     ret = 1
     for c in vals:
-        ret = ret & (1 * c)
+        ret = ret * (1 * c)
     return ret
 
 

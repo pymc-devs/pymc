@@ -372,9 +372,10 @@ def Gamma(alpha, beta):
 
 def Bound(distribution, lower=-inf, upper=inf):
     @tensordist(continuous)
+    @wraps_with_spec(distribution)
     def Bounded(*args, **kwargs):
         """A bounded distribution."""
-        dist = distribution.dist(*args,**kwargs)
+        dist = distribution.dist(*args, **kwargs)
 
         def logp(value):
             return bound(
