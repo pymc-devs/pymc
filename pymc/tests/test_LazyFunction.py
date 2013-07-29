@@ -64,12 +64,12 @@ class test_LazyFunction(TestCase):
                 # Make sure A's value and last value occupy correct places in B's
                 # cached arguments
                 cur_frame = B._value.get_frame_queue()[1]
+                B_cached_count = B._value.get_cached_counts()
+                B_at_a_loc = B_cached_count[a_loc]
                 assert(
-                    B._value.get_cached_counts()[a_loc,
-                                                 cur_frame] == A.counter.get_count())
+                    B_at_a_loc[cur_frame] == A.counter.get_count())
                 assert(
-                    B._value.get_cached_counts()[a_loc,
-                                                 1 - cur_frame] == last_A_count)
+                    B_at_a_loc[1 - cur_frame] == last_A_count)
                 assert(B._value.ultimate_args[a_loc] is A)
 
             except ZeroProbability:
