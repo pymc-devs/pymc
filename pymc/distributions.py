@@ -351,7 +351,7 @@ def stochastic_from_dist(name, logp, random=None, logp_partial_gradients={}, dty
 
 
 def stochastic_from_data(name, data, lower=-np.inf, upper=np.inf,
-                         value=None, observed=False, size=1, trace=True, verbose=-1, debug=False):
+                         value=None, observed=False, trace=True, verbose=-1, debug=False):
     """
     Return a Stochastic subclass made from arbitrary data.
 
@@ -366,11 +366,10 @@ def stochastic_from_data(name, data, lower=-np.inf, upper=np.inf,
        >>> from pymc import stochastic_from_data
        >>> pos = stochastic_from_data('posterior', posterior_samples)
        >>> prior = pos # update the prior with arbitrary distributions
-    """
-    if size != 1:
-        # TODO: requires a newer version of SciPy, mine is 0.10.1
-        raise NotImplementedError('Not implemented yet. Sorry.')
 
+    :Alias:
+      Histogram
+    """
     pdf = gaussian_kde(data) # automatic bandwidth selection
 
     # account for tail contribution
@@ -406,6 +405,10 @@ def stochastic_from_data(name, data, lower=-np.inf, upper=np.inf,
                       dtype    = float,
                       observed = observed,
                       verbose  = verbose)
+
+
+# Alias following Stochastics naming convention
+Histogram = stochastic_from_data
 
 #-------------------------------------------------------------
 # Light decorators
