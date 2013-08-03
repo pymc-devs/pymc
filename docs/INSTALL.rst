@@ -213,7 +213,7 @@ installed. The tests are launched from a python shell::
 
 In case of failures, messages detailing the nature of these failures will
 appear. In case this happens (it shouldn't), please report the problems on the
-`issue tracker`_ (the issues tab on the Google Code page), specifying the
+`issue tracker`_ (the issues tab on the GitHub page), specifying the
 version you are using and the environment.
 
 .. _`nose`: http://readthedocs.org/docs/nose/en/latest/
