@@ -1165,7 +1165,7 @@ def summary_plot(
             for variable in vars:
                 R[variable.__name__] = gelman_rubin(variable)
         except ValueError:
-            print 'Could not calculate Gelman-Rubin statistics. Requires multiple chains of equal length.'
+            print('Could not calculate Gelman-Rubin statistics. Requires multiple chains of equal length.')
             rhat = False
 
     # Empty list for y-axis labels
