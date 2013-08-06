@@ -319,7 +319,6 @@ def plotwrapper(f):
     """
 
     def wrapper(pymc_obj, *args, **kwargs):
-
         start = 0
         if 'start' in kwargs:
             start = kwargs.pop('start')
@@ -329,7 +328,7 @@ def plotwrapper(f):
             # First try Model type
             for variable in pymc_obj._variables_to_tally:
                 # Plot object
-                if variable._plot:
+                if variable._plot is not False:
                     data = pymc_obj.trace(variable.__name__)[start:]
                     if size(data[-1]) >= 10 and variable._plot != True:
                         continue
@@ -354,7 +353,7 @@ def plotwrapper(f):
 
         try:
             # Then try Node type
-            if pymc_obj._plot:
+            if pymc_obj._plot is not False:
                 data = pymc_obj.trace()[start:]  # This is deprecated. DH
                 name = pymc_obj.__name__
                 f(data, name, *args, **kwargs)
@@ -372,6 +371,7 @@ def plotwrapper(f):
                     i = '%s_%s' % (kwargs.pop('name'), i)
                 f(data, i, *args, **kwargs)
             return
+
         # If others fail, assume that raw data is passed
         f(pymc_obj, *args, **kwargs)
 
@@ -381,8 +381,7 @@ def plotwrapper(f):
 
 
 @plotwrapper
-def plot(
-    data, name, format='png', suffix='', path='./', common_scale=True, datarange=(None, None),
+def plot(data, name, format='png', suffix='', path='./', common_scale=True, datarange=(None, None),
         new=True, last=True, rows=1, num=1, fontmap=None, verbose=1):
     """
     Generates summary plots for nodes of a given PyMC object.
@@ -408,7 +407,6 @@ def plot(
             (defaults to True).
 
     """
-
     if fontmap is None:
         fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
