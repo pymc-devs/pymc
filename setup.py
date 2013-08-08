@@ -35,6 +35,7 @@ if __name__ == "__main__":
           url=URL,
           long_description=LONG_DESCRIPTION,
           packages=['pymc', 'pymc.distributions',
-                    'pymc.step_methods', 'pymc.tuning', 'pymc.tests'],
+                    'pymc.step_methods', 'pymc.tuning', 
+                    'pymc.tests', 'pymc.glm'],
           classifiers=classifiers,
           install_requires=required)
