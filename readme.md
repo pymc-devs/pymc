@@ -4,7 +4,7 @@
 
 PyMC is a python module for Bayesian statistical modeling and model fitting which focuses on advanced Markov chain Monte Carlo fitting algorithms. Its flexibility and extensibility make it applicable to a large suite of problems. 
 
-Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/examples/tutorial.ipynb)!
+Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/pymc/examples/tutorial.ipynb)!
 
 ## Features 
 
