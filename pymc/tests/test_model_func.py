@@ -25,3 +25,12 @@ def test_dlogp2():
     d2logp = model.d2logpc()
 
     close_to(d2logp(start), H, np.abs(H / 100.))
+
+
+def test_named():
+    with pm.Model() as model:
+        x = Normal('x', 0,1)
+        y = pm.named(x**2, 'y')
+
+    assert model.y == y
+    assert model['y'] == y
