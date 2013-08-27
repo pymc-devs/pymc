@@ -180,14 +180,14 @@ def compilef(outs, mode=None):
     )
 
 
-def named(var, name, model=None):
+def named(name, var, model=None):
     """
     Name a theano variables
 
     Parameters
     ----------
-        var : theano variables
         name : str
+        var : theano variables
     Returns
     -------
         n : var but with name name

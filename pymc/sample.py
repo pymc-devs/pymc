@@ -58,8 +58,11 @@ def sample(draws, step, start=None, trace=None, tune=None, progressbar=True, mod
 
         if not isinstance(trace, NpTrace):
             if trace is None:
-                trace = model.vars
-            trace = NpTrace(list(trace))
+                trace = model.named_vars
+            try:
+                trace = NpTrace(trace.values())
+            except AttributeError:
+                trace = NpTrace(list(trace))
 
     try:
         step = step_methods.CompoundStep(step)
@@ -139,12 +142,15 @@ def psample(draws, step, start=None, trace=None, tune=None, model=None, threads=
         start = threads * [start]
 
     if trace is None:
-        trace = model.vars
+        trace = model.named_vars
 
     if type(trace) is MultiTrace:
         mtrace = trace
     else:
-        mtrace = MultiTrace(threads, trace)
+        try:
+            mtrace = MultiTrace(threads, trace.values())
+        except AttributeError:
+            mtrace = MultiTrace(threads, trace)
 
     p = mp.Pool(threads)
 
