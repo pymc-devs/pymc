@@ -30,7 +30,7 @@ def test_dlogp2():
 def test_named():
     with pm.Model() as model:
         x = Normal('x', 0,1)
-        y = pm.named(x**2, 'y')
+        y = pm.named('y', x**2)
 
     assert model.y == y
     assert model['y'] == y

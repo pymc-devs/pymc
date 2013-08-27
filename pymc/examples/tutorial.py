@@ -178,7 +178,3 @@ traceplot(trace)
 # * With a name argument, it constructs a random variable using the distrubtion object as the prior distribution and inserts this random variable into the current model. Then the constructor returns the random variable.
 
 # <codecell>
-
-help(model)
-
-# <codecell>

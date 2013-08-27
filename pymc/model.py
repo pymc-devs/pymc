@@ -116,7 +116,7 @@ class Model(Context):
     def TransformedVar(model, name, dist, trans):
         tvar = model.Var(trans.name + '_' + name, trans.apply(dist))
 
-        return named(trans.backward(tvar), name), tvar
+        return named(name, trans.backward(tvar)), tvar
 
     def AddPotential(model, potential):
         model.factors.append(potential)
