@@ -311,7 +311,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             # Deal with multivariate nodes
             if k > 1:
 
-                for i, q in enumerate(transpose(quants).squeeze()):
+                for i, q in enumerate(np.transpose(quants).squeeze()):
 
                     # Y coordinate with jitter
                     y = -(var + i) + e[j]
@@ -376,7 +376,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
     labels = ylabels or labels
 
     # Update margins
-    left_margin = max([len(x) for x in labels]) * 0.015
+    left_margin = np.max([len(x) for x in labels]) * 0.015
     gs.update(left=left_margin, right=0.95, top=0.9, bottom=0.05)
 
     # Define range of y-axis
@@ -440,10 +440,10 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             k = np.size(value)
 
             if k > 1:
-                plot([min(r, 2) for r in R[varname]], [-(j + i)
+                plot([np.min(r, 2) for r in R[varname]], [-(j + i)
                      for j in range(k)], 'bo', markersize=4)
             else:
-                plot(min(R[varname], 2), -i, 'bo', markersize=4)
+                plot(np.min(R[varname], 2), -i, 'bo', markersize=4)
 
             i += k
 
