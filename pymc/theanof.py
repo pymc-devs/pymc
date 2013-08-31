@@ -3,7 +3,7 @@ from theano import theano, tensor as t
 from theano.gof.graph import inputs
 from memoize import memoize
 
-__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars', 'cont_inputs', 'named']
+__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars', 'cont_inputs']
 
 def inputvars(a):
     """
@@ -33,20 +33,6 @@ def cont_inputs(f):
     """
     return typefilter(inputvars(f), continuous_types)
 
-def named(var, name):
-    """
-    Name a theano variables
-
-    Parameters
-    ----------
-        var : theano variables
-        name : str
-    Returns
-    -------
-        n : var but with name name
-    """
-    var.name = name
-    return var
 
 
 """
