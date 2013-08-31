@@ -440,10 +440,10 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             k = np.size(value)
 
             if k > 1:
-                plot([np.min(r, 2) for r in R[varname]], [-(j + i)
+                plot([min(r, 2) for r in R[varname]], [-(j + i)
                      for j in range(k)], 'bo', markersize=4)
             else:
-                plot(np.min(R[varname], 2), -i, 'bo', markersize=4)
+                plot(min(R[varname], 2), -i, 'bo', markersize=4)
 
             i += k
 
