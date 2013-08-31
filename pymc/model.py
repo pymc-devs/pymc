@@ -9,7 +9,7 @@ from theanof import *
 
 from memoize import memoize
 
-__all__ = ['Model', 'compilef', 'modelcontext', 'Point', 'named']
+__all__ = ['Model', 'compilef', 'modelcontext', 'Point', 'Deterministic']
 
 
 class Context(object):
