@@ -27,10 +27,10 @@ def test_dlogp2():
     close_to(d2logp(start), H, np.abs(H / 100.))
 
 
-def test_named():
+def test_deterministic():
     with pm.Model() as model:
         x = Normal('x', 0,1)
-        y = pm.named('y', x**2)
+        y = pm.Deterministic('y', x**2)
 
     assert model.y == y
     assert model['y'] == y

@@ -17,7 +17,7 @@ with Model() as model:
     beta = Normal('beta', 0, 0.01)
 
     # Calculate probabilities of death
-    theta = named('theta', tinvlogit(alpha + beta * dose))
+    theta = Deterministic('theta', tinvlogit(alpha + beta * dose))
 
     # Data likelihood
     deaths = Binomial('deaths', n=n, p=theta, observed=[0, 1, 3, 5])

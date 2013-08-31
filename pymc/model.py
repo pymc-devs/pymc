@@ -116,7 +116,7 @@ class Model(Context):
     def TransformedVar(model, name, dist, trans):
         tvar = model.Var(trans.name + '_' + name, trans.apply(dist))
 
-        return named(name, trans.backward(tvar)), tvar
+        return Deterministic(name, trans.backward(tvar)), tvar
 
     def AddPotential(model, potential):
         model.factors.append(potential)
@@ -180,9 +180,9 @@ def compilef(outs, mode=None):
     )
 
 
-def named(name, var, model=None):
+def Deterministic(name, var, model=None):
     """
-    Name a theano variables
+    Create a named deterministic variable
 
     Parameters
     ----------
