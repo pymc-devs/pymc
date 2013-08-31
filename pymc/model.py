@@ -9,7 +9,7 @@ from theanof import *
 
 from memoize import memoize
 
-__all__ = ['Model', 'compilef', 'modelcontext', 'Point']
+__all__ = ['Model', 'compilef', 'modelcontext', 'Point', 'Deterministic']
 
 
 class Context(object):
@@ -50,6 +50,7 @@ class Model(Context):
     def __init__(self):
         self.vars = []
         self.factors = []
+        self.named_vars = {}
 
     @property
     @memoize
@@ -86,7 +87,8 @@ class Model(Context):
     @property
     def test_point(self):
         """Test point used to check that the model doesn't generate errors"""
-        return Point(((var, var.tag.test_value) for var in self.vars), model=self)
+        return Point(((var, var.tag.test_value) for var in self.vars),
+                     model=self)
 
     @property
     def cont_vars(model):
@@ -97,7 +99,7 @@ class Model(Context):
     these functions add random variables
     """
     def Data(model, data, dist):
-        if  hasattr(data, 'values'):
+        if hasattr(data, 'values'):
             # Incase obs is a Series or DataFrame
             data = data.values
         args = map(t.constant, as_iterargs(data))
@@ -105,6 +107,7 @@ class Model(Context):
 
     def Var(model, name, dist):
         var = dist.makevar(name)
+        model.AddNamed(var)
 
         model.vars.append(var)
         model.factors.append(dist.logp(var))
@@ -113,13 +116,22 @@ class Model(Context):
     def TransformedVar(model, name, dist, trans):
         tvar = model.Var(trans.name + '_' + name, trans.apply(dist))
 
-        return named(trans.backward(tvar), name), tvar
+        return Deterministic(name, trans.backward(tvar)), tvar
 
     def AddPotential(model, potential):
         model.factors.append(potential)
 
+    def AddNamed(model, var):
+        model.named_vars[var.name] = var
+        if not hasattr(model, var.name):
+            setattr(model, var.name, var)
+
+    def __getitem__(self, key):
+        return self.named_vars[key]
+
 
 def Point(*args, **kwargs):
+
     """
     Build a point. Uses same args as dict() does.
     Filters out variables not in the model. All keys are strings.
@@ -129,11 +141,9 @@ def Point(*args, **kwargs):
         *args, **kwargs
             arguments to build a dict
     """
-    if 'model' in kwargs:
-        model = kwargs['model']
-        del kwargs['model']
-    else:
-        model = Model.get_context()
+    model = modelcontext(kwargs.get('model'))
+    kwargs.pop('model', None)
+
     try:
         d = dict(*args, **kwargs)
     except Exception as e:
@@ -146,10 +156,12 @@ def Point(*args, **kwargs):
                 for (k, v) in d.iteritems()
                 if str(k) in varnames)
 
+
 @memoize
 def compilef(outs, mode=None):
     """
-    Compiles a Theano function which returns `outs` and takes the variable ancestors of `outs` as inputs.
+    Compiles a Theano function which returns `outs` and takes the variable
+    ancestors of `outs` as inputs.
 
     Parameters
     ----------
@@ -168,6 +180,21 @@ def compilef(outs, mode=None):
     )
 
 
+def Deterministic(name, var, model=None):
+    """
+    Create a named deterministic variable
+
+    Parameters
+    ----------
+        name : str
+        var : theano variables
+    Returns
+    -------
+        n : var but with name name
+    """
+    var.name = name
+    modelcontext(model).AddNamed(var)
+    return var
 
 
 def as_iterargs(data):
@@ -177,9 +204,6 @@ def as_iterargs(data):
         return [np.asarray(data[c]) for c in data.columns]
     else:
         return [data]
-
-
-
 
 # theano stuff
 theano.config.warn.sum_div_dimshuffle_bug = False
