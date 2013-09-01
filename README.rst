@@ -77,7 +77,8 @@ Usage
 
 First, define your model in a file, say mymodel.py (with comments, of course!):
 
-.. code:: python
+.. code-block:: python
+
    # Import relevant modules
    import pymc
    import numpy as np
@@ -102,7 +103,8 @@ First, define your model in a file, say mymodel.py (with comments, of course!):
 
 Save this file, then from a python shell (or another file in the same directory), call:
 
-.. code:: python
+.. code-block:: python
+
 	import pymc
 	import mymodel
 
