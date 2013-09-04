@@ -1,6 +1,6 @@
 # PyMC 3
 
-[![Build Status](https://travis-ci.org/pymc-devs/pymc.png)](https://travis-ci.org/pymc-devs/pymc)
+[![Build Status](https://travis-ci.org/pymc-devs/pymc.png?branch=pymc3)](https://travis-ci.org/pymc-devs/pymc)
 
 PyMC is a python module for Bayesian statistical modeling and model fitting which focuses on advanced Markov chain Monte Carlo fitting algorithms. Its flexibility and extensibility make it applicable to a large suite of problems. 
 
