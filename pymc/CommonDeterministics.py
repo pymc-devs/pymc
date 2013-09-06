@@ -917,7 +917,7 @@ for op in ['add', 'mul', 'sub']:
             locals(
             )))
 
-for op in ['iadd', 'isub', 'imul', 'idiv', 'itruediv', 'ifloordiv', 'imod', 'ipow', 'ilshift', 'irshift', 'iand', 'ixor', 'ior', 'unicode']:
+for op in ['iadd', 'isub', 'imul', 'idiv', 'itruediv', 'ifloordiv', 'imod', 'ipow', 'ilshift', 'irshift', 'iand', 'ixor', 'ior']:
     create_nonimplemented_method(op, Variable)
 
 

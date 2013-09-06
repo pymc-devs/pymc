@@ -1312,6 +1312,19 @@ class test_shape_consistency(TestCase):
                       True, value=data)
 
 
+
+def test_unicode():
+    try:
+        import pandas as pd
+    except ImportError:
+        return
+
+    N = Normal('x', np.ones(3), np.ones(3))
+    trans = N**2
+
+    series = pd.Series([N, trans])
+    print series
+
 if __name__ == '__main__':
 
     original_filters = warnings.filters[:]
