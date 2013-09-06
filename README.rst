@@ -2,7 +2,7 @@
 Introduction
 ************
 
-:Version: 2.2
+:Version: 2.3
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Web site: https://github.com/pymc-devs/pymc
 :Documentation: http://bit.ly/pymc_docs
@@ -24,7 +24,7 @@ diagnostics.
 Features
 ========
 
-PyMC provides functionalities to make Bayesian analysis as painless as 
+PyMC provides functionalities to make Bayesian analysis as painless as
 possible. Here is a short list of some of its features:
 
 * Fits Bayesian statistical models with Markov chain Monte Carlo and
@@ -55,10 +55,10 @@ possible. Here is a short list of some of its features:
 What's new in version 2
 =======================
 
-This second version of PyMC benefits from a major rewrite effort. 
+This second version of PyMC benefits from a major rewrite effort.
 Substantial improvements in code extensibility, user interface as well
 as in raw performance have been achieved. Most notably, the PyMC 2 series
-provides: 
+provides:
 
 * New flexible object model and syntax (not backward-compatible).
 
@@ -130,7 +130,7 @@ Relationship to other packages
 
 PyMC in one of many general-purpose MCMC packages. The most prominent among them is `WinBUGS`_, which has made MCMC and with it Bayesian statistics accessible to a huge user community. Unlike PyMC, WinBUGS is a stand-alone, self-contained application. This can be an attractive feature for users without much programming experience, but others may find it constraining. A related package is `JAGS`_, which provides a more UNIX-like implementation of the BUGS language. Other packages include `Hierarchical Bayes Compiler`_ and a number of `R packages`_ of varying scope.
 
-It would be difficult to meaningfully benchmark PyMC against these other packages because of the unlimited variety in Bayesian probability models and flavors of the MCMC algorithm. However, it is possible to anticipate how it will perform in broad terms. 
+It would be difficult to meaningfully benchmark PyMC against these other packages because of the unlimited variety in Bayesian probability models and flavors of the MCMC algorithm. However, it is possible to anticipate how it will perform in broad terms.
 
 PyMC's number-crunching is done using a combination of industry-standard libraries (NumPy and the linear algebra libraries on which it depends) and hand-optimized Fortran routines. For models that are composed of variables valued as large arrays, PyMC will spend most of its time in these fast routines. In that case, it will be roughly as fast as packages written entirely in C and faster than WinBUGS. For finer-grained models containing mostly scalar variables, it will spend most of its time in coordinating Python code. In that case, despite our best efforts at optimization, PyMC will be significantly slower than packages written in C and on par with or slower than WinBUGS. However, as fine-grained models are often small and simple, the total time required for sampling is often quite reasonable despite this poorer performance.
 

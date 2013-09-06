@@ -7,11 +7,6 @@ from __future__ import print_function
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
 import os, sys
-#try:
-#    from googlecode import upload2google
-#except:
-#    def upload2google():
-#        raise "This commmand is only available with the subversion development version."
 
 config = Configuration('pymc',parent_package=None,top_path=None)
 dist = sys.argv[1]
@@ -37,9 +32,7 @@ if not lapack_info or dist in ['bdist', 'sdist']:
         # pop up sometimes in the tarballs
         if fname[-2:]=='.f' and fname[0].find('_')==-1:
             f_sources.append('blas/BLAS/'+fname)
-    ##    for fname in os.listdir('lapack/double'):
-    ##        if fname[-2:]=='.f':
-    ##            inc_dirs.append('lapack/double/'+fname)
+
 
     for fname in ['dpotrs','dpotrf','dpotf2','ilaenv','dlamch','ilaver','ieeeck','iparmq']:
         f_sources.append('lapack/double/'+fname+'.f')
@@ -96,14 +89,11 @@ config.add_extension(name='gp.cov_funs.distances',sources=['pymc/gp/cov_funs/dis
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
-    setup(  version="2.2",
+    setup(  version="2.3a",
             description="Markov Chain Monte Carlo sampling toolkit.",
-            #maintainer="David Huard",
-            #maintainer_email="david.huard@gmail.com",
             author="Christopher Fonnesbeck, Anand Patil and David Huard",
             author_email="fonnesbeck@gmail.com ",
             url="github.com/pymc-devs/pymc",
-            #download_url="",
             license="Academic Free License",
             classifiers=[
                 'Development Status :: 5 - Production/Stable',
@@ -115,7 +105,7 @@ if __name__ == '__main__':
                 'Programming Language :: Fortran',
                 'Topic :: Scientific/Engineering',
                  ],
-            requires=['NumPy (>=1.6)',],
+            requires=['NumPy (>=1.8)',],
             long_description="""
             Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC),
             is an increasingly relevant approach to statistical estimation. However,
@@ -130,6 +120,5 @@ if __name__ == '__main__':
             ``SciPy``, ``pytables``, ``sqlite`` or ``mysql`` are optional.
             """,
             packages=["pymc", "pymc/database", "pymc/examples", "pymc/examples/gp", "pymc/tests", "pymc/gp", "pymc/gp/cov_funs"],
-            #cmdclass={'upload2google':upload2google},
             **(config_dict))
 
