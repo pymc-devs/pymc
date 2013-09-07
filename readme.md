@@ -37,5 +37,14 @@ sudo apt-get install libsuitesparse-dev
 pip install git+https://github.com/njsmith/scikits-sparse.git
 ```
 
+On Mac OS X you can install libsuitesparse 4.2.1 via homebrew (see http://brew.sh/ to install homebrew), manually add a link so the include files are where scikits-sparse expects them, and then install scikits-sparse:
+
+```
+brew install suite-sparse
+ln -s /usr/local/Cellar/suite-sparse/4.2.1/include/ /usr/local/include/suitesparse
+pip install git+https://github.com/njsmith/scikits-sparse.git
+```
+
+
 ## License 
 [Apache License, Version 2.0](https://github.com/pymc-devs/pymc/blob/pymc3/LICENSE)
