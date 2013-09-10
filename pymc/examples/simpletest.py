@@ -19,12 +19,9 @@ with model:
 
     d = Normal('data', mu=x, tau=.75 ** -2, observed=data)
 
-    start = model.test_point
+    step = NUTS()
 
-    h = approx_hess(start)
-    step = HamiltonianMC(model.vars, h)
-
-    trace = sample(1e3, step, start)
+    trace = sample(1e3, step)
 
 subplot(2, 2, 1)
 plot(trace[x][:, 0, 0])

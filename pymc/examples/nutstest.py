@@ -15,12 +15,10 @@ xtrue = normal(scale = 2., size = 1)
 
 with Model() as model:
     x = Normal('x', mu = 0., tau = 1)
-    start = model.test_point
-    h = approx_hess(start)
 
-    step = NUTS(model.vars, h)
+    step = NUTS()
 
-    trace = sample(10, step, start)
+    trace = sample(10, step)
 
 # <markdowncell>
 

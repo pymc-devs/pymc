@@ -36,10 +36,7 @@ def run():
     with model:
         # move the chain to the MAP which should be a good starting point
         start = find_MAP()
-        h = np.diag(approx_hess(
-            start))  # find a good orientation using the hessian at the MAP
-
-        step = HamiltonianMC(model.vars, h)
+        step = NUTS(scaling=start)
 
         trace = sample(3e2, step, start)
 

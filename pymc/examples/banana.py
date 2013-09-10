@@ -33,7 +33,7 @@ with Model() as model:
     d = Normal('d', x + y ** 2, 1., observed=np.zeros(N))
 
     start = model.test_point
-    h = np.ones(2) * np.diag(approx_hess(start))[0]
+    h = np.ones(2) * np.diag(find_hessian(start))[0]
 
     step = HamiltonianMC(model.vars, h, path_length=4.)
 

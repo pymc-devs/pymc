@@ -49,8 +49,8 @@ with model:
     yd = Normal('y', sum(effects[g] * predictors, 1), s[g] ** -2, observed=y)
 
     start = find_MAP()
-    h = approx_hess(
-        start)  # find a good orientation using the hessian at the MAP
+    h = find_hessian(start)#approx_hess(
+        #start)  # find a good orientation using the hessian at the MAP
 
     step = HamiltonianMC(model.vars, h, is_cov=False)
 
