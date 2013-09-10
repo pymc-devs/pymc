@@ -7,6 +7,8 @@ from numpy import floor
 from quadpotential import *
 from arraystep import *
 from ..core import *
+from ..tuning import guess_scaling
+
 import numpy as np
 from scipy.sparse import issparse
 
