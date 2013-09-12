@@ -61,7 +61,7 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False, d
     if (not allfinite(mx) or
         not allfinite(logp(mx)) or
             not allfinite(dlogp(mx))):
-            raise ValueError("Optimization error: max, logp or dlogp at max have bad values. max: " + repr(mx) + " logp: " + repr(logp(mx)) + " dlogp: " + repr(dlogp(mx)) +
+            raise ValueError("Optimization error: max, logp or dlogp at max have bad values. Some values may be outside of distribution support. max: " + repr(mx) + " logp: " + repr(logp(mx)) + " dlogp: " + repr(dlogp(mx)) +
                              "Check that 1) you don't have hierarchical parameters, these will lead to points with infinite density. 2) your distribution logp's are properly specified.")
 
     mx = bij.rmap(mx)
