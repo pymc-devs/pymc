@@ -722,6 +722,7 @@ class Sampler(Model):
                     break
                 elif cmd == 'h':
                     self.status = 'halt'
+                    self._halt()
                     break
                 elif cmd == 'b':
                     return
@@ -738,6 +739,7 @@ class Sampler(Model):
         except KeyboardInterrupt:
             if not self.status == 'ready':
                 self.status = 'halt'
+                self._halt()
 
         if self.status == 'ready':
             print_("Sampling terminated successfully.", file=out)
