@@ -1140,6 +1140,21 @@ _Tau_test = np.matrix([[209.47883244, 10.88057915, 13.80581557],
                        [13.80581557, 11.18453854, 209.89396417]])
 
 
+def slo_wishart(W, n, V):
+
+    p = W.shape[0]
+
+    logp = (n - p - 1)*0.5*np.log(det(W))
+    logp += n*0.5*np.log(det(V))
+    logp -= n*p*0.5*np.log(2)
+
+    for i in xrange(1, p+1):
+        logp -= gammaln((n + 1 - i)*0.5)
+
+    logp -= np.trace(np.dot(V, W)*0.5)
+
+    return logp
+
 class test_wishart(TestCase):
 
     """
@@ -1150,16 +1165,6 @@ class test_wishart(TestCase):
     # precision matrix
     Tau_test = _Tau_test / 100
 
-    # def test_samples(self):
-    # test consistency between precision and cov-based
-    #     _npr.seed(1)
-    #     sample_a = rwishart(100, self.Tau_test)
-
-    #     _npr.seed(1)
-    #     sample_b = rwishart_cov(100, self.Tau_test.I)
-
-    #     assert_array_almost_equal(sample_a, sample_b)
-
     def test_likelihoods(self):
         try:
             from scipy.special import gammaln
@@ -1168,18 +1173,8 @@ class test_wishart(TestCase):
 
         W_test = rwishart(100, self.Tau_test)
 
-        def slo_wishart_cov(W, n, V):
-            p = W.shape[0]
-
-            logp = ((n - p - 1) * .5 * np.log(det(W)) - n * p * .5 * np.log(2)
-                    - n * .5 * np.log(det(V)) - p * (p - 1) / 4. * np.log(pi))
-            for i in xrange(1, p + 1):
-                logp -= gammaln((n + 1 - i) * .5)
-            logp -= np.trace(np.linalg.solve(V, W) * .5)
-            return logp
-
         for i in [5, 10, 100, 10000]:
-            right_answer = slo_wishart_cov(W_test, i, self.Tau_test.I)
+            right_answer = slo_wishart(W_test, i, self.Tau_test)
             assert_array_almost_equal(wishart_like(W_test, i, self.Tau_test),
                                       right_answer, decimal=5)
             assert_array_almost_equal(
@@ -1206,74 +1201,45 @@ class test_wishart(TestCase):
         assert(np.abs(np.asarray(delta) / np.asarray(A)).max() < .1)
 
 
-# class test_inverse_wishart(TestCase):
-#     """
-#     Adapted from test_wishart
-#     """
-# Covariance matrix (!)
-#     C_test = _Tau_test.I
+class test_inverse_wishart(TestCase):
+    """
+    Adapted from test_wishart
+    """
+    C_test = _Tau_test.I
 
-# def test_samples(self):
-# test consistency between precision and cov-based
-# _npr.seed(1)
-# sample_a = rinverse_wishart(100, self.C_test)
+    def test_likelihoods(self):
+        try:
+            from scipy.special import gammaln
+        except:
+            raise nose.SkipTest("SciPy not installed.")
 
-# _npr.seed(1)
-# sample_b = rinverse_wishart_prec(100, self.C_test.I)
+        IW_test = rinverse_wishart(100, self.C_test)
 
-# assert_array_almost_equal(sample_a, sample_b)
+        for i in [5,10,100,10000]:
+            right_answer = slo_wishart(IW_test.I, i, self.C_test.I)
+            calculated = inverse_wishart_like(IW_test, i, self.C_test)
+            assert_array_almost_equal(calculated, right_answer, decimal=1)
 
-#     def test_likelihoods(self):
-#         try:
-#             from scipy.special import gammaln
-#         except:
-#             raise nose.SkipTest("SciPy not installed.")
+    def test_wishart_equivalence(self):
 
-#         IW_test = rinverse_wishart(100,self.C_test)
+        IW_test = rinverse_wishart(100, self.C_test)
 
-#         def slo_inv_wishart(W,n,V):
-#             p = W.shape[0]
+        iwlike = inverse_wishart_like(IW_test, 100, self.C_test)
+        wlike = wishart_like(IW_test.I, 100, self.C_test.I)
 
-#             logp = (-0.5*(n+p+1) * np.log(det(W)) - n*p*.5*np.log(2)
-#                      + n*.5*np.log(det(V)) - p*(p-1)/4.*np.log(pi))
+        assert_almost_equal(iwlike, wlike, decimal=6)
 
-#             for i in xrange(1,p+1):
-#                 logp -= gammaln((n+1-i)*.5)
-#             logp -= 0.5*np.trace(V*W.I)
-
-#             return logp
-
-#         for i in [5,10,100,10000]:
-#             right_answer = slo_inv_wishart(IW_test,i,self.C_test)
-#             calculated = inverse_wishart_like(IW_test,i,self.C_test)
-#             assert_array_almost_equal(calculated, right_answer, decimal=1)
-
-#             calculated = inverse_wishart_prec_like(IW_test,i,self.C_test.I)
-#             assert_array_almost_equal(calculated, right_answer, decimal=1)
-
-# def test_wishart_equivalence(self):
-
-# IW_test = rinverse_wishart(100,self.C_test)
-
-# iwlike = inverse_wishart_like(IW_test, 100, self.C_test)
-# wlike = wishart_like(np.linalg.inv(IW_test), 100, np.linalg.inv(self.C_test))
-
-# assert_almost_equal(iwlike, wlike, decimal=6)
-
-#     """
-#     def test_expval(self):
-
-#         n = 100
-#         N = 1000
-
-#         A = 0.*self.C_test
-#         for i in xrange(N):
-#             A += rinverse_wishart(n,self.C_test)
-#         A /= N
-#         delta=A-inverse_wishart_expval(n,self.C_test)
-#         print np.abs(np.asarray(delta)/np.asarray(A)).max()
-#         assert(np.abs(np.asarray(delta)/np.asarray(A)).max()<.5)
-#     """
+    # def test_expval(self):
+    #
+    #     n = 100
+    #     N = 1000
+    #
+    #     A = 0.*self.C_test
+    #     for i in xrange(N):
+    #         A += rinverse_wishart(n, self.C_test)
+    #     A /= N
+    #     delta = A - inverse_wishart_expval(n, self.C_test)
+    #     assert(np.abs(np.asarray(delta)/np.asarray(A)).max() < 0.5)
 
 class test_Stochastic_generator(TestCase):
 

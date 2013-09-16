@@ -201,7 +201,6 @@ cf2py threadsafe
       PARAMETER (infinity = 1.7976931348623157d308)
       DOUBLE PRECISION PI
       LOGICAL csx
-      PARAMETER (PI=3.141592653589793238462643d0)
 
       EXTERNAL DCOPY
 ! DCOPY(N,DX,INCX,DY,INCY) copies x to y
@@ -255,7 +254,7 @@ c Get the trace and log-sqrt-determinants
       like = (n - k - 1) * dx
       like = like + n * db
       like = like - 0.5D0 * tbx
-      like = like - (n*k/2.0d0)*dlog(2.0d0)
+      like = like - (0.5D0*n*k)*dlog(2.0d0)
 
       do i=1,k
         a = (n - i + 1)/2.0D0
@@ -263,7 +262,7 @@ c Get the trace and log-sqrt-determinants
         like = like - g
       enddo
 
-      like = like - k * (k-1) * 0.25D0 * dlog(PI)
+C       like = like - k * (k-1) * 0.25D0 * dlog(PI)
 !
       return
       END
@@ -348,7 +347,7 @@ c trace of V^{-1}*X
         like = like - g
       enddo
 
-      like = like - k * (k-1) * 0.25D0 * dlog(PI)
+C       like = like - k * (k-1) * 0.25D0 * dlog(PI)
 
       return
       END
