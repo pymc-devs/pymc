@@ -2,6 +2,7 @@ import itertools as its
 from checks import *
 from pymc import *
 from numpy import array, inf
+import numpy
 
 from scipy import integrate
 from numdifftools import Gradient
@@ -119,6 +120,11 @@ def test_addpotential():
 
         check_dlogp(model, x, [R])
 
+
+
+def test_wishart_initialization():
+    with Model() as model:
+        x = Wishart('wishart_test', n=3, p=2, V=numpy.eye(2), shape = [2,2])
 
 
 def test_bound():

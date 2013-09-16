@@ -2,7 +2,7 @@ from dist_math import *
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
 
-from theano.sandbox.linalg import det, solve
+from theano.sandbox.linalg import det, solve, trace
 from theano.tensor import dot
 
 
@@ -159,7 +159,7 @@ def Wishart(n, p, V):
             n > p - 1)
 
     mean = n * V
-    mode = switch(n >= p + 1,
+    mode = switch(1*(n >= p + 1),
                  (n - p - 1) * V,
                   nan)
 

@@ -16,7 +16,7 @@ from theano.tensor import (
 
 
 from numpy import pi, inf, nan
-from special import gammaln
+from special import gammaln, multigammaln
 
 from theano.printing import Print
 from distribution import *
