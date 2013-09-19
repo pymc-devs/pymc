@@ -54,13 +54,13 @@ class NormApproxMu(object):
         except:
             stochastic_tuple = stochastics
 
-        for p in stochastic_tuple:
+        for p in stochastics:
             tot_len += self.owner.stochastic_len[p]
 
         mu = zeros(tot_len, dtype=float)
 
         start_index = 0
-        for p in stochastic_tuple:
+        for p in stochastics:
             mu[start_index:(start_index + self.owner.stochastic_len[
                             p])] = self.owner._mu[self.owner._slices[p]]
             start_index += self.owner.stochastic_len[p]
@@ -99,15 +99,15 @@ class NormApproxC(object):
         except:
             stochastic_tuple = stochastics
 
-        for p in stochastic_tuple:
+        for p in stochastics:
             tot_len += self.owner.stochastic_len[p]
 
         C = asmatrix(zeros((tot_len, tot_len)), dtype=float)
 
         start_index1 = 0
-        for p1 in stochastic_tuple:
+        for p1 in stochastics:
             start_index2 = 0
-            for p2 in stochastic_tuple:
+            for p2 in stochastics:
                 C[start_index1:(start_index1 + self.owner.stochastic_len[p1]),
                   start_index2:(start_index2 + self.owner.stochastic_len[p2])] = \
                     self.owner._C[
