@@ -434,6 +434,11 @@ class MCMC(Sampler):
                 print_(
                     "No trace available for %s. DIC value may not be valid." %
                     stochastic.__name__)
+            except TypeError:
+                print_(
+                    "Not able to calculate DIC: invalid stochastic %s" %
+                    stochastic.__name__)
+                return None
 
         # Return twice deviance minus deviance at means
         return 2 * mean_deviance - self.deviance
