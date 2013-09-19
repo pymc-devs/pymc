@@ -1215,6 +1215,8 @@ class test_inverse_wishart(TestCase):
 
         IW_test = rinverse_wishart(100, self.C_test)
 
+        _ = inverse_wishart_like(IW_test, 5, self.C_test)
+
         for i in [5,10,100,10000]:
             right_answer = slo_wishart(IW_test.I, i, self.C_test.I)
             calculated = inverse_wishart_like(IW_test, i, self.C_test)
