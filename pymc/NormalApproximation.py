@@ -483,7 +483,7 @@ class MAP(Model):
 
         Sets all N's stochastics to their MAP values.
         """
-        self._set_stochastics(self.mu[self.stochastics])
+        self._set_stochastics([self.mu[s] for s in self.stochastics])
 
 
 class NormApprox(MAP, Sampler):
