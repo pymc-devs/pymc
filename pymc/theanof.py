@@ -45,7 +45,7 @@ def gradient1(f, v):
 
 @memoize
 def gradient(f, vars=None):
-    if not vars:
+    if vars is None:
         vars = cont_inputs(f)
 
     return t.concatenate([gradient1(f, v) for v in vars], axis=0)
@@ -64,7 +64,7 @@ def jacobian1(f, v):
 
 @memoize
 def jacobian(f, vars=None):
-    if not vars:
+    if vars is None:
         vars = cont_inputs(f)
 
     return t.concatenate([jacobian1(f, v) for v in vars], axis=1)
@@ -88,8 +88,7 @@ def hessian_diag1(f, v):
 
 @memoize
 def hessian_diag(f, vars=None):
-
-    if not vars:
+    if vars is None:
         vars = cont_inputs(f)
 
     return -t.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
