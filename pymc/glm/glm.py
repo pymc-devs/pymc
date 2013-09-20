@@ -155,9 +155,11 @@ def glm(*args, **kwargs):
 
     # Find vars we have not initialized yet
     non_init_vars = set(model.vars).difference(set(coeffs))
-    start = find_MAP(vars=non_init_vars)
-    for var in non_init_vars:
-        var.tag.test_value = start[var.name]
+    if len(non_init_vars) != 0:
+        start = find_MAP(vars=non_init_vars)
+
+        for var in non_init_vars:
+            var.tag.test_value = start[var.name]
 
     return [y_est] + coeffs + list(non_init_vars)
 
