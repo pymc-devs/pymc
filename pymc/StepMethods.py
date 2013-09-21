@@ -785,20 +785,6 @@ class DrawFromPrior(StepMethod):
         return 0
 
 
-class NoStepper(StepMethod):
-
-    """
-    Step and tune methods do nothing.
-
-    Useful for holding stochastics constant without setting observed=True.
-    """
-    def step(self, *args, **kwargs):
-        pass
-
-    def tune(self, *args, **kwargs):
-        return False
-
-
 class DiscreteMetropolis(Metropolis):
 
     """
