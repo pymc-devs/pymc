@@ -6,7 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build
-HTMLBUILDDIR  = ~/Code/pymc-pages
+HTMLBUILDDIR  = _build/html
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
