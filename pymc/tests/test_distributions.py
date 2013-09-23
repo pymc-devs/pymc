@@ -59,7 +59,7 @@ except:
     PLOT = False
 
 # Set RNG seed
-_npr.seed(13253221)
+_npr.seed(1)
 
 # Some python densities for comparison
 

@@ -1493,8 +1493,6 @@ def inverse_wishart_like(X, n, C):
     """
     return flib.blas_wishart(X.I, n, C.I)
 
-    #return flib.blas_inv_wishart(X, n, C)
-
 # Double exponential (Laplace)--------------------------------------------
 @randomwrap
 def rlaplace(mu, tau, size=None):
@@ -2493,45 +2491,6 @@ def t_grad_setup(x, nu, f):
 t_grad_like = {'value'  : lambda x, nu : t_grad_setup(x, nu, flib.t_grad_x),
                'nu' : lambda x, nu : t_grad_setup(x, nu, flib.t_grad_nu)}
 
-# Half-non-central t-----------------------------------------------
-@randomwrap
-def rhalf_noncentral_t(mu, lam, nu, size=None):
-    """
-    Half-non-central Student's t random variates.
-    """
-    return abs(rnoncentral_t(mu, lam, nu, size=size))
-
-def noncentral_t_expval(mu, lam, nu):
-    """
-    Expectation of non-central Student's t random variables. Only defined
-    for nu>1.
-    """
-    if nu > 1:
-        return mu
-    return inf
-
-def noncentral_t_like(x, mu, lam, nu):
-    R"""
-    Non-central Student's T log-likelihood. Describes a normal variable
-    whose precision is gamma distributed.
-
-    .. math::
-        f(x|\mu,\lambda,\nu) = \frac{\Gamma(\frac{\nu +
-        1}{2})}{\Gamma(\frac{\nu}{2})}
-        \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}}
-        \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}
-
-    :Parameters:
-      - `x` : Input data.
-      - `mu` : Location parameter.
-      - `lambda` : Scale parameter.
-      - `nu` : Degrees of freedom.
-
-    """
-    mu = np.asarray(mu)
-    lam = np.asarray(lam)
-    nu = np.asarray(nu)
-    return flib.nct(x, mu, lam, nu)
 
 # DiscreteUniform--------------------------------------------------
 @randomwrap

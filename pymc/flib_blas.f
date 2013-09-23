@@ -194,7 +194,7 @@ cf2py double precision intent(out) :: like
 cf2py integer intent(hide),depend(X) :: k=len(X)
 cf2py threadsafe
 
-      INTEGER i,k,n
+      INTEGER i,k,n,info
       DOUBLE PRECISION X(k,k),T(k,k),bx(k,k)
       DOUBLE PRECISION dx,db,tbx,a,g,like
       DOUBLE PRECISION infinity
@@ -222,17 +222,17 @@ c trace of T*X
 
 c Cholesky factor T, puke if not pos def.
       call DPOTRF( 'L', k, T, k, info )
-      if (info .GT. 0) then
-        like = -infinity
-        RETURN
-      endif
+C       if (info .GT. 0) then
+C         like = -infinity
+C         RETURN
+C       endif
 
 c Cholesky factor X, puke if not pos def.
       call DPOTRF( 'L', k, X, k, info )
-      if (info .GT. 0) then
-        like = -infinity
-        RETURN
-      endif
+C       if (info .GT. 0) then
+C         like = -infinity
+C         RETURN
+C       endif
 
 c Get the trace and log-sqrt-determinants
       tbx = 0.0D0
@@ -349,94 +349,5 @@ c trace of V^{-1}*X
 
 C       like = like - k * (k-1) * 0.25D0 * dlog(PI)
 
-      return
-      END
-
-
-      SUBROUTINE blas_inv_wishart(X,k,n,T,like)
-
-c Inverse Wishart log-likelihood function.
-
-cf2py double precision dimension(k,k),intent(copy) :: X,T
-cf2py double precision intent(out) :: like
-cf2py integer intent(hide),depend(X) :: k=len(X)
-cf2py threadsafe
-
-      INTEGER i,k,n
-      DOUBLE PRECISION X(k,k),T(k,k),TX(k,k)
-      DOUBLE PRECISION dx,db,tbx,a,g,like
-      DOUBLE PRECISION infinity
-      PARAMETER (infinity = 1.7976931348623157d308)
-      DOUBLE PRECISION PI
-      LOGICAL csx
-      PARAMETER (PI=3.141592653589793238462643d0)
-
-      EXTERNAL DCOPY
-! DCOPY(N,DX,INCX,DY,INCY) copies x to y
-      EXTERNAL DPOTRF
-! DPOTRF( UPLO, N, A, LDA, INFO ) Cholesky factorization
-      EXTERNAL DTRMM
-! DTRMM(SIDE,UPLO,TRANSA,DIAG,M,N,ALPHA,A,LDA,B,LDB) B := alpha*B*op( A )
-
-c Check X and T for symmetry
-C       CALL checksymm(X,k,csx)
-C       if (csx) then
-C           print *,"checksymm failed"
-C           like = -infinity
-C           return
-C       end if
-
-c trace of T*X^{-1}
-!     TX <- T
-      call DCOPY(k*k,T,1,TX,1)
-!     TX <- T * X^{-1}
-      call DTRMM('R','L','T','N',k,k,1.0D0,X,k,TX,k)
-
-c Cholesky factor T, puke if not pos def.
-      call DPOTRF( 'L', k, T, k, info )
-      if (info .GT. 0) then
-        print *,"cholesky of T failed"
-        like = -infinity
-        RETURN
-      endif
-
-c Cholesky factor X, puke if not pos def.
-      call DPOTRF( 'L', k, X, k, info )
-      if (info .GT. 0) then
-        print *,"cholesky of X failed"
-        like = -infinity
-        RETURN
-      endif
-
-c Get the trace and log-sqrt-determinants
-      tbx = 0.0D0
-      dx = 0.0D0
-      db = 0.0D0
-
-      do i=1,k
-        tbx = tbx + TX(i,i)
-        dx = dx + dlog(X(i,i))
-        db = db + dlog(T(i,i))
-      enddo
-
-      if (k .GT. n) then
-        print *, "k > n"
-        like = -infinity
-        RETURN
-      endif
-
-      like = -1.0D0*(n + k + 1) * dx
-      like = like + 0.5D0 * n * db
-      like = like - 0.5D0 * tbx
-      like = like - (n*k/2.0d0)*dlog(2.0d0)
-
-      do i=1,k
-        a = (n - i + 1)/2.0D0
-        call gamfun(a, g)
-        like = like - g
-      enddo
-
-      like = like - k * (k-1) * 0.25D0 * dlog(PI)
-!
       return
       END
