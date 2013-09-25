@@ -4,15 +4,14 @@ Created on Mar 12, 2011
 from __future__ import division
 @author: johnsalvatier
 '''
-import numdifftools as nd
 import numpy as np
 from numpy import exp, log, sqrt
 from ..core import *
 
-__all__ = ['approx_hess', 'find_hessian', 'trace_cov', 'guess_scaling']
+__all__ = ['approx_hessian', 'find_hessian', 'trace_cov', 'guess_scaling']
 
 
-def approx_hess(point, vars=None, model=None):
+def approx_hessian(point, vars=None, model=None):
     """
     Returns an approximation of the Hessian at the current chain location.
 
@@ -23,6 +22,8 @@ def approx_hess(point, vars=None, model=None):
     vars : list
         Variables for which Hessian is to be calculated.
     """
+    from numdifftools import Jacobian
+
     model = modelcontext(model)
     if vars is None:
         vars = model.cont_vars
@@ -40,7 +41,7 @@ def approx_hess(point, vars=None, model=None):
     this should be the Hessian; invert it to find the approximate
     covariance matrix.
     '''
-    return -nd.Jacobian(grad_logp)(bij.map(point))
+    return -Jacobian(grad_logp)(bij.map(point))
 
 
 def find_hessian(point, vars=None, model=None):
