@@ -15,10 +15,8 @@ with model:
 
     # start sampling at the MAP
     start = find_MAP()
-    h = approx_hess(
-        start)  # find a good orientation using the hessian at the MAP
 
-    step = HamiltonianMC(model.vars, h, is_cov=False)
+    step = NUTS(scaling=start)
 
     ndraw = 3e3
-    trace = sample(ndraw, step, start)
+    trace = sample(ndraw, step, start=start)

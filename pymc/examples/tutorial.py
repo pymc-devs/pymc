@@ -107,27 +107,12 @@ print "xtrue", xtrue
 
 # <markdowncell>
 
-# We will use Hamiltonian Monte Carlo (HMC) to sample from the posterior as implemented by the `HamiltonianMC` step method class.
-#
-# HMC requires an (inverse) covariance matrix to scale its proposal points. So first we pick one. It is helpful if it approximates the true (inverse) covariance matrix of the posterior. For distributions which are somewhat normal-like, the hessian matrix (matrix of 2nd derivatives of the log posterior) close to the MAP will approximate the inverse covariance matrix of the posterior.
-#
-# The `approx_hess(start)` function works similarly to the find_MAP
-# function and returns the hessian at a given point.
+# We will use NUTS to sample from the posterior as implemented by the `NUTS` step method class.
 
 # <codecell>
 
 with model:
-    h = approx_hess(start)
-
-# <markdowncell>
-
-# Now we build our step method. The `HamiltonianMC` constructor takes a
-# set of variables it should update and a scaling matrix.
-
-# <codecell>
-
-with model:
-    step = HamiltonianMC(model.vars, h)
+    step = NUTS(scaling=start)
 
 # <markdowncell>
 

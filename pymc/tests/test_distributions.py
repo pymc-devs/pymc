@@ -5,7 +5,6 @@ from numpy import array, inf
 import numpy
 
 from scipy import integrate
-from numdifftools import Gradient
 from knownfailure import *
 
 
@@ -181,6 +180,10 @@ def check_int_to_1(model, value, domains):
 
 
 def check_dlogp(model, value, domains):
+    try:
+        from numdifftools import Gradient
+    except ImportError:
+        return
 
     domains = [d[1:-1] for d in domains]
     bij = DictToArrayBijection(
