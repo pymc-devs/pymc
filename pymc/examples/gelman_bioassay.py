@@ -22,9 +22,6 @@ with Model() as model:
     # Data likelihood
     deaths = Binomial('deaths', n=n, p=theta, observed=[0, 1, 3, 5])
 
-    start = model.test_point
-    h = approx_hess(start)
+    step = NUTS()
 
-    step = NUTS(model.vars, h)
-
-    trace = sample(1000, step, start, trace=model.named_vars)
+    trace = sample(1000, step, trace=model.named_vars)
