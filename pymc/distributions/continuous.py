@@ -11,7 +11,7 @@ from dist_math import *
 from numpy.random import uniform as runiform, normal as rnormal
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
-           'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos']
+           'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos', 'Lognormal']
 
 def get_tau(tau=None, sd=None):
     if tau is None:
@@ -226,6 +226,54 @@ def Laplace(mu, b):
 
     def logp(value):
         return -log(2 * b) - abs(value - mu) / b
+
+    return locals()
+
+
+@tensordist(continuous)
+def Lognormal(mu=0, tau=1):
+    """
+    Log-normal log-likelihood.
+
+    Distribution of any random variable whose logarithm is normally
+    distributed. A variable might be modeled as log-normal if it can
+    be thought of as the multiplicative product of many small
+    independent factors.
+
+    .. math::
+        f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
+        \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
+
+    :Parameters:
+      - `x` : x > 0
+      - `mu` : Location parameter.
+      - `tau` : Scale parameter (tau > 0).
+
+    .. note::
+
+       :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
+       :math:`Var(X)=(e^{1/\tau}-1)e^{2\mu+\frac{1}{\tau}}`
+
+    """
+    def logp(value):
+        return bound(
+            -0.5*tau*(log(value) - mu)**2 + 0.5*log(tau/(2.*pi)) - log(value),
+            tau > 0)
+
+    mean = exp(mu + 1./(2*tau))
+    median = exp(mu)
+    mode = exp(mu - 1./tau)
+
+    variance = (exp(1./tau) - 1) * exp(2*mu + 1./tau)
+
+    logp.__doc__ = """
+        Log-normal log-likelihood with paramters mu={0} and tau={1}.
+
+        Parameters
+        ----------
+        value : float
+            Input data
+        """
 
     return locals()
 
