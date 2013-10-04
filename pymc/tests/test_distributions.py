@@ -64,6 +64,8 @@ def test_negative_binomial():
 def test_laplace():
     checkd(Laplace, R, {'mu': R, 'b': Rplus})
 
+def test_lognormal():
+    checkd(Lognormal, Rplus, {'mu': R, 'tau': Rplus}, False)
 
 def test_t():
     checkd(T, R, {'nu': Rplus, 'mu': R, 'lam': Rplus})
