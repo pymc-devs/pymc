@@ -102,3 +102,27 @@ def test_slice():
     assert np.all([burned_again[v].shape==(iterations-2*burn, start[v].size) for v in burned_again.varnames])
     assert np.all([burned[v].shape==(iterations-burn, start[v].size) for v in burned.varnames])
 
+def test_multi_slice():
+
+    model, start, step, moments = simple_init()
+
+    iterations = 100
+    burn = 10
+
+    with model:
+        tr = psample(iterations, start=start, step=step, threads=2)
+
+    burned = tr[burn:]
+
+    # Slicing returns a MultiTrace
+    assert type(burned) is pm.trace.MultiTrace
+
+    # Indexing returns a list of arrays
+    assert type(tr[tr.varnames[0]]) is list
+    assert type(tr[tr.varnames[0]][0]) is np.ndarray
+
+    # # Burned trace is of the correct length
+    assert np.all([burned[v][0].shape==(iterations-burn, start[v].size) for v in burned.varnames])
+
+    # Original trace did not change
+    assert np.all([tr[v][0].shape==(iterations, start[v].size) for v in tr.varnames])

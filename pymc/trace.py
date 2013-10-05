@@ -183,8 +183,13 @@ class MultiTrace(object):
                 raise ValueError("vars can't be None if trace count specified")
             self.traces = [NpTrace(vars) for _ in xrange(traces)]
 
-    def __getitem__(self, key):
-        return [h[key] for h in self.traces]
+    def __getitem__(self, index_value):
+
+        item_list = [h[index_value] for h in self.traces]
+
+        if isinstance(index_value, slice):
+            return MultiTrace(item_list)
+        return item_list
 
     @property
     def varnames(self):
