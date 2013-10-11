@@ -2,7 +2,7 @@ from __future__ import division
 
 import numpy as np
 from .utils import msqrt, check_type, round_array, float_dtypes, integer_dtypes, bool_dtypes, safe_len, find_generations, logp_of_set, symmetrize, logp_gradient_of_set
-from numpy import ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable, multiply, transpose, tri, pi
+from numpy import rank, ones, zeros, log, shape, cov, ndarray, inner, reshape, sqrt, any, array, all, abs, exp, where, isscalar, iterable, multiply, transpose, tri, pi
 from numpy.linalg.linalg import LinAlgError
 from numpy.linalg import pinv, cholesky
 from numpy.random import randint, random
@@ -897,7 +897,7 @@ class BinaryMetropolis(Metropolis):
             return 0
 
     def step(self):
-        if not isscalar(self.stochastic.value):
+        if rank(self.stochastic.value):
             Metropolis.step(self)
         else:
 
