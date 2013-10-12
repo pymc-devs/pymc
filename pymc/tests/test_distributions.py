@@ -1289,7 +1289,7 @@ def test_unicode():
     trans = N**2
 
     series = pd.Series([N, trans])
-    print series
+
 
 if __name__ == '__main__':
 
