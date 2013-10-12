@@ -1201,33 +1201,33 @@ class test_wishart(TestCase):
         assert(np.abs(np.asarray(delta) / np.asarray(A)).max() < .1)
 
 
-class test_inverse_wishart(TestCase):
-    """
-    Adapted from test_wishart
-    """
-    C_test = _Tau_test.I
-
-    def test_likelihoods(self):
-        try:
-            from scipy.special import gammaln
-        except:
-            raise nose.SkipTest("SciPy not installed.")
-
-        IW_test = rinverse_wishart(100, self.C_test)
-
-        for i in [5,10,100,10000]:
-            right_answer = slo_wishart(IW_test.I, i, self.C_test.I)
-            calculated = inverse_wishart_like(IW_test, i, self.C_test)
-            assert_array_almost_equal(calculated, right_answer, decimal=1)
-
-    def test_wishart_equivalence(self):
-
-        IW_test = rinverse_wishart(100, self.C_test)
-
-        iwlike = inverse_wishart_like(IW_test, 100, self.C_test)
-        wlike = wishart_like(IW_test.I, 100, self.C_test.I)
-
-        assert_almost_equal(iwlike, wlike, decimal=6)
+# class test_inverse_wishart(TestCase):
+#     """
+#     Adapted from test_wishart
+#     """
+#     C_test = _Tau_test.I
+#
+#     def test_likelihoods(self):
+#         try:
+#             from scipy.special import gammaln
+#         except:
+#             raise nose.SkipTest("SciPy not installed.")
+#
+#         IW_test = rinverse_wishart(100, self.C_test)
+#
+#         for i in [5,10,100,10000]:
+#             right_answer = slo_wishart(IW_test.I, i, self.C_test.I)
+#             calculated = inverse_wishart_like(IW_test, i, self.C_test)
+#             assert_array_almost_equal(calculated, right_answer, decimal=1)
+#
+#     def test_wishart_equivalence(self):
+#
+#         IW_test = rinverse_wishart(100, self.C_test)
+#
+#         iwlike = inverse_wishart_like(IW_test, 100, self.C_test)
+#         wlike = wishart_like(IW_test.I, 100, self.C_test.I)
+#
+#         assert_almost_equal(iwlike, wlike, decimal=6)
 
     # def test_expval(self):
     #
