@@ -54,10 +54,25 @@ Vec2small = Domain([
     ], 
     edges = ([ -25, -25], [25, 25]))
 
-PdMatrix = Domain([
+Vec3small = Domain([ 
+    [.1, 0.0, 0],
+    [-2.3, .1,1],
+    [-2.3, 1.5, 2],
+    ], 
+    edges = ([ -25, -25, -25], [25, 25,25]))
+
+PdMatrix2 = Domain([
     np.eye(2),
     [[.1, .05],
-    [.05, 4.5]]
+     [.05, 4.5]]
+    ], 
+    edges = (None,None))
+
+PdMatrix3 = Domain([
+    np.eye(3),
+    [[.1, .05,0],
+     [.05, 1, 0],
+     [0, 0, 4.5]]
     ], 
     edges = (None,None))
     
@@ -144,7 +159,8 @@ def test_zeroinflatedpoisson():
     checkd(ZeroInflatedPoisson, Nat, {'theta': Rplus, 'z': Bool})
 
 def test_mvnormal():
-    checkd(MvNormal, Vec2small, {'mu': R, 'Tau': PdMatrix}, checks = [check_dlogp, check_int_to_1])
+    checkd(MvNormal, Vec2small, {'mu': R, 'Tau': PdMatrix2}, checks = [check_dlogp, check_int_to_1])
+    checkd(MvNormal, Vec3small, {'mu': R, 'Tau': PdMatrix3}, checks = [check_dlogp, check_int_to_1])
 
 
 def test_densitydist():
@@ -187,20 +203,33 @@ def check_int_to_1(model, value, domain, paramdomains):
 
         pdfx = bij.mapf(pdf)
 
-        if value.dshape == ():
-            if value.dtype in continuous_types:
-                area = integrate.quad(pdfx, domain.lower, domain.upper, epsabs=1e-8)[0]
-            else:
-                area = np.sum(map(pdfx, np.arange(domain.lower, domain.upper + 1)))
-        elif value.dshape == (2,):
-            def pdfx2(a,b): 
-                return pdfx([a,b])
-
-            area = integrate.dblquad(pdfx2, 
-                    domain.lower[0], domain.upper[0], 
-                    lambda a: domain.lower[1], lambda a: domain.upper[1])[0]
+        area = integrate_nd(pdfx, domain, value.dshape, value.dtype)
 
         assert_almost_equal(area, 1, err_msg=str(pt))
+
+def integrate_nd(f, domain, shape, dtype):
+        if shape == () or shape == (1,):
+            if dtype in continuous_types:
+                return integrate.quad(f, domain.lower, domain.upper, epsabs=1e-8)[0]
+            else:
+                return np.sum(map(f, np.arange(domain.lower, domain.upper + 1)))
+        elif shape == (2,):
+            def f2(a,b): 
+                return f([a,b])
+
+            return integrate.dblquad(f2, 
+                    domain.lower[0], domain.upper[0], 
+                    lambda a: domain.lower[1], lambda a: domain.upper[1])[0]
+        elif shape == (3,):
+            def f3(a,b,c): 
+                return f([a,b,c])
+
+            return integrate.tplquad(f3, 
+                    domain.lower[0], domain.upper[0], 
+                    lambda a, b: domain.lower[1], lambda a,b: domain.upper[1],
+                    lambda a, b: domain.lower[2], lambda a,b: domain.upper[2])[0]
+        else: 
+            raise ValueError("Dont know how to integrate shape: " + str(shape))
 
 def check_dlogp(model, value, domain, paramdomains):
     try:
