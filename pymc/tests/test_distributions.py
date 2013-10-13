@@ -47,15 +47,17 @@ NatBig = Domain([0, 1, 2, 3, 5000, 50000], 'int64')
 Bool = Domain([0, 0, 1, 1], 'int64')
 
 
-Vec2 =Domain([ 
+Vec2small = Domain([ 
     [.1, 0.0],
     [-2.3, .1],
     [-2.3, 1.5],
     ], 
-    edges = ([ -inf, -inf ], [inf, inf]))
+    edges = ([ -25, -25], [25, 25]))
 
 PdMatrix = Domain([
-    np.eye(2)
+    np.eye(2),
+    [[.1, .05],
+    [.05, 4.5]]
     ], 
     edges = (None,None))
     
@@ -142,7 +144,7 @@ def test_zeroinflatedpoisson():
     checkd(ZeroInflatedPoisson, Nat, {'theta': Rplus, 'z': Bool})
 
 def test_mvnormal():
-    checkd(MvNormal, Vec2, {'mu': R, 'Tau': PdMatrix}, checks = [check_dlogp])
+    checkd(MvNormal, Vec2small, {'mu': R, 'Tau': PdMatrix}, checks = [check_dlogp, check_int_to_1])
 
 
 def test_densitydist():
@@ -185,13 +187,20 @@ def check_int_to_1(model, value, domain, paramdomains):
 
         pdfx = bij.mapf(pdf)
 
-        if value.dtype in continuous_types:
-            area = integrate.quad(pdfx, domain.lower, domain.upper, epsabs=1e-8)[0]
-        else:
-            area = np.sum(map(pdfx, np.arange(domain.lower, domain.upper + 1)))
+        if value.dshape == ():
+            if value.dtype in continuous_types:
+                area = integrate.quad(pdfx, domain.lower, domain.upper, epsabs=1e-8)[0]
+            else:
+                area = np.sum(map(pdfx, np.arange(domain.lower, domain.upper + 1)))
+        elif value.dshape == (2,):
+            def pdfx2(a,b): 
+                return pdfx([a,b])
+
+            area = integrate.dblquad(pdfx2, 
+                    domain.lower[0], domain.upper[0], 
+                    lambda a: domain.lower[1], lambda a: domain.upper[1])[0]
 
         assert_almost_equal(area, 1, err_msg=str(pt))
-
 
 def check_dlogp(model, value, domain, paramdomains):
     try:
@@ -241,3 +250,4 @@ def checkd(distfam, valuedomain, vardomains,
         for check in checks: 
             check(m, m.named_vars['value'], valuedomain, domains)
 
+test_mvnormal()

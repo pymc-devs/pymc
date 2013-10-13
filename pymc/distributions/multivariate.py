@@ -24,7 +24,9 @@ def MvNormal(mu, Tau):
 
     def logp(value):
         delta = value - mu
-        return 1 / 2. * (log(det(Tau)) - dot(delta.T, dot(Tau, delta)))
+        k = Tau.shape[0]
+
+        return -k/2 * log(2*pi) + 1 / 2. * (log(det(Tau)) - dot(delta.T, dot(Tau, delta)))
 
     mean = median = mode = mu
 
