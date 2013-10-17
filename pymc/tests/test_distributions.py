@@ -66,15 +66,15 @@ Vec3small = Domain([
 
 PdMatrix2 = Domain([
     np.eye(2),
-    [[.1, .05],
+    [[.5, .05],
      [.05, 4.5]]
     ], 
     edges = (None,None))
 
 PdMatrix3 = Domain([
     np.eye(3),
-    [[.1, .05,0],
-     [.05, 1, 0],
+    [[.5, .1,0],
+     [.1, 1, 0],
      [0, 0, 2.5]]
     ], 
     edges = (None,None))
@@ -178,7 +178,7 @@ def test_addpotential():
         x = Normal('x', 1, 1)
         model.AddPotential(-x ** 2)
 
-        check_dlogp(model, x, [R])
+        check_dlogp(model, x, R, [])
 
 
 
@@ -192,7 +192,9 @@ def test_bound():
         PositiveNormal = Bound(Normal, -.2)
         x = PositiveNormal('x', 1, 1)
 
-        check_dlogp(model, x, [Rplus - .2])
+        Rplus2 = Domain([-.2, -.19,-.1, 0, .5, 1, inf])
+
+        check_dlogp(model, x, Rplus2, [])
 
 def check_int_to_1(model, value, domain, paramdomains):
     pdf = compilef(exp(model.logp))
@@ -275,7 +277,7 @@ def build_model(distfam, valuedomain, vardomains, extra_args={}):
 def checkd(distfam, valuedomain, vardomains,
            checks = [check_int_to_1, check_dlogp], extra_args={}):
 
-        m = build_model(distfam, valuedomain, vardomains, extra_args={})
+        m = build_model(distfam, valuedomain, vardomains, extra_args=extra_args)
 
         domains = [vardomains[str(v)] for v in m.vars[:-1]]
 
