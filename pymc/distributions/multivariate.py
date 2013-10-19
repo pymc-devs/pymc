@@ -2,7 +2,7 @@ from dist_math import *
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
 
-from theano.sandbox.linalg import det, solve, trace, matrix_inv
+from theano.sandbox.linalg import det, solve, matrix_inverse, trace
 from theano.tensor import dot
 
 
@@ -129,7 +129,7 @@ def Wishart(n, p, V):
     """
     The Wishart distribution is the probability
     distribution of the maximum-likelihood estimator (MLE) of the precision
-    matrix of a multivariate normal distribution. If tau=1, the distribution
+    matrix of a multivariate normal distribution. If V=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
 
     For an alternative parameterization based on :math:`C=T{-1}` (Not yet implemented)
@@ -143,8 +143,11 @@ def Wishart(n, p, V):
     :Parameters:
       n : int
         Degrees of freedom, > 0.
-      tau : matrix
-        Symmetric and positive definite
+      p : int 
+        Dimensionality, > 0
+      V : ndarray
+        p x p positive definite matrix 
+        
 
     :Support:
       X : matrix
@@ -154,7 +157,7 @@ def Wishart(n, p, V):
     def logp(X):
         IVI = det(V)
         return bound(
-            ((n - p - 1) * log(IVI) - trace(matrix_inv(V).dot(X)) -
+            ((n - p - 1) * log(IVI) - trace(matrix_inverse(V).dot(X)) -
              n * p * log(
              2) - n * log(IVI) - 2 * multigammaln(p, n / 2)) / 2,
 

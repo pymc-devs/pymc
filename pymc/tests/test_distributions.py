@@ -165,9 +165,17 @@ def test_mvnormal2():
     checkd(MvNormal, Vec2small, {'mu': R, 'tau': PdMatrix2}, checks = [check_dlogp, check_int_to_1])
 def test_mvnormal3():
     checkd(MvNormal, Vec3small, {'mu': R, 'tau': PdMatrix3}, checks = [check_int_to_1])
+
 def test_mvnormal3d():
     checkd(MvNormal, Vec3small, {'mu': R, 'tau': PdMatrix3}, checks = [check_dlogp])
 
+
+
+def test_wishart2():
+    checkd(Wishart, PdMatrix2, {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix2}, checks = [check_dlogp], extra_args={'p' : 2})
+
+def test_wishart3():
+    checkd(Wishart, PdMatrix2, {'n': Domain([3, 4, 5, 2000]) , 'V': PdMatrix3}, checks = [check_dlogp], extra_args={'p' : 3})
 
 def test_densitydist():
     def logp(x):
@@ -240,13 +248,11 @@ def integrate_nd(f, domain, shape, dtype):
     else: 
         raise ValueError("Dont know how to integrate shape: " + str(shape))
 
-def check_dlogp(model, value, domains):
+def check_dlogp(model, value, domain, paramdomains):
     try:
         from numdifftools import Gradient
     except ImportError:
         return
-
-def check_dlogp(model, value, domain, paramdomains):
 
     domains = paramdomains + [domain] 
     bij = DictToArrayBijection(
