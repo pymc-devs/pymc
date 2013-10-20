@@ -4,13 +4,13 @@ from .cov import C
 from pymc.gp import *
 
 # Generate realizations
-f_list=[Realization(M, C) for i in range(3)]
+f_list = [Realization(M, C) for i in range(3)]
 
-#### - Plot - ####
+# - Plot - ####
 if __name__ == '__main__':
     from pylab import *
 
-    x=arange(-1.,1.,.01)
+    x = arange(-1., 1., .01)
     clf()
 
     plot_envelope(M, C, x)

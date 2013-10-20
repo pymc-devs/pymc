@@ -381,7 +381,8 @@ def plotwrapper(f):
 
 
 @plotwrapper
-def plot(data, name, format='png', suffix='', path='./', common_scale=True, datarange=(None, None),
+def plot(
+    data, name, format='png', suffix='', path='./', common_scale=True, datarange=(None, None),
         new=True, last=True, rows=1, num=1, fontmap=None, verbose=1):
     """
     Generates summary plots for nodes of a given PyMC object.
@@ -1163,7 +1164,8 @@ def summary_plot(
             for variable in vars:
                 R[variable.__name__] = gelman_rubin(variable)
         except ValueError:
-            print('Could not calculate Gelman-Rubin statistics. Requires multiple chains of equal length.')
+            print(
+                'Could not calculate Gelman-Rubin statistics. Requires multiple chains of equal length.')
             rhat = False
 
     # Empty list for y-axis labels

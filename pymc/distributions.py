@@ -374,8 +374,10 @@ def stochastic_from_data(name, data, lower=-np.inf, upper=np.inf,
 
     # account for tail contribution
     lower_tail = upper_tail = 0.
-    if lower > -np.inf: lower_tail = pdf.integrate_box(-np.inf, lower)
-    if upper <  np.inf: upper_tail = pdf.integrate_box(upper, np.inf)
+    if lower > -np.inf:
+        lower_tail = pdf.integrate_box(-np.inf, lower)
+    if upper <  np.inf:
+        upper_tail = pdf.integrate_box(upper, np.inf)
     factor = 1./(1. - (lower_tail + upper_tail))
 
     def logp(value):
@@ -393,7 +395,8 @@ def stochastic_from_data(name, data, lower=-np.inf, upper=np.inf,
             res = pdf.resample(1)[0][0]
         return res
 
-    if value == None: value = random()
+    if value == None:
+        value = random()
 
     return Stochastic(logp     = logp,
                       doc      = 'Non-parametric density with Gaussian Kernels.',

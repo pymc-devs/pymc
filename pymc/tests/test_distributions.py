@@ -1144,16 +1144,17 @@ def slo_wishart(W, n, V):
 
     p = W.shape[0]
 
-    logp = (n - p - 1)*0.5*np.log(det(W))
-    logp += n*0.5*np.log(det(V))
-    logp -= n*p*0.5*np.log(2)
+    logp = (n - p - 1) * 0.5 * np.log(det(W))
+    logp += n * 0.5 * np.log(det(V))
+    logp -= n * p * 0.5 * np.log(2)
 
-    for i in xrange(1, p+1):
-        logp -= gammaln((n + 1 - i)*0.5)
+    for i in xrange(1, p + 1):
+        logp -= gammaln((n + 1 - i) * 0.5)
 
-    logp -= np.trace(np.dot(V, W)*0.5)
+    logp -= np.trace(np.dot(V, W) * 0.5)
 
     return logp
+
 
 class test_wishart(TestCase):
 
@@ -1278,7 +1279,6 @@ class test_shape_consistency(TestCase):
                       True, value=data)
 
 
-
 def test_unicode():
     try:
         import pandas as pd
@@ -1286,7 +1286,7 @@ def test_unicode():
         return
 
     N = Normal('x', np.ones(3), np.ones(3))
-    trans = N**2
+    trans = N ** 2
 
     series = pd.Series([N, trans])
     print series
