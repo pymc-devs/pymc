@@ -11,16 +11,16 @@ __all__ = ['switch', 'early_mean', 'late_mean', 'disasters']
 
 from pymc import DiscreteUniform, Exponential, deterministic, Poisson, Uniform, Lambda, MCMC, observed, poisson_like
 from pymc.distributions import Impute
-from numpy.ma import masked_array
+from numpy.ma import masked_values
 import numpy as np
 
-# Missing values indicated by -999 placeholder values
+# Missing values indicated by None placeholder values
 disasters_array = np.array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
-                            2, 2, 3, 4, 2, 1, 3, -999, 2, 1, 1, 1, 1, 3, 0, 0,
+                            2, 2, 3, 4, 2, 1, 3, None, 2, 1, 1, 1, 1, 3, 0, 0,
                             1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
                             0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-                            3, 3, 1, -999, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+                            3, 3, 1, None, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
                             0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 
 
@@ -49,7 +49,7 @@ def rate(s=switch, e=early_mean, l=late_mean):
 # The efficient way, using masked arrays:
 # Generate masked array. Where the mask is true,
 # the value is taken as missing.
-masked_values = masked_array(disasters_array, mask=disasters_array == -999)
+masked_values = masked_values(disasters_array, value=None)
 
 # Pass masked array to data stochastic, and it does the right thing
 disasters = Poisson('disasters', mu=rate, value=masked_values, observed=True)
