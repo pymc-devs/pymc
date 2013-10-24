@@ -56,6 +56,12 @@ class test_norm_approx(TestCase):
         N.fit('fmin')
         assert((abs(N._sig * N._sig.T - N._C) < 1.0e-14).all())
 
+    def test_get(self):
+        N = NormApprox(model)
+        N.fit('fmin')
+        N.mu[N.alpha, N.beta]
+        N.C[N.alpha, N.beta]
+
     def test_draws(self):
         N = NormApprox(model)
         N.fit('fmin')
