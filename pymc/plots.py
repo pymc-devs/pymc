@@ -1,4 +1,5 @@
 from pylab import *
+import matplotlib.pyplot as plt
 try:
     import matplotlib.gridspec as gridspec
 except ImportError:
@@ -10,7 +11,25 @@ from .trace import *
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
-def traceplot(trace, vars=None):
+def traceplot(trace, vars=None, figsize=None):
+    """Plot samples histograms and values
+
+    Parameters
+    ----------
+
+    trace : result of MCMC run
+    vars : list of variable names
+        variables to be plotted, if None all variable are plotted
+    figsize : figure size tuple
+        if None, size is (12, num of variables * 2) inch
+
+    Returns
+    -------
+
+    fig : figure object
+
+    """
+
     if vars is None:
         vars = trace.varnames
 
@@ -18,7 +37,11 @@ def traceplot(trace, vars=None):
         trace = trace.combined()
 
     n = len(vars)
-    f, ax = subplots(n, 2, squeeze=False)
+
+    if figsize is None:
+        figsize = (12, n*2)
+
+    fig, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
 
     for i, v in enumerate(vars):
         d = np.squeeze(trace[v])
@@ -28,12 +51,15 @@ def traceplot(trace, vars=None):
         else:
             kdeplot_op(ax[i, 0], d)
         ax[i, 0].set_title(str(v))
+        ax[i, 0].grid(True)
+        ax[i, 1].set_title(str(v))
         ax[i, 1].plot(d, alpha=.35)
 
-        ax[i, 0].set_ylabel("frequency")
-        ax[i, 1].set_ylabel("sample value")
+        ax[i, 0].set_ylabel("Frequency")
+        ax[i, 1].set_ylabel("Sample value")
 
-    return f
+    plt.tight_layout()
+    return fig
 
 
 def kdeplot_op(ax, data):
@@ -61,7 +87,7 @@ def kde2plot_op(ax, x, y, grid=200):
     kernel = kde.gaussian_kde(values)
     Z = np.reshape(kernel(positions).T, X.shape)
 
-    ax.imshow(np.rot90(Z), cmap=cm.gist_earth_r,
+    ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
               extent=[xmin, xmax, ymin, ymax])
 
 
