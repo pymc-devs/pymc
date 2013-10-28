@@ -1,10 +1,10 @@
 # PyMC 3
 
-[![Build Status](https://travis-ci.org/pymc-devs/pymc.png?branch=pymc3)](https://travis-ci.org/pymc-devs/pymc)
+[![Build Status](https://travis-ci.org/pymc-devs/pymc.png?branch=master)](https://travis-ci.org/pymc-devs/pymc)
 
 PyMC is a python module for Bayesian statistical modeling and model fitting which focuses on advanced Markov chain Monte Carlo fitting algorithms. Its flexibility and extensibility make it applicable to a large suite of problems. 
 
-Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/pymc/examples/tutorial.ipynb)!
+Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc/examples/tutorial.ipynb)!
 
 ## Features 
 
@@ -18,14 +18,14 @@ Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-de
  * Simple extensibility
 
 ## Getting started
- * [PyMC 3 Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/pymc/examples/tutorial.ipynb)
- * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc/blob/pymc3/examples/disaster_model.py) 
- * [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/pymc3/pymc/examples/stochastic_volatility.ipynb) guided example
+ * [PyMC 3 Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc/examples/tutorial.ipynb)
+ * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/2.3/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py) 
+ * [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc/examples/stochastic_volatility.ipynb) guided example
 
 ## Installation 
 
 ```
-pip install git+https://github.com/pymc-devs/pymc@pymc3
+pip install git+https://github.com/pymc-devs/pymc
 ```
 
 ### Optional
@@ -47,4 +47,4 @@ pip install git+https://github.com/njsmith/scikits-sparse.git
 
 
 ## License 
-[Apache License, Version 2.0](https://github.com/pymc-devs/pymc/blob/pymc3/LICENSE)
+[Apache License, Version 2.0](https://github.com/pymc-devs/pymc/blob/master/LICENSE)
