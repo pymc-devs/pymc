@@ -73,15 +73,18 @@ def sample(draws, step, start=None, trace=None, tune=None, progressbar=True, mod
 
     progress = progress_bar(draws)
 
-    for i in xrange(draws):
-        if (i == tune):
-            step = stop_tuning(step)
-        point = step.step(point)
-        trace = trace.record(point)
-        if progressbar:
-            progress.update(i)
-
-    return trace
+    try:
+        for i in xrange(draws):
+            if (i == tune):
+                step = stop_tuning(step)
+            point = step.step(point)
+            trace = trace.record(point)
+            if progressbar:
+                progress.update(i)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        return trace
 
 def stop_tuning(step):
     """ stop tuning the current step method """
