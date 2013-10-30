@@ -1,4 +1,5 @@
 from pylab import *
+import exceptions
 import matplotlib.pyplot as plt
 try:
     import matplotlib.gridspec as gridspec
@@ -11,7 +12,7 @@ from .trace import *
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
-def traceplot(trace, vars=None, figsize=None):
+def traceplot(trace, vars=None, figsize=None, lines=None):
     """Plot samples histograms and values
 
     Parameters
@@ -22,6 +23,10 @@ def traceplot(trace, vars=None, figsize=None):
         variables to be plotted, if None all variable are plotted
     figsize : figure size tuple
         if None, size is (12, num of variables * 2) inch
+    lines : dict
+        dictionary of variable name / value  to be overplotted as vertical lines
+        to the posteriors and horizontal lines on sample values
+        e.g. mean of posteriors, true values of a simulation
 
     Returns
     -------
@@ -57,6 +62,13 @@ def traceplot(trace, vars=None, figsize=None):
 
         ax[i, 0].set_ylabel("Frequency")
         ax[i, 1].set_ylabel("Sample value")
+
+        if lines:
+            try:
+                ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
+                ax[i, 1].axhline(y=lines[v], color="r", lw=1.5, alpha=.35)
+            except exceptions.KeyError:
+                pass
 
     plt.tight_layout()
     return fig
