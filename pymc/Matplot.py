@@ -837,6 +837,8 @@ def gof_plot(
     figure()
 
     # Specify number of bins
+    if bins is None:
+        bins = 'sqrt'
     uniquevals = len(unique(simdata))
     if bins == 'sturges':
         bins = uniquevals * (uniquevals <= 25) or _sturges(len(simdata))
@@ -1156,17 +1158,18 @@ def summary_plot(
     from .diagnostics import gelman_rubin
 
     # Calculate G-R diagnostics
-    try:
-        R = gelman_rubin(pymc_obj)
-    except ValueError:
+    if rhat:
         try:
-            R = {}
-            for variable in vars:
-                R[variable.__name__] = gelman_rubin(variable)
-        except ValueError:
-            print(
-                'Could not calculate Gelman-Rubin statistics. Requires multiple chains of equal length.')
-            rhat = False
+            R = gelman_rubin(pymc_obj)
+        except ValueError, TypeError:
+            try:
+                R = {}
+                for variable in vars:
+                    R[variable.__name__] = gelman_rubin(variable)
+            except ValueError:
+                print(
+                    'Could not calculate Gelman-Rubin statistics. Requires multiple chains of equal length.')
+                rhat = False
 
     # Empty list for y-axis labels
     labels = []

@@ -1,4 +1,4 @@
-from numpy import reshape
+from numpy import reshape, sum
 
 melanoma_data = reshape([1.57808, 0.00000, 2, 1.27, 35.9945, 1, 1.48219,
                          0.00000, 2, 0.76, 41.9014, 1, 0.0, 7.33425, 1, 35.00, 70.2164, 2, 2.23288,
