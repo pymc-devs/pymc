@@ -1,3 +1,5 @@
+__version__ = "3.0"
+
 from core import *
 from distributions import *
 from math import *
