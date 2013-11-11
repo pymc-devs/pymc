@@ -13,7 +13,7 @@ class NpTrace(object):
     def __init__(self, vars):
         self.f = compilef(vars)
         self.vars = vars
-        self.varnames =map(str, vars)
+        self.varnames = list(map(str, vars))
         self.samples = dict((v, ListArray()) for v in self.varnames)
 
     def record(self, point):
@@ -42,7 +42,7 @@ class NpTrace(object):
             return sliced_trace
 
         else:
-            try :
+            try:
                 return self.point(index_value)
             except ValueError:
                 pass
@@ -55,7 +55,7 @@ class NpTrace(object):
         return len(self.samples[self.varnames[0]])
 
     def point(self, index):
-        return dict((k, v.value[index]) for (k,v) in self.samples.iteritems())
+        return dict((k, v.value[index]) for (k, v) in self.samples.items())
 
 
 def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
@@ -102,7 +102,7 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
         sample = trace[var][start:]
 
         shape = sample.shape
-        if len(shape)>1:
+        if len(shape) > 1:
             size = shape[1]
         else:
             size = 1
@@ -114,8 +114,8 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
         buffer += ['Mean             SD               MC Error        {0}% HPD interval'.format((int(100*(1-alpha))))]
         buffer += ['-'*len(buffer[-1])]
 
-        indices = range(size)
-        if len(indices)==1:
+        indices = list(range(size))
+        if len(indices) == 1:
             indices = [None]
 
         for index in indices:
@@ -137,13 +137,13 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
 
         # Print quantiles
         buffer += ['Posterior quantiles:','']
-        lo,hi = 100*alpha/2, 100*(1.-alpha/2)
+        lo, hi = 100*alpha/2, 100*(1.-alpha/2)
         buffer += ['{0}             25              50              75             {1}'.format(lo, hi)]
         buffer += [' |---------------|===============|===============|---------------|']
 
         for index in indices:
             quantile_str = ''
-            for i,q in enumerate((lo, 25, 50, 75, hi)):
+            for i, q in enumerate((lo, 25, 50, 75, hi)):
                 qstr = str(round(quantiles(sample, qlist=(lo, 25, 50, 75, hi))[q][index], roundto))
                 quantile_str += qstr + ' '*(17-i-len(qstr))
             buffer += [quantile_str.strip()]
@@ -160,7 +160,7 @@ class ListArray(object):
     @property
     def value(self):
         if len(self.vals) > 1:
-            self.vals = [np.concatenate(self.vals, axis =0)]
+            self.vals = [np.concatenate(self.vals, axis=0)]
 
         return self.vals[0]
 
@@ -175,13 +175,13 @@ class ListArray(object):
 
 
 class MultiTrace(object):
-    def __init__(self, traces, vars = None):
-        try :
+    def __init__(self, traces, vars=None):
+        try:
             self.traces = list(traces)
         except TypeError:
             if vars is None:
                 raise ValueError("vars can't be None if trace count specified")
-            self.traces = [NpTrace(vars) for _ in xrange(traces)]
+            self.traces = [NpTrace(vars) for _ in range(traces)]
 
     def __getitem__(self, index_value):
 

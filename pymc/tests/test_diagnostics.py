@@ -10,7 +10,7 @@ def test_gelman_rubin(n=1000):
         step2 = Metropolis([dm.switchpoint])
         start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
         ptrace = psample(n, [step1, step2], start, threads=2,
-            random_seeds=[1,3])
+                         random_seeds=[1, 3])
 
     rhat = gelman_rubin(ptrace)
 
@@ -24,7 +24,7 @@ def test_geweke(n=3000):
         step1 = Slice([dm.early_mean, dm.late_mean])
         step2 = Metropolis([dm.switchpoint])
         trace = sample(n, [step1, step2], progressbar=False,
-            random_seed=1)
+                       random_seed=1)
 
     z_switch = geweke(trace['switchpoint'], last=.5, intervals=20)
 
@@ -35,6 +35,5 @@ def test_geweke(n=3000):
     assert z_switch[-1, 0] < (n / 2)
 
     # These should all be z-scores
-    print max(abs(z_switch[:, 1]))
+    print(max(abs(z_switch[:, 1])))
     assert max(abs(z_switch[:, 1])) < 1
-

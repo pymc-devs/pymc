@@ -1,5 +1,5 @@
 import numpy as np
-from blocking import *
+from .blocking import *
 
 # TODO I could not locate this function used anywhere in the code base
 # do we need it?
@@ -22,4 +22,4 @@ def eval_univariate(f, var, idx, point, x):
 
     """
     bij = DictToVarBijection(var, idx, point)
-    return map(bij.mapf(f), x)
+    return list(map(bij.mapf(f), x))

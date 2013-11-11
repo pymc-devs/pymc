@@ -1,11 +1,11 @@
 import itertools as its
-from checks import *
+from .checks import *
 from pymc import *
 from numpy import array, inf
 import numpy
 
 from scipy import integrate
-from knownfailure import *
+from .knownfailure import *
 
 
 R = array([-inf, -2.1, -1, -.01, .0, .01, 1, 2.1, inf])
@@ -122,10 +122,9 @@ def test_addpotential():
         check_dlogp(model, x, [R])
 
 
-
 def test_wishart_initialization():
     with Model() as model:
-        x = Wishart('wishart_test', n=3, p=2, V=numpy.eye(2), shape = [2,2])
+        x = Wishart('wishart_test', n=3, p=2, V=numpy.eye(2), shape=[2, 2])
 
 
 def test_bound():
@@ -141,7 +140,7 @@ def checkd(distfam, valuedomain, vardomains,
 
     with Model() as m:
         vars = dict((v, Flat(
-            v, dtype=dom.dtype)) for v, dom in vardomains.iteritems())
+            v, dtype=dom.dtype)) for v, dom in vardomains.items())
         vars.update(extra_args)
         # print vars
         value = distfam(
@@ -176,7 +175,7 @@ def check_int_to_1(model, value, domains):
         if value.dtype in continuous_types:
             area = integrate.quad(pdfx, lower, upper, epsabs=1e-8)[0]
         else:
-            area = np.sum(map(pdfx, np.arange(lower, upper + 1)))
+            area = np.sum(list(map(pdfx, np.arange(lower, upper + 1))))
 
         assert_almost_equal(area, 1, err_msg=str(pt))
 

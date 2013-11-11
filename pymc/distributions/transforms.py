@@ -1,4 +1,4 @@
-from dist_math import *
+from .dist_math import *
 
 __all__ = ['transform', 'logtransform', 'simplextransform']
 

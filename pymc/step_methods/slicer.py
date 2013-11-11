@@ -1,7 +1,7 @@
 # Modified from original implementation by Dominik Wabersich (2013)
 
 from ..core import *
-from arraystep import *
+from .arraystep import *
 from numpy import floor, abs, atleast_1d, empty, isfinite, sum
 from numpy.random import standard_exponential, random, uniform
 

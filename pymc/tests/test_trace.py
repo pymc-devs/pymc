@@ -1,5 +1,5 @@
-from checks import *
-from models import *
+from .checks import *
+from .models import *
 import pymc as pm
 import numpy as np
 
@@ -19,7 +19,7 @@ def check_trace(model, trace, n, step, start):
         trace = sample(
             n, step, start, trace, progressbar=False, model=model)
 
-        for (var, val) in start.iteritems():
+        for (var, val) in start.items():
 
             assert np.shape(trace[var]) == (n * (i + 1),) + np.shape(val)
 
@@ -50,13 +50,13 @@ def check_multi_trace(model, trace, n, step, start):
         trace = psample(
             n, step, start, trace, model=model)
 
-        for (var, val) in start.iteritems():
-            print [len(tr.samples[var].vals) for tr in trace.traces]
+        for (var, val) in start.items():
+            print([len(tr.samples[var].vals) for tr in trace.traces])
             for t in trace[var]:
                 assert np.shape(t) == (n * (i + 1),) + np.shape(val)
 
         ctrace = trace.combined()
-        for (var, val) in start.iteritems():
+        for (var, val) in start.items():
 
             assert np.shape(
                 ctrace[var]) == (len(trace.traces) * n * (i + 1),) + np.shape(val)
@@ -92,15 +92,15 @@ def test_slice():
     assert type(tr[tr.varnames[0]]) is np.ndarray
 
     # Burned trace is of the correct length
-    assert np.all([burned[v].shape==(iterations-burn, start[v].size) for v in burned.varnames])
+    assert np.all([burned[v].shape == (iterations-burn, start[v].size) for v in burned.varnames])
 
     # Original trace did not change
-    assert np.all([tr[v].shape==(iterations, start[v].size) for v in tr.varnames])
+    assert np.all([tr[v].shape == (iterations, start[v].size) for v in tr.varnames])
 
     # Now take more burn-in from the burned trace
     burned_again = burned[burn:]
-    assert np.all([burned_again[v].shape==(iterations-2*burn, start[v].size) for v in burned_again.varnames])
-    assert np.all([burned[v].shape==(iterations-burn, start[v].size) for v in burned.varnames])
+    assert np.all([burned_again[v].shape == (iterations-2*burn, start[v].size) for v in burned_again.varnames])
+    assert np.all([burned[v].shape == (iterations-burn, start[v].size) for v in burned.varnames])
 
 def test_multi_slice():
 
@@ -122,7 +122,7 @@ def test_multi_slice():
     assert type(tr[tr.varnames[0]][0]) is np.ndarray
 
     # # Burned trace is of the correct length
-    assert np.all([burned[v][0].shape==(iterations-burn, start[v].size) for v in burned.varnames])
+    assert np.all([burned[v][0].shape == (iterations-burn, start[v].size) for v in burned.varnames])
 
     # Original trace did not change
-    assert np.all([tr[v][0].shape==(iterations, start[v].size) for v in tr.varnames])
+    assert np.all([tr[v][0].shape == (iterations, start[v].size) for v in tr.varnames])

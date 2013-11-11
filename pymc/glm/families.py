@@ -14,16 +14,15 @@ import pymc
 
 __all__ = ['Normal', 'T', 'Binomial', 'Poisson']
 
-class Family(object):
+class Family(object, metaclass=ABCMeta):
     """Base class for Family of likelihood distribution and link functions.
     """
-    __metaclass__ = ABCMeta
     priors = {}
     link = Identity
 
     def __init__(self, **kwargs):
         # Overwrite defaults
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             if key == 'priors':
                 self.priors = copy(self.priors)
                 self.priors.update(val)
@@ -42,7 +41,7 @@ class Family(object):
         """
         model = pymc.modelcontext(model)
         priors = {}
-        for key, val in self.priors.iteritems():
+        for key, val in self.priors.items():
             if isinstance(val, numbers.Number):
                 priors[key] = val
             else:
