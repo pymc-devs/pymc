@@ -1,6 +1,6 @@
 import pymc
 from pymc import sample, psample
-from models import simple_init
+from .models import simple_init
 
 # Test if multiprocessing is available
 import multiprocessing
@@ -26,10 +26,8 @@ def test_sample():
     with model:
         for trace in test_traces:
             for samplr in test_samplers:
-                for n in [0,1, 10, 300]:
+                for n in [0, 1, 10, 300]:
 
                     yield samplr, n, step, {}
                     yield samplr, n, step, {}, trace
                     yield samplr, n, step, start
-
-

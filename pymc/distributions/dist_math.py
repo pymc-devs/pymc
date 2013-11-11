@@ -16,10 +16,10 @@ from theano.tensor import (
 
 
 from numpy import pi, inf, nan
-from special import gammaln, multigammaln
+from .special import gammaln, multigammaln
 
 from theano.printing import Print
-from distribution import *
+from .distribution import *
 
 
 def bound(logp, *conditions):

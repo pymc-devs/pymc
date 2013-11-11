@@ -1,13 +1,13 @@
-from point import *
-from vartypes import *
+from .point import *
+from .vartypes import *
 
 from theano import theano, tensor as t, function
 
 import numpy as np
 from functools import wraps
-from theanof import *
+from .theanof import *
 
-from memoize import memoize
+from .memoize import memoize
 
 __all__ = ['Model', 'compilef', 'modelcontext', 'Point', 'Deterministic']
 
@@ -93,7 +93,7 @@ class Model(Context):
     @property
     def cont_vars(model):
         """All the continuous variables in the model"""
-        return typefilter(model.vars, continuous_types)
+        return list(typefilter(model.vars, continuous_types))
 
     """
     these functions add random variables
@@ -151,9 +151,9 @@ def Point(*args, **kwargs):
             "can't turn " + str(args) + " and " + str(kwargs) +
             " into a dict. " + str(e))
 
-    varnames = map(str, model.vars)
+    varnames = list(map(str, model.vars))
     return dict((str(k), np.array(v))
-                for (k, v) in d.iteritems()
+                for (k, v) in d.items()
                 if str(k) in varnames)
 
 

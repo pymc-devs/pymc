@@ -1,9 +1,9 @@
 from numpy.linalg import cholesky
 
 from ..core import *
-from quadpotential import quad_potential
+from .quadpotential import quad_potential
 
-from arraystep import *
+from .arraystep import *
 from numpy.random import normal, standard_cauchy, standard_exponential, poisson, random
 from numpy import round, exp, copy, where
 

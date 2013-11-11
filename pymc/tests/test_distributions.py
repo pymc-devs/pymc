@@ -1,13 +1,13 @@
 import unittest
 
 import itertools
-from checks import *
+from .checks import *
 from pymc import *
 from numpy import array, inf
 import numpy
 
 from scipy import integrate
-from knownfailure import *
+from .knownfailure import *
 
 
 class Domain(object):
@@ -186,10 +186,9 @@ def test_addpotential():
         check_dlogp(model, x, R, [])
 
 
-
 def test_wishart_initialization():
     with Model() as model:
-        x = Wishart('wishart_test', n=3, p=2, V=numpy.eye(2), shape = [2,2])
+        x = Wishart('wishart_test', n=3, p=2, V=numpy.eye(2), shape=[2, 2])
 
 
 def test_bound():

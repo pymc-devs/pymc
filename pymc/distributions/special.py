@@ -6,7 +6,7 @@ Created on Mar 17, 2011
 from theano import scalar, tensor
 import numpy
 from scipy import special, misc
-from dist_math import *
+from .dist_math import *
 
 __all__ = ['gammaln', 'multigammaln', 'psi', 'trigamma', 'factln']
 

@@ -1,7 +1,7 @@
-from vartypes import typefilter, continuous_types
+from .vartypes import typefilter, continuous_types
 from theano import theano, tensor as t
 from theano.gof.graph import inputs
-from memoize import memoize
+from .memoize import memoize
 
 __all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars', 'cont_inputs']
 

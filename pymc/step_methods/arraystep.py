@@ -17,7 +17,7 @@ class ArrayStep(object):
     def step(self, point):
         bij = DictToArrayBijection(self.ordering, point)
 
-        inputs = map(bij.mapf, self.fs)
+        inputs = list(map(bij.mapf, self.fs))
         if self.allvars:
             inputs += [point]
 

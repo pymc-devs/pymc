@@ -34,7 +34,7 @@ def quad_potential(C, is_cov, as_cov):
 
     partial_check_positive_definite(C)
     if C.ndim == 1:
-        if is_cov !=  as_cov:
+        if is_cov != as_cov:
             return ElemWiseQuadPotential(C)
         else:
             return ElemWiseQuadPotential(1. / C)

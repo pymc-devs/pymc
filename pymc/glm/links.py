@@ -10,15 +10,14 @@ except:
 
 __all__ = ['Identity', 'Logit', 'Inverse', 'Log']
 
-class LinkFunction(object):
+class LinkFunction(object, metaclass=ABCMeta):
     """Base class to define link functions.
 
     If initialization via statsmodels is desired, define sm.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, theano_link=None, sm_link=None):
-    	if theano_link is not None:
+        if theano_link is not None:
             self.theano = theano_link
         if sm_link is not None:
             self.sm = sm_link

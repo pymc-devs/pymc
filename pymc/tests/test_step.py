@@ -5,7 +5,7 @@ from scipy.stats.mstats import moment
 
 
 def check_stat(name, trace, var, stat, value, bound):
-    s = stat(trace[var][4000:], axis=0)
+    s = stat(trace[var], axis=0)
     close_to(s, value, bound)
 
 
@@ -17,7 +17,7 @@ def test_step_continuous():
         mh = pm.Metropolis(S=C,
                            proposal_dist=pm.MultivariateNormalProposal)
         slicer = pm.Slice()
-        nuts = pm.NUTS(scaling=C, is_cov = True)
+        nuts = pm.NUTS(scaling=C, is_cov=True)
         compound = pm.CompoundStep([hmc, mh])
 
     steps = [mh, hmc, slicer, nuts, compound]

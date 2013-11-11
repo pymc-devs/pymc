@@ -9,8 +9,8 @@ import imp
 
 def test_examples():
 
-    for path in all_matching_files(example_dir(), '*.py'):
-        yield check_example, path
+    for _path in all_matching_files(example_dir(), '*.py'):
+        yield check_example, _path
 
 
 def all_matching_files(d, pattern):
@@ -21,7 +21,7 @@ def all_matching_files(d, pattern):
         fls.extend(nfiles)
 
     files = []
-    path.walk(d, addfiles, files)
+    os.walk(d, addfiles, files)
     return files
 
 
