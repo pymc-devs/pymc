@@ -1,3 +1,5 @@
+import unittest
+
 import itertools
 from checks import *
 from pymc import *
@@ -164,6 +166,7 @@ def test_zeroinflatedpoisson():
 def test_mvnormal2():
     checkd(MvNormal, Vec2small, {'mu': R, 'tau': PdMatrix2}, checks=(check_dlogp, check_int_to_1))
 
+@unittest.skip('Takes too long for travis.')
 def test_mvnormal3():
     checkd(MvNormal, Vec3small, {'mu': R, 'tau': PdMatrix3}, checks=(check_dlogp, check_int_to_1))
 
