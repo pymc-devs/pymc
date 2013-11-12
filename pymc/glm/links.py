@@ -1,5 +1,3 @@
-from abc import ABCMeta
-
 import theano.tensor
 
 try:
@@ -10,7 +8,7 @@ except:
 
 __all__ = ['Identity', 'Logit', 'Inverse', 'Log']
 
-class LinkFunction(object, metaclass=ABCMeta):
+class LinkFunction(object):
     """Base class to define link functions.
 
     If initialization via statsmodels is desired, define sm.
