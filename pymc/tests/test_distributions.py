@@ -11,7 +11,7 @@ from .knownfailure import *
 
 
 class Domain(object):
-    def __init__(self, vals, dtype = None, edges=None, shape = None):
+    def __init__(self, vals, dtype=None, edges=None, shape=None):
         avals = array(vals)
 
         if edges is None:
@@ -19,7 +19,6 @@ class Domain(object):
             vals = vals[1:-1]
         if shape is None:
             shape = avals[0].shape
-
 
         self.vals = vals
         self.shape = shape
@@ -29,6 +28,7 @@ class Domain(object):
 
     def __neg__(self):
         return Domain([-v for v in self.vals], self.dtype, (-self.lower, -self.upper), self.shape)
+
 
 def product(domains):
     return itertools.product(*[d.vals for d in domains])
@@ -57,31 +57,29 @@ Vec2small = Domain([
     [-2.3, .1],
     [-2.3, 1.5],
     ],
-    edges = ([ -25, -25], [25, 25]))
+    edges=([-25, -25], [25, 25]))
 
 Vec3small = Domain([
     [.1, 0.0, 0],
-    [-2.3, .1,1],
+    [-2.3, .1, 1],
     [-2.3, 1.5, 2],
     ],
-    edges = ([ -12, -12, -12], [12, 12,12]))
+    edges=([-12, -12, -12], [12, 12, 12]))
 
 PdMatrix2 = Domain([
     np.eye(2),
     [[.5, .05],
      [.05, 4.5]]
     ],
-    edges = (None,None))
+    edges=(None, None))
 
 PdMatrix3 = Domain([
     np.eye(3),
-    [[.5, .1,0],
+    [[.5, .1, 0],
      [.1, 1, 0],
      [0, 0, 2.5]]
     ],
-    edges = (None,None))
-
-
+    edges=(None, None))
 
 
 def test_unif():
@@ -94,7 +92,7 @@ def test_discrete_unif():
 
 
 def test_flat():
-    checkd(Flat, Runif, {}, checks = (check_dlogp,))
+    checkd(Flat, Runif, {}, checks=(check_dlogp,))
 
 
 def test_normal():
@@ -121,8 +119,10 @@ def test_negative_binomial():
 def test_laplace():
     checkd(Laplace, R, {'mu': R, 'b': Rplus})
 
+
 def test_lognormal():
     checkd(Lognormal, Rplus, {'mu': R, 'tau': Rplus}, (check_dlogp,))
+
 
 def test_t():
     checkd(T, R, {'nu': Rplus, 'mu': R, 'lam': Rplus})
@@ -163,8 +163,10 @@ def test_constantdist():
 def test_zeroinflatedpoisson():
     checkd(ZeroInflatedPoisson, Nat, {'theta': Rplus, 'z': Bool})
 
+
 def test_mvnormal2():
     checkd(MvNormal, Vec2small, {'mu': R, 'tau': PdMatrix2}, checks=(check_dlogp, check_int_to_1))
+
 
 @unittest.skip('Takes too long for travis.')
 def test_mvnormal3():
@@ -196,13 +198,14 @@ def test_bound():
         PositiveNormal = Bound(Normal, -.2)
         x = PositiveNormal('x', 1, 1)
 
-        Rplus2 = Domain([-.2, -.19,-.1, 0, .5, 1, inf])
+        Rplus2 = Domain([-.2, -.19, -.1, 0, .5, 1, inf])
 
         check_dlogp(model, x, Rplus2, [])
 
+
 def check_int_to_1(model, value, domain, paramdomains):
     pdf = compilef(exp(model.logp))
-    names = map(str, model.vars)
+    names = list(map(str, model.vars))
 
     for a in product(paramdomains):
         a = a + (value.tag.test_value,)
@@ -216,30 +219,37 @@ def check_int_to_1(model, value, domain, paramdomains):
 
         assert_almost_equal(area, 1, err_msg=str(pt))
 
+
 def integrate_nd(f, domain, shape, dtype):
 
     if shape == () or shape == (1,):
         if dtype in continuous_types:
             return integrate.quad(f, domain.lower, domain.upper, epsabs=1e-8)[0]
         else:
-            return np.sum(map(f, np.arange(domain.lower, domain.upper + 1)))
+            return np.sum(list(map(f, np.arange(domain.lower, domain.upper + 1))))
     elif shape == (2,):
-        def f2(a,b):
-            return f([a,b])
+        def f2(a, b):
+            return f([a, b])
 
         return integrate.dblquad(f2,
-                domain.lower[0], domain.upper[0],
-                lambda a: domain.lower[1], lambda a: domain.upper[1])[0]
+                                 domain.lower[0],
+                                 domain.upper[0],
+                                 lambda a: domain.lower[1],
+                                 lambda a: domain.upper[1])[0]
+
     elif shape == (3,):
-        def f3(a,b,c):
-            return f([a,b,c])
+        def f3(a, b, c):
+            return f([a, b, c])
 
         return integrate.tplquad(f3,
-                domain.lower[0], domain.upper[0],
-                lambda a: domain.lower[1], lambda a: domain.upper[1],
-                lambda a, b: domain.lower[2], lambda a,b: domain.upper[2])[0]
+                                 domain.lower[0], domain.upper[0],
+                                 lambda a: domain.lower[1],
+                                 lambda a: domain.upper[1],
+                                 lambda a, b: domain.lower[2],
+                                 lambda a, b: domain.upper[2])[0]
     else:
         raise ValueError("Dont know how to integrate shape: " + str(shape))
+
 
 def check_dlogp(model, value, domain, paramdomains):
     try:
@@ -258,7 +268,7 @@ def check_dlogp(model, value, domain, paramdomains):
     logp = bij.mapf(model.logpc)
 
     ndlogp = Gradient(logp)
-    names = map(str, model.vars)
+    names = list(map(str, model.vars))
 
     for a in product(domains):
         pt = Point(zip(names, a), model=model)
@@ -268,15 +278,17 @@ def check_dlogp(model, value, domain, paramdomains):
         assert_almost_equal(dlogp(pt), ndlogp(pt),
                             decimal=6, err_msg=str(pt))
 
+
 def build_model(distfam, valuedomain, vardomains, extra_args={}):
     with Model() as m:
         vars = dict((v, Flat(
-            v, dtype=dom.dtype, shape=dom.shape, testval=dom.vals[0])) for v, dom in vardomains.iteritems())
+            v, dtype=dom.dtype, shape=dom.shape, testval=dom.vals[0])) for v, dom in vardomains.items())
         vars.update(extra_args)
 
         value = distfam(
             'value', shape=valuedomain.shape, **vars)
     return m
+
 
 def checkd(distfam, valuedomain, vardomains,
            checks=(check_int_to_1, check_dlogp), extra_args={}):
