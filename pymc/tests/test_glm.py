@@ -32,7 +32,7 @@ bern_trials = [np.random.binomial(1, i) for i in y_logistic]
 data_logistic = dict(x=x_logistic, y=bern_trials)
 
 class TestGLM(unittest.TestCase):
-    @SkipTest("Fails only on travis. Investigate")
+    @unittest.skip("Fails only on travis. Investigate")
     def test_linear_component(self):
         with Model() as model:
             y_est, coeffs = glm.linear_component('y ~ x', data_linear)
@@ -48,7 +48,7 @@ class TestGLM(unittest.TestCase):
             self.assertAlmostEqual(np.mean(trace.samples['x'].value), true_slope, 1)
             self.assertAlmostEqual(np.mean(trace.samples['sigma'].value), true_sd, 1)
 
-    @SkipTest("Fails only on travis. Investigate")
+    @unittest.skip("Fails only on travis. Investigate")
     def test_glm(self):
         with Model() as model:
             vars = glm.glm('y ~ x', data_linear)
