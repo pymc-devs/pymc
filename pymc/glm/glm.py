@@ -70,11 +70,7 @@ def linear_component(formula, data, priors=None,
     reg_names = dmatrix.design_info.column_names
 
     if init_vals is None and init:
-        try:
-            from statsmodels.formula.api import glm as glm_sm
-            init_vals = glm_sm(formula, data, family=family).fit().params
-        except ImportError:
-            raise ImportError("Can't initialize -- statsmodels not found. Set init=False and run find_MAP().")
+        init_vals = glm_sm(formula, data, family=family).fit().params
     else:
         init_vals = defaultdict(lambda: None)
 

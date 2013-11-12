@@ -7,13 +7,13 @@ from theano.tensor import dot
 
 
 @tensordist(continuous)
-def MvNormal(mu, Tau):
+def MvNormal(mu, tau):
     """
     Multivariate normal
 
     :Parameters:
         mu : vector of means
-        Tau : precision matrix
+        tau : precision matrix
 
     .. math::
         f(x \mid \pi, T) = \frac{|T|^{1/2}}{(2\pi)^{1/2}} \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
@@ -24,7 +24,9 @@ def MvNormal(mu, Tau):
 
     def logp(value):
         delta = value - mu
-        return 1 / 2. * (log(det(Tau)) - dot(delta.T, dot(Tau, delta)))
+        k = tau.shape[0]
+
+        return 1/2. * (-k * log(2*pi) + log(det(tau)) - dot(delta.T, dot(tau, delta)))
 
     mean = median = mode = mu
 
@@ -127,7 +129,7 @@ def Wishart(n, p, V):
     """
     The Wishart distribution is the probability
     distribution of the maximum-likelihood estimator (MLE) of the precision
-    matrix of a multivariate normal distribution. If Tau=1, the distribution
+    matrix of a multivariate normal distribution. If tau=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
 
     For an alternative parameterization based on :math:`C=T{-1}` (Not yet implemented)
@@ -141,7 +143,7 @@ def Wishart(n, p, V):
     :Parameters:
       n : int
         Degrees of freedom, > 0.
-      Tau : matrix
+      tau : matrix
         Symmetric and positive definite
 
     :Support:

@@ -1,4 +1,6 @@
-import itertools as its
+import unittest
+
+import itertools
 from checks import *
 from pymc import *
 from numpy import array, inf
@@ -8,23 +10,78 @@ from scipy import integrate
 from knownfailure import *
 
 
-R = array([-inf, -2.1, -1, -.01, .0, .01, 1, 2.1, inf])
-Rplus = array([0, .01, .1, .9, .99, 1, 1.5, 2, 100, inf])
-Rplusbig = array([0, .5, .9, .99, 1, 1.5, 2, 20, inf])
-Unit = array([0, .001, .1, .5, .75, .99, 1])
+class Domain(object):
+    def __init__(self, vals, dtype = None, edges=None, shape = None):
+        avals = array(vals)
 
-Runif = array([-1, -.4, 0, .4, 1])
-Rdunif = array([-10, 0, 10.])
-Rplusunif = array([0, .5, inf])
-Rplusdunif = array([2, 10, 100], 'int64')
+        if edges is None:
+            edges = array(vals[0]), array(vals[-1])
+            vals = vals[1:-1]
+        if shape is None:
+            shape = avals[0].shape
 
-I = array([-1000, -3, -2, -1, 0, 1, 2, 3, 1000], 'int64')
 
-NatSmall = array([0, 3, 4, 5, 1000], 'int64')
-Nat = array([0, 1, 2, 3, 2000], 'int64')
-NatBig = array([0, 1, 2, 3, 5000, 50000], 'int64')
+        self.vals = vals
+        self.shape = shape
 
-Bool = array([0, 0, 1, 1], 'int64')
+        self.lower, self.upper = edges
+        self.dtype = avals.dtype
+
+    def __neg__(self):
+        return Domain([-v for v in self.vals], self.dtype, (-self.lower, -self.upper), self.shape)
+
+def product(domains):
+    return itertools.product(*[d.vals for d in domains])
+
+R = Domain([-inf, -2.1, -1, -.01, .0, .01, 1, 2.1, inf])
+Rplus = Domain([0, .01, .1, .9, .99, 1, 1.5, 2, 100, inf])
+Rplusbig = Domain([0, .5, .9, .99, 1, 1.5, 2, 20, inf])
+Unit = Domain([0, .001, .1, .5, .75, .99, 1])
+
+Runif = Domain([-1, -.4, 0, .4, 1])
+Rdunif = Domain([-10, 0, 10.])
+Rplusunif = Domain([0, .5, inf])
+Rplusdunif = Domain([2, 10, 100], 'int64')
+
+I = Domain([-1000, -3, -2, -1, 0, 1, 2, 3, 1000], 'int64')
+
+NatSmall = Domain([0, 3, 4, 5, 1000], 'int64')
+Nat = Domain([0, 1, 2, 3, 2000], 'int64')
+NatBig = Domain([0, 1, 2, 3, 5000, 50000], 'int64')
+
+Bool = Domain([0, 0, 1, 1], 'int64')
+
+
+Vec2small = Domain([
+    [.1, 0.0],
+    [-2.3, .1],
+    [-2.3, 1.5],
+    ],
+    edges = ([ -25, -25], [25, 25]))
+
+Vec3small = Domain([
+    [.1, 0.0, 0],
+    [-2.3, .1,1],
+    [-2.3, 1.5, 2],
+    ],
+    edges = ([ -12, -12, -12], [12, 12,12]))
+
+PdMatrix2 = Domain([
+    np.eye(2),
+    [[.5, .05],
+     [.05, 4.5]]
+    ],
+    edges = (None,None))
+
+PdMatrix3 = Domain([
+    np.eye(3),
+    [[.5, .1,0],
+     [.1, 1, 0],
+     [0, 0, 2.5]]
+    ],
+    edges = (None,None))
+
+
 
 
 def test_unif():
@@ -37,7 +94,7 @@ def test_discrete_unif():
 
 
 def test_flat():
-    checkd(Flat, Runif, {}, False)
+    checkd(Flat, Runif, {}, checks = (check_dlogp,))
 
 
 def test_normal():
@@ -65,7 +122,7 @@ def test_laplace():
     checkd(Laplace, R, {'mu': R, 'b': Rplus})
 
 def test_lognormal():
-    checkd(Lognormal, Rplus, {'mu': R, 'tau': Rplus}, False)
+    checkd(Lognormal, Rplus, {'mu': R, 'tau': Rplus}, (check_dlogp,))
 
 def test_t():
     checkd(T, R, {'nu': Rplus, 'mu': R, 'lam': Rplus})
@@ -80,7 +137,7 @@ def test_gamma():
 
 
 def test_tpos():
-    checkd(Tpos, Rplus, {'nu': Rplus, 'mu': R, 'lam': Rplus}, False)
+    checkd(Tpos, Rplus, {'nu': Rplus, 'mu': R, 'lam': Rplus}, checks=(check_dlogp,))
 
 
 def test_binomial():
@@ -104,7 +161,14 @@ def test_constantdist():
 
 
 def test_zeroinflatedpoisson():
-    checkd(ZeroInflatedPoisson, I, {'theta': Rplus, 'z': Bool})
+    checkd(ZeroInflatedPoisson, Nat, {'theta': Rplus, 'z': Bool})
+
+def test_mvnormal2():
+    checkd(MvNormal, Vec2small, {'mu': R, 'tau': PdMatrix2}, checks=(check_dlogp, check_int_to_1))
+
+@unittest.skip('Takes too long for travis.')
+def test_mvnormal3():
+    checkd(MvNormal, Vec3small, {'mu': R, 'tau': PdMatrix3}, checks=(check_dlogp, check_int_to_1))
 
 
 def test_densitydist():
@@ -119,7 +183,7 @@ def test_addpotential():
         x = Normal('x', 1, 1)
         model.AddPotential(-x ** 2)
 
-        check_dlogp(model, x, [R])
+        check_dlogp(model, x, R, [])
 
 
 
@@ -133,61 +197,58 @@ def test_bound():
         PositiveNormal = Bound(Normal, -.2)
         x = PositiveNormal('x', 1, 1)
 
-        check_dlogp(model, x, [Rplus - .2])
+        Rplus2 = Domain([-.2, -.19,-.1, 0, .5, 1, inf])
 
+        check_dlogp(model, x, Rplus2, [])
 
-def checkd(distfam, valuedomain, vardomains,
-           check_int=True, check_der=True, extra_args={}):
-
-    with Model() as m:
-        vars = dict((v, Flat(
-            v, dtype=dom.dtype)) for v, dom in vardomains.iteritems())
-        vars.update(extra_args)
-        # print vars
-        value = distfam(
-            'value', **vars)
-
-        vardomains['value'] = np.array(valuedomain)
-
-        domains = [np.array(vardomains[str(v)]) for v in m.vars]
-
-        if check_int:
-            check_int_to_1(m, value, domains)
-        if check_der:
-            check_dlogp(m, value, domains)
-
-
-def check_int_to_1(model, value, domains):
+def check_int_to_1(model, value, domain, paramdomains):
     pdf = compilef(exp(model.logp))
+    names = map(str, model.vars)
 
-    lower, upper = np.min(domains[-1]), np.max(domains[-1])
-
-    domains = [d[1:-1] for d in domains[:-1]]
-
-    for a in its.product(*domains):
+    for a in product(paramdomains):
         a = a + (value.tag.test_value,)
-        pt = Point(dict((
-            str(var), val) for var, val in zip(model.vars, a)), model=model)
+        pt = Point(zip(names, a), model=model)
 
         bij = DictToVarBijection(value, (), pt)
 
         pdfx = bij.mapf(pdf)
 
-        if value.dtype in continuous_types:
-            area = integrate.quad(pdfx, lower, upper, epsabs=1e-8)[0]
-        else:
-            area = np.sum(map(pdfx, np.arange(lower, upper + 1)))
+        area = integrate_nd(pdfx, domain, value.dshape, value.dtype)
 
         assert_almost_equal(area, 1, err_msg=str(pt))
 
+def integrate_nd(f, domain, shape, dtype):
 
-def check_dlogp(model, value, domains):
+    if shape == () or shape == (1,):
+        if dtype in continuous_types:
+            return integrate.quad(f, domain.lower, domain.upper, epsabs=1e-8)[0]
+        else:
+            return np.sum(map(f, np.arange(domain.lower, domain.upper + 1)))
+    elif shape == (2,):
+        def f2(a,b):
+            return f([a,b])
+
+        return integrate.dblquad(f2,
+                domain.lower[0], domain.upper[0],
+                lambda a: domain.lower[1], lambda a: domain.upper[1])[0]
+    elif shape == (3,):
+        def f3(a,b,c):
+            return f([a,b,c])
+
+        return integrate.tplquad(f3,
+                domain.lower[0], domain.upper[0],
+                lambda a: domain.lower[1], lambda a: domain.upper[1],
+                lambda a, b: domain.lower[2], lambda a,b: domain.upper[2])[0]
+    else:
+        raise ValueError("Dont know how to integrate shape: " + str(shape))
+
+def check_dlogp(model, value, domain, paramdomains):
     try:
         from numdifftools import Gradient
     except ImportError:
         return
 
-    domains = [d[1:-1] for d in domains]
+    domains = paramdomains + [domain]
     bij = DictToArrayBijection(
         ArrayOrdering(model.cont_vars), model.test_point)
 
@@ -195,15 +256,35 @@ def check_dlogp(model, value, domains):
         return
 
     dlogp = bij.mapf(model.dlogpc())
-
     logp = bij.mapf(model.logpc)
-    ndlogp = Gradient(logp)
 
-    for a in its.product(*domains):
-        pt = Point(dict((
-            str(var), val) for var, val in zip(model.vars, a)), model=model)
+    ndlogp = Gradient(logp)
+    names = map(str, model.vars)
+
+    for a in product(domains):
+        pt = Point(zip(names, a), model=model)
 
         pt = bij.map(pt)
 
         assert_almost_equal(dlogp(pt), ndlogp(pt),
                             decimal=6, err_msg=str(pt))
+
+def build_model(distfam, valuedomain, vardomains, extra_args={}):
+    with Model() as m:
+        vars = dict((v, Flat(
+            v, dtype=dom.dtype, shape=dom.shape, testval=dom.vals[0])) for v, dom in vardomains.iteritems())
+        vars.update(extra_args)
+
+        value = distfam(
+            'value', shape=valuedomain.shape, **vars)
+    return m
+
+def checkd(distfam, valuedomain, vardomains,
+           checks=(check_int_to_1, check_dlogp), extra_args={}):
+
+        m = build_model(distfam, valuedomain, vardomains, extra_args=extra_args)
+
+        domains = [vardomains[str(v)] for v in m.vars[:-1]]
+
+        for check in checks:
+            check(m, m.named_vars['value'], valuedomain, domains)

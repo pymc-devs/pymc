@@ -67,6 +67,7 @@ def autocov(x, lag=1):
     x[:-lag] and x[lag:] in the diagonal and the autocovariance
     on the off-diagonal.
     """
+    x = np.asarray(x)
 
     if not lag: return 1
     if lag<0:

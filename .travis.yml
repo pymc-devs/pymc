@@ -18,6 +18,7 @@ install:
   - pip install statsmodels
   - python setup.py build_ext --inplace
 env: 
-  - TESTCMD="nosetests -v -e test_examples"
+  - TESTCMD="nosetests -v -e test_examples -e test_distributions"
   - TESTCMD="nosetests -v pymc.tests.test_examples"
+  - TESTCMD="nosetests -v pymc.tests.test_distributions"
 script: "$TESTCMD"
