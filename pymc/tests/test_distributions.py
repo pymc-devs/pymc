@@ -161,8 +161,10 @@ def test_constantdist():
 def test_zeroinflatedpoisson():
     checkd(ZeroInflatedPoisson, Nat, {'theta': Rplus, 'z': Bool})
 
-def test_mvnormal():
+def test_mvnormal2():
     checkd(MvNormal, Vec2small, {'mu': R, 'tau': PdMatrix2}, checks=(check_dlogp, check_int_to_1))
+
+def test_mvnormal3():
     checkd(MvNormal, Vec3small, {'mu': R, 'tau': PdMatrix3}, checks=(check_dlogp, check_int_to_1))
 
 
