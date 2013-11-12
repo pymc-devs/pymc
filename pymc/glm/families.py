@@ -1,4 +1,3 @@
-from abc import ABCMeta
 import numbers
 from copy import copy
 
@@ -14,7 +13,7 @@ import pymc
 
 __all__ = ['Normal', 'T', 'Binomial', 'Poisson']
 
-class Family(object, metaclass=ABCMeta):
+class Family(object):
     """Base class for Family of likelihood distribution and link functions.
     """
     priors = {}
