@@ -5,7 +5,7 @@ from scipy.stats.mstats import moment
 
 
 def check_stat(name, trace, var, stat, value, bound):
-    s = stat(trace[var], axis=0)
+    s = stat(trace[var][4000:], axis=0)
     close_to(s, value, bound)
 
 
