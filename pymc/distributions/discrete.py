@@ -210,7 +210,7 @@ def NegativeBinomial(mu, alpha):
             mu > 0, value >= 0),
 
             bound(gammaln(value + alpha) - factln(value) - gammaln(alpha) +
-            logpow(mu / (mu + alpha), value) + logpow(alpha / (mu + alpha), alpha),
+            logpow(alpha / (mu + alpha), value) + logpow(mu / (mu + alpha), alpha),
             mu > 0, alpha > 0, value >= 0))
 
     logp.__doc__ = """

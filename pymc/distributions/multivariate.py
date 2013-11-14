@@ -1,10 +1,9 @@
 from dist_math import *
 
-__all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
-
 from theano.sandbox.linalg import det, solve, matrix_inverse, trace
 from theano.tensor import dot
 
+__all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
 
 @tensordist(continuous)
 def MvNormal(mu, tau):

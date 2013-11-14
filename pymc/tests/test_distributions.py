@@ -5,6 +5,7 @@ from numpy import array, inf
 import numpy
 
 from scipy import integrate
+import scipy.stats.distributions  as sp
 from knownfailure import *
 
 
@@ -81,46 +82,68 @@ PdMatrix3 = Domain([
     
 
 
-
-def test_unif():
-    checkd(Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif})
+def test_uniform():
+    pymc_matches_scipy(
+            Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif},
+            lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower)
+            )
 
 
 def test_discrete_unif():
-    checkd(DiscreteUniform, Rdunif,
-           {'lower': -Rplusdunif, 'upper': Rplusdunif})
-
+    pymc_matches_scipy(
+            DiscreteUniform, Rdunif,
+            {'lower': -Rplusdunif, 'upper': Rplusdunif},
+            lambda value, lower, upper: sp.randint.logpmf(value, lower, upper)
+            )
 
 def test_flat():
     checkd(Flat, Runif, {}, checks = [check_dlogp])
 
 
 def test_normal():
-    checkd(Normal, R, {'mu': R, 'tau': Rplus})
-
+    pymc_matches_scipy(
+            Normal, R, {'mu': R, 'sd': Rplus},
+            lambda value, mu, sd: sp.norm.logpdf(value, mu, sd)
+            )
 
 def test_beta():
-    # TODO this fails with `Rplus`
-    checkd(Beta, Unit, {'alpha': Rplusbig, 'beta': Rplusbig})
+    pymc_matches_scipy(
+            Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
+            lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta)
+            )
 
 
 def test_exponential():
-    checkd(Exponential, Rplus, {'lam': Rplus})
-
+    pymc_matches_scipy(
+            Exponential, Rplus, {'lam': Rplus},
+            lambda value, lam: sp.expon.logpdf(value, 0, 1.0/lam)
+            )
 
 def test_geometric():
-    checkd(Geometric, NatBig, {'p': Unit})
+    pymc_matches_scipy(
+            Geometric, NatBig, {'p': Unit},
+            lambda value, p: sp.geom.logpmf(value, p)
+            )
 
 
 def test_negative_binomial():
-    checkd(NegativeBinomial, Nat, {'mu': Rplusbig, 'alpha': Rplusbig})
+    pymc_matches_scipy(
+            NegativeBinomial, Nat, {'mu': Rplus, 'alpha': Rplus},
+            lambda value, mu, alpha: sp.nbinom.logpmf(value, alpha, mu/(mu + alpha))
+            )
 
 
 def test_laplace():
-    checkd(Laplace, R, {'mu': R, 'b': Rplus})
+    pymc_matches_scipy(
+            Laplace, R, {'mu': R, 'b': Rplus},
+            lambda value, mu, b: sp.laplace.logpdf(value, mu, b)
+            )
 
 def test_lognormal():
-    checkd(Lognormal, Rplus, {'mu': R, 'tau': Rplus}, False)
+    pymc_matches_scipy(
+            Lognormal, Rplus, {'mu': R, 'tau': Rplusbig},
+            lambda value, mu, tau: sp.lognorm.logpdf(value, tau**-.5, 0, np.exp(mu))
+            )
 
 def test_t():
     checkd(T, R, {'nu': Rplus, 'mu': R, 'lam': Rplus})
@@ -170,6 +193,9 @@ def test_mvnormal3d():
     checkd(MvNormal, Vec3small, {'mu': R, 'tau': PdMatrix3}, checks = [check_dlogp])
 
 
+def test_wishart_initialization():
+    with Model() as model:
+        x = Wishart('wishart_test', n=3, p=2, V=numpy.eye(2), shape = [2,2])
 
 def test_wishart2():
     checkd(Wishart, PdMatrix2, {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix2}, checks = [check_dlogp], extra_args={'p' : 2})
@@ -193,9 +219,16 @@ def test_addpotential():
 
 
 
-def test_wishart_initialization():
-    with Model() as model:
-        x = Wishart('wishart_test', n=3, p=2, V=numpy.eye(2), shape = [2,2])
+def pymc_matches_scipy(pymc_dist, domain, paramdomains, scipy_dist):
+    model= build_model(pymc_dist, domain, paramdomains)
+    value = model.named_vars['value']
+    domains = [paramdomains[str(v)] for v in model.vars[:-1]]
+
+    def logp(args):
+        return scipy_dist(**args)
+
+    check_logp(model, value, domain, domains, logp)
+
 
 
 def test_bound():
@@ -274,6 +307,35 @@ def check_dlogp(model, value, domain, paramdomains):
 
         assert_almost_equal(dlogp(pt), ndlogp(pt),
                             decimal=6, err_msg=str(pt))
+
+def check_logp(model, value, domain, paramdomains, logp_reference):
+    domains = paramdomains + [domain] 
+
+    if not model.cont_vars:
+        return
+
+    logp = model.logpc
+    names = map(str, model.vars)
+
+    for a in product(domains):
+        pt = Point(zip(names, a), model=model)
+
+        assert_almost_equal(logp(pt), logp_reference(pt),
+                            decimal=6, err_msg=str(pt))
+
+
+def rearg(fn, names): 
+    def nfn(**args): 
+
+        args2 = {}
+        for k, v in args.items():
+            if k in names: 
+                args2[names[k]] = v
+            else :
+                args2[k] = v
+        print args2, names
+        return fn(**args2)
+    return nfn
 
 def build_model(distfam, valuedomain, vardomains, extra_args={}):
     with Model() as m:
