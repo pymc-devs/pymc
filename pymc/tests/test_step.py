@@ -17,7 +17,7 @@ def test_step_continuous():
         mh = pm.Metropolis(S=C,
                            proposal_dist=pm.MultivariateNormalProposal)
         slicer = pm.Slice()
-        nuts = pm.NUTS(scaling=C, is_cov = True)
+        nuts = pm.NUTS(scaling=C, is_cov=True)
         compound = pm.CompoundStep([hmc, mh])
 
     steps = [mh, hmc, slicer, nuts, compound]

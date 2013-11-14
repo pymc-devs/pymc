@@ -7,7 +7,7 @@ nodes in PyMC.
 """
 from __future__ import division
 
-from dist_math import *
+from .dist_math import *
 from numpy.random import uniform as runiform, normal as rnormal
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -431,7 +431,7 @@ def Bound(distribution, lower=-inf, upper=inf):
 
                 lower <= value, value <= upper)
 
-        if hasattr(dist,'mode'):
+        if hasattr(dist, 'mode'):
             mode = dist.mode
 
         return locals()
@@ -439,4 +439,3 @@ def Bound(distribution, lower=-inf, upper=inf):
 
 
 Tpos = Bound(T, 0)
-

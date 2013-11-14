@@ -1,5 +1,4 @@
 from pylab import *
-import exceptions
 import matplotlib.pyplot as plt
 try:
     import matplotlib.gridspec as gridspec
@@ -67,7 +66,7 @@ def traceplot(trace, vars=None, figsize=None, lines=None):
             try:
                 ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
                 ax[i, 1].axhline(y=lines[v], color="r", lw=1.5, alpha=.35)
-            except exceptions.KeyError:
+            except KeyError:
                 pass
 
     plt.tight_layout()
@@ -114,7 +113,7 @@ def kde2plot(x, y, grid=200):
     kde2plot_op(ax, x, y, grid)
     return f
 
-def autocorrplot(trace, vars=None, fontmap = None, max_lag=100):
+def autocorrplot(trace, vars=None, fontmap=None, max_lag=100):
     """Bar plot of the autocorrelation function for a trace"""
 
     try:
@@ -126,13 +125,13 @@ def autocorrplot(trace, vars=None, fontmap = None, max_lag=100):
         # NpTrace
         traces = [trace]
 
-    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
+    if fontmap is None: fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
     if vars is None:
         vars = traces[0].varnames
 
     # Extract sample data
-    samples = [{v:trace[v] for v in vars} for trace in traces]
+    samples = [{v: trace[v] for v in vars} for trace in traces]
 
     chains = len(traces)
 
@@ -143,11 +142,11 @@ def autocorrplot(trace, vars=None, fontmap = None, max_lag=100):
 
     for i, v in enumerate(vars):
 
-        for j in xrange(chains):
+        for j in range(chains):
 
             d = np.squeeze(samples[j][v])
 
-            ax[i,j].acorr(d, detrend=mlab.detrend_mean, maxlags=max_lag)
+            ax[i, j].acorr(d, detrend=mlab.detrend_mean, maxlags=max_lag)
 
             if not j:
                 ax[i, j].set_ylabel("correlation")
@@ -312,7 +311,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
 
             var_quantiles = trace_quantiles[varname]
 
-            quants = var_quantiles.values()
+            quants = list(var_quantiles.values())
             var_hpd = hpd_intervals[varname].T
 
             # Substitute HPD interval for quantile
@@ -445,7 +444,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
         ticks.tick1On = False
         ticks.tick2On = False
 
-    for loc, spine in interval_plot.spines.iteritems():
+    for loc, spine in interval_plot.spines.items():
         if loc in ['bottom', 'top']:
             pass
             # spine.set_position(('outward',10)) # outward by 10 points
@@ -493,7 +492,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             ticks.tick1On = False
             ticks.tick2On = False
 
-        for loc, spine in rhat_plot.spines.iteritems():
+        for loc, spine in rhat_plot.spines.items():
             if loc in ['bottom', 'top']:
                 pass
                 # spine.set_position(('outward',10)) # outward by 10 points

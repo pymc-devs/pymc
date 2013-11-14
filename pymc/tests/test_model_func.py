@@ -1,6 +1,6 @@
 import pymc as pm
-from models import *
-from checks import *
+from .models import *
+from .checks import *
 
 
 def test_lop():
@@ -29,7 +29,7 @@ def test_dlogp2():
 
 def test_deterministic():
     with pm.Model() as model:
-        x = Normal('x', 0,1)
+        x = Normal('x', 0, 1)
         y = pm.Deterministic('y', x**2)
 
     assert model.y == y

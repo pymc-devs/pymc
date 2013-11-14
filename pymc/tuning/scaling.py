@@ -55,7 +55,7 @@ def find_hessian(point, vars=None, model=None):
     vars : list
         Variables for which Hessian is to be calculated.
     """
-    model=modelcontext(model)
+    model = modelcontext(model)
     H = model.d2logpc(vars)
     return H(Point(point, model=model))
 
@@ -70,7 +70,7 @@ def find_hessian_diag(point, vars=None, model=None):
     vars : list
         Variables for which Hessian is to be calculated.
     """
-    model=modelcontext(model)
+    model = modelcontext(model)
     H = compilef(hessian_diag(model.logp, vars))
     return H(Point(point, model=model))
 
@@ -85,7 +85,7 @@ def adjust_scaling(s):
     else:
         val, vec = np.linalg.eigh(s)
         val = adjust_precision(val)
-        return eig_recompose(val,vec)
+        return eig_recompose(val, vec)
 
 def adjust_precision(tau):
     mag = sqrt(abs(tau))
@@ -95,7 +95,7 @@ def adjust_precision(tau):
 
 
 def bound(a, l, u):
-    return np.maximum(np.minimum(a,u), l)
+    return np.maximum(np.minimum(a, u), l)
 
 def eig_recompose(val, vec):
     return vec.dot(np.diag(val)).dot(vec.T)
@@ -126,4 +126,4 @@ def trace_cov(trace, vars=None):
         x = trace[str(var)]
         return x.reshape((x.shape[0], np.prod(x.shape[1:])))
 
-    return np.cov(np.concatenate(map(flat_t, vars), 1).T)
+    return np.cov(np.concatenate(list(map(flat_t, vars)), 1).T)

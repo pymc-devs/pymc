@@ -15,13 +15,13 @@ def quickclass(baseclass):
 
         cls = type(f.__name__, (baseclass,), clsdict)
         cls._spec = getargspec_wrapped(f)
-        return cls 
-    
+        return cls
+
     return decorator
 
 
 def remove_keys(d, ks):
-    return dict((k, v) for k, v in d.iteritems() if k not in ks)
+    return dict((k, v) for k, v in d.items() if k not in ks)
 
 
 def allowed_args(f, args, kwargs):
@@ -70,7 +70,7 @@ def withdefaults(g):
     def decorator(f):
         @wraps_with_spec(f)
         def newf(*args, **kwargs):
-            args_a, kwargs_a, args_left, kwargs_left = allowed_args(f, args,kwargs)
+            args_a, kwargs_a, args_left, kwargs_left = allowed_args(f, args, kwargs)
             r = g(*args_left, **kwargs_left)
             check_dict(r)
             r1 = f(*args_a, **kwargs_a)

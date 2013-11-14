@@ -26,7 +26,7 @@ def statfunc(f):
             except KeyError:
                 vars = traces[0].varnames
 
-            return [{v:f(trace[v][burn:], *args, **kwargs) for v in vars} for trace in traces]
+            return [{v: f(trace[v][burn:], *args, **kwargs) for v in vars} for trace in traces]
 
         except AttributeError:
             pass
@@ -38,7 +38,7 @@ def statfunc(f):
             except KeyError:
                 vars = pymc_obj.varnames
 
-            return {v:f(pymc_obj[v][burn:], *args, **kwargs) for v in vars}
+            return {v: f(pymc_obj[v][burn:], *args, **kwargs) for v in vars}
         except AttributeError:
             pass
 
@@ -57,7 +57,7 @@ def autocorr(x, lag=1):
     """
 
     S = autocov(x, lag)
-    return S[0,1]/np.sqrt(np.prod(np.diag(S)))
+    return S[0, 1]/np.sqrt(np.prod(np.diag(S)))
 
 @statfunc
 def autocov(x, lag=1):
@@ -70,7 +70,7 @@ def autocov(x, lag=1):
     x = np.asarray(x)
 
     if not lag: return 1
-    if lag<0:
+    if lag < 0:
         raise ValueError("Autocovariance lag must be a positive integer")
     return np.cov(x[:-lag], x[lag:], bias=1)
 
@@ -79,7 +79,7 @@ def make_indices(dimensions):
 
     level = len(dimensions)
 
-    if level==1: return range(dimensions[0])
+    if level == 1: return list(range(dimensions[0]))
 
     indices = [[]]
 
@@ -110,11 +110,11 @@ def calc_min_interval(x, alpha):
     n = len(x)
     cred_mass = 1.0-alpha
 
-    interval_idx_inc = int(np.floor( cred_mass*n ))
+    interval_idx_inc = int(np.floor(cred_mass*n))
     n_intervals = n - interval_idx_inc
     interval_width = x[interval_idx_inc:] - x[:n_intervals]
 
-    if len(interval_width)==0:
+    if len(interval_width) == 0:
         raise ValueError('Too few elements for interval calculation')
 
     min_idx = np.argmin(interval_width)
@@ -139,10 +139,10 @@ def hpd(x, alpha=0.05):
     x = x.copy()
 
     # For multivariate node
-    if x.ndim>1:
+    if x.ndim > 1:
 
         # Transpose first, then sort
-        tx = np.transpose(x, range(x.ndim)[1:]+[0])
+        tx = np.transpose(x, list(range(x.ndim))[1:]+[0])
         dims = np.shape(tx)
 
         # Container list for intervals
@@ -222,7 +222,7 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
     x = x.copy()
 
     # For multivariate node
-    if x.ndim>1:
+    if x.ndim > 1:
         # Transpose first, then sort, then transpose back
         sx = np.sort(x.T).T
     else:

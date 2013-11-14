@@ -5,11 +5,11 @@ import pymc.distributions.special as ps
 import scipy.special as ss
 import numpy as np
 
-from checks import close_to
+from .checks import close_to
 
 
 def test_functions():
-    xvals = map(np.atleast_1d, [.01, .1, 2, 100, 10000])
+    xvals = list(map(np.atleast_1d, [.01, .1, 2, 100, 10000]))
 
     x = t.dvector('x')
     x.tag.test_value = xvals[0]
@@ -38,7 +38,7 @@ In [14]:
 
 
 def t_multigamma():
-    xvals = map(np.atleast_1d, [0, .1, 2, 100])
+    xvals = list(map(np.atleast_1d, [0, .1, 2, 100]))
 
     x = t.dvector('x')
     x.tag.test_value = xvals[0]
