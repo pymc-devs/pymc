@@ -1,11 +1,15 @@
+from __future__ import division
 import itertools
 from checks import *
 from pymc import *
 from numpy import array, inf
 import numpy
+from numpy.linalg import inv
 
 from scipy import integrate
 import scipy.stats.distributions  as sp
+import scipy.stats
+
 from knownfailure import *
 
 
@@ -93,11 +97,14 @@ def test_discrete_unif():
     pymc_matches_scipy(
             DiscreteUniform, Rdunif,
             {'lower': -Rplusdunif, 'upper': Rplusdunif},
-            lambda value, lower, upper: sp.randint.logpmf(value, lower, upper)
+            lambda value, lower, upper: sp.randint.logpmf(value, lower, upper+1)
             )
 
 def test_flat():
-    checkd(Flat, Runif, {}, checks = [check_dlogp])
+    pymc_matches_scipy(
+            Flat, Runif, {},
+            lambda value: 0
+            )
 
 
 def test_normal():
@@ -116,13 +123,13 @@ def test_beta():
 def test_exponential():
     pymc_matches_scipy(
             Exponential, Rplus, {'lam': Rplus},
-            lambda value, lam: sp.expon.logpdf(value, 0, 1.0/lam)
+            lambda value, lam: sp.expon.logpdf(value, 0, 1/lam)
             )
 
 def test_geometric():
     pymc_matches_scipy(
-            Geometric, NatBig, {'p': Unit},
-            lambda value, p: sp.geom.logpmf(value, p)
+            Geometric, Nat, {'p': Unit},
+            lambda value, p: np.log(sp.geom.pmf(value, p))
             )
 
 
@@ -146,46 +153,75 @@ def test_lognormal():
             )
 
 def test_t():
-    checkd(T, R, {'nu': Rplus, 'mu': R, 'lam': Rplus})
+    pymc_matches_scipy(
+            T, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
+            lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5)
+            )
 
 
 def test_cauchy():
-    checkd(Cauchy, R, {'alpha': R, 'beta': Rplusbig})
+    pymc_matches_scipy(
+            Cauchy, R, {'alpha': R, 'beta': Rplusbig},
+            lambda value, alpha, beta: sp.cauchy.logpdf(value, alpha, beta)
+            )
 
 
 def test_gamma():
-    checkd(Gamma, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig})
-
+    pymc_matches_scipy(
+            Gamma, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
+            lambda value, alpha, beta: sp.gamma.logpdf(value, alpha, scale = 1.0/beta)
+            )
 
 def test_tpos():
-    checkd(Tpos, Rplus, {'nu': Rplus, 'mu': R, 'lam': Rplus}, checks = [check_dlogp])
+    #TODO: this actually shouldn't pass
+    pymc_matches_scipy(
+            Tpos, Rplus, {'nu': Rplus, 'mu': R, 'lam': Rplus},
+            lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5)
+            )
 
 
 def test_binomial():
-    checkd(Binomial, Nat, {'n': NatSmall, 'p': Unit})
-
+    pymc_matches_scipy(
+            Binomial, Nat, {'n': NatSmall, 'p': Unit},
+            lambda value, n, p: sp.binom.logpmf(value, n, p)
+            )
 
 def test_betabin():
     checkd(BetaBin, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': NatSmall})
 
 
 def test_bernoulli():
-    checkd(Bernoulli, Bool, {'p': Unit})
-
+    pymc_matches_scipy(
+            Bernoulli, Bool, {'p': Unit},
+            lambda value, p: sp.bernoulli.logpmf(value, p)
+            )
 
 def test_poisson():
-    checkd(Poisson, Nat, {'mu': Rplus})
-
+    pymc_matches_scipy(
+            Poisson, Nat, {'mu': Rplus},
+            lambda value, mu: sp.poisson.logpmf(value, mu)
+            )
 
 def test_constantdist():
-    checkd(ConstantDist, I, {'c': I})
-
+    pymc_matches_scipy(
+            ConstantDist, I, {'c': I},
+            lambda value, c: np.log(c == value)
+            )
 
 def test_zeroinflatedpoisson():
     checkd(ZeroInflatedPoisson, Nat, {'theta': Rplus, 'z': Bool})
 
+"""for scipy 0.14
 def test_mvnormal2():
-    checkd(MvNormal, Vec2small, {'mu': R, 'tau': PdMatrix2}, checks = [check_dlogp, check_int_to_1])
+    pymc_matches_scipy(
+            MvNormal, Vec2small, {'mu': R, 'tau': PdMatrix2},
+            lambda value, mu, tau: scipy.stats.multivariate_normal(value, mu, inv(tau))
+            )
+"""
+
+def test_mvnormal2():
+    checkd(MvNormal, Vec2small, {'mu': R, 'tau': PdMatrix2})
+
 def test_mvnormal3():
     checkd(MvNormal, Vec3small, {'mu': R, 'tau': PdMatrix3}, checks = [check_int_to_1])
 
@@ -310,9 +346,6 @@ def check_dlogp(model, value, domain, paramdomains):
 
 def check_logp(model, value, domain, paramdomains, logp_reference):
     domains = paramdomains + [domain] 
-
-    if not model.cont_vars:
-        return
 
     logp = model.logpc
     names = map(str, model.vars)
