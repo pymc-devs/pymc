@@ -21,10 +21,13 @@ classifiers = ['Development Status :: 3 - Alpha',
                'Topic :: Scientific/Engineering :: Mathematics',
                'Operating System :: OS Independent']
 
-with open('requirements.txt') as f:
-    required = f.read().splitlines()
+required = ['numpy>=1.7.1', 'scipy>=0.12.0', 'matplotlib>=1.2.1',
+            'Theano<=0.6.1dev']
 
 if __name__ == "__main__":
+    ## Current release of Theano does not support python 3, so need
+    ## to get it from upstream git repo
+    dep_links = ['https://github.com/Theano/Theano/tarball/master#egg=Theano-0.6.1dev']
 
     setup(name=DISTNAME,
           version=VERSION,
@@ -38,4 +41,5 @@ if __name__ == "__main__":
                     'pymc.step_methods', 'pymc.tuning', 
                     'pymc.tests', 'pymc.glm'],
           classifiers=classifiers,
+          dependency_links=dep_links,
           install_requires=required)
