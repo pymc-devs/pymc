@@ -2,7 +2,7 @@ from dist_math import *
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
 
-from theano.sandbox.linalg import det, solve, trace
+from theano.sandbox.linalg import det, trace, matrix_inverse
 from theano.tensor import dot
 
 
@@ -154,7 +154,7 @@ def Wishart(n, p, V):
     def logp(X):
         IVI = det(V)
         return bound(
-            ((n - p - 1) * log(IVI) - trace(solve(V, X)) -
+            ((n - p - 1) * log(IVI) - trace(matrix_inverse(V).dot(X)) -
              n * p * log(
              2) - n * log(IVI) - 2 * multigammaln(p, n / 2)) / 2,
 
