@@ -1,6 +1,8 @@
 from __future__ import division
+import unittest
+
 import itertools
-from checks import *
+from .checks import *
 from pymc import *
 from numpy import array, inf
 import numpy
@@ -10,11 +12,11 @@ from scipy import integrate
 import scipy.stats.distributions  as sp
 import scipy.stats
 
-from knownfailure import *
+from .knownfailure import *
 
 
 class Domain(object):
-    def __init__(self, vals, dtype = None, edges=None, shape = None):
+    def __init__(self, vals, dtype=None, edges=None, shape=None):
         avals = array(vals)
 
         if edges is None:
@@ -22,7 +24,6 @@ class Domain(object):
             vals = vals[1:-1]
         if shape is None:
             shape = avals[0].shape
-
 
         self.vals = vals
         self.shape = shape
@@ -33,9 +34,10 @@ class Domain(object):
     def __neg__(self):
         return Domain([-v for v in self.vals], self.dtype, (-self.lower, -self.upper), self.shape)
 
-def product(domains): 
+
+def product(domains):
     return itertools.product(*[d.vals for d in domains])
-        
+
 R = Domain([-inf, -2.1, -1, -.01, .0, .01, 1, 2.1, inf])
 Rplus = Domain([0, .01, .1, .9, .99, 1, 1.5, 2, 100, inf])
 Rplusbig = Domain([0, .5, .9, .99, 1, 1.5, 2, 20, inf])
@@ -136,7 +138,7 @@ def test_geometric():
 def test_negative_binomial():
     pymc_matches_scipy(
             NegativeBinomial, Nat, {'mu': Rplus, 'alpha': Rplus},
-            lambda value, mu, alpha: sp.nbinom.logpmf(value, alpha, mu/(mu + alpha))
+            lambda value, mu, alpha: sp.nbinom.logpmf(value, alpha, 1 - mu/(mu + alpha))
             )
 
 
@@ -145,6 +147,7 @@ def test_laplace():
             Laplace, R, {'mu': R, 'b': Rplus},
             lambda value, mu, b: sp.laplace.logpdf(value, mu, b)
             )
+
 
 def test_lognormal():
     pymc_matches_scipy(
@@ -209,7 +212,7 @@ def test_constantdist():
             )
 
 def test_zeroinflatedpoisson():
-    checkd(ZeroInflatedPoisson, Nat, {'theta': Rplus, 'z': Bool})
+    checkd(ZeroInflatedPoisson, I, {'theta': Rplus, 'z': Bool})
 
 """for scipy 0.14
 def test_mvnormal2():
@@ -222,6 +225,8 @@ def test_mvnormal2():
 def test_mvnormal2():
     checkd(MvNormal, Vec2small, {'mu': R, 'tau': PdMatrix2})
 
+
+@unittest.skip('Takes too long for travis.')
 def test_mvnormal3():
     checkd(MvNormal, Vec3small, {'mu': R, 'tau': PdMatrix3}, checks = [check_int_to_1])
 
@@ -237,7 +242,7 @@ def test_wishart2():
     checkd(Wishart, PdMatrix2, {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix2}, checks = [check_dlogp], extra_args={'p' : 2})
 
 def test_wishart3():
-    checkd(Wishart, PdMatrix2, {'n': Domain([3, 4, 5, 2000]) , 'V': PdMatrix3}, checks = [check_dlogp], extra_args={'p' : 3})
+    checkd(Wishart, PdMatrix3, {'n': Domain([3, 4, 5, 2000]) , 'V': PdMatrix3}, checks = [check_dlogp], extra_args={'p' : 3})
 
 def test_densitydist():
     def logp(x):
@@ -272,7 +277,7 @@ def test_bound():
         PositiveNormal = Bound(Normal, -.2)
         x = PositiveNormal('x', 1, 1)
 
-        Rplus2 = Domain([-.2, -.19,-.1, 0, .5, 1, inf])
+        Rplus2 = Domain([-.2, -.19, -.1, 0, .5, 1, inf])
 
         check_dlogp(model, x, Rplus2, [])
 
@@ -285,7 +290,6 @@ def check_int_to_1(model, value, domain, paramdomains):
         pt = Point(zip(names, a), model=model)
 
         bij = DictToVarBijection(value, (), pt)
-
         pdfx = bij.mapf(pdf)
 
         area = integrate_nd(pdfx, domain, value.dshape, value.dtype)
@@ -298,24 +302,30 @@ def integrate_nd(f, domain, shape, dtype):
         if dtype in continuous_types:
             return integrate.quad(f, domain.lower, domain.upper, epsabs=1e-8)[0]
         else:
-            return np.sum(map(f, np.arange(domain.lower, domain.upper + 1)))
+            return np.sum(list(map(f, np.arange(domain.lower, domain.upper + 1))))
     elif shape == (2,):
-        def f2(a,b): 
-            return f([a,b])
+        def f2(a, b):
+            return f([a, b])
 
-        return integrate.dblquad(f2, 
-                domain.lower[0], domain.upper[0], 
-                lambda a: domain.lower[1], lambda a: domain.upper[1])[0]
+        return integrate.dblquad(f2,
+                                 domain.lower[0],
+                                 domain.upper[0],
+                                 lambda a: domain.lower[1],
+                                 lambda a: domain.upper[1])[0]
+
     elif shape == (3,):
-        def f3(a,b,c): 
-            return f([a,b,c])
+        def f3(a, b, c):
+            return f([a, b, c])
 
-        return integrate.tplquad(f3, 
-                domain.lower[0], domain.upper[0], 
-                lambda a: domain.lower[1], lambda a: domain.upper[1],
-                lambda a, b: domain.lower[2], lambda a,b: domain.upper[2])[0]
-    else: 
+        return integrate.tplquad(f3,
+                                 domain.lower[0], domain.upper[0],
+                                 lambda a: domain.lower[1],
+                                 lambda a: domain.upper[1],
+                                 lambda a, b: domain.lower[2],
+                                 lambda a, b: domain.upper[2])[0]
+    else:
         raise ValueError("Dont know how to integrate shape: " + str(shape))
+
 
 def check_dlogp(model, value, domain, paramdomains):
     try:
@@ -323,7 +333,7 @@ def check_dlogp(model, value, domain, paramdomains):
     except ImportError:
         return
 
-    domains = paramdomains + [domain] 
+    domains = paramdomains + [domain]
     bij = DictToArrayBijection(
         ArrayOrdering(model.cont_vars), model.test_point)
 
@@ -333,8 +343,16 @@ def check_dlogp(model, value, domain, paramdomains):
     dlogp = bij.mapf(model.dlogpc())
     logp = bij.mapf(model.logpc)
 
-    ndlogp = Gradient(logp)
-    names = map(str, model.vars)
+
+    def wrapped_logp(x): 
+        try :
+            return logp(x) 
+        except: 
+            return np.nan
+
+    ndlogp = Gradient(wrapped_logp)
+
+    names = list(map(str, model.vars))
 
     for a in product(domains):
         pt = Point(zip(names, a), model=model)
@@ -357,36 +375,23 @@ def check_logp(model, value, domain, paramdomains, logp_reference):
                             decimal=6, err_msg=str(pt))
 
 
-def rearg(fn, names): 
-    def nfn(**args): 
-
-        args2 = {}
-        for k, v in args.items():
-            if k in names: 
-                args2[names[k]] = v
-            else :
-                args2[k] = v
-        print args2, names
-        return fn(**args2)
-    return nfn
-
 def build_model(distfam, valuedomain, vardomains, extra_args={}):
     with Model() as m:
         vars = dict((v, Flat(
-            v, dtype=dom.dtype, shape=dom.shape, testval=dom.vals[0])) for v, dom in vardomains.iteritems())
+            v, dtype=dom.dtype, shape=dom.shape, testval=dom.vals[0])) for v, dom in vardomains.items())
         vars.update(extra_args)
 
         value = distfam(
             'value', shape=valuedomain.shape, **vars)
-    return m 
+    return m
+
 
 def checkd(distfam, valuedomain, vardomains,
-           checks = [check_int_to_1, check_dlogp], extra_args={}):
+           checks=(check_int_to_1, check_dlogp), extra_args={}):
 
         m = build_model(distfam, valuedomain, vardomains, extra_args=extra_args)
 
         domains = [vardomains[str(v)] for v in m.vars[:-1]]
 
-        for check in checks: 
+        for check in checks:
             check(m, m.named_vars['value'], valuedomain, domains)
-

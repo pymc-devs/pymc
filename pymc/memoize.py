@@ -21,8 +21,8 @@ def hashable(a):
     Turn some unhashable objects into hashable ones.
     """
     if isinstance(a, dict):
-        return hashable(a.iteritems())
+        return hashable(a.items())
     try:
-        return tuple(map(hashable,a))
+        return tuple(map(hashable, a))
     except:
         return a

@@ -1,5 +1,6 @@
 *.pyc
 examples/*.png
 build/*
+dist/*
 *.egg-info/
 .ipynb_checkpoints

@@ -1,5 +1,11 @@
 import numpy as np
 
+try:
+    import statsmodels.api as sm
+except ImportError:
+    print("Example requires statsmodels")
+    sys.exit(0)
+
 from pymc import *
 
 # Generate data

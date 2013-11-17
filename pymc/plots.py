@@ -1,4 +1,5 @@
 from pylab import *
+import matplotlib.pyplot as plt
 try:
     import matplotlib.gridspec as gridspec
 except ImportError:
@@ -10,7 +11,29 @@ from .trace import *
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
-def traceplot(trace, vars=None):
+def traceplot(trace, vars=None, figsize=None, lines=None):
+    """Plot samples histograms and values
+
+    Parameters
+    ----------
+
+    trace : result of MCMC run
+    vars : list of variable names
+        variables to be plotted, if None all variable are plotted
+    figsize : figure size tuple
+        if None, size is (12, num of variables * 2) inch
+    lines : dict
+        dictionary of variable name / value  to be overplotted as vertical lines
+        to the posteriors and horizontal lines on sample values
+        e.g. mean of posteriors, true values of a simulation
+
+    Returns
+    -------
+
+    fig : figure object
+
+    """
+
     if vars is None:
         vars = trace.varnames
 
@@ -18,7 +41,11 @@ def traceplot(trace, vars=None):
         trace = trace.combined()
 
     n = len(vars)
-    f, ax = subplots(n, 2, squeeze=False)
+
+    if figsize is None:
+        figsize = (12, n*2)
+
+    fig, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
 
     for i, v in enumerate(vars):
         d = np.squeeze(trace[v])
@@ -28,12 +55,22 @@ def traceplot(trace, vars=None):
         else:
             kdeplot_op(ax[i, 0], d)
         ax[i, 0].set_title(str(v))
+        ax[i, 0].grid(True)
+        ax[i, 1].set_title(str(v))
         ax[i, 1].plot(d, alpha=.35)
 
-        ax[i, 0].set_ylabel("frequency")
-        ax[i, 1].set_ylabel("sample value")
+        ax[i, 0].set_ylabel("Frequency")
+        ax[i, 1].set_ylabel("Sample value")
 
-    return f
+        if lines:
+            try:
+                ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
+                ax[i, 1].axhline(y=lines[v], color="r", lw=1.5, alpha=.35)
+            except KeyError:
+                pass
+
+    plt.tight_layout()
+    return fig
 
 
 def kdeplot_op(ax, data):
@@ -61,7 +98,7 @@ def kde2plot_op(ax, x, y, grid=200):
     kernel = kde.gaussian_kde(values)
     Z = np.reshape(kernel(positions).T, X.shape)
 
-    ax.imshow(np.rot90(Z), cmap=cm.gist_earth_r,
+    ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
               extent=[xmin, xmax, ymin, ymax])
 
 
@@ -76,7 +113,7 @@ def kde2plot(x, y, grid=200):
     kde2plot_op(ax, x, y, grid)
     return f
 
-def autocorrplot(trace, vars=None, fontmap = None, max_lag=100):
+def autocorrplot(trace, vars=None, fontmap=None, max_lag=100):
     """Bar plot of the autocorrelation function for a trace"""
 
     try:
@@ -88,13 +125,13 @@ def autocorrplot(trace, vars=None, fontmap = None, max_lag=100):
         # NpTrace
         traces = [trace]
 
-    if fontmap is None: fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}
+    if fontmap is None: fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
     if vars is None:
         vars = traces[0].varnames
 
     # Extract sample data
-    samples = [{v:trace[v] for v in vars} for trace in traces]
+    samples = [{v: trace[v] for v in vars} for trace in traces]
 
     chains = len(traces)
 
@@ -105,11 +142,11 @@ def autocorrplot(trace, vars=None, fontmap = None, max_lag=100):
 
     for i, v in enumerate(vars):
 
-        for j in xrange(chains):
+        for j in range(chains):
 
             d = np.squeeze(samples[j][v])
 
-            ax[i,j].acorr(d, detrend=mlab.detrend_mean, maxlags=max_lag)
+            ax[i, j].acorr(d, detrend=mlab.detrend_mean, maxlags=max_lag)
 
             if not j:
                 ax[i, j].set_ylabel("correlation")
@@ -274,7 +311,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
 
             var_quantiles = trace_quantiles[varname]
 
-            quants = var_quantiles.values()
+            quants = list(var_quantiles.values())
             var_hpd = hpd_intervals[varname].T
 
             # Substitute HPD interval for quantile
@@ -407,7 +444,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
         ticks.tick1On = False
         ticks.tick2On = False
 
-    for loc, spine in interval_plot.spines.iteritems():
+    for loc, spine in interval_plot.spines.items():
         if loc in ['bottom', 'top']:
             pass
             # spine.set_position(('outward',10)) # outward by 10 points
@@ -455,7 +492,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             ticks.tick1On = False
             ticks.tick2On = False
 
-        for loc, spine in rhat_plot.spines.iteritems():
+        for loc, spine in rhat_plot.spines.items():
             if loc in ['bottom', 'top']:
                 pass
                 # spine.set_position(('outward',10)) # outward by 10 points

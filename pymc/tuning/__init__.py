@@ -1,2 +1,2 @@
-from starting import *
-from scaling import *
+from .starting import *
+from .scaling import *

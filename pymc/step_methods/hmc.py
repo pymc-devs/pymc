@@ -4,8 +4,8 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 '''
 from numpy import floor
-from quadpotential import *
-from arraystep import *
+from .quadpotential import *
+from .arraystep import *
 from ..core import *
 from ..tuning import guess_scaling
 
@@ -60,7 +60,7 @@ class HamiltonianMC(ArrayStep):
 
         self.step_size = step_scale / n ** (1 / 4.)
 
-        self.potential = quad_potential(scaling, is_cov, as_cov = False)
+        self.potential = quad_potential(scaling, is_cov, as_cov=False)
 
         self.path_length = path_length
         self.step_rand = step_rand
@@ -97,13 +97,13 @@ def bern(p):
 
 Hamiltonian = namedtuple("Hamiltonian", "logp, dlogp, pot")
 
-def energy(H, q,p):
+def energy(H, q, p):
         return -(H.logp(q) - H.pot.energy(p))
 
 def leapfrog(H, q, p, n, e):
     _, dlogp, pot = H
 
-    p = p - (e/2) * -dlogp(q) # half momentum update
+    p = p - (e/2) * -dlogp(q)  # half momentum update
 
     for i in range(n):
         #alternate full variable and momentum updates
@@ -114,4 +114,3 @@ def leapfrog(H, q, p, n, e):
 
     p = p - (e/2) * -dlogp(q)  # do a half step momentum update to finish off
     return q, p
-

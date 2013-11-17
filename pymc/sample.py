@@ -1,10 +1,10 @@
-from point import *
-from trace import NpTrace, MultiTrace
+from .point import *
+from .trace import NpTrace, MultiTrace
 import multiprocessing as mp
 from time import time
-from core import *
-import step_methods
-from progressbar import progress_bar
+from .core import *
+from . import step_methods
+from .progressbar import progress_bar
 from numpy.random import seed
 
 __all__ = ['sample', 'psample']
@@ -60,7 +60,7 @@ def sample(draws, step, start=None, trace=None, tune=None, progressbar=True, mod
             if trace is None:
                 trace = model.named_vars
             try:
-                trace = NpTrace(trace.values())
+                trace = NpTrace(list(trace.values()))
             except AttributeError:
                 trace = NpTrace(list(trace))
 
@@ -73,15 +73,18 @@ def sample(draws, step, start=None, trace=None, tune=None, progressbar=True, mod
 
     progress = progress_bar(draws)
 
-    for i in xrange(draws):
-        if (i == tune):
-            step = stop_tuning(step)
-        point = step.step(point)
-        trace = trace.record(point)
-        if progressbar:
-            progress.update(i)
-
-    return trace
+    try:
+        for i in range(draws):
+            if (i == tune):
+                step = stop_tuning(step)
+            point = step.step(point)
+            trace = trace.record(point)
+            if progressbar:
+                progress.update(i)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        return trace
 
 def stop_tuning(step):
     """ stop tuning the current step method """
@@ -148,7 +151,7 @@ def psample(draws, step, start=None, trace=None, tune=None, model=None, threads=
         mtrace = trace
     else:
         try:
-            mtrace = MultiTrace(threads, trace.values())
+            mtrace = MultiTrace(threads, list(trace.values()))
         except AttributeError:
             mtrace = MultiTrace(threads, trace)
 

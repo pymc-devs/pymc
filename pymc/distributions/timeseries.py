@@ -1,5 +1,5 @@
-from dist_math import *
-from continuous import *
+from .dist_math import *
+from .continuous import *
 
 __all__ = ['AR1', 'GaussianRandomWalk']
 
@@ -33,7 +33,7 @@ def AR1(k, tau_e):
 
 
 @tensordist(continuous)
-def GaussianRandomWalk(tau =None, init=Flat.dist(), sd=None):
+def GaussianRandomWalk(tau=None, init=Flat.dist(), sd=None):
     """
     Random Walk with Normal innovations
 

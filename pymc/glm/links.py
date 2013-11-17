@@ -1,5 +1,3 @@
-from abc import ABCMeta
-
 import theano.tensor
 
 try:
@@ -15,10 +13,9 @@ class LinkFunction(object):
 
     If initialization via statsmodels is desired, define sm.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, theano_link=None, sm_link=None):
-    	if theano_link is not None:
+        if theano_link is not None:
             self.theano = theano_link
         if sm_link is not None:
             self.sm = sm_link

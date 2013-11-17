@@ -1,4 +1,4 @@
-from dist_math import *
+from .dist_math import *
 
 __all__  = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson', 'NegativeBinomial',
 'ConstantDist', 'ZeroInflatedPoisson', 'DiscreteUniform', 'Geometric']
@@ -77,13 +77,13 @@ def BetaBin(alpha, beta, n):
 
     def logp(value):
 
-          return bound(gammaln(alpha + beta) -  gammaln(alpha) - gammaln(beta) +
-          gammaln(n  + 1) - gammaln(value + 1) - gammaln(n - value + 1) +
-          gammaln(alpha + value) + gammaln(n + beta - value) - gammaln(beta + alpha + n),
+        return bound(gammaln(alpha + beta) - gammaln(alpha) - gammaln(beta) +
+                     gammaln(n + 1) - gammaln(value + 1) - gammaln(n - value + 1) +
+                     gammaln(alpha + value) + gammaln(n + beta - value) - gammaln(beta + alpha + n),
 
-            0 <= value, value <= n,
-            alpha > 0,
-            beta > 0)
+                     0 <= value, value <= n,
+                     alpha > 0,
+                     beta > 0)
 
     mode = cast(round(alpha / (alpha + beta)), 'int8')
 
@@ -204,14 +204,16 @@ def NegativeBinomial(mu, alpha):
     """
     def logp(value):
         # Return Poisson when alpha gets very large
+        pois = bound(logpow(mu, value) - factln(value) - mu,
+                     mu > 0, 
+                     value >= 0)
+        negbinom = bound(gammaln(value + alpha) - factln(value) - gammaln(alpha) +
+                      logpow(mu / (mu + alpha), value) + logpow(alpha / (mu + alpha), alpha),
+                      mu > 0, alpha > 0, value >= 0)
+
         return switch(alpha > 1e10,
-
-            bound(logpow(mu, value) - factln(value) - mu,
-            mu > 0, value >= 0),
-
-            bound(gammaln(value + alpha) - factln(value) - gammaln(alpha) +
-            logpow(alpha / (mu + alpha), value) + logpow(mu / (mu + alpha), alpha),
-            mu > 0, alpha > 0, value >= 0))
+                      pois,
+                      negbinom)
 
     logp.__doc__ = """
         Negative binomial log-likelihood with parameters ({0},{1}).

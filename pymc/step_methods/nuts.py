@@ -1,9 +1,9 @@
-from quadpotential import *
-from arraystep import *
+from .quadpotential import *
+from .arraystep import *
 from ..core import *
 from numpy import exp, log
 from numpy.random import uniform
-from hmc import leapfrog, Hamiltonian, bern, energy
+from .hmc import leapfrog, Hamiltonian, bern, energy
 from ..tuning import guess_scaling
 
 __all__ = ['NUTS']
@@ -17,13 +17,13 @@ class NUTS(ArrayStep):
     Hoffman, Matthew D., & Gelman, Andrew. (2011).
     The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
-    def __init__(self, vars=None, scaling=None, step_scale = .25, is_cov = False, state = None,
-                 Emax = 1000,
-                 target_accept = .65,
-                 gamma = .05,
-                 k =.75,
-                 t0 = 10,
-                 model = None):
+    def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False, state=None,
+                 Emax=1000,
+                 target_accept=0.65,
+                 gamma=0.05,
+                 k=0.75,
+                 t0=10,
+                 model=None):
         """
         Parameters
         ----------
@@ -97,17 +97,15 @@ class NUTS(ArrayStep):
         q = qn = qp = q0
         p = pn = pp = p0
 
-        n=1
-        s=1
-        j=0
+        n, s, j = 1, 1, 0
 
         while s == 1:
-            v = bern(.5) * 2 -1
+            v = bern(.5) * 2 - 1
 
             if v == -1:
-                qn,pn,_,_, q1,n1,s1,a,na = buildtree(H, qn,pn,u, v,j,e, Emax, q0, p0)
+                qn, pn, _, _, q1, n1, s1, a, na = buildtree(H, qn, pn, u, v, j, e, Emax, q0, p0)
             else:
-                _,_,qp,pp, q1,n1,s1,a,na = buildtree(H, qp,pp,u, v,j,e, Emax, q0, p0)
+                _, _, qp, pp, q1, n1, s1, a, na = buildtree(H, qp, pp, u, v, j, e, Emax, q0, p0)
 
             if s1 == 1 and bern(min(1, n1*1./n)):
                 q = q1
@@ -121,33 +119,32 @@ class NUTS(ArrayStep):
         p = -p
 
         w = 1./(self.m+self.t0)
-        self.Hbar = (1 - w)* self.Hbar + w*(self.target_accept - a*1./na)
+        self.Hbar = (1 - w) * self.Hbar + w*(self.target_accept - a*1./na)
 
         self.step_size = exp(self.u - (self.m**.5/self.gamma)*self.Hbar)
         self.m += 1
 
-
-
         return q
 
-def buildtree(H, q, p, u, v, j,e, Emax, q0, p0):
+
+def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):
     if j == 0:
         q1, p1 = leapfrog(H, q, p, 1, v*e)
-        E = energy(H, q1,p1)
-        E0 = energy(H, q0,p0)
+        E = energy(H, q1, p1)
+        E0 = energy(H, q0, p0)
 
         dE = E - E0
 
-        n1 = int(log(u) + dE  <= 0)
+        n1 = int(log(u) + dE <= 0)
         s1 = int(log(u) + dE < Emax)
         return q1, p1, q1, p1, q1, n1, s1, min(1, exp(-dE)), 1
     else:
-        qn,pn,qp,pp, q1,n1,s1,a1, na1 = buildtree(H, q,p,u, v,j - 1,e, Emax, q0, p0)
+        qn, pn, qp, pp, q1, n1, s1, a1, na1 = buildtree(H, q, p, u, v, j - 1, e, Emax, q0, p0)
         if s1 == 1:
             if v == -1:
-                qn,pn,_,_, q11,n11,s11,a11,na11 = buildtree(H, qn,pn,u, v,j - 1,e, Emax, q0, p0)
+                qn, pn, _, _, q11, n11, s11, a11, na11 = buildtree(H, qn, pn, u, v, j - 1, e, Emax, q0, p0)
             else:
-                _,_,qp,pp, q11,n11,s11,a11,na11 = buildtree(H, qp,pp,u, v,j - 1,e, Emax, q0, p0)
+                _, _, qp, pp, q11, n11, s11, a11, na11 = buildtree(H, qp, pp, u, v, j - 1, e, Emax, q0, p0)
 
             if bern(n11*1./(max(n1 + n11, 1))):
                 q1 = q11

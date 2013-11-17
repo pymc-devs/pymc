@@ -1,8 +1,7 @@
 try:
     import statsmodels.api as sm
-    import links
-    import families
+    from . import links
+    from . import families
     from .glm import *
 except ImportError:
-    print "Warning: statsmodels not found, only importing parts of glm."
-    from .glm import linear_component
+    print("Warning: statsmodels and/or patsy not found, not importing glm submodule.")

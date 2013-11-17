@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from pymc import  *
+from pymc import *
 import patsy
 import theano
 import pandas as pd
@@ -9,8 +9,8 @@ from statsmodels.formula.api import glm as glm_sm
 import statsmodels.api as sm
 from pandas.tools.plotting import scatter_matrix
 
-import links
-import families
+from . import links
+from . import families
 
 def linear_component(formula, data, priors=None,
                      intercept_prior=None,
@@ -30,10 +30,10 @@ def linear_component(formula, data, priors=None,
         E.g. {'Intercept': Normal.dist(mu=0, sd=1)}
     intercept_prior : pymc distribution
         Prior to use for the intercept.
-    	Default: Normal.dist(mu=0, tau=1.0E-12)
+        Default: Normal.dist(mu=0, tau=1.0E-12)
     regressor_prior : pymc distribution
         Prior to use for all regressor(s).
-	    Default: Normal.dist(mu=0, tau=1.0E-12)
+        Default: Normal.dist(mu=0, tau=1.0E-12)
     init : bool
         Whether to set the starting values via statsmodels
         Default: True
@@ -42,7 +42,7 @@ def linear_component(formula, data, priors=None,
         Default: None
     family : statsmodels.family
         Link function to pass to statsmodels (init has to be True).
-	See `statsmodels.api.families`
+    See `statsmodels.api.families`
         Default: identity
 
     Output
@@ -70,11 +70,7 @@ def linear_component(formula, data, priors=None,
     reg_names = dmatrix.design_info.column_names
 
     if init_vals is None and init:
-        try:
-            from statsmodels.formula.api import glm as glm_sm
-            init_vals = glm_sm(formula, data, family=family).fit().params
-        except ImportError:
-            raise ImportError("Can't initialize -- statsmodels not found. Set init=False and run find_MAP().")
+        init_vals = glm_sm(formula, data, family=family).fit().params
     else:
         init_vals = defaultdict(lambda: None)
 
@@ -91,7 +87,7 @@ def linear_component(formula, data, priors=None,
     for reg_name in reg_names:
         prior = priors.get(reg_name, regressor_prior)
         coeff = model.Var(reg_name, prior)
-    	coeff.tag.test_value = init_vals[reg_name]
+        coeff.tag.test_value = init_vals[reg_name]
         coeffs.append(coeff)
 
     y_est = theano.dot(np.asarray(dmatrix), theano.tensor.stack(*coeffs)).reshape((1, -1))
@@ -113,10 +109,10 @@ def glm(*args, **kwargs):
         E.g. {'Intercept': Normal.dist(mu=0, sd=1)}
     intercept_prior : pymc distribution
         Prior to use for the intercept.
-    	Default: Normal.dist(mu=0, tau=1.0E-12)
+        Default: Normal.dist(mu=0, tau=1.0E-12)
     regressor_prior : pymc distribution
         Prior to use for all regressor(s).
-	    Default: Normal.dist(mu=0, tau=1.0E-12)
+        Default: Normal.dist(mu=0, tau=1.0E-12)
     init : bool
         Whether initialize test values via statsmodels
         Default: True

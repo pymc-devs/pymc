@@ -4,7 +4,7 @@ Created on May 12, 2012
 @author: john
 '''
 from ..core import *
-from arraystep import *
+from .arraystep import *
 from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones
 from numpy.random import uniform
 
@@ -44,7 +44,7 @@ def categorical(prob, shape):
     out = empty([1] + list(shape))
 
     n = len(shape)
-    it0, it1 = nested_iters([prob, out], [range(1, n + 1), [0]],
+    it0, it1 = nested_iters([prob, out], [list(range(1, n + 1)), [0]],
                             op_flags=[['readonly'], ['readwrite']],
                             flags=['reduce_ok'])
 

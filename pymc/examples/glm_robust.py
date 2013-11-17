@@ -1,5 +1,10 @@
 import numpy as np
 
+try:
+    import statsmodels.api as sm
+except ImportError:
+    sys.exit(0)
+
 from pymc import *
 
 # Generate data
