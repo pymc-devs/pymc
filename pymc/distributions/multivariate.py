@@ -70,7 +70,7 @@ def Dirichlet(k, a):
                 value, a - 1) - gammaln(a), axis=0) + gammaln(sum(a)),
 
             k > 1,
-            a > 0)
+            all(a > 0))
 
     mean = a / sum(a)
 
@@ -116,7 +116,7 @@ def Multinomial(n, p):
         return bound(
             factln(n) + sum(x * log(p) - factln(x)),
             n > 0,
-            0 <= x, x <= n)
+            all(0 <= x), all(x <= n))
 
     mean = n * p
 
@@ -160,7 +160,7 @@ def Wishart(n, p, V):
              n * p * log(
              2) - n * log(IVI) - 2 * multigammaln(p, n / 2)) / 2,
 
-            n > p - 1)
+            all(n > p - 1))
 
     mean = n * V
     mode = switch(1*(n >= p + 1),

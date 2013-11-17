@@ -57,19 +57,44 @@ NatBig = Domain([0, 1, 2, 3, 5000, 50000], 'int64')
 Bool = Domain([0, 0, 1, 1], 'int64')
 
 
-Vec2small = Domain([ 
-    [.1, 0.0],
-    [-2.3, .1],
-    [-2.3, 1.5],
-    ], 
-    edges = ([ -25, -25], [25, 25]))
 
-Vec3small = Domain([ 
-    [.1, 0.0, 0],
-    [-2.3, .1,1],
-    [-2.3, 1.5, 2],
-    ], 
-    edges = ([ -12, -12, -12], [12, 12,12]))
+class ProductDomain(object):
+    def __init__(self, domains): 
+        self.vals = list(product(domains))
+
+        self.shape = (len(domains),) + domains[0].shape
+
+        self.lower = [d.lower for d in domains] 
+        self.upper = [d.upper for d in domains] 
+
+        self.dtype = domains[0].dtype
+
+def Vector(D, n): 
+    return ProductDomain([D] *n)
+
+def simplex_values(n): 
+    if n == 1: 
+        yield array([1.0])
+    else: 
+        for v in Unit.vals: 
+            for vals in simplex_values(n-1):
+                yield np.concatenate([[v], (1-v) * vals])
+
+class Simplex(object): 
+    def __init__(self, n):
+        self.vals = list(simplex_values(n))
+        
+        self.shape = (n,)
+        self.dtype = Unit
+        return 
+
+def PdMatrix(n):
+    if n == 2: 
+        return PdMatrix2
+    elif n == 3: 
+        return PdMatrix3
+    else:
+        raise ValueError("n out of bounds")
 
 PdMatrix2 = Domain([
     np.eye(2),
@@ -85,8 +110,6 @@ PdMatrix3 = Domain([
      [0, 0, 2.5]]
     ], 
     edges = (None,None))
-    
-
 
 def test_uniform():
     pymc_matches_scipy(
@@ -214,35 +237,48 @@ def test_constantdist():
 def test_zeroinflatedpoisson():
     checkd(ZeroInflatedPoisson, I, {'theta': Rplus, 'z': Bool})
 
-"""for scipy 0.14
-def test_mvnormal2():
+def  test_mvnormal():
+    for n in [2,3]:
+        yield check_mvnormal, n
+
+def check_mvnormal(n):
     pymc_matches_scipy(
-            MvNormal, Vec2small, {'mu': R, 'tau': PdMatrix2},
-            lambda value, mu, tau: scipy.stats.multivariate_normal(value, mu, inv(tau))
+            MvNormal, Vector(R,n), {'mu': Vector(R,n), 'tau': PdMatrix(n)},
+            normal_logpdf
             )
-"""
 
-def test_mvnormal2():
-    checkd(MvNormal, Vec2small, {'mu': R, 'tau': PdMatrix2})
+def normal_logpdf(value, mu, tau):
+    (k,) = value.shape
+    return  (-k/2)* np.log(2*np.pi) + .5 * np.log(np.linalg.det(tau)) - .5*(value-mu).dot(tau).dot(value -mu)
 
+def test_wishart():
+    for n in [2,3]:
+        yield check_wishart,n
 
-@unittest.skip('Takes too long for travis.')
-def test_mvnormal3():
-    checkd(MvNormal, Vec3small, {'mu': R, 'tau': PdMatrix3}, checks = [check_int_to_1])
+def check_wishart(n):
+    checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix(n) }, checks = [check_dlogp], extra_args={'p' : n})
 
-def test_mvnormal3d():
-    checkd(MvNormal, Vec3small, {'mu': R, 'tau': PdMatrix3}, checks = [check_dlogp])
+def betafn(a): 
+    return scipy.special.gammaln(a).sum() - scipy.special.gammaln(a.sum())
 
+def logpow(v, p):
+    return np.choose(v==0, [p * np.log(v), 0])
 
-def test_wishart_initialization():
-    with Model() as model:
-        x = Wishart('wishart_test', n=3, p=2, V=numpy.eye(2), shape = [2,2])
+def dirichlet_logpdf(value, a):
+    print -betafn(a) , logpow(value, a-1)
+    return -betafn(a) + logpow(value, a-1).sum()
 
-def test_wishart2():
-    checkd(Wishart, PdMatrix2, {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix2}, checks = [check_dlogp], extra_args={'p' : 2})
+def test_dirichlet(): 
+    for n in [2,3]:
+        yield check_dirichlet, n 
 
-def test_wishart3():
-    checkd(Wishart, PdMatrix3, {'n': Domain([3, 4, 5, 2000]) , 'V': PdMatrix3}, checks = [check_dlogp], extra_args={'p' : 3})
+def check_dirichlet(n): 
+        pymc_matches_scipy(
+                Dirichlet, Simplex(n), {'a': Vector(Rplus, n) },
+                dirichlet_logpdf,
+                extra_args = {'k' : n}
+                )
+
 
 def test_densitydist():
     def logp(x):
@@ -260,8 +296,8 @@ def test_addpotential():
 
 
 
-def pymc_matches_scipy(pymc_dist, domain, paramdomains, scipy_dist):
-    model= build_model(pymc_dist, domain, paramdomains)
+def pymc_matches_scipy(pymc_dist, domain, paramdomains, scipy_dist, extra_args={}):
+    model= build_model(pymc_dist, domain, paramdomains, extra_args)
     value = model.named_vars['value']
     domains = [paramdomains[str(v)] for v in model.vars[:-1]]
 
@@ -283,7 +319,7 @@ def test_bound():
 
 def check_int_to_1(model, value, domain, paramdomains):
     pdf = compilef(exp(model.logp))
-    names = map(str, model.vars)
+    names = list(map(str, model.vars))
 
     for a in product(paramdomains):
         a = a + (value.tag.test_value,)
