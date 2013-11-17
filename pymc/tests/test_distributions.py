@@ -58,6 +58,8 @@ Bool = Domain([0, 0, 1, 1], 'int64')
 
 
 
+
+
 class ProductDomain(object):
     def __init__(self, domains): 
         self.vals = list(product(domains))
@@ -85,7 +87,7 @@ class Simplex(object):
         self.vals = list(simplex_values(n))
         
         self.shape = (n,)
-        self.dtype = Unit
+        self.dtype = Unit.dtype
         return 
 
 def PdMatrix(n):
@@ -237,7 +239,7 @@ def test_constantdist():
 def test_zeroinflatedpoisson():
     checkd(ZeroInflatedPoisson, I, {'theta': Rplus, 'z': Bool})
 
-def  test_mvnormal():
+def test_mvnormal():
     for n in [2,3]:
         yield check_mvnormal, n
 
@@ -277,6 +279,23 @@ def check_dirichlet(n):
                 Dirichlet, Simplex(n), {'a': Vector(Rplus, n) },
                 dirichlet_logpdf,
                 extra_args = {'k' : n}
+                )
+
+def multinomial_logpdf(value, n, p):
+    if value.sum() == n and all(value >= 0) and all(value <= n) :
+        return scipy.special.gammaln(n+1) - scipy.special.gammaln(value+1).sum() + logpow(p, value).sum() 
+    else:
+        return -inf 
+
+def test_multinomial(): 
+    for n in [2,3]:
+        yield check_multinomial, n 
+
+def check_multinomial(n): 
+        pymc_matches_scipy(
+                Multinomial, Vector(Nat, n), {'p': Simplex(n), 'n' : Nat },
+                multinomial_logpdf,
+                extra_args = {'testval' : np.zeros(n, int)}
                 )
 
 

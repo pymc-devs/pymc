@@ -116,6 +116,7 @@ def Multinomial(n, p):
         return bound(
             factln(n) + sum(x * log(p) - factln(x)),
             n > 0,
+            eq(sum(x), n),
             all(0 <= x), all(x <= n))
 
     mean = n * p
