@@ -421,7 +421,7 @@ def check_logp(model, value, domain, paramdomains, logp_reference):
     domains = paramdomains + [domain] 
 
     logp = model.logpc
-    names = map(str, model.vars)
+    names = list(map(str, model.vars))
 
     for a in product(domains):
         pt = Point(zip(names, a), model=model)
