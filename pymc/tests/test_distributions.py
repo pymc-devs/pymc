@@ -267,7 +267,6 @@ def logpow(v, p):
     return np.choose(v==0, [p * np.log(v), 0])
 
 def dirichlet_logpdf(value, a):
-    print -betafn(a) , logpow(value, a-1)
     return -betafn(a) + logpow(value, a-1).sum()
 
 def test_dirichlet(): 
