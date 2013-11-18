@@ -1,10 +1,9 @@
 from .dist_math import *
 
-__all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
-
-from theano.sandbox.linalg import det, solve, trace
+from theano.sandbox.linalg import det, solve, matrix_inverse, trace
 from theano.tensor import dot
 
+__all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
 
 @tensordist(continuous)
 def MvNormal(mu, tau):
@@ -71,7 +70,7 @@ def Dirichlet(k, a):
                 value, a - 1) - gammaln(a), axis=0) + gammaln(sum(a)),
 
             k > 1,
-            a > 0)
+            all(a > 0))
 
     mean = a / sum(a)
 
@@ -117,7 +116,8 @@ def Multinomial(n, p):
         return bound(
             factln(n) + sum(x * log(p) - factln(x)),
             n > 0,
-            0 <= x, x <= n)
+            eq(sum(x), n),
+            all(0 <= x), all(x <= n))
 
     mean = n * p
 
@@ -129,7 +129,7 @@ def Wishart(n, p, V):
     """
     The Wishart distribution is the probability
     distribution of the maximum-likelihood estimator (MLE) of the precision
-    matrix of a multivariate normal distribution. If tau=1, the distribution
+    matrix of a multivariate normal distribution. If V=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
 
     For an alternative parameterization based on :math:`C=T{-1}` (Not yet implemented)
@@ -143,8 +143,11 @@ def Wishart(n, p, V):
     :Parameters:
       n : int
         Degrees of freedom, > 0.
-      tau : matrix
-        Symmetric and positive definite
+      p : int 
+        Dimensionality, > 0
+      V : ndarray
+        p x p positive definite matrix 
+        
 
     :Support:
       X : matrix
@@ -154,11 +157,11 @@ def Wishart(n, p, V):
     def logp(X):
         IVI = det(V)
         return bound(
-            ((n - p - 1) * log(IVI) - trace(solve(V, X)) -
+            ((n - p - 1) * log(IVI) - trace(matrix_inverse(V).dot(X)) -
              n * p * log(
              2) - n * log(IVI) - 2 * multigammaln(p, n / 2)) / 2,
 
-            n > p - 1)
+            all(n > p - 1))
 
     mean = n * V
     mode = switch(1*(n >= p + 1),

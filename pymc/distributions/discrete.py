@@ -204,12 +204,16 @@ def NegativeBinomial(mu, alpha):
     """
     def logp(value):
         # Return Poisson when alpha gets very large
-        return switch(alpha > 1e10,
-                      bound(logpow(mu, value) - factln(value) - mu,
-                      mu > 0, value >= 0),
-                      bound(gammaln(value + alpha) - factln(value) - gammaln(alpha) +
+        pois = bound(logpow(mu, value) - factln(value) - mu,
+                     mu > 0, 
+                     value >= 0)
+        negbinom = bound(gammaln(value + alpha) - factln(value) - gammaln(alpha) +
                       logpow(mu / (mu + alpha), value) + logpow(alpha / (mu + alpha), alpha),
-                      mu > 0, alpha > 0, value >= 0))
+                      mu > 0, alpha > 0, value >= 0)
+
+        return switch(alpha > 1e10,
+                      pois,
+                      negbinom)
 
     logp.__doc__ = """
         Negative binomial log-likelihood with parameters ({0},{1}).
