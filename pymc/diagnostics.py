@@ -131,24 +131,20 @@ def gelman_rubin(mtrace):
         raise ValueError(
             'Gelman-Rubin diagnostic requires multiple chains of the same length.')
 
-    def calc_rhat(x, m, n):
+    def calc_rhat(x):
+
+        m, n = x.shape
 
         # Calculate between-chain variance
-        B_over_n = np.sum((np.mean(x, 1) - np.mean(x)) ** 2) / (m - 1)
+        B = n * np.var(np.mean(x, axis=1), ddof=1)
 
-        # Calculate within-chain variances
-        W = np.sum(
-            [(x[i] - xbar) ** 2 for i,
-             xbar in enumerate(np.mean(x,
-                                       1))]) / (m * (n - 1))
+        # Calculate within-chain variance
+        W = np.mean(np.var(x, axis=1, ddof=1))
 
-        # (over) estimate of variance
-        s2 = W * (n - 1) / n + B_over_n
+        # Estimate of marginal posterior variance
+        Vhat = W*(n - 1)/n + B/n
 
-        # Pooled posterior variance estimate
-        V = s2 + B_over_n / m
-
-        return V / W
+        return np.sqrt(Vhat/W)
 
     Rhat = {}
     for var in mtrace.varnames:
@@ -157,11 +153,9 @@ def gelman_rubin(mtrace):
         x = np.array([mtrace.traces[i][var] for i in range(m)])
 
         try:
-            m, n = x.shape
-            Rhat[var] = calc_rhat(x, m, n)
+            Rhat[var] = calc_rhat(x)
         except ValueError:
-            m, n = x.shape[:2]
-            Rhat[var] = [calc_rhat(y.transpose(), m, n) for y in x.transpose()]
+            Rhat[var] = [calc_rhat(y.transpose()) for y in x.transpose()]
 
     return Rhat
 
