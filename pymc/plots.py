@@ -11,7 +11,7 @@ from .trace import *
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
-def traceplot(trace, vars=None, figsize=None, lines=None, combined=False, ax=None):
+def traceplot(trace, vars=None, figsize=None, lines=None, combined=False):
     """Plot samples histograms and values
 
     Parameters
@@ -19,13 +19,16 @@ def traceplot(trace, vars=None, figsize=None, lines=None, combined=False, ax=Non
 
     trace : result of MCMC run
     vars : list of variable names
-        variables to be plotted, if None all variable are plotted
+        Variables to be plotted, if None all variable are plotted
     figsize : figure size tuple
-        if None, size is (12, num of variables * 2) inch
+        If None, size is (12, num of variables * 2) inch
     lines : dict
-        dictionary of variable name / value  to be overplotted as vertical lines
+        Dictionary of variable name / value  to be overplotted as vertical lines
         to the posteriors and horizontal lines on sample values
         e.g. mean of posteriors, true values of a simulation
+    combined : bool
+        Flag for combining MultiTrace into a single trace. If False (default)
+        traces will be plotted separately on the same set of axes.
 
     Returns
     -------
