@@ -11,7 +11,7 @@ from .trace import *
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
-def traceplot(trace, vars=None, figsize=None, lines=None):
+def traceplot(trace, vars=None, figsize=None, lines=None, combined=False, ax=None):
     """Plot samples histograms and values
 
     Parameters
@@ -38,7 +38,10 @@ def traceplot(trace, vars=None, figsize=None, lines=None):
         vars = trace.varnames
 
     if isinstance(trace, MultiTrace):
-        trace = trace.combined()
+        if combined:
+            traces = [trace.combined()]
+        else:
+            traces = trace.traces
 
     n = len(vars)
 
@@ -47,27 +50,28 @@ def traceplot(trace, vars=None, figsize=None, lines=None):
 
     fig, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
 
-    for i, v in enumerate(vars):
-        d = np.squeeze(trace[v])
+    for trace in traces:
+        for i, v in enumerate(vars):
+            d = np.squeeze(trace[v])
 
-        if trace[v].dtype.kind == 'i':
-            ax[i, 0].hist(d, bins=sqrt(d.size))
-        else:
-            kdeplot_op(ax[i, 0], d)
-        ax[i, 0].set_title(str(v))
-        ax[i, 0].grid(True)
-        ax[i, 1].set_title(str(v))
-        ax[i, 1].plot(d, alpha=.35)
+            if trace[v].dtype.kind == 'i':
+                ax[i, 0].hist(d, bins=sqrt(d.size))
+            else:
+                kdeplot_op(ax[i, 0], d)
+            ax[i, 0].set_title(str(v))
+            ax[i, 0].grid(True)
+            ax[i, 1].set_title(str(v))
+            ax[i, 1].plot(d, alpha=.35)
 
-        ax[i, 0].set_ylabel("Frequency")
-        ax[i, 1].set_ylabel("Sample value")
+            ax[i, 0].set_ylabel("Frequency")
+            ax[i, 1].set_ylabel("Sample value")
 
-        if lines:
-            try:
-                ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
-                ax[i, 1].axhline(y=lines[v], color="r", lw=1.5, alpha=.35)
-            except KeyError:
-                pass
+            if lines:
+                try:
+                    ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
+                    ax[i, 1].axhline(y=lines[v], color="r", lw=1.5, alpha=.35)
+                except exceptions.KeyError:
+                    pass
 
     plt.tight_layout()
     return fig
@@ -362,8 +366,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                                 q[3]),
                             y=(y,
                                 y),
-                            linewidth=2,
-                            color="blue")
+                            linewidth=2)
 
                     else:
                         # Plot median
@@ -375,8 +378,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                             q[-1]),
                         y=(y,
                             y),
-                        linewidth=1,
-                        color="blue")
+                        linewidth=1)
 
             else:
 
@@ -392,8 +394,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                             quants[3]),
                         y=(y,
                             y),
-                        linewidth=2,
-                        color="blue")
+                        linewidth=2)
                 else:
                     # Plot median
                     plot(quants[1], y, 'bo', markersize=4)
@@ -404,8 +405,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                         quants[-1]),
                     y=(y,
                         y),
-                    linewidth=1,
-                    color="blue")
+                    linewidth=1)
 
             # Increment index
             var += k
