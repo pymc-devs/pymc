@@ -45,6 +45,8 @@ def traceplot(trace, vars=None, figsize=None, lines=None, combined=False):
             traces = [trace.combined()]
         else:
             traces = trace.traces
+    else:
+        traces = [trace]
 
     n = len(vars)
 
