@@ -100,12 +100,8 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
 
         # Extract sampled values
         sample = trace[var][start:]
-
-        shape = sample.shape
-        if len(shape) > 1:
-            size = shape[1]
-        else:
-            size = 1
+        if sample.ndim == 1:
+            sample = sample[:, None]
 
         # Initialize buffer
         buffer = []
@@ -114,17 +110,18 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
         buffer += ['Mean             SD               MC Error        {0}% HPD interval'.format((int(100*(1-alpha))))]
         buffer += ['-'*len(buffer[-1])]
 
-        indices = list(range(size))
-        if len(indices) == 1:
-            indices = [None]
+        means = sample.mean(0)
+        sds = sample.std(0)
+        mces = mc_error(sample, batches)
+        intervals = hpd(sample, alpha)
 
+        indices = list(range(sample.shape[1]))
         for index in indices:
             # Extract statistics and convert to string
-            m = str(round(sample.mean(0)[index], roundto))
-            sd = str(round(sample.std(0)[index], roundto))
-            mce = str(round(mc_error(sample, batches)[index], roundto))
-            interval = str(hpd(sample, alpha)[index].squeeze().round(roundto))
-
+            m = str(round(means[index], roundto))
+            sd = str(round(sds[index], roundto))
+            mce = str(round(mces[index], roundto))
+            interval = str(intervals[index].squeeze().round(roundto))
             # Build up string buffer of values
             valstr = m
             valstr += ' '*(17-len(m)) + sd
@@ -140,14 +137,14 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
         lo, hi = 100*alpha/2, 100*(1.-alpha/2)
         buffer += ['{0}             25              50              75             {1}'.format(lo, hi)]
         buffer += [' |---------------|===============|===============|---------------|']
-
+        qlist = (lo, 25, 50, 75, hi)
+        var_quantiles = quantiles(sample, qlist=qlist)
         for index in indices:
             quantile_str = ''
-            for i, q in enumerate((lo, 25, 50, 75, hi)):
-                qstr = str(round(quantiles(sample, qlist=(lo, 25, 50, 75, hi))[q][index], roundto))
+            for i, q in enumerate(qlist):
+                qstr = str(round(var_quantiles[q][index], roundto))
                 quantile_str += qstr + ' '*(17-i-len(qstr))
             buffer += [quantile_str.strip()]
-
         buffer += ['']
 
         print('\t' + '\n\t'.join(buffer))

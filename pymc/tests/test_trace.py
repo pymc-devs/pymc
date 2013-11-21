@@ -126,3 +126,23 @@ def test_multi_slice():
 
     # Original trace did not change
     assert np.all([tr[v][0].shape == (iterations, start[v].size) for v in tr.varnames])
+
+
+def test_summary_1_value_model():
+    mu = -2.1
+    tau = 1.3
+    with Model() as model:
+        x = Normal('x', mu, tau, testval=.1)
+        step = Metropolis(model.vars, np.diag([1.]))
+        trace = sample(100, step=step)
+    pm.summary(trace)
+
+
+def test_summary_2_value_model():
+    mu = -2.1
+    tau = 1.3
+    with Model() as model:
+        x = Normal('x', mu, tau, shape=2, testval=[.1, .1])
+        step = Metropolis(model.vars, np.diag([1.]))
+        trace = sample(100, step=step)
+    pm.summary(trace)
