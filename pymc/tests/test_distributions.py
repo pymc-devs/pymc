@@ -25,7 +25,7 @@ import pdb
 import warnings
 import nose
 
-from numpy import exp, log, array, sqrt
+from numpy import exp, log, array, sqrt, arange
 from numpy.linalg import cholesky, det, inv
 from numpy.testing import *
 import numpy as np
@@ -465,6 +465,21 @@ class test_cauchy(TestCase):
         parameters = {'alpha': 0, 'beta': .5}
         integral = normalization(flib.cauchy, parameters, [-100, 100], 600)
         assert_almost_equal(integral, 1, 2)
+
+
+class test_half_cauchy_like_input_shape(TestCase):
+
+    def test_half_cauchy_like_1d_input(self):
+        x = arange(8.)
+        half_cauchy_like(x, 0, 1)
+
+    def test_half_cauchy_like_2d_input(self):
+        x = arange(8.).reshape(2, 4)
+        half_cauchy_like(x, 0, 1)
+
+    def test_half_cauchy_like_3d_input(self):
+        x = arange(8.).reshape(2, 2, 2)
+        half_cauchy_like(x, 0, 1)
 
 
 class test_chi2(TestCase):
