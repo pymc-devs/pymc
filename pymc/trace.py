@@ -3,6 +3,7 @@ from .core import *
 from .stats import *
 import copy
 import types
+import warnings
 
 __all__ = ['NpTrace', 'MultiTrace', 'summary']
 
@@ -94,14 +95,17 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
         trace = trace.combined()
 
     for var in vars:
-
-        print('\n%s:' % var)
-        print(' ')
-
         # Extract sampled values
         sample = trace[var][start:]
         if sample.ndim == 1:
             sample = sample[:, None]
+        elif sample.ndim > 2:
+            ## trace dimensions greater than 2 (variable greater than 1)
+            warnings.warn('Skipping {} (above 1 dimension)'.format(var))
+            continue
+
+        print('\n%s:' % var)
+        print(' ')
 
         # Initialize buffer
         buffer = []

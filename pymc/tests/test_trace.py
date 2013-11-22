@@ -2,6 +2,7 @@ from .checks import *
 from .models import *
 import pymc as pm
 import numpy as np
+import warnings
 
 # Test if multiprocessing is available
 import multiprocessing
@@ -146,3 +147,18 @@ def test_summary_2_value_model():
         step = Metropolis(model.vars, np.diag([1.]))
         trace = sample(100, step=step)
     pm.summary(trace)
+
+
+def test_summary_2dim_value_model():
+    mu = -2.1
+    tau = 1.3
+    with Model() as model:
+        x = Normal('x', mu, tau, shape=(2, 2),
+                   testval=np.tile(.1, (2, 2)))
+        step = Metropolis(model.vars, np.diag([1.]))
+        trace = sample(100, step=step)
+
+    with warnings.catch_warnings(record=True) as wrn:
+        pm.summary(trace)
+        assert len(wrn) == 1
+        assert str(wrn[0].message) == 'Skipping x (above 1 dimension)'
