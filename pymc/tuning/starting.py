@@ -52,7 +52,7 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False, d
         return nan_to_num(-dlogp(point))
     
     # Check to see if minimization function actually uses the gradient
-    if 'fprime' in fmin.func_code.co_varnames:
+    if 'fprime' in fmin.__code__.co_varnames:
         r = fmin(logp_o, bij.map(
             start), fprime=grad_logp_o, disp=disp, *args, **kwargs)
     else:
