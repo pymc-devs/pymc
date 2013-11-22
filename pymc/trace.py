@@ -140,12 +140,13 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
       The number of digits to round posterior statistics.
 
     """
-
     if vars is None:
         vars = trace.varnames
-
     if isinstance(trace, MultiTrace):
         trace = trace.combined()
+
+    stat_summ = _StatSummary(roundto, batches, alpha)
+    pq_summ = _PosteriorQuantileSummary(roundto, alpha)
 
     for var in vars:
         # Extract sampled values
@@ -160,48 +161,110 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
         print('\n%s:' % var)
         print(' ')
 
-        # Initialize buffer
-        buffer = []
+        stat_summ.print_output(sample)
+        pq_summ.print_output(sample)
 
-        # Print basic stats
-        buffer += ['Mean             SD               MC Error        {0}% HPD interval'.format((int(100*(1-alpha))))]
-        buffer += ['-'*len(buffer[-1])]
 
-        means = sample.mean(0)
-        sds = sample.std(0)
-        mces = mc_error(sample, batches)
-        intervals = hpd(sample, alpha)
+class _Summary(object):
+    """Base class for summary output"""
+    def __init__(self, roundto):
+        self.roundto = roundto
+        self.header_lines = None
+        self.leader = '  '
+        self.spaces = None
 
-        indices = list(range(sample.shape[1]))
-        for index in indices:
-            # Extract statistics and convert to string
-            m = str(round(means[index], roundto))
-            sd = str(round(sds[index], roundto))
-            mce = str(round(mces[index], roundto))
-            interval = str(intervals[index].squeeze().round(roundto))
-            # Build up string buffer of values
-            valstr = m
-            valstr += ' '*(17-len(m)) + sd
-            valstr += ' '*(17-len(sd)) + mce
-            valstr += ' '*(len(buffer[-1]) - len(valstr) - len(interval)) + interval
+    def print_output(self, sample):
+        print('\n'.join(list(self._get_lines(sample))) + '\n')
 
-            buffer += [valstr]
+    def _get_lines(self, sample):
+        for line in self.header_lines:
+            yield self.leader + line
+        summary_lines = self._calculate_values(sample)
+        for line in self._create_value_output(summary_lines):
+            yield self.leader + line
 
-        buffer += ['']*2
+    def _create_value_output(self, lines):
+        for values in lines:
+            self._format_values(values)
+            yield self.value_line.format(pad=self.spaces, **values).strip()
 
-        # Print quantiles
-        buffer += ['Posterior quantiles:','']
-        lo, hi = 100*alpha/2, 100*(1.-alpha/2)
-        buffer += ['{0}             25              50              75             {1}'.format(lo, hi)]
-        buffer += [' |---------------|===============|===============|---------------|']
+    def _calculate_values(self, sample):
+        raise NotImplementedError
+
+    def _format_values(self, summary_values):
+        for key, val in summary_values.items():
+            summary_values[key] = '{:.{ndec}f}'.format(
+                float(val), ndec=self.roundto)
+
+
+class _StatSummary(_Summary):
+    def __init__(self, roundto, batches, alpha):
+        super(_StatSummary, self).__init__(roundto)
+        spaces = 17
+        hpd_name = '{}% HPD interval'.format(int(100 * (1 - alpha)))
+        value_line = '{mean:<{pad}}{sd:<{pad}}{mce:<{pad}}{hpd:<{pad}}'
+        header = value_line.format(mean='Mean', sd='SD', mce='MC Error',
+                                  hpd=hpd_name, pad=spaces).strip()
+        hline = '-' * len(header)
+
+        self.header_lines = [header, hline]
+        self.spaces = spaces
+        self.value_line = value_line
+        self.batches = batches
+        self.alpha = alpha
+
+    def _calculate_values(self, sample):
+        return _calculate_stats(sample, self.batches, self.alpha)
+
+    def _format_values(self, summary_values):
+        roundto = self.roundto
+        for key, val in summary_values.items():
+            if key == 'hpd':
+                summary_values[key] = '[{:.{ndec}f}, {:.{ndec}f}]'.format(
+                    *val, ndec=roundto)
+            else:
+                summary_values[key] = '{:.{ndec}f}'.format(
+                    float(val), ndec=roundto)
+
+
+class _PosteriorQuantileSummary(_Summary):
+    def __init__(self, roundto, alpha):
+        super(_PosteriorQuantileSummary, self).__init__(roundto)
+        spaces = 15
+        title = 'Posterior quantiles:'
+        value_line = '{lo:<{pad}}{q25:<{pad}}{q50:<{pad}}{q75:<{pad}}{hi:<{pad}}'
+        lo, hi = 100 * alpha / 2, 100 * (1. - alpha / 2)
         qlist = (lo, 25, 50, 75, hi)
-        var_quantiles = quantiles(sample, qlist=qlist)
-        for index in indices:
-            quantile_str = ''
-            for i, q in enumerate(qlist):
-                qstr = str(round(var_quantiles[q][index], roundto))
-                quantile_str += qstr + ' '*(17-i-len(qstr))
-            buffer += [quantile_str.strip()]
-        buffer += ['']
+        header = value_line.format(lo=lo, q25=25, q50=50, q75=75, hi=hi,
+                                   pad=spaces).strip()
+        hline = '|{thin}|{thick}|{thick}|{thin}|'.format(
+            thin='-' * (spaces - 1), thick='=' * (spaces - 1))
 
-        print('\t' + '\n\t'.join(buffer))
+        self.header_lines = [title, header, hline]
+        self.spaces = spaces
+        self.lo, self.hi = lo, hi
+        self.qlist = qlist
+        self.value_line = value_line
+
+    def _calculate_values(self, sample):
+        return _calculate_posterior_quantiles(sample, self.qlist)
+
+
+def _calculate_stats(sample, batches, alpha):
+    means = sample.mean(0)
+    sds = sample.std(0)
+    mces = mc_error(sample, batches)
+    intervals = hpd(sample, alpha)
+    for index in range(sample.shape[1]):
+        mean, sd, mce = [stat[index] for stat in (means, sds, mces)]
+        interval = intervals[index].squeeze().tolist()
+        yield {'mean': mean, 'sd': sd, 'mce': mce, 'hpd': interval}
+
+
+def _calculate_posterior_quantiles(sample, qlist):
+    var_quantiles = quantiles(sample, qlist=qlist)
+    ## Replace ends of qlist with 'lo' and 'hi'
+    qends = {qlist[0]: 'lo', qlist[-1]: 'hi'}
+    qkeys = {q: qends[q] if q in qends else 'q{}'.format(q) for q in qlist}
+    for index in range(sample.shape[1]):
+        yield {qkeys[q]: var_quantiles[q][index] for q in qlist}
