@@ -22,7 +22,7 @@ classifiers = ['Development Status :: 3 - Alpha',
                'Operating System :: OS Independent']
 
 required = ['numpy>=1.7.1', 'scipy>=0.12.0', 'matplotlib>=1.2.1',
-            'Theano<=0.6.1dev']
+            'Theano>=0.6.1dev']
 
 if __name__ == "__main__":
     ## Current release of Theano does not support python 3, so need
