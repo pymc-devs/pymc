@@ -332,6 +332,8 @@ class MCMC(Sampler):
 
         except KeyboardInterrupt:
             self.status = 'halt'
+
+        if self.status == 'halt':
             self._halt()
 
     def tune(self):

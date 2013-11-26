@@ -259,6 +259,8 @@ class GPEvaluationGibbs(pm.Metropolis):
         self._tuning_info = []
         self.proposal_distribution = None
 
+        self.verbose = verbose
+
     def get_logp(self):
         return 0.
     logp = property(get_logp)
