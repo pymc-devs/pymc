@@ -27,17 +27,17 @@ def test_find_MAP():
     data = (data-np.mean(data))/np.std(data)
 
     with Model() as model:
-        mu = Uniform('mu',-1,1)
-        sigma = Uniform('sigma',.5,1.5)
-        y = Normal('y',mu=mu,tau=sigma**-2,observed=data)
+        mu = Uniform('mu', -1, 1)
+        sigma = Uniform('sigma', .5, 1.5)
+        y = Normal('y', mu=mu, tau=sigma**-2, observed=data)
         
         # Test gradient minimization
         map_est1 = starting.find_MAP()
         # Test non-gradient minimization
         map_est2 = starting.find_MAP(fmin=starting.optimize.fmin_powell)
     
-    close_to(map_est1['mu'],0,tol)
-    close_to(map_est1['sigma'],1,tol)
+    close_to(map_est1['mu'], 0, tol)
+    close_to(map_est1['sigma'], 1, tol)
     
-    close_to(map_est2['mu'],0,tol)
-    close_to(map_est2['sigma'],1,tol)
+    close_to(map_est2['mu'], 0, tol)
+    close_to(map_est2['sigma'], 1, tol)
