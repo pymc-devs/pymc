@@ -47,6 +47,33 @@ class test_logp_of_set(TestCase):
                 assert(cls is RuntimeError)
 
 
+class test_normcdf_input_shape(TestCase):
+
+    def test_normcdf_1d_input(self):
+        x = arange(8.)
+        utils.normcdf(x)
+
+    def test_normcdf_log_1d_input(self):
+        x = arange(8.)
+        utils.normcdf(x, log=True)
+
+    def test_normcdf_2d_input(self):
+        x = arange(8.).reshape(2, 4)
+        utils.normcdf(x)
+
+    def test_normcdf_log_2d_input(self):
+        x = arange(8.).reshape(2, 4)
+        utils.normcdf(x, log=True)
+
+    def test_normcdf_3d_input(self):
+        x = arange(8.).reshape(2, 2, 2)
+        utils.normcdf(x)
+
+    def test_normcdf_log_3d_input(self):
+        x = arange(8.).reshape(2, 2, 2)
+        utils.normcdf(x, log=True)
+
+
 if __name__ == '__main__':
     C = nose.config.Config(verbosity=1)
     nose.runmodule(config=C)

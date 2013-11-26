@@ -1321,7 +1321,7 @@ def half_cauchy_like(x, alpha, beta):
     """
 
     x = np.atleast_1d(x)
-    if sum(x < 0):
+    if sum(x.ravel() < 0):
         return -inf
     return flib.cauchy(x, alpha, beta) + len(x)*np.log(2)
 
