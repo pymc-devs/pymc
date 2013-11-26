@@ -963,7 +963,53 @@ class BinaryMetropolis(Metropolis):
                 new_value = True - new_value
             self.stochastic.value = new_value
 
+class ThresholdedMetropolis(Metropolis):
+	"""
+	Implements a standard metropolis step that halts
+	the sampler when a value threshold is exceeded.
+	"""
+	def __init__(self, stochastic, 
+                lb=np.finfo('d').min, 
+                ub=np.finfo('d').max, 
+				post_thresh_ctr=0,
+				*args, **kwargs):
+		"""
+		Initializes ThresholdedMetropolis for the provided bounds.
 
+		:Parameters:
+          - stochastic : Stochastic object
+            The target pymc stochstic.
+            
+          - lb : float
+              lower bound on the variable's value.
+
+          - ub : float
+              upper bound on the variable's value.
+             
+          - post_thresh_ctr : int
+              number of runs to continue sampling after threshold is reached.
+		"""
+		self.lb = lb
+		self.ub = ub
+		self.post_thresh_ctr = post_thresh_ctr
+		self._reached = False
+		Metropolis.__init__(self, stochastic, *args, **kwargs)
+
+	def step(self):		
+		if (self.stochastic.value < self.lb or self.stochastic.value > self.ub):
+			ss = self._model.get_state()['sampler']
+			if (ss['_current_iter'] > ss['_tune_interval']) and\
+			(ss['_current_iter'] > ss['_burn']):
+				if not self._reached:
+					self._model._thresh_reached_iter = ss['_current_iter']
+				self._reached = True		
+				self.post_thresh_ctr -= 1
+
+		if self.post_thresh_ctr < 0:
+			self._model.halt()
+
+		return Metropolis.step(self)
+        
 class AdaptiveMetropolis(StepMethod):
 
     """

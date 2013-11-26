@@ -336,6 +336,9 @@ class MCMC(Sampler):
         if self.status == 'halt':
             self._halt()
 
+        if self.status == 'halt':
+            self._halt()
+            
     def tune(self):
         """
         Tell all step methods to tune themselves.
