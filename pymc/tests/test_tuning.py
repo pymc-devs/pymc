@@ -3,6 +3,7 @@ from numpy import inf
 from pymc.tuning import scaling
 from pymc.tuning import starting
 from pymc import Model,Uniform,Normal
+from pymc.tests.checks import close_to
 from . import models
 
 a = np.array([-10, -.01, 0, 10, 1e300, -inf, inf])
@@ -35,7 +36,8 @@ def test_find_MAP():
         # Test non-gradient minimization
         map_est2 = starting.find_MAP(fmin=starting.optimize.fmin_powell)
     
-    assert (-tol<=map_est1['mu']<=tol)
-    assert (1-tol<=map_est1['sigma']<=1+tol)
-    assert (-tol<=map_est2['mu']<=tol)
-    assert (1-tol<=map_est2['sigma']<=1+tol)
+    close_to(map_est1['mu'],0,tol)
+    close_to(map_est1['sigma'],1,tol)
+    
+    close_to(map_est2['mu'],0,tol)
+    close_to(map_est2['sigma'],1,tol)
