@@ -166,4 +166,6 @@ def psample(draws, step, start=None, trace=None, tune=None, model=None, threads=
 
     traces = p.map(argsample, argset)
 
+    p.close()
+
     return MultiTrace(traces)
