@@ -8,10 +8,13 @@ import numpy as np
 from numpy import isfinite, nan_to_num
 from ..core import *
 
+from inspect import getargspec
+
 __all__ = ['find_MAP', 'scipyminimize']
 
 
-def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False, disp=False, model=None, *args, **kwargs):
+def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False,
+             disp=False, model=None, *args, **kwargs):
     """
     Sets state to the local maximum a posteriori point given a model.
     Current default of fmin_Hessian does not deal well with optimizing close
@@ -50,9 +53,14 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False, d
 
     def grad_logp_o(point):
         return nan_to_num(-dlogp(point))
+ 
+    # Check to see if minimization function actually uses the gradient
+    if 'fprime' in getargspec(fmin).args:
+        r = fmin(logp_o, bij.map(
+            start), fprime=grad_logp_o, disp=disp, *args, **kwargs)
+    else:
+        r = fmin(logp_o, bij.map(start), disp=disp, *args, **kwargs)
 
-    r = fmin(logp_o, bij.map(
-        start), fprime=grad_logp_o, disp=disp, *args, **kwargs)
     if isinstance(r, tuple):
         mx = r[0]
     else:
