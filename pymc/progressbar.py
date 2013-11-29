@@ -61,7 +61,7 @@ class TextProgressBar(ProgressBar):
         bar = self.fill_char * num_hashes + ' ' * (all_full - num_hashes)
 
         info = '%d%%' % percent
-        loc = (len(bar) - len(info)) / 2
+        loc = (len(bar) - len(info)) // 2
         return replace_at(bar, info, loc, loc + len(info))
 
 
