@@ -58,7 +58,7 @@ def sample(draws, step, start=None, trace=None, tune=None, progressbar=True, mod
 
         if not isinstance(trace, NpTrace):
             if trace is None:
-                trace = model.named_vars
+                trace = model.unobserved_RVs
             try:
                 trace = NpTrace(list(trace.values()))
             except AttributeError:
