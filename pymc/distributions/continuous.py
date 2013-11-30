@@ -26,67 +26,57 @@ def get_tau(tau=None, sd=None):
         else:
             return tau
 
-@tensordist(continuous)
-def Uniform(lower=0, upper=1):
-    """
-    Continuous uniform log-likelihood.
+class Uniform(Continuous): 
+    def __init__(self, lower=0, upper=1, *args, **kwargs):
+        """
+        Continuous uniform log-likelihood.
 
-    .. math::
-        f(x \mid lower, upper) = \frac{1}{upper-lower}
+        .. math::
+            f(x \mid lower, upper) = \frac{1}{upper-lower}
 
-    Parameters
-    ----------
-    lower : float
-        Lower limit (defaults to 0)
-    upper : float
-        Upper limit (defaults to 1)
-    """
+        Parameters
+        ----------
+        lower : float
+            Lower limit (defaults to 0)
+        upper : float
+            Upper limit (defaults to 1)
+        """
+        Continuous.__init__(self, *args, **kwargs)
 
-    def logp(value):
+        mean = (upper + lower) / 2.
+        median = mean
+
+        self.__dict__.update(locals())
+
+    def logp(self, value):
+        lower = self.lower 
+        upper = self.upper
+
         return bound(
             -log(upper - lower),
             lower <= value, value <= upper)
 
-    def random(size=None):
-        return runiform(upper, lower, size)
-
-    mean = (upper + lower) / 2.
-    median = mean
-
-    logp.__doc__ = """
-        Uniform log-likelihood with parameters lower={0} and upper={1}.
-
-        Parameters
-        ----------
-        value : float
-            :math:`lower \leq x \leq upper`
-        """
-
-    return locals()
+    def random(self, size=None):
+        return runiform(self.upper, self.lower, size)
 
 
-@tensordist(continuous)
-def Flat():
+class Flat(Continuous):
     """
     Uninformative log-likelihood that returns 0 regardless of
     the passed value.
     """
+    def __init__(self, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
+        median = 0
+        self.__dict__.update(locals())
 
-    def logp(value):
+    def logp(self, value):
         return zeros_like(value)
 
-    logp.__doc__ = """
-        Uninformative log-likelihood that returns 0 regardless of
-        the passed value.
-        """
-
-    median = 0
-
-    return locals()
 
 
-@tensordist(continuous)
-def Normal(mu=0.0, tau=None, sd=None):
+class Normal(Continuous):
+    
     """
     Normal log-likelihood.
 
@@ -108,34 +98,28 @@ def Normal(mu=0.0, tau=None, sd=None):
     - :math:`Var(X) = 1/\tau`
 
     """
+    def __init__(self, mu=0.0, tau=None, sd=None, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
 
-    tau = get_tau(tau=tau, sd=sd)
+        tau = get_tau(tau=tau, sd=sd)
+        mean = mu
+        variance = 1. / tau
 
-    def logp(value):
+        median = mean
+        mode = mean
+
+        self.__dict__.update(locals())
+
+    def logp(self, value):
+        tau = self.tau 
+        mu = self.mu
 
         return bound(
             (-tau * (value - mu) ** 2 + log(tau / pi / 2.)) / 2.,
             tau > 0)
 
-    mean = mu
-    variance = 1. / tau
 
-    median = mean
-    mode = mean
-
-    logp.__doc__ = """
-        Normal log-likelihood with parameters mu={0} and tau={1}.
-
-        Parameters
-        ----------
-        value : float
-            Input data.
-        """.format(mu, tau)
-
-    return locals()
-
-@tensordist(continuous)
-def Beta(alpha, beta):
+class Beta(Continuous):
     """
     Beta log-likelihood. The conjugate prior for the parameter
     :math:`p` of the binomial distribution.
@@ -155,7 +139,20 @@ def Beta(alpha, beta):
     - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
     """
-    def logp(value):
+    def __init__(self, alpha, beta, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
+
+        mean = alpha / (alpha + beta)
+        variance = alpha * beta / (
+            (alpha + beta) ** 2 * (alpha + beta + 1))
+
+        self.__dict__.update(locals())
+
+
+
+    def logp(self, value):
+        alpha = self.alpha
+        beta = self.beta
 
         return bound(
             gammaln(alpha + beta) - gammaln(alpha) - gammaln(beta) +
@@ -165,24 +162,8 @@ def Beta(alpha, beta):
             alpha > 0,
             beta > 0)
 
-    mean = alpha / (alpha + beta)
-    variance = alpha * beta / (
-        (alpha + beta) ** 2 * (alpha + beta + 1))
 
-    logp.__doc__ = """
-    Beta log-likelihood with parameters alpha={0} and beta={1}.
-
-    Parameters
-    ----------
-    value : float
-        0 < x < 1
-    """.format(alpha, beta)
-
-    return locals()
-
-
-@tensordist(continuous)
-def Exponential(lam):
+class Exponential(Continuous):
     """
     Exponential distribution
 
@@ -192,23 +173,25 @@ def Exponential(lam):
         lam > 0
         rate or inverse scale
     """
+    def __init__(self, lam, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
 
-    mean = 1. / lam
-    median = mean * log(2)
-    mode = 0
+        mean = 1. / lam
+        median = mean * log(2)
+        mode = 0
 
-    variance = lam ** -2
+        variance = lam ** -2
+        self.__dict__.update(locals())
 
-    def logp(value):
+    def logp(self, value):
+        lam = self.lam
         return bound(log(lam) - lam * value,
                      value > 0,
                      lam > 0)
 
-    return locals()
 
 
-@tensordist(continuous)
-def Laplace(mu, b):
+class Laplace(Continuous):
     """
     Laplace distribution
 
@@ -220,18 +203,23 @@ def Laplace(mu, b):
         scale
     """
 
-    mean = median = mode = mu
+    def __init__(self, mu, b, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
+        mean = median = mode = mu
 
-    variance = 2 * b ** 2
+        variance = 2 * b ** 2
 
-    def logp(value):
+        self.__dict__.update(locals())
+
+    def logp(self, value):
+        mu = self.mu 
+        b = self.b
+
         return -log(2 * b) - abs(value - mu) / b
 
-    return locals()
 
 
-@tensordist(continuous)
-def Lognormal(mu=0, tau=1):
+class Lognormal(Continuous):
     """
     Log-normal log-likelihood.
 
@@ -255,31 +243,26 @@ def Lognormal(mu=0, tau=1):
        :math:`Var(X)=(e^{1/\tau}-1)e^{2\mu+\frac{1}{\tau}}`
 
     """
-    def logp(value):
+    def __init__(self, mu=0, tau=1, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
+        mean = exp(mu + 1./(2*tau))
+        median = exp(mu)
+        mode = exp(mu - 1./tau)
+
+        variance = (exp(1./tau) - 1) * exp(2*mu + 1./tau)
+
+        self.__dict__.update(locals())
+
+    def logp(self, value):
+        mu = self.mu
+        tau = self.tau
+
         return bound(
             -0.5*tau*(log(value) - mu)**2 + 0.5*log(tau/(2.*pi)) - log(value),
             tau > 0)
 
-    mean = exp(mu + 1./(2*tau))
-    median = exp(mu)
-    mode = exp(mu - 1./tau)
 
-    variance = (exp(1./tau) - 1) * exp(2*mu + 1./tau)
-
-    logp.__doc__ = """
-        Log-normal log-likelihood with paramters mu={0} and tau={1}.
-
-        Parameters
-        ----------
-        value : float
-            Input data
-        """
-
-    return locals()
-
-
-@tensordist(continuous)
-def T(nu, mu=0, lam=1):
+class T(Continuous):
     """
     Non-central Student's T log-likelihood.
 
@@ -302,33 +285,27 @@ def T(nu, mu=0, lam=1):
     lam : float
         Scale parameter (defaults to 1)
     """
+    def __init__(self, nu, mu=0, lam=1, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
+        mean = mu
+        median = mu
+        mode = mu
 
-    def logp(value):
+        variance = switch((nu > 2) * 1, nu / (nu - 2) / lam, inf)
+        self.__dict__.update(locals())
+
+    def logp(self, value):
+        nu = self.nu
+        mu = self.mu
+        lam = self.lam 
+
         return bound(
             gammaln((nu + 1.0) / 2.0) + .5 * log(lam / (nu * pi)) - gammaln(nu / 2.0) - (nu + 1.0) / 2.0 * log(1.0 + lam * (value - mu) ** 2 / nu),
             lam > 0,
             nu > 0)
 
-    mean = mu
-    median = mu
-    mode = mu
 
-    variance = switch((nu > 2) * 1, nu / (nu - 2) / lam, inf)
-
-    logp.__doc__ = """
-        Student's T log-likelihood with paramters nu={0}, mu={1} and lam={2}.
-
-        Parameters
-        ----------
-        value : float
-            Input data
-        """
-
-    return locals()
-
-
-@tensordist(continuous)
-def Cauchy(alpha, beta):
+class Cauchy(Continuous): 
     """
     Cauchy log-likelihood. The Cauchy distribution is also known as the
     Lorentz or the Breit-Wigner distribution.
@@ -348,27 +325,20 @@ def Cauchy(alpha, beta):
 
     """
 
-    median = mode = alpha
+    def __init__(self, alpha, beta, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
+        median = mode = alpha
+        self.__dict__.update(locals())
 
-    def logp(value):
+    def logp(self, value):
+        alpha = self.alpha
+        beta = self.beta
         return bound(
             -log(pi) - log(beta) - log(1 + ((
                                             value - alpha) / beta) ** 2),
             beta > 0)
 
-    logp.__doc__ = """
-        Cauchy log-likelihood with parameters alpha={0} and beta={0}.
-
-        Parameters
-        ----------
-        value : float
-            Input data.
-        """.format(alpha, beta)
-    return locals()
-
-
-@tensordist(continuous)
-def Gamma(alpha, beta):
+class Gamma(Continuous): 
     """
     Gamma log-likelihood.
 
@@ -392,12 +362,18 @@ def Gamma(alpha, beta):
     - :math:`Var(X) = \frac{\alpha}{\beta^2}`
 
     """
+    def __init__(self, alpha, beta, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
 
-    mean = alpha / beta
-    median = maximum((alpha - 1) / beta, 0)
-    variance = alpha / beta ** 2
+        mean = alpha / beta
+        median = maximum((alpha - 1) / beta, 0)
+        variance = alpha / beta ** 2
 
-    def logp(value):
+        self.__dict__.update(locals())
+
+    def logp(self, value):
+        alpha = self.alpha 
+        beta = self.beta
         return bound(
             -gammaln(alpha) + logpow(
                 beta, alpha) - beta * value + logpow(value, alpha - 1),
@@ -406,36 +382,46 @@ def Gamma(alpha, beta):
             alpha > 0,
             beta > 0)
 
-    logp.__doc__ = """
-        Gamma log-likelihood with paramters alpha={0} and beta={1}.
+class Bounded(Continuous):
+    def __init__(self, distribution, lower, upper, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
 
-        Parameters
-        ----------
-        x : float
-            math:`x \ge 0`
-        """.format(alpha, beta)
+        self.dist = distribution.dist(*args, **kwargs)
 
-    return locals()
+        self.__dict__.update(locals())
+
+        if hasattr(self.dist, 'mode'):
+            self.mode = self.dist.mode
+
+    def logp(self, value):
+        return bound(
+            self.dist.logp(value),
+
+            self.lower <= value, value <= self.upper)
 
 
-def Bound(distribution, lower=-inf, upper=inf):
-    @tensordist(continuous)
-    @wraps_with_spec(distribution)
-    def Bounded(*args, **kwargs):
+
+class Bound(object): 
+    def __init__(self, distribution, lower=-inf, upper=inf):
         """A bounded distribution."""
-        dist = distribution.dist(*args, **kwargs)
+        self.distribution = distribution
+        self.lower = lower
+        self.upper = upper
 
-        def logp(value):
-            return bound(
-                dist.logp(value),
+    def __call__(self, *args, **kwargs):
+        kwargs = kwargs.copy() 
+        kwargs['distribution'] = self.distribution
+        kwargs['lower'] = self.lower
+        kwargs['upper'] = self.upper
+        
+        return Bounded(*args, **kwargs)
 
-                lower <= value, value <= upper)
-
-        if hasattr(dist, 'mode'):
-            mode = dist.mode
-
-        return locals()
-    return Bounded
+    def dist(*args, **kwargs):
+        kwargs = kwargs.copy() 
+        kwargs['distribution'] = distribution
+        kwargs['lower'] = lower
+        kwargs['upper'] = upper
+        return Bounded.dist(*args, **kwargs)
 
 
 Tpos = Bound(T, 0)

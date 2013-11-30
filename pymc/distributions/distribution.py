@@ -5,7 +5,7 @@ from ..model import *
 import warnings
 
 __all__ = ['DensityDist', 'TensorDist', 'tensordist', 'continuous',
-           'discrete', 'arbitrary', 'evaluate']
+           'discrete', 'arbitrary', 'evaluate', 'Arbitrary', 'Continuous']
 
 
 class Distribution(object):
@@ -16,9 +16,9 @@ class Distribution(object):
             raise TypeError("No model on context stack, which is needed to use the Normal('x', 0,1) syntax. Add a 'with model:' block")
 
         if 'observed' in kwargs:
-            obs = kwargs.pop('observed')
+            data = kwargs.pop('observed')
             dist = cls.dist(*args, **kwargs)
-            return model.Data(obs, dist)
+            return model.Data(name, dist, data)
         else:
             dist = cls.dist(*args, **kwargs)
             return model.Var(name, dist)
@@ -64,10 +64,13 @@ class TensorDist(Distribution):
         var = self.type(name)
         var.dshape = tuple(self.shape)
         var.dsize = int(np.prod(self.shape))
+        var.distribution = self
 
         testval = self.default(self.testval)
         var.tag.test_value = np.ones(
             self.shape, self.dtype) * get_test_val(self, testval)
+
+        var.logp = self.logp(var)
         return var
 
 
@@ -105,3 +108,46 @@ def arbitrary(shape=(), dtype='float64', testval=0):
 @tensordist(arbitrary)
 def DensityDist(logp):
     return locals()
+
+
+
+class Arbitrary(TensorDist): 
+    def __init__(self, shape=(), dtype='float64', *args, **kwargs):
+        TensorDist.__init__(self, *args, **kwargs)
+
+        self.shape = np.atleast_1d(shape)
+        self.type = TensorType(dtype, shape)
+
+class Discrete(TensorDist): 
+    def __init__(self, shape=(), dtype='int64', testval=None):
+        self.shape = np.atleast_1d(shape)
+        self.type = TensorType(dtype, shape)
+        self.default_testvals = ['mode']
+
+class Continuous(TensorDist): 
+    def __init__(self, shape=(), dtype='float64', testval=None, *args, **kwargs):
+        TensorDist.__init__(self, *args, **kwargs)
+
+        shape = np.atleast_1d(shape)
+        type = TensorType(dtype, shape)
+        default_testvals = ['median', 'mean', 'mode']
+
+        self.__dict__.update(locals())
+
+
+
+class DensityDist(Arbitrary):
+    def __init__(self, logp, *args, **kwargs):
+        Arbitrary.__init__(*args, **kwargs)
+
+        self.logpf = logp
+
+    def logp(self, value): 
+        return self.logpf(value)
+
+ignore_names = set(['self', 'args', 'kwargs'])
+def attach(obj, values): 
+    for name, value in values.iteritems():
+        if not name in ignore_names:
+            setattr(obj, name, value)
+
