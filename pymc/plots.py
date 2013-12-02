@@ -11,7 +11,7 @@ from .trace import *
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
-def traceplot(trace, vars=None, figsize=None, lines=None, combined=False):
+def traceplot(trace, vars=None, figsize=None, lines=None, combined=False, grid=True):
     """Plot samples histograms and values
 
     Parameters
@@ -29,6 +29,8 @@ def traceplot(trace, vars=None, figsize=None, lines=None, combined=False):
     combined : bool
         Flag for combining MultiTrace into a single trace. If False (default)
         traces will be plotted separately on the same set of axes.
+    grid : bool
+        Flag for adding gridlines to histogram. Defaults to True.
 
     Returns
     -------
@@ -64,7 +66,7 @@ def traceplot(trace, vars=None, figsize=None, lines=None, combined=False):
             else:
                 kdeplot_op(ax[i, 0], d)
             ax[i, 0].set_title(str(v))
-            ax[i, 0].grid(True)
+            ax[i, 0].grid(grid)
             ax[i, 1].set_title(str(v))
             ax[i, 1].plot(d, alpha=.35)
 
