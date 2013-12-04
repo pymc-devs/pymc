@@ -27,20 +27,20 @@ def get_tau(tau=None, sd=None):
             return tau
 
 class Uniform(Continuous): 
+    """
+    Continuous uniform log-likelihood.
+
+    .. math::
+        f(x \mid lower, upper) = \frac{1}{upper-lower}
+
+    Parameters
+    ----------
+    lower : float
+        Lower limit (defaults to 0)
+    upper : float
+        Upper limit (defaults to 1)
+    """
     def __init__(self, lower=0, upper=1, *args, **kwargs):
-        """
-        Continuous uniform log-likelihood.
-
-        .. math::
-            f(x \mid lower, upper) = \frac{1}{upper-lower}
-
-        Parameters
-        ----------
-        lower : float
-            Lower limit (defaults to 0)
-        upper : float
-            Upper limit (defaults to 1)
-        """
         Continuous.__init__(self, *args, **kwargs)
 
         mean = (upper + lower) / 2.
@@ -76,7 +76,6 @@ class Flat(Continuous):
 
 
 class Normal(Continuous):
-    
     """
     Normal log-likelihood.
 
