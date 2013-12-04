@@ -86,9 +86,29 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     else:
         mx = r
 
+    mx = bij.rmap(mx)
+
     if (not allfinite(mx) or
         not allfinite(logp(mx)) or
-            not allfinite(dlogp(mx))):
+        not allfinite(dlogp(mx))):
+
+
+        badvals = {}
+        for var in vars:
+            val = mx[var.name]
+            logp = pointfn(var.logp)(mx)
+            dlogp = pointfn(gradient(var.logp))(mx)
+
+            message = ""
+
+            if not allfinite(val):
+                message += "bad value: " + str(val) + "\n"
+            if not allfinite(logp):
+                message += "bad logp: " + str(logp) + "\n"
+            if not allfinite(dlogp):
+                message += "bad dlogp: " + str(dlogp) + "\n"
+            badvals[var.name] = message
+
             raise ValueError("Optimization error: max, logp or dlogp at " +
                              "max have bad values. Some values may be " +
                              "outside of distribution support. max: " +
@@ -97,9 +117,7 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
                              "1) you don't have hierarchical parameters, " +
                              "these will lead to points with infinite " +
                              "density. 2) your distribution logp's are " +
-                             "properly specified.")
-
-    mx = bij.rmap(mx)
+                             "properly specified. Specific issues: \n" + str(badvals))
     mx = {v.name: np.floor(mx[v.name]) if v.dtype in discrete_types else
           mx[v.name] for v in vars}
     if return_raw:

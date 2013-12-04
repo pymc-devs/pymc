@@ -2,11 +2,11 @@ from .dist_math import *
 
 from theano.sandbox.linalg import det, solve, matrix_inverse, trace
 from theano.tensor import dot
+from theano.printing import Print
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
 
-@tensordist(continuous)
-def MvNormal(mu, tau):
+class MvNormal(Continuous):
     """
     Multivariate normal
 
@@ -20,20 +20,23 @@ def MvNormal(mu, tau):
     :Support:
         2 array of floats
     """
+    def __init__(self, mu, tau, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
+        mean = median = mode = mu
+        self.__dict__.update(locals())
 
-    def logp(value):
+    def logp(self, value):
+        mu = self.mu
+        tau = self.tau
+
         delta = value - mu
         k = tau.shape[0]
 
         return 1/2. * (-k * log(2*pi) + log(det(tau)) - dot(delta.T, dot(tau, delta)))
 
-    mean = median = mode = mu
-
-    return locals()
 
 
-@tensordist(continuous)
-def Dirichlet(k, a):
+class Dirichlet(Continuous):
     """
     Dirichlet
 
@@ -59,10 +62,19 @@ def Dirichlet(k, a):
         Only the first `k-1` elements of `x` are expected. Can be used
         as a parent of Multinomial and Categorical nevertheless.
     """
+    def __init__(self, k, a, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
+        a = ones([k]) * a
+        mean = a / sum(a)
 
-    a = ones([k]) * a
+        mode = switch(all(a > 1),
+                     (a - 1) / sum(a - 1),
+                      nan)
+        self.__dict__.update(locals())
 
-    def logp(value):
+    def logp(self, value):
+        k = self.k 
+        a = self.a
 
         # only defined for sum(value) == 1
         return bound(
@@ -72,17 +84,9 @@ def Dirichlet(k, a):
             k > 1,
             all(a > 0))
 
-    mean = a / sum(a)
-
-    mode = switch(all(a > 1),
-                 (a - 1) / sum(a - 1),
-                  nan)
-
-    return locals()
 
 
-@tensordist(discrete)
-def Multinomial(n, p):
+class Multinomial(Continuous):
     """
     Generalization of the binomial
     distribution, but instead of each trial resulting in "success" or
@@ -110,8 +114,14 @@ def Multinomial(n, p):
         - :math:`Var(X_i)=n p_i(1-p_i)`
         - :math:`Cov(X_i,X_j) = -n p_i p_j`
     """
+    def __init__(self, n, p, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
+        mean = n * p
+        self.__dict__.update(locals())
 
-    def logp(x):
+    def logp(self, x):
+        n = self.n
+        p = self.p
         # only defined for sum(p) == 1
         return bound(
             factln(n) + sum(x * log(p) - factln(x)),
@@ -119,13 +129,8 @@ def Multinomial(n, p):
             eq(sum(x), n),
             all(0 <= x), all(x <= n))
 
-    mean = n * p
 
-    return locals()
-
-
-@tensordist(continuous)
-def Wishart(n, p, V):
+class Wishart(Continuous):
     """
     The Wishart distribution is the probability
     distribution of the maximum-likelihood estimator (MLE) of the precision
@@ -153,8 +158,20 @@ def Wishart(n, p, V):
       X : matrix
         Symmetric, positive definite.
     """
+    def __init__(self, n, p, V, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
+        mean = n * V
+        mode = switch(1*(n >= p + 1),
+                     (n - p - 1) * V,
+                      nan)
+        self.__dict__.update(locals())
 
-    def logp(X):
+
+    def logp(self, X):
+        n = self.n
+        p = self.p
+        V = self.V
+
         IVI = det(V)
         return bound(
             ((n - p - 1) * log(IVI) - trace(matrix_inverse(V).dot(X)) -
@@ -162,10 +179,3 @@ def Wishart(n, p, V):
              2) - n * log(IVI) - 2 * multigammaln(p, n / 2)) / 2,
 
             all(n > p - 1))
-
-    mean = n * V
-    mode = switch(1*(n >= p + 1),
-                 (n - p - 1) * V,
-                  nan)
-
-    return locals()

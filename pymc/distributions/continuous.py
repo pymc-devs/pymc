@@ -384,10 +384,9 @@ class Gamma(Continuous):
 
 class Bounded(Continuous):
     def __init__(self, distribution, lower, upper, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
-
         self.dist = distribution.dist(*args, **kwargs)
 
+        self.__dict__.update(self.dist.__dict__)
         self.__dict__.update(locals())
 
         if hasattr(self.dist, 'mode'):
@@ -409,19 +408,12 @@ class Bound(object):
         self.upper = upper
 
     def __call__(self, *args, **kwargs):
-        kwargs = kwargs.copy() 
-        kwargs['distribution'] = self.distribution
-        kwargs['lower'] = self.lower
-        kwargs['upper'] = self.upper
+        first, args = args[0], args[1:]
         
-        return Bounded(*args, **kwargs)
+        return Bounded(first, self.distribution, self.lower, self.upper, *args, **kwargs)
 
     def dist(*args, **kwargs):
-        kwargs = kwargs.copy() 
-        kwargs['distribution'] = distribution
-        kwargs['lower'] = lower
-        kwargs['upper'] = upper
-        return Bounded.dist(*args, **kwargs)
+        return Bounded.dist(self.distribution, self.lower, self.upper, *args, **kwargs)
 
 
 Tpos = Bound(T, 0)

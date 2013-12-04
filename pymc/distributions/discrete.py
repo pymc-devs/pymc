@@ -4,8 +4,7 @@ __all__  = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson', 'NegativeBinomial'
 'ConstantDist', 'ZeroInflatedPoisson', 'DiscreteUniform', 'Geometric']
 
 
-@tensordist(discrete)
-def Binomial(n, p):
+class Binomial(Discrete):
     """
     Binomial log-likelihood.  The discrete probability distribution
     of the number of successes in a sequence of n independent yes/no
@@ -26,9 +25,19 @@ def Binomial(n, p):
     - :math:`Var(X)=np(1-p)`
 
     """
-    def logp(value):
+    def __init__(self, n, p, *args, **kwargs):
+        Discrete.__init__(self, *args, **kwargs)
+
+        mode = cast(round(n * p), 'int8')
+
+        self.__dict__.update(locals())
+
+    def logp(self, value):
+        n = self.n 
+        p = self.p 
 
         return bound(
+
             logpow(p, value) + logpow(
                 1 - p, n - value) + factln(
                     n) - factln(value) - factln(n - value),
@@ -36,22 +45,8 @@ def Binomial(n, p):
             0 <= value, value <= n,
             0 <= p, p <= 1)
 
-    mode = cast(round(n * p), 'int8')
 
-    logp.__doc__ = """
-        Binomial log-likelihood with parameters n={0} and p={1}.
-
-        Parameters
-        ----------
-        value : int
-            Number of successes, x > 0
-        """.format(n, p)
-
-    return locals()
-
-
-@tensordist(discrete)
-def BetaBin(alpha, beta, n):
+class BetaBin(Discrete):
     """
     Beta-binomial log-likelihood. Equivalent to binomial random
     variables with probabilities drawn from a
@@ -74,8 +69,15 @@ def BetaBin(alpha, beta, n):
     - :math:`Var(X)=n\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
     """
+    def __init__(self, alpha, beta, n, *args, **kwargs):
+        Discrete.__init__(self, *args, **kwargs)
+        mode = cast(round(alpha / (alpha + beta)), 'int8')
+        self.__dict__.update(locals())
 
-    def logp(value):
+    def logp(self, value):
+        alpha = self.alpha
+        beta = self.beta
+        n = self.n
 
         return bound(gammaln(alpha + beta) - gammaln(alpha) - gammaln(beta) +
                      gammaln(n + 1) - gammaln(value + 1) - gammaln(n - value + 1) +
@@ -85,23 +87,8 @@ def BetaBin(alpha, beta, n):
                      alpha > 0,
                      beta > 0)
 
-    mode = cast(round(alpha / (alpha + beta)), 'int8')
 
-    logp.__doc__ = """
-        Beta-binomial log-likelihood with parameters alpha={0}, beta={1},
-        and n={2}.
-
-        Parameters
-        ----------
-        value : int
-            x=0,1,...,n
-        """.format(alpha, beta, n)
-
-    return locals()
-
-
-@tensordist(discrete)
-def Bernoulli(p):
+class Bernoulli(Discrete):
     """Bernoulli log-likelihood
 
     The Bernoulli distribution describes the probability of successes (x=1) and
@@ -119,28 +106,19 @@ def Bernoulli(p):
     - :math:`Var(x)= p(1-p)`
 
     """
+    def __init__(self, p, *args,**kwargs):
+        Discrete.__init__(self, *args, **kwargs)
+        mode = cast(round(p), 'int8')
+        self.__dict__.update(locals())
 
-    def logp(value):
+    def logp(self, value):
+        p = self.p
         return bound(
             switch(value, log(p), log(1 - p)),
             0 <= p, p <= 1)
 
-    mode = cast(round(p), 'int8')
 
-    logp.__doc__ = """
-        Bernoulli log-likelihood with parameter p={0}.
-
-        Parameters
-        ----------
-        value : int
-            Series of successes (1) and failures (0). :math:`x=0,1`
-        """.format(p)
-
-    return locals()
-
-
-@tensordist(discrete)
-def Poisson(mu):
+class Poisson(Discrete):
     """
     Poisson log-likelihood.
 
@@ -163,27 +141,20 @@ def Poisson(mu):
        - :math:`Var(x)=\mu`
 
     """
-    def logp(value):
+    def __init__(self, mu, *args, **kwargs):
+        Discrete.__init__(self, *args, **kwargs)
+        mode = floor(mu).astype('int32')
+        self.__dict__.update(locals())
+
+    def logp(self, value):
+        mu = self.mu
+
         return bound(
             logpow(mu, value) - factln(value) - mu,
 
             mu > 0, value >= 0)
 
-    logp.__doc__ = """
-        Poisson log-likelihood with parameters mu={0}.
-
-        Parameters
-        ----------
-        x : int
-            :math:`x \in {{0,1,2,...}}`
-        """.format(mu)
-
-    mode = floor(mu).astype('int32')
-    return locals()
-
-
-@tensordist(discrete)
-def NegativeBinomial(mu, alpha):
+class NegativeBinomial(Discrete):
     """
     Negative binomial log-likelihood.
 
@@ -202,7 +173,15 @@ def NegativeBinomial(mu, alpha):
       - :math:`E[x]=\mu`
 
     """
-    def logp(value):
+    def __init__(self, mu, alpha, *args, **kwargs):
+        Discrete.__init__(self, *args, **kwargs)
+        mode = floor(mu).astype('int32')
+        self.__dict__.update(locals())
+
+    def logp(self, value):
+        mu = self.mu
+        alpha = self.alpha
+
         # Return Poisson when alpha gets very large
         pois = bound(logpow(mu, value) - factln(value) - mu,
                      mu > 0, 
@@ -215,21 +194,7 @@ def NegativeBinomial(mu, alpha):
                       pois,
                       negbinom)
 
-    logp.__doc__ = """
-        Negative binomial log-likelihood with parameters ({0},{1}).
-
-        Parameters
-        ----------
-        x : int
-            :math:`x \in {{0,1,2,...}}`
-        """.format(mu, alpha)
-
-    mode = floor(mu).astype('int32')
-    return locals()
-
-
-@tensordist(discrete)
-def Geometric(p):
+class Geometric(Discrete):
     """
     Geometric log-likelihood. The probability that the first success in a
     sequence of Bernoulli trials occurs on the x'th trial.
@@ -245,27 +210,18 @@ def Geometric(p):
       - :math:`Var(X)=\frac{1-p}{p^2}`
 
     """
+    def __init__(self, p, *args, **kwargs):
+        Discrete.__init__(self, *args, **kwargs)
+        mode = 1
+        self.__dict__.update(locals())
 
-    def logp(value):
+    def logp(self, value):
+        p = self.p
         return bound(log(p) + logpow(1 - p, value - 1),
                      0 <= p, p <= 1, value >= 1)
 
-    logp.__doc__ = """
-        Geometric log-likelihood with parameter {0}.
 
-        Parameters
-        ----------
-        x : int
-            :math:`x \in {{1,2,...}}`
-        """.format(p)
-
-    mode = 1
-
-    return locals()
-
-
-@tensordist(discrete)
-def DiscreteUniform(lower, upper):
+class DiscreteUniform(Discrete):
     """
     Discrete uniform distribution.
 
@@ -277,53 +233,52 @@ def DiscreteUniform(lower, upper):
       - `upper` : Upper limit (upper > lower).
 
     """
-    lower, upper = floor(lower).astype('int32'), floor(upper).astype('int32')
+    def __init__(self, lower, upper, *args, **kwargs):
+        Discrete.__init__(self, *args, **kwargs)
+        lower, upper = floor(lower).astype('int32'), floor(upper).astype('int32')
+        mode = floor((upper - lower) / 2.).astype('int32')
+        self.__dict__.update(locals())
 
-    def logp(value):
+    def logp(self, value):
+        upper = self.upper
+        lower = self.lower
 
         return bound(
             -log(upper - lower + 1),
 
             lower <= value, value <= upper)
 
-    logp.__doc__ = """
-        Discrete uniform log-likelihood with bounds ({0},{1}).
 
-        Parameters
-        ----------
-        x : int
-            :math:`lower \leq x \leq upper`
-        """.format(upper, lower)
+class ConstantDist(Discrete):
+    """
+    Constant log-likelihood with parameter c={0}.
 
-    mode = floor((upper - lower) / 2.).astype('int32')
-    return locals()
+    Parameters
+    ----------
+    value : float or int
+        Data value(s)
+    """
 
+    def __init__(self, c, *args, **kwargs):
+        Discrete.__init__(self, *args, **kwargs)
+        mean = median = mode = c
+        self.__dict__.update(locals())
 
-@tensordist(discrete)
-def ConstantDist(c):
-    def logp(value):
+    def logp(self, value):
+        c = self.c 
         return bound(0, eq(value, c))
 
-    mean = median = mode = c
-    logp.__doc__ = """
-        Constant log-likelihood with parameter c={0}.
 
-        Parameters
-        ----------
-        value : float or int
-            Data value(s)
-        """.format(c)
-    return locals()
+class ZeroInflatedPoisson(Discrete):
+    def __init__(self, theta, z, *args, **kwargs):
+        Discrete.__init__(self, *args, **kwargs)
+        pois = Poisson.dist(theta)
+        const = ConstantDist.dist(0)
+        mode = pois.mode
+        self.__dict__.update(locals())
 
-
-@tensordist(discrete)
-def ZeroInflatedPoisson(theta, z):
-    pois = Poisson.dist(theta)
-    const = ConstantDist.dist(0)
-
-    def logp(value):
+    def logp(self, value):
+        z = self.z
         return switch(z,
-                      pois.logp(value),
-                      const.logp(value))
-    mode = pois.mode
-    return locals()
+                      self.pois.logp(value),
+                      self.const.logp(value))
