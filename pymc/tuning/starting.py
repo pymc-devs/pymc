@@ -7,6 +7,7 @@ from scipy import optimize
 import numpy as np
 from numpy import isfinite, nan_to_num
 from ..core import *
+from ..vartypes import discrete_types, typefilter
 
 from inspect import getargspec
 
@@ -25,8 +26,13 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False,
     start : dict of parameter values (Defaults to model.test_point)
     vars : list
         List of variables to set to MAP point (Defaults to all continuous).
+        If discrete variables are included, estimates are likely to be 
+        inaccurate, and a warning is issued.
     fmin : function
-        Optimization algorithm (Defaults to `scipy.optimize.fmin_bfgs`).
+        Optimization algorithm (Defaults to `scipy.optimize.fmin_bfgs`) for 
+        continuous variables. If their are discrete variable specified,
+        defaults to `scipy.optimize.fmin_powell`, which provides slightly
+        better performance.
     return_raw : Bool
         Whether to return extra value returned by fmin (Defaults to False)
     model : Model (optional if in `with` context)
@@ -39,6 +45,14 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False,
 
     if vars is None:
         vars = model.cont_vars
+    else:
+        disc_vars = list(typefilter(vars,discrete_types))
+        if disc_vars:
+            print("Warning: vars contains discrete variables. MAP " +\
+                  "estimates may not be accurate for the default parameters."+\
+                  " Defaulting to non-gradient minimization fmin_powell.")
+            fmin = optimize.fmin_powell 
+
 
     allinmodel(vars, model)
 
@@ -69,10 +83,19 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False,
     if (not allfinite(mx) or
         not allfinite(logp(mx)) or
             not allfinite(dlogp(mx))):
-            raise ValueError("Optimization error: max, logp or dlogp at max have bad values. Some values may be outside of distribution support. max: " + repr(mx) + " logp: " + repr(logp(mx)) + " dlogp: " + repr(dlogp(mx)) +
-                             "Check that 1) you don't have hierarchical parameters, these will lead to points with infinite density. 2) your distribution logp's are properly specified.")
+            raise ValueError("Optimization error: max, logp or dlogp at " +\
+                             "max have bad values. Some values may be " +\
+                             "outside of distribution support. max: " +\
+                             repr(mx) + " logp: " + repr(logp(mx)) +\
+                             " dlogp: " + repr(dlogp(mx)) + "Check that " +\
+                             "1) you don't have hierarchical parameters, " +\
+                             "these will lead to points with infinite " +\
+                             "density. 2) your distribution logp's are " +\
+                             "properly specified.")
 
     mx = bij.rmap(mx)
+    mx = {v.name:np.floor(mx[v.name]) if v.dtype in discrete_types else
+                 mx[v.name] for v in vars}
     if return_raw:
         return mx, r
     else:
