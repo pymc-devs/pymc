@@ -17,9 +17,16 @@ class Distribution(object):
             data = kwargs.pop('observed')
             dist = cls.dist(*args, **kwargs)
             return model.Data(name, dist, data)
-        else:
+        elif isinstance(name, basestring):  
             dist = cls.dist(*args, **kwargs)
             return model.Var(name, dist)
+        elif name is None:
+            return cls.dist(*args, **kwargs)
+        else: 
+            raise TypeError("needed name or None but got: " + name)
+
+    def __getnewargs__(self):
+        return None, 
 
     @classmethod
     def dist(cls, *args, **kwargs):
