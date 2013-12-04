@@ -5,7 +5,7 @@ from ..model import *
 import warnings
 
 __all__ = ['DensityDist', 'TensorDist', 'tensordist', 'continuous',
-           'discrete', 'arbitrary', 'evaluate', 'Arbitrary', 'Continuous']
+           'discrete', 'arbitrary', 'evaluate', 'Arbitrary', 'Continuous', 'Discrete']
 
 
 class Distribution(object):
@@ -117,12 +117,15 @@ class Arbitrary(TensorDist):
 
         self.shape = np.atleast_1d(shape)
         self.type = TensorType(dtype, shape)
+        self.__dict__.update(locals())
 
 class Discrete(TensorDist): 
-    def __init__(self, shape=(), dtype='int64', testval=None):
+    def __init__(self, shape=(), dtype='int64', testval=None, *args, **kwargs):
+        TensorDist.__init__(self, *args, **kwargs)
         self.shape = np.atleast_1d(shape)
         self.type = TensorType(dtype, shape)
         self.default_testvals = ['mode']
+        self.__dict__.update(locals())
 
 class Continuous(TensorDist): 
     def __init__(self, shape=(), dtype='float64', testval=None, *args, **kwargs):
@@ -138,16 +141,13 @@ class Continuous(TensorDist):
 
 class DensityDist(Arbitrary):
     def __init__(self, logp, *args, **kwargs):
-        Arbitrary.__init__(*args, **kwargs)
+        Arbitrary.__init__(self, *args, **kwargs)
 
-        self.logpf = logp
+        logpf = logp
+        testval = 0
+        
+        self.__dict__.update(locals())
 
     def logp(self, value): 
         return self.logpf(value)
-
-ignore_names = set(['self', 'args', 'kwargs'])
-def attach(obj, values): 
-    for name, value in values.iteritems():
-        if not name in ignore_names:
-            setattr(obj, name, value)
 
