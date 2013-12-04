@@ -14,7 +14,7 @@ from inspect import getargspec
 __all__ = ['find_MAP', 'scipyminimize']
 
 
-def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False,
+def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
              disp=False, model=None, *args, **kwargs):
     """
     Sets state to the local maximum a posteriori point given a model.
@@ -45,13 +45,16 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False,
 
     if vars is None:
         vars = model.cont_vars
+        if fmin is None:
+            fmin = optimize.fmin_bfgs
     else:
         disc_vars = list(typefilter(vars,discrete_types))
         if disc_vars:
             print("Warning: vars contains discrete variables. MAP " +\
                   "estimates may not be accurate for the default parameters."+\
                   " Defaulting to non-gradient minimization fmin_powell.")
-            fmin = optimize.fmin_powell 
+            if fmin is None:
+                fmin = optimize.fmin_powell 
 
 
     allinmodel(vars, model)
