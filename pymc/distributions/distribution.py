@@ -1,11 +1,9 @@
 import theano.tensor as t
 import numpy as np
-from ..quickclass import *
 from ..model import *
 import warnings
 
-__all__ = ['DensityDist', 'TensorDist', 'tensordist', 'continuous',
-           'discrete', 'arbitrary', 'evaluate', 'Arbitrary', 'Continuous', 'Discrete']
+__all__ = ['DensityDist', 'TensorDist', 'evaluate', 'Arbitrary', 'Continuous', 'Discrete']
 
 
 class Distribution(object):
@@ -73,41 +71,8 @@ class TensorDist(Distribution):
         var.logp = self.logp(var)
         return var
 
-
-def tensordist(defaults):
-    def decorator(fn):
-        fn = withdefaults(defaults)(fn)
-        return quickclass(TensorDist)(fn)
-    return decorator
-
-
 def TensorType(dtype, shape):
     return t.TensorType(str(dtype), np.atleast_1d(shape) == 1)
-
-
-def continuous(shape=(), dtype='float64', testval=None):
-    shape = np.atleast_1d(shape)
-    type = TensorType(dtype, shape)
-    default_testvals = ['median', 'mean', 'mode']
-    return locals()
-
-
-def discrete(shape=(), dtype='int64', testval=None):
-    shape = np.atleast_1d(shape)
-    type = TensorType(dtype, shape)
-    default_testvals = ['mode']
-    return locals()
-
-
-def arbitrary(shape=(), dtype='float64', testval=0):
-    shape = np.atleast_1d(shape)
-    type = TensorType(dtype, shape)
-    return locals()
-
-
-@tensordist(arbitrary)
-def DensityDist(logp):
-    return locals()
 
 
 
@@ -136,7 +101,6 @@ class Continuous(TensorDist):
         default_testvals = ['median', 'mean', 'mode']
 
         self.__dict__.update(locals())
-
 
 
 class DensityDist(Arbitrary):
