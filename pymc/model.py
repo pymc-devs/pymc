@@ -110,7 +110,7 @@ class Model(Context):
     these functions add random variables
     """
     def Data(self, name, dist, data):
-        var = Data(name, args, dist)
+        var = Data(name, data, dist)
         self.observed_RVs.append(var)
         self.add_random_variable(var)
         return var
@@ -149,7 +149,7 @@ class Data(object):
         self.data = map(t.constant, as_iterargs(data))
 
         self.distribution = distribution
-        self.logp = self.distribution.logp(*data_args)
+        self.logp = self.distribution.logp(*self.data)
 
     def __str__(self): 
         return self.name
@@ -216,6 +216,7 @@ def pointfn(outs, mode=None):
     -------
     Compiled Theano function as point function.
     """
+    outs
     return PointFunc(fn(outs, mode))
 
 compilef = pointfn 

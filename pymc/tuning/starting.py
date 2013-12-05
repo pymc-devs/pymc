@@ -82,15 +82,15 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
         r = fmin(logp_o, bij.map(start), disp=disp, *args, **kwargs)
 
     if isinstance(r, tuple):
-        mx = r[0]
+        mx0 = r[0]
     else:
-        mx = r
+        mx0 = r
 
-    mx = bij.rmap(mx)
+    mx = bij.rmap(mx0)
 
-    if (not allfinite(mx) or
-        not allfinite(logp(mx)) or
-        not allfinite(dlogp(mx))):
+    if (not allfinite(mx0) or
+        not allfinite(model.logpc(mx)) or
+        not allfinite(model.dlogpc()(mx))):
 
 
         badvals = {}
