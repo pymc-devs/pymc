@@ -26,10 +26,10 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     start : dict of parameter values (Defaults to model.test_point)
     vars : list
         List of variables to set to MAP point (Defaults to all continuous).
-        If discrete variables are included, estimates are likely to be 
+        If discrete variables are included, estimates are likely to be
         inaccurate, and a warning is issued if `fmin` is not specified.
     fmin : function
-        Optimization algorithm (Defaults to `scipy.optimize.fmin_bfgs`) for 
+        Optimization algorithm (Defaults to `scipy.optimize.fmin_bfgs`) for
         continuous variables. If there are discrete variable specified,
         defaults to `scipy.optimize.fmin_powell`, which provides slightly
         better performance.
@@ -45,18 +45,18 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
 
     if vars is None:
         vars = model.cont_vars
-        if fmin is None:
-            fmin = optimize.fmin_bfgs
     else:
-        disc_vars = list(typefilter(vars,discrete_types))
+        disc_vars = list(typefilter(vars, discrete_types))
         if disc_vars:
             if fmin is None:
-                print("Warning: vars contains discrete variables. MAP " +\
-                      "estimates may not be accurate for the default " +\
-                      "parameters. Defaulting to non-gradient minimization " +\
+                print("Warning: vars contains discrete variables. MAP " +
+                      "estimates may not be accurate for the default " +
+                      "parameters. Defaulting to non-gradient minimization " +
                       "fmin_powell.")
-                fmin = optimize.fmin_powell 
+                fmin = optimize.fmin_powell
 
+    if fmin is None:
+        fmin = optimize.fmin_bfgs
 
     allinmodel(vars, model)
 
@@ -71,7 +71,7 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
 
     def grad_logp_o(point):
         return nan_to_num(-dlogp(point))
- 
+
     # Check to see if minimization function actually uses the gradient
     if 'fprime' in getargspec(fmin).args:
         r = fmin(logp_o, bij.map(
@@ -87,19 +87,19 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     if (not allfinite(mx) or
         not allfinite(logp(mx)) or
             not allfinite(dlogp(mx))):
-            raise ValueError("Optimization error: max, logp or dlogp at " +\
-                             "max have bad values. Some values may be " +\
-                             "outside of distribution support. max: " +\
-                             repr(mx) + " logp: " + repr(logp(mx)) +\
-                             " dlogp: " + repr(dlogp(mx)) + "Check that " +\
-                             "1) you don't have hierarchical parameters, " +\
-                             "these will lead to points with infinite " +\
-                             "density. 2) your distribution logp's are " +\
+            raise ValueError("Optimization error: max, logp or dlogp at " +
+                             "max have bad values. Some values may be " +
+                             "outside of distribution support. max: " +
+                             repr(mx) + " logp: " + repr(logp(mx)) +
+                             " dlogp: " + repr(dlogp(mx)) + "Check that " +
+                             "1) you don't have hierarchical parameters, " +
+                             "these will lead to points with infinite " +
+                             "density. 2) your distribution logp's are " +
                              "properly specified.")
 
     mx = bij.rmap(mx)
-    mx = {v.name:np.floor(mx[v.name]) if v.dtype in discrete_types else
-                 mx[v.name] for v in vars}
+    mx = {v.name: np.floor(mx[v.name]) if v.dtype in discrete_types else
+          mx[v.name] for v in vars}
     if return_raw:
         return mx, r
     else:
