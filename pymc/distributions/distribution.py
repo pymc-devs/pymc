@@ -17,7 +17,7 @@ class Distribution(object):
             data = kwargs.pop('observed')
             dist = cls.dist(*args, **kwargs)
             return model.Data(name, dist, data)
-        elif isinstance(name, basestring):  
+        elif isinstance(name, str):  
             dist = cls.dist(*args, **kwargs)
             return model.Var(name, dist)
         elif name is None:
