@@ -21,7 +21,7 @@ class Distribution(object):
             dist = cls.dist(*args, **kwargs)
             return model.Var(name, dist)
         elif name is None:
-            return cls.dist(*args, **kwargs)
+            return object.__new__(cls)
         else: 
             raise TypeError("needed name or None but got: " + name)
 
