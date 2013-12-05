@@ -35,7 +35,13 @@ Another option is to clone the repository and install PyMC using `python setup.p
 
 **Note:** Running `pip install pymc` will install PyMC 2.3, not PyMC 3, from PyPI.
 
+## Dependencies
+
+PyMC is tested on Python 2.7 and 3.3 and depends on Theano, NumPy, SciPy, and Matplotlib (see setup.py for version information).
+
 ### Optional
+
+The GLM submodule relies on Pandas, Patsy, Statsmodels.
 
 [`scikits.sparse`](https://github.com/njsmith/scikits-sparse) enables sparse scaling matrices which are useful for large problems. Installation on Ubuntu is easy:
 
