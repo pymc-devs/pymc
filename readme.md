@@ -25,9 +25,15 @@ Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-de
 
 ## Installation
 
+The latest version of PyMC 3 can be installed from the master branch using pip:
+
 ```
 pip install git+https://github.com/pymc-devs/pymc
 ```
+
+Another option is to clone the repository and install PyMC using `python setup.py install` or `python setup.py develop`.
+
+**Note:** Running `pip install pymc` will install PyMC 2.3, not PyMC 3, from PyPI.
 
 ### Optional
 
