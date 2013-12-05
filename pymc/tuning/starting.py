@@ -27,11 +27,10 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     vars : list
         List of variables to set to MAP point (Defaults to all continuous).
         If discrete variables are included, estimates are likely to be 
-        inaccurate, and a warning is issued if the default `fmin` is the
-        default.
+        inaccurate, and a warning is issued if `fmin` is not specified.
     fmin : function
         Optimization algorithm (Defaults to `scipy.optimize.fmin_bfgs`) for 
-        continuous variables. If their are discrete variable specified,
+        continuous variables. If there are discrete variable specified,
         defaults to `scipy.optimize.fmin_powell`, which provides slightly
         better performance.
     return_raw : Bool
