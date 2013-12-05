@@ -27,7 +27,8 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     vars : list
         List of variables to set to MAP point (Defaults to all continuous).
         If discrete variables are included, estimates are likely to be 
-        inaccurate, and a warning is issued.
+        inaccurate, and a warning is issued if the default `fmin` is the
+        default.
     fmin : function
         Optimization algorithm (Defaults to `scipy.optimize.fmin_bfgs`) for 
         continuous variables. If their are discrete variable specified,
@@ -50,10 +51,11 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     else:
         disc_vars = list(typefilter(vars,discrete_types))
         if disc_vars:
-            print("Warning: vars contains discrete variables. MAP " +\
-                  "estimates may not be accurate for the default parameters."+\
-                  " Defaulting to non-gradient minimization fmin_powell.")
             if fmin is None:
+                print("Warning: vars contains discrete variables. MAP " +\
+                      "estimates may not be accurate for the default " +\
+                      "parameters. Defaulting to non-gradient minimization " +\
+                      "fmin_powell.")
                 fmin = optimize.fmin_powell 
 
 
