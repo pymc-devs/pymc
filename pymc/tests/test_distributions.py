@@ -339,7 +339,7 @@ def test_bound():
         check_dlogp(model, value, Rplus2, {})
 
 def check_int_to_1(model, value, domain, paramdomains):
-    pdf = compilef(exp(model.logp))
+    pdf = compilef(exp(model.logpt))
 
     for pt in product(paramdomains):
         pt = Point(pt, value=value.tag.test_value, model=model)
@@ -397,8 +397,8 @@ def check_dlogp(model, value, domain, paramdomains):
     if not model.cont_vars:
         return
 
-    dlogp = bij.mapf(model.dlogpc(model.cont_vars))
-    logp = bij.mapf(model.logpc)
+    dlogp = bij.mapf(model.fastdlogp(model.cont_vars))
+    logp = bij.mapf(model.fastlogp)
 
 
     def wrapped_logp(x): 
@@ -422,7 +422,7 @@ def check_logp(model, value, domain, paramdomains, logp_reference):
     domains['value'] = domain 
 
 
-    logp = model.logpc
+    logp = model.fastlogp
 
     for pt in product(domains):
         pt = Point(pt, model=model)

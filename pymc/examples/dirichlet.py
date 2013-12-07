@@ -14,7 +14,7 @@ with model:
 if __name__ == '__main__':
 
     with model:
-        H = model.d2logpc()
+        H = model.fastd2dlogp()
 
         s = find_MAP()
 

@@ -84,7 +84,7 @@ class NUTS(ArrayStep):
 
 
         ArrayStep.__init__(self,
-                vars, [model.logpc, model.dlogpc(vars)]
+                vars, [model.fastlogp, model.fastdlogp(vars)]
                 )
 
     def astep(self, q0, logp, dlogp):

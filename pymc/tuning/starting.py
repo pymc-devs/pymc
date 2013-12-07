@@ -42,8 +42,8 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False, d
     start = Point(start, model=model)
     bij = DictToArrayBijection(ArrayOrdering(vars), start)
 
-    logp = bij.mapf(model.logpc)
-    dlogp = bij.mapf(model.dlogpc(vars))
+    logp = bij.mapf(model.fastlogp)
+    dlogp = bij.mapf(model.fastdlogp(vars))
 
     def logp_o(point):
         return nan_to_high(-logp(point))
@@ -61,8 +61,8 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False, d
     mx = bij.rmap(mx0)
 
     if (not allfinite(mx0) or
-        not allfinite(model.logpc(mx)) or
-        not allfinite(model.dlogpc()(mx))):
+        not allfinite(model.fastlogp(mx)) or
+        not allfinite(model.fastdlogp()(mx))):
 
 
         badvals = {}
