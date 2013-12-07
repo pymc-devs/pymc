@@ -1,7 +1,10 @@
 import theano.tensor as t
+from theano.tensor.var import TensorVariable
+import theano
 import numpy as np
 from ..model import *
 import warnings
+from inspect import getargspec
 
 __all__ = ['DensityDist', 'TensorDist', 'evaluate', 'Arbitrary', 'Continuous', 'Discrete']
 
@@ -13,15 +16,12 @@ class Distribution(object):
         except TypeError:
             raise TypeError("No model on context stack, which is needed to use the Normal('x', 0,1) syntax. Add a 'with model:' block")
 
-        if 'observed' in kwargs:
-            data = kwargs.pop('observed')
+        if isinstance(name, str):  
+            data = kwargs.pop('observed', None)
             dist = cls.dist(*args, **kwargs)
-            return model.Data(name, dist, data)
-        elif isinstance(name, str):  
-            dist = cls.dist(*args, **kwargs)
-            return model.Var(name, dist)
+            return model.Var(name, dist, data)
         elif name is None:
-            return object.__new__(cls)
+            return object.__new__(cls) #for pickle
         else: 
             raise TypeError("needed name or None but got: " + name)
 
@@ -45,7 +45,7 @@ def get_test_val(dist, val):
     if hasattr(val, '__call__'):
         val = val(dist)
 
-    if isinstance(val, t.TensorVariable):
+    if isinstance(val, TensorVariable):
         return val.tag.test_value
     else:
         return val
@@ -65,23 +65,55 @@ class TensorDist(Distribution):
                                  str(self.default_testvals) + " pass testval argument or provide one of these.")
         return testval
 
-    def makevar(self, name):
-        var = self.type(name)
-        var.dshape = tuple(self.shape)
-        var.dsize = int(np.prod(self.shape))
-        var.distribution = self
+    def makeFreeRV(self, name):
+        return TheanoFreeRV(name=name, distribution=self)
 
-        testval = self.default(self.testval)
-        var.tag.test_value = np.ones(
-            self.shape, self.dtype) * get_test_val(self, testval)
+    def makeObservedRV(self, name, data):
+        return TheanoObservedRV(name=name, data=data, distribution=self)
 
-        var.logp = self.logp(var)
-        return var
+
+class TheanoFreeRV(Factor, TensorVariable):
+    def __init__(self, type=None, owner=None, index=None, name=None, distribution=None):
+        if type is None:
+            type = distribution.type
+        TensorVariable.__init__(self, type, owner, index, name)
+
+        if distribution is not None:
+            self.dshape = tuple(distribution.shape)
+            self.dsize = int(np.prod(distribution.shape))
+            self.distribution = distribution
+            testval = distribution.default(distribution.testval)
+            self.tag.test_value = np.ones(
+                distribution.shape, distribution.dtype) * get_test_val(distribution, testval)
+            self.logpt = distribution.logp(self)
+
+class TheanoObservedRV(Factor):
+    def __init__(self, name, data, distribution):
+        self.name = name
+        data = getattr(data, 'values', data) #handle pandas
+        args = as_iterargs(data)
+
+        if len(args) > 1:
+            params = getargspec(distribution.logp).args
+            args = [t.constant(d, name=name + "_" + param) 
+                    for d,param in zip(args,params) ]
+        else: 
+            args = [t.constant(args[0], name=name)]
+            
+        self.logpt = distribution.logp(*args)
+
+
+def as_iterargs(data):
+    if isinstance(data, tuple):
+        return data
+    if hasattr(data, 'columns'):  # data frames
+        return [np.asarray(data[c]) for c in data.columns]
+    else:
+        return [data]
+
 
 def TensorType(dtype, shape):
     return t.TensorType(str(dtype), np.atleast_1d(shape) == 1)
-
-
 
 class Arbitrary(TensorDist): 
     def __init__(self, shape=(), dtype='float64', *args, **kwargs):

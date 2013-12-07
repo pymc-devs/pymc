@@ -9,7 +9,7 @@ from .theanof import *
 
 from .memoize import memoize
 
-__all__ = ['Model', 'compilef', 'fn', 'pointfn', 'modelcontext', 'Point', 'Deterministic']
+__all__ = ['Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext', 'Point', 'Deterministic']
 
 
 class Context(object):
@@ -40,8 +40,34 @@ def modelcontext(model):
         return Model.get_context()
     return model
 
+class Factor(object): 
+    @property
+    def logp(self):
+        """Compiled log probability density function"""
+        return fn(self.logpt)
 
-class Model(Context):
+    def dlogp(self, vars=None):
+        """Compiled log probability density gradient function"""
+        return fn(gradient(self.logpt, vars))
+
+    def d2logp(self, vars=None):
+        """Compiled log probability density hessian function"""
+        return fn(hessian(self.logpt, vars))
+
+    @property
+    def fastlogp(self):
+        """Compiled log probability density function"""
+        return fastfn(self.logpt)
+
+    def fastdlogp(self, vars=None):
+        """Compiled log probability density gradient function"""
+        return fastfn(gradient(self.logpt, vars))
+
+    def fastd2logp(self, vars=None):
+        """Compiled log probability density hessian function"""
+        return fastfn(hessian(self.logpt, vars))
+
+class Model(Context, Factor):
     """
     Base class for encapsulation of the variables and
     likelihood factors of a model.
@@ -56,7 +82,7 @@ class Model(Context):
 
     @property
     @memoize
-    def logp(self):
+    def logpt(self):
         """
         log-probability of the model
 
@@ -71,29 +97,21 @@ class Model(Context):
         logp : Theano scalar
 
         """
-        factors = [var.logp for var in (self.free_RVs + self.observed_RVs)] + self.potentials
+        factors = [var.logpt for var in self.basic_RVs] + self.potentials
         return t.add(*map(t.sum, factors))
 
     @property 
     def vars(self): 
         return self.free_RVs
 
+    @property
+    def basic_RVs(self):
+        return (self.free_RVs + self.observed_RVs)
+
     @property 
     def unobserved_RVs(self): 
         return self.free_RVs + self.deterministics 
 
-    @property
-    def logpc(self):
-        """Compiled log probability density function"""
-        return compilef(self.logp)
-
-    def dlogpc(self, vars=None):
-        """Compiled log probability density gradient function"""
-        return compilef(gradient(self.logp, vars))
-
-    def d2logpc(self, vars=None):
-        """Compiled log probability density hessian function"""
-        return compilef(hessian(self.logp, vars))
 
     @property
     def test_point(self):
@@ -109,15 +127,13 @@ class Model(Context):
     """
     these functions add random variables
     """
-    def Data(self, name, dist, data):
-        var = Data(name, data, dist)
-        self.observed_RVs.append(var)
-        self.add_random_variable(var)
-        return var
-
-    def Var(self, name, dist):
-        var = dist.makevar(name)
-        self.free_RVs.append(var)
+    def Var(self, name, dist, data=None):
+        if data is None: 
+            var = dist.makeFreeRV(name)
+            self.free_RVs.append(var)
+        else: 
+            var = dist.makeObservedRV(name, data)
+            self.observed_RVs.append(var)
         self.add_random_variable(var)
         return var
 
@@ -134,25 +150,11 @@ class Model(Context):
         self.named_vars[var.name] = var
         if not hasattr(self, var.name):
             setattr(self, var.name, var)
-        return var
 
     def __getitem__(self, key):
         return self.named_vars[key]
 
-class Data(object): 
-    def __init__(self, name, data, distribution):
-        self.name = name
 
-        if hasattr(data, 'values'):
-            # Incase obs is a Series or DataFrame
-            data = data.values
-        self.data = map(t.constant, as_iterargs(data))
-
-        self.distribution = distribution
-        self.logp = self.distribution.logp(*self.data)
-
-    def __str__(self): 
-        return self.name
 
 def Point(*args, **kwargs):
 
@@ -181,8 +183,23 @@ def Point(*args, **kwargs):
                 for (k, v) in d.items()
                 if str(k) in varnames)
 
+class FastPointFunc(object):
+    def __init__(self, f):
+        self.f = f
+
+    def __call__(self, state):
+        return self.f(**state)
+
+class LoosePointFunc(object):
+    def __init__(self, f):
+        self.f = f
+
+    def __call__(self, *args, **kwargs):
+        point = Point(*args, **kargs)
+        return self.f(**point)
+
 @memoize
-def fn(outs, mode=None):
+def makefn(outs, mode=None):
     """
     Compiles a Theano function which returns `outs` and takes the variable
     ancestors of `outs` as inputs.
@@ -201,8 +218,23 @@ def fn(outs, mode=None):
                  on_unused_input='ignore',
                  mode=mode)
 
-@memoize
-def pointfn(outs, mode=None):
+def fn(outs, mode=None):
+    """
+    Compiles a Theano function which returns `outs` and takes the variable
+    ancestors of `outs` as inputs.
+
+    Parameters
+    ----------
+    outs : Theano variable or iterable of Theano variables
+    mode : Theano compilation mode
+
+    Returns
+    -------
+    Compiled Theano function
+    """
+    return LoosePointFunc(makefn(outs, mode))
+
+def fastfn(outs, mode=None):
     """
     Compiles a Theano function which returns `outs` and takes the variable
     ancestors of `outs` as inputs.
@@ -216,10 +248,9 @@ def pointfn(outs, mode=None):
     -------
     Compiled Theano function as point function.
     """
-    outs
-    return PointFunc(fn(outs, mode))
+    return FastPointFunc(makefn(outs, mode))
 
-compilef = pointfn 
+compilef = fastfn 
 
 
 def Deterministic(name, var, model=None):
@@ -239,13 +270,6 @@ def Deterministic(name, var, model=None):
     return var
 
 
-def as_iterargs(data):
-    if isinstance(data, tuple):
-        return data
-    if hasattr(data, 'columns'):  # data frames
-        return [np.asarray(data[c]) for c in data.columns]
-    else:
-        return [data]
 
 # theano stuff
 theano.config.warn.sum_div_dimshuffle_bug = False
