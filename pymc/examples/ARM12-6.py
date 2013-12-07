@@ -57,7 +57,7 @@ if __name__ == '__main__':
                  }
 
         start = find_MAP(start, [groupmean, sd, floor_m])
-        H = model.d2logpc()
+        H = model.fastd2dlogp()
         h = np.diag(H(start))
 
         step = HamiltonianMC(model.vars, h)

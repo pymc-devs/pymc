@@ -23,7 +23,7 @@ class Slice(ArrayStep):
         self.w_tune = []
         self.model = model
 
-        super(Slice, self).__init__(vars, [model.logpc])
+        super(Slice, self).__init__(vars, [model.fastlogp])
 
     def astep(self, q0, logp):
 
