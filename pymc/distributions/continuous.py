@@ -26,7 +26,7 @@ def get_tau(tau=None, sd=None):
         else:
             return tau
 
-class Uniform(Continuous): 
+class Uniform(Continuous):
     """
     Continuous uniform log-likelihood.
 
@@ -42,14 +42,13 @@ class Uniform(Continuous):
     """
     def __init__(self, lower=0, upper=1, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-
-        mean = (upper + lower) / 2.
-        median = mean
-
-        self.__dict__.update(locals())
+        self.lower = lower
+        self.upper = upper
+        self.mean = (upper + lower) / 2.
+        self.median = self.mean
 
     def logp(self, value):
-        lower = self.lower 
+        lower = self.lower
         upper = self.upper
 
         return bound(
@@ -67,12 +66,10 @@ class Flat(Continuous):
     """
     def __init__(self, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-        median = 0
-        self.__dict__.update(locals())
+        self.median = 0
 
     def logp(self, value):
         return zeros_like(value)
-
 
 
 class Normal(Continuous):
@@ -99,18 +96,12 @@ class Normal(Continuous):
     """
     def __init__(self, mu=0.0, tau=None, sd=None, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-
-        tau = get_tau(tau=tau, sd=sd)
-        mean = mu
-        variance = 1. / tau
-
-        median = mean
-        mode = mean
-
-        self.__dict__.update(locals())
+        self.mean = self.median = self.mode = self.mu = mu
+        self.tau = get_tau(tau=tau, sd=sd)
+        self.variance = 1. / self.tau
 
     def logp(self, value):
-        tau = self.tau 
+        tau = self.tau
         mu = self.mu
 
         return bound(
@@ -140,14 +131,11 @@ class Beta(Continuous):
     """
     def __init__(self, alpha, beta, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-
-        mean = alpha / (alpha + beta)
-        variance = alpha * beta / (
+        self.alpha = alpha
+        self.beta = beta
+        self.mean = alpha / (alpha + beta)
+        self.variance = alpha * beta / (
             (alpha + beta) ** 2 * (alpha + beta + 1))
-
-        self.__dict__.update(locals())
-
-
 
     def logp(self, value):
         alpha = self.alpha
@@ -174,20 +162,18 @@ class Exponential(Continuous):
     """
     def __init__(self, lam, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
+        self.lam = lam
+        self.mean = 1. / lam
+        self.median = self.mean * log(2)
+        self.mode = 0
 
-        mean = 1. / lam
-        median = mean * log(2)
-        mode = 0
-
-        variance = lam ** -2
-        self.__dict__.update(locals())
+        self.variance = lam ** -2
 
     def logp(self, value):
         lam = self.lam
         return bound(log(lam) - lam * value,
                      value > 0,
                      lam > 0)
-
 
 
 class Laplace(Continuous):
@@ -204,18 +190,16 @@ class Laplace(Continuous):
 
     def __init__(self, mu, b, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-        mean = median = mode = mu
+        self.b = b
+        self.mean = self.median = self.mode = self.mu = mu
 
-        variance = 2 * b ** 2
-
-        self.__dict__.update(locals())
+        self.variance = 2 * b ** 2
 
     def logp(self, value):
-        mu = self.mu 
+        mu = self.mu
         b = self.b
 
         return -log(2 * b) - abs(value - mu) / b
-
 
 
 class Lognormal(Continuous):
@@ -244,13 +228,13 @@ class Lognormal(Continuous):
     """
     def __init__(self, mu=0, tau=1, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-        mean = exp(mu + 1./(2*tau))
-        median = exp(mu)
-        mode = exp(mu - 1./tau)
+        self.mu = mu
+        self.tau = tau
+        self.mean = exp(mu + 1./(2*tau))
+        self.median = exp(mu)
+        self.mode = exp(mu - 1./tau)
 
-        variance = (exp(1./tau) - 1) * exp(2*mu + 1./tau)
-
-        self.__dict__.update(locals())
+        self.variance = (exp(1./tau) - 1) * exp(2*mu + 1./tau)
 
     def logp(self, value):
         mu = self.mu
@@ -286,17 +270,16 @@ class T(Continuous):
     """
     def __init__(self, nu, mu=0, lam=1, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-        mean = mu
-        median = mu
-        mode = mu
+        self.nu = nu
+        self.lam = lam
+        self.mean = self.median = self.mode = self.mu = mu
 
-        variance = switch((nu > 2) * 1, nu / (nu - 2) / lam, inf)
-        self.__dict__.update(locals())
+        self.variance = switch((nu > 2) * 1, nu / (nu - 2) / lam, inf)
 
     def logp(self, value):
         nu = self.nu
         mu = self.mu
-        lam = self.lam 
+        lam = self.lam
 
         return bound(
             gammaln((nu + 1.0) / 2.0) + .5 * log(lam / (nu * pi)) - gammaln(nu / 2.0) - (nu + 1.0) / 2.0 * log(1.0 + lam * (value - mu) ** 2 / nu),
@@ -304,7 +287,7 @@ class T(Continuous):
             nu > 0)
 
 
-class Cauchy(Continuous): 
+class Cauchy(Continuous):
     """
     Cauchy log-likelihood. The Cauchy distribution is also known as the
     Lorentz or the Breit-Wigner distribution.
@@ -326,8 +309,8 @@ class Cauchy(Continuous):
 
     def __init__(self, alpha, beta, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-        median = mode = alpha
-        self.__dict__.update(locals())
+        self.median = self.mode = self.alpha = alpha
+        self.beta = beta
 
     def logp(self, value):
         alpha = self.alpha
@@ -337,7 +320,7 @@ class Cauchy(Continuous):
                                             value - alpha) / beta) ** 2),
             beta > 0)
 
-class Gamma(Continuous): 
+class Gamma(Continuous):
     """
     Gamma log-likelihood.
 
@@ -363,15 +346,14 @@ class Gamma(Continuous):
     """
     def __init__(self, alpha, beta, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-
-        mean = alpha / beta
-        median = maximum((alpha - 1) / beta, 0)
-        variance = alpha / beta ** 2
-
-        self.__dict__.update(locals())
+        self.alpha = alpha
+        self.beta = beta
+        self.mean = alpha / beta
+        self.median = maximum((alpha - 1) / beta, 0)
+        self.variance = alpha / beta ** 2
 
     def logp(self, value):
-        alpha = self.alpha 
+        alpha = self.alpha
         beta = self.beta
         return bound(
             -gammaln(alpha) + logpow(
@@ -399,7 +381,7 @@ class Bounded(Continuous):
 
 
 
-class Bound(object): 
+class Bound(object):
     def __init__(self, distribution, lower=-inf, upper=inf):
         """A bounded distribution."""
         self.distribution = distribution
@@ -408,7 +390,7 @@ class Bound(object):
 
     def __call__(self, *args, **kwargs):
         first, args = args[0], args[1:]
-        
+
         return Bounded(first, self.distribution, self.lower, self.upper, *args, **kwargs)
 
     def dist(*args, **kwargs):

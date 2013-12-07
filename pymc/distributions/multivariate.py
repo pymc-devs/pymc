@@ -22,8 +22,8 @@ class MvNormal(Continuous):
     """
     def __init__(self, mu, tau, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-        mean = median = mode = mu
-        self.__dict__.update(locals())
+        self.mean = self.median = self.mode = self.mu = mu
+        self.tau = tau
 
     def logp(self, value):
         mu = self.mu
@@ -33,7 +33,6 @@ class MvNormal(Continuous):
         k = tau.shape[0]
 
         return 1/2. * (-k * log(2*pi) + log(det(tau)) - dot(delta.T, dot(tau, delta)))
-
 
 
 class Dirichlet(Continuous):
@@ -65,15 +64,16 @@ class Dirichlet(Continuous):
     def __init__(self, k, a, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
         a = ones([k]) * a
-        mean = a / sum(a)
+        self.k = k
+        self.a = a
+        self.mean = a / sum(a)
 
-        mode = switch(all(a > 1),
-                     (a - 1) / sum(a - 1),
-                      nan)
-        self.__dict__.update(locals())
+        self.mode = switch(all(a > 1),
+                           (a - 1) / sum(a - 1),
+                           nan)
 
     def logp(self, value):
-        k = self.k 
+        k = self.k
         a = self.a
 
         # only defined for sum(value) == 1
@@ -83,7 +83,6 @@ class Dirichlet(Continuous):
 
             k > 1,
             all(a > 0))
-
 
 
 class Multinomial(Continuous):
@@ -116,8 +115,9 @@ class Multinomial(Continuous):
     """
     def __init__(self, n, p, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-        mean = n * p
-        self.__dict__.update(locals())
+        self.n = n
+        self.p = p
+        self.mean = n * p
 
     def logp(self, x):
         n = self.n
@@ -148,11 +148,11 @@ class Wishart(Continuous):
     :Parameters:
       n : int
         Degrees of freedom, > 0.
-      p : int 
+      p : int
         Dimensionality, > 0
       V : ndarray
-        p x p positive definite matrix 
-        
+        p x p positive definite matrix
+
 
     :Support:
       X : matrix
@@ -160,12 +160,13 @@ class Wishart(Continuous):
     """
     def __init__(self, n, p, V, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-        mean = n * V
-        mode = switch(1*(n >= p + 1),
+        self.n = n
+        self.p = p
+        self.V = V
+        self.mean = n * V
+        self.mode = switch(1*(n >= p + 1),
                      (n - p - 1) * V,
                       nan)
-        self.__dict__.update(locals())
-
 
     def logp(self, X):
         n = self.n

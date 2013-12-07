@@ -18,12 +18,13 @@ class AR1(Continuous):
     """
     def __init__(self, k, tau_e, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-        tau = tau_e * (1 - k ** 2)
-        mode = 0.
-        self.__dict__.update(locals())
+        self.k = k
+        self.tau_e = tau_e
+        self.tau = tau_e * (1 - k ** 2)
+        self.mode = 0.
 
     def logp(self, x):
-        k =self.k 
+        k = self.k
         tau_e = self.tau_e
 
         x_im1 = x[:-1]
@@ -47,11 +48,13 @@ class GaussianRandomWalk(Continuous):
     """
     def __init__(self, tau=None, init=Flat.dist(), sd=None, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-        mean = 0.
-        self.__dict__.update(locals())
+        self.tau = tau
+        self.sd = sd
+        self.init = init
+        self.mean = 0.
 
     def logp(self, x):
-        tau = self.tau 
+        tau = self.tau
         sd = self.sd
         init = self.init
 

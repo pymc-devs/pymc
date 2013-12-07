@@ -27,14 +27,13 @@ class Binomial(Discrete):
     """
     def __init__(self, n, p, *args, **kwargs):
         Discrete.__init__(self, *args, **kwargs)
-
-        mode = cast(round(n * p), 'int8')
-
-        self.__dict__.update(locals())
+        self.n = n
+        self.p = p
+        self.mode = cast(round(n * p), 'int8')
 
     def logp(self, value):
-        n = self.n 
-        p = self.p 
+        n = self.n
+        p = self.p
 
         return bound(
 
@@ -71,8 +70,10 @@ class BetaBin(Discrete):
     """
     def __init__(self, alpha, beta, n, *args, **kwargs):
         Discrete.__init__(self, *args, **kwargs)
-        mode = cast(round(alpha / (alpha + beta)), 'int8')
-        self.__dict__.update(locals())
+        self.alpha = alpha
+        self.beta = beta
+        self.n = n
+        self.mode = cast(round(alpha / (alpha + beta)), 'int8')
 
     def logp(self, value):
         alpha = self.alpha
@@ -108,8 +109,8 @@ class Bernoulli(Discrete):
     """
     def __init__(self, p, *args,**kwargs):
         Discrete.__init__(self, *args, **kwargs)
-        mode = cast(round(p), 'int8')
-        self.__dict__.update(locals())
+        self.p = p
+        self.mode = cast(round(p), 'int8')
 
     def logp(self, value):
         p = self.p
@@ -143,8 +144,8 @@ class Poisson(Discrete):
     """
     def __init__(self, mu, *args, **kwargs):
         Discrete.__init__(self, *args, **kwargs)
-        mode = floor(mu).astype('int32')
-        self.__dict__.update(locals())
+        self.mu = mu
+        self.mode = floor(mu).astype('int32')
 
     def logp(self, value):
         mu = self.mu
@@ -175,8 +176,9 @@ class NegativeBinomial(Discrete):
     """
     def __init__(self, mu, alpha, *args, **kwargs):
         Discrete.__init__(self, *args, **kwargs)
-        mode = floor(mu).astype('int32')
-        self.__dict__.update(locals())
+        self.mu = mu
+        self.alpha = alpha
+        self.mode = floor(mu).astype('int32')
 
     def logp(self, value):
         mu = self.mu
@@ -184,7 +186,7 @@ class NegativeBinomial(Discrete):
 
         # Return Poisson when alpha gets very large
         pois = bound(logpow(mu, value) - factln(value) - mu,
-                     mu > 0, 
+                     mu > 0,
                      value >= 0)
         negbinom = bound(gammaln(value + alpha) - factln(value) - gammaln(alpha) +
                       logpow(mu / (mu + alpha), value) + logpow(alpha / (mu + alpha), alpha),
@@ -212,8 +214,8 @@ class Geometric(Discrete):
     """
     def __init__(self, p, *args, **kwargs):
         Discrete.__init__(self, *args, **kwargs)
-        mode = 1
-        self.__dict__.update(locals())
+        self.p = p
+        self.mode = 1
 
     def logp(self, value):
         p = self.p
@@ -235,9 +237,8 @@ class DiscreteUniform(Discrete):
     """
     def __init__(self, lower, upper, *args, **kwargs):
         Discrete.__init__(self, *args, **kwargs)
-        lower, upper = floor(lower).astype('int32'), floor(upper).astype('int32')
-        mode = floor((upper - lower) / 2.).astype('int32')
-        self.__dict__.update(locals())
+        self.lower, self.upper = floor(lower).astype('int32'), floor(upper).astype('int32')
+        self.mode = floor((upper - lower) / 2.).astype('int32')
 
     def logp(self, value):
         upper = self.upper
@@ -261,21 +262,21 @@ class ConstantDist(Discrete):
 
     def __init__(self, c, *args, **kwargs):
         Discrete.__init__(self, *args, **kwargs)
-        mean = median = mode = c
-        self.__dict__.update(locals())
+        self.mean = self.median = self.mode = self.c = c
 
     def logp(self, value):
-        c = self.c 
+        c = self.c
         return bound(0, eq(value, c))
 
 
 class ZeroInflatedPoisson(Discrete):
     def __init__(self, theta, z, *args, **kwargs):
         Discrete.__init__(self, *args, **kwargs)
-        pois = Poisson.dist(theta)
-        const = ConstantDist.dist(0)
-        mode = pois.mode
-        self.__dict__.update(locals())
+        self.theta = theta
+        self.z = z
+        self.pois = Poisson.dist(theta)
+        self.const = ConstantDist.dist(0)
+        self.mode = self.pois.mode
 
     def logp(self, value):
         z = self.z
