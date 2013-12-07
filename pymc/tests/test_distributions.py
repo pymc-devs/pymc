@@ -36,8 +36,8 @@ class Domain(object):
 
 
 def product(domains):
-    names = [name for (name, domain) in domains.iteritems()] 
-    domains = [domain for (name, domain) in domains.iteritems()] 
+    names = [name for (name, domain) in domains.items()] 
+    domains = [domain for (name, domain) in domains.items()] 
 
     for val in itertools.product(*[d.vals for d in domains]):
         yield zip(names, val)
