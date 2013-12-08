@@ -5,7 +5,7 @@ Created on Mar 12, 2011
 '''
 from scipy import optimize
 import numpy as np
-from numpy import isfinite, nan_to_num
+from numpy import isfinite, nan_to_num, logical_not
 from ..core import *
 from ..vartypes import discrete_types, typefilter
 
@@ -89,28 +89,35 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     mx = bij.rmap(mx0)
 
     if (not allfinite(mx0) or
-        not allfinite(model.fastlogp(mx)) or
-        not allfinite(model.fastdlogp()(mx))):
+        not allfinite(model.logp(mx)) or
+        not allfinite(model.dlogp()(mx))):
 
 
-        badvals = {}
+        messages = []
         for var in vars:
-            val = mx[var.name]
-            logp = pointfn(var.logp)(mx)
-            dlogp = pointfn(gradient(var.logp))(mx)
+            
+            print mx 
 
-            message = ""
+            vals = { 
+                "value"   : mx[var.name],
+                "logp"    : var.logp(mx),
+                "dlogp"   : var.dlogp()(mx) }
 
-            if not allfinite(val):
-                message += "bad value: " + str(val) + "\n"
-            if not allfinite(logp):
-                message += "bad logp: " + str(logp) + "\n"
-            if not allfinite(dlogp):
-                message += "bad dlogp: " + str(dlogp) + "\n"
-            badvals[var.name] = message
+            def message(name, values):
+                if np.size(values) < 10:
+                    return name + " bad: " + str(values)
+                else:
+                    idx = np.nonzero(logical_not(isfinite(values)))
+                    return name + " bad at idx: " + str(idx) + " with values: " + str(values[idx])
+
+            messages += [ 
+                message(var.name + "." + k, v)
+                for k,v in vals.items()
+                if not allfinite(v)]
+
 
             raise ValueError("Optimization error: max, logp or dlogp at " +
-                             "max have bad values. Some values may be " +
+                             "max have non-finite values. Some values may be " +
                              "outside of distribution support. max: " +
                              repr(mx) + " logp: " + repr(logp(mx)) +
                              " dlogp: " + repr(dlogp(mx)) + "Check that " +

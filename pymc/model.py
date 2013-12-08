@@ -44,28 +44,36 @@ class Factor(object):
     @property
     def logp(self):
         """Compiled log probability density function"""
-        return fn(self.logpt)
+        return self.model.fn(self.logpt)
+
+    @property
+    def logp_elemwise(self):
+        return self.model.fn(self.logp_elemwiset)
 
     def dlogp(self, vars=None):
         """Compiled log probability density gradient function"""
-        return fn(gradient(self.logpt, vars))
+        return self.model.fn(gradient(self.logpt, vars))
 
     def d2logp(self, vars=None):
         """Compiled log probability density hessian function"""
-        return fn(hessian(self.logpt, vars))
+        return self.model.fn(hessian(self.logpt, vars))
 
     @property
     def fastlogp(self):
         """Compiled log probability density function"""
-        return fastfn(self.logpt)
+        return self.model.fastfn(self.logpt)
 
     def fastdlogp(self, vars=None):
         """Compiled log probability density gradient function"""
-        return fastfn(gradient(self.logpt, vars))
+        return self.model.fastfn(gradient(self.logpt, vars))
 
     def fastd2logp(self, vars=None):
         """Compiled log probability density hessian function"""
-        return fastfn(hessian(self.logpt, vars))
+        return self.model.fastfn(hessian(self.logpt, vars))
+
+    @property
+    def logpt(self):
+        return t.sum(self.logp_elemwiset)
 
 class Model(Context, Factor):
     """
@@ -79,6 +87,7 @@ class Model(Context, Factor):
         self.observed_RVs = [] 
         self.deterministics = []
         self.potentials = []
+        self.model = self
 
     @property
     @memoize
@@ -129,10 +138,10 @@ class Model(Context, Factor):
     """
     def Var(self, name, dist, data=None):
         if data is None: 
-            var = dist.makeFreeRV(name)
+            var = dist.makeFreeRV(name, self)
             self.free_RVs.append(var)
         else: 
-            var = dist.makeObservedRV(name, data)
+            var = dist.makeObservedRV(name, data, self)
             self.observed_RVs.append(var)
         self.add_random_variable(var)
         return var
@@ -154,6 +163,65 @@ class Model(Context, Factor):
     def __getitem__(self, key):
         return self.named_vars[key]
 
+    @memoize
+    def makefn(self, outs, mode=None):
+        """
+        Compiles a Theano function which returns `outs` and takes the variable
+        ancestors of `outs` as inputs.
+
+        Parameters
+        ----------
+        outs : Theano variable or iterable of Theano variables
+        mode : Theano compilation mode
+
+        Returns
+        -------
+        Compiled Theano function
+        """
+        return function(self.vars, outs,
+                     allow_input_downcast=True,
+                     on_unused_input='ignore',
+                     mode=mode)
+
+    def fn(self, outs, mode=None):
+        """
+        Compiles a Theano function which returns `outs` and takes the variable
+        ancestors of `outs` as inputs.
+
+        Parameters
+        ----------
+        outs : Theano variable or iterable of Theano variables
+        mode : Theano compilation mode
+
+        Returns
+        -------
+        Compiled Theano function
+        """
+        return LoosePointFunc(self.makefn(outs, mode))
+
+    def fastfn(self, outs, mode=None):
+        """
+        Compiles a Theano function which returns `outs` and takes the variable
+        ancestors of `outs` as inputs.
+
+        Parameters
+        ----------
+        outs : Theano variable or iterable of Theano variables
+        mode : Theano compilation mode
+
+        Returns
+        -------
+        Compiled Theano function as point function.
+        """
+        return FastPointFunc(self.makefn(outs, mode))
+
+def fn(outs, mode=None, model=None):
+    model = modelcontext(model)
+    return model.fn(outs,mode)
+
+def fastfn(outs, mode=None, model=None):
+    model = modelcontext(model)
+    return model.fastfn(outs,mode)
 
 
 def Point(*args, **kwargs):
@@ -195,60 +263,9 @@ class LoosePointFunc(object):
         self.f = f
 
     def __call__(self, *args, **kwargs):
-        point = Point(*args, **kargs)
+        point = Point(*args, **kwargs)
         return self.f(**point)
 
-@memoize
-def makefn(outs, mode=None):
-    """
-    Compiles a Theano function which returns `outs` and takes the variable
-    ancestors of `outs` as inputs.
-
-    Parameters
-    ----------
-    outs : Theano variable or iterable of Theano variables
-    mode : Theano compilation mode
-
-    Returns
-    -------
-    Compiled Theano function
-    """
-    return function(inputvars(outs), outs,
-                 allow_input_downcast=True,
-                 on_unused_input='ignore',
-                 mode=mode)
-
-def fn(outs, mode=None):
-    """
-    Compiles a Theano function which returns `outs` and takes the variable
-    ancestors of `outs` as inputs.
-
-    Parameters
-    ----------
-    outs : Theano variable or iterable of Theano variables
-    mode : Theano compilation mode
-
-    Returns
-    -------
-    Compiled Theano function
-    """
-    return LoosePointFunc(makefn(outs, mode))
-
-def fastfn(outs, mode=None):
-    """
-    Compiles a Theano function which returns `outs` and takes the variable
-    ancestors of `outs` as inputs.
-
-    Parameters
-    ----------
-    outs : Theano variable or iterable of Theano variables
-    mode : Theano compilation mode
-
-    Returns
-    -------
-    Compiled Theano function as point function.
-    """
-    return FastPointFunc(makefn(outs, mode))
 
 compilef = fastfn 
 
