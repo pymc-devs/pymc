@@ -5,7 +5,7 @@ Created on Mar 12, 2011
 '''
 from scipy import optimize
 import numpy as np
-from numpy import isfinite, nan_to_num
+from numpy import isfinite, nan_to_num, logical_not
 from ..core import *
 
 __all__ = ['find_MAP', 'scipyminimize']
@@ -61,28 +61,35 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False, d
     mx = bij.rmap(mx0)
 
     if (not allfinite(mx0) or
-        not allfinite(model.fastlogp(mx)) or
-        not allfinite(model.fastdlogp()(mx))):
+        not allfinite(model.logp(mx)) or
+        not allfinite(model.dlogp()(mx))):
 
 
-        badvals = {}
+        messages = []
         for var in vars:
-            val = mx[var.name]
-            logp = pointfn(var.logp)(mx)
-            dlogp = pointfn(gradient(var.logp))(mx)
+            
+            print mx 
 
-            message = ""
+            vals = { 
+                "value"   : mx[var.name],
+                "logp"    : var.logp(mx),
+                "dlogp"   : var.dlogp()(mx) }
 
-            if not allfinite(val):
-                message += "bad value: " + str(val) + "\n"
-            if not allfinite(logp):
-                message += "bad logp: " + str(logp) + "\n"
-            if not allfinite(dlogp):
-                message += "bad dlogp: " + str(dlogp) + "\n"
-            badvals[var.name] = message
+            def message(name, values):
+                if np.size(values) < 10:
+                    return name + " bad: " + str(values)
+                else:
+                    idx = np.nonzero(logical_not(isfinite(values)))
+                    return name + " bad at idx: " + str(idx) + " with values: " + str(values[idx])
 
-            raise ValueError("Optimization error: max, logp or dlogp at max have non-finite values. Some values may be outside of distribution support. "  +
-                    "Check that 1) you don't have hierarchical parameters, these will lead to points with infinite density. 2) your distribution logp's are properly specified. Specific issues: \n" + str(badvals))
+            messages += [ 
+                message(var.name + "." + k, v)
+                for k,v in vals.items()
+                if not allfinite(v)]
+
+
+        raise ValueError("Optimization error: max, logp or dlogp at max have non-finite values. Some values may be outside of distribution support. "  +
+                "Check that 1) you don't have hierarchical parameters, these will lead to points with infinite density. 2) your distribution logp's are properly specified. Specific issues: \n" + "\n".join(messages))
 
     if return_raw:
         return mx, r

@@ -65,15 +65,15 @@ class TensorDist(Distribution):
                                  str(self.default_testvals) + " pass testval argument or provide one of these.")
         return testval
 
-    def makeFreeRV(self, name):
-        return TheanoFreeRV(name=name, distribution=self)
+    def makeFreeRV(self, name, model):
+        return TheanoFreeRV(name=name, distribution=self, model=model)
 
     def makeObservedRV(self, name, data):
-        return TheanoObservedRV(name=name, data=data, distribution=self)
+        return TheanoObservedRV(name=name, data=data, distribution=self, model=model)
 
 
 class TheanoFreeRV(Factor, TensorVariable):
-    def __init__(self, type=None, owner=None, index=None, name=None, distribution=None):
+    def __init__(self, type=None, owner=None, index=None, name=None, distribution=None, model=None):
         if type is None:
             type = distribution.type
         TensorVariable.__init__(self, type, owner, index, name)
@@ -85,10 +85,11 @@ class TheanoFreeRV(Factor, TensorVariable):
             testval = distribution.default(distribution.testval)
             self.tag.test_value = np.ones(
                 distribution.shape, distribution.dtype) * get_test_val(distribution, testval)
-            self.logpt = distribution.logp(self)
+            self.logp_elemwiset = distribution.logp(self)
+            self.model = model
 
 class TheanoObservedRV(Factor):
-    def __init__(self, name, data, distribution):
+    def __init__(self, name, data, distribution, model):
         self.name = name
         data = getattr(data, 'values', data) #handle pandas
         args = as_iterargs(data)
@@ -100,7 +101,8 @@ class TheanoObservedRV(Factor):
         else: 
             args = [t.constant(args[0], name=name)]
             
-        self.logpt = distribution.logp(*args)
+        self.logp_elemwiset = distribution.logp(*args)
+        self.model = model
 
 
 def as_iterargs(data):
