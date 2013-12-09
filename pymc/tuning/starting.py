@@ -95,8 +95,6 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
 
         messages = []
         for var in vars:
-            
-            print mx 
 
             vals = { 
                 "value"   : mx[var.name],
