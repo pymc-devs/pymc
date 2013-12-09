@@ -12,7 +12,9 @@ class NpTrace(object):
     encapsulates the recording of a process chain
     """
     def __init__(self, vars):
-        self.f = compilef(vars)
+        vars = list(vars)
+        model = vars[0].model
+        self.f = model.fastfn(vars)
         self.vars = vars
         self.varnames = list(map(str, vars))
         self.samples = dict((v, ListArray()) for v in self.varnames)

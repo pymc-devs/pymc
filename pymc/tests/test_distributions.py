@@ -339,7 +339,7 @@ def test_bound():
         check_dlogp(model, value, Rplus2, {})
 
 def check_int_to_1(model, value, domain, paramdomains):
-    pdf = compilef(exp(model.logpt))
+    pdf = model.fastfn(exp(model.logpt))
 
     for pt in product(paramdomains):
         pt = Point(pt, value=value.tag.test_value, model=model)

@@ -14,7 +14,7 @@ class Transform(object):
     def __str__(self):
         return name + " transform"
 
-class TransformedDistribtuion(TensorDist):
+class TransformedDistribtuion(Distribution):
     def __init__(self, dist, transform, *args, **kwargs):
         TensorDist.__init__(self, *args, **kwargs)
         try:
