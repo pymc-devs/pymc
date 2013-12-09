@@ -237,10 +237,7 @@ def Point(*args, **kwargs):
         *args, **kwargs
             arguments to build a dict
     """
-    model = kwargs.get('model')
-    print model
-    model = modelcontext(model)
-    kwargs.pop('model', None)
+    model = modelcontext(kwargs.pop('model', None))
 
     args = [a for a in args]
     try:

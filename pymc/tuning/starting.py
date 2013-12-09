@@ -67,8 +67,6 @@ def find_MAP(start=None, vars=None, fmin=optimize.fmin_bfgs, return_raw=False, d
 
         messages = []
         for var in vars:
-            
-            print mx 
 
             vals = { 
                 "value"   : mx[var.name],
