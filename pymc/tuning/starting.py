@@ -28,8 +28,8 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
         List of variables to set to MAP point (Defaults to all continuous).
     fmin : function
         Optimization algorithm (Defaults to `scipy.optimize.fmin_bfgs` unless
-        discrete variables are specified in `vars`, then 
-        `scipy.optimize.fmin_powell` which will perform better). 
+        discrete variables are specified in `vars`, then
+        `scipy.optimize.fmin_powell` which will perform better).
     return_raw : Bool
         Whether to return extra value returned by fmin (Defaults to `False`)
     disp : Bool
@@ -45,9 +45,9 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
 
     if vars is None:
         vars = model.cont_vars
-    
+ 
     disc_vars = list(typefilter(vars, discrete_types))
-    
+
     if disc_vars and disp:
         print("Warning: vars contains discrete variables. MAP " +
               "estimates may not be accurate for the default " +
