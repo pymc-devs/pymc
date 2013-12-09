@@ -2,10 +2,12 @@ from .point import *
 from .vartypes import *
 
 from theano import theano, tensor as t, function
+from theano.tensor.var import TensorVariable
 
 import numpy as np
 from functools import wraps
 from .theanof import *
+from inspect import getargspec
 
 from .memoize import memoize
 
@@ -138,10 +140,10 @@ class Model(Context, Factor):
     """
     def Var(self, name, dist, data=None):
         if data is None: 
-            var = dist.makeFreeRV(name, self)
+            var = FreeRV(name=name, distribution=dist, model=self) 
             self.free_RVs.append(var)
         else: 
-            var = dist.makeObservedRV(name, data, self)
+            var = ObservedRV(name=name, data=data, distribution=dist, model=self)
             self.observed_RVs.append(var)
         self.add_random_variable(var)
         return var
@@ -235,7 +237,9 @@ def Point(*args, **kwargs):
         *args, **kwargs
             arguments to build a dict
     """
-    model = modelcontext(kwargs.get('model'))
+    model = kwargs.get('model')
+    print model
+    model = modelcontext(model)
     kwargs.pop('model', None)
 
     args = [a for a in args]
@@ -268,6 +272,63 @@ class LoosePointFunc(object):
 
 
 compilef = fastfn 
+
+
+class FreeRV(Factor, TensorVariable):
+    def __init__(self, type=None, owner=None, index=None, name=None, distribution=None, model=None):
+        if type is None:
+            type = distribution.type
+        TensorVariable.__init__(self, type, owner, index, name)
+
+        if distribution is not None:
+            self.dshape = tuple(distribution.shape)
+            self.dsize = int(np.prod(distribution.shape))
+            self.distribution = distribution
+            testval = distribution.default(distribution.testval)
+            self.tag.test_value = np.ones(
+                distribution.shape, distribution.dtype) * get_test_val(distribution, testval)
+            self.logp_elemwiset = distribution.logp(self)
+            self.model = model
+
+class ObservedRV(Factor):
+    def __init__(self, name, data, distribution, model):
+        self.name = name
+        data = getattr(data, 'values', data) #handle pandas
+        args = as_iterargs(data)
+
+        if len(args) > 1:
+            params = getargspec(distribution.logp).args
+            args = [t.constant(d, name=name + "_" + param) 
+                    for d,param in zip(args,params) ]
+        else: 
+            args = [t.constant(args[0], name=name)]
+            
+        self.logp_elemwiset = distribution.logp(*args)
+        self.model = model
+
+def get_test_val(dist, val):
+    try:
+        val = getattr(dist, val)
+    except TypeError:
+        pass
+
+    if hasattr(val, '__call__'):
+        val = val(dist)
+
+    if isinstance(val, TensorVariable):
+        return val.tag.test_value
+    else:
+        return val
+
+
+def as_iterargs(data):
+    if isinstance(data, tuple):
+        return data
+    if hasattr(data, 'columns'):  # data frames
+        return [np.asarray(data[c]) for c in data.columns]
+    else:
+        return [data]
+
 
 
 def Deterministic(name, var, model=None):

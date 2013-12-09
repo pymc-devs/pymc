@@ -71,7 +71,7 @@ def find_hessian_diag(point, vars=None, model=None):
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
-    H = compilef(hessian_diag(model.logpt, vars))
+    H = model.fastfn(hessian_diag(model.logpt, vars))
     return H(Point(point, model=model))
 
 def guess_scaling(point, model=None):

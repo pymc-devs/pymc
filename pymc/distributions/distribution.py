@@ -1,12 +1,8 @@
 import theano.tensor as t
-from theano.tensor.var import TensorVariable
-import theano
 import numpy as np
-from ..model import *
-import warnings
-from inspect import getargspec
+from ..model import Model
 
-__all__ = ['DensityDist', 'TensorDist', 'evaluate', 'Arbitrary', 'Continuous', 'Discrete']
+__all__ = ['DensityDist', 'Distribution', 'Arbitrary', 'Continuous', 'Discrete']
 
 
 class Distribution(object):
@@ -35,27 +31,6 @@ class Distribution(object):
         return dist
 
 
-
-def get_test_val(dist, val):
-    try:
-        val = getattr(dist, val)
-    except TypeError:
-        pass
-
-    if hasattr(val, '__call__'):
-        val = val(dist)
-
-    if isinstance(val, TensorVariable):
-        return val.tag.test_value
-    else:
-        return val
-
-
-# Convenience function for evaluating distributions at test point
-evaluate = lambda dist: dist.tag.test_value
-
-
-class TensorDist(Distribution):
     def default(self, testval):
         if testval is None:
             for val in self.default_testvals:
@@ -65,77 +40,28 @@ class TensorDist(Distribution):
                                  str(self.default_testvals) + " pass testval argument or provide one of these.")
         return testval
 
-    def makeFreeRV(self, name, model):
-        return TheanoFreeRV(name=name, distribution=self, model=model)
-
-    def makeObservedRV(self, name, data):
-        return TheanoObservedRV(name=name, data=data, distribution=self, model=model)
-
-
-class TheanoFreeRV(Factor, TensorVariable):
-    def __init__(self, type=None, owner=None, index=None, name=None, distribution=None, model=None):
-        if type is None:
-            type = distribution.type
-        TensorVariable.__init__(self, type, owner, index, name)
-
-        if distribution is not None:
-            self.dshape = tuple(distribution.shape)
-            self.dsize = int(np.prod(distribution.shape))
-            self.distribution = distribution
-            testval = distribution.default(distribution.testval)
-            self.tag.test_value = np.ones(
-                distribution.shape, distribution.dtype) * get_test_val(distribution, testval)
-            self.logp_elemwiset = distribution.logp(self)
-            self.model = model
-
-class TheanoObservedRV(Factor):
-    def __init__(self, name, data, distribution, model):
-        self.name = name
-        data = getattr(data, 'values', data) #handle pandas
-        args = as_iterargs(data)
-
-        if len(args) > 1:
-            params = getargspec(distribution.logp).args
-            args = [t.constant(d, name=name + "_" + param) 
-                    for d,param in zip(args,params) ]
-        else: 
-            args = [t.constant(args[0], name=name)]
-            
-        self.logp_elemwiset = distribution.logp(*args)
-        self.model = model
-
-
-def as_iterargs(data):
-    if isinstance(data, tuple):
-        return data
-    if hasattr(data, 'columns'):  # data frames
-        return [np.asarray(data[c]) for c in data.columns]
-    else:
-        return [data]
-
-
 def TensorType(dtype, shape):
     return t.TensorType(str(dtype), np.atleast_1d(shape) == 1)
 
-class Arbitrary(TensorDist): 
+class Arbitrary(Distribution): 
     def __init__(self, shape=(), dtype='float64', *args, **kwargs):
-        TensorDist.__init__(self, *args, **kwargs)
+        Distribution.__init__(self, *args, **kwargs)
 
         self.shape = np.atleast_1d(shape)
         self.type = TensorType(dtype, shape)
         self.__dict__.update(locals())
 
-class Discrete(TensorDist): 
+class Discrete(Distribution): 
     def __init__(self, shape=(), dtype='int64', testval=None, *args, **kwargs):
-        TensorDist.__init__(self, *args, **kwargs)
+        Distribution.__init__(self, *args, **kwargs)
         self.shape = np.atleast_1d(shape)
         self.type = TensorType(dtype, shape)
         self.default_testvals = ['mode']
         self.__dict__.update(locals())
 
-class Continuous(TensorDist): 
+class Continuous(Distribution): 
     def __init__(self, shape=(), dtype='float64', testval=None, *args, **kwargs):
-        TensorDist.__init__(self, *args, **kwargs)
+        Distribution.__init__(self, *args, **kwargs)
 
         shape = np.atleast_1d(shape)
         type = TensorType(dtype, shape)
