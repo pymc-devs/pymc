@@ -23,18 +23,18 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
 
     Parameters
     ----------
-    start : dict of parameter values (Defaults to model.test_point)
+    start : `dict` of parameter values (Defaults to `model.test_point`)
     vars : list
         List of variables to set to MAP point (Defaults to all continuous).
-        If discrete variables are included, estimates are likely to be
-        inaccurate, and a warning is issued if `fmin` is not specified.
     fmin : function
-        Optimization algorithm (Defaults to `scipy.optimize.fmin_bfgs`) for
-        continuous variables. If there are discrete variable specified,
-        defaults to `scipy.optimize.fmin_powell`, which provides slightly
-        better performance.
+        Optimization algorithm (Defaults to `scipy.optimize.fmin_bfgs` unless
+        discrete variables are specified in `vars`, then 
+        `scipy.optimize.fmin_powell` which will perform better). 
     return_raw : Bool
-        Whether to return extra value returned by fmin (Defaults to False)
+        Whether to return extra value returned by fmin (Defaults to `False`)
+    disp : Bool
+        Display helpful warnings, and verbose output of `fmin` (Defaults to
+        `False`)
     model : Model (optional if in `with` context)
     *args, **kwargs
         Extra args passed to fmin
@@ -45,17 +45,18 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
 
     if vars is None:
         vars = model.cont_vars
-    else:
-        disc_vars = list(typefilter(vars, discrete_types))
-        if disc_vars:
-            if fmin is None:
-                print("Warning: vars contains discrete variables. MAP " +
-                      "estimates may not be accurate for the default " +
-                      "parameters. Defaulting to non-gradient minimization " +
-                      "fmin_powell.")
-                fmin = optimize.fmin_powell
+    
+    disc_vars = list(typefilter(vars, discrete_types))
+    
+    if disc_vars and disp:
+        print("Warning: vars contains discrete variables. MAP " +
+              "estimates may not be accurate for the default " +
+              "parameters. Defaulting to non-gradient minimization " +
+              "fmin_powell.")
 
-    if fmin is None:
+    if fmin is None and disc_vars:
+        fmin = optimize.fmin_powell
+    else:
         fmin = optimize.fmin_bfgs
 
     allinmodel(vars, model)
