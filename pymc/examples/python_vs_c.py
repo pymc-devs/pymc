@@ -42,5 +42,5 @@ for mode in [ProfileMode(linker='py'),
     print(mode)
     logp = model.logpt
     f = model.fastfn([logp, gradient(logp)], mode)
-    print f(start)
+    print(f(start))
     mode.print_summary()
