@@ -1,4 +1,5 @@
 from .dist_math import *
+from ..model import FreeRV
 
 __all__ = ['transform', 'logtransform', 'simplextransform']
 
@@ -9,14 +10,15 @@ class Transform(object):
         self.__dict__.update(locals())
 
     def apply(self, dist):
-        return TransformedDistribtuion(dist, self)
+        return TransformedDistribution.dist(dist, self)
 
     def __str__(self):
         return name + " transform"
 
-class TransformedDistribtuion(Distribution):
+class TransformedDistribution(Distribution):
     def __init__(self, dist, transform, *args, **kwargs):
-        TensorDist.__init__(self, *args, **kwargs)
+        Distribution.__init__(self, *args, **kwargs)
+        forward = transform.forward 
         try:
             testval = forward(dist.testval)
         except TypeError:
@@ -27,7 +29,8 @@ class TransformedDistribtuion(Distribution):
         if hasattr(dist, "median"):
             mode = forward(dist.median)
 
-        _v = forward(dist.makevar('_v'))
+        
+        _v = forward(FreeRV(name='_v', distribution=dist))
         type = _v.type
         shape = _v.shape.tag.test_value
         dtype = _v.dtype
@@ -37,7 +40,7 @@ class TransformedDistribtuion(Distribution):
 
 
     def logp(self, x):
-        return self.dist.logp(self.backward(x)) + self.jacobian_det(x)
+        return self.dist.logp(self.transform.backward(x)) + self.transform.jacobian_det(x)
 
 
 transform = Transform
