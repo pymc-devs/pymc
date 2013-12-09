@@ -77,7 +77,7 @@ with model:
 
 # <codecell>
 
-H = model.fastd2dlogp()
+H = model.fastd2logp()
 
 
 def hessian(point, nusd):

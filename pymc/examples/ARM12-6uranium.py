@@ -62,7 +62,7 @@ if __name__ == '__main__':
                  }
 
         start = find_MAP(start, model.vars[:-1])
-        H = model.fastd2dlogp()
+        H = model.fastd2logp()
         h = np.diag(H(start))
 
         step = HamiltonianMC(model.vars, h)
