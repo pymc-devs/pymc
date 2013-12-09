@@ -199,7 +199,7 @@ class Model(Context, Factor):
         -------
         Compiled Theano function
         """
-        return LoosePointFunc(self.makefn(outs, mode))
+        return LoosePointFunc(self.makefn(outs, mode), self)
 
     def fastfn(self, outs, mode=None):
         """
@@ -260,11 +260,12 @@ class FastPointFunc(object):
         return self.f(**state)
 
 class LoosePointFunc(object):
-    def __init__(self, f):
+    def __init__(self, f, model):
         self.f = f
+        self.model = model
 
     def __call__(self, *args, **kwargs):
-        point = Point(*args, **kwargs)
+        point = Point(model=self.model, *args, **kwargs)
         return self.f(**point)
 
 
