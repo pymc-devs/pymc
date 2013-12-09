@@ -8,21 +8,15 @@ import imp
 
 
 def test_examples():
-
-    for _path in all_matching_files(example_dir(), '*.py'):
+    for _path in matching_files(example_dir(), '*.py'):
         yield check_example, _path
 
 
-def all_matching_files(d, pattern):
-
-    def addfiles(fls, dir, nfiles):
-        nfiles = fnmatch.filter(nfiles, pattern)
-        nfiles = [path.join(dir, f) for f in nfiles]
-        fls.extend(nfiles)
-
-    files = []
-    os.walk(d, addfiles, files)
-    return files
+def matching_files(d, pattern):
+    return [path.join(dir, file) 
+            for dir, _, files in os.walk(d)
+            for file in fnmatch.filter(files, pattern) 
+            ]
 
 
 def example_dir():

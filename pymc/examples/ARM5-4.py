@@ -34,7 +34,7 @@ if __name__ == '__main__':
     with model:
         # move the chain to the MAP which should be a good starting point
         start = find_MAP()
-        H = model.fastd2dlogp()  # find a good orientation using the hessian at the MAP
+        H = model.fastd2logp()  # find a good orientation using the hessian at the MAP
         h = H(start)
 
         step = HamiltonianMC(model.vars, h)
