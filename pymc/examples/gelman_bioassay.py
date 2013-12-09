@@ -24,4 +24,4 @@ with Model() as model:
 
     step = NUTS()
 
-    trace = sample(1000, step, trace=model.named_vars)
+    trace = sample(1000, step, trace=model.vars)

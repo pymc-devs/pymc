@@ -79,7 +79,7 @@ def hessian_diag(f, vars=None):
     return t.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
 
 
-dh = compilef(hessian_diag(model.logp))
+dh = model.fastfn(hessian_diag(model.logpt))
 
 # <codecell>
 
