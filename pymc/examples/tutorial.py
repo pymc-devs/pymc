@@ -72,13 +72,13 @@ with model:
 
 # In[5]:
 
-print "MAP found:"
-print "x:", start['x']
-print "y:", start['y']
+print("MAP found:")
+print("x:", start['x'])
+print("y:", start['y'])
 
-print "Compare with true values:"
-print "ytrue", ytrue
-print "xtrue", xtrue
+print("Compare with true values:")
+print("ytrue", ytrue)
+print("xtrue", xtrue)
 
 
 # Out[5]:

@@ -39,7 +39,7 @@ from theano import ProfileMode
 
 for mode in [ProfileMode(linker='py'),
              ProfileMode(linker='c|py')]:
-    print mode
+    print(mode)
     logp = model.logpt
     f = model.fastfn([logp, gradient(logp)], mode)
     print f(start)
