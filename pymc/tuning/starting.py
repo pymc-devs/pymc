@@ -54,10 +54,11 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
               "parameters. Defaulting to non-gradient minimization " +
               "fmin_powell.")
 
-    if fmin is None and disc_vars:
-        fmin = optimize.fmin_powell
-    else:
-        fmin = optimize.fmin_bfgs
+    if fmin is None:
+        if disc_vars:
+            fmin = optimize.fmin_powell
+        else:
+            fmin = optimize.fmin_bfgs
 
     allinmodel(vars, model)
 
