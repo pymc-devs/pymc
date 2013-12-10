@@ -62,4 +62,4 @@ if __name__ == '__main__':
 
         step = HamiltonianMC(model.vars, h)
 
-        trace = sample(3000, step, start)
+        trace = sample(1500, step, start)

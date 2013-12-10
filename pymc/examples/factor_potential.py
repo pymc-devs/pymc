@@ -7,4 +7,4 @@ with Model() as model:
     start = model.test_point
     h = find_hessian(start)
     step = Metropolis(model.vars, h)
-    trace = sample(3000, step, start)
+    trace = sample(1500, step, start)

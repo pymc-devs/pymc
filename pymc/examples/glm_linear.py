@@ -26,7 +26,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     with model:
-        trace = sample(2000, Slice(model.vars))
+        trace = sample(1000, Slice(model.vars))
 
     plt.plot(x, y, 'x')
     glm.plot_posterior_predictive(trace)

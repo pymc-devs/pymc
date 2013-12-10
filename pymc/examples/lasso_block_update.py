@@ -49,7 +49,7 @@ with model:
 
     step2 = Metropolis([s], proposal_dist=LaplaceProposal)
 
-    trace = sample(5000, [step1, step2], start)
+    trace = sample(3000, [step1, step2], start)
     
 from pymc.model import cont_inputs
 import theano.tensor as t

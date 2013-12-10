@@ -52,4 +52,4 @@ with model:
 
     step = NUTS(model.vars, scaling=start)
 
-    trace = sample(3e3, step, start)
+    trace = sample(2e3, step, start)

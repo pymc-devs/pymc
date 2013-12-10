@@ -83,4 +83,4 @@ if __name__ == '__main__':
 
         step2 = BinaryMetropolis([z])
 
-        trace = sample(5000, [step1, step2], start)
+        trace = sample(3000, [step1, step2], start)

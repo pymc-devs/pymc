@@ -38,7 +38,7 @@ def run():
         start = find_MAP()
         step = NUTS(scaling=start)
 
-        trace = sample(3e2, step, start)
+        trace = sample(2e2, step, start)
 
 if __name__ == '__main__':
 
