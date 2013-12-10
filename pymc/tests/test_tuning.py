@@ -2,7 +2,7 @@ import numpy as np
 from numpy import inf
 from pymc.tuning import scaling
 from pymc.tuning import starting
-from pymc import Model, Uniform, Normal
+from pymc import Model, Uniform, Normal, Beta, Binomial
 from pymc.tests.checks import close_to
 from . import models
 
@@ -21,6 +21,28 @@ def test_guess_scaling():
     a1 = scaling.guess_scaling(start, model=model)
 
     assert all((a1 > 0) & (a1 < 1e200))
+
+
+def test_find_MAP_discrete():
+    tol = 2.0**-11
+    alpha = 4
+    beta = 4
+    n = 20
+    yes = 15
+
+    with Model() as model:
+        p = Beta('p',alpha,beta)
+        ss = Binomial('ss', n=n, p=p)
+        s = Binomial('s', n=n, p=p, observed=yes)
+        
+        map_est1 = starting.find_MAP()
+        map_est2 = starting.find_MAP(vars=model.vars)
+
+    close_to(map_est1['p'], 0.6086956533498806, tol)
+    assert 'ss' not in map_est1
+
+    close_to(map_est2['p'], 0.695642178810167, tol)
+    assert map_est2['ss'] == 14
 
 
 def test_find_MAP():
