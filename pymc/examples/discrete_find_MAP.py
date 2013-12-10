@@ -40,7 +40,7 @@ with model:
 
 with model:
     for i in range(n+1):
-        s = {'p':0.5, 'surv_sim':i}
+        s = {'p': 0.5, 'surv_sim': i}
         map_est = mc.find_MAP(start=s, vars=model.vars,
                               fmin=mc.starting.optimize.fmin_bfgs)
         print('surv_sim: %i->%i, p: %f->%f, LogP:%f'%(s['surv_sim'],
@@ -58,7 +58,7 @@ with model:
 
 with model:
     for i in range(n+1):
-        s = {'p':0.5, 'surv_sim':i}
+        s = {'p': 0.5, 'surv_sim': i}
         map_est = mc.find_MAP(start=s, vars=model.vars)
         print('surv_sim: %i->%i, p: %f->%f, LogP:%f'%(s['surv_sim'],
                                                       map_est['surv_sim'],
@@ -74,14 +74,15 @@ with model:
 # near found minimums. Because it has a slightly different interface to other
 # minimization schemes we have to define a wrapper function.
 
-def bh(*args,**kwargs):
+
+def bh(*args, **kwargs):
     result = mc.starting.optimize.basinhopping(*args, **kwargs)
     # A `Result` object is returned, the argmin value can be in `x`
     return result['x']
 
 with model:
     for i in range(n+1):
-        s = {'p':0.5, 'surv_sim':i}
+        s = {'p': 0.5, 'surv_sim': i}
         map_est = mc.find_MAP(start=s, vars=model.vars, fmin=bh)
         print('surv_sim: %i->%i, p: %f->%f, LogP:%f'%(s['surv_sim'],
                                                       map_est['surv_sim'],
@@ -95,7 +96,7 @@ with model:
 
 with model:
     for i in range(n+1):
-        s = {'p':0.5, 'surv_sim':i}
+        s = {'p': 0.5, 'surv_sim': i}
         map_est = mc.find_MAP(start=s, vars=model.vars,
                               fmin=bh, minimizer_kwargs={"method": "Powell"})
         print('surv_sim: %i->%i, p: %f->%f, LogP:%f'%(s['surv_sim'],
@@ -112,6 +113,6 @@ with model:
     step2 = mc.step_methods.Metropolis(vars=[surv_sim])
 
 with model:
-    trace = mc.sample(25000,[step1,step2],start=map_est)
+    trace = mc.sample(25000, [step1, step2], start=map_est)
 
 mc.traceplot(trace);
