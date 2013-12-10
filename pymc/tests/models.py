@@ -49,8 +49,14 @@ def mv_simple():
     return model.test_point, model, (mu, C)
 
 def non_normal(n=2):
-
     with pm.Model() as model:
         x = pm.Beta('x', 3, 3, shape=n)
+
+    return model.test_point, model, ([.5] * n, None)
+
+def exponential_beta(n=2):
+    with pm.Model() as model:
+        x = pm.Beta('x', 3, 1, shape=n)
+        y = pm.Exponential('y', 1, shape=n)
 
     return model.test_point, model, None

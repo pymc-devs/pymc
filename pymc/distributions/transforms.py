@@ -1,42 +1,49 @@
 from .dist_math import *
+from ..model import FreeRV
 
 __all__ = ['transform', 'logtransform', 'simplextransform']
 
 
-@quickclass(object)
-def transform(name, forward, backward, jacobian_det, getshape=None):
-    def apply(dist):
 
-        @quickclass(TensorDist)
-        def TransformedDistribtuion():
-            try:
-                testval = forward(dist.testval)
-            except TypeError:
-                testval = dist.testval
+class Transform(object):
+    def __init__(self, name, forward, backward, jacobian_det, getshape=None):
+        self.__dict__.update(locals())
 
-            def logp(x):
-                return dist.logp(backward(x)) + jacobian_det(x)
+    def apply(self, dist):
+        return TransformedDistribution.dist(dist, self)
 
-            if hasattr(dist, "mode"):
-                mode = forward(dist.mode)
-            if hasattr(dist, "median"):
-                mode = forward(dist.median)
-
-            _v = forward(dist.makevar('_v'))
-            type = _v.type
-            shape = _v.shape.tag.test_value
-            dtype = _v.dtype
-
-            default_testvals = dist.default_testvals
-
-            return locals()
-
-        return TransformedDistribtuion.dist()
-
-    def __str__():
+    def __str__(self):
         return name + " transform"
 
-    return locals()
+class TransformedDistribution(Distribution):
+    def __init__(self, dist, transform, *args, **kwargs):
+        Distribution.__init__(self, *args, **kwargs)
+        forward = transform.forward 
+        try:
+            testval = forward(dist.testval)
+        except TypeError:
+            testval = dist.testval
+        
+        if hasattr(dist, "mode"):
+            mode = forward(dist.mode)
+        if hasattr(dist, "median"):
+            mode = forward(dist.median)
+
+        
+        _v = forward(FreeRV(name='_v', distribution=dist))
+        type = _v.type
+        shape = _v.shape.tag.test_value
+        dtype = _v.dtype
+
+        default_testvals = dist.default_testvals
+        self.__dict__.update(locals())
+
+
+    def logp(self, x):
+        return self.dist.logp(self.transform.backward(x)) + self.transform.jacobian_det(x)
+
+
+transform = Transform
 
 logtransform = transform("log", log, exp, idfn)
 

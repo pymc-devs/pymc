@@ -14,9 +14,9 @@ with model:
 if __name__ == '__main__':
 
     with model:
-        H = model.d2logpc()
+        H = model.fastd2logp()
 
         s = find_MAP()
 
         step = HamiltonianMC(model.vars, H(s))
-        trace = sample(1000, step, s)
+        trace = sample(800, step, s)

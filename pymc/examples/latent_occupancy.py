@@ -62,13 +62,13 @@ with model:
 
 point = model.test_point
 
-_pymc3_logp = model.logpc
+_pymc3_logp = model.logp
 
 
 def pymc3_logp():
     _pymc3_logp(point)
 
-_pymc3_dlogp = model.dlogpc()
+_pymc3_dlogp = model.dlogp()
 
 
 def pymc3_dlogp():
@@ -83,4 +83,4 @@ if __name__ == '__main__':
 
         step2 = BinaryMetropolis([z])
 
-        trace = sample(5000, [step1, step2], start)
+        trace = sample(3000, [step1, step2], start)

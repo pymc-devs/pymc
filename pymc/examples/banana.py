@@ -37,7 +37,7 @@ with Model() as model:
 
     step = HamiltonianMC(model.vars, h, path_length=4.)
 
-    trace = sample(3e3, step, start)
+    trace = sample(2e3, step, start)
 
 pl.figure()
 pl.hexbin(trace['x'], trace['y'])

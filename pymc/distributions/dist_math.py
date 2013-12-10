@@ -4,7 +4,6 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 '''
 from __future__ import division
-from ..quickclass import *
 import theano.tensor as t
 from theano.tensor import (
     sum, switch, log, exp,

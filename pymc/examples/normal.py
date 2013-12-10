@@ -18,5 +18,5 @@ with model:
 
     step = NUTS(scaling=start)
 
-    ndraw = 3e3
+    ndraw = 2e3
     trace = sample(ndraw, step, start=start)

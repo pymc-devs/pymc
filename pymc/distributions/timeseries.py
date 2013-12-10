@@ -4,8 +4,8 @@ from .continuous import *
 __all__ = ['AR1', 'GaussianRandomWalk']
 
 
-@tensordist(continuous)
-def AR1(k, tau_e):
+
+class AR1(Continuous):
     """
     Autoregressive process with 1 lag.
 
@@ -16,10 +16,17 @@ def AR1(k, tau_e):
     tau_e : tensor
        precision for innovations
     """
+    def __init__(self, k, tau_e, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
+        self.k = k
+        self.tau_e = tau_e
+        self.tau = tau_e * (1 - k ** 2)
+        self.mode = 0.
 
-    tau = tau_e * (1 - k ** 2)
+    def logp(self, x):
+        k = self.k
+        tau_e = self.tau_e
 
-    def logp(x):
         x_im1 = x[:-1]
         x_i = x[1:]
         boundary = Normal.dist(0, tau).logp
@@ -27,13 +34,8 @@ def AR1(k, tau_e):
         innov_like = Normal.dist(k * x_im1, tau_e).logp(x_i)
         return boundary(x[0]) + sum(innov_like) + boundary(x[-1])
 
-    mode = 0.
 
-    return locals()
-
-
-@tensordist(continuous)
-def GaussianRandomWalk(tau=None, init=Flat.dist(), sd=None):
+class GaussianRandomWalk(Continuous):
     """
     Random Walk with Normal innovations
 
@@ -44,14 +46,20 @@ def GaussianRandomWalk(tau=None, init=Flat.dist(), sd=None):
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
+    def __init__(self, tau=None, init=Flat.dist(), sd=None, *args, **kwargs):
+        Continuous.__init__(self, *args, **kwargs)
+        self.tau = tau
+        self.sd = sd
+        self.init = init
+        self.mean = 0.
 
-    def logp(x):
+    def logp(self, x):
+        tau = self.tau
+        sd = self.sd
+        init = self.init
+
         x_im1 = x[:-1]
         x_i = x[1:]
 
         innov_like = Normal.dist(x_im1, tau, sd=sd).logp(x_i)
         return init.logp(x[0]) + sum(innov_like)
-
-    mean = 0.
-
-    return locals()
