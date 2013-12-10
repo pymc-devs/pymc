@@ -86,7 +86,7 @@ with model:
     s = trace[-1]
 
     step = NUTS(scaling = s)
-    trace = sample(3000, step, s)
+    trace = sample(1500, step, s)
 
 
 # <codecell>

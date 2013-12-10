@@ -19,4 +19,4 @@ if __name__ == '__main__':
         s = find_MAP()
 
         step = HamiltonianMC(model.vars, H(s))
-        trace = sample(1000, step, s)
+        trace = sample(800, step, s)
