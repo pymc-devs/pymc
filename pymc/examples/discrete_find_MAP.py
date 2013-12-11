@@ -47,7 +47,7 @@ with model:
                                                       map_est['surv_sim'],
                                                       s['p'],
                                                       map_est['p'],
-                                                      model.logpc(map_est)))
+                                                      model.logp(map_est)))
 
 # Once again because the gradient of `surv_sim` provides no information to the
 # `fmin` routine and it is only changed in a few cases, most of which are not
@@ -64,7 +64,7 @@ with model:
                                                       map_est['surv_sim'],
                                                       s['p'],
                                                       map_est['p'],
-                                                      model.logpc(map_est)))
+                                                      model.logp(map_est)))
 
 # For most starting values this converges to the maximum log likelihood of
 # $\approx -3.15$, but for particularly low starting values of `surv_sim`, or
@@ -88,7 +88,7 @@ with model:
                                                       map_est['surv_sim'],
                                                       s['p'],
                                                       map_est['p'],
-                                                      model.logpc(map_est)))
+                                                      model.logp(map_est)))
 
 # By default `basinhopping` uses a gradient minimization technique,
 # `fmin_bfgs`, resulting in inaccurate predictions many times. If we force
@@ -103,7 +103,7 @@ with model:
                                                       map_est['surv_sim'],
                                                       s['p'],
                                                       map_est['p'],
-                                                      model.logpc(map_est)))
+                                                      model.logp(map_est)))
 
 # Confident in our MAP estimate we can sample from the posterior, making sure
 # we use the `Metropolis` method for our discrete variables.

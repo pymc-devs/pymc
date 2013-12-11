@@ -3,10 +3,10 @@ from numpy import inf
 from pymc.tuning import starting
 from pymc import find_MAP, Point, Model
 from pymc import Model, Uniform, Normal, Beta, Binomial
-import models 
+from .models import simple_init, simple_model, non_normal, exponential_beta
 
 def test_accuracy_normal():
-    _, model, (mu, _) = models.simple_model()
+    _, model, (mu, _) = simple_model()
 
     with model: 
         newstart = find_MAP(Point(x = [-10.5, 100.5]))
@@ -14,14 +14,14 @@ def test_accuracy_normal():
 
 
 def test_accuracy_non_normal():
-    _, model, (mu, _) = models.non_normal(4)
+    _, model, (mu, _) = non_normal(4)
 
     with model: 
         newstart = find_MAP(Point(x = [.5, .01, .95, .99]))
         close_to(newstart['x'], mu, 1e-5)
 
 def test_errors():
-    _, model, _ = models.exponential_beta(2)
+    _, model, _ = exponential_beta(2)
 
     with model: 
         try : 
