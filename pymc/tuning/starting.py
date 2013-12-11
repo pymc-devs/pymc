@@ -113,18 +113,19 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
                 for k,v in vals.items()
                 if not allfinite(v)]
 
-
-            raise ValueError("Optimization error: max, logp or dlogp at " +
-                             "max have non-finite values. Some values may be " +
-                             "outside of distribution support. max: " +
-                             repr(mx) + " logp: " + repr(logp(mx)) +
-                             " dlogp: " + repr(dlogp(mx)) + "Check that " +
-                             "1) you don't have hierarchical parameters, " +
-                             "these will lead to points with infinite " +
-                             "density. 2) your distribution logp's are " +
-                             "properly specified. Specific issues: \n" + str(badvals))
+        specific_errors = '\n'.join(messages)
+        raise ValueError("Optimization error: max, logp or dlogp at " +
+                         "max have non-finite values. Some values may be " +
+                         "outside of distribution support. max: " +
+                         repr(mx) + " logp: " + repr(model.logp(mx)) +
+                         " dlogp: " + repr(model.dlogp()(mx)) + "Check that " +
+                         "1) you don't have hierarchical parameters, " +
+                         "these will lead to points with infinite " +
+                         "density. 2) your distribution logp's are " +
+                         "properly specified. Specific issues: \n" + 
+                         specific_errors)
     mx = {v.name: np.floor(mx[v.name]) if v.dtype in discrete_types else
-          mx[v.name] for v in vars}
+          mx[v.name] for v in model.vars}
     if return_raw:
         return mx, r
     else:
