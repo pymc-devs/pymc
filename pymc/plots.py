@@ -62,11 +62,10 @@ def traceplot(trace, vars=None, figsize=None, lines=None, combined=False, grid=T
             d = np.squeeze(trace[v])
 
             if trace[v].dtype.kind == 'i':
-                maxd = max(d)
                 mind = min(d)
-                bins = np.arange(mind-.5,maxd+1.5,1)
-                ax[i, 0].hist(d, bins=bins)
-                ax[i, 0].set_xlim(mind-.5,maxd+.5)
+                maxd = max(d)
+                ax[i, 0].hist(d, bins=range(mind, maxd + 2), align='left')
+                ax[i, 0].set_xlim(mind - .5, maxd + .5)
             else:
                 kdeplot_op(ax[i, 0], d)
             ax[i, 0].set_title(str(v))
