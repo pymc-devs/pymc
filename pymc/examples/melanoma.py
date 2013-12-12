@@ -24,6 +24,7 @@ model {
 """
 
 from pymc import Normal, Lambda, observed
+from numpy import exp, log
 from .melanoma_data import *
 
 # Convert censoring indicators to indicators for failure event
