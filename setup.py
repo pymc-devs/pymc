@@ -15,6 +15,10 @@ VERSION = "3.0"
 
 classifiers = ['Development Status :: 3 - Alpha',
                'Programming Language :: Python',
+               'Programming Language :: Python :: 2',
+               'Programming Language :: Python :: 3',
+               'Programming Language :: Python :: 2.7',
+               'Programming Language :: Python :: 3.3',
                'License :: OSI Approved :: Apache Software License',
                'Intended Audience :: Science/Research',
                'Topic :: Scientific/Engineering',
@@ -22,7 +26,7 @@ classifiers = ['Development Status :: 3 - Alpha',
                'Operating System :: OS Independent']
 
 required = ['numpy>=1.7.1', 'scipy>=0.12.0', 'matplotlib>=1.2.1',
-            'Theano==0.6.0rc5']
+            'Theano==0.6.0']
 
 if __name__ == "__main__":
     setup(name=DISTNAME,

@@ -377,7 +377,8 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                                 q[3]),
                             y=(y,
                                 y),
-                            linewidth=2)
+                            linewidth=2,
+                            color='b')
 
                     else:
                         # Plot median
@@ -389,7 +390,8 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                             q[-1]),
                         y=(y,
                             y),
-                        linewidth=1)
+                        linewidth=1,
+                        color='b')
 
             else:
 
@@ -405,7 +407,8 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                             quants[3]),
                         y=(y,
                             y),
-                        linewidth=2)
+                        linewidth=2,
+                        color='b')
                 else:
                     # Plot median
                     plot(quants[1], y, 'bo', markersize=4)
@@ -416,7 +419,8 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                         quants[-1]),
                     y=(y,
                         y),
-                    linewidth=1)
+                    linewidth=1,
+                    color='b')
 
             # Increment index
             var += k
