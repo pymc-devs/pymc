@@ -11,7 +11,9 @@ from .trace import *
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
-def traceplot(trace, vars=None, figsize=None, lines=None, combined=False, grid=True):
+
+def traceplot(trace, vars=None, figsize=None,
+              lines=None, combined=False, grid=True):
     """Plot samples histograms and values
 
     Parameters
@@ -23,8 +25,8 @@ def traceplot(trace, vars=None, figsize=None, lines=None, combined=False, grid=T
     figsize : figure size tuple
         If None, size is (12, num of variables * 2) inch
     lines : dict
-        Dictionary of variable name / value  to be overplotted as vertical lines
-        to the posteriors and horizontal lines on sample values
+        Dictionary of variable name / value  to be overplotted as vertical
+        lines to the posteriors and horizontal lines on sample values
         e.g. mean of posteriors, true values of a simulation
     combined : bool
         Flag for combining MultiTrace into a single trace. If False (default)
@@ -62,7 +64,10 @@ def traceplot(trace, vars=None, figsize=None, lines=None, combined=False, grid=T
             d = np.squeeze(trace[v])
 
             if trace[v].dtype.kind == 'i':
-                ax[i, 0].hist(d, bins=sqrt(d.size))
+                mind = min(d)
+                maxd = max(d)
+                ax[i, 0].hist(d, bins=range(mind, maxd + 2), align='left')
+                ax[i, 0].set_xlim(mind - .5, maxd + .5)
             else:
                 kdeplot_op(ax[i, 0], d)
             ax[i, 0].set_title(str(v))
@@ -124,6 +129,7 @@ def kde2plot(x, y, grid=200):
     kde2plot_op(ax, x, y, grid)
     return f
 
+
 def autocorrplot(trace, vars=None, fontmap=None, max_lag=100):
     """Bar plot of the autocorrelation function for a trace"""
 
@@ -132,11 +138,11 @@ def autocorrplot(trace, vars=None, fontmap=None, max_lag=100):
         traces = trace.traces
 
     except AttributeError:
-
         # NpTrace
         traces = [trace]
 
-    if fontmap is None: fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
+    if fontmap is None:
+        fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
     if vars is None:
         vars = traces[0].varnames
@@ -195,11 +201,12 @@ def var_str(name, shape):
 
 
 def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
-               main=None, xtitle=None, xrange=None, ylabels=None, chain_spacing=0.05, vline=0):
+               main=None, xtitle=None, xrange=None, ylabels=None,
+               chain_spacing=0.05, vline=0):
     """ Forest plot (model summary plot)
 
-    Generates a "forest plot" of 100*(1-alpha)% credible intervals for either the
-    set of variables in a given model, or a specified set of nodes.
+    Generates a "forest plot" of 100*(1-alpha)% credible intervals for either
+    the set of variables in a given model, or a specified set of nodes.
 
     :Arguments:
         trace_obj: NpTrace or MultiTrace object
@@ -210,7 +217,8 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             variables plotted).
 
         alpha (optional): float
-            Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
+            Alpha value for (1-alpha)*100% credible intervals (defaults to
+            0.05).
 
         quartiles (optional): bool
             Flag for plotting the interquartile range, in addition to the
@@ -243,8 +251,9 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
     """
 
     if not gridspec:
-        print_(
-            '\nYour installation of matplotlib is not recent enough to support summary_plot; this function is disabled until matplotlib is updated.')
+        print_('\nYour installation of matplotlib is not recent enough to ' +
+               'support summary_plot; this function is disabled until ' +
+               'matplotlib is updated.')
         return
 
     # Quantiles to be calculated
@@ -354,7 +363,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
 
             # Add spacing for each chain, if more than one
             e = [0] + [(chain_spacing * ((i + 2) / 2)) *
-                (-1) ** i for i in range(chains - 1)]
+                       (-1) ** i for i in range(chains - 1)]
 
             # Deal with multivariate nodes
             if k > 1:
