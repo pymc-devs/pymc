@@ -83,8 +83,7 @@ def sample(draws, step, start=None, trace=None, tune=None, progressbar=True, mod
                 progress.update(i)
     except KeyboardInterrupt:
         pass
-    finally:
-        return trace
+    return trace
 
 def stop_tuning(step):
     """ stop tuning the current step method """
