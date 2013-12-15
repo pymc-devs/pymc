@@ -239,14 +239,14 @@ class Categorical(Discrete):
     def __init__(self, p, *args, **kwargs):
         Discrete.__init__(self, *args, **kwargs)
         self.p = p
-        self.mode = where(p == maximum(p))
+        self.mode = argmax(p)
 
     def logp(self, value):
         p = self.p
 
         return bound(log(p[value]),
-            value => 0,
-            value <= p.shape,
+            value >= 0,
+            value <= p.shape[0],
             all(p >= 0),
             all(p <= 1),
             eq(sum(p), 1))
