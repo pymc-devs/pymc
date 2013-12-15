@@ -11,6 +11,8 @@ with model:
         'p', Dirichlet.dist(k, a, shape=k),
         simplextransform)
 
+    c = Categorical('c', p, observed=np.random.randint(0, k, 5))
+
 if __name__ == '__main__':
 
     with model:
