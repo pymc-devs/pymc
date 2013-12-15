@@ -85,7 +85,7 @@ class Dirichlet(Continuous):
             all(a > 0))
 
 
-class Multinomial(Continuous):
+class Multinomial(Discrete):
     """
     Generalization of the binomial
     distribution, but instead of each trial resulting in "success" or
@@ -114,7 +114,7 @@ class Multinomial(Continuous):
         - :math:`Cov(X_i,X_j) = -n p_i p_j`
     """
     def __init__(self, n, p, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        Discrete.__init__(self, *args, **kwargs)
         self.n = n
         self.p = p
         self.mean = n * p
