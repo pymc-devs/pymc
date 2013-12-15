@@ -11,7 +11,7 @@ from theano.tensor import (
     cast, round, arange, max, min,
     maximum, minimum, floor, ceil,
     zeros_like, ones, ones_like,
-    concatenate, constant)
+    concatenate, constant, where)
 
 
 from numpy import pi, inf, nan
