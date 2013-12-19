@@ -122,8 +122,8 @@ def run(n=2000):
 
         # Start next run at the last sampled position.
         start2 = trace.point(-1)
-        step = HamiltonianMC(model.vars, hessian(start2, 6), path_length=4.)
-        trace = sample(2000, step, trace=trace)
+        step2 = HamiltonianMC(model.vars, hessian(start2, 6), path_length=4.)
+        trace = sample(2000, step2, trace=trace)
 
     # <codecell>
 

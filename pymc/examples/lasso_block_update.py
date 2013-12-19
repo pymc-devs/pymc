@@ -53,7 +53,7 @@ def run(n=5000):
     with model:
         trace = sample(n, [step1, step2], start)
 
-    dh = fn(hessian_diag(model.logpt))
+        dh = fn(hessian_diag(model.logpt))
 
     # <codecell>
 
