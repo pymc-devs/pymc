@@ -37,6 +37,7 @@ from scipy import optimize
 # <codecell>
 
 n = 400
+import pkgutil
 from StringIO import StringIO
 returns = np.genfromtxt(StringIO(pkgutil.get_data('pymc.examples', "data/SP500.csv")))[-n:]
 returns[:5]

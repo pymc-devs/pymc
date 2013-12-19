@@ -53,15 +53,15 @@ def run(n=5000):
     with model:
         trace = sample(n, [step1, step2], start)
 
-dh = fn(hessian_diag(model.logp))
+    dh = fn(hessian_diag(model.logpt))
 
-# <codecell>
+    # <codecell>
 
-traceplot(trace)
+    traceplot(trace)
 
-# <codecell>
+    # <codecell>
 
-hexbin(trace[m1], trace[m2], gridsize=50)
+    hexbin(trace[m1], trace[m2], gridsize=50)
 
 # <codecell>
 if __name__ == '__main__':

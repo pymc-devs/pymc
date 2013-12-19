@@ -42,7 +42,7 @@ def run(n=1):
                  ProfileMode(linker='c|py')]:
 
         print mode
-        logp = model.logp
+        logp = model.logpt
         f = model.fn([logp, gradient(logp)], mode)
         print f(start)
         
