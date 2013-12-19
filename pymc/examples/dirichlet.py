@@ -11,7 +11,7 @@ with model:
         'p', Dirichlet.dist(k, a, shape=k),
         simplextransform)
 
-if __name__ == '__main__':
+def run(n=3000):
 
     with model:
         H = model.fastd2logp()
@@ -19,4 +19,9 @@ if __name__ == '__main__':
         s = find_MAP()
 
         step = HamiltonianMC(model.vars, H(s))
-        trace = sample(800, step, s)
+        trace = sample(n, step, s)
+
+if __name__ == '__main__':
+    run()
+
+

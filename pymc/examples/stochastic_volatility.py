@@ -37,7 +37,8 @@ from scipy import optimize
 # <codecell>
 
 n = 400
-returns = np.genfromtxt("data/SP500.csv")[-n:]
+from StringIO import StringIO
+returns = np.genfromtxt(StringIO(pkgutil.get_data('pymc.examples', "data/SP500.csv")))[-n:]
 returns[:5]
 
 # <markdowncell>
@@ -111,23 +112,31 @@ with model:
 
 with model:
     step = NUTS(model.vars, hessian(start, 6))
-    trace = sample(5, step, start, trace=model.vars + [sigma])
+    
+    
+    
+def run(n=2000):
+    with model:
+        trace = sample(5, step, start, trace=model.vars + [sigma])
 
-    # Start next run at the last sampled position.
-    #start2 = trace.point(-1)
-    #step = HamiltonianMC(model.vars, hessian(start2, 6), path_length=4.)
-    #trace = sample(2000, step, trace=trace)
+        # Start next run at the last sampled position.
+        start2 = trace.point(-1)
+        step = HamiltonianMC(model.vars, hessian(start2, 6), path_length=4.)
+        trace = sample(2000, step, trace=trace)
 
-# <codecell>
+    # <codecell>
 
-# figsize(12,6)
-title(str(s))
-plot(trace[s][::10].T, 'b', alpha=.03)
-xlabel('time')
-ylabel('log volatility')
+    # figsize(12,6)
+    title(str(s))
+    plot(trace[s][::10].T, 'b', alpha=.03)
+    xlabel('time')
+    ylabel('log volatility')
 
-# figsize(12,6)
-traceplot(trace, model.vars[:-1])
+    # figsize(12,6)
+    traceplot(trace, model.vars[:-1])
+    
+if __name__ == '__main__':
+    run()
 
 # <markdowncell>
 

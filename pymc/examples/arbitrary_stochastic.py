@@ -11,11 +11,15 @@ with Model() as model:
 
     x = DensityDist('x', logp, observed=(failure, value))
 
-if __name__ == "__main__":
 
+def run (n):
     with model:
 
         start = model.test_point
         h = find_hessian(start)
         step = Metropolis(model.vars, h)
-        trace = sample(1500, step, start)
+        trace = sample(n, step, start)
+
+if __name__ == "__main__":
+    run(3000)
+

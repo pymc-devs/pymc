@@ -31,15 +31,13 @@ with model:
 
     o = Bernoulli('o', p, observed=outcomes)
 
-def run():
-
+def run(n=3000):
     with model:
         # move the chain to the MAP which should be a good starting point
         start = find_MAP()
         step = NUTS(scaling=start)
 
-        trace = sample(2e2, step, start)
+        trace = sample(n, step, start)
 
 if __name__ == '__main__':
-
     run()

@@ -44,8 +44,7 @@ with Model() as model:
     disasters = Poisson('disasters', rate, observed=disasters_data)
 
 
-if __name__ == '__main__':
-
+def run(n=1000):
     with model:
 
         # Initial values for stochastic nodes
@@ -57,3 +56,8 @@ if __name__ == '__main__':
         step2 = Metropolis([switchpoint])
 
         tr = sample(1000, tune=500, start=start, step=[step1, step2])
+
+if __name__ == '__main__':
+    run()
+
+

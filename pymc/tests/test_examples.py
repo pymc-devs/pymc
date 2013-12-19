@@ -1,31 +1,19 @@
 import matplotlib
 matplotlib.use('Agg', warn=False)
 
-from os import path
-import os
-import fnmatch
-import imp
+import pkgutil
 
 
 def test_examples():
-    for _path in matching_files(example_dir(), '*.py'):
-        yield check_example, _path
+    from pymc import examples
 
+    prefix = examples.__name__ + "."
+    for _, example, _ in pkgutil.iter_modules(examples.__path__):
+        yield check_example, prefix + example
 
-def matching_files(d, pattern):
-    return [path.join(dir, file) 
-            for dir, _, files in os.walk(d)
-            for file in fnmatch.filter(files, pattern) 
-            ]
+        
+def check_example(example_name):
+    example = __import__(example_name, fromlist='dummy')
+    if hasattr(example, 'run'):
+        example.run(n=10)
 
-
-def example_dir():
-    import pymc
-    d = path.dirname(pymc.__file__)
-
-    return path.join(d, 'examples/')
-
-
-def check_example(p):
-    os.chdir(path.dirname(p))
-    imp.load_source('__main__', path.basename(p))

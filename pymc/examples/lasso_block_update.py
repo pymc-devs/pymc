@@ -49,37 +49,11 @@ with model:
 
     step2 = Metropolis([s], proposal_dist=LaplaceProposal)
 
-    trace = sample(3000, [step1, step2], start)
-    
-from pymc.model import cont_inputs
-import theano.tensor as t
+def run(n=5000):
+    with model:
+        trace = sample(n, [step1, step2], start)
 
-
-def gradient1(f, v):
-    """flat gradient of f wrt v"""
-    return t.flatten(t.grad(f, v, disconnected_inputs='warn'))
-
-
-def hessian_diag1(f, v):
-
-    g = gradient1(f, v)
-    idx = t.arange(g.shape[0])
-
-    def hess_ii(i):
-        return gradient1(g[i], v)[i]
-
-    return theano.map(hess_ii, idx)[0]
-
-
-def hessian_diag(f, vars=None):
-
-    if not vars:
-        vars = cont_inputs(f)
-
-    return t.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
-
-
-dh = model.fastfn(hessian_diag(model.logpt))
+dh = fn(hessian_diag(model.logp))
 
 # <codecell>
 
@@ -90,3 +64,7 @@ traceplot(trace)
 hexbin(trace[m1], trace[m2], gridsize=50)
 
 # <codecell>
+if __name__ == '__main__':
+    run()
+
+

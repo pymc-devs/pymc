@@ -52,4 +52,9 @@ with model:
 
     step = NUTS(model.vars, scaling=start)
 
-    trace = sample(2e3, step, start)
+def run(n=3000):
+    with model:
+        trace = sample(3e3, step, start)
+        
+if __name__ == '__main__':
+    run()

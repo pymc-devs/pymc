@@ -107,7 +107,7 @@ with model:
 
 with model: 
     trace = pm.sample(3000, step, start)
-
+      
 
 # Out[7]:
 

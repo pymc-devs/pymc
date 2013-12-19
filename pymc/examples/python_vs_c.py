@@ -37,10 +37,16 @@ start = model.test_point
 
 from theano import ProfileMode
 
-for mode in [ProfileMode(linker='py'),
-             ProfileMode(linker='c|py')]:
-    print(mode)
-    logp = model.logpt
-    f = model.fastfn([logp, gradient(logp)], mode)
-    print(f(start))
-    mode.print_summary()
+def run(n=1):
+    for mode in [ProfileMode(linker='py'),
+                 ProfileMode(linker='c|py')]:
+
+        print mode
+        logp = model.logp
+        f = model.fn([logp, gradient(logp)], mode)
+        print f(start)
+        
+        mode.print_summary()
+    
+if __name__ == '__main__':
+    run()

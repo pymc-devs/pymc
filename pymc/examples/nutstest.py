@@ -18,26 +18,33 @@ with Model() as model:
 
     step = NUTS()
 
-    trace = sample(10, step)
+def run(n=10):
+    with model:
+        trace = sample(10, step)
+        
+ 
 
-# <markdowncell>
+    # <markdowncell>
 
-# To use more than one sampler, use a CompoundStep which takes a list of step methods. 
-# 
-# The trace object can be indexed by the variables returning an array with the first index being the sample index
-# and the other indexes the shape of the parameter. Thus the shape of trace[x].shape == (ndraw, 2,1).
-# 
-# Pymc3 provides `traceplot` a simple plot for a trace.
+    # To use more than one sampler, use a CompoundStep which takes a list of step methods. 
+    # 
+    # The trace object can be indexed by the variables returning an array with the first index being the sample index
+    # and the other indexes the shape of the parameter. Thus the shape of trace[x].shape == (ndraw, 2,1).
+    # 
+    # Pymc3 provides `traceplot` a simple plot for a trace.
 
-# <codecell>
+    # <codecell>
 
-plot(trace[x])
+    plot(trace[x])
 
-# <codecell>
+    # <codecell>
 
-trace[x]
+    trace[x]
 
-# <codecell>
+    # <codecell>
 
-traceplot(trace)
+    traceplot(trace)
+    
+if __name__ == '__main__':
+    run()
 

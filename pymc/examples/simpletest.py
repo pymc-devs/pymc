@@ -21,15 +21,20 @@ with model:
 
     step = NUTS()
 
-    trace = sample(1e3, step)
+def run(n=1000):
+    with model:
+        trace = sample(1e3, step)
 
-subplot(2, 2, 1)
-plot(trace[x][:, 0, 0])
-subplot(2, 2, 2)
-hist(trace[x][:, 0, 0])
+    subplot(2, 2, 1)
+    plot(trace[x][:, 0, 0])
+    subplot(2, 2, 2)
+    hist(trace[x][:, 0, 0])
 
-subplot(2, 2, 3)
-plot(trace[x][:, 1, 0])
-subplot(2, 2, 4)
-hist(trace[x][:, 1, 0])
-show()
+    subplot(2, 2, 3)
+    plot(trace[x][:, 1, 0])
+    subplot(2, 2, 4)
+    hist(trace[x][:, 1, 0])
+    show()
+    
+if __name__ == '__main__':
+    run()

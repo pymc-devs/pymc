@@ -37,24 +37,29 @@ with Model() as model:
 
     step = HamiltonianMC(model.vars, h, path_length=4.)
 
-    trace = sample(2e3, step, start)
 
-pl.figure()
-pl.hexbin(trace['x'], trace['y'])
+def run(n = 3000):
+    with model: 
+        trace = sample(n, step, start)
+
+        pl.figure()
+        pl.hexbin(trace['x'], trace['y'])
 
 
-# lets plot the samples vs. the actual distribution
-from theano import function
-xn = 1500
-yn = 1000
+        # lets plot the samples vs. the actual distribution
+        from theano import function
+        xn = 1500
+        yn = 1000
 
-xs = np.linspace(-3, .25, xn)[np.newaxis, :]
-ys = np.linspace(-1.5, 1.5, yn)[:, np.newaxis]
+        xs = np.linspace(-3, .25, xn)[np.newaxis, :]
+        ys = np.linspace(-1.5, 1.5, yn)[:, np.newaxis]
 
-like = (xs + ys ** 2) ** 2 * N
-post = np.exp(-.5 * (xs ** 2 + ys ** 2 + like))
-post = post
+        like = (xs + ys ** 2) ** 2 * N
+        post = np.exp(-.5 * (xs ** 2 + ys ** 2 + like))
+        post = post
 
-pl.figure()
-extent = np.min(xs), np.max(xs), np.min(ys), np.max(ys)
-pl.imshow(post, extent=extent)
+        pl.figure()
+        extent = np.min(xs), np.max(xs), np.min(ys), np.max(ys)
+        pl.imshow(post, extent=extent)
+
+
