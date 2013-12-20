@@ -43,10 +43,10 @@ def run(n=1):
     for mode in [ProfileMode(linker='py'),
                  ProfileMode(linker='c|py')]:
 
-        print mode
+        print(mode)
         logp = model.logpt
         f = model.fn([logp, gradient(logp)], mode)
-        print f(start)
+        print(f(start))
         
         mode.print_summary()
     
