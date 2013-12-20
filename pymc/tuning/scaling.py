@@ -74,9 +74,9 @@ def find_hessian_diag(point, vars=None, model=None):
     H = compilef(hessian_diag(model.logp, vars))
     return H(Point(point, model=model))
 
-def guess_scaling(point, model=None):
+def guess_scaling(point, vars=None, model=None):
     model = modelcontext(model)
-    h = find_hessian_diag(point, model=model)
+    h = find_hessian_diag(point, vars, model=model)
     return adjust_scaling(h)
 
 def adjust_scaling(s):
