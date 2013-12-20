@@ -75,6 +75,8 @@ def pymc3_dlogp():
     _pymc3_dlogp(point)
 
 def run(n=5000):
+    if n == "short":
+        n = 50
     with model:
         start = {'p': 0.5, 'z': (y > 0).astype(int), 'theta': 5}
 

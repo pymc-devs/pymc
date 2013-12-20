@@ -37,9 +37,8 @@ from scipy import optimize
 # <codecell>
 
 n = 400
-import pkgutil
-from StringIO import StringIO
-returns = np.genfromtxt(StringIO(pkgutil.get_data('pymc.examples', "data/SP500.csv")))[-n:]
+
+returns = np.genfromtxt(get_data_file('pymc.examples', "data/SP500.csv"))[-n:]
 returns[:5]
 
 # <markdowncell>
@@ -117,6 +116,8 @@ with model:
     
     
 def run(n=2000):
+    if n == "short":
+        n = 50
     with model:
         trace = sample(5, step, start, trace=model.vars + [sigma])
 

@@ -53,6 +53,8 @@ with model:
     step = NUTS(model.vars, scaling=start)
 
 def run(n=3000):
+    if n == "short":
+        n = 50
     with model:
         trace = sample(3e3, step, start)
         

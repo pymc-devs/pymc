@@ -28,6 +28,8 @@ with Model() as model:
     glm.glm('y ~ x', data_outlier, family=family)
 
 def run(n=2000):
+    if n == "short":
+        n = 50
     import matplotlib.pyplot as plt
 
     with model:

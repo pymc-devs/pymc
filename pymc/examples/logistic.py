@@ -32,6 +32,8 @@ with model:
     o = Bernoulli('o', p, observed=outcomes)
 
 def run(n=3000):
+    if n == "short":
+        n = 50
     with model:
         # move the chain to the MAP which should be a good starting point
         start = find_MAP()

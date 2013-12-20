@@ -45,6 +45,8 @@ with Model() as model:
 
 
 def run(n=1000):
+    if n == "short":
+        n = 50
     with model:
 
         # Initial values for stochastic nodes

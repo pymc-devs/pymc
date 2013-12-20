@@ -15,5 +15,5 @@ def test_examples():
 def check_example(example_name):
     example = __import__(example_name, fromlist='dummy')
     if hasattr(example, 'run'):
-        example.run(n=10)
+        example.run("short")
 

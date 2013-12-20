@@ -22,6 +22,8 @@ with model:
     step = NUTS()
 
 def run(n=1000):
+    if n == "short":
+        n = 50
     with model:
         trace = sample(1e3, step)
 

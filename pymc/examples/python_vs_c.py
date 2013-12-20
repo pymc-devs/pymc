@@ -38,6 +38,8 @@ start = model.test_point
 from theano import ProfileMode
 
 def run(n=1):
+    if n == "short":
+        n = 50
     for mode in [ProfileMode(linker='py'),
                  ProfileMode(linker='c|py')]:
 

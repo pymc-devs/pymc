@@ -12,7 +12,9 @@ with Model() as model:
     x = DensityDist('x', logp, observed=(failure, value))
 
 
-def run (n):
+def run (n=3000):
+    if n == "short":
+        n = 50
     with model:
 
         start = model.test_point
@@ -21,5 +23,5 @@ def run (n):
         trace = sample(n, step, start)
 
 if __name__ == "__main__":
-    run(3000)
+    run()
 

@@ -25,6 +25,8 @@ with Model() as model:
     step = NUTS()
 
 def run(n=1000): 
+    if n == "short":
+        n = 50
     with model:
         trace = sample(n, step, trace=model.unobserved_RVs)
 

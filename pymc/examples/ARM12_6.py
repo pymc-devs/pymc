@@ -2,11 +2,9 @@ import numpy as np
 from pymc import *
 import pandas as pd
 
-import pkgutil
-from StringIO import StringIO
-data = pd.read_csv(StringIO(pkgutil.get_data('pymc.examples', 'data/srrs2.dat')))
+data = pd.read_csv(get_data_file('pymc.examples', 'data/srrs2.dat'))
 
-cty_data = pd.read_csv(StringIO(pkgutil.get_data('pymc.examples', 'data/cty.dat')))
+cty_data = pd.read_csv(get_data_file('pymc.examples', 'data/cty.dat'))
 
 data = data[data.state == 'MN']
 
@@ -48,7 +46,8 @@ with model:
         'lr', floor * floor_m + means[group], sd ** -2., observed=lradon)
 
 def run(n=3000):
-
+    if n == "short":
+        n = 50
     with model:
         start = {'groupmean': obs_means.mean(),
                  'groupsd': obs_means.std(),

@@ -9,6 +9,8 @@ with Model() as model:
     step = Metropolis(model.vars, h)
 
 def run(n = 3000):
+    if n == "short":
+        n = 50
     with model:
         trace = sample(n, step, start)
 if __name__ == '__main__':

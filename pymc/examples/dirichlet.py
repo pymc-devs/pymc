@@ -12,7 +12,8 @@ with model:
         simplextransform)
 
 def run(n=3000):
-
+    if n == "short":
+        n = 50
     with model:
         H = model.fastd2logp()
 

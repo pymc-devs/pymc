@@ -7,9 +7,6 @@ import pandas as pd
 from pymc import *
 from pymc.distributions.timeseries import *
 
-import pkgutil
-from StringIO import StringIO
-
 # <markdowncell>
 
 # Data
@@ -17,7 +14,7 @@ from StringIO import StringIO
 
 # <codecell>
 
-data = pd.read_csv(StringIO(pkgutil.get_data('pymc.examples', 'data/pancreatitis/input_data.csv')))
+data = pd.read_csv(get_data_file('pymc.examples', 'data/pancreatitis/input_data.csv'))
 countries = ['CYP', 'DNK', 'ESP', 'FIN','GBR', 'ISL']
 data = data[data.area.isin(countries)]
 
@@ -91,6 +88,8 @@ with model:
     step = NUTS(scaling = s)
     
 def run(n=3000):
+    if n == "short":
+        n = 50
     with model:
         trace = sample(1500, step, s)
 

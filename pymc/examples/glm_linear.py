@@ -23,6 +23,8 @@ with Model() as model:
 
 
 def run(n=2000):
+    if n == "short":
+        n = 50
     import matplotlib.pyplot as plt
 
     with model:
