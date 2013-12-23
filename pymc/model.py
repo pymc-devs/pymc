@@ -324,7 +324,6 @@ class FreeRV(Factor, TensorVariable):
             self.dshape = tuple(distribution.shape)
             self.dsize = int(np.prod(distribution.shape))
             self.distribution = distribution
-            print distribution.shape, distribution.dtype, distribution.default() 
             self.tag.test_value = np.ones(
                 distribution.shape, distribution.dtype) * distribution.default()
             self.logp_elemwiset = distribution.logp(self)
