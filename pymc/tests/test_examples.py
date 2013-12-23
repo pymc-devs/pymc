@@ -24,5 +24,5 @@ def test_examples1():
         yield t
 
 def test_examples2():
-    for t in itertools.islice(get_examples(), 20, 30):
+    for t in itertools.islice(get_examples(), 20, None):
         yield t
