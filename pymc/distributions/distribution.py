@@ -2,7 +2,7 @@ import theano.tensor as t
 import numpy as np
 from ..model import Model
 
-__all__ = ['DensityDist', 'Distribution', 'Arbitrary', 'Continuous', 'Discrete']
+__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete']
 
 
 class Distribution(object):
@@ -31,6 +31,11 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
+    def __init__(self, shape, dtype, testval=None):
+        self.shape = np.atleast_1d(shape)
+        self.dtype = dtype
+        self.type = TensorType(dtype, shape)
+        self.testval = testval
 
     def default(self, testval):
         if testval is None:
@@ -44,42 +49,25 @@ class Distribution(object):
 def TensorType(dtype, shape):
     return t.TensorType(str(dtype), np.atleast_1d(shape) == 1)
 
-class Arbitrary(Distribution): 
-    def __init__(self, shape=(), dtype='float64', *args, **kwargs):
-        Distribution.__init__(self, *args, **kwargs)
-
-        self.shape = np.atleast_1d(shape)
-        self.type = TensorType(dtype, shape)
-        self.__dict__.update(locals())
-
 class Discrete(Distribution): 
-    def __init__(self, shape=(), dtype='int64', testval=None, *args, **kwargs):
-        Distribution.__init__(self, *args, **kwargs)
-        self.shape = np.atleast_1d(shape)
-        self.type = TensorType(dtype, shape)
+    """Base class for discrete distributions"""
+    def __init__(self, shape=(), dtype='int64', *args, **kwargs):
+        Distribution.__init__(self, shape, dtype, *args, **kwargs)
         self.default_testvals = ['mode']
-        self.__dict__.update(locals())
 
 class Continuous(Distribution): 
-    def __init__(self, shape=(), dtype='float64', testval=None, *args, **kwargs):
-        Distribution.__init__(self, *args, **kwargs)
+    """Base class for continuous distributions"""
+    def __init__(self, shape=(), dtype='float64', *args, **kwargs):
+        Distribution.__init__(self, shape, dtype, *args, **kwargs)
+        self.default_testvals = ['median', 'mean', 'mode']
 
-        shape = np.atleast_1d(shape)
-        type = TensorType(dtype, shape)
-        default_testvals = ['median', 'mean', 'mode']
+class DensityDist(Distribution):
+    """Distribution based on a given log density function."""
+    def __init__(self, logp, shape=(), dtype='float64', *args, **kwargs):
+        Distribution.__init__(self, shape, dtype, *args, **kwargs)
+        self.default_testvals = [0]
 
-        self.__dict__.update(locals())
-
-
-class DensityDist(Arbitrary):
-    def __init__(self, logp, *args, **kwargs):
-        Arbitrary.__init__(self, *args, **kwargs)
-
-        logpf = logp
-        testval = 0
-        
-        self.__dict__.update(locals())
+        self.logpf = logp
 
     def logp(self, value): 
         return self.logpf(value)
-
