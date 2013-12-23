@@ -364,6 +364,7 @@ class Gamma(Continuous):
             beta > 0)
 
 class Bounded(Continuous):
+    """A bounded distribution."""
     def __init__(self, distribution, lower, upper, *args, **kwargs):
         self.dist = distribution.dist(*args, **kwargs)
 
@@ -382,8 +383,8 @@ class Bounded(Continuous):
 
 
 class Bound(object):
+    """Creates a new bounded distribution"""
     def __init__(self, distribution, lower=-inf, upper=inf):
-        """A bounded distribution."""
         self.distribution = distribution
         self.lower = lower
         self.upper = upper

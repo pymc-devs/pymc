@@ -6,6 +6,7 @@ __all__ = ['DensityDist', 'Distribution', 'Arbitrary', 'Continuous', 'Discrete']
 
 
 class Distribution(object):
+    """Statistical distribution"""
     def __new__(cls, name, *args, **kwargs):
         try:
             model = Model.get_context()

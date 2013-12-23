@@ -5,6 +5,7 @@ Created on Mar 7, 2011
 '''
 
 class CompoundStep(object):
+    """Step method composed of a list of several other step methods applied in sequence."""
     def __init__(self, methods):
         self.methods = list(methods)
 

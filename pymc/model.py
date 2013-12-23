@@ -162,7 +162,6 @@ class Model(Context, Factor):
         -------
         Random Variable
         """
-        Compiled Theano function
         tvar = self.Var(trans.name + '_' + name, trans.apply(dist))
 
         return Deterministic(name, trans.backward(tvar)), tvar
