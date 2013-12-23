@@ -43,8 +43,6 @@ with Model() as model:
 # <codecell>
 
 with model:
-    start = find_MAP()
-
     step1 = Metropolis([m1, m2])
 
     step2 = Metropolis([s], proposal_dist=LaplaceProposal)
@@ -53,6 +51,7 @@ def run(n=5000):
     if n == "short":
         n = 300
     with model:
+        start = find_MAP()
         trace = sample(n, [step1, step2], start)
 
         dh = fn(hessian_diag(model.logpt))

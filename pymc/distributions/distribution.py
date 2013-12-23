@@ -31,24 +31,26 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, shape, dtype, testval=None):
+    def __init__(self, shape, dtype, testval=None, defaults=[]):
         self.shape = np.atleast_1d(shape)
         self.dtype = dtype
-        self.type = TensorType(dtype, shape)
+        self.type = TensorType(self.dtype, self.shape)
         self.testval = testval
+        self.defaults = defaults
 
     def default(self):
-        return self.get_test_val(self.testval)
+        return self.get_test_val(self.testval, self.defaults)
 
-    def get_test_val(self, val):
-        if hasattr(val, "__iter__"):
-            for v in val:
-                try:
-                    return self.get_test_val(v)
-                except AttributeError:
-                    pass
+    def get_test_val(self, val, defaults):
+        if val is None:
+            for v in defaults:
+                if hasattr(self, v):
+                    val = getattr(self, v)
+                    break
+
+        if val is None:
             raise AttributeError(str(self) + " has no default value to use, checked for: " +
-                                 str(val) + " pass testval argument or provide one of these.")
+                         str(defaults) + " pass testval argument or provide one of these.")
 
         if isinstance(val, str):
             val = getattr(self, val)
@@ -64,19 +66,16 @@ def TensorType(dtype, shape):
 
 class Discrete(Distribution): 
     """Base class for discrete distributions"""
-    def __init__(self, shape=(), dtype='int64', testval=['mode'], *args, **kwargs):
-        Distribution.__init__(self, shape, dtype, testval, *args, **kwargs)
+    def __init__(self, shape=(), dtype='int64', *args, **kwargs):
+        Distribution.__init__(self, shape, dtype, defaults=['mode'], *args, **kwargs)
 
 class Continuous(Distribution): 
     """Base class for continuous distributions"""
-    def __init__(self, shape=(), dtype='float64', testval=['median', 'mean', 'mode'], *args, **kwargs):
-        Distribution.__init__(self, shape, dtype, testval, *args, **kwargs)
+    def __init__(self, shape=(), dtype='float64', *args, **kwargs):
+        Distribution.__init__(self, shape, dtype, defaults=['median', 'mean', 'mode'], *args, **kwargs)
 
 class DensityDist(Distribution):
     """Distribution based on a given log density function."""
     def __init__(self, logp, shape=(), dtype='float64',testval=0, *args, **kwargs):
         Distribution.__init__(self, shape, dtype, testval, *args, **kwargs)
-        self.logpf = logp
-
-    def logp(self, value): 
-        return self.logpf(value)
+        self.logp = logp

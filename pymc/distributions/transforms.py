@@ -34,7 +34,6 @@ class TransformedDistribution(Distribution):
         transform : Transform
         args, kwargs
             arguments to Distribution"""
-        Distribution.__init__(self, *args, **kwargs)
         forward = transform.forward 
         try:
             testval = forward(dist.testval)
@@ -42,18 +41,20 @@ class TransformedDistribution(Distribution):
             testval = dist.testval
         
         if hasattr(dist, "mode"):
-            mode = forward(dist.mode)
+            self.mode = forward(dist.mode)
         if hasattr(dist, "median"):
-            mode = forward(dist.median)
-
+            self.mode = forward(dist.median)
         
-        _v = forward(FreeRV(name='_v', distribution=dist))
-        type = _v.type
-        shape = _v.shape.tag.test_value
-        dtype = _v.dtype
+        self.dist = dist
+        self.transform = transform
+        v = forward(FreeRV(name='v', distribution=dist))
+        self.type = v.type
 
-        default_testvals = dist.default_testvals
-        self.__dict__.update(locals())
+        Distribution.__init__(self,
+                v.shape.tag.test_value, 
+                v.dtype, 
+                testval, dist.defaults, 
+                *args, **kwargs)
 
 
     def logp(self, x):

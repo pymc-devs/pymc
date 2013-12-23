@@ -174,6 +174,7 @@ class Wishart(Continuous):
         V = self.V
 
         IVI = det(V)
+
         return bound(
             ((n - p - 1) * log(IVI) - trace(matrix_inverse(V).dot(X)) -
              n * p * log(
