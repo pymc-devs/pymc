@@ -62,7 +62,7 @@ class Dirichlet(Continuous):
     def __init__(self, a, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
         self.a = a
-        self.k = a.shape
+        self.k = a.shape[0]
         self.mean = a / sum(a)
 
         self.mode = switch(all(a > 1),
