@@ -3,10 +3,19 @@ from ..model import FreeRV
 
 __all__ = ['transform', 'logtransform', 'simplextransform']
 
-
-
 class Transform(object):
-    def __init__(self, name, forward, backward, jacobian_det, getshape=None):
+    """A transformation of a random variable from one space into another."""
+    def __init__(self, name, forward, backward, jacobian_det):
+        """
+        Parameters
+        ----------
+        name : str
+        forward : function 
+            forward transformation
+        backwards : function 
+            backwards transformation
+        jacobian_det : function 
+            jacobian determinant of the transformation"""
         self.__dict__.update(locals())
 
     def apply(self, dist):
@@ -16,7 +25,15 @@ class Transform(object):
         return name + " transform"
 
 class TransformedDistribution(Distribution):
+    """A distribution that has been transformed from one space into another."""
     def __init__(self, dist, transform, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        dist : Distribution 
+        transform : Transform
+        args, kwargs
+            arguments to Distribution"""
         Distribution.__init__(self, *args, **kwargs)
         forward = transform.forward 
         try:
@@ -41,7 +58,6 @@ class TransformedDistribution(Distribution):
 
     def logp(self, x):
         return self.dist.logp(self.transform.backward(x)) + self.transform.jacobian_det(x)
-
 
 transform = Transform
 
