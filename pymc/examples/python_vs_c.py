@@ -48,7 +48,7 @@ def run(n=1):
         f = model.fn([logp, gradient(logp)], mode)
         print(f(start))
         
-        mode.print_summary()
+        #mode.print_summary()
     
 if __name__ == '__main__':
     run()
