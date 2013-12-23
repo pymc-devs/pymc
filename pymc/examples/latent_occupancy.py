@@ -62,20 +62,21 @@ with model:
 
 point = model.test_point
 
-_pymc3_logp = model.logpc
+_pymc3_logp = model.logp
 
 
 def pymc3_logp():
     _pymc3_logp(point)
 
-_pymc3_dlogp = model.dlogpc()
+_pymc3_dlogp = model.dlogp()
 
 
 def pymc3_dlogp():
     _pymc3_dlogp(point)
 
-if __name__ == '__main__':
-
+def run(n=5000):
+    if n == "short":
+        n = 50
     with model:
         start = {'p': 0.5, 'z': (y > 0).astype(int), 'theta': 5}
 
@@ -83,4 +84,7 @@ if __name__ == '__main__':
 
         step2 = BinaryMetropolis([z])
 
-        trace = sample(5000, [step1, step2], start)
+        trace = sample(n, [step1, step2], start)
+        
+if __name__ == '__main__':
+    run()

@@ -14,7 +14,7 @@ from pymc.distributions.timeseries import *
 
 # <codecell>
 
-data = pd.read_csv('data/pancreatitis/input_data.csv')
+data = pd.read_csv(get_data_file('pymc.examples', 'data/pancreatitis/input_data.csv'))
 countries = ['CYP', 'DNK', 'ESP', 'FIN','GBR', 'ISL']
 data = data[data.area.isin(countries)]
 
@@ -86,26 +86,34 @@ with model:
     s = trace[-1]
 
     step = NUTS(scaling = s)
-    trace = sample(3000, step, s)
+    
+def run(n=3000):
+    if n == "short":
+        n = 50
+    with model:
+        trace = sample(1500, step, s)
 
 
-# <codecell>
+    # <codecell>
 
-for i, country in enumerate(countries):
-    subplot(2,3,i+1)
-    title(country)
+    for i, country in enumerate(countries):
+        subplot(2,3,i+1)
+        title(country)
 
-    d = data[data.area == country]
-    plot(d.age, d.value, '.')
-    plot(knots, trace[y][::5,:,i].T, color ='r', alpha =.01);
+        d = data[data.area == country]
+        plot(d.age, d.value, '.')
+        plot(knots, trace[y][::5,:,i].T, color ='r', alpha =.01);
 
-    ylim(0,rate.max())
+        ylim(0,rate.max())
 
-# <codecell>
+    # <codecell>
 
-traceplot(trace[100:], vars = [coeff_sd,sd ]);
+    traceplot(trace[100:], vars = [coeff_sd,sd ]);
 
-# <codecell>
+    # <codecell>
 
-autocorrplot(trace, vars = [coeff_sd,sd ])
+    autocorrplot(trace, vars = [coeff_sd,sd ])
+    
+if __name__ == '__main__':
+    run()
 

@@ -2,10 +2,9 @@ import numpy as np
 from pymc import *
 import pandas as pd
 
+data = pd.read_csv(get_data_file('pymc.examples', 'data/srrs2.dat'))
 
-data = pd.read_csv('data/srrs2.dat')
-
-cty_data = pd.read_csv('data/cty.dat')
+cty_data = pd.read_csv(get_data_file('pymc.examples', 'data/cty.dat'))
 
 data = data[data.state == 'MN']
 
@@ -46,8 +45,9 @@ with model:
     lr = Normal(
         'lr', floor * floor_m + means[group], sd ** -2., observed=lradon)
 
-if __name__ == '__main__':
-
+def run(n=3000):
+    if n == "short":
+        n = 50
     with model:
         start = {'groupmean': obs_means.mean(),
                  'groupsd': obs_means.std(),
@@ -57,9 +57,12 @@ if __name__ == '__main__':
                  }
 
         start = find_MAP(start, [groupmean, sd, floor_m])
-        H = model.d2logpc()
+        H = model.fastd2logp()
         h = np.diag(H(start))
 
         step = HamiltonianMC(model.vars, h)
 
-        trace = sample(3000, step, start)
+        trace = sample(n, step, start)
+        
+if __name__ == '__main__':
+    run()

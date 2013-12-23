@@ -8,8 +8,10 @@ from pymc import *
 import theano.tensor as t
 import pandas as pd
 
-data = pd.read_csv('data/wells.dat', delimiter=' ', index_col='id',
-                   dtype={'switch': np.int8})
+wells = get_data_file('pymc.examples', 'data/wells.dat')
+
+data = pd.read_csv(wells, delimiter=u' ', index_col=u'id',
+                   dtype={u'switch': np.int8})
 
 col = data.columns
 
@@ -29,14 +31,17 @@ with Model() as model:
 
     s = Bernoulli('s', p, observed=np.array(data.switch))
 
-if __name__ == '__main__':
-
+def run(n=3000):
+    if n == "short":
+        n = 50
     with model:
         # move the chain to the MAP which should be a good starting point
         start = find_MAP()
-        H = model.d2logpc()  # find a good orientation using the hessian at the MAP
+        H = model.fastd2logp()  # find a good orientation using the hessian at the MAP
         h = H(start)
 
         step = HamiltonianMC(model.vars, h)
 
-        trace = sample(3e3, step, start)
+        trace = sample(n, step, start)
+if __name__ == '__main__':
+    run()

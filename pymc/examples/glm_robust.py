@@ -27,12 +27,19 @@ with Model() as model:
 				                    'lam': ('sigma', Uniform.dist(0, 20))})
     glm.glm('y ~ x', data_outlier, family=family)
 
-if __name__ == '__main__':
+def run(n=2000):
+    if n == "short":
+        n = 50
     import matplotlib.pyplot as plt
 
     with model:
-        trace = sample(2000, Slice(model.vars))
+        trace = sample(n, Slice(model.vars))
 
     plt.plot(x, y, 'x')
     glm.plot_posterior_predictive(trace)
     plt.show()
+    
+if __name__ == '__main__':
+    run()
+
+

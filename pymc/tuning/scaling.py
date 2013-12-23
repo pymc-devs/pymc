@@ -31,7 +31,7 @@ def approx_hessian(point, vars=None, model=None):
     point = Point(point, model=model)
 
     bij = DictToArrayBijection(ArrayOrdering(vars), point)
-    dlogp = bij.mapf(model.dlogpc(vars))
+    dlogp = bij.mapf(model.fastdlogp(vars))
 
     def grad_logp(point):
         return np.nan_to_num(dlogp(point))
@@ -56,7 +56,7 @@ def find_hessian(point, vars=None, model=None):
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
-    H = model.d2logpc(vars)
+    H = model.fastd2logp(vars)
     return H(Point(point, model=model))
 
 def find_hessian_diag(point, vars=None, model=None):
@@ -71,7 +71,7 @@ def find_hessian_diag(point, vars=None, model=None):
         Variables for which Hessian is to be calculated.
     """
     model = modelcontext(model)
-    H = compilef(hessian_diag(model.logp, vars))
+    H = model.fastfn(hessian_diag(model.logpt, vars))
     return H(Point(point, model=model))
 
 def guess_scaling(point, vars=None, model=None):

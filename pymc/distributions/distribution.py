@@ -1,27 +1,29 @@
 import theano.tensor as t
 import numpy as np
-from ..quickclass import *
-from ..model import *
-import warnings
+from ..model import Model
 
-__all__ = ['DensityDist', 'TensorDist', 'tensordist', 'continuous',
-           'discrete', 'arbitrary', 'evaluate']
+__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete']
 
 
 class Distribution(object):
+    """Statistical distribution"""
     def __new__(cls, name, *args, **kwargs):
         try:
             model = Model.get_context()
         except TypeError:
             raise TypeError("No model on context stack, which is needed to use the Normal('x', 0,1) syntax. Add a 'with model:' block")
 
-        if 'observed' in kwargs:
-            obs = kwargs.pop('observed')
+        if isinstance(name, str):  
+            data = kwargs.pop('observed', None)
             dist = cls.dist(*args, **kwargs)
-            return model.Data(obs, dist)
-        else:
-            dist = cls.dist(*args, **kwargs)
-            return model.Var(name, dist)
+            return model.Var(name, dist, data)
+        elif name is None:
+            return object.__new__(cls) #for pickle
+        else: 
+            raise TypeError("needed name or None but got: " + name)
+
+    def __getnewargs__(self):
+        return None, 
 
     @classmethod
     def dist(cls, *args, **kwargs):
@@ -29,79 +31,51 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
+    def __init__(self, shape, dtype, testval=None, defaults=[]):
+        self.shape = np.atleast_1d(shape)
+        self.dtype = dtype
+        self.type = TensorType(self.dtype, self.shape)
+        self.testval = testval
+        self.defaults = defaults
 
+    def default(self):
+        return self.get_test_val(self.testval, self.defaults)
 
-def get_test_val(dist, val):
-    try:
-        val = getattr(dist, val)
-    except TypeError:
-        pass
+    def get_test_val(self, val, defaults):
+        if val is None:
+            for v in defaults:
+                if hasattr(self, v):
+                    val = getattr(self, v)
+                    break
 
-    if hasattr(val, '__call__'):
-        val = val(dist)
-
-    if isinstance(val, t.TensorVariable):
-        return val.tag.test_value
-    else:
-        return val
-
-
-# Convenience function for evaluating distributions at test point
-evaluate = lambda dist: dist.tag.test_value
-
-
-class TensorDist(Distribution):
-    def default(self, testval):
-        if testval is None:
-            for val in self.default_testvals:
-                if hasattr(self, val):
-                    return getattr(self, val)
+        if val is None:
             raise AttributeError(str(self) + " has no default value to use, checked for: " +
-                                 str(self.default_testvals) + " pass testval argument or provide one of these.")
-        return testval
+                         str(defaults) + " pass testval argument or provide one of these.")
 
-    def makevar(self, name):
-        var = self.type(name)
-        var.dshape = tuple(self.shape)
-        var.dsize = int(np.prod(self.shape))
+        if isinstance(val, str):
+            val = getattr(self, val)
 
-        testval = self.default(self.testval)
-        var.tag.test_value = np.ones(
-            self.shape, self.dtype) * get_test_val(self, testval)
-        return var
+        if isinstance(val, t.TensorVariable):
+            return val.tag.test_value
 
-
-def tensordist(defaults):
-    def decorator(fn):
-        fn = withdefaults(defaults)(fn)
-        return quickclass(TensorDist)(fn)
-    return decorator
+        return val
 
 
 def TensorType(dtype, shape):
     return t.TensorType(str(dtype), np.atleast_1d(shape) == 1)
 
+class Discrete(Distribution): 
+    """Base class for discrete distributions"""
+    def __init__(self, shape=(), dtype='int64', *args, **kwargs):
+        Distribution.__init__(self, shape, dtype, defaults=['mode'], *args, **kwargs)
 
-def continuous(shape=(), dtype='float64', testval=None):
-    shape = np.atleast_1d(shape)
-    type = TensorType(dtype, shape)
-    default_testvals = ['median', 'mean', 'mode']
-    return locals()
+class Continuous(Distribution): 
+    """Base class for continuous distributions"""
+    def __init__(self, shape=(), dtype='float64', *args, **kwargs):
+        Distribution.__init__(self, shape, dtype, defaults=['median', 'mean', 'mode'], *args, **kwargs)
 
-
-def discrete(shape=(), dtype='int64', testval=None):
-    shape = np.atleast_1d(shape)
-    type = TensorType(dtype, shape)
-    default_testvals = ['mode']
-    return locals()
-
-
-def arbitrary(shape=(), dtype='float64', testval=0):
-    shape = np.atleast_1d(shape)
-    type = TensorType(dtype, shape)
-    return locals()
-
-
-@tensordist(arbitrary)
-def DensityDist(logp):
-    return locals()
+class DensityDist(Distribution):
+    """Distribution based on a given log density function."""
+    def __init__(self, logp, shape=(), dtype='float64',testval=0, *args, **kwargs):
+        Distribution.__init__(self, shape, dtype, testval, *args, **kwargs)
+        self.logp = logp

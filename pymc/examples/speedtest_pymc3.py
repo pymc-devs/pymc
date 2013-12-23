@@ -61,14 +61,20 @@ with model:
 
 point = model.test_point
 
-_pymc3_logp = model.logpc
+_pymc3_logp = model.logp
 
 
 def pymc3_logp():
     _pymc3_logp(point)
 
-_pymc3_dlogp = model.dlogpc()
+_pymc3_dlogp = model.dlogp()
 
 
 def pymc3_dlogp():
     _pymc3_dlogp(point)
+    
+def run(n=1):
+    pass
+    
+if __name__ == '__main__':
+    run()

@@ -1,37 +1,28 @@
-import matplotlib
+import matplotlib, pkgutil, itertools
+from pymc import examples 
+
 matplotlib.use('Agg', warn=False)
 
-from os import path
-import os
-import fnmatch
-import imp
+def get_examples():
+    prefix = examples.__name__ + "."
+    for _, example, _ in pkgutil.iter_modules(examples.__path__):
+        yield check_example, prefix + example
+
+        
+def check_example(example_name):
+    example = __import__(example_name, fromlist='dummy')
+    if hasattr(example, 'run'):
+        example.run("short")
 
 
-def test_examples():
+def test_examples0():
+    for t in itertools.islice(get_examples(), 0, 10):
+        yield t
 
-    for _path in all_matching_files(example_dir(), '*.py'):
-        yield check_example, _path
+def test_examples1():
+    for t in itertools.islice(get_examples(), 10, 20):
+        yield t
 
-
-def all_matching_files(d, pattern):
-
-    def addfiles(fls, dir, nfiles):
-        nfiles = fnmatch.filter(nfiles, pattern)
-        nfiles = [path.join(dir, f) for f in nfiles]
-        fls.extend(nfiles)
-
-    files = []
-    os.walk(d, addfiles, files)
-    return files
-
-
-def example_dir():
-    import pymc
-    d = path.dirname(pymc.__file__)
-
-    return path.join(d, 'examples/')
-
-
-def check_example(p):
-    os.chdir(path.dirname(p))
-    imp.load_source('__main__', path.basename(p))
+def test_examples2():
+    for t in itertools.islice(get_examples(), 20, None):
+        yield t

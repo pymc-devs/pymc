@@ -7,4 +7,13 @@ with Model() as model:
     start = model.test_point
     h = find_hessian(start)
     step = Metropolis(model.vars, h)
-    trace = sample(3000, step, start)
+
+def run(n = 3000):
+    if n == "short":
+        n = 50
+    with model:
+        trace = sample(n, step, start)
+if __name__ == '__main__':
+    run()
+
+

@@ -18,5 +18,11 @@ with model:
 
     step = NUTS(scaling=start)
 
-    ndraw = 3e3
-    trace = sample(ndraw, step, start=start)
+def run(n=3000):
+    if n == "short":
+        n = 50
+    with model:
+        trace = sample(n, step, start=start)
+        
+if __name__ == '__main__':
+    run()

@@ -11,12 +11,18 @@ with model:
         'p', Dirichlet.dist(k, a, shape=k),
         simplextransform)
 
-if __name__ == '__main__':
-
+def run(n=3000):
+    if n == "short":
+        n = 50
     with model:
-        H = model.d2logpc()
+        H = model.fastd2logp()
 
         s = find_MAP()
 
         step = HamiltonianMC(model.vars, H(s))
-        trace = sample(1000, step, s)
+        trace = sample(n, step, s)
+
+if __name__ == '__main__':
+    run()
+
+

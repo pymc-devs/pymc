@@ -84,7 +84,7 @@ class Metropolis(ArrayStep):
         # Determine type of variables
         self.discrete = np.array([v.dtype in discrete_types for v in vars])
 
-        super(Metropolis, self).__init__(vars, [model.logpc])
+        super(Metropolis, self).__init__(vars, [model.fastlogp])
 
     def astep(self, q0, logp):
 
@@ -167,7 +167,7 @@ class BinaryMetropolis(ArrayStep):
             raise ValueError(
                 'All variables must be Bernoulli for BinaryMetropolis')
 
-        super(BinaryMetropolis, self).__init__(vars, [model.logpc])
+        super(BinaryMetropolis, self).__init__(vars, [model.fastlogp])
 
     def astep(self, q0, logp):
 

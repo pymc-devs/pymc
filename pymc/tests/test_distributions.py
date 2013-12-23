@@ -36,7 +36,11 @@ class Domain(object):
 
 
 def product(domains):
-    return itertools.product(*[d.vals for d in domains])
+    names = [name for (name, domain) in domains.items()] 
+    domains = [domain for (name, domain) in domains.items()] 
+
+    for val in itertools.product(*[d.vals for d in domains]):
+        yield zip(names, val)
 
 R = Domain([-inf, -2.1, -1, -.01, .0, .01, 1, 2.1, inf])
 Rplus = Domain([0, .01, .1, .9, .99, 1, 1.5, 2, 100, inf])
@@ -62,7 +66,7 @@ Bool = Domain([0, 0, 1, 1], 'int64')
 
 class ProductDomain(object):
     def __init__(self, domains): 
-        self.vals = list(product(domains))
+        self.vals = list(itertools.product(*[d.vals for d in domains]))
 
         self.shape = (len(domains),) + domains[0].shape
 
@@ -307,41 +311,38 @@ def test_densitydist():
 
 def test_addpotential():
     with Model() as model:
-        x = Normal('x', 1, 1)
-        model.AddPotential(-x ** 2)
+        value = Normal('value', 1, 1)
+        model.AddPotential(-value ** 2)
 
-        check_dlogp(model, x, R, [])
+        check_dlogp(model, value, R, {})
 
 
 
 def pymc_matches_scipy(pymc_dist, domain, paramdomains, scipy_dist, extra_args={}):
     model= build_model(pymc_dist, domain, paramdomains, extra_args)
     value = model.named_vars['value']
-    domains = [paramdomains[str(v)] for v in model.vars[:-1]]
 
     def logp(args):
         return scipy_dist(**args)
 
-    check_logp(model, value, domain, domains, logp)
+    check_logp(model, value, domain, paramdomains, logp)
 
 
 
 def test_bound():
     with Model() as model:
         PositiveNormal = Bound(Normal, -.2)
-        x = PositiveNormal('x', 1, 1)
+        value = PositiveNormal('value', 1, 1)
 
         Rplus2 = Domain([-.2, -.19, -.1, 0, .5, 1, inf])
 
-        check_dlogp(model, x, Rplus2, [])
+        check_dlogp(model, value, Rplus2, {})
 
 def check_int_to_1(model, value, domain, paramdomains):
-    pdf = compilef(exp(model.logp))
-    names = list(map(str, model.vars))
+    pdf = model.fastfn(exp(model.logpt))
 
-    for a in product(paramdomains):
-        a = a + (value.tag.test_value,)
-        pt = Point(zip(names, a), model=model)
+    for pt in product(paramdomains):
+        pt = Point(pt, value=value.tag.test_value, model=model)
 
         bij = DictToVarBijection(value, (), pt)
         pdfx = bij.mapf(pdf)
@@ -387,15 +388,17 @@ def check_dlogp(model, value, domain, paramdomains):
     except ImportError:
         return
 
-    domains = paramdomains + [domain]
+    domains = paramdomains.copy()
+    domains['value'] = domain 
+
     bij = DictToArrayBijection(
         ArrayOrdering(model.cont_vars), model.test_point)
 
     if not model.cont_vars:
         return
 
-    dlogp = bij.mapf(model.dlogpc())
-    logp = bij.mapf(model.logpc)
+    dlogp = bij.mapf(model.fastdlogp(model.cont_vars))
+    logp = bij.mapf(model.fastlogp)
 
 
     def wrapped_logp(x): 
@@ -406,10 +409,8 @@ def check_dlogp(model, value, domain, paramdomains):
 
     ndlogp = Gradient(wrapped_logp)
 
-    names = list(map(str, model.vars))
-
-    for a in product(domains):
-        pt = Point(zip(names, a), model=model)
+    for pt in product(domains):
+        pt = Point(pt, model=model)
 
         pt = bij.map(pt)
 
@@ -417,13 +418,14 @@ def check_dlogp(model, value, domain, paramdomains):
                             decimal=6, err_msg=str(pt))
 
 def check_logp(model, value, domain, paramdomains, logp_reference):
-    domains = paramdomains + [domain] 
+    domains = paramdomains.copy()
+    domains['value'] = domain 
 
-    logp = model.logpc
-    names = list(map(str, model.vars))
 
-    for a in product(domains):
-        pt = Point(zip(names, a), model=model)
+    logp = model.fastlogp
+
+    for pt in product(domains):
+        pt = Point(pt, model=model)
 
         assert_almost_equal(logp(pt), logp_reference(pt),
                             decimal=6, err_msg=str(pt))
@@ -445,7 +447,6 @@ def checkd(distfam, valuedomain, vardomains,
 
         m = build_model(distfam, valuedomain, vardomains, extra_args=extra_args)
 
-        domains = [vardomains[str(v)] for v in m.vars[:-1]]
 
         for check in checks:
-            check(m, m.named_vars['value'], valuedomain, domains)
+            check(m, m.named_vars['value'], valuedomain, vardomains)

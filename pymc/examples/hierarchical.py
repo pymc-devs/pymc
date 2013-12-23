@@ -1,7 +1,6 @@
 from pymc import *
 import theano.tensor as T
 from numpy import random, sum as nsum, ones, concatenate, newaxis, dot, arange
-from __builtin__ import map
 import numpy as np
 
 random.seed(1)
@@ -53,4 +52,11 @@ with model:
 
     step = NUTS(model.vars, scaling=start)
 
-    trace = sample(3e3, step, start)
+def run(n=3000):
+    if n == "short":
+        n = 50
+    with model:
+        trace = sample(3e3, step, start)
+        
+if __name__ == '__main__':
+    run()

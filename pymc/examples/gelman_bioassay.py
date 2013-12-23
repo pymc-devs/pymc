@@ -24,4 +24,13 @@ with Model() as model:
 
     step = NUTS()
 
-    trace = sample(1000, step, trace=model.named_vars)
+def run(n=1000): 
+    if n == "short":
+        n = 50
+    with model:
+        trace = sample(n, step, trace=model.unobserved_RVs)
+
+if __name__ == '__main__':
+    run()
+
+

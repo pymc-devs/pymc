@@ -1,4 +1,5 @@
-from ..plots import *
+#from ..plots import *
+from pymc.plots import *
 from pymc import psample, Slice, Metropolis, find_hessian, sample
 
 

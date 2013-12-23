@@ -12,7 +12,9 @@ class NpTrace(object):
     encapsulates the recording of a process chain
     """
     def __init__(self, vars):
-        self.f = compilef(vars)
+        vars = list(vars)
+        model = vars[0].model
+        self.f = model.fastfn(vars)
         self.vars = vars
         self.varnames = list(map(str, vars))
         self.samples = dict((v, ListArray()) for v in self.varnames)
@@ -25,9 +27,6 @@ class NpTrace(object):
             self.samples[var].append(value)
         return self
 
-    def copy(self):
-        return copy.deepcopy(self)
-
     def __getitem__(self, index_value):
         """
         Return copy NpTrace with sliced sample values if a slice is passed,
@@ -36,9 +35,8 @@ class NpTrace(object):
 
         if isinstance(index_value, slice):
 
-            sliced_trace = self.copy()
-            for v in sliced_trace.varnames:
-                sliced_trace.samples[v].vals = [sliced_trace.samples[v].value[index_value]]
+            sliced_trace = NpTrace(self.vars)
+            sliced_trace.samples = dict((name, vals[index_value]) for (name, vals) in self.samples.items())
 
             return sliced_trace
 
@@ -60,8 +58,8 @@ class NpTrace(object):
 
 
 class ListArray(object):
-    def __init__(self):
-        self.vals = []
+    def __init__(self, *args):
+        self.vals = list(args)
 
     @property
     def value(self):
@@ -69,6 +67,10 @@ class ListArray(object):
             self.vals = [np.concatenate(self.vals, axis=0)]
 
         return self.vals[0]
+
+    def __getitem__(self, idx): 
+        return ListArray(self.value[idx])
+
 
     def append(self, v):
         self.vals.append(v[np.newaxis])
