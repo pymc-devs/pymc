@@ -324,9 +324,9 @@ class FreeRV(Factor, TensorVariable):
             self.dshape = tuple(distribution.shape)
             self.dsize = int(np.prod(distribution.shape))
             self.distribution = distribution
-            testval = distribution.default(distribution.testval)
+            print distribution.shape, distribution.dtype, distribution.default() 
             self.tag.test_value = np.ones(
-                distribution.shape, distribution.dtype) * get_test_val(distribution, testval)
+                distribution.shape, distribution.dtype) * distribution.default()
             self.logp_elemwiset = distribution.logp(self)
             self.model = model
 
@@ -371,20 +371,6 @@ def Deterministic(name, var, model=None):
     var.name = name
     modelcontext(model).add_random_variable(var)
     return var
-
-def get_test_val(dist, val):
-    try:
-        val = getattr(dist, val)
-    except TypeError:
-        pass
-
-    if hasattr(val, '__call__'):
-        val = val(dist)
-
-    if isinstance(val, TensorVariable):
-        return val.tag.test_value
-    else:
-        return val
 
 
 def as_iterargs(data):
