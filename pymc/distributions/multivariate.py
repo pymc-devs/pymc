@@ -46,8 +46,6 @@ class Dirichlet(Continuous):
         \cdot\left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k
 
     :Parameters:
-        k : scalar int
-            k > 1
         a : float tensor
             a > 0
             concentration parameters
@@ -61,11 +59,10 @@ class Dirichlet(Continuous):
         Only the first `k-1` elements of `x` are expected. Can be used
         as a parent of Multinomial and Categorical nevertheless.
     """
-    def __init__(self, k, a, *args, **kwargs):
+    def __init__(self, a, *args, **kwargs):
         Continuous.__init__(self, *args, **kwargs)
-        a = ones([k]) * a
-        self.k = k
         self.a = a
+        self.k = a.shape
         self.mean = a / sum(a)
 
         self.mode = switch(all(a > 1),

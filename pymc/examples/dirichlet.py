@@ -8,7 +8,7 @@ with model:
     a = constant(np.array([2, 3., 4, 2, 2]))
 
     p, p_m1 = model.TransformedVar(
-        'p', Dirichlet.dist(k, a, shape=k),
+        'p', Dirichlet.dist(a, shape=k),
         simplextransform)
 
 def run(n=3000):
