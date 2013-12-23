@@ -13,6 +13,7 @@ with model:
 
     c = Categorical('c', p, observed=np.random.randint(0, k, 5))
 
+
 def run(n=3000):
     if n == "short":
         n = 50
