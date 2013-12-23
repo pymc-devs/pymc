@@ -15,6 +15,7 @@ __all__ = ['Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext', 'Point
 
 
 class Context(object):
+    """Functionality for objects that put themselves in a context using the `with` statement."""
     def __enter__(self):
         type(self).get_contexts().append(self)
         return self
@@ -31,6 +32,7 @@ class Context(object):
 
     @classmethod
     def get_context(cls):
+        """Return the deepest context on the stack."""
         try:
             return cls.get_contexts()[-1]
         except IndexError:
@@ -38,11 +40,13 @@ class Context(object):
 
 
 def modelcontext(model):
+    """return the given model or try to find it in the context if there was none supplied."""
     if model is None:
         return Model.get_context()
     return model
 
 class Factor(object): 
+    """Common functionality for objects with a log probability density associated with them."""
     @property
     def logp(self):
         """Compiled log probability density function"""
