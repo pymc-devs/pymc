@@ -1,7 +1,7 @@
 from .dist_math import *
 
 from theano.sandbox.linalg import det, solve, matrix_inverse, trace
-from theano.tensor import dot
+from theano.tensor import dot, cast
 from theano.printing import Print
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
@@ -118,6 +118,7 @@ class Multinomial(Discrete):
         self.n = n
         self.p = p
         self.mean = n * p
+        self.mode = cast(round(n * p), 'int32')
 
     def logp(self, x):
         n = self.n
