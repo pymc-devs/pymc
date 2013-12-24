@@ -280,8 +280,7 @@ def test_dirichlet():
 def check_dirichlet(n):
         pymc_matches_scipy(
                 Dirichlet, Simplex(n), {'a': Vector(Rplus, n) },
-                dirichlet_logpdf,
-                extra_args = {'k' : n}
+                dirichlet_logpdf
                 )
 
 def multinomial_logpdf(value, n, p):
