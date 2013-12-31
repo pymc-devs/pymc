@@ -1,5 +1,5 @@
 import pymc
-from pymc import sample, psample
+from pymc import sample, psample, iter_sample
 from .models import simple_init
 
 # Test if multiprocessing is available
@@ -31,3 +31,8 @@ def test_sample():
                     yield samplr, n, step, {}
                     yield samplr, n, step, {}, trace
                     yield samplr, n, step, start
+
+def test_iter_sample():
+    model, start, step, _ = simple_init()
+    for i, trace in enumerate(iter_sample(5, step, start, model=model)):
+        assert i == len(trace) - 1, "Trace does not have correct length."
