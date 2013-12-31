@@ -54,9 +54,9 @@ def sample(draws, step, start=None, trace=None, tune=None, progressbar=True, mod
 
 def iter_sample(draws, step, start=None, trace=None, tune=None, model=None, random_seed=None):
     """
-    Draw a number of samples using the given step method.
-    Multiple step methods supported via compound step method
-    returns the amount of time taken.
+    Generator that returns a trace on each iteration using the given
+    step method.  Multiple step methods supported via compound step
+    method returns the amount of time taken.
 
     Parameters
     ----------
@@ -75,6 +75,12 @@ def iter_sample(draws, step, start=None, trace=None, tune=None, model=None, rand
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
     model : Model (optional if in `with` context)
+
+    Example
+    -------
+
+    for trace in iter_sample(500, step):
+        ...
 
     """
     model = modelcontext(model)
