@@ -112,15 +112,13 @@ def iter_sample(draws, step, start=None, trace=None, tune=None, model=None, rand
 
     point = Point(start, model=model)
 
-    try:
-        for i in range(draws):
-            if (i == tune):
-                step = stop_tuning(step)
-            point = step.step(point)
-            trace.record(point)
-            yield trace
-    except KeyboardInterrupt:
-        pass
+    for i in range(draws):
+        if (i == tune):
+            step = stop_tuning(step)
+        point = step.step(point)
+        trace.record(point)
+        yield trace
+
 
 def stop_tuning(step):
     """ stop tuning the current step method """
