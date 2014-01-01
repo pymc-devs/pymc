@@ -7,7 +7,7 @@ from . import step_methods
 from .progressbar import progress_bar
 from numpy.random import seed
 
-__all__ = ['sample', 'psample']
+__all__ = ['sample', 'psample', 'iter_sample']
 
 
 def sample(draws, step, start=None, trace=None, tune=None, progressbar=True, model=None, random_seed=None):
@@ -37,6 +37,52 @@ def sample(draws, step, start=None, trace=None, tune=None, progressbar=True, mod
     model : Model (optional if in `with` context)
 
     """
+    progress = progress_bar(draws)
+
+    try:
+        for i, trace in enumerate(iter_sample(draws, step,
+                                              start=start,
+                                              trace=trace,
+                                              tune=tune,
+                                              model=model,
+                                              random_seed=random_seed)):
+            if progressbar:
+                progress.update(i)
+    except KeyboardInterrupt:
+        pass
+    return trace
+
+def iter_sample(draws, step, start=None, trace=None, tune=None, model=None, random_seed=None):
+    """
+    Generator that returns a trace on each iteration using the given
+    step method.  Multiple step methods supported via compound step
+    method returns the amount of time taken.
+
+    Parameters
+    ----------
+
+    draws : int
+        The number of samples to draw
+    step : function
+        A step function
+    start : dict
+        Starting point in parameter space (or partial point)
+        Defaults to trace.point(-1)) if there is a trace provided and
+        model.test_point if not (defaults to empty dict)
+    trace : NpTrace or list
+        Either a trace of past values or a list of variables to track
+        (defaults to None)
+    tune : int
+        Number of iterations to tune, if applicable (defaults to None)
+    model : Model (optional if in `with` context)
+
+    Example
+    -------
+
+    for trace in iter_sample(500, step):
+        ...
+
+    """
     model = modelcontext(model)
     draws = int(draws)
     seed(random_seed)
@@ -45,13 +91,11 @@ def sample(draws, step, start=None, trace=None, tune=None, progressbar=True, mod
         start = {}
 
     if isinstance(trace, NpTrace) and len(trace) > 0:
-
         trace_point = trace.point(-1)
         trace_point.update(start)
         start = trace_point
 
     else:
-
         test_point = model.test_point.copy()
         test_point.update(start)
         start = test_point
@@ -68,19 +112,13 @@ def sample(draws, step, start=None, trace=None, tune=None, progressbar=True, mod
 
     point = Point(start, model=model)
 
-    progress = progress_bar(draws)
+    for i in range(draws):
+        if (i == tune):
+            step = stop_tuning(step)
+        point = step.step(point)
+        trace.record(point)
+        yield trace
 
-    try:
-        for i in range(draws):
-            if (i == tune):
-                step = stop_tuning(step)
-            point = step.step(point)
-            trace = trace.record(point)
-            if progressbar:
-                progress.update(i)
-    except KeyboardInterrupt:
-        pass
-    return trace
 
 def stop_tuning(step):
     """ stop tuning the current step method """
