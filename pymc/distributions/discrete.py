@@ -238,6 +238,7 @@ class Categorical(Discrete):
     """
     def __init__(self, p, *args, **kwargs):
         Discrete.__init__(self, *args, **kwargs)
+        self.k = p.shape[0]
         self.p = p
         self.mode = argmax(p)
 
@@ -246,10 +247,11 @@ class Categorical(Discrete):
 
         return bound(log(p[value]),
             value >= 0,
-            value <= p.shape[0],
-            all(p >= 0),
-            all(p <= 1),
+            value <= self.k,
             eq(sum(p), 1))
+            # ,
+            # all(p <= 1),
+            # all(p >= 0))
 
 class DiscreteUniform(Discrete):
     """
