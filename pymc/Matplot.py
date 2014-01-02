@@ -1161,7 +1161,7 @@ def summary_plot(
     if rhat:
         try:
             R = gelman_rubin(pymc_obj)
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             try:
                 R = {}
                 for variable in vars:
