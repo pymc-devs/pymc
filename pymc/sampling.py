@@ -5,7 +5,7 @@ import multiprocessing as mp
 from time import time
 from .core import *
 from . import step_methods
-from .progressbar import progress_bar
+from .progressbar import enumerate_progress
 from numpy.random import seed
 
 __all__ = ['sample', 'iter_sample']
@@ -81,15 +81,15 @@ def _sample(draws, step, start=None, db=None, chain=0, tune=None,
             progressbar=True, model=None, variables=None, random_seed=None):
     sampling = _iter_sample(draws, step, start, db, chain,
                             tune, model, variables, random_seed)
+
     if progressbar:
         sampling = enumerate_progress(sampling, draws)
     else:
         sampling = enumerate(sampling)
 
     try:
-        for i, trace in enumerate(sampling):
-            if progressbar:
-                progress.update(i)
+        for i, trace in sampling:
+            pass
     except KeyboardInterrupt:
         trace.backend.clean_interrupt(i)
         trace.backend.close()

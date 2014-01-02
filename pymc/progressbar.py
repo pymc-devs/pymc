@@ -121,3 +121,22 @@ def progress_bar(iters):
             return TextProgressBar(iters, ipythonprint)
     else:
         return TextProgressBar(iters, consoleprint)
+
+
+def enumerate_progress(iterable, total, meter=None):
+    """Wrapper `enumerate` in a progress bar update
+
+    Parameters
+    ----------
+    iterable
+    total : int
+    meter
+        Any object with an `update` method that accepts current
+        iteration as an argument. If none, `progress_bar` is used.
+    """
+    if meter is None:
+        meter = progress_bar
+    progress = meter(total)
+    for i, item in enumerate(iterable):
+        progress.update(i)
+        yield i, item
