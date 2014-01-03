@@ -245,13 +245,13 @@ class Categorical(Discrete):
     def logp(self, value):
         p = self.p
 
+        return log(p[value])
         return bound(log(p[value]),
             value >= 0,
             value <= self.k,
-            eq(sum(p), 1))
-            # ,
-            # all(p <= 1),
-            # all(p >= 0))
+            eq(sum(p), 1),
+            all(p <= 1),
+            all(p >= 0))
 
 class DiscreteUniform(Discrete):
     """
