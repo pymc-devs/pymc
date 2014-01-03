@@ -283,6 +283,22 @@ def check_dirichlet(n):
                 dirichlet_logpdf
                 )
 
+def categorical_logpdf(value, p):
+    if value >= 0 and value <= len(p):
+        return np.log(p[value])
+    else:
+        return -inf
+
+def test_categorical():
+    for n in [2,3,4]:
+        yield check_categorical, n
+
+def check_categorical(n):
+    pymc_matches_scipy(
+        Categorical, Domain(range(n), 'int64'), {'p': Simplex(n)},
+        lambda value, p: categorical_logpdf(value, p)
+        )
+
 def multinomial_logpdf(value, n, p):
     if value.sum() == n and all(value >= 0) and all(value <= n) :
         return scipy.special.gammaln(n+1) - scipy.special.gammaln(value+1).sum() + logpow(p, value).sum()
@@ -423,7 +439,6 @@ def check_logp(model, value, domain, paramdomains, logp_reference):
 
     for pt in product(domains):
         pt = Point(pt, model=model)
-
         assert_almost_equal(logp(pt), logp_reference(pt),
                             decimal=6, err_msg=str(pt))
 
