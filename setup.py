@@ -25,8 +25,9 @@ classifiers = ['Development Status :: 3 - Alpha',
                'Topic :: Scientific/Engineering :: Mathematics',
                'Operating System :: OS Independent']
 
-required = ['numpy>=1.7.1', 'scipy>=0.12.0', 'matplotlib>=1.2.1',
-            'Theano==0.6.0']
+install_reqs = ['numpy>=1.7.1', 'scipy>=0.12.0', 'matplotlib>=1.2.1',
+                'Theano==0.6.0']
+test_reqs = ['nose']
 
 if __name__ == "__main__":
     setup(name=DISTNAME,
@@ -41,4 +42,6 @@ if __name__ == "__main__":
                     'pymc.step_methods', 'pymc.tuning', 
                     'pymc.tests', 'pymc.glm'],
           classifiers=classifiers,
-          install_requires=required)
+          install_requires=install_reqs,
+          tests_require=test_reqs,
+          test_suite='nose.collector')
