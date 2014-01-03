@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from setuptools import setup
+import sys
 
 
 DISTNAME = 'pymc'
@@ -27,7 +28,10 @@ classifiers = ['Development Status :: 3 - Alpha',
 
 install_reqs = ['numpy>=1.7.1', 'scipy>=0.12.0', 'matplotlib>=1.2.1',
                 'Theano==0.6.0']
+
 test_reqs = ['nose']
+if sys.version_info[0] == 2:  # py3 has mock in stdlib
+    test_reqs.append('mock')
 
 if __name__ == "__main__":
     setup(name=DISTNAME,

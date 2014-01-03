@@ -16,6 +16,7 @@ install:
   - conda create -n testenv --yes pip python=$TRAVIS_PYTHON_VERSION
   - source activate testenv
   - conda install --yes ipython==1.1.0 pyzmq numpy==1.8.0 scipy nose matplotlib pandas Cython patsy statsmodels
+  - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then conda install --yes mock; fi
   - pip install --no-deps numdifftools
   - pip install git+https://github.com/Theano/Theano.git
   - python setup.py build_ext --inplace
