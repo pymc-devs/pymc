@@ -298,6 +298,21 @@ def check_multinomial(n):
                 Multinomial, Vector(Nat, n), {'p': Simplex(n), 'n' : Nat },
                 multinomial_logpdf)
 
+def categorical_logpdf(value, p):
+    if value >= 0 and value <= len(p):
+        return np.log(p[value])
+    else:
+        return -inf
+
+def test_categorical():
+    for n in [2,3,4]:
+        yield check_categorical, n
+
+def check_categorical(n):
+    pymc_matches_scipy(
+        Categorical, Domain(range(n), 'int64'), {'p': Simplex(n)},
+        lambda value, p: categorical_logpdf(value, p)
+        )
 
 def test_densitydist():
     def logp(x):

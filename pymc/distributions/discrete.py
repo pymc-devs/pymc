@@ -1,7 +1,8 @@
 from .dist_math import *
 
 __all__  = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson', 'NegativeBinomial',
-'ConstantDist', 'ZeroInflatedPoisson', 'DiscreteUniform', 'Geometric']
+'ConstantDist', 'ZeroInflatedPoisson', 'DiscreteUniform', 'Geometric',
+'Categorical']
 
 
 class Binomial(Discrete):
@@ -248,6 +249,35 @@ class DiscreteUniform(Discrete):
             -log(upper - lower + 1),
 
             lower <= value, value <= upper)
+
+class Categorical(Discrete):
+    """
+    Categorical log-likelihood. The most general discrete distribution.
+
+    .. math::  f(x=i \mid p) = p_i
+
+    for :math:`i \in 0 \ldots k-1`.
+
+    :Parameters:
+      - `p` : [float] :math:`p > 0`, :math:`\sum p = 1`
+
+    """
+    def __init__(self, p, *args, **kwargs):
+        Discrete.__init__(self, *args, **kwargs)
+        self.k = p.shape[0]
+        self.p = p
+        self.mode = argmax(p)
+
+    def logp(self, value):
+        p = self.p
+
+        return bound(log(p[value]),
+            value >= 0,
+            value <= self.k,
+            eq(sum(p), 1))
+            # ,
+            # all(p <= 1),
+            # all(p >= 0))
 
 
 class ConstantDist(Discrete):
