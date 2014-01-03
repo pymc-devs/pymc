@@ -271,12 +271,12 @@ class Categorical(Discrete):
 
     def logp(self, value):
         p = self.p
+        k = self.k
 
         return bound(log(p[value]),
             value >= 0,
-            value <= self.k,
-            all(p <= 1),
-            all(p >= 0))
+            value <= k,
+            eq(sum(p), 1))
 
 
 class ConstantDist(Discrete):
