@@ -327,7 +327,7 @@ class Database(pickle.Database):
                 if k.__class__ not in [tables.Table, tables.Group]:
                     setattr(db, k.name, k)
 
-            varnames = db._tables[-1].colnames + objects.keys()
+            varnames = db._tables[-1].colnames + list(objects.keys())
             db.trace_names = db.chains * [varnames, ]
 
     def connect_model(self, model):
