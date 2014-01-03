@@ -1,4 +1,5 @@
 from .dist_math import *
+import theano
 
 __all__  = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson', 'NegativeBinomial',
 'ConstantDist', 'ZeroInflatedPoisson', 'DiscreteUniform', 'Geometric',
@@ -274,10 +275,8 @@ class Categorical(Discrete):
         return bound(log(p[value]),
             value >= 0,
             value <= self.k,
-            eq(sum(p), 1))
-            # ,
-            # all(p <= 1),
-            # all(p >= 0))
+            all(p <= 1),
+            all(p >= 0))
 
 
 class ConstantDist(Discrete):
