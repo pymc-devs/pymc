@@ -2,13 +2,13 @@
 Installation
 ************
 
-:Date: 5 April 2012
+:Date: 6 September 2013
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Contact: chris.fonnesbeck@vanderbilt.edu
 :Web site: http://github.com/pymc-devs/pymc
 :Copyright: This document has been placed in the public domain.
 :License: PyMC is released under the Academic Free license.
-:Version: 2.2
+:Version: 2.3
 
 PyMC is known to run on Mac OS X, Linux and Windows, but in theory should be
 able to work on just about any platform for which Python, a Fortran compiler
@@ -213,7 +213,7 @@ installed. The tests are launched from a python shell::
 
 In case of failures, messages detailing the nature of these failures will
 appear. In case this happens (it shouldn't), please report the problems on the
-`issue tracker`_ (the issues tab on the Google Code page), specifying the
+`issue tracker`_ (the issues tab on the GitHub page), specifying the
 version you are using and the environment.
 
 .. _`nose`: http://readthedocs.org/docs/nose/en/latest/
