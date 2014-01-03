@@ -1,7 +1,7 @@
 import pymc as pm
 import numpy as np
 
-from pymc import sample, psample
+from pymc import sample
 
 from numpy.testing import assert_almost_equal
 

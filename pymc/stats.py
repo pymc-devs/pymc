@@ -1,7 +1,6 @@
 """Utility functions for PyMC"""
 
 import numpy as np
-from .trace import MultiTrace
 import warnings
 
 
@@ -14,39 +13,28 @@ def statfunc(f):
     """
 
     def wrapped_f(pymc_obj, *args, **kwargs):
+        burn = kwargs.pop('burn', 0)
+        thin = kwargs.pop('thin', 1)
+        combine = kwargs.pop('combine', False)
 
         try:
-            burn = kwargs.pop('burn')
-        except KeyError:
-            burn = 0
-
-        try:
-            # MultiTrace
-            traces = pymc_obj.traces
-
-            try:
-                vars = kwargs.pop('vars')
-            except KeyError:
-                vars = traces[0].varnames
-
-            return [{v: f(trace[v][burn:], *args, **kwargs) for v in vars} for trace in traces]
-
+            var_names = kwargs.pop('vars',  pymc_obj.var_names)
+            chains = kwargs.pop('chains', pymc_obj.active_chains)
         except AttributeError:
-            pass
+            # If fails, assume that raw data is passed
+            return f(pymc_obj, *args, **kwargs)
 
-        try:
-            # NpTrace
-            try:
-                vars = kwargs.pop('vars')
-            except KeyError:
-                vars = pymc_obj.varnames
+        results = {chain: {} for chain in chains}
+        for var_name in var_names:
+            samples = pymc_obj.get_values(var_name, chains=chains, burn=burn,
+                                          thin=thin, combine=combine,
+                                          squeeze=False)
+            for chain, data in zip(chains, samples):
+                results[chain][var_name] = f(np.squeeze(data), *args, **kwargs)
 
-            return {v: f(pymc_obj[v][burn:], *args, **kwargs) for v in vars}
-        except AttributeError:
-            pass
-
-        # If others fail, assume that raw data is passed
-        return f(pymc_obj, *args, **kwargs)
+        if len(chains) == 1 or combine:
+            results = results[chains[0]]
+        return results
 
     wrapped_f.__doc__ = f.__doc__
     wrapped_f.__name__ = f.__name__
@@ -242,15 +230,16 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
         print("Too few elements for quantile calculation")
 
 
-def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
+def summary(trace, var_names=None, alpha=0.05, start=0, batches=100,
+            roundto=3):
     """
     Generate a pretty-printed summary of the node.
 
     :Parameters:
     trace : Trace object
-      Trace containing MCMC sample
+      Trace containing MCMC samples
 
-    vars : list of strings
+    var_names : list of strings
       List of variables to summarize. Defaults to None, which results
       in all variables summarized.
 
@@ -270,17 +259,15 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
       The number of digits to round posterior statistics.
 
     """
-    if vars is None:
-        vars = trace.varnames
-    if isinstance(trace, MultiTrace):
-        trace = trace.combined()
+    if var_names is None:
+        var_names = trace.var_names
 
     stat_summ = _StatSummary(roundto, batches, alpha)
     pq_summ = _PosteriorQuantileSummary(roundto, alpha)
 
-    for var in vars:
+    for var_name in var_names:
         # Extract sampled values
-        sample = trace[var][start:]
+        sample = trace.get_values(var_name, burn=start, combine=True)
         if sample.ndim == 1:
             sample = sample[:, None]
         elif sample.ndim > 2:
@@ -288,7 +275,7 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
             warnings.warn('Skipping {} (above 1 dimension)'.format(var))
             continue
 
-        print('\n%s:' % var)
+        print('\n%s:' % var_name)
         print(' ')
 
         stat_summ.print_output(sample)
