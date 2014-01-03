@@ -1,7 +1,6 @@
 from .dist_math import *
-import theano
 
-__all__  = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson', 'NegativeBinomial',
+__all__ = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson', 'NegativeBinomial',
 'ConstantDist', 'ZeroInflatedPoisson', 'DiscreteUniform', 'Geometric',
 'Categorical']
 
@@ -109,7 +108,7 @@ class Bernoulli(Discrete):
     - :math:`Var(x)= p(1-p)`
 
     """
-    def __init__(self, p, *args,**kwargs):
+    def __init__(self, p, *args, **kwargs):
         Discrete.__init__(self, *args, **kwargs)
         self.p = p
         self.mode = cast(round(p), 'int8')
@@ -157,6 +156,7 @@ class Poisson(Discrete):
 
             mu > 0, value >= 0)
 
+
 class NegativeBinomial(Discrete):
     """
     Negative binomial log-likelihood.
@@ -191,12 +191,13 @@ class NegativeBinomial(Discrete):
                      mu > 0,
                      value >= 0)
         negbinom = bound(gammaln(value + alpha) - factln(value) - gammaln(alpha) +
-                      logpow(mu / (mu + alpha), value) + logpow(alpha / (mu + alpha), alpha),
+                     logpow(mu / (mu + alpha), value) + logpow(alpha / (mu + alpha), alpha),
                       mu > 0, alpha > 0, value >= 0)
 
         return switch(alpha > 1e10,
                       pois,
                       negbinom)
+
 
 class Geometric(Discrete):
     """
@@ -250,6 +251,7 @@ class DiscreteUniform(Discrete):
             -log(upper - lower + 1),
 
             lower <= value, value <= upper)
+
 
 class Categorical(Discrete):
     """
