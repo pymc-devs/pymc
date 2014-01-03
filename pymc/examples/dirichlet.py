@@ -17,12 +17,8 @@ def run(n=3000):
     if n == "short":
         n = 50
     with model:
-        H = model.fastd2logp()
-
-        s = find_MAP()
-
-        step = HamiltonianMC(model.vars, H(s))
-        trace = sample(n, step, s)
+        step = Slice()
+        trace = sample(n, step)
 
 if __name__ == '__main__':
     run()

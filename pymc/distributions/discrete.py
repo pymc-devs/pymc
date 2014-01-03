@@ -275,8 +275,8 @@ class Categorical(Discrete):
 
         return bound(log(p[value]),
             value >= 0,
-            value <= k,
-            eq(sum(p), 1))
+            value <= (k - 1),
+            le(abs(sum(p) - 1), 1e-5))
 
 
 class ConstantDist(Discrete):
