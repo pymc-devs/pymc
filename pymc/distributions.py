@@ -2612,7 +2612,7 @@ def rwishart(n, Tau):
     if n < p:
         raise ValueError('Wishart parameter n must be greater '
                          'than size of matrix.')
-    norms = np.random.normal(size=p*(p-1)/2)
+    norms = np.random.normal(size=(p*(p-1))//2)
     chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n, n-p, -1)))
     A = flib.expand_triangular(chi_sqs, norms)
 
@@ -2680,7 +2680,7 @@ def rwishart_cov(n, C):
         raise ValueError('Wishart parameter n must be greater '
                          'than size of matrix.')
 
-    norms = np.random.normal(size=p*(p-1)/2)
+    norms = np.random.normal(size=(p*(p-1))//2)
     chi_sqs = np.sqrt(np.random.chisquare(df=np.arange(n, n-p, -1)))
     A = flib.expand_triangular(chi_sqs, norms)
 
