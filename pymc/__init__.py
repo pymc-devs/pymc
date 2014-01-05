@@ -5,7 +5,7 @@ from .distributions import *
 from .math import *
 
 from .trace import *
-from .sample import *
+from .sampling import *
 from .stats import summary
 from .step_methods import *
 from .tuning import *
