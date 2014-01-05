@@ -37,7 +37,7 @@ class ElemwiseCategoricalStep(ArrayStep):
 
 
 def elemwise_logp(model, var):
-    terms = [v.logp_elemwiset for v in model.free_RVs if var in inputs([v.logpt])]
+    terms = [v.logp_elemwiset for v in model.basic_RVs if var in inputs([v.logpt])]
     return model.fn(add(*terms))
 
 
