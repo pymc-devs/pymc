@@ -9,6 +9,7 @@ from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, on
 from numpy.random import uniform
 
 from theano.gof.graph import inputs
+from theano.tensor import add 
 
 __all__ = ['ElemwiseCategoricalStep']
 
@@ -36,8 +37,8 @@ class ElemwiseCategoricalStep(ArrayStep):
 
 
 def elemwise_logp(model, var):
-    terms = [term for term in model.factors if var in inputs([term])]
-    return add(*terms)
+    terms = [v.logp_elemwiset for v in model.free_RVs if var in inputs([v.logpt])]
+    return model.fn(add(*terms))
 
 
 def categorical(prob, shape):
