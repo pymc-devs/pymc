@@ -64,10 +64,7 @@ def traceplot(trace, vars=None, figsize=None,
             d = np.squeeze(trace[v])
 
             if trace[v].dtype.kind == 'i':
-                mind = min(d)
-                maxd = max(d)
-                ax[i, 0].hist(d, bins=range(mind, maxd + 2), align='left')
-                ax[i, 0].set_xlim(mind - .5, maxd + .5)
+                histplot_op(ax[i, 0], d)
             else:
                 kdeplot_op(ax[i, 0], d)
             ax[i, 0].set_title(str(v))
@@ -88,6 +85,15 @@ def traceplot(trace, vars=None, figsize=None,
     plt.tight_layout()
     return fig
 
+def histplot_op(ax, data):
+    data = np.atleast_2d(data.T).T
+    for i in range(data.shape[1]):
+        d = data[:, i]
+
+        mind = np.min(d)
+        maxd = np.max(d)
+        ax.hist(d, bins=range(mind, maxd + 2), align='left')
+        ax.set_xlim(mind - .5, maxd + .5)
 
 def kdeplot_op(ax, data):
     data = np.atleast_2d(data.T).T
