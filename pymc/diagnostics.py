@@ -280,7 +280,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
     end = len(x) - 1
 
     # Calculate starting indices
-    sindices = np.arange(0, end / 2, step=int((end / 2) / (intervals - 1)))
+    sindices = np.arange(0, end // 2, step=int((end / 2) / (intervals - 1)))
 
     # Loop over start indices
     for start in sindices:
