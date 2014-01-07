@@ -61,7 +61,7 @@ class DictToArrayBijection(object):
         dpt = self.dpt.copy()
 
         for var, slc, shp in self.ordering.vmap:
-            dpt[var] = np.reshape(apt[slc], shp)
+            dpt[var] = np.reshape(np.atleast_1d(apt)[slc], shp)
 
         return dpt
 
