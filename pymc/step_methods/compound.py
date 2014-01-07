@@ -27,7 +27,7 @@ class SingleComponentStep(CompoundStep):
         try:
             self.step_method = kwargs.pop('step_method', getattr(self, 'step_method'))
         except AttributeError as e:
-            print "Either supply step_method argument or use an inherited class like SingleComponentSlice or SingleComponentMetropolis."
+            print("Either supply step_method argument or use an inherited class like SingleComponentSlice or SingleComponentMetropolis.")
             raise e
 
         methods = [self.step_method(vars=[v], **kwargs) for v in vars]
