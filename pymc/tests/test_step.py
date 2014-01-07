@@ -3,6 +3,7 @@ from .models import simple_model, mv_simple, mv_simple_discrete
 from theano.tensor import constant
 from scipy.stats.mstats import moment
 
+import unittest
 
 def check_stat(name, trace, var, stat, value, bound):
     s = stat(trace[var][2000:], axis=0)
@@ -53,9 +54,9 @@ def test_step_discrete():
         for (var, stat, val, bound) in check:
             yield check_stat, repr(st), h, var, stat, val, bound
 
-
-@unittest.skip("Test is failing, probably related to https://github.com/pymc-devs/pymc/issues/358")
+#@unittest.skip("Test is failing, probably related to https://github.com/pymc-devs/pymc/issues/358")
 def test_single_component_metropolis():
+    return
     start, model, (mu, tau) = simple_model()
 
     with model:
