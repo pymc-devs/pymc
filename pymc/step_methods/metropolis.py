@@ -2,13 +2,21 @@ from numpy.linalg import cholesky
 
 from ..core import *
 from .quadpotential import quad_potential
+from .compound import SingleComponentStep
 
 from .arraystep import *
 from numpy.random import normal, standard_cauchy, standard_exponential, poisson, random
 from numpy import round, exp, copy, where
 
 
-__all__ = ['Metropolis', 'BinaryMetropolis', 'NormalProposal', 'CauchyProposal', 'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal']
+__all__ = ['Metropolis',
+           'BinaryMetropolis',
+           'NormalProposal',
+           'CauchyProposal',
+           'LaplaceProposal',
+           'PoissonProposal',
+           'MultivariateNormalProposal',
+           'SingleComponentMetropolis']
 
 # Available proposal distributions for Metropolis
 
@@ -183,3 +191,8 @@ class BinaryMetropolis(ArrayStep):
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
         return q_new
+
+
+class SingleComponentMetropolis(SingleComponentStep):
+    """Metropolis sampler that is applied to each random variable separately. Step methods are called in sequence."""
+    step_method = Metropolis

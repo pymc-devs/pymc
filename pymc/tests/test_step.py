@@ -18,10 +18,10 @@ def test_step_continuous():
                            proposal_dist=pm.MultivariateNormalProposal)
         slicer = pm.Slice()
         nuts = pm.NUTS(scaling=C, is_cov=True)
+        single_component_slicer = pm.SingleComponentSlice()
         compound = pm.CompoundStep([hmc, mh])
 
-
-    steps = [mh, hmc, slicer, nuts, compound]
+    steps = [mh, hmc, slicer, nuts, single_component_slicer, compound]
 
     unc = np.diag(C) ** .5
     check = [('x', np.mean, mu, unc / 10.),
@@ -52,3 +52,19 @@ def test_step_discrete():
 
         for (var, stat, val, bound) in check:
             yield check_stat, repr(st), h, var, stat, val, bound
+
+
+@unittest.skip("Test is failing, probably related to https://github.com/pymc-devs/pymc/issues/358")
+def test_single_component_metropolis():
+    start, model, (mu, tau) = simple_model()
+
+    with model:
+        single_component_metropolis = pm.SingleComponentMetropolis()
+
+    check = [('x', np.mean, mu, tau / 10.),
+             ('x', np.std, tau, tau / 10.)]
+
+    h = sample(30000, single_component_metropolis, start, model=model, random_seed=1)[-10000:]
+
+    for (var, stat, val, bound) in check:
+        yield check_stat, 'single_component_metropolis', h, var, stat, val, bound
