@@ -4,9 +4,8 @@ from .core import *
 from .distributions import *
 from .math import *
 
-
-from .sampling import *
 from .trace import *
+from .sample import *
 from .step_methods import *
 from .tuning import *
 
