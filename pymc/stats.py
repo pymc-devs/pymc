@@ -272,7 +272,7 @@ def summary(trace, var_names=None, alpha=0.05, start=0, batches=100,
             sample = sample[:, None]
         elif sample.ndim > 2:
             ## trace dimensions greater than 2 (variable greater than 1)
-            warnings.warn('Skipping {} (above 1 dimension)'.format(var))
+            warnings.warn('Skipping {} (above 1 dimension)'.format(var_name))
             continue
 
         print('\n%s:' % var_name)
