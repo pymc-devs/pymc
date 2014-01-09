@@ -6,7 +6,7 @@ from .math import *
 
 
 from .sampling import *
-from .stats import summary
+from .trace import *
 from .step_methods import *
 from .tuning import *
 
