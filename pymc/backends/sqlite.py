@@ -52,16 +52,55 @@ QUERIES = {
 
 
 class SQLite(base.Backend):
+    """SQLite storage
+
+    Parameters
+    ----------
+    name : str
+        Name of database file
+    model : Model
+        If None, the model is taken from the `with` context.
+    variables : list of variable objects
+        Sampling values will be stored for these variables
+    """
 
     def __init__(self, name, model=None, variables=None):
         super(SQLite, self).__init__(name, model, variables)
-        ## initialized by _connect
+
+        self.trace = Trace(self.var_names, self)
+
+        ## These are set in `setup` to avoid sqlite3.OperationalError
+        ## (Base Cursor.__init__ not called) when performing parallel
+        ## sampling
         self.conn = None
         self.cursor = None
         self.connected = False
 
-    def _initialize_trace(self):
-        return Trace(self.var_names, self)
+        self.var_inserts = {}  # var_name -> insert query
+        self.draw_idx = 0
+
+    def setup(self, draws, chain):
+        """Perform chain-specific setup
+
+        draws : int
+            Expected number of draws
+        chain : int
+            chain number
+        """
+        self.connect()
+        table = QUERIES['table']
+        insert = QUERIES['insert']
+        for var_name, shape in self.var_shapes.items():
+            var_cols = _create_colnames(shape)
+            var_float = ', '.join([v + ' FLOAT' for v in var_cols])
+            ## Create table
+            self.cursor.execute(table.format(table=var_name,
+                                             value_cols=var_float))
+            ## Create insert query for each variable
+            var_str = ', '.join(var_cols)
+            self.var_inserts[var_name] = insert.format(table=var_name,
+                                                       value_cols=var_str,
+                                                       chain=chain)
 
     def connect(self):
         if self.connected:
@@ -71,38 +110,28 @@ class SQLite(base.Backend):
         self.cursor = self.conn.cursor()
         self.connected = True
 
-    ## sampling methods
+    def record(self, point):
+        """Record results of a sampling iteration
 
-    def setup_samples(self, draws, chain):
-        ## make connection here (versus __init__) to handle parallel
-        ## chains
-        self.connect()
-        super(SQLite, self).setup_samples(draws, chain)
+        point : dict
+            Values mappled to variable names
+        """
+        for var_name, value in zip(self.var_names, self.fn(point)):
+            val_str = ', '.join(['{}'.format(val) for val in np.ravel(value)])
+            query = self.var_inserts[var_name].format(draw=self.draw_idx,
+                                                      value=val_str)
+            self.cursor.execute(query)
+        self.draw_idx += 1
 
-    def _create_trace(self, chain, var_name, shape):
-        ## first element of trace is number of draws
-        var_cols = create_colnames(shape[1:])
-        var_float = ', '.join([v + ' FLOAT' for v in var_cols])
-        self.cursor.execute(QUERIES['table'].format(table=var_name,
-                                                    value_cols=var_float))
-        return QUERIES['insert'].format(table=var_name,
-                                        value_cols=', '.join(var_cols),
-                                        chain=chain)
-
-    def _store_value(self, draw, var_trace, value):
-        val_str = ', '.join(['{}'.format(val) for val in np.ravel(value)])
-        query = var_trace.format(draw=draw, value=val_str)
-        self.cursor.execute(query)
-
-    def commit(self):
-        self.conn.commit()
+        if not self.draw_idx % 1000:
+            self.conn.commit()
 
     def close(self):
         if not self.connected:
             return
 
         self.cursor.close()
-        self.commit()
+        self.conn.commit()
         self.conn.close()
         self.connected = False
 
@@ -111,16 +140,27 @@ class Trace(base.Trace):
 
     __doc__ = 'SQLite trace\n' + base.Trace.__doc__
 
+    def __init__(self, var_names, backend=None):
+        super(Trace, self).__init__(var_names, backend)
+        self._len = None
+        self._chains = None
+
     def __len__(self):
-        try:
-            return super(Trace, self).__len__()
-        except KeyError:  # draws dictionary not set up
+        if self._len is None:
             query = QUERIES['max_draw'].format(table=self.var_names[0],
                                                chain=self.default_chain)
             self.backend.connect()
-            draws = self.backend.cursor.execute(query).fetchall()[0][0] + 1
-            self._draws[self.default_chain] = draws
-            return draws
+            self._len = self.backend.cursor.execute(query).fetchall()[0][0] + 1
+        return self._len
+
+    @property
+    def chains(self):
+        """All chains in trace"""
+        if self._chains is None:
+            self.backend.connect()
+            var_name = self.var_names[0]  # any variable should do
+            self._chains = _get_chain_list(self.backend.cursor, var_name)
+        return self._chains
 
     def get_values(self, var_name, burn=0, thin=1, combine=False, chains=None,
                    squeeze=True):
@@ -175,12 +215,9 @@ class Trace(base.Trace):
                                          **query_args)
             self.backend.cursor.execute(call)
             results.append(_rows_to_ndarray(self.backend.cursor))
-
         return base._squeeze_cat(results, combine, squeeze)
 
     def _slice(self, idx):
-        """Slice trace object
-        """
         warnings.warn('Slice for SQLite backend has no effect.')
 
     def point(self, idx, chain=None):
@@ -205,8 +242,11 @@ class Trace(base.Trace):
                 _rows_to_ndarray(self.backend.cursor))
         return var_values
 
+    def merge_chains(self, traces):
+        pass
 
-def create_colnames(shape):
+
+def _create_colnames(shape):
     """Return column names based on `shape`
 
     Examples
@@ -233,9 +273,7 @@ def load(name, model=None):
     name : str
         Path to SQLite database file
     model : Model
-        If None, the model is taken from the `with` context. The trace
-        can be loaded without connecting by passing False (although
-        connecting to the original model is recommended).
+        If None, the model is taken from the `with` context.
 
     Returns
     -------
@@ -243,25 +281,8 @@ def load(name, model=None):
     """
     db = SQLite(name, model=model)
     db.connect()
-
     var_names = _get_table_list(db.cursor)
-    trace = Trace(var_names, db)
-    var_cols = {var_name: ', '.join(_get_var_strs(db.cursor, var_name))
-                for var_name in var_names}
-
-    ## Use first var_names element to get chain list. Chains should be
-    ## the same for all.
-    chains = _get_chain_list(db.cursor, var_names[0])
-
-    query = QUERIES['insert']
-    for chain in chains:
-        samples = {}
-        for var_name in var_names:
-            samples[var_name] = query.format(table=var_name,
-                                             value_cols=var_cols[var_name],
-                                             chain=chain)
-        trace.samples[chain] = samples
-    return trace
+    return Trace(var_names, db)
 
 
 def _get_table_list(cursor):

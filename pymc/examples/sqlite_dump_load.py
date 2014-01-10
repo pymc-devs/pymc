@@ -37,8 +37,8 @@ def run(n=50):
 
             for chain in trace.chains:
                 for var_name in trace.var_names:
-                    data = trace.samples[chain][var_name]
-                    dumped_data = dumped.samples[chain][var_name]
+                    data = trace.get_values(var_name, chains=[chain])
+                    dumped_data = dumped.get_values(var_name, chains=[chain])
                     npt.assert_equal(data, dumped_data)
         finally:
             try:

@@ -25,9 +25,9 @@ For example, the following would save traces to the file 'test.db'.
 Selecting values from a backend
 -------------------------------
 
-After a backend is finished sampling, values can be accessed in a few
-ways. The easiest way is to index the backend object with a variable or
-variable name.
+After a backend is finished sampling, it returns a Trace object. Values
+can be accessed in a few ways. The easiest way is to index the backend
+object with a variable or variable name.
 
     >>> trace['x']  # or trace[x]
 
@@ -79,37 +79,34 @@ specific backend.
 Writing custom backends
 -----------------------
 
-To write a custom backend, two base classes should be inherited:
-pymc.backends.base.Backend and pymc.backends.base.Trace. The first class
-handles sampling, while the second provides access to the sampled
-values.
+Backends consist of two classes: one that handles storing the sample
+results (e.g., backends.ndarray.NDArray or backends.sqlite.SQLite) and
+one that handles value selection (e.g., backends.ndarray.Trace or
+backends.sqlite.Trace).
 
-These following sampling-related methods of base.Backend should be
-define in the child class:
+Three methods of the storage class will be called:
 
-- _initialize_trace: Return a trace object for to store the sampled
-  values.
+- setup: Before sampling is started, the `setup` method will be called
+  with two arguments: the number of draws and the chain number. This is
+  useful setting up any structure for storing the sampling values that
+  require the above information.
 
-- _create_trace: Create the trace object for a specific variable and
-  chain. For example, the NumPy array backend creates an array of zeros
-  shaped according to the number of planned iterations and the shape of
-  the given variable.
-
-- _store_value: Store the value for a draw of a particular variable
-  (using the trace from `_create_trace`).
-
-- commit: After a set amount of iterations, the sampling results will be
-  committed to the backend. In the case of in memory backends (NumPy and
-  Text), this doesn't do anything.
+- record: Record the sampling results for the current draw. This method
+  will be called with a dictionary of values mapped to the variable
+  names. This is the only function that *must* do something to have a
+  meaningful backend.
 
 - close: This method is called following sampling and should perform any
   actions necessary for finalizing and cleaning up the backend.
 
-If backend-specific initialization is required, redefine `__init__` to
-include this and the call the parent `__init__` method.
+The base storage class `backends.base.Backend` provides model setup that
+is used by PyMC backends.
 
-In addition to sampling methods, several methods in base.Trace should
-also be defined.
+After sampling has completed, the `trace` attribute of the storage
+object will be returned. To have a consistent interface with the backend
+trace objects in PyMC, this attribute should be an instance of a class
+that inherits from pymc.backends.base.Trace, and several methods in the
+inherited Trace object should be defined.
 
 - get_values: This is the core method for selecting values from the
   backend. It can be called directly and is used by __getitem__ when the
@@ -120,6 +117,23 @@ also be defined.
 
 - point: Returns values for each variables at a single iteration. This
   is called if the backend is indexed with a single integer.
+
+- __len__: This should return the number of draws (for the default
+  chain).
+
+- chains: Property that returns a list of chains
+
+In addtion, a `merge_chains` method should be defined if the backend
+will be used with parallel sampling. This method describes how to merge
+sampling chains from a list of other traces.
+
+As mentioned above, the only method necessary to store the sampling
+values is `record`. Other methods in the storage may consist of only a
+pass statement. The storage object should have an attribute `trace`
+(with a `merge_chains` method for parallel sampling), but this does not
+have to do anything if storing the values is all that is desired. The
+backends.base.Trace is provided for convenience in setting up a
+consistent Trace object.
 
 For specific examples, see pymc.backends.{ndarray,text,sqlite}.py.
 """

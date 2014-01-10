@@ -22,6 +22,7 @@ class SQLiteTestCase(unittest.TestCase):
             context.return_value = self.model
             self.db = sqlite.SQLite('test.db')
         self.db.cursor = mock.Mock()
+        self.db.var_shapes = {'x': (), 'y': (3,)}
 
         connect_patch = mock.patch('pymc.backends.sqlite.SQLite.connect')
         self.addCleanup(connect_patch.stop)
@@ -32,84 +33,88 @@ class SQLiteTestCase(unittest.TestCase):
 class TestSQLiteSample(SQLiteTestCase):
 
     def test_setup_trace(self):
-        self.db.setup_samples(self.draws, chain=0)
+        self.db.setup(self.draws, chain=0)
         self.connect.assert_called_once_with()
 
-    def test__create_trace_scalar(self):
+    def test_setup_scalar(self):
         db = self.db
-        var_trace = db._create_trace(chain=0, var_name='x',
-                                     shape=(self.draws,))
-
+        db.setup(draws=3, chain=0)
         tbl_expected = ('CREATE TABLE IF NOT EXISTS [x] '
                         '(recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
                         'draw INTEGER, '
                         'chain INT(5), v1 FLOAT)')
-        db.cursor.execute.assert_called_once_with(tbl_expected)
+        db.cursor.execute.assert_any_call(tbl_expected)
 
         trace_expected = ('INSERT INTO [x] (recid, draw, chain, v1) '
                           'VALUES (NULL, {draw}, 0, {value})')
-        self.assertEqual(var_trace, trace_expected)
+        self.assertEqual(db.var_inserts['x'], trace_expected)
 
-    def test__create_trace_1d(self):
+    def test_setup_1d(self):
         db = self.db
-        var_trace = db._create_trace(chain=0, var_name='x',
-                                     shape=(self.draws, 2))
-        tbl_expected = ('CREATE TABLE IF NOT EXISTS [x] '
+        db.setup(draws=3, chain=0)
+        tbl_expected = ('CREATE TABLE IF NOT EXISTS [y] '
                         '(recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
                         'draw INTEGER, '
-                        'chain INT(5), v1 FLOAT, v2 FLOAT)')
-        db.cursor.execute.assert_called_once_with(tbl_expected)
+                        'chain INT(5), v1 FLOAT, v2 FLOAT, v3 FLOAT)')
+        db.cursor.execute.assert_any_call(tbl_expected)
 
-        trace_expected = ('INSERT INTO [x] (recid, draw, chain, v1, v2) '
+        trace_expected = ('INSERT INTO [y] (recid, draw, chain, v1, v2, v3) '
                           'VALUES (NULL, {draw}, 0, {value})')
-        self.assertEqual(var_trace, trace_expected)
+        self.assertEqual(db.var_inserts['y'], trace_expected)
 
-    def test__create_trace_2d(self):
+    def test_setup_2d(self):
         db = self.db
-        var_trace = db._create_trace(chain=0, var_name='x',
-                                     shape=(self.draws, 2, 3))
+        db.var_shapes = {'x': (2, 3)}
+        db.setup(draws=3, chain=0)
         tbl_expected = ('CREATE TABLE IF NOT EXISTS [x] '
                         '(recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
                         'draw INTEGER, '
                         'chain INT(5), '
                         'v1_1 FLOAT, v1_2 FLOAT, v1_3 FLOAT, '
                         'v2_1 FLOAT, v2_2 FLOAT, v2_3 FLOAT)')
-        db.cursor.execute.assert_called_once_with(tbl_expected)
 
+        db.cursor.execute.assert_any_call(tbl_expected)
         trace_expected = ('INSERT INTO [x] (recid, draw, chain, '
                           'v1_1, v1_2, v1_3, '
                           'v2_1, v2_2, v2_3) '
                           'VALUES (NULL, {draw}, 0, {value})')
-        self.assertEqual(var_trace, trace_expected)
+        self.assertEqual(db.var_inserts['x'], trace_expected)
 
-    def test__store_value_scalar(self):
+    def test_record_scalar(self):
         db = self.db
-        db.setup_samples(draws=3, chain=0)
+        db.setup(draws=3, chain=0)
+
+        db.fn = mock.Mock(return_value=iter([3.]))
         var_name = 'x'
+        db.var_names = ['x']
+
         query = sqlite.QUERIES['insert'].format(table=var_name,
                                                 value_cols='v1',
                                                 chain=0)
-        db.trace.samples[0] = {'x': query}
-        db._store_value(draw=0, var_trace=db.trace.samples[0][var_name],
-                        value=3.)
+        db.var_inserts = {'x': query}
+        db.draw_idx = 0
+        db.record({'x': 3.})
         expected = ('INSERT INTO [x] (recid, draw, chain, v1) '
                     'VALUES (NULL, 0, 0, 3.0)')
-        db.cursor.execute.assert_called_once_with(expected)
+        db.cursor.execute.assert_any_call(expected)
 
-    def test__store_value_1d(self):
+    def test_record_1d(self):
         db = self.db
-        db.setup_samples(draws=3, chain=0)
+        db.setup(draws=3, chain=0)
+
+        db.fn = mock.Mock(return_value=iter([[3., 3.]]))
         var_name = 'x'
+        db.var_names = ['x']
+
         query = sqlite.QUERIES['insert'].format(table=var_name,
                                                 value_cols='v1, v2',
                                                 chain=0)
-        db.trace.samples[0] = {'x': query}
-        print(db)
-        db._store_value(draw=0, var_trace=db.trace.samples[0][var_name],
-                        value=[3., 3.])
+        db.var_inserts = {'x': query}
+        db.draw_idx = 0
+        db.record({'x': [3., 3.]})
         expected = ('INSERT INTO [x] (recid, draw, chain, v1, v2) '
                     'VALUES (NULL, 0, 0, 3.0, 3.0)')
-        db.cursor.execute.assert_called_once_with(expected)
+        db.cursor.execute.assert_any_call(expected)
 
 
 class SQLiteSelectionTestCase(SQLiteTestCase):
@@ -117,13 +122,14 @@ class SQLiteSelectionTestCase(SQLiteTestCase):
     def setUp(self):
         super(SQLiteSelectionTestCase, self).setUp()
         self.db.var_shapes = {'x': (), 'y': (4,)}
-        self.db.setup_samples(self.draws, chain=0)
+        self.db.setup(self.draws, chain=0)
 
         ndarray_patch = mock.patch('pymc.backends.sqlite._rows_to_ndarray')
         self.addCleanup(ndarray_patch.stop)
         ndarray_patch.start()
 
         self.draws = 5
+        self.db.trace.active_chains = 0
 
 
 class TestSQLiteSelection(SQLiteSelectionTestCase):
@@ -180,7 +186,7 @@ class TestSQLiteSelectionMultipleChains(SQLiteSelectionTestCase):
 
     def setUp(self):
         super(TestSQLiteSelectionMultipleChains, self).setUp()
-        self.db.trace.samples[1] = self.db.trace.samples[0]
+        self.db.trace.active_chains = [0, 1]
 
     def test_get_values_default_keywords(self):
         self.db.trace.get_values('x')
@@ -208,45 +214,24 @@ class TestSQLiteLoad(unittest.TestCase):
         self.table_list = table_list_patch.start()
         self.table_list.return_value = ['x', 'y']
 
-        var_strs_list_patch = mock.patch('pymc.backends.sqlite._get_var_strs')
-        self.addCleanup(var_strs_list_patch.stop)
-        self.var_strs_list = var_strs_list_patch.start()
-        self.var_strs_list.return_value = ['v1', 'v2']
-
-        chain_list_patch = mock.patch('pymc.backends.sqlite._get_chain_list')
-        self.addCleanup(chain_list_patch.stop)
-        self.chain_list = chain_list_patch.start()
-        self.chain_list.return_value = [0, 1]
-
     def test_load(self):
         trace = sqlite.load('test.db')
-        self.assertEqual(len(trace.samples), 2)
-
-        self.assertTrue('x' in trace.samples[0])
-        self.assertTrue('y' in trace.samples[0])
-
-        expected = ('INSERT INTO [{}] '
-                    '(recid, draw, chain, v1, v2) '
-                    'VALUES (NULL, {{draw}}, {}, {{value}})')
-        for chain in [0, 1]:
-            for var_name in ['x', 'y']:
-                self.assertEqual(trace.samples[chain][var_name],
-                                 expected.format(var_name, chain))
-
+        assert self.table_list.called
+        assert self.db.called
 
 def test_create_column_empty():
-    result = sqlite.create_colnames(())
+    result = sqlite._create_colnames(())
     expected = ['v1']
     assert result == expected
 
 
 def test_create_column_1d():
-    result = sqlite.create_colnames((2, ))
+    result = sqlite._create_colnames((2, ))
     expected = ['v1', 'v2']
     assert result == expected
 
 
 def test_create_column_2d():
-    result = sqlite.create_colnames((2, 2))
+    result = sqlite._create_colnames((2, 2))
     expected = ['v1_1', 'v1_2', 'v2_1', 'v2_2']
     assert result == expected

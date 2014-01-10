@@ -21,50 +21,45 @@ class TestNDArraySampling(unittest.TestCase):
             context.return_value = self.model
             self.db = ndarray.NDArray()
 
-    def test_create_trace_scalar(self):
+    def test_setup_scalar(self):
         db = self.db
-        draws = 3
-        trace = db._create_trace(chain=0, var_name=None, shape=[draws])
-        npt.assert_equal(trace, np.zeros(draws))
+        db.var_shapes = {'x': ()}
+        draws, chain = 3, 0
+        db.setup(draws, chain)
+        npt.assert_equal(db.trace.samples[chain]['x'], np.zeros(draws))
 
-    def test_create_trace_1d(self):
+    def test_setup_1d(self):
         db = self.db
-        draws = 3
-        trace = db._create_trace(chain=0, var_name=None, shape=[draws, 2])
-        npt.assert_equal(trace, np.zeros([draws, 2]))
-
-    def test_setup_samples(self):
-        db = self.db
-        draws = 3
-
-        db.var_shapes = {'x': (), 'y': (4,)}
-        db.setup_samples(draws, chain=0)
-
-        npt.assert_equal(db.trace['x'], np.zeros([draws]))
-        npt.assert_equal(db.trace['y'], np.zeros([draws, 4]))
+        shape = (2,)
+        db.var_shapes = {'x': shape}
+        draws, chain = 3, 0
+        db.setup(draws, chain)
+        npt.assert_equal(db.trace.samples[chain]['x'], np.zeros((draws,) + shape))
 
     def test_record(self):
         db = self.db
         draws = 3
 
         db.var_shapes = {'x': (), 'y': (4,)}
-        db.setup_samples(draws, chain=0)
+        db.setup(draws, chain=0)
 
         def just_ones(*args):
             while True:
                 yield 1.
 
-        db._fn = just_ones
+        db.fn = just_ones
+        db.draw_idx = 0
 
-        db.record(point=None, draw=0)
-        npt.assert_equal(1., db.trace.get_values('x', combine=True)[0])
+        db.record(point=None)
+        npt.assert_equal(1., db.trace.get_values('x')[0])
         npt.assert_equal(np.ones(4), db.trace['y'][0])
 
     def test_clean_interrupt(self):
         db = self.db
-        db.setup_samples(draws=3, chain=0)
+        db.setup(draws=10, chain=0)
         db.trace.samples = {0: {'x': np.zeros(10), 'y': np.zeros((10, 5))}}
-        db.clean_interrupt(3)
+        db.draw_idx = 3
+        db.close()
         npt.assert_equal(np.zeros(3), db.trace['x'])
         npt.assert_equal(np.zeros((3, 5)), db.trace['y'])
 
@@ -82,6 +77,12 @@ class TestNDArraySelection(unittest.TestCase):
         self.draws = draws
         self.var_names = var_names
         self.var_shapes = var_shapes
+
+    def test_chains_single_chain(self):
+        self.trace.chains == [0]
+
+    def test_nchains_single_chain(self):
+        self.trace.nchains == 1
 
     def test_get_values_default(self):
         base_shape = (self.draws,)
@@ -187,6 +188,12 @@ class TestNDArrayMultipleChains(unittest.TestCase):
         self.var_names = var_names
         self.var_shapes = var_shapes
         self.total_draws = 2 * draws
+
+    def test_chains_multichain(self):
+        self.trace.chains == [0, 1]
+
+    def test_nchains_multichain(self):
+        self.trace.nchains == [0, 1]
 
     def test_get_values_multi_default(self):
         sample = self.trace.get_values('x')
@@ -318,3 +325,33 @@ class TestNDArrayMultipleChains(unittest.TestCase):
             for var_name, var_shape in self.var_shapes.items():
                 npt.assert_equal(sliced.samples[chain][var_name],
                                  expected[chain][var_name])
+
+class TestMergeChains(unittest.TestCase):
+
+    def setUp(self):
+        var_names = ['x', 'y']
+        var_shapes = {'x': (), 'y': (2,)}
+        draws = 3
+        self.trace1 = ndarray.Trace(var_names)
+        self.trace1.samples = {0:
+                              {'x': np.zeros(draws),
+                               'y': np.zeros((draws, 2))}}
+
+        self.trace2 = ndarray.Trace(var_names)
+        self.trace2.samples = {1:
+                               {'x': np.ones(draws),
+                                'y': np.ones((draws, 2))}}
+        self.draws = draws
+        self.var_names = var_names
+        self.var_shapes = var_shapes
+        self.total_draws = 2 * draws
+
+    def test_merge_chains_two_traces(self):
+        self.trace1.merge_chains([self.trace2])
+        self.assertEqual(self.trace1.samples[1], self.trace2.samples[1])
+
+    def test_merge_chains_two_traces_same_slot(self):
+        self.trace2.samples = self.trace1.samples
+
+        with self.assertRaises(ValueError):
+            self.trace1.merge_chains([self.trace2])

@@ -23,7 +23,17 @@ from pymc.backends.ndarray import NDArray, Trace
 
 
 class Text(NDArray):
+    """Text storage
 
+    Parameters
+    ----------
+    name : str
+        Name of directory to store text files.
+    model : Model
+        If None, the model is taken from the `with` context.
+    variables : list of variable objects
+        Sampling values will be stored for these variables
+    """
     def __init__(self, name, model=None, variables=None):
         super(Text, self).__init__(name, model, variables)
         if not os.path.exists(name):
@@ -56,9 +66,7 @@ def load(name, chains=None, model=None):
     chains : list or None
         Chains to load. If None, all chains are loaded.
     model : Model
-        If None, the model is taken from the `with` context. The trace
-        can be loaded without connecting by passing False (although
-        connecting to the original model is recommended).
+        If None, the model is taken from the `with` context.
 
     Returns
     -------

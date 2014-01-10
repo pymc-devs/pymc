@@ -1,6 +1,5 @@
 from .point import *
 from pymc.backends.ndarray import NDArray
-from pymc.backends.base import merge_chains
 import multiprocessing as mp
 from time import time
 from .core import *
@@ -24,7 +23,7 @@ def sample(draws, step, start=None, db=None, chain=0, threads=1, tune=None,
         Starting point in parameter space (or partial point). Defaults
         to model.test_point.
     db : backend
-        If None, NDArray is used.
+        A storage backend. If None, NDArray is used.
     chain : int
         Chain number used to store sample in trace. If threads greater
         than one, chain numbers will start here
@@ -44,7 +43,7 @@ def sample(draws, step, start=None, db=None, chain=0, threads=1, tune=None,
 
     Returns
     -------
-    Backend object with access to sampling values
+    Trace object with access to sampling values
     """
     if threads is None:
         threads = max(mp.cpu_count() - 2, 1)
@@ -91,7 +90,6 @@ def _sample(draws, step, start=None, db=None, chain=0, tune=None,
         for i, trace in sampling:
             pass
     except KeyboardInterrupt:
-        trace.backend.clean_interrupt(i)
         trace.backend.close()
     return trace
 
@@ -158,15 +156,13 @@ def _iter_sample(draws, step, start=None, db=None, chain=0, tune=None,
 
     if db is None:
         db = NDArray(model=model, variables=variables)
-    db.setup_samples(draws, chain)
+    db.setup(draws, chain)
 
     for i in range(draws):
         if i == tune:
             step = stop_tuning(step)
         point = step.step(point)
-        db.record(point, i)
-        if not i % 1000:
-            db.commit()
+        db.record(point)
         yield db.trace
     else:
         db.close()
@@ -176,7 +172,8 @@ def _thread_sample(threads, args):
     p = mp.Pool(threads)
     traces = p.map(_argsample, args)
     p.close()
-    return merge_chains(traces)
+    traces[0].merge_chains(traces[1:])
+    return traces[0]
 
 
 def _argsample(args):

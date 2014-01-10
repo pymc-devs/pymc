@@ -43,7 +43,7 @@ class TestTextWrite(TextTestCase):
 
         self.draws = 5
         self.db.var_shapes = {'x': (), 'y': (4,)}
-        self.db.setup_samples(self.draws, chain=0)
+        self.db.setup(self.draws, chain=0)
 
         savetxt_patch = mock.patch('pymc.backends.text.np.savetxt')
         self.addCleanup(savetxt_patch.stop)
