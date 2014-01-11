@@ -22,13 +22,12 @@ class SingleComponentStep(CompoundStep):
     def __init__(self, vars=None, **kwargs):
         model = modelcontext(kwargs.get('model', None))
         if vars is None:
-            vars = model.cont_vars
+            vars = model.vars
 
-        try:
-            self.step_method = kwargs.pop('step_method', getattr(self, 'step_method'))
-        except AttributeError as e:
-            print("Either supply step_method argument or use an inherited class like SingleComponentSlice or SingleComponentMetropolis.")
-            raise e
+        if 'step_method' in kwargs:
+            self.step_method = kwargs.pop('step_method')
+        elif not hasattr(self, 'step_method'):
+            raise ArgumentError("Either supply step_method argument or use an inherited class like SingleComponentSlice or SingleComponentMetropolis.")
 
         methods = [self.step_method(vars=[v], **kwargs) for v in vars]
 
