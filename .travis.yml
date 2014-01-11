@@ -4,7 +4,6 @@ python:
   - "3.3"
 before_install:
   - sudo apt-get install liblapack-dev gfortran python-scipy libblas-dev libsuitesparse-dev swig
-  - sudo rmdir /dev/shm
   - sudo ln -Tsf /{run,dev}/shm
 install:
   - pip install git+https://github.com/numpy/numpy.git
