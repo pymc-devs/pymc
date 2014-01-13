@@ -40,6 +40,7 @@ class Text(NDArray):
             os.mkdir(name)
 
     def close(self):
+        super(Text, self).close()
         for chain in self.trace.chains:
             chain_name = 'chain-{}'.format(chain)
             chain_dir = os.path.join(self.name, chain_name)
