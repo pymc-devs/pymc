@@ -56,6 +56,10 @@ class TestCompareNDArraySQLite(unittest.TestCase):
         assert self.ntrace.nchains == self.strace.nchains
         assert len(self.ntrace) == len(self.strace)
 
+    def test_number_of_draws(self):
+        assert self.ntrace['x'][0].shape[0] == self.draws
+        assert self.strace['x'][0].shape[0] == self.draws
+
     def test_get_item(self):
         npt.assert_equal(self.ntrace['x'], self.strace['x'])
 

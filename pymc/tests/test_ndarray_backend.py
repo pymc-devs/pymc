@@ -63,6 +63,15 @@ class TestNDArraySampling(unittest.TestCase):
         npt.assert_equal(np.zeros(3), db.trace['x'])
         npt.assert_equal(np.zeros((3, 5)), db.trace['y'])
 
+    def test_standard_close(self):
+        db = self.db
+        db.setup(draws=10, chain=0)
+        db.trace.samples = {0: {'x': np.zeros(10), 'y': np.zeros((10, 5))}}
+        db.draw_idx = 10
+        db.close()
+        npt.assert_equal(np.zeros(10), db.trace['x'])
+        npt.assert_equal(np.zeros((10, 5)), db.trace['y'])
+
 
 class TestNDArraySelection(unittest.TestCase):
 

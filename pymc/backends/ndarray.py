@@ -53,7 +53,7 @@ class NDArray(base.Backend):
         self.draw_idx += 1
 
     def close(self):
-        if self.draw_idx == self.draws - 1:
+        if self.draw_idx == self.draws:
             return
         ## Remove trailing zeros if interrupted before completed all draws
         traces = self.trace.samples[self.chain]
