@@ -22,7 +22,7 @@ class NDArray(base.Backend):
     def __init__(self, name=None, model=None, variables=None):
         super(NDArray, self).__init__(name, model, variables)
 
-        self.trace = Trace(self.var_names)
+        self.trace = Trace(self.var_names, self)
         self.draw_idx = 0
         self.draws = None
 
@@ -34,13 +34,24 @@ class NDArray(base.Backend):
         chain : int
             chain number
         """
-        self.draws = draws
         self.chain = chain
-        ## Make array of zeros for each variable
-        var_arrays = {}
-        for var_name, shape in self.var_shapes.items():
-            var_arrays[var_name] = np.zeros((draws, ) + shape)
-        self.trace.samples[chain] = var_arrays
+        ## Concatenate new array if chain is already present.
+        if chain in self.trace.samples:
+            chain_trace = self.trace.samples[chain]
+            old_draws = len(self.trace)
+            self.draws = old_draws + draws
+            self.draws_idx = old_draws
+            for var_name, shape in self.var_shapes.items():
+                old_trace = chain_trace[var_name]
+                new_trace = np.zeros((draws, ) + shape)
+                chain_trace[var_name] = np.concatenate((old_trace, new_trace),
+                                                       axis=0)
+        else:  # Otherwise, make array of zeros for each variable.
+            self.draws = draws
+            var_arrays = {}
+            for var_name, shape in self.var_shapes.items():
+                var_arrays[var_name] = np.zeros((draws, ) + shape)
+            self.trace.samples[chain] = var_arrays
 
     def record(self, point):
         """Record results of a sampling iteration
@@ -151,8 +162,13 @@ class Trace(base.Trace):
         -------
         Backend instance with merge chains
         """
+        var_name = self.var_names[0]  # Select any variable.
         for new_trace in traces:
-            new_chain = new_trace.chains[0]
-            if new_chain in self.samples:
-                raise ValueError('Trace chain numbers conflict.')
-            self.samples[new_chain] = new_trace.samples[new_chain]
+            for new_chain in new_trace.chains:
+                if new_chain in self.chains:
+                    ## Take the new chain if it has more draws.
+                    draws = self.samples[new_chain][var_name].shape[0]
+                    new_draws = new_trace.samples[new_chain][var_name].shape[0]
+                    if draws >= new_draws:
+                        continue
+                self.samples[new_chain] = new_trace.samples[new_chain]

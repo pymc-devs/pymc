@@ -121,16 +121,10 @@ def run(n=2000):
     with model:
         trace = sample(5, step, start, variables=model.vars + [sigma])
 
-        ## FIXME: At the moment, there isn't a method for updating the
-        ## same trace. Below makes a new trace in the same backend that
-        ## has both the chains. The chain needs to be manually set to
-        ## avoid overwriting the previous chain. A check could be added
-        ## to override the chain argument to previous chain + 1.
-
         # Start next run at the last sampled position.
         start2 = trace.point(-1)
         step2 = HamiltonianMC(model.vars, hessian(start2, 6), path_length=4.)
-        trace = sample(n, step2, start=start2, db=trace.backend, chain=1)
+        trace = sample(n, step2, db=trace.backend)
 
     # <codecell>
 

@@ -21,20 +21,25 @@ class SQLiteTestCase(unittest.TestCase):
         with mock.patch('pymc.backends.base.modelcontext') as context:
             context.return_value = self.model
             self.db = sqlite.SQLite('test.db')
+
+        self.draws = 5
+
         self.db.cursor = mock.Mock()
         self.db.var_shapes = {'x': (), 'y': (3,)}
+
+        self.db.trace._chains = [0]
+        self.db.trace._len = self.draws
 
         connect_patch = mock.patch('pymc.backends.sqlite.SQLite.connect')
         self.addCleanup(connect_patch.stop)
         self.connect = connect_patch.start()
-        self.draws = 5
 
 
 class TestSQLiteSample(SQLiteTestCase):
 
     def test_setup_trace(self):
         self.db.setup(self.draws, chain=0)
-        self.connect.assert_called_once_with()
+        assert self.connect.called
 
     def test_setup_scalar(self):
         db = self.db
@@ -52,6 +57,8 @@ class TestSQLiteSample(SQLiteTestCase):
     def test_setup_1d(self):
         db = self.db
         db.setup(draws=3, chain=0)
+        db.trace._chains = []
+
         tbl_expected = ('CREATE TABLE IF NOT EXISTS [y] '
                         '(recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
                         'draw INTEGER, '

@@ -29,21 +29,28 @@ class TestCompareNDArraySQLite(unittest.TestCase):
         n = 1
 
         model = pm.Model()
+        draws = 5
         with model:
             x = pm.Normal('x', 0, 1., shape=n)
 
-            # start sampling at the MAP
             start = {'x': 0.}
             step = pm.Metropolis()
             cls.db = 'test.db'
 
             try:
-                cls.draws = 10
-                cls.ntrace = pm.sample(cls.draws, step=step,
-                                       threads=threads, random_seed=4)
-                cls.strace = pm.sample(cls.draws, step=step,
-                                       threads=threads, random_seed=4,
+                cls.ntrace = pm.sample(draws, step=step,
+                                       threads=threads, random_seed=9)
+                cls.strace = pm.sample(draws, step=step,
+                                       threads=threads, random_seed=9,
                                        db=pm.backends.SQLite(cls.db))
+                ## Extend each trace.
+                cls.ntrace = pm.sample(draws, step=step,
+                                       threads=threads, random_seed=4,
+                                       db=cls.ntrace.backend)
+                cls.strace = pm.sample(draws, step=step,
+                                       threads=threads, random_seed=4,
+                                       db=cls.strace.backend)
+                cls.draws = draws * 2  # Account for extension.
             except:
                 remove_db(cls.db)
                 raise
@@ -57,8 +64,10 @@ class TestCompareNDArraySQLite(unittest.TestCase):
         assert len(self.ntrace) == len(self.strace)
 
     def test_number_of_draws(self):
-        assert self.ntrace['x'][0].shape[0] == self.draws
-        assert self.strace['x'][0].shape[0] == self.draws
+        nvalues = self.ntrace.get_values('x', squeeze=False)
+        svalues = self.strace.get_values('x', squeeze=False)
+        assert nvalues[0].shape[0] == self.draws
+        assert svalues[0].shape[0] == self.draws
 
     def test_get_item(self):
         npt.assert_equal(self.ntrace['x'], self.strace['x'])

@@ -48,6 +48,8 @@ QUERIES = {
                          'WHERE (chain={chain}) AND (draw={draw})'),
     'max_draw':         ('SELECT MAX(draw) FROM [{table}] '
                          'WHERE chain={chain}'),
+    'draw_count':       ('SELECT COUNT(*) FROM [{table}] '
+                         'WHERE chain={chain}'),
 }
 
 
@@ -76,6 +78,7 @@ class SQLite(base.Backend):
         self.cursor = None
         self.connected = False
 
+        self._var_cols = {}
         self.var_inserts = {}  # var_name -> insert query
         self.draw_idx = 0
 
@@ -87,15 +90,30 @@ class SQLite(base.Backend):
         chain : int
             chain number
         """
+        self.chain = chain
+
+        if not self._var_cols:  # Table has not been created.
+            self._var_cols = {var_name: _create_colnames(shape)
+                              for var_name, shape in self.var_shapes.items()}
+            self._create_table()
+        else:
+            self.draw_idx = self.trace._get_max_draw(chain) + 1
+            self.trace._len = None
+
+        self._create_insert_queries(chain)
+
+    def _create_table(self):
         self.connect()
         table = QUERIES['table']
-        insert = QUERIES['insert']
-        for var_name, shape in self.var_shapes.items():
-            var_cols = _create_colnames(shape)
+        for var_name, var_cols in self._var_cols.items():
             var_float = ', '.join([v + ' FLOAT' for v in var_cols])
-            ## Create table
             self.cursor.execute(table.format(table=var_name,
                                              value_cols=var_float))
+
+    def _create_insert_queries(self, chain):
+        self.connect()
+        insert = QUERIES['insert']
+        for var_name, var_cols in self._var_cols.items():
             ## Create insert query for each variable
             var_str = ', '.join(var_cols)
             self.var_inserts[var_name] = insert.format(table=var_name,
@@ -147,11 +165,20 @@ class Trace(base.Trace):
 
     def __len__(self):
         if self._len is None:
-            query = QUERIES['max_draw'].format(table=self.var_names[0],
-                                               chain=self.default_chain)
-            self.backend.connect()
-            self._len = self.backend.cursor.execute(query).fetchall()[0][0] + 1
+            self._len = self._get_number_draws(self.default_chain)
         return self._len
+
+    def _get_max_draw(self, chain):
+        self.backend.connect()
+        query = QUERIES['max_draw'].format(table=self.var_names[0],
+                                           chain=chain)
+        return self.backend.cursor.execute(query).fetchall()[0][0]
+
+    def _get_number_draws(self, chain):
+        self.backend.connect()
+        query = QUERIES['draw_count'].format(table=self.var_names[0],
+                                             chain=chain)
+        return self.backend.cursor.execute(query).fetchall()[0][0]
 
     @property
     def chains(self):

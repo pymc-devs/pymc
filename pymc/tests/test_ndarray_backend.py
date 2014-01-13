@@ -340,27 +340,53 @@ class TestMergeChains(unittest.TestCase):
     def setUp(self):
         var_names = ['x', 'y']
         var_shapes = {'x': (), 'y': (2,)}
-        draws = 3
         self.trace1 = ndarray.Trace(var_names)
+
+        self.trace2 = ndarray.Trace(var_names)
+        self.var_names = var_names
+        self.var_shapes = var_shapes
+
+    def test_merge_chains_two_traces(self):
+        draws = 3
         self.trace1.samples = {0:
                               {'x': np.zeros(draws),
                                'y': np.zeros((draws, 2))}}
-
-        self.trace2 = ndarray.Trace(var_names)
         self.trace2.samples = {1:
                                {'x': np.ones(draws),
                                 'y': np.ones((draws, 2))}}
-        self.draws = draws
-        self.var_names = var_names
-        self.var_shapes = var_shapes
-        self.total_draws = 2 * draws
 
-    def test_merge_chains_two_traces(self):
         self.trace1.merge_chains([self.trace2])
         self.assertEqual(self.trace1.samples[1], self.trace2.samples[1])
 
-    def test_merge_chains_two_traces_same_slot(self):
-        self.trace2.samples = self.trace1.samples
+    def test_merge_chains_two_traces_same_slot_same_size(self):
+        draws = 3
+        self.trace1.samples = {0:
+                               {'x': np.zeros(draws),
+                                'y': np.zeros((draws, 2))}}
+        self.trace2.samples = {0:
+                               {'x': np.ones(draws),
+                                'y': np.ones((draws, 2))}}
+        self.trace1.merge_chains([self.trace2])
+        npt.assert_equal(self.trace1.samples[0]['x'], np.zeros(draws))
 
-        with self.assertRaises(ValueError):
-            self.trace1.merge_chains([self.trace2])
+    def test_merge_chains_two_traces_same_slot_base_longer(self):
+        draws = 3
+        self.trace1.samples = {0:
+                               {'x': np.zeros(draws),
+                                'y': np.zeros((draws, 2))}}
+        self.trace2.samples = {0:
+                               {'x': np.ones(draws - 1),
+                                'y': np.ones((draws - 1, 2))}}
+        self.trace1.merge_chains([self.trace2])
+        npt.assert_equal(self.trace1.samples[0]['x'], np.zeros(draws))
+
+    def test_merge_chains_two_traces_same_slot_new_longer(self):
+        draws = 3
+        self.trace1.samples = {0:
+                               {'x': np.zeros(draws - 1),
+                                'y': np.zeros((draws - 1, 2))}}
+        self.trace2.samples = {0:
+                               {'x': np.ones(draws),
+                                'y': np.ones((draws, 2))}}
+        self.trace1.merge_chains([self.trace2])
+        npt.assert_equal(self.trace1.samples[0]['x'], np.ones(draws))
