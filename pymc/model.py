@@ -45,7 +45,7 @@ def modelcontext(model):
         return Model.get_context()
     return model
 
-class Factor(object): 
+class Factor(object):
     """Common functionality for objects with a log probability density associated with them."""
     @property
     def logp(self):
@@ -88,7 +88,7 @@ class Model(Context, Factor):
     def __init__(self):
         self.named_vars = {}
         self.free_RVs = []
-        self.observed_RVs = [] 
+        self.observed_RVs = []
         self.deterministics = []
         self.potentials = []
         self.model = self
@@ -100,8 +100,8 @@ class Model(Context, Factor):
         factors = [var.logpt for var in self.basic_RVs] + self.potentials
         return t.add(*map(t.sum, factors))
 
-    @property 
-    def vars(self): 
+    @property
+    def vars(self):
         """List of unobserved random variables the model is defined in terms of (which excludes deterministics)."""
         return self.free_RVs
 
@@ -110,10 +110,10 @@ class Model(Context, Factor):
         """List of random variables the model is defined in terms of (which excludes deterministics)."""
         return (self.free_RVs + self.observed_RVs)
 
-    @property 
-    def unobserved_RVs(self): 
-        """List of all random variable, including deterministic ones.""" 
-        return self.free_RVs + self.deterministics 
+    @property
+    def unobserved_RVs(self):
+        """List of all random variable, including deterministic ones."""
+        return self.free_RVs + self.deterministics
 
 
     @property
@@ -128,11 +128,11 @@ class Model(Context, Factor):
         return list(typefilter(self.vars, continuous_types))
 
     def Var(self, name, dist, data=None):
-        """Create and add (un)observed random variable to the model with an appropriate prior distribution. 
+        """Create and add (un)observed random variable to the model with an appropriate prior distribution.
 
-        Parameters 
+        Parameters
         ----------
-            name : str 
+            name : str
             dist : distribution for the random variable
             data : arraylike (optional)
                if data is provided, the variable is observed. If None, the variable is unobserved.
@@ -140,10 +140,10 @@ class Model(Context, Factor):
         -------
             FreeRV or ObservedRV
         """
-        if data is None: 
-            var = FreeRV(name=name, distribution=dist, model=self) 
+        if data is None:
+            var = FreeRV(name=name, distribution=dist, model=self)
             self.free_RVs.append(var)
-        else: 
+        else:
             var = ObservedRV(name=name, data=data, distribution=dist, model=self)
             self.observed_RVs.append(var)
         self.add_random_variable(var)
@@ -200,7 +200,7 @@ class Model(Context, Factor):
                      mode=mode)
 
     def fn(self, outs, mode=None):
-        """Compiles a Theano function which returns the values of `outs` and takes values of model 
+        """Compiles a Theano function which returns the values of `outs` and takes values of model
         vars as arguments.
 
         Parameters
@@ -214,7 +214,7 @@ class Model(Context, Factor):
         return LoosePointFunc(self.makefn(outs, mode), self)
 
     def fastfn(self, outs, mode=None):
-        """Compiles a Theano function which returns `outs` and takes values of model 
+        """Compiles a Theano function which returns `outs` and takes values of model
         vars as a dict as an argument.
 
         Parameters
@@ -228,7 +228,7 @@ class Model(Context, Factor):
         return FastPointFunc(self.makefn(outs, mode))
 
 def fn(outs, mode=None, model=None):
-    """Compiles a Theano function which returns the values of `outs` and takes values of model 
+    """Compiles a Theano function which returns the values of `outs` and takes values of model
     vars as arguments.
 
     Parameters
@@ -243,7 +243,7 @@ def fn(outs, mode=None, model=None):
     return model.fn(outs,mode)
 
 def fastfn(outs, mode=None, model=None):
-    """Compiles a Theano function which returns `outs` and takes values of model 
+    """Compiles a Theano function which returns `outs` and takes values of model
     vars as a dict as an argument.
 
     Parameters
@@ -290,7 +290,7 @@ class FastPointFunc(object):
         return self.f(**state)
 
 class LoosePointFunc(object):
-    """Wraps so a function so it takes a dict of arguments instead of arguments 
+    """Wraps so a function so it takes a dict of arguments instead of arguments
     but can still take arguments."""
     def __init__(self, f, model):
         self.f = f
@@ -300,7 +300,7 @@ class LoosePointFunc(object):
         point = Point(model=self.model, *args, **kwargs)
         return self.f(**point)
 
-compilef = fastfn 
+compilef = fastfn
 
 
 class FreeRV(Factor, TensorVariable):
@@ -349,11 +349,11 @@ class ObservedRV(Factor):
 
         if len(args) > 1:
             params = getargspec(distribution.logp).args
-            args = [t.constant(d, name=name + "_" + param) 
+            args = [t.constant(d, name=name + "_" + param)
                     for d,param in zip(args,params) ]
-        else: 
+        else:
             args = [t.constant(args[0], name=name)]
-            
+
         self.logp_elemwiset = distribution.logp(*args)
         self.model = model
 
@@ -368,6 +368,7 @@ def Deterministic(name, var, model=None):
     -------
         n : var but with name name"""
     var.name = name
+    modelcontext(model).deterministics.append(var)
     modelcontext(model).add_random_variable(var)
     return var
 
