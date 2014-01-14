@@ -119,12 +119,12 @@ def run(n=2000):
     if n == "short":
         n = 50
     with model:
-        trace = sample(5, step, start, trace=model.vars + [sigma])
+        trace = sample(5, step, start, variables=model.vars + [sigma])
 
         # Start next run at the last sampled position.
         start2 = trace.point(-1)
         step2 = HamiltonianMC(model.vars, hessian(start2, 6), path_length=4.)
-        trace = sample(2000, step2, trace=trace)
+        trace = sample(n, step2, db=trace.backend)
 
     # <codecell>
 

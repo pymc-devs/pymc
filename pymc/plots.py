@@ -7,12 +7,11 @@ except ImportError:
 import numpy as np
 from scipy.stats import kde
 from .stats import *
-from .trace import *
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
 
-def traceplot(trace, vars=None, figsize=None,
+def traceplot(trace, var_names=None, figsize=None,
               lines=None, combined=False, grid=True):
     """Plot samples histograms and values
 
@@ -20,7 +19,7 @@ def traceplot(trace, vars=None, figsize=None,
     ----------
 
     trace : result of MCMC run
-    vars : list of variable names
+    var_names : list of variable names
         Variables to be plotted, if None all variable are plotted
     figsize : figure size tuple
         If None, size is (12, num of variables * 2) inch
@@ -29,8 +28,8 @@ def traceplot(trace, vars=None, figsize=None,
         lines to the posteriors and horizontal lines on sample values
         e.g. mean of posteriors, true values of a simulation
     combined : bool
-        Flag for combining MultiTrace into a single trace. If False (default)
-        traces will be plotted separately on the same set of axes.
+        Flag for combining multiple chains into a single chain. If False
+        (default), chains will be plotted separately.
     grid : bool
         Flag for adding gridlines to histogram. Defaults to True.
 
@@ -40,30 +39,19 @@ def traceplot(trace, vars=None, figsize=None,
     fig : figure object
 
     """
+    if var_names is None:
+        var_names = trace.var_names
 
-    if vars is None:
-        vars = trace.varnames
-
-    if isinstance(trace, MultiTrace):
-        if combined:
-            traces = [trace.combined()]
-        else:
-            traces = trace.traces
-    else:
-        traces = [trace]
-
-    n = len(vars)
+    n = len(var_names)
 
     if figsize is None:
         figsize = (12, n*2)
 
     fig, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
 
-    for trace in traces:
-        for i, v in enumerate(vars):
-            d = np.squeeze(trace[v])
-
-            if trace[v].dtype.kind == 'i':
+    for i, v in enumerate(var_names):
+        for d in trace.get_values(v, combine=combined, squeeze=False):
+            if d.dtype.kind == 'i':
                 histplot_op(ax[i, 0], d)
             else:
                 kdeplot_op(ax[i, 0], d)
@@ -138,36 +126,25 @@ def kde2plot(x, y, grid=200):
 
 def autocorrplot(trace, vars=None, fontmap=None, max_lag=100):
     """Bar plot of the autocorrelation function for a trace"""
-
-    try:
-        # MultiTrace
-        traces = trace.traces
-
-    except AttributeError:
-        # NpTrace
-        traces = [trace]
-
     if fontmap is None:
         fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
     if vars is None:
-        vars = traces[0].varnames
+        var_names = trace.var_names
+    else:
+        var_names = [str(var) for var in vars]
+
+    chains = trace.nchains
 
     # Extract sample data
-    samples = [{v: trace[v] for v in vars} for trace in traces]
 
-    chains = len(traces)
+    f, ax = subplots(len(var_names), chains, squeeze=False)
 
-    n = len(samples[0])
-    f, ax = subplots(n, chains, squeeze=False)
+    max_lag = min(len(trace) - 1, max_lag)
 
-    max_lag = min(len(samples[0][vars[0]])-1, max_lag)
-
-    for i, v in enumerate(vars):
-
+    for i, v in enumerate(var_names):
         for j in range(chains):
-
-            d = np.squeeze(samples[j][v])
+            d = np.squeeze(trace.get_values(v, chains=[j]))
 
             ax[i, j].acorr(d, detrend=mlab.detrend_mean, maxlags=max_lag)
 
@@ -205,7 +182,7 @@ def var_str(name, shape):
     names[0] = '%s %s' % (name, names[0])
     return names
 
-
+## FIXME: This has not been updated to work with backends
 def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                main=None, xtitle=None, xrange=None, ylabels=None,
                chain_spacing=0.05, vline=0):

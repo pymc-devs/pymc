@@ -1,5 +1,12 @@
-import pymc
-from pymc import sample, psample, iter_sample
+import numpy as np
+import numpy.testing as npt
+try:
+    import unittest.mock as mock  # py3
+except ImportError:
+    import mock
+import unittest
+
+from pymc import sample, iter_sample
 from .models import simple_init
 
 # Test if multiprocessing is available
@@ -15,24 +22,19 @@ def test_sample():
 
     model, start, step, _ = simple_init()
 
-    test_samplers = [sample]
-
-    tr = sample(5, step, start, model=model)
-    test_traces = [None, tr]
+    test_threads = [1]
 
     if test_parallel:
-        test_samplers.append(psample)
+        test_threads.append(2)
 
     with model:
-        for trace in test_traces:
-            for samplr in test_samplers:
-                for n in [0, 1, 10, 300]:
+        for threads in test_threads:
+            for n in [1, 10, 300]:
+                yield sample, n, step, {}, None, threads
 
-                    yield samplr, n, step, {}
-                    yield samplr, n, step, {}, trace
-                    yield samplr, n, step, start
 
 def test_iter_sample():
     model, start, step, _ = simple_init()
-    for i, trace in enumerate(iter_sample(5, step, start, model=model)):
+    samps = iter_sample(5, step, start, model=model)
+    for i, trace in enumerate(samps):
         assert i == len(trace) - 1, "Trace does not have correct length."

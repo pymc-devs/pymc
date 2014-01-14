@@ -11,39 +11,28 @@ def statfunc(f):
     """
 
     def wrapped_f(pymc_obj, *args, **kwargs):
+        burn = kwargs.pop('burn', 0)
+        thin = kwargs.pop('thin', 1)
+        combine = kwargs.pop('combine', False)
 
         try:
-            burn = kwargs.pop('burn')
-        except KeyError:
-            burn = 0
-
-        try:
-            # MultiTrace
-            traces = pymc_obj.traces
-
-            try:
-                vars = kwargs.pop('vars')
-            except KeyError:
-                vars = traces[0].varnames
-
-            return [{v: f(trace[v][burn:], *args, **kwargs) for v in vars} for trace in traces]
-
+            var_names = kwargs.pop('vars',  pymc_obj.var_names)
+            chains = kwargs.pop('chains', pymc_obj.active_chains)
         except AttributeError:
-            pass
+            # If fails, assume that raw data is passed
+            return f(pymc_obj, *args, **kwargs)
 
-        try:
-            # NpTrace
-            try:
-                vars = kwargs.pop('vars')
-            except KeyError:
-                vars = pymc_obj.varnames
+        results = {chain: {} for chain in chains}
+        for var_name in var_names:
+            samples = pymc_obj.get_values(var_name, chains=chains, burn=burn,
+                                          thin=thin, combine=combine,
+                                          squeeze=False)
+            for chain, data in zip(chains, samples):
+                results[chain][var_name] = f(np.squeeze(data), *args, **kwargs)
 
-            return {v: f(pymc_obj[v][burn:], *args, **kwargs) for v in vars}
-        except AttributeError:
-            pass
-
-        # If others fail, assume that raw data is passed
-        return f(pymc_obj, *args, **kwargs)
+        if len(chains) == 1 or combine:
+            results = results[chains[0]]
+        return results
 
     wrapped_f.__doc__ = f.__doc__
     wrapped_f.__name__ = f.__name__
