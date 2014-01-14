@@ -73,7 +73,7 @@ def stochastic_from_scipy_dist(scipy_dist):
 
     (args, varargs, varkw, defaults) = inspect.getargspec(scipy_dist._cdf)
     shape_args = args[2:]
-    if isinstance(scipy_dist, cdists.rv_continuous):
+    if isinstance(scipy_dist, rv_continuous):
         dtype = float
 
         def logp(value, **kwds):
@@ -83,7 +83,7 @@ def stochastic_from_scipy_dist(scipy_dist):
         parent_names = shape_args + ['loc', 'scale']
         defaults = [None] * (len(parent_names) - 2) + [0., 1.]
 
-    elif isinstance(scipy_dist, ddists.rv_discrete):
+    elif isinstance(scipy_dist, rv_discrete):
         dtype = int
 
         def logp(value, **kwds):
@@ -241,7 +241,7 @@ if sp_old:
 
     for scipy_dist_name in sc_dst.__all__:
         scipy_dist = sc_dst.__dict__[scipy_dist_name]
-        if isinstance(scipy_dist, sc_dst.rv_continuous) or isinstance(scipy_dist, sc_dst.rv_discrete):
+        if isinstance(scipy_dist, rv_continuous) or isinstance(scipy_dist, rv_discrete):
             new_dist = stochastic_from_scipy_dist(scipy_dist)
             locals()[new_dist.__name__] = new_dist
             __all__.append(new_dist.__name__)
@@ -250,14 +250,14 @@ else:
 
     for scipy_dist_name in ddists.__all__:
         scipy_dist = ddists.__dict__[scipy_dist_name]
-        if isinstance(scipy_dist, ddists.rv_discrete):
+        if isinstance(scipy_dist, rv_discrete):
             new_dist = stochastic_from_scipy_dist(scipy_dist)
             locals()[new_dist.__name__] = new_dist
             __all__.append(new_dist.__name__)
 
     for scipy_dist_name in cdists.__all__:
         scipy_dist = cdists.__dict__[scipy_dist_name]
-        if isinstance(scipy_dist, cdists.rv_continuous):
+        if isinstance(scipy_dist, rv_continuous):
             new_dist = stochastic_from_scipy_dist(scipy_dist)
             locals()[new_dist.__name__] = new_dist
             __all__.append(new_dist.__name__)
