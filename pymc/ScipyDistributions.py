@@ -1,5 +1,16 @@
-from scipy.stats import _continuous_distns as cdists
-from scipy.stats import _discrete_distns as ddists
+# Need to accomodate for SciPy's recent changes in organization
+# of statistical distributuions
+try:
+    from scipy.stats import _continuous_distns as cdists
+    from scipy.stats import _discrete_distns as ddists
+    rv_discrete = ddists.rv_discrete
+    rv_continuous = cdists.rv_continuous
+    sp_old = False
+except ImportError:
+    import scipy.stats.distributions as sc_dst
+    rv_discrete = sc_dst.rv_discrete
+    rv_continuous = sc_dst.rv_continuous
+    sp_old = True
 import inspect
 import numpy as np
 from . import Stochastic
@@ -226,16 +237,27 @@ reporting the bug.
     newer_class.__name__ = new_class.__name__
     return newer_class
 
-for scipy_dist_name in ddists.__all__:
-    scipy_dist = ddists.__dict__[scipy_dist_name]
-    if isinstance(scipy_dist, ddists.rv_discrete):
-        new_dist = stochastic_from_scipy_dist(scipy_dist)
-        locals()[new_dist.__name__] = new_dist
-        __all__.append(new_dist.__name__)
+if sp_old:
 
-for scipy_dist_name in cdists.__all__:
-    scipy_dist = cdists.__dict__[scipy_dist_name]
-    if isinstance(scipy_dist, cdists.rv_continuous):
-        new_dist = stochastic_from_scipy_dist(scipy_dist)
-        locals()[new_dist.__name__] = new_dist
-        __all__.append(new_dist.__name__)
+    for scipy_dist_name in sc_dst.__all__:
+        scipy_dist = sc_dst.__dict__[scipy_dist_name]
+        if isinstance(scipy_dist, sc_dst.rv_continuous) or isinstance(scipy_dist, sc_dst.rv_discrete):
+            new_dist = stochastic_from_scipy_dist(scipy_dist)
+            locals()[new_dist.__name__] = new_dist
+            __all__.append(new_dist.__name__)
+
+else:
+
+    for scipy_dist_name in ddists.__all__:
+        scipy_dist = ddists.__dict__[scipy_dist_name]
+        if isinstance(scipy_dist, ddists.rv_discrete):
+            new_dist = stochastic_from_scipy_dist(scipy_dist)
+            locals()[new_dist.__name__] = new_dist
+            __all__.append(new_dist.__name__)
+
+    for scipy_dist_name in cdists.__all__:
+        scipy_dist = cdists.__dict__[scipy_dist_name]
+        if isinstance(scipy_dist, cdists.rv_continuous):
+            new_dist = stochastic_from_scipy_dist(scipy_dist)
+            locals()[new_dist.__name__] = new_dist
+            __all__.append(new_dist.__name__)
