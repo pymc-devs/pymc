@@ -1,8 +1,8 @@
 import numpy as np
 import imp
 import pymc
-mod_search_path = [pymc.__path__[0]+'/gp/cov_funs']
-imp.load_module('distances', *imp.find_module('distances',mod_search_path))
+
+import distances
 
 from .distances import euclidean, aniso_geo_rad, paniso_geo_rad
 from .distances import geographic as geo_rad
