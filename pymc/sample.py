@@ -137,8 +137,8 @@ def argsample(args):
     return sample(*args)
 
 
-def psample(draws, step, start=None, trace=None, tune=None, model=None, threads=None,
-    random_seeds=None):
+def psample(draws, step, start=None, trace=None, tune=None, progressbar=True,
+            model=None, threads=None, random_seeds=None):
     """draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
     returns the amount of time taken
@@ -156,6 +156,8 @@ def psample(draws, step, start=None, trace=None, tune=None, model=None, threads=
         Either a trace of past values or a list of variables to track (defaults to None)
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
+    progressbar : bool
+        Flag for progress bar
     model : Model (optional if in `with` context)
     threads : int
         Number of parallel traces to start
@@ -190,10 +192,10 @@ def psample(draws, step, start=None, trace=None, tune=None, model=None, threads=
 
     if random_seeds is None:
         random_seeds = [None] * threads
+    pbars = [progressbar] + [False] * (threads - 1)
 
     argset = zip([draws] * threads, [step] * threads, start, mtrace.traces,
-                 [tune] * threads, [False] * threads, [model] * threads,
-                 random_seeds)
+                 [tune] * threads, pbars, [model] * threads, random_seeds)
 
     traces = p.map(argsample, argset)
 
