@@ -270,34 +270,31 @@ def geweke(x, first=.1, last=.5, intervals=20):
     if first + last >= 1:
         raise ValueError(
             "Invalid intervals for Geweke convergence analysis",
-            (first,
-             last))
+            (first,last))
 
     # Initialize list of z-scores
-    zscores = []
+    zscores = [None] * intervals
 
-    # Last index value
-    end = len(x) - 1
-
-    # Calculate starting indices
-    sindices = np.arange(0, end // 2, step=int((end / 2) / (intervals - 1)))
+    # Make a copy we can truncate
+    x_trunc = x[:]
 
     # Loop over start indices
-    for start in sindices:
+    for i in range(intervals):
+
+        # Size of remaining array
+        n = len(x_trunc)
 
         # Calculate slices
-        first_slice = x[start: start + int(first * (end - start))]
-        last_slice = x[int(end - last * (end - start)):]
+        first_slice = x_trunc[:int(first * n)]
+        last_slice = x_trunc[int(last * n):]
 
         z = (first_slice.mean() - last_slice.mean())
-        z /= np.sqrt(first_slice.std() ** 2 + last_slice.std() ** 2)
+        z /= np.sqrt(first_slice.var() / len(first_slice) + last_slice.var() / len(last_slice))
+        zscores[i] = len(x) - len(x_trunc), z
 
-        zscores.append([start, z])
+        x_trunc = x_trunc[int(first * n):]
 
-    if intervals is None:
-        return zscores[0]
-    else:
-        return zscores
+    return zscores
 
 # From StatLib -- gibbsit.f
 
