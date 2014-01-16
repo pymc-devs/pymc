@@ -133,18 +133,24 @@ def gelman_rubin(mtrace):
 
     def calc_rhat(x):
 
-        m, n = x.shape
+        try:
+            m, n = x.shape
 
-        # Calculate between-chain variance
-        B = n * np.var(np.mean(x, axis=1), ddof=1)
+            # Calculate between-chain variance
+            B = n * np.var(np.mean(x, axis=1), ddof=1)
 
-        # Calculate within-chain variance
-        W = np.mean(np.var(x, axis=1, ddof=1))
+            # Calculate within-chain variance
+            W = np.mean(np.var(x, axis=1, ddof=1))
 
-        # Estimate of marginal posterior variance
-        Vhat = W*(n - 1)/n + B/n
+            # Estimate of marginal posterior variance
+            Vhat = W*(n - 1)/n + B/n
 
-        return np.sqrt(Vhat/W)
+            return np.sqrt(Vhat/W)
+
+        except ValueError:
+
+            rotated_indices = np.roll(np.arange(x.ndim), 1)
+            return np.squeeze([calc_rhat(xi) for xi in x.transpose(rotated_indices)])
 
     Rhat = {}
     for var in mtrace.varnames:
