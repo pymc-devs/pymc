@@ -61,7 +61,7 @@ class test_geweke(TestCase):
         # within 2 standard deviations of zero, under standard normal model
         intervals = 40
         x = np.transpose(pymc.geweke(np.random.normal(size=10000), intervals=intervals))[1]
-        assert(sum(np.abs(x) > 1.96) < (int(0.05 * intervals) + 1))
+        assert(sum(np.abs(x) < 2) >= int(0.9 * intervals))
 
     def test_simple(self):
 
