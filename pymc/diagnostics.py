@@ -134,6 +134,8 @@ def gelman_rubin(mtrace):
     def calc_rhat(x):
 
         try:
+            # When the variable is multidimensional, this assignment will fail, triggering
+            # a ValueError that will handle the multidimensional case
             m, n = x.shape
 
             # Calculate between-chain variance
@@ -149,7 +151,9 @@ def gelman_rubin(mtrace):
 
         except ValueError:
 
+            # Tricky transpose here, shifting the last dimension to the first
             rotated_indices = np.roll(np.arange(x.ndim), 1)
+            # Now iterate over the dimension of the variable
             return np.squeeze([calc_rhat(xi) for xi in x.transpose(rotated_indices)])
 
     Rhat = {}
