@@ -149,10 +149,10 @@ computes its log-probability as follows:</p>
     <span class="sd">&quot;&quot;&quot;The switchpoint for the rate of disaster occurrence.&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">t_h</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">t_l</span><span class="p">:</span>
         <span class="c"># Invalid values</span>
-        <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="c"># Uniform log-likelihood</span>
-        <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">t_h</span> <span class="o">-</span> <span class="n">t_l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">t_h</span> <span class="o">-</span> <span class="n">t_l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Note that this is a simple Python function preceded by a Python expression
@@ -185,13 +185,13 @@ on its parents.</p>
 
     <span class="k">def</span> <span class="nf">logp</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">t_h</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">t_l</span><span class="p">:</span>
-            <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
+            <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">t_h</span> <span class="o">-</span> <span class="n">t_l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">t_h</span> <span class="o">-</span> <span class="n">t_l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">random</span><span class="p">(</span><span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
         <span class="kn">from</span> <span class="nn">numpy.random</span> <span class="kn">import</span> <span class="n">random</span>
-        <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">round</span><span class="p">(</span> <span class="p">(</span><span class="n">t_l</span> <span class="o">-</span> <span class="n">t_h</span><span class="p">)</span> <span class="o">*</span> <span class="n">random</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span> <span class="n">t_l</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span> <span class="p">(</span><span class="n">t_l</span> <span class="o">-</span> <span class="n">t_h</span><span class="p">)</span> <span class="o">*</span> <span class="n">random</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span> <span class="n">t_l</span>
 </pre></div>
 </div>
 <p class="last">The stochastic variable again gets its name, docstring and parents from
@@ -204,13 +204,13 @@ take a <tt class="docutils literal"><span class="pre">value</span></tt> argument
 <dd><p class="first">It&#8217;s possible to instantiate <tt class="docutils literal"><span class="pre">Stochastic</span></tt> directly:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">switchpoint_logp</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">t_h</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">t_l</span><span class="p">:</span>
-        <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">t_h</span> <span class="o">-</span> <span class="n">t_l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">t_h</span> <span class="o">-</span> <span class="n">t_l</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 
 <span class="k">def</span> <span class="nf">switchpoint_rand</span><span class="p">(</span><span class="n">t_l</span><span class="p">,</span> <span class="n">t_h</span><span class="p">):</span>
     <span class="kn">from</span> <span class="nn">numpy.random</span> <span class="kn">import</span> <span class="n">random</span>
-    <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">round</span><span class="p">(</span> <span class="p">(</span><span class="n">t_l</span> <span class="o">-</span> <span class="n">t_h</span><span class="p">)</span> <span class="o">*</span> <span class="n">random</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span> <span class="n">t_l</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span> <span class="p">(</span><span class="n">t_l</span> <span class="o">-</span> <span class="n">t_h</span><span class="p">)</span> <span class="o">*</span> <span class="n">random</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span> <span class="n">t_l</span>
 
 <span class="n">switchpoint</span> <span class="o">=</span> <span class="n">Stochastic</span><span class="p">(</span> <span class="n">logp</span> <span class="o">=</span> <span class="n">switchpoint_logp</span><span class="p">,</span>
                 <span class="n">doc</span> <span class="o">=</span> <span class="s">&#39;The switchpoint for the rate of disaster occurrence.&#39;</span><span class="p">,</span>
@@ -341,8 +341,8 @@ to step methods.</p>
 </dd>
 <dt><strong>Elementary operations on variables</strong></dt>
 <dd><p class="first">Certain elementary operations on variables create deterministic variables. For example:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">MvNormalCov</span><span class="p">(</span><span class="s">&#39;x&#39;</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span><span class="n">numpy</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">MvNormalCov</span><span class="p">(</span><span class="s">&#39;y&#39;</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span><span class="n">numpy</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">MvNormalCov</span><span class="p">(</span><span class="s">&#39;x&#39;</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">MvNormalCov</span><span class="p">(</span><span class="s">&#39;y&#39;</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">x</span><span class="o">+</span><span class="n">y</span>
 <span class="go">&lt;pymc.PyMCObjects.Deterministic &#39;(x_add_y)&#39; at 0x105c3bd10&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -419,7 +419,7 @@ etc.</p>
 <div class="highlight-python"><pre>N = 10
 x_0 = pymc.Normal(`x_0', mu=0, tau=1)
 
-x = numpy.empty(N, dtype=object)
+x = np.empty(N, dtype=object)
 x[0] = x_0
 
 for i in range(1, N):
@@ -428,7 +428,7 @@ for i in range(1, N):
 
 @pymc.observed
 def y(value=1, mu=x, tau=100):
-    return pymc.normal_like(value, numpy.sum(mu**2), tau)</pre>
+    return pymc.normal_like(value, np.sum(mu**2), tau)</pre>
 </div>
 <p>PyMC automatically wraps array <span class="math">\(x\)</span> in an appropriate <tt class="docutils literal"><span class="pre">Container</span></tt> class.
 The expression <tt class="docutils literal"><span class="pre">'x_%i'</span> <span class="pre">%</span> <span class="pre">i</span></tt> labels each <tt class="docutils literal"><span class="pre">Normal</span></tt> object in the container
