@@ -41,7 +41,7 @@ class Uniform(Continuous):
         Upper limit (defaults to 1)
     """
     def __init__(self, lower=0, upper=1, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(Uniform, self).__init__(*args, **kwargs)
         self.lower = lower
         self.upper = upper
         self.mean = (upper + lower) / 2.
@@ -65,7 +65,7 @@ class Flat(Continuous):
     the passed value.
     """
     def __init__(self, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(Flat, self).__init__(*args, **kwargs)
         self.median = 0
 
     def logp(self, value):
@@ -95,7 +95,7 @@ class Normal(Continuous):
 
     """
     def __init__(self, mu=0.0, tau=None, sd=None, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(Normal, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
         self.tau = get_tau(tau=tau, sd=sd)
         self.variance = 1. / self.tau
@@ -130,7 +130,7 @@ class Beta(Continuous):
 
     """
     def __init__(self, alpha, beta, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(Beta, self).__init__(*args, **kwargs)
         self.alpha = alpha
         self.beta = beta
         self.mean = alpha / (alpha + beta)
@@ -161,7 +161,7 @@ class Exponential(Continuous):
         rate or inverse scale
     """
     def __init__(self, lam, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(Exponential, self).__init__(*args, **kwargs)
         self.lam = lam
         self.mean = 1. / lam
         self.median = self.mean * log(2)
@@ -189,7 +189,7 @@ class Laplace(Continuous):
     """
 
     def __init__(self, mu, b, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(Laplace, self).__init__(*args, **kwargs)
         self.b = b
         self.mean = self.median = self.mode = self.mu = mu
 
@@ -227,7 +227,7 @@ class Lognormal(Continuous):
 
     """
     def __init__(self, mu=0, tau=1, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(Lognormal, self).__init__(*args, **kwargs)
         self.mu = mu
         self.tau = tau
         self.mean = exp(mu + 1./(2*tau))
@@ -269,7 +269,7 @@ class T(Continuous):
         Scale parameter (defaults to 1)
     """
     def __init__(self, nu, mu=0, lam=1, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(T, self).__init__(*args, **kwargs)
         self.nu = nu
         self.lam = lam
         self.mean = self.median = self.mode = self.mu = mu
@@ -308,7 +308,7 @@ class Cauchy(Continuous):
     """
 
     def __init__(self, alpha, beta, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(Cauchy, self).__init__(*args, **kwargs)
         self.median = self.mode = self.alpha = alpha
         self.beta = beta
 
@@ -345,7 +345,7 @@ class Gamma(Continuous):
 
     """
     def __init__(self, alpha, beta, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(Gamma, self).__init__(*args, **kwargs)
         self.alpha = alpha
         self.beta = beta
         self.mean = alpha / beta

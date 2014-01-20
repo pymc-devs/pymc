@@ -50,8 +50,7 @@ class TransformedDistribution(Distribution):
         v = forward(FreeRV(name='v', distribution=dist))
         self.type = v.type
 
-        Distribution.__init__(self,
-                v.shape.tag.test_value, 
+        super(TransformedDistribution, self).__init__(v.shape.tag.test_value,
                 v.dtype, 
                 testval, dist.defaults, 
                 *args, **kwargs)

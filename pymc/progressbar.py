@@ -43,7 +43,7 @@ class TextProgressBar(ProgressBar):
         self.width = 40
         self.printer = printer
 
-        ProgressBar.__init__(self, iterations)
+        super(TextProgressBar, self).__init__(iterations)
         self.update(0)
 
     def animate(self, i, elapsed):
@@ -94,7 +94,7 @@ class IPythonNotebookPB(ProgressBar):
             """ % (self.divid, self.sec_id))
         display(pb)
 
-        ProgressBar.__init__(self, iterations)
+        super(IPythonNotebookPB, self).__init__(iterations)
 
     def animate(self, i, elapsed):
         percentage = int(self.fraction(i))
