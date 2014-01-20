@@ -21,7 +21,7 @@ class MvNormal(Continuous):
         2 array of floats
     """
     def __init__(self, mu, tau, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(MvNormal, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
         self.tau = tau
 
@@ -60,7 +60,7 @@ class Dirichlet(Continuous):
         as a parent of Multinomial and Categorical nevertheless.
     """
     def __init__(self, a, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(Dirichlet, self).__init__(*args, **kwargs)
         self.a = a
         self.k = a.shape[0]
         self.mean = a / sum(a)
@@ -111,7 +111,7 @@ class Multinomial(Discrete):
         - :math:`Cov(X_i,X_j) = -n p_i p_j`
     """
     def __init__(self, n, p, *args, **kwargs):
-        Discrete.__init__(self, *args, **kwargs)
+        super(Multinomial, self).__init__(*args, **kwargs)
         self.n = n
         self.p = p
         self.mean = n * p
@@ -157,7 +157,7 @@ class Wishart(Continuous):
         Symmetric, positive definite.
     """
     def __init__(self, n, p, V, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(Wishart, self).__init__(*args, **kwargs)
         self.n = n
         self.p = p
         self.V = V

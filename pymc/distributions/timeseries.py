@@ -17,7 +17,7 @@ class AR1(Continuous):
        precision for innovations
     """
     def __init__(self, k, tau_e, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(AR1, self).__init__(*args, **kwargs)
         self.k = k
         self.tau_e = tau_e
         self.tau = tau_e * (1 - k ** 2)
@@ -47,7 +47,7 @@ class GaussianRandomWalk(Continuous):
         distribution for initial value (Defaults to Flat())
     """
     def __init__(self, tau=None, init=Flat.dist(), sd=None, *args, **kwargs):
-        Continuous.__init__(self, *args, **kwargs)
+        super(GaussianRandomWalk, self).__init__(*args, **kwargs)
         self.tau = tau
         self.sd = sd
         self.init = init

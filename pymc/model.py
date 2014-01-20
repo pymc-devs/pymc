@@ -318,7 +318,7 @@ class FreeRV(Factor, TensorVariable):
         model : Model"""
         if type is None:
             type = distribution.type
-        TensorVariable.__init__(self, type, owner, index, name)
+        super(FreeRV, self).__init__(type, owner, index, name)
 
         if distribution is not None:
             self.dshape = tuple(distribution.shape)
