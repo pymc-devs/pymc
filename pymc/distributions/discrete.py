@@ -27,7 +27,7 @@ class Binomial(Discrete):
 
     """
     def __init__(self, n, p, *args, **kwargs):
-        Discrete.__init__(self, *args, **kwargs)
+        super(Binomial, self).__init__(*args, **kwargs)
         self.n = n
         self.p = p
         self.mode = cast(round(n * p), 'int8')
@@ -70,7 +70,7 @@ class BetaBin(Discrete):
 
     """
     def __init__(self, alpha, beta, n, *args, **kwargs):
-        Discrete.__init__(self, *args, **kwargs)
+        super(Binomial, self).__init__(*args, **kwargs)
         self.alpha = alpha
         self.beta = beta
         self.n = n
@@ -109,7 +109,7 @@ class Bernoulli(Discrete):
 
     """
     def __init__(self, p, *args, **kwargs):
-        Discrete.__init__(self, *args, **kwargs)
+        super(Binomial, self).__init__(*args, **kwargs)
         self.p = p
         self.mode = cast(round(p), 'int8')
 
@@ -144,7 +144,7 @@ class Poisson(Discrete):
 
     """
     def __init__(self, mu, *args, **kwargs):
-        Discrete.__init__(self, *args, **kwargs)
+        super(Binomial, self).__init__(*args, **kwargs)
         self.mu = mu
         self.mode = floor(mu).astype('int32')
 
@@ -177,7 +177,7 @@ class NegativeBinomial(Discrete):
 
     """
     def __init__(self, mu, alpha, *args, **kwargs):
-        Discrete.__init__(self, *args, **kwargs)
+        super(Binomial, self).__init__(*args, **kwargs)
         self.mu = mu
         self.alpha = alpha
         self.mode = floor(mu).astype('int32')
@@ -216,7 +216,7 @@ class Geometric(Discrete):
 
     """
     def __init__(self, p, *args, **kwargs):
-        Discrete.__init__(self, *args, **kwargs)
+        super(Binomial, self).__init__(*args, **kwargs)
         self.p = p
         self.mode = 1
 
@@ -239,7 +239,7 @@ class DiscreteUniform(Discrete):
 
     """
     def __init__(self, lower, upper, *args, **kwargs):
-        Discrete.__init__(self, *args, **kwargs)
+        super(Binomial, self).__init__(*args, **kwargs)
         self.lower, self.upper = floor(lower).astype('int32'), floor(upper).astype('int32')
         self.mode = floor((upper - lower) / 2.).astype('int32')
 
@@ -266,7 +266,7 @@ class Categorical(Discrete):
 
     """
     def __init__(self, p, *args, **kwargs):
-        Discrete.__init__(self, *args, **kwargs)
+        super(Binomial, self).__init__(*args, **kwargs)
         self.k = p.shape[0]
         self.p = p
         self.mode = argmax(p)
@@ -292,7 +292,7 @@ class ConstantDist(Discrete):
     """
 
     def __init__(self, c, *args, **kwargs):
-        Discrete.__init__(self, *args, **kwargs)
+        super(Binomial, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c
 
     def logp(self, value):
@@ -302,7 +302,7 @@ class ConstantDist(Discrete):
 
 class ZeroInflatedPoisson(Discrete):
     def __init__(self, theta, z, *args, **kwargs):
-        Discrete.__init__(self, *args, **kwargs)
+        super(Binomial, self).__init__(*args, **kwargs)
         self.theta = theta
         self.z = z
         self.pois = Poisson.dist(theta)
