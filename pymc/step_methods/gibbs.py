@@ -29,7 +29,7 @@ class ElemwiseCategoricalStep(ArrayStep):
         self.values = values
         self.var = var
 
-        ArrayStep.__init__(self, [var], [elemwise_logp(model, var)])
+        super(ElemwiseCategoricalStep, self).__init__([var], [elemwise_logp(model, var)])
 
     def astep(self, q, logp):
         p = array([logp(v * self.sh) for v in self.values])

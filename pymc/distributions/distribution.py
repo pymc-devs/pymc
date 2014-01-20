@@ -27,6 +27,7 @@ class Distribution(object):
 
     @classmethod
     def dist(cls, *args, **kwargs):
+        #super(Distribution, cls).__new__(
         dist = object.__new__(cls)
         dist.__init__(*args, **kwargs)
         return dist
@@ -67,15 +68,15 @@ def TensorType(dtype, shape):
 class Discrete(Distribution): 
     """Base class for discrete distributions"""
     def __init__(self, shape=(), dtype='int64', *args, **kwargs):
-        Distribution.__init__(self, shape, dtype, defaults=['mode'], *args, **kwargs)
+        super(Discrete, self).__init__(shape, dtype, defaults=['mode'], *args, **kwargs)
 
 class Continuous(Distribution): 
     """Base class for continuous distributions"""
     def __init__(self, shape=(), dtype='float64', *args, **kwargs):
-        Distribution.__init__(self, shape, dtype, defaults=['median', 'mean', 'mode'], *args, **kwargs)
+        super(Continuous, self).__init__(shape, dtype, defaults=['median', 'mean', 'mode'], *args, **kwargs)
 
 class DensityDist(Distribution):
     """Distribution based on a given log density function."""
     def __init__(self, logp, shape=(), dtype='float64',testval=0, *args, **kwargs):
-        Distribution.__init__(self, shape, dtype, testval, *args, **kwargs)
+        super(DensityDist, self).__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
