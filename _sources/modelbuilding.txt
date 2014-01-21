@@ -306,13 +306,13 @@ have similar **automatic**, **decorator**, and **direct** interfaces:
         Has two parents :math:`x` and :math:`y`, both of which must be iterable
         (*i.e.* vector-valued). This function returns:
 
-        .. math: \sum_i x_i^T y_i.
+            .. math:: \sum_i x_i^T y_i.
 
     ``Index``:
         Has two parents :math:`x` and ``index``. :math:`x` must be iterables,
         ``index`` must be valued as an integer. The value of an ``index`` is:
 
-        .. math: x[\mathtt{index}]^T y[\mathtt{index}].
+            .. math:: x[\mathtt{index}]^T y[\mathtt{index}].
 
         ``Index`` is useful for implementing dynamic models, in which the
         parent-child connections change.

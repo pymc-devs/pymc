@@ -317,11 +317,20 @@ have similar <strong>automatic</strong>, <strong>decorator</strong>, and <strong
 These are brief enough to list:</p>
 <dl class="docutils">
 <dt><tt class="docutils literal"><span class="pre">LinearCombination</span></tt>:</dt>
-<dd>Has two parents <span class="math">\(x\)</span> and <span class="math">\(y\)</span>, both of which must be iterable
-(<em>i.e.</em> vector-valued). This function returns:</dd>
+<dd><p class="first">Has two parents <span class="math">\(x\)</span> and <span class="math">\(y\)</span>, both of which must be iterable
+(<em>i.e.</em> vector-valued). This function returns:</p>
+<blockquote class="last">
+<div><div class="math">
+\[\sum_i x_i^T y_i.\]</div>
+</div></blockquote>
+</dd>
 <dt><tt class="docutils literal"><span class="pre">Index</span></tt>:</dt>
 <dd><p class="first">Has two parents <span class="math">\(x\)</span> and <tt class="docutils literal"><span class="pre">index</span></tt>. <span class="math">\(x\)</span> must be iterables,
 <tt class="docutils literal"><span class="pre">index</span></tt> must be valued as an integer. The value of an <tt class="docutils literal"><span class="pre">index</span></tt> is:</p>
+<blockquote>
+<div><div class="math">
+\[x[\mathtt{index}]^T y[\mathtt{index}].\]</div>
+</div></blockquote>
 <p class="last"><tt class="docutils literal"><span class="pre">Index</span></tt> is useful for implementing dynamic models, in which the
 parent-child connections change.</p>
 </dd>
