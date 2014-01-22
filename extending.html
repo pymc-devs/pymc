@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -15,7 +13,7 @@
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '2.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -145,7 +143,7 @@ Metropolis step methods&#8217; default tuning behavior is to reduce
 to write our own tuning infrastructure. If we don&#8217;t want the proposal to tune,
 we don&#8217;t have to use <tt class="docutils literal"><span class="pre">adaptive_scale_factor</span></tt>.</p>
 <p>The <tt class="docutils literal"><span class="pre">hastings_factor</span></tt> method adjusts for the asymmetric proposal distribution
-<a class="reference internal" href="references.html#gelman2004">[Gelman2004]</a>. It computes the log of the quotient of the &#8216;backward&#8217; density
+<a class="reference internal" href="references.html#gelman2004" id="id1">[Gelman2004]</a>. It computes the log of the quotient of the &#8216;backward&#8217; density
 and the &#8216;forward&#8217; density. For symmetric proposal distributions, this quotient
 is 1, so its log is zero.</p>
 <p>Having created our custom step method, we need to tell MCMC instances to use it
@@ -253,7 +251,7 @@ values.</p>
 <dt>A list of strings giving the names of any tuning parameters. For</dt>
 <dd><tt class="docutils literal"><span class="pre">Metropolis</span></tt> instances, this would be <tt class="docutils literal"><span class="pre">adaptive_scale_factor</span></tt>. This
 list is used to keep traces of tuning parameters in order to verify
-&#8216;diminishing tuning&#8217; <a class="reference internal" href="references.html#roberts2007">[Roberts2007]</a>.</dd>
+&#8216;diminishing tuning&#8217; <a class="reference internal" href="references.html#roberts2007" id="id2">[Roberts2007]</a>.</dd>
 </dl>
 </dd>
 </dl>
@@ -270,9 +268,10 @@ methods, which are called by <tt class="docutils literal"><span class="pre">Metr
 <dl class="docutils">
 <dt><tt class="docutils literal"><span class="pre">reject()</span></tt>:</dt>
 <dd><p class="first">Usually just</p>
-<div class="last highlight-python"><pre>def reject(self):
+<div class="last highlight-python"><div class="highlight"><pre>def reject(self):
     self.rejected += 1
-    [s.value = s.last_value for s in self.stochastics]</pre>
+    [s.value = s.last_value for s in self.stochastics]
+</pre></div>
 </div>
 </dd>
 <dt><tt class="docutils literal"><span class="pre">propose():</span></tt></dt>
@@ -484,7 +483,7 @@ to save the current model state. Like custom <tt class="docutils literal"><span 
     </div>
     <div class="footer">
         &copy; Copyright 2012, Christopher J. Fonnesbeck.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
     </div>
   </body>
 </html>

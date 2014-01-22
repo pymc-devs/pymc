@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -15,7 +13,7 @@
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '2.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -94,7 +92,7 @@ distribution. Poor mixing may stem from inappropriate proposals (if one is
 using the Metropolis-Hastings sampler) or from attempting to estimate models
 with highly correlated variables.</p>
 <div class="figure align-center" id="mix">
-<a class="reference internal image-reference" href="_images/poormixing.png"><img alt="Poor mixing figure" src="_images/poormixing.png" style="width: 312.2px; height: 294.0px;" /></a>
+<a class="reference internal image-reference" href="_images/poormixing.png"><img alt="Poor mixing figure" src="_images/poormixing.png" /></a>
 <p class="caption">An example of a poorly-mixing sample in two dimensions. Notice that the
 chain is trapped in a region of low probability relative to the mean
 (dot) and variance (oval) of the true posterior quantity.</p>
@@ -129,7 +127,7 @@ constructed using MCMC, and should be observable using this technique. Again,
 however, this approach is only a heuristic method, and cannot always detect
 lack of convergence, even though chains may appear ergodic.</p>
 <div class="figure align-center" id="metas">
-<a class="reference internal image-reference" href="_images/metastable.png"><img alt="_images/metastable.png" src="_images/metastable.png" style="width: 312.2px; height: 294.0px;" /></a>
+<a class="reference internal image-reference" href="_images/metastable.png"><img alt="_images/metastable.png" src="_images/metastable.png" /></a>
 <p class="caption">An example of metastability in a two-dimensional parameter space. The
 chain appears to be stable in one region of the parameter space for an
 extended period, then unpredictably jumps to another region of the
@@ -152,7 +150,7 @@ methods exist which are prevalent in the literature. These are considered more
 formal because they are based on existing statistical methods, such as time
 series analysis.</p>
 <p>PyMC currently includes three formal convergence diagnostic methods. The first,
-proposed by <a class="reference internal" href="references.html#geweke1992">[Geweke1992]</a>, is a time-series approach that compares the mean
+proposed by <a class="reference internal" href="references.html#geweke1992" id="id2">[Geweke1992]</a>, is a time-series approach that compares the mean
 and variance of segments from the beginning and end of a single chain.</p>
 <div class="math">
 \[z = \frac{\bar{\theta}_a - \bar{\theta}_b}{\sqrt{Var(\theta_a) + Var(\theta_b)}}\]</div>
@@ -182,7 +180,7 @@ Defaults to 0.5 (<em>i.e.</em> last 50% of chain).</li>
 the 2 standard deviation boundaries around zero. Hence, it is easy to see
 departures from the standard normal assumption.</p>
 <div class="figure align-center" id="geweke">
-<img alt="Geweke figure." src="_images/geweke.png" style="width: 800px;" />
+<a class="reference internal image-reference" href="_images/geweke.png"><img alt="Geweke figure." src="_images/geweke.png" style="width: 800px;" /></a>
 <p class="caption">Sample plot of Geweke z-scores for a variable using <tt class="docutils literal"><span class="pre">geweke_plot</span></tt>.
 The occurrence of the scores well within 2 standard deviations of zero
 gives not indicate of lack of convergence (top), while deviations exceeding
@@ -191,8 +189,9 @@ achieve convergence (bottom).</p>
 </div>
 <p><tt class="docutils literal"><span class="pre">geweke_plot</span></tt> takes either a single set of scores, or a dictionary of scores
 (output by <tt class="docutils literal"><span class="pre">geweke</span></tt> when an entire Sampler is passed) as its argument:</p>
-<div class="highlight-python"><pre>def geweke_plot(scores, name='geweke', format='png', suffix='-diagnostic',
-                path='./', fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)</pre>
+<div class="highlight-python"><div class="highlight"><pre>def geweke_plot(scores, name=&#39;geweke&#39;, format=&#39;png&#39;, suffix=&#39;-diagnostic&#39;,
+                path=&#39;./&#39;, fontmap = {1:10, 2:8, 3:6, 4:5, 5:4}, verbose=1)
+</pre></div>
 </div>
 <p>The arguments are defined as:</p>
 <ul class="simple">
@@ -230,7 +229,7 @@ convergence:</p>
 </div>
 <p>An example of convergence and non-convergence of a chain using <cite>geweke_plot</cite> is
 given in Figure 7.3.</p>
-<p>The second diagnostic provided by PyMC is the <a class="reference internal" href="references.html#raftery1995a">[Raftery1995a]</a> procedure. This
+<p>The second diagnostic provided by PyMC is the <a class="reference internal" href="references.html#raftery1995a" id="id3">[Raftery1995a]</a> procedure. This
 approach estimates the number of iterations required to reach convergence,
 along with the number of burn-in samples to be discarded and the appropriate
 thinning interval. A separate estimate of both quantities can be obtained for
@@ -254,8 +253,8 @@ preferable to the second order Markov chain.</p>
 done by comparing the remaining samples from burn-in intervals of increasing
 length to the limiting distribution of the chain. An appropriate value is one
 for which the truncated sample&#8217;s distribution is within <span class="math">\(\epsilon\)</span>
-(arbitrarily small) of the limiting distribution. See <a class="reference internal" href="references.html#raftery1995a">[Raftery1995a]</a> or
-<a class="reference internal" href="references.html#gamerman1997">[Gamerman1997]</a> for computational details. Estimates for sample size tend to
+(arbitrarily small) of the limiting distribution. See <a class="reference internal" href="references.html#raftery1995a" id="id4">[Raftery1995a]</a> or
+<a class="reference internal" href="references.html#gamerman1997" id="id5">[Gamerman1997]</a> for computational details. Estimates for sample size tend to
 be conservative.</p>
 <p>This diagnostic is best used on a short pilot run of a particular model, and
 the results used to parameterize a subsequent sample that is to be used for
@@ -276,7 +275,7 @@ the q-quantile (defaults to 0.001).</li>
 <li><tt class="docutils literal"><span class="pre">verbose</span></tt> (optional) : Verbosity level for output (defaults to 1).</li>
 </ul>
 <p>The code for <tt class="docutils literal"><span class="pre">raftery_lewis</span></tt> is based on the FORTRAN program <em>gibbsit</em>
-(<a class="reference internal" href="references.html#raftery1995b">[Raftery1995b]</a>).</p>
+(<a class="reference internal" href="references.html#raftery1995b" id="id6">[Raftery1995b]</a>).</p>
 <p>For example, consider again a sampler S run for some model my_model:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">S</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">MCMC</span><span class="p">(</span><span class="n">my_model</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">S</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="n">burn</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
@@ -291,7 +290,7 @@ the q-quantile (defaults to 0.001).</li>
 </div>
 <p>This yields diagnostics as follows for each stochastic of S, as well as a
 dictionary containing the diagnostic quantities:</p>
-<div class="highlight-python"><pre>========================
+<div class="highlight-python"><div class="highlight"><pre>========================
 Raftery-Lewis Diagnostic
 ========================
 
@@ -304,10 +303,11 @@ Thinning factor of 1 required to produce a first-order Markov chain.
 
 11380 subsequent iterations required.
 
-Thinning factor of 11 required to produce an independence chain.</pre>
+Thinning factor of 11 required to produce an independence chain.
+</pre></div>
 </div>
 <p>The third convergence diagnostic provided by PyMC is the Gelman-Rubin statistic
-(<a class="reference internal" href="references.html#gelman1992">[Gelman1992]</a>). This diagnostic uses multiple chains to check for lack of
+(<a class="reference internal" href="references.html#gelman1992" id="id7">[Gelman1992]</a>). This diagnostic uses multiple chains to check for lack of
 convergence, and is based on the notion that if multiple chains have converged,
 by definition they should appear very similar to one another; if not, one or
 more of the chains has failed to converge.</p>
@@ -350,12 +350,12 @@ for each stochastic node in the passed model:</p>
 <p>For the best results, each chain should be initialized to highly dispersed starting values for each stochastic node.</p>
 <p>By default, when calling the <tt class="docutils literal"><span class="pre">summary_plot</span></tt> function using nodes with multiple chains, the <span class="math">\(\hat{R}\)</span> values will be plotted alongside the posterior intervals.</p>
 <div class="figure align-center" id="summary-plot">
-<img alt="_images/summary.png" src="_images/summary.png" style="width: 800px;" />
+<a class="reference internal image-reference" href="_images/summary.png"><img alt="_images/summary.png" src="_images/summary.png" style="width: 800px;" /></a>
 <p class="caption">Summary plot of parameters from <cite>gelman_bioassay</cite> model, showing credible
 intervals on the left and the Gelman-Rubin statistic on the right.</p>
 </div>
 <p>Additional convergence diagnostics are available in the <a class="reference external" href="http://lib.stat.cmu.edu/r/cran/">R</a> statistical
-package (<a class="reference internal" href="references.html#r2010">[R2010]</a>), via the <a class="reference external" href="http://www-fis.iarc.fr/coda/">CODA</a> module (<a class="reference internal" href="references.html#plummer2008">[Plummer2008]</a>). PyMC includes a
+package (<a class="reference internal" href="references.html#r2010" id="id8">[R2010]</a>), via the <a class="reference external" href="http://www-fis.iarc.fr/coda/">CODA</a> module (<a class="reference internal" href="references.html#plummer2008" id="id9">[Plummer2008]</a>). PyMC includes a
 method <tt class="docutils literal"><span class="pre">coda</span></tt> for exporting model traces in a format that may be directly
 read by <tt class="docutils literal"><span class="pre">coda</span></tt>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">pymc</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">coda</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
@@ -416,7 +416,7 @@ example, the parameter <cite>beta</cite> that was estimated using sampler <cite>
 </pre></div>
 </div>
 <div class="figure align-center" id="autocorr">
-<a class="reference internal image-reference" href="_images/autocorr.png"><img alt="Autocorrelation figure" src="_images/autocorr.png" style="width: 560.0px; height: 560.0px;" /></a>
+<a class="reference internal image-reference" href="_images/autocorr.png"><img alt="Autocorrelation figure" src="_images/autocorr.png" style="width: 560.0px;" /></a>
 <p class="caption">Sample autocorrelation plot for the switchpoint variable from the coal
 mining disasters example model.</p>
 </div>
@@ -478,7 +478,7 @@ the tails of the histogram of replicated data, while a good fit will tend to
 show the true data in high-probability regions of the posterior predictive
 distribution (Figure 7.6).</p>
 <div class="figure align-center" id="gof">
-<a class="reference internal image-reference" href="_images/gof.png"><img alt="GOF figure" src="_images/gof.png" style="width: 560.0px; height: 560.0px;" /></a>
+<a class="reference internal image-reference" href="_images/gof.png"><img alt="GOF figure" src="_images/gof.png" style="width: 560.0px;" /></a>
 <p class="caption">Data sampled from the posterior predictive distribution of a binomial random
 variate. The observed value (1) is shown by the dotted red line.</p>
 </div>
@@ -491,10 +491,10 @@ distribution. The histogram is generated by calling:</p>
 </div>
 <p>A second approach for evaluating goodness of fit using samples from the
 posterior predictive distribution involves the use of a statistical criterion.
-For example, the Bayesian p-value <a class="reference internal" href="references.html#gelman1996">[Gelman1996]</a> uses a discrepancy measure
+For example, the Bayesian p-value <a class="reference internal" href="references.html#gelman1996" id="id10">[Gelman1996]</a> uses a discrepancy measure
 that quantifies the difference between data (observed or simulated) and the
 expected value, conditional on some model. One such discrepancy measure is the
-Freeman-Tukey statistic <a class="reference internal" href="references.html#brooks2000">[Brooks2000]</a>:</p>
+Freeman-Tukey statistic <a class="reference internal" href="references.html#brooks2000" id="id11">[Brooks2000]</a>:</p>
 <div class="math">
 \[D(x|\theta) = \sum_j (\sqrt{x_j}-\sqrt{e_j})^2,\]</div>
 <p>where the <span class="math">\(x_j\)</span> are data and <span class="math">\(e_j\)</span> are the corresponding expected
@@ -511,7 +511,7 @@ and thus is evidence of lack of fit. Graphically, data and simulated
 discrepancies plotted together should be clustered along a 45 degree line
 passing through the origin, as shown in Figure 7.7.</p>
 <div class="figure align-center" id="deviate">
-<a class="reference internal image-reference" href="_images/deviates.png"><img alt="deviates figure" src="_images/deviates.png" style="width: 640.0px; height: 640.0px;" /></a>
+<a class="reference internal image-reference" href="_images/deviates.png"><img alt="deviates figure" src="_images/deviates.png" style="width: 640.0px;" /></a>
 <p class="caption">Plot of deviates of observed and simulated data from expected values.
 The cluster of points symmetrically about the 45 degree line (and the
 reported p-value) suggests acceptable fit for the modeled parameter.</p>
@@ -615,7 +615,7 @@ stays relatively constant over some arbitrary period.</td></tr>
     </div>
     <div class="footer">
         &copy; Copyright 2012, Christopher J. Fonnesbeck.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
     </div>
   </body>
 </html>

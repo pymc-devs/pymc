@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -15,7 +13,7 @@
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '2.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -58,15 +56,15 @@
   <div class="section" id="tutorial">
 <span id="chap-tutorial"></span><h1>3. Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
 <p>This tutorial will guide you through a typical PyMC application. Familiarity
-with Python is assumed, so if you are new to Python, books such as <a class="reference internal" href="references.html#lutz2007">[Lutz2007]</a>
-or <a class="reference internal" href="references.html#langtangen2009">[Langtangen2009]</a> are the place to start. Plenty of online documentation
+with Python is assumed, so if you are new to Python, books such as <a class="reference internal" href="references.html#lutz2007" id="id1">[Lutz2007]</a>
+or <a class="reference internal" href="references.html#langtangen2009" id="id2">[Langtangen2009]</a> are the place to start. Plenty of online documentation
 can also be found on the <a class="reference external" href="http://www.python.org/doc/">Python documentation</a> page.</p>
 <div class="section" id="an-example-statistical-model">
 <h2>3.1. An example statistical model<a class="headerlink" href="#an-example-statistical-model" title="Permalink to this headline">¶</a></h2>
 <p>Consider the following dataset, which is a time series of recorded coal mining
-disasters in the UK from 1851 to 1962 <a class="reference internal" href="references.html#jarrett1979">[Jarrett1979]</a>.</p>
+disasters in the UK from 1851 to 1962 <a class="reference internal" href="references.html#jarrett1979" id="id3">[Jarrett1979]</a>.</p>
 <div class="figure" id="disasters-figure">
-<img alt="_images/disasterts.png" src="_images/disasterts.png" style="width: 800px;" />
+<a class="reference internal image-reference" href="_images/disasterts.png"><img alt="_images/disasterts.png" src="_images/disasterts.png" style="width: 800px;" /></a>
 <p class="caption">Recorded coal mining disasters in the UK.</p>
 </div>
 <p>Occurrences of disasters in the time series is thought to be derived from a
@@ -103,7 +101,7 @@ and late rates, respectively.</li>
 Bayesian &#8220;random&#8221; variables have not necessarily arisen from a physical random
 process. The Bayesian interpretation of probability is <em>epistemic</em>, meaning
 random variable <span class="math">\(x\)</span>&#8216;s probability distribution <span class="math">\(p(x)\)</span> represents
-our knowledge and uncertainty about <span class="math">\(x\)</span>&#8216;s value <a class="reference internal" href="references.html#jaynes2003">[Jaynes2003]</a>. Candidate
+our knowledge and uncertainty about <span class="math">\(x\)</span>&#8216;s value <a class="reference internal" href="references.html#jaynes2003" id="id4">[Jaynes2003]</a>. Candidate
 values of <span class="math">\(x\)</span> for which <span class="math">\(p(x)\)</span> is high are relatively more
 probable, given what we know. Random variables are represented in PyMC by the
 classes <tt class="docutils literal"><span class="pre">Stochastic</span></tt> and <tt class="docutils literal"><span class="pre">Deterministic</span></tt>.</p>
@@ -253,7 +251,7 @@ variable <cite>disasters</cite> is a filled ellipse and deterministic variable <
 a triangle. Arrows point from parent to child and display the label that the
 child assigns to the parent. See section <a class="reference internal" href="modelbuilding.html#graphical"><em>Graphing models</em></a> for more details.</p>
 <div class="figure" id="dag">
-<img alt="_images/DisasterModel2.png" src="_images/DisasterModel2.png" style="width: 600px;" />
+<a class="reference internal image-reference" href="_images/DisasterModel2.png"><img alt="_images/DisasterModel2.png" src="_images/DisasterModel2.png" style="width: 600px;" /></a>
 <p class="caption">Directed acyclic graph of the relationships in the coal mining disaster model example.</p>
 </div>
 <p>As the examples above have shown, pymc objects need to have a name assigned,
@@ -382,7 +380,7 @@ function as argument <tt class="docutils literal"><span class="pre">switchpoint<
 <h2>3.5. Fitting the model with MCMC<a class="headerlink" href="#fitting-the-model-with-mcmc" title="Permalink to this headline">¶</a></h2>
 <p>PyMC provides several objects that fit probability models (linked collections
 of variables) like ours. The primary such object, <tt class="docutils literal"><span class="pre">MCMC</span></tt>, fits models with a
-Markov chain Monte Carlo algorithm <a class="reference internal" href="references.html#gamerman1997">[Gamerman1997]</a>. To create an <tt class="docutils literal"><span class="pre">MCMC</span></tt>
+Markov chain Monte Carlo algorithm <a class="reference internal" href="references.html#gamerman1997" id="id5">[Gamerman1997]</a>. To create an <tt class="docutils literal"><span class="pre">MCMC</span></tt>
 object to handle our model, import <tt class="docutils literal"><span class="pre">disaster_model.py</span></tt> and use it as an
 argument for <tt class="docutils literal"><span class="pre">MCMC</span></tt>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pymc.examples</span> <span class="kn">import</span> <span class="n">disaster_model</span>
@@ -407,7 +405,7 @@ model has been fitted.</p>
 this case, we are trying to represent the posterior <span class="math">\(p(s,e,l|D)\)</span> by a set
 of joint samples from it. To produce these samples, the MCMC sampler randomly
 updates the values of <tt class="docutils literal"><span class="pre">switchpoint</span></tt>, <tt class="docutils literal"><span class="pre">early_mean</span></tt> and <tt class="docutils literal"><span class="pre">late_mean</span></tt>
-according to the Metropolis-Hastings algorithm <a class="reference internal" href="references.html#gelman2004">[Gelman2004]</a> over a specified
+according to the Metropolis-Hastings algorithm <a class="reference internal" href="references.html#gelman2004" id="id6">[Gelman2004]</a> over a specified
 number of iterations (<tt class="docutils literal"><span class="pre">iter</span></tt>).</p>
 <p>As the number of samples grows sufficiently large, the MCMC distributions of
 <tt class="docutils literal"><span class="pre">switchpoint</span></tt>, <tt class="docutils literal"><span class="pre">early_mean</span></tt> and <tt class="docutils literal"><span class="pre">late_mean</span></tt> converge to their joint
@@ -426,7 +424,7 @@ passed to the sampler via the <tt class="docutils literal"><span class="pre">thi
 <tt class="docutils literal"><span class="pre">thin</span></tt> parameters, you may want to retain all the MCMC samples, that is to
 set <tt class="docutils literal"><span class="pre">burn=0</span></tt> and <tt class="docutils literal"><span class="pre">thin=1</span></tt>, and then discard the <cite>burn-in period</cite> and thin
 the samples after examining the traces (the series of samples). See
-<a class="reference internal" href="references.html#gelman2004">[Gelman2004]</a> for general guidance.</p>
+<a class="reference internal" href="references.html#gelman2004" id="id7">[Gelman2004]</a> for general guidance.</p>
 </div>
 <div class="section" id="accessing-the-samples">
 <h3>3.5.2. Accessing the samples<a class="headerlink" href="#accessing-the-samples" title="Permalink to this headline">¶</a></h3>
@@ -458,7 +456,7 @@ of its trace:</p>
 </div>
 <p>You should see something like this:</p>
 <div class="figure">
-<img alt="_images/ltrace.png" src="_images/ltrace.png" style="width: 800px;" />
+<a class="reference internal image-reference" href="_images/ltrace.png"><img alt="_images/ltrace.png" src="_images/ltrace.png" style="width: 800px;" /></a>
 <p class="caption">Histogram of the marginal posterior probability of parameter <tt class="docutils literal"><span class="pre">late_mean</span></tt>.</p>
 </div>
 <p>PyMC has its own plotting functionality, via the optional <tt class="docutils literal"><span class="pre">matplotlib</span></tt> module
@@ -471,7 +469,7 @@ function that takes the model (or a single parameter) as an argument:</p>
 <p>For each variable in the model, <tt class="docutils literal"><span class="pre">plot</span></tt> generates a composite figure, such as
 this one for the switchpoint in the disasters model:</p>
 <div class="figure">
-<img alt="_images/spost.png" src="_images/spost.png" style="width: 800px;" />
+<a class="reference internal image-reference" href="_images/spost.png"><img alt="_images/spost.png" src="_images/spost.png" style="width: 800px;" /></a>
 <p class="caption">Temporal series, autocorrelation plot and histogram of the samples drawn for
 <tt class="docutils literal"><span class="pre">switchpoint</span></tt>.</p>
 </div>
@@ -479,7 +477,7 @@ this one for the switchpoint in the disasters model:</p>
 samples from <tt class="docutils literal"><span class="pre">switchpoint</span></tt>, while below is an autocorrelation plot of the
 samples. The right-hand pane shows a histogram of the trace. The trace is
 useful for evaluating and diagnosing the algorithm&#8217;s performance (see
-<a class="reference internal" href="references.html#gelman1996">[Gelman1996]</a>), while the histogram is useful for visualizing the posterior.</p>
+<a class="reference internal" href="references.html#gelman1996" id="id9">[Gelman1996]</a>), while the histogram is useful for visualizing the posterior.</p>
 <p>For a non-graphical summary of the posterior, simply call <tt class="docutils literal"><span class="pre">M.stats()</span></tt>.</p>
 </div>
 <div class="section" id="imputation-of-missing-data">
@@ -628,7 +626,7 @@ the MCMC algorithm, just as unknown model parameters.</p>
 <p>Here, we have used the <tt class="docutils literal"><span class="pre">masked_array</span></tt> function, rather than <tt class="docutils literal"><span class="pre">masked_equal</span></tt>,
 and the value -999 as a placeholder for missing data. The result is the same.</p>
 <div class="figure">
-<img alt="_images/missing.png" src="_images/missing.png" style="width: 800px;" />
+<a class="reference internal image-reference" href="_images/missing.png"><img alt="_images/missing.png" src="_images/missing.png" style="width: 800px;" /></a>
 <p class="caption">Trace, autocorrelation plot and posterior distribution of the missing data
 points in the example.</p>
 </div>
@@ -777,7 +775,7 @@ no trace and calling <tt class="docutils literal"><span class="pre">M.trace('dis
     </div>
     <div class="footer">
         &copy; Copyright 2012, Christopher J. Fonnesbeck.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
     </div>
   </body>
 </html>

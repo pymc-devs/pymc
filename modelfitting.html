@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -15,7 +13,7 @@
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '2.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -63,7 +61,7 @@
 work of updating stochastic variables conditional on the rest of the model is
 done by <tt class="docutils literal"><span class="pre">StepMethod</span></tt> objects, which are described in this chapter.</li>
 <li><tt class="docutils literal"><span class="pre">MAP</span></tt>, which computes maximum <em>a posteriori</em> estimates.</li>
-<li><tt class="docutils literal"><span class="pre">NormApprox</span></tt>, which computes the &#8216;normal approximation&#8217; <a class="reference internal" href="references.html#gelman2004">[Gelman2004]</a>: the
+<li><tt class="docutils literal"><span class="pre">NormApprox</span></tt>, which computes the &#8216;normal approximation&#8217; <a class="reference internal" href="references.html#gelman2004" id="id1">[Gelman2004]</a>: the
 joint distribution of all stochastic variables in a model is approximated as
 normal using local information at the maximum <em>a posteriori</em> estimate.</li>
 </ul>
@@ -147,7 +145,7 @@ log-probability functions returned zero. If any stochastic variables lack a
 attribute is not <tt class="docutils literal"><span class="pre">None</span></tt> are changed.</dd>
 </dl>
 <p>As introduced in the previous chapter, the helper function <tt class="docutils literal"><span class="pre">graph.dag</span></tt>
-produces graphical representations of models (see <a class="reference internal" href="references.html#jordan2004">[Jordan2004]</a>).</p>
+produces graphical representations of models (see <a class="reference internal" href="references.html#jordan2004" id="id2">[Jordan2004]</a>).</p>
 <p>Models have the following important attributes:</p>
 <ul class="simple">
 <li><tt class="docutils literal"><span class="pre">variables</span></tt></li>
@@ -220,9 +218,9 @@ either a single value or a dictionary of values whose keys are variables
 <dd>The maximum joint log-probability of the model.</dd>
 <dt><tt class="docutils literal"><span class="pre">AIC</span></tt>:</dt>
 <dd>Akaike&#8217;s information criterion for this model
-(<a class="reference internal" href="references.html#akaike1973">[Akaike1973]</a>,[Burnham2002]_).</dd>
+(<a class="reference internal" href="references.html#akaike1973" id="id3">[Akaike1973]</a>,[Burnham2002]_).</dd>
 <dt><tt class="docutils literal"><span class="pre">BIC</span></tt>:</dt>
-<dd>The Bayesian information criterion for this model <a class="reference internal" href="references.html#schwarz1978">[Schwarz1978]</a>.</dd>
+<dd>The Bayesian information criterion for this model <a class="reference internal" href="references.html#schwarz1978" id="id4">[Schwarz1978]</a>.</dd>
 </dl>
 <p>One use of the <tt class="docutils literal"><span class="pre">MAP</span></tt> class is finding reasonable initial states for MCMC
 chains. Note that multiple <tt class="docutils literal"><span class="pre">Model</span></tt> subclasses can handle the same collection
@@ -323,7 +321,7 @@ of <tt class="docutils literal"><span class="pre">method</span></tt>. Assigning 
 the <tt class="docutils literal"><span class="pre">MCMC</span></tt> instance from automatically assigning one. However, you may
 handle a variable with multiple step methods.</dd>
 <dt><tt class="docutils literal"><span class="pre">goodness()</span></tt>:</dt>
-<dd>Calculates goodness-of-fit (GOF) statistics according to <a class="reference internal" href="references.html#brooks2000">[Brooks2000]</a>.</dd>
+<dd>Calculates goodness-of-fit (GOF) statistics according to <a class="reference internal" href="references.html#brooks2000" id="id5">[Brooks2000]</a>.</dd>
 <dt><tt class="docutils literal"><span class="pre">save_state()</span></tt>:</dt>
 <dd>Saves the current state of the sampler, including all stochastics, to the
 database. This allows the sampler to be reconstituted at a later time to
@@ -474,7 +472,7 @@ burnin period is over. This can be changed via the <tt class="docutils literal">
 to <tt class="docutils literal"><span class="pre">MCMC.sample</span></tt>. If an adaptive step method&#8217;s <tt class="docutils literal"><span class="pre">tally</span></tt> flag is set (the
 default for <tt class="docutils literal"><span class="pre">Metropolis</span></tt>), a trace of its tuning parameters will be kept. If
 you allow tuning to continue throughout the sampling loop, it is important to
-verify that the &#8216;Diminishing Tuning&#8217; condition of <a class="reference internal" href="references.html#roberts2007">[Roberts2007]</a> is satisfied:
+verify that the &#8216;Diminishing Tuning&#8217; condition of <a class="reference internal" href="references.html#roberts2007" id="id6">[Roberts2007]</a> is satisfied:
 the amount of tuning should decrease to zero, or tuning should become very
 infrequent.</p>
 <p>If a Metropolis step method handles an array-valued variable, it proposes all
@@ -489,7 +487,7 @@ class (see below), on the other hand, does make correlated proposals.</p>
 step method, with the exception that its variables are block-updated using a
 multivariate jump distribution whose covariance is tuned during sampling.
 Although the chain is non-Markovian, it has correct ergodic properties (see
-<a class="reference internal" href="references.html#haario2001">[Haario2001]</a>).</p>
+<a class="reference internal" href="references.html#haario2001" id="id7">[Haario2001]</a>).</p>
 <p>To tell an <tt class="docutils literal"><span class="pre">MCMC</span></tt> object <span class="math">\(M\)</span> to handle variables <span class="math">\(x\)</span>, <span class="math">\(y\)</span>
 and <span class="math">\(z\)</span> with an <tt class="docutils literal"><span class="pre">AdaptiveMetropolis</span></tt> instance, you might do the
 following:</p>
@@ -729,7 +727,7 @@ returns the highest competence value to each of its stochastic variables.</p>
     </div>
     <div class="footer">
         &copy; Copyright 2012, Christopher J. Fonnesbeck.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
     </div>
   </body>
 </html>

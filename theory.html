@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -15,7 +13,7 @@
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '2.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -115,7 +113,7 @@ that fall under the curve (Figure <a class="reference internal" href="#bound"><e
 accepted (open squares) to total points, multiplied by the rectangle
 area.</em></a>).</p>
 <div class="figure align-center" id="bound">
-<a class="reference internal image-reference" href="_images/reject.png"><img alt="Rejection figure." src="_images/reject.png" style="width: 823.0px; height: 625.0px;" /></a>
+<a class="reference internal image-reference" href="_images/reject.png"><img alt="Rejection figure." src="_images/reject.png" /></a>
 <p class="caption">Rejection sampling of a bounded form. Area is estimated by the ratio of
 accepted (open squares) to total points, multiplied by the rectangle
 area.</p>
@@ -125,7 +123,7 @@ area.</p>
 <p>This approach is useful, for example, in estimating the normalizing constant
 for posterior distributions.</p>
 <div class="figure align-center" id="envelope">
-<a class="reference internal image-reference" href="_images/envelope.png"><img alt="envelope figure" src="_images/envelope.png" style="width: 480.0px; height: 480.0px;" /></a>
+<a class="reference internal image-reference" href="_images/envelope.png"><img alt="envelope figure" src="_images/envelope.png" /></a>
 <p class="caption">Rejection sampling of an unbounded form using an enveloping distribution.</p>
 </div>
 <p>If <span class="math">\(f(x)\)</span> has unbounded support (i.e. infinite tails), such as a Gaussian
@@ -144,7 +142,7 @@ using optimized algorithms such as importance sampling which, as the name
 implies, samples more frequently from important areas of the distribution.</p>
 <p>Rejection sampling is usually subject to declining performance as the dimension
 of the parameter space increases, so it is used less frequently than MCMC for
-evaluation of posterior distributions <a class="reference internal" href="references.html#gamerman1997">[Gamerman1997]</a>.</p>
+evaluation of posterior distributions <a class="reference internal" href="references.html#gamerman1997" id="id1">[Gamerman1997]</a>.</p>
 </div>
 </div>
 <div class="section" id="markov-chains">
@@ -377,7 +375,7 @@ produce proposals close to the current parameter value, but may result in chains
 that mix very slowly. Some simulation studies suggest optimal acceptance rates
 in the range of 20-50%. It is often worthwhile to optimize the proposal variance
 by iteratively adjusting its value, according to observed acceptance rates early
-in the MCMC simulation <a class="reference internal" href="references.html#gamerman1997">[Gamerman1997]</a>.</p>
+in the MCMC simulation <a class="reference internal" href="references.html#gamerman1997" id="id2">[Gamerman1997]</a>.</p>
 </div>
 </div>
 </div>
@@ -460,7 +458,7 @@ in the MCMC simulation <a class="reference internal" href="references.html#gamer
     </div>
     <div class="footer">
         &copy; Copyright 2012, Christopher J. Fonnesbeck.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
     </div>
   </body>
 </html>

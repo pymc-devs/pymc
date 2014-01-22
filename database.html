@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -15,7 +13,7 @@
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '2.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -121,7 +119,7 @@ containing all available statistics for each node:</p>
 </pre></div>
 </div>
 <div class="figure align-center" id="write-csv">
-<a class="reference internal image-reference" href="_images/write_csv.png"><img alt="Table of summary stats" src="_images/write_csv.png" style="width: 745.2px; height: 81.0px;" /></a>
+<a class="reference internal image-reference" href="_images/write_csv.png"><img alt="Table of summary stats" src="_images/write_csv.png" /></a>
 <p class="caption">Summary statistics of stochastics from the <tt class="docutils literal"><span class="pre">disaster_model</span></tt> example,
 shown in a spreadsheet.</p>
 </div>
@@ -198,7 +196,7 @@ applications.</p>
 precisely, the <tt class="docutils literal"><span class="pre">dbname</span></tt> argument is used to create a top directory into which
 chain directories, called <tt class="docutils literal"><span class="pre">Chain_&lt;#&gt;</span></tt>, are going to be created each time
 <tt class="docutils literal"><span class="pre">sample</span></tt> is called:</p>
-<div class="highlight-python"><pre>dbname/
+<div class="highlight-python"><div class="highlight"><pre>dbname/
   Chain_0/
     &lt;object0 name&gt;.txt
     &lt;object1 name&gt;.txt
@@ -207,7 +205,8 @@ chain directories, called <tt class="docutils literal"><span class="pre">Chain_&
     &lt;object0 name&gt;.txt
     &lt;object1 name&gt;.txt
     ...
-  ...</pre>
+  ...
+</pre></div>
 </div>
 <p>In each one of these chain directories, files named <tt class="docutils literal"><span class="pre">&lt;variable</span> <span class="pre">name&gt;.txt</span></tt> are
 created, storing the values of the variable as rows of text:</p>
@@ -238,7 +237,8 @@ storing the traces, as well as the state of the <tt class="docutils literal"><sp
 Python versions greater than 2.4) . It opens an SQL database named <tt class="docutils literal"><span class="pre">dbname</span></tt>,
 and creates one table per tallyable objects. The rows of this table store a
 key, the chain index and the values of the objects:</p>
-<div class="highlight-python"><pre>key (INTT), trace (INT),  v1 (FLOAT), v2 (FLOAT), v3 (FLOAT) ...</pre>
+<div class="highlight-python"><div class="highlight"><pre>key (INTT), trace (INT),  v1 (FLOAT), v2 (FLOAT), v3 (FLOAT) ...
+</pre></div>
 </div>
 <p>The key is autoincremented each time a new row is added to the table, that is,
 each time <tt class="docutils literal"><span class="pre">tally</span></tt> is called by the sampler. Note that the <tt class="docutils literal"><span class="pre">savestate</span></tt>
@@ -256,15 +256,16 @@ can tally any object that can be pickled, opening the door for powerful and
 exotic applications (see <tt class="docutils literal"><span class="pre">pymc.gp</span></tt>).</p>
 <p>The internal structure of an HDF5 file storing both numerical values and
 arbitrary objects is as follows:</p>
-<div class="highlight-python"><pre>/ (root)
-  /chain0/ (Group) 'Chain #0'
-    /chain0/PyMCSamples (Table(N,)) 'PyMC Samples'
-    /chain0/group0 (Group) 'Group storing objects.'
-      /chain0/group0/&lt;object0 name&gt; (VLArray(N,)) '&lt;object0 name&gt; samples.'
-      /chain0/group0/&lt;object1 name&gt; (VLArray(N,)) '&lt;object1 name&gt; samples.'
+<div class="highlight-python"><div class="highlight"><pre>/ (root)
+  /chain0/ (Group) &#39;Chain #0&#39;
+    /chain0/PyMCSamples (Table(N,)) &#39;PyMC Samples&#39;
+    /chain0/group0 (Group) &#39;Group storing objects.&#39;
+      /chain0/group0/&lt;object0 name&gt; (VLArray(N,)) &#39;&lt;object0 name&gt; samples.&#39;
+      /chain0/group0/&lt;object1 name&gt; (VLArray(N,)) &#39;&lt;object1 name&gt; samples.&#39;
       ...
-  /chain1/ (Group) 'Chain #1'
-    ...</pre>
+  /chain1/ (Group) &#39;Chain #1&#39;
+    ...
+</pre></div>
 </div>
 <p>All standard numerical values are stored in a <tt class="docutils literal"><span class="pre">Table</span></tt>, while <tt class="docutils literal"><span class="pre">objects</span></tt> are
 stored in individual <tt class="docutils literal"><span class="pre">VLArrays</span></tt>.</p>
@@ -276,10 +277,10 @@ read-only.</li>
 <li><tt class="docutils literal"><span class="pre">dbcomplevel</span></tt> (<cite>int</cite> (0-9)) Compression level, 0: no compression.</li>
 <li><tt class="docutils literal"><span class="pre">dbcomplib</span></tt> (<cite>string</cite>) Compression library (<tt class="docutils literal"><span class="pre">zlib</span></tt>, <tt class="docutils literal"><span class="pre">bzip2</span></tt>, <tt class="docutils literal"><span class="pre">lzo</span></tt>)</li>
 </ul>
-<p>According the the <a class="reference external" href="http://www.pytables.org/moin">pyTables</a> manual, <cite>zlib</cite> (<a class="reference internal" href="references.html#roelofs2010">[Roelofs2010]</a>) has a fast
+<p>According the the <a class="reference external" href="http://www.pytables.org/moin">pyTables</a> manual, <cite>zlib</cite> (<a class="reference internal" href="references.html#roelofs2010" id="id1">[Roelofs2010]</a>) has a fast
 decompression, relatively slow compression, and a good compression ratio. <cite>LZO</cite>
-(<a class="reference internal" href="references.html#oberhumer2008">[Oberhumer2008]</a>) has a fast compression, but a low compression ratio.
-<cite>bzip2</cite> (<a class="reference internal" href="references.html#seward2007">[Seward2007]</a>) has an excellent compression ratio but requires more
+(<a class="reference internal" href="references.html#oberhumer2008" id="id2">[Oberhumer2008]</a>) has a fast compression, but a low compression ratio.
+<cite>bzip2</cite> (<a class="reference internal" href="references.html#seward2007" id="id3">[Seward2007]</a>) has an excellent compression ratio but requires more
 CPU. Note that some of these compression algorithms require additional software
 to work (see the <a class="reference external" href="http://www.pytables.org/moin">pyTables</a> manual).</p>
 </div>
@@ -375,7 +376,7 @@ basic features required of all backends are implemented and working properly.</p
     </div>
     <div class="footer">
         &copy; Copyright 2012, Christopher J. Fonnesbeck.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
     </div>
   </body>
 </html>

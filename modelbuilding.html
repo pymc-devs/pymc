@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -15,7 +13,7 @@
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
+        URL_ROOT:    './',
         VERSION:     '2.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
@@ -68,7 +66,7 @@ parlance, <tt class="docutils literal"><span class="pre">Stochastic</span></tt> 
 <tt class="docutils literal"><span class="pre">Variable</span></tt> class, which only serves as a template for other classes and is
 never actually implemented in models.</p>
 <p>The third basic class, <tt class="docutils literal"><span class="pre">Potential</span></tt>, represents &#8216;factor potentials&#8217;
-(<a class="reference internal" href="references.html#lauritzen1990">[Lauritzen1990]</a>,[Jordan2004]_), which are <em>not</em> variables but simply
+(<a class="reference internal" href="references.html#lauritzen1990" id="id1">[Lauritzen1990]</a>,[Jordan2004]_), which are <em>not</em> variables but simply
 log-likelihood terms and/or constraints that are multiplied into joint
 distributions to modify them. <tt class="docutils literal"><span class="pre">Potential</span></tt> and <tt class="docutils literal"><span class="pre">Variable</span></tt> are subclasses of
 <tt class="docutils literal"><span class="pre">Node</span></tt>.</p>
@@ -156,7 +154,7 @@ computes its log-probability as follows:</p>
 </pre></div>
 </div>
 <p>Note that this is a simple Python function preceded by a Python expression
-called a <strong>decorator</strong> <a class="reference internal" href="references.html#vanrossum2010">[vanRossum2010]</a>, here called <tt class="docutils literal"><span class="pre">&#64;stochastic</span></tt>.
+called a <strong>decorator</strong> <a class="reference internal" href="references.html#vanrossum2010" id="id3">[vanRossum2010]</a>, here called <tt class="docutils literal"><span class="pre">&#64;stochastic</span></tt>.
 Generally, decorators enhance functions with additional properties or
 functionality. The <tt class="docutils literal"><span class="pre">Stochastic</span></tt> object produced by the <tt class="docutils literal"><span class="pre">&#64;stochastic</span></tt>
 decorator will evaluate its log-probability using the function
@@ -244,9 +242,10 @@ following form:</p>
 </pre></div>
 </div>
 <p>The following are in-place updates and should _never_ be used:</p>
-<div class="highlight-python"><pre>* ``A.value += 3``
+<div class="highlight-python"><div class="highlight"><pre>* ``A.value += 3``
 * ``A.value[2,1] = 5``
-* ``A.value.attribute = new_attribute_value``</pre>
+* ``A.value.attribute = new_attribute_value``
+</pre></div>
 </div>
 <p>This restriction becomes onerous if a step method proposes values for the
 elements of an array-valued variable separately. In this case, it may be
@@ -265,7 +264,8 @@ value cannot be changed, and it won&#8217;t be sampled by the fitting method.</p
 <p>In each interface, an optional keyword argument <tt class="docutils literal"><span class="pre">observed</span></tt> can be set to
 <tt class="docutils literal"><span class="pre">True</span></tt>. In the decorator interface, this argument is added to the
 <tt class="docutils literal"><span class="pre">&#64;stochastic</span></tt> decorator:</p>
-<div class="highlight-python"><pre>@pymc.stochastic(observed=True)</pre>
+<div class="highlight-python"><div class="highlight"><pre>@pymc.stochastic(observed=True)
+</pre></div>
 </div>
 <p>In the other interfaces, the <tt class="docutils literal"><span class="pre">observed=True</span></tt> argument is added to the
 instantiation of the <tt class="docutils literal"><span class="pre">Stochastic</span></tt>, or its subclass:</p>
@@ -275,8 +275,9 @@ instantiation of the <tt class="docutils literal"><span class="pre">Stochastic</
 <p>Alternatively, in the decorator interface only, a <tt class="docutils literal"><span class="pre">Stochastic</span></tt> object&#8217;s
 <tt class="docutils literal"><span class="pre">observed</span></tt> flag can be set to true by stacking an <tt class="docutils literal"><span class="pre">&#64;observed</span></tt> decorator on
 top of the <tt class="docutils literal"><span class="pre">&#64;stochastic</span></tt> decorator:</p>
-<div class="highlight-python"><pre>@pymc.observed(dtype=int)
-def ...</pre>
+<div class="highlight-python"><div class="highlight"><pre>@pymc.observed(dtype=int)
+def ...
+</pre></div>
 </div>
 </div>
 </div>
@@ -362,7 +363,7 @@ to step methods.</p>
 </div>
 <p class="last">All the objects thus created have <tt class="docutils literal"><span class="pre">trace=False</span></tt> and <tt class="docutils literal"><span class="pre">plot=False</span></tt> by
 default. This convenient method of generating simple deterministics was
-inspired by <a class="reference internal" href="references.html#kerman2004">[Kerman2004]</a>.</p>
+inspired by <a class="reference internal" href="references.html#kerman2004" id="id5">[Kerman2004]</a>.</p>
 </dd>
 <dt><strong>Decorator</strong></dt>
 <dd><p class="first">A deterministic variable can be created via a decorator in a way very
@@ -389,23 +390,24 @@ decorator <a class="footnote-reference" href="#id16" id="id6">[2]</a>.</p>
 </dd>
 <dt><strong>Direct</strong></dt>
 <dd><p class="first"><tt class="docutils literal"><span class="pre">Deterministic</span></tt> objects can also be instantiated directly:</p>
-<div class="last highlight-python"><pre>def rate_eval(switchpoint = s, early_rate = e, late_rate = l):
+<div class="last highlight-python"><div class="highlight"><pre>def rate_eval(switchpoint = s, early_rate = e, late_rate = l):
     value = zeros(N)
     value[:switchpoint] = early_rate
     value[switchpoint:] = late_rate
     return value
 
 rate = pymc.Deterministic(eval = rate_eval,
-                  name = 'rate',
-                  parents = {'switchpoint': switchpoint,
-                          'early_mean': early_mean,
-                          'late_mean': late_mean}),
-                  doc = 'The rate of disaster occurrence.',
+                  name = &#39;rate&#39;,
+                  parents = {&#39;switchpoint&#39;: switchpoint,
+                          &#39;early_mean&#39;: early_mean,
+                          &#39;late_mean&#39;: late_mean}),
+                  doc = &#39;The rate of disaster occurrence.&#39;,
                   trace = True,
                   verbose = 0,
                   dtype=float,
                   plot=False,
-                  cache_depth = 2)</pre>
+                  cache_depth = 2)
+</pre></div>
 </div>
 </dd>
 </dl>
@@ -425,19 +427,20 @@ parent of some variable. Consider <span class="math">\(y\)</span> in the followi
 wouldn&#8217;t want to manually enter <span class="math">\(N\)</span> parent labels <tt class="docutils literal"><span class="pre">`x_0'</span></tt>, <tt class="docutils literal"><span class="pre">`x_1'</span></tt>,
 etc.</p>
 <p>This situation can be handled naturally in PyMC:</p>
-<div class="highlight-python"><pre>N = 10
-x_0 = pymc.Normal(`x_0', mu=0, tau=1)
+<div class="highlight-python"><div class="highlight"><pre>N = 10
+x_0 = pymc.Normal(`x_0&#39;, mu=0, tau=1)
 
 x = np.empty(N, dtype=object)
 x[0] = x_0
 
 for i in range(1, N):
 
-    x[i] = pymc.Normal(`x_%i' % i, mu=x[i-1], tau=1)
+    x[i] = pymc.Normal(`x_%i&#39; % i, mu=x[i-1], tau=1)
 
 @pymc.observed
 def y(value=1, mu=x, tau=100):
-    return pymc.normal_like(value, np.sum(mu**2), tau)</pre>
+    return pymc.normal_like(value, np.sum(mu**2), tau)
+</pre></div>
 </div>
 <p>PyMC automatically wraps array <span class="math">\(x\)</span> in an appropriate <tt class="docutils literal"><span class="pre">Container</span></tt> class.
 The expression <tt class="docutils literal"><span class="pre">'x_%i'</span> <span class="pre">%</span> <span class="pre">i</span></tt> labels each <tt class="docutils literal"><span class="pre">Normal</span></tt> object in the container
@@ -493,12 +496,12 @@ grouping <span class="math">\(e\)</span> and <span class="math">\(l\)</span> to 
 uncomfortable to do so.</p>
 <p>Arbitrary factors such as <span class="math">\(\psi\)</span> and the indicator function
 <span class="math">\(I(|e-l|&lt;1)\)</span> are implemented by objects of class <tt class="docutils literal"><span class="pre">Potential</span></tt> (from
-<a class="reference internal" href="references.html#lauritzen1990">[Lauritzen1990]</a> and <a class="reference internal" href="references.html#jordan2004">[Jordan2004]</a>, who call these terms &#8216;factor
+<a class="reference internal" href="references.html#lauritzen1990" id="id9">[Lauritzen1990]</a> and <a class="reference internal" href="references.html#jordan2004" id="id10">[Jordan2004]</a>, who call these terms &#8216;factor
 potentials&#8217;). Bayesian hierarchical notation (cf model (<a href="#equation-disastermodel">(?)</a>))
 doesn&#8217;t accomodate these potentials. They are often used in cases where there
 is no natural dependence hierarchy, such as the first example above (which is
 known as a Markov random field). They are also useful for expressing &#8216;soft
-data&#8217; <a class="reference internal" href="references.html#christakos2002">[Christakos2002]</a> as in the second example below.</p>
+data&#8217; <a class="reference internal" href="references.html#christakos2002" id="id11">[Christakos2002]</a> as in the second example below.</p>
 <p>Potentials have one important attribute, <tt class="docutils literal"><span class="pre">logp</span></tt>, the log of their current
 probability or probability density value given the values of their parents. The
 only other additional attribute of interest is <tt class="docutils literal"><span class="pre">parents</span></tt>, a dictionary
@@ -588,7 +591,7 @@ decorator can take <tt class="docutils literal"><span class="pre">verbose</span>
 <span id="graphical"></span><h2>4.6. Graphing models<a class="headerlink" href="#graphing-models" title="Permalink to this headline">¶</a></h2>
 <p>The function <tt class="docutils literal"><span class="pre">dag</span></tt> (or <tt class="docutils literal"><span class="pre">graph</span></tt>) in <tt class="docutils literal"><span class="pre">pymc.graph</span></tt> draws graphical
 representations of <tt class="docutils literal"><span class="pre">Model</span></tt> (Chapter <a class="reference internal" href="modelfitting.html#chap-modelfitting"><em>Fitting Models</em></a>) instances using
-<a class="reference external" href="http://www.graphviz.org/">GraphViz</a> via the Python package <a class="reference external" href="http://code.google.com/p/pydot/">PyDot</a>. See <a class="reference internal" href="references.html#lauritzen1990">[Lauritzen1990]</a> and <a class="reference internal" href="references.html#jordan2004">[Jordan2004]</a>
+<a class="reference external" href="http://www.graphviz.org/">GraphViz</a> via the Python package <a class="reference external" href="http://code.google.com/p/pydot/">PyDot</a>. See <a class="reference internal" href="references.html#lauritzen1990" id="id12">[Lauritzen1990]</a> and <a class="reference internal" href="references.html#jordan2004" id="id13">[Jordan2004]</a>
 for more discussion of useful information that can be read off of graphical
 models <a class="footnote-reference" href="#id18" id="id14">[4]</a>.</p>
 <p>The symbol for stochastic variables is an ellipse. Parent-child relationships
@@ -605,7 +608,7 @@ pictured above is much more compact: Directed or mixed graphical models can be
 represented in an undirected form by &#8216;moralizing&#8217;, which is done by the
 function <tt class="docutils literal"><span class="pre">pymc.graph.moral_graph</span></tt>.</p>
 <div class="figure" id="pot">
-<img alt="_images/PotExample.png" src="_images/PotExample.png" style="width: 800px;" />
+<a class="reference internal image-reference" href="_images/PotExample.png"><img alt="_images/PotExample.png" src="_images/PotExample.png" style="width: 800px;" /></a>
 <p class="caption">Directed graphical model example. Factor potentials are represented by
 rectangles and stochastic variables by ellipses.</p>
 </div>
@@ -764,7 +767,7 @@ from accidental misuse.</p>
     </div>
     <div class="footer">
         &copy; Copyright 2012, Christopher J. Fonnesbeck.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
     </div>
   </body>
 </html>
