@@ -1538,7 +1538,7 @@ def laplace_like(x, mu, tau):
       - :math:`Var(X) = \frac{2}{\tau^2}`
     """
 
-    return flib.gamma(np.abs(x-mu), 1, tau) - np.log(2)
+    return flib.gamma(np.abs(np.array(x) - mu), 1, tau) - np.size(x) * np.log(2)
 
 laplace_grad_like = {'value'   : lambda x, mu, tau: flib.gamma_grad_x(np.abs(x - mu), 1, tau) * np.sign(x - mu),
                      'mu'  : lambda x, mu, tau: -flib.gamma_grad_x(np.abs(x - mu), 1, tau) * np.sign(x - mu),

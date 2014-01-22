@@ -46,7 +46,7 @@ try:
     import scipy.stats
     from scipy import integrate, special
     from scipy.misc import factorial, comb
-    from scipy.stats import genextreme, exponweib
+    from scipy.stats import genextreme, exponweib, laplace
     from scipy.optimize import fmin
     SP = True
 except:
@@ -178,9 +178,7 @@ def consistency(
     if range is None:
         range = samples.min(), samples.max()
     x = np.linspace(range[0], range[1], nbins * nintegration)
-    l = []
-    for z in x:
-        l.append(likef(z, **parameters))
+    l = [likef(z, **parameters) for z in x]
     L = np.exp(np.array(l))
 
     figuredata = {'hist': hist, 'bins': output['edges'][:-1],
@@ -549,14 +547,23 @@ class test_exponential(TestCase):
 
 class test_laplace(TestCase):
 
+    parameters = {'mu': 10, 'tau': 0.5}
+
     """Based on gamma."""
     def test_consistency(self):
-        parameters = {'mu': 1, 'tau': 0.5}
         hist, like, figdata = consistency(rlaplace, laplace_like,
-                                          parameters, nrandom=5000)
+                                          self.parameters, nrandom=5000)
         if PLOT:
             compare_hist(figname='laplace', **figdata)
         assert_array_almost_equal(hist, like, 1)
+
+    def test_scipy(self):
+        x = [8, 9]
+        if SP:
+            assert_almost_equal(
+            laplace.logpdf(x, loc=self.parameters['mu'], scale=1./self.parameters['tau']).sum(),
+            laplace_like(x, **self.parameters)
+            )
 
 
 class test_logistic(TestCase):
