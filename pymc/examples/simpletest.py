@@ -36,7 +36,7 @@ def run(n=1000):
     plot(trace[x][:, 1, 0])
     subplot(2, 2, 4)
     hist(trace[x][:, 1, 0])
-    show()
-    
+    # show()
+
 if __name__ == '__main__':
     run()
