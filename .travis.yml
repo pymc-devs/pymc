@@ -1,7 +1,9 @@
 language: python
+
 python:
   - "2.7"
   - "3.3"
+
 before_install:
   - sudo apt-get install liblapack-dev gfortran python-scipy libblas-dev libsuitesparse-dev swig
   - sudo ln -Tsf /{run,dev}/shm
@@ -9,18 +11,20 @@ before_install:
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
   - export PATH=/home/travis/anaconda/bin:$PATH
-  - export DISPLAY=localhost:0
+
 install:
   - conda create -n testenv --yes pip python=$TRAVIS_PYTHON_VERSION
   - source activate testenv
-  - conda install --yes ipython==1.1.0 pyzmq numpy scipy nose matplotlib pandas numdifftools Cython scikits.sparse patsy statsmodels
+  - conda install --yes ipython==1.1.0 pyzmq numpy scipy nose matplotlib pandas numdifftools Cython scikits.sparse patsy statsmodels pillow
   - pip install git+https://github.com/Theano/Theano.git
   - python setup.py build_ext --inplace
   - pip install git+https://github.com/mahmoudimus/nose-timer.git
+
 env:
   - TESTCMD="nosetests -vv --with-timer --timer-verbose -e test_glm -e test_examples -e test_distributions"
   - TESTCMD="nosetests -vv --with-timer --timer-verbose pymc.tests.test_distributions"
   - TESTCMD="nosetests -vv --with-timer --timer-verbose pymc.tests.test_examples:test_examples0"
   - TESTCMD="nosetests -vv --with-timer --timer-verbose pymc.tests.test_examples:test_examples1"
   - TESTCMD="nosetests -vv --with-timer --timer-verbose pymc.tests.test_examples:test_examples2"
+
 script: "$TESTCMD"
