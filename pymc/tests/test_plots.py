@@ -1,4 +1,6 @@
-#from ..plots import *
+import matplotlib
+matplotlib.use('Agg', warn=False)
+
 from pymc.plots import *
 from pymc import psample, Slice, Metropolis, find_hessian, sample
 
