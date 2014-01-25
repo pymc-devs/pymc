@@ -13,9 +13,9 @@ from .debug import *
 
 from .diagnostics import *
 
-from .plots import *
+# from .plots import *
 
 from .tests import test
 
 from . import glm
-from .data import * 
+from .data import *

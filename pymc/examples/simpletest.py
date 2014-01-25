@@ -1,4 +1,4 @@
-from pylab import *
+import matplotlib.pyplot as plt
 from pymc import *
 import numpy as np
 import theano
@@ -27,16 +27,16 @@ def run(n=1000):
     with model:
         trace = sample(1e3, step)
 
-    subplot(2, 2, 1)
-    plot(trace[x][:, 0, 0])
-    subplot(2, 2, 2)
-    hist(trace[x][:, 0, 0])
+    plt.subplot(2, 2, 1)
+    plt.plot(trace[x][:, 0, 0])
+    plt.subplot(2, 2, 2)
+    plt.hist(trace[x][:, 0, 0])
 
-    subplot(2, 2, 3)
-    plot(trace[x][:, 1, 0])
-    subplot(2, 2, 4)
-    hist(trace[x][:, 1, 0])
-    # show()
+    plt.subplot(2, 2, 3)
+    plt.plot(trace[x][:, 1, 0])
+    plt.subplot(2, 2, 4)
+    plt.hist(trace[x][:, 1, 0])
+    plt.show()
 
 if __name__ == '__main__':
     run()
