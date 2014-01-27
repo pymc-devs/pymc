@@ -1,4 +1,6 @@
 __version__ = "3.0"
+import matplotlib
+matplotlib.use('Agg')
 
 from .core import *
 from .distributions import *
@@ -18,4 +20,4 @@ from .plots import *
 from .tests import test
 
 from . import glm
-from .data import * 
+from .data import *

@@ -41,7 +41,7 @@ with Model() as model:
 def run(n = 3000):
     if n == "short":
         n = 50
-    with model: 
+    with model:
         trace = sample(n, step, start)
 
         pl.figure()

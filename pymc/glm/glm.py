@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 from pymc import *
 import patsy
@@ -179,6 +178,7 @@ def plot_posterior_predictive(trace, eval=None, lm=None, samples=30, **kwargs):
     Additional keyword arguments are passed to pylab.plot().
 
     """
+    import matplotlib.pyplot as plt
 
     if lm is None:
         lm = lambda x, sample: sample['Intercept'] + sample['x'] * x

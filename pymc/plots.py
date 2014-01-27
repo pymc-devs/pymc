@@ -1,9 +1,3 @@
-from pylab import *
-import matplotlib.pyplot as plt
-try:
-    import matplotlib.gridspec as gridspec
-except ImportError:
-    gridspec = None
 import numpy as np
 from scipy.stats import kde
 from .stats import *
@@ -40,7 +34,7 @@ def traceplot(trace, vars=None, figsize=None,
     fig : figure object
 
     """
-
+    import matplotlib.pyplot as plt
     if vars is None:
         vars = trace.varnames
 
@@ -138,7 +132,7 @@ def kde2plot(x, y, grid=200):
 
 def autocorrplot(trace, vars=None, fontmap=None, max_lag=100):
     """Bar plot of the autocorrelation function for a trace"""
-
+    import matplotlib.pyplot as plt
     try:
         # MultiTrace
         traces = trace.traces
@@ -159,7 +153,7 @@ def autocorrplot(trace, vars=None, fontmap=None, max_lag=100):
     chains = len(traces)
 
     n = len(samples[0])
-    f, ax = subplots(n, chains, squeeze=False)
+    f, ax = plt.subplots(n, chains, squeeze=False)
 
     max_lag = min(len(samples[0][vars[0]])-1, max_lag)
 
@@ -169,7 +163,7 @@ def autocorrplot(trace, vars=None, fontmap=None, max_lag=100):
 
             d = np.squeeze(samples[j][v])
 
-            ax[i, j].acorr(d, detrend=mlab.detrend_mean, maxlags=max_lag)
+            ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
 
             if not j:
                 ax[i, j].set_ylabel("correlation")
@@ -179,11 +173,11 @@ def autocorrplot(trace, vars=None, fontmap=None, max_lag=100):
                 ax[i, j].set_title("chain {0}".format(j+1))
 
     # Smaller tick labels
-    tlabels = gca().get_xticklabels()
-    setp(tlabels, 'fontsize', fontmap[1])
+    tlabels = plt.gca().get_xticklabels()
+    plt.setp(tlabels, 'fontsize', fontmap[1])
 
-    tlabels = gca().get_yticklabels()
-    setp(tlabels, 'fontsize', fontmap[1])
+    tlabels = plt.gca().get_yticklabels()
+    plt.setp(tlabels, 'fontsize', fontmap[1])
 
 
 def var_str(name, shape):
@@ -255,6 +249,11 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             Location of vertical reference line (defaults to 0).
 
     """
+    import matplotlib.pyplot as plt
+    try:
+        import matplotlib.gridspec as gridspec
+    except ImportError:
+        gridspec = None
 
     if not gridspec:
         print_('\nYour installation of matplotlib is not recent enough to ' +
@@ -322,7 +321,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             gs = gridspec.GridSpec(1, 1)
 
         # Subplot for confidence intervals
-        interval_plot = subplot(gs[0])
+        interval_plot = plt.subplot(gs[0])
 
     for j, tr in enumerate(traces):
 
@@ -381,9 +380,9 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
 
                     if quartiles:
                         # Plot median
-                        plot(q[2], y, 'bo', markersize=4)
+                        plt.plot(q[2], y, 'bo', markersize=4)
                         # Plot quartile interval
-                        errorbar(
+                        plt.errorbar(
                             x=(q[1],
                                 q[3]),
                             y=(y,
@@ -393,10 +392,10 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
 
                     else:
                         # Plot median
-                        plot(q[1], y, 'bo', markersize=4)
+                        plt.plot(q[1], y, 'bo', markersize=4)
 
                     # Plot outer interval
-                    errorbar(
+                    plt.errorbar(
                         x=(q[0],
                             q[-1]),
                         y=(y,
@@ -411,9 +410,9 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
 
                 if quartiles:
                     # Plot median
-                    plot(quants[2], y, 'bo', markersize=4)
+                    plt.plot(quants[2], y, 'bo', markersize=4)
                     # Plot quartile interval
-                    errorbar(
+                    plt.errorbar(
                         x=(quants[1],
                             quants[3]),
                         y=(y,
@@ -422,10 +421,10 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                         color='b')
                 else:
                     # Plot median
-                    plot(quants[1], y, 'bo', markersize=4)
+                    plt.plot(quants[1], y, 'bo', markersize=4)
 
                 # Plot outer interval
-                errorbar(
+                plt.errorbar(
                     x=(quants[0],
                         quants[-1]),
                     y=(y,
@@ -443,27 +442,27 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
     gs.update(left=left_margin, right=0.95, top=0.9, bottom=0.05)
 
     # Define range of y-axis
-    ylim(-var + 0.5, -0.5)
+    plt.ylim(-var + 0.5, -0.5)
 
     datarange = plotrange[1] - plotrange[0]
-    xlim(plotrange[0] - 0.05 * datarange, plotrange[1] + 0.05 * datarange)
+    plt.xlim(plotrange[0] - 0.05 * datarange, plotrange[1] + 0.05 * datarange)
 
     # Add variable labels
-    yticks([-(l + 1) for l in range(len(labels))], labels)
+    plt.yticks([-(l + 1) for l in range(len(labels))], labels)
 
     # Add title
     if main is not False:
         plot_title = main or str(int((
             1 - alpha) * 100)) + "% Credible Intervals"
-        title(plot_title)
+        plt.title(plot_title)
 
     # Add x-axis label
     if xtitle is not None:
-        xlabel(xtitle)
+        plt.xlabel(xtitle)
 
     # Constrain to specified range
     if xrange is not None:
-        xlim(*xrange)
+        plt.xlim(*xrange)
 
     # Remove ticklines on y-axes
     for ticks in interval_plot.yaxis.get_major_ticks():
@@ -478,23 +477,23 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             spine.set_color('none')  # don't draw spine
 
     # Reference line
-    axvline(vline, color='k', linestyle='--')
+    plt.axvline(vline, color='k', linestyle='--')
 
     # Genenerate Gelman-Rubin plot
     if rhat and chains > 1:
 
         # If there are multiple chains, calculate R-hat
-        rhat_plot = subplot(gs[1])
+        rhat_plot = plt.subplot(gs[1])
 
         if main is not False:
-            title("R-hat")
+            plt.title("R-hat")
 
         # Set x range
-        xlim(0.9, 2.1)
+        plt.xlim(0.9, 2.1)
 
         # X axis labels
-        xticks((1.0, 1.5, 2.0), ("1", "1.5", "2+"))
-        yticks([-(l + 1) for l in range(len(labels))], "")
+        plt.xticks((1.0, 1.5, 2.0), ("1", "1.5", "2+"))
+        plt.yticks([-(l + 1) for l in range(len(labels))], "")
 
         i = 1
         for varname in vars:
@@ -503,15 +502,15 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             k = np.size(value)
 
             if k > 1:
-                plot([min(r, 2) for r in R[varname]], [-(j + i)
+                plt.plot([min(r, 2) for r in R[varname]], [-(j + i)
                      for j in range(k)], 'bo', markersize=4)
             else:
-                plot(min(R[varname], 2), -i, 'bo', markersize=4)
+                plt.plot(min(R[varname], 2), -i, 'bo', markersize=4)
 
             i += k
 
         # Define range of y-axis
-        ylim(-i + 0.5, -0.5)
+        plt.ylim(-i + 0.5, -0.5)
 
         # Remove ticklines on y-axes
         for ticks in rhat_plot.yaxis.get_major_ticks():

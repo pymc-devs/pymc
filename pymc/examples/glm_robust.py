@@ -38,7 +38,7 @@ def run(n=2000):
     plt.plot(x, y, 'x')
     glm.plot_posterior_predictive(trace)
     plt.show()
-    
+
 if __name__ == '__main__':
     run()
 
