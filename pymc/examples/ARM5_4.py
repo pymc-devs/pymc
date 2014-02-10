@@ -13,11 +13,12 @@ wells = get_data_file('pymc.examples', 'data/wells.dat')
 data = pd.read_csv(wells, delimiter=u' ', index_col=u'id',
                    dtype={u'switch': np.int8})
 
+data.dist /= 100
+data.educ /= 4
+
 col = data.columns
 
 P = data[col[1:]]
-P.dist /= 100
-P.educ /= 4
 
 P = P - P.mean()
 P['1'] = 1
