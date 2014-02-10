@@ -73,7 +73,7 @@ def traceplot(trace, vars=None, figsize=None,
                 try:
                     ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
                     ax[i, 1].axhline(y=lines[v], color="r", lw=1.5, alpha=.35)
-                except exceptions.KeyError:
+                except KeyError:
                     pass
 
     plt.tight_layout()
