@@ -337,10 +337,7 @@ class Sampler(Model):
         if variables is None:
             variables = self._variables_to_tally
         else:
-            variables = [
-                self.__dict__[
-                    i] for i in variables if self.__dict__[
-                        i] in self._variables_to_tally]
+            variables = [v for v in self.variables if v.__name__ in variables]
 
         stat_dict = {}
 
