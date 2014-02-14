@@ -27,7 +27,6 @@ class Distribution(object):
 
     @classmethod
     def dist(cls, *args, **kwargs):
-        #super(Distribution, cls).__new__(
         dist = object.__new__(cls)
         dist.__init__(*args, **kwargs)
         return dist
