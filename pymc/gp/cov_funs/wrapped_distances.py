@@ -2,7 +2,7 @@ import numpy as np
 import imp
 import pymc
 
-import distances
+from . import distances
 
 from .distances import euclidean, aniso_geo_rad, paniso_geo_rad
 from .distances import geographic as geo_rad
