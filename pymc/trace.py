@@ -43,9 +43,7 @@ class NpTrace(object):
         else:
             try:
                 return self.point(index_value)
-            except ValueError:
-                pass
-            except TypeError:
+            except (ValueError, TypeError, IndexError):
                 pass
 
             return self.samples[str(index_value)].value
@@ -68,7 +66,7 @@ class ListArray(object):
 
         return self.vals[0]
 
-    def __getitem__(self, idx): 
+    def __getitem__(self, idx):
         return ListArray(self.value[idx])
 
 
