@@ -87,7 +87,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
         return np.array(zscores)
 
 
-def gelman_rubin(mtrace):
+def gelman_rubin(trace):
     """ Returns estimate of R for a set of traces.
 
     The Gelman-Rubin diagnostic tests for lack of convergence by comparing
@@ -99,8 +99,8 @@ def gelman_rubin(mtrace):
 
     Parameters
     ----------
-    mtrace : MultiTrace
-      A MultiTrace object containing parallel traces (minimum 2)
+    trace
+      A trace object containing parallel traces (minimum 2)
       of one or more stochastic parameters.
 
     Returns
@@ -126,8 +126,7 @@ def gelman_rubin(mtrace):
     Brooks and Gelman (1998)
     Gelman and Rubin (1992)"""
 
-    m = len(mtrace.traces)
-    if m < 2:
+    if trace.nchains < 2:
         raise ValueError(
             'Gelman-Rubin diagnostic requires multiple chains of the same length.')
 
@@ -157,10 +156,10 @@ def gelman_rubin(mtrace):
             return np.squeeze([calc_rhat(xi) for xi in x.transpose(rotated_indices)])
 
     Rhat = {}
-    for var in mtrace.varnames:
+    for var in trace.varnames:
 
         # Get all traces for var
-        x = np.array([mtrace.traces[i][var] for i in range(m)])
+        x = np.array(trace.get_values(var))
 
         try:
             Rhat[var] = calc_rhat(x)
@@ -169,9 +168,11 @@ def gelman_rubin(mtrace):
 
     return Rhat
 
+
 def trace_to_dataframe(trace):
     """Convert a PyMC trace consisting of 1-D variables to a pandas DataFrame
     """
     import pandas as pd
-    return pd.DataFrame({name: np.squeeze(trace_var.vals)
-			             for name, trace_var in trace.samples.items()})
+    return pd.DataFrame(
+        {varname: np.squeeze(trace.get_values(varname, combine=True))
+         for varname in trace.varnames})
