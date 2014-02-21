@@ -126,8 +126,7 @@ def gelman_rubin(mtrace):
     Brooks and Gelman (1998)
     Gelman and Rubin (1992)"""
 
-    m = len(mtrace.traces)
-    if m < 2:
+    if mtrace.nchains < 2:
         raise ValueError(
             'Gelman-Rubin diagnostic requires multiple chains of the same length.')
 
@@ -160,7 +159,7 @@ def gelman_rubin(mtrace):
     for var in mtrace.varnames:
 
         # Get all traces for var
-        x = np.array([mtrace.traces[i][var] for i in range(m)])
+        x = np.array(mtrace.get_values(var))
 
         try:
             Rhat[var] = calc_rhat(x)
@@ -169,9 +168,11 @@ def gelman_rubin(mtrace):
 
     return Rhat
 
+
 def trace_to_dataframe(trace):
     """Convert a PyMC trace consisting of 1-D variables to a pandas DataFrame
     """
     import pandas as pd
-    return pd.DataFrame({name: np.squeeze(trace_var.vals)
-			             for name, trace_var in trace.samples.items()})
+    return pd.DataFrame(
+        {varname: np.squeeze(trace.get_values(varname, combine=True))
+         for varname in trace.varnames})

@@ -80,7 +80,7 @@ def non_normal(n=2):
     with pm.Model() as model:
         x = pm.Beta('x', 3, 3, shape=n)
 
-    return model.test_point, model, ([.5] * n, None)
+    return model.test_point, model, (np.tile([.5], n), None)
 
 def exponential_beta(n=2):
     with pm.Model() as model:
