@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Do not add setuptools here; use setupegg.py instead. Nose still has problems running
 # tests inside of egg packages, so it is useful to be able to install without eggs as needed.
 
