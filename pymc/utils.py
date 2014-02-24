@@ -607,7 +607,7 @@ def hpd(x, alpha):
     if x.ndim > 1:
 
         # Transpose first, then sort
-        tx = tr(x, range(x.ndim)[1:] + [0])
+        tx = tr(x, list(range(x.ndim)[1:]) + [0])
         dims = shape(tx)
 
         # Container list for intervals
