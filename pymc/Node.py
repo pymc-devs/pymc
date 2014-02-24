@@ -311,7 +311,7 @@ class Variable(Node):
 
         # Index to interval label
         iindex = [key.split()[-1] for key in statdict.keys()].index('interval')
-        interval = statdict.keys()[iindex]
+        interval = list(statdict.keys())[iindex]
 
         # Print basic stats
         buffer += [
