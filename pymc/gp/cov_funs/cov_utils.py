@@ -51,12 +51,12 @@ def regularize_array(A):
 def import_item(name):
     """
     Useful for importing nested modules such as pymc.gp.cov_funs.isotropic_cov_funs.
-    
+
     Updated with code copied from IPython under a BSD license.
     """
     package = '.'.join(name.split('.')[0:-1])
     obj = name.split('.')[-1]
-    
+
     if package:
         module = __import__(package,fromlist=[obj])
         return module.__dict__[obj]
@@ -139,7 +139,7 @@ class covariance_wrapper(object):
         # Figure out how to divide job up between threads.
         nx = x.shape[0]
         ny = y.shape[0]
-        n_threads = min(get_threadpool_size(), nx*ny / 10000)
+        n_threads = min(get_threadpool_size(), nx*ny // 10000)
 
         if n_threads > 1:
             if not symm:
@@ -255,7 +255,7 @@ class covariance_function_bundle(object):
         self.cov_fun_module = cov_fun_module
         self.extra_cov_params = extra_cov_params
         self.ampsq_is_diag = ampsq_is_diag
-        
+
         self.wrappers = []
 
         self.add_distance_metric('euclidean','wrapped_distances',with_x=with_x)

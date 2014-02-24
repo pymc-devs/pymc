@@ -254,7 +254,7 @@ class Database(object):
             self._traces[name]._initialize(self.chains, length)
 
 
-        self.trace_names.append(funs_to_tally.keys())
+        self.trace_names.append(list(funs_to_tally.keys()))
 
         self.chains += 1
 

@@ -74,7 +74,7 @@ def brownian(x,y,amp=1.,scale=1.,origin=None,h=.5,symm=None):
     # Figure out how to divide job up between threads.
     nx = x.shape[0]
     ny = y.shape[0]
-    n_threads = min(get_threadpool_size(), nx*ny / 10000)
+    n_threads = min(get_threadpool_size(), nx*ny // 10000)
 
     if n_threads > 1:
         if not symm:

@@ -440,7 +440,7 @@ class Sampler(Model):
 
         # Index to interval label
         iindex = [key.split()[-1] for key in stats.keys()].index('interval')
-        interval = stats.keys()[iindex]
+        interval = list(stats.keys())[iindex]
         buffer += ', '.join(stats[interval][index].astype(str))
 
         # Process quantiles
