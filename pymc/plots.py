@@ -360,7 +360,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             # Append variable name(s) to list
             if not j:
                 if k > 1:
-                    names = var_str(varname, shape(value))
+                    names = var_str(varname, np.shape(value))
                     labels += names
                 else:
                     labels.append(varname)
