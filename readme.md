@@ -6,6 +6,8 @@ PyMC is a python module for Bayesian statistical modeling and model fitting whic
 
 Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc/examples/tutorial.ipynb)!
 
+***PyMC 3 is alpha software*** and is not ready for use in production. We encourage most new users to use the current release version in the [PyMC 2.3 branch](https://github.com/pymc-devs/pymc/tree/2.3). Release versions are also available on [PyPI](https://pypi.python.org/pypi/pymc) and [Binstar](https://binstar.org/pymc/pymc).
+
 ## Features
 
  * Intuitive model specification syntax, for example, `x ~ N(0,1)` translates to `x = Normal(0,1)`
