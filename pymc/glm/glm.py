@@ -118,6 +118,8 @@ def glm(*args, **kwargs):
     init_vals : dict
         Set starting values externally: parameter -> value
         Default: None
+    find_MAP : bool
+        Whether to call find_MAP on non-initialized nodes.
     family : statsmodels.family
         Distribution of likelihood, see pymc.glm.families
         (init has to be True).
@@ -138,6 +140,7 @@ def glm(*args, **kwargs):
 
     family = kwargs.pop('family', families.Normal())
 
+    call_find_map = kwargs.pop('find_MAP', True)
     formula = args[0]
     data = args[1]
     y_data = np.asarray(patsy.dmatrices(formula, data)[0]).T
@@ -150,7 +153,7 @@ def glm(*args, **kwargs):
 
     # Find vars we have not initialized yet
     non_init_vars = set(model.vars).difference(set(coeffs))
-    if len(non_init_vars) != 0:
+    if len(non_init_vars) != 0 and call_find_map:
         start = find_MAP(vars=non_init_vars)
 
         for var in non_init_vars:
