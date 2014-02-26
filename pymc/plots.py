@@ -190,8 +190,8 @@ def var_str(name, shape):
 
     """
 
-    size = prod(shape)
-    ind = (indices(shape) + 1).reshape(-1, size)
+    size = np.prod(shape)
+    ind = (np.indices(shape) + 1).reshape(-1, size)
     names = ['[' + ','.join(map(str, i)) + ']' for i in zip(*ind)]
     # if len(name)>12:
     #     name = '\n'.join(name.split('_'))
