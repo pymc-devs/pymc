@@ -25,7 +25,7 @@ def run(n=1000):
     if n == "short":
         n = 50
     with model:
-        trace = sample(1e3, step)
+        trace = sample(n, step)
 
     plt.subplot(2, 2, 1)
     plt.plot(trace[x][:, 0, 0])

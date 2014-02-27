@@ -18,11 +18,11 @@ with Model() as model:
 
     step = NUTS()
 
-def run(n=10):
+def run(n=5000):
     if n == "short":
         n = 50
     with model:
-        trace = sample(10, step)
+        trace = sample(n, step)
         
  
 

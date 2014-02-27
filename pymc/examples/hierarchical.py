@@ -56,7 +56,7 @@ def run(n=3000):
     if n == "short":
         n = 50
     with model:
-        trace = sample(3e3, step, start)
+        trace = sample(n, step, start)
         
 if __name__ == '__main__':
     run()

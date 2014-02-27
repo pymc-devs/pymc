@@ -89,9 +89,9 @@ with model:
     
 def run(n=3000):
     if n == "short":
-        n = 50
+        n = 150
     with model:
-        trace = sample(1500, step, s)
+        trace = sample(n, step, s)
 
 
     # <codecell>
