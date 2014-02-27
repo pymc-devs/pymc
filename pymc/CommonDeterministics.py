@@ -532,7 +532,8 @@ def pfunc(func):
 
     def dtrm_generator(*args, **kwds):
         name = func.__name__ + '(' + '_'.join([str(arg)
-                                               for arg in list(args) + kwds.values()]) + ')'
+                                               for arg in list(args) +
+                                               list(kwds.values())]) + ')'
         doc_str = 'A deterministic returning %s(%s, %s)' % (
             func.__name__,
             ', '.join([str(arg) for arg in args]),

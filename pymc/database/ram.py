@@ -127,7 +127,7 @@ class Trace(base.Trace):
                 chain = range(self.db.chains)[chain]
             return self._trace[chain][slicing]
         else:
-            return concatenate(self._trace.values())[slicing]
+            return concatenate(list(self._trace.values()))[slicing]
 
     def __getitem__(self, index):
         chain = self._chain

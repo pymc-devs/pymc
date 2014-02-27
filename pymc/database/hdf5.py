@@ -144,16 +144,16 @@ class Trace(base.Trace):
     def __getitem__(self, index):
         """Mimic NumPy indexing for arrays."""
         chain = self._chain
-        
+
         if chain is not None:
             tables = [self.db._gettables()[chain], ]
         else:
             tables = self.db._gettables()
-        
-        out = np.asarray(tables[0].col(self.name))      
+
+        out = np.asarray(tables[0].col(self.name))
         for table in tables[1:]:
             out = np.append(out, table.col(self.name), axis=0)
-        
+
         return out[index]
 
     def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
@@ -463,7 +463,7 @@ class Database(pickle.Database):
 
             self._traces[name]._initialize(self.chains, length)
 
-        self.trace_names.append(funs_to_tally.keys())
+        self.trace_names.append(list(funs_to_tally.keys()))
         self.chains += 1
 
     def tally(self, chain=-1):

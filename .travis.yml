@@ -1,6 +1,7 @@
 language: python
 python:
   - "2.7"
+  - "3.3"
 before_install:
   - sudo apt-get install liblapack-dev gfortran libblas-dev
 install:

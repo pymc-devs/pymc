@@ -256,7 +256,7 @@ class Database(pickle.Database):
             self._traces[name] = Trace(name, getfunc=fun, db=self)
             self._traces[name]._initialize(self.chains, length)
 
-        self.trace_names.append(funs_to_tally.keys())
+        self.trace_names.append(list(funs_to_tally.keys()))
 
     def tally(self, chain=-1):
         chain = self.chains[chain]
