@@ -57,7 +57,7 @@ def run(n=1000):
         # Use Metropolis for switchpoint, since it accomodates discrete variables
         step2 = Metropolis([switchpoint])
 
-        tr = sample(1000, tune=500, start=start, step=[step1, step2])
+        tr = sample(n, tune=500, start=start, step=[step1, step2])
 
 if __name__ == '__main__':
     run()
