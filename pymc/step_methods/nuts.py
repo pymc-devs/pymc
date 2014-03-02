@@ -56,7 +56,7 @@ class NUTS(ArrayStep):
             scaling = model.test_point
 
         if isinstance(scaling, dict):
-            scaling = guess_scaling(Point(scaling, model=model), model=model)
+            scaling = guess_scaling(Point(scaling, model=model), model=model, vars = vars)
 
 
 
