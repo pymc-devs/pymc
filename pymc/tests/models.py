@@ -48,6 +48,17 @@ def mv_simple():
 
     return model.test_point, model, (mu, C)
 
+def simple_discrete():
+    p = np.array([.1,..5,.4])
+
+    with pm.Model() as model:
+        x = pm.Multinomial('x', 5, pm.constant(p), shape=3, testval=np.array([1,2,2]))
+
+                H = tau
+          C = np.linalg.inv(H)
+
+return model.test_point, model, (mu, C)
+
 def non_normal(n=2):
     with pm.Model() as model:
         x = pm.Beta('x', 3, 3, shape=n)

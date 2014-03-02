@@ -71,7 +71,7 @@ class Metropolis(ArrayStep):
         model = modelcontext(model)
 
         if vars is None:
-            vars = model.cont_vars
+            vars = model.vars
         if S is None:
             S = np.ones(sum(v.dsize for v in vars))
         self.proposal_dist = proposal_dist(S)
