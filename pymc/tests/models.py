@@ -1,6 +1,7 @@
 from pymc import Model, Normal, Metropolis, MvNormal
 import numpy as np
 import pymc as pm
+from itertools import product
 
 
 def simple_model():
@@ -48,16 +49,24 @@ def mv_simple():
 
     return model.test_point, model, (mu, C)
 
-def simple_discrete():
-    p = np.array([.1,..5,.4])
+def mv_simple_discrete():
+    d= 2
+    n = 5
+    p = np.array([.15,.85])
 
     with pm.Model() as model:
-        x = pm.Multinomial('x', 5, pm.constant(p), shape=3, testval=np.array([1,2,2]))
+        x = pm.Multinomial('x', n, pm.constant(p), shape=d, testval=np.array([1,4]))
+        mu = n * p
+        
+        #covariance matrix
+        C = np.zeros((d,d))
+        for (i, j) in product(range(d), range(d)): 
+            if i == j:
+                C[i,i] = n * p[i]*(1-p[i])
+            else:
+                C[i,j] = -n*p[i]*p[j]
 
-                H = tau
-          C = np.linalg.inv(H)
-
-return model.test_point, model, (mu, C)
+    return model.test_point, model, (mu, C)
 
 def non_normal(n=2):
     with pm.Model() as model:
