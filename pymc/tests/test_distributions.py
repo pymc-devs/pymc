@@ -441,8 +441,6 @@ class test_categorical(TestCase):
         """Check to make sure values outside support are -inf"""
         assert categorical_like([-1], [[0.4, 0.4, 0.2]]) < -1e300
         assert categorical_like([3], [[0.4, 0.4, 0.2]]) < -1e300
-        assert categorical_like([1.3], [[0.4, 0.4, 0.2]]) < -1e300
-
 
 class test_cauchy(TestCase):
 
