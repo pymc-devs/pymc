@@ -1,4 +1,4 @@
-from pymc import rnormal, Normal, MCMC, Uniform, Matplot, Metropolis
+from pymc import rnormal, Normal, MCMC, Uniform, Metropolis
 from numpy import ma, shape, ravel
 from numpy.testing import *
 
