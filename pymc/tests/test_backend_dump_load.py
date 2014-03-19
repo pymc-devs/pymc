@@ -42,7 +42,7 @@ class DumpLoadTestCase(unittest.TestCase):
             try:
                 cls.trace = pm.sample(n, step=pm.Metropolis(),
                                       trace=cls.backend(cls.db),
-                                      njobs=2)
+                                      njobs=njobs)
                 cls.dumped = cls.load_func(cls.db)
             except:
                 remove_file_or_directory(cls.db)
