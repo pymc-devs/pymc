@@ -83,3 +83,28 @@ def test_iter_sample():
     samps = sampling.iter_sample(5, step, start, model=model)
     for i, trace in enumerate(samps):
         assert i == len(trace) - 1, "Trace does not have correct length."
+
+
+class TestChooseBackend(unittest.TestCase):
+
+    def test_choose_backend_none(self):
+        with mock.patch('pymc.sampling.NDArray') as nd:
+            sampling._choose_backend(None, 'chain')
+        self.assertTrue(nd.called)
+
+    def test_choose_backend_list_of_variables(self):
+        with mock.patch('pymc.sampling.NDArray') as nd:
+            sampling._choose_backend(['var1', 'var2'], 'chain')
+        nd.assert_called_with(vars=['var1', 'var2'])
+
+    def test_choose_backend_invalid(self):
+        self.assertRaises(ValueError,
+                          sampling._choose_backend,
+                          'invalid', 'chain')
+
+    def test_choose_backend_shortcut(self):
+        backend = mock.Mock()
+        shortcuts = {'test_backend': {'backend': backend,
+                                      'name': None}}
+        sampling._choose_backend('test_backend', 'chain', shortcuts=shortcuts)
+        self.assertTrue(backend.called)

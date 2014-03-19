@@ -112,3 +112,8 @@ For specific examples, see pymc.backends.{ndarray,text,sqlite}.py.
 from pymc.backends.ndarray import NDArray
 from pymc.backends.text import Text
 from pymc.backends.sqlite import SQLite
+
+_shortcuts = {'text': {'backend': Text,
+                       'name': 'mcmc'},
+              'sqlite': {'backend': SQLite,
+                         'name': 'mcmc.sqlite'}}

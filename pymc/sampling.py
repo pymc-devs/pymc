@@ -1,4 +1,5 @@
 from .point import *
+from pymc import backends
 from pymc.backends.base import merge_traces, BaseTrace, MultiTrace
 from pymc.backends.ndarray import NDArray
 import multiprocessing as mp
@@ -34,6 +35,9 @@ def sample(draws, step, start=None, trace=None, chain=0, njobs=1, tune=None,
         or a MultiTrace object with past values. If a MultiTrace object
         is given, it must contain samples for the chain number `chain`.
         If None or a list of variables, the NDArray backend is used.
+        Passing either "text" or "sqlite" is taken as a shortcut to set
+        up the corresponding backend (with "mcmc" used as the base
+        name).
     chain : int
         Chain number used to store sample in backend. If `njobs` is
         greater than one, chain numbers will start here.
@@ -155,10 +159,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     if start is None:
         start = {}
 
-    if isinstance(trace, MultiTrace):
-        trace = trace._traces[chain]
-    elif not isinstance(trace, BaseTrace):
-        trace = NDArray(model=model, vars=trace)
+    trace = _choose_backend(trace, chain, model=model)
 
     if len(trace) > 0:
         _soft_update(start, trace.point(-1))
@@ -181,6 +182,27 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         yield trace
     else:
         trace.close()
+
+
+def _choose_backend(trace, chain, shortcuts=None, **kwds):
+    if isinstance(trace, BaseTrace):
+        return trace
+    if isinstance(trace, MultiTrace):
+        return trace._traces[chain]
+    if trace is None:
+        return NDArray(**kwds)
+
+    if shortcuts is None:
+        shortcuts = backends._shortcuts
+
+    try:
+        backend = shortcuts[trace]['backend']
+        name = shortcuts[trace]['name']
+        return backend(name, **kwds)
+    except TypeError:
+        return NDArray(vars=trace, **kwds)
+    except KeyError:
+        raise ValueError('Argument `trace` is invalid.')
 
 
 def _mp_sample(njobs, args):
