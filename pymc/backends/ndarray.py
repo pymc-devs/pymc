@@ -105,8 +105,6 @@ class NDArray(base.BaseTrace):
     def point(self, idx):
         """Return dictionary of point values at `idx` for current chain
         with variables names as keys.
-
-        If `chain` is not specified, `default_chain` is used.
         """
         idx = int(idx)
         return {varname: values[idx]
