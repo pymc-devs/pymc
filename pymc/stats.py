@@ -11,39 +11,30 @@ def statfunc(f):
     """
 
     def wrapped_f(pymc_obj, *args, **kwargs):
-
         try:
-            burn = kwargs.pop('burn')
-        except KeyError:
-            burn = 0
-
-        try:
-            # MultiTrace
-            traces = pymc_obj.traces
-
-            try:
-                vars = kwargs.pop('vars')
-            except KeyError:
-                vars = traces[0].varnames
-
-            return [{v: f(trace[v][burn:], *args, **kwargs) for v in vars} for trace in traces]
-
+            vars = kwargs.pop('vars',  pymc_obj.varnames)
+            chains = kwargs.pop('chains', pymc_obj.chains)
         except AttributeError:
-            pass
+            # If fails, assume that raw data was passed.
+            return f(pymc_obj, *args, **kwargs)
 
-        try:
-            # NpTrace
-            try:
-                vars = kwargs.pop('vars')
-            except KeyError:
-                vars = pymc_obj.varnames
+        burn = kwargs.pop('burn', 0)
+        thin = kwargs.pop('thin', 1)
+        combine = kwargs.pop('combine', False)
+        ## Remove outer level chain keys if only one chain)
+        squeeze = kwargs.pop('squeeze', True)
 
-            return {v: f(pymc_obj[v][burn:], *args, **kwargs) for v in vars}
-        except AttributeError:
-            pass
+        results = {chain: {} for chain in chains}
+        for var in vars:
+            samples = pymc_obj.get_values(var, chains=chains, burn=burn,
+                                          thin=thin, combine=combine,
+                                          squeeze=False)
+            for chain, data in zip(chains, samples):
+                results[chain][var] = f(np.squeeze(data), *args, **kwargs)
 
-        # If others fail, assume that raw data is passed
-        return f(pymc_obj, *args, **kwargs)
+        if squeeze and (len(chains) == 1 or combine):
+            results = results[chains[0]]
+        return results
 
     wrapped_f.__doc__ = f.__doc__
     wrapped_f.__name__ = f.__name__

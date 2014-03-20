@@ -9,8 +9,8 @@ def test_gelman_rubin(n=1000):
         step1 = Slice([dm.early_mean, dm.late_mean])
         step2 = Metropolis([dm.switchpoint])
         start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
-        ptrace = psample(n, [step1, step2], start, threads=2,
-                         random_seeds=[1, 3])
+        ptrace = sample(n, [step1, step2], start, njobs=2,
+                        random_seed=[1, 3])
 
     rhat = gelman_rubin(ptrace)
 

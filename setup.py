@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from setuptools import setup
+import sys
 
 
 DISTNAME = 'pymc'
@@ -25,8 +26,12 @@ classifiers = ['Development Status :: 3 - Alpha',
                'Topic :: Scientific/Engineering :: Mathematics',
                'Operating System :: OS Independent']
 
-required = ['numpy>=1.7.1', 'scipy>=0.12.0', 'matplotlib>=1.2.1',
-            'Theano==0.6.0']
+install_reqs = ['numpy>=1.7.1', 'scipy>=0.12.0', 'matplotlib>=1.2.1',
+                'Theano==0.6.0']
+
+test_reqs = ['nose']
+if sys.version_info[0] == 2:  # py3 has mock in stdlib
+    test_reqs.append('mock')
 
 if __name__ == "__main__":
     setup(name=DISTNAME,
@@ -39,6 +44,8 @@ if __name__ == "__main__":
           long_description=LONG_DESCRIPTION,
           packages=['pymc', 'pymc.distributions',
                     'pymc.step_methods', 'pymc.tuning', 
-                    'pymc.tests', 'pymc.glm'],
+                    'pymc.tests', 'pymc.glm', 'pymc.backends'],
           classifiers=classifiers,
-          install_requires=required)
+          install_requires=install_reqs,
+          tests_require=test_reqs,
+          test_suite='nose.collector')
