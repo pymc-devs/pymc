@@ -2,7 +2,6 @@ import os
 import numpy as np
 import numpy.testing as npt
 import unittest
-import multiprocessing as mp
 
 import pymc as pm
 
