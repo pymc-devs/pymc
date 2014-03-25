@@ -11,7 +11,7 @@ from inspect import getargspec
 
 from .memoize import memoize
 
-__all__ = ['Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext', 'Point', 'Deterministic']
+__all__ = ['Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext', 'Point', 'Deterministic', 'Potential']
 
 
 class Context(object):
@@ -165,12 +165,6 @@ class Model(Context, Factor):
         tvar = self.Var(trans.name + '_' + name, trans.apply(dist))
 
         return Deterministic(name, trans.backward(tvar)), tvar
-
-    def AddPotential(self, potential):
-        """
-        Add an arbitrary potential to the likelihood.
-        """
-        self.potentials.append(potential)
 
     def add_random_variable(self, var):
         """Add a random variable to the named variables of the model."""
@@ -372,6 +366,21 @@ def Deterministic(name, var, model=None):
     modelcontext(model).add_random_variable(var)
     return var
 
+def Potential(name, var, model=None):
+    """Add an arbitrary factor potential to the model likelihood
+
+    Parameters
+    ----------
+        name : str
+        var : theano variables
+    Returns
+    -------
+        var : var, with name attribute
+    """
+
+    var.name = name
+    modelcontext(model).potentials.append(var)
+    return var
 
 def as_iterargs(data):
     if isinstance(data, tuple):

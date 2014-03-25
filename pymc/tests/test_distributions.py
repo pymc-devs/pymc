@@ -324,7 +324,7 @@ def test_densitydist():
 def test_addpotential():
     with Model() as model:
         value = Normal('value', 1, 1)
-        model.AddPotential(-value ** 2)
+        value_squared = Potential('value_squared', -value ** 2)
 
         check_dlogp(model, value, R, {})
 
