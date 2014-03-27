@@ -55,7 +55,7 @@ def traceplot(trace, vars=None, figsize=None,
 
     for trace in traces:
         for i, v in enumerate(vars):
-            d = np.squeeze(trace[v])
+            d = make_2d(trace[v])
 
             if trace[v].dtype.kind == 'i':
                 histplot_op(ax[i, 0], d)
@@ -80,7 +80,6 @@ def traceplot(trace, vars=None, figsize=None,
     return fig
 
 def histplot_op(ax, data):
-    data = np.atleast_2d(data.T).T
     for i in range(data.shape[1]):
         d = data[:, i]
 
@@ -90,7 +89,6 @@ def histplot_op(ax, data):
         ax.set_xlim(mind - .5, maxd + .5)
 
 def kdeplot_op(ax, data):
-    data = np.atleast_2d(data.T).T
     for i in range(data.shape[1]):
         d = data[:, i]
         density = kde.gaussian_kde(d)
@@ -99,6 +97,16 @@ def kdeplot_op(ax, data):
         x = np.linspace(0, 1, 100) * (u - l) + l
 
         ax.plot(x, density(x))
+
+def make_2d(a): 
+    """Ravel the dimensions after the first.
+    """
+    a = np.atleast_2d(a.T).T
+    #flatten out dimensions beyond the first
+    n = a.shape[0]
+    newshape = np.product(a.shape[1:]).astype(int)
+    a = a.reshape((n, newshape), order='F')
+    return a
 
 
 def kde2plot_op(ax, x, y, grid=200):
