@@ -5,3 +5,4 @@ dist/*
 *.egg-info/
 .ipynb_checkpoints
 tmtags
+tags
