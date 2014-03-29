@@ -11,7 +11,8 @@ from .dist_math import *
 from numpy.random import uniform as runiform, normal as rnormal
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
-           'T', 'Cauchy', 'Gamma', 'Bound', 'Tpos', 'Lognormal']
+           'T', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
+           'Tpos', 'Lognormal']
 
 def get_tau(tau=None, sd=None):
     if tau is None:
@@ -320,6 +321,34 @@ class Cauchy(Continuous):
                                             value - alpha) / beta) ** 2),
             beta > 0)
 
+class HalfCauchy(Continuous):
+    """
+    Half-Cauchy log-likelihood. Simply the absolute value of Cauchy.
+
+    .. math::
+        f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}
+
+    :Parameters:
+      - `alpha` : Location parameter.
+      - `beta` : Scale parameter (beta > 0).
+
+    .. note::
+      - x must be non-negative.
+    """
+
+    def __init__(self, beta, *args, **kwargs):
+        super(HalfCauchy, self).__init__(*args, **kwargs)
+        self.mode = 0
+        self.beta = beta
+
+    def logp(self, value):
+        beta = self.beta
+        return bound(
+            log(2) - log(pi) - log(beta) - log(1 + (value / beta) ** 2),
+            beta > 0,
+            value >= 0)
+
+
 class Gamma(Continuous):
     """
     Gamma log-likelihood.
@@ -362,6 +391,44 @@ class Gamma(Continuous):
             value >= 0,
             alpha > 0,
             beta > 0)
+
+class Weibull(Continuous):
+    """
+    Weibull log-likelihood
+
+    .. math::
+        f(x \mid \alpha, \beta) = \frac{\alpha x^{\alpha - 1}
+        \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
+
+    :Parameters:
+      - `x` : :math:`x \ge 0`
+      - `alpha` : alpha > 0
+      - `beta` : beta > 0
+
+    .. note::
+      - :math:`E(x)=\beta \Gamma(1+\frac{1}{\alpha})`
+      - :math:`median(x)=\Gamma(\log(2))^{1/\alpha}`
+      - :math:`Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)`
+
+    """
+    def __init__(self, alpha, beta, *args, **kwargs):
+        super(Weibull, self).__init__(*args, **kwargs)
+        self.alpha = alpha
+        self.beta = beta
+        self.mean = beta * exp(gammaln(1 + 1./alpha))
+        self.median = beta * exp(gammaln(log(2)))**(1./alpha)
+        self.variance = (beta**2) * exp(gammaln(1 + 2./alpha - self.mean**2))
+
+    def logp(self, value):
+        alpha = self.alpha
+        beta = self.beta
+        return bound(
+            (log(alpha) - log(beta) + (alpha - 1)*log(value/beta)
+            - (value/beta)**alpha),
+            value >= 0,
+            alpha > 0,
+            beta > 0)
+
 
 class Bounded(Continuous):
     """A bounded distribution."""
