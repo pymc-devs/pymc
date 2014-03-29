@@ -210,8 +210,11 @@ def test_gamma():
             )
 
 def scipy_exponweib_sucks(value, alpha, beta):
-    # This function is required because SciPy's implementation of
-    # the Weibull PDF sucks
+    """
+    This function is required because SciPy's implementation of
+    the Weibull PDF fails for some valid combinations of parameters, while the
+    log-PDF fails for others.
+    """
     pdf = numpy.log(sp.exponweib.pdf(value, 1, alpha, scale=beta))
     logpdf = sp.exponweib.logpdf(value, 1, alpha, scale=beta)
 
