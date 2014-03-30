@@ -197,11 +197,35 @@ def test_cauchy():
             lambda value, alpha, beta: sp.cauchy.logpdf(value, alpha, beta)
             )
 
+def test_half_cauchy():
+    pymc_matches_scipy(
+            HalfCauchy, Rplus, {'beta': Rplusbig},
+            lambda value, beta: sp.halfcauchy.logpdf(value, scale=beta)
+            )
 
 def test_gamma():
     pymc_matches_scipy(
             Gamma, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
-            lambda value, alpha, beta: sp.gamma.logpdf(value, alpha, scale = 1.0/beta)
+            lambda value, alpha, beta: sp.gamma.logpdf(value, alpha, scale=1.0/beta)
+            )
+
+def scipy_exponweib_sucks(value, alpha, beta):
+    """
+    This function is required because SciPy's implementation of
+    the Weibull PDF fails for some valid combinations of parameters, while the
+    log-PDF fails for others.
+    """
+    pdf = numpy.log(sp.exponweib.pdf(value, 1, alpha, scale=beta))
+    logpdf = sp.exponweib.logpdf(value, 1, alpha, scale=beta)
+
+    if np.isinf(pdf):
+        return logpdf
+    return pdf
+
+def test_weibull():
+    pymc_matches_scipy(
+            Weibull, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
+            scipy_exponweib_sucks
             )
 
 def test_tpos():
