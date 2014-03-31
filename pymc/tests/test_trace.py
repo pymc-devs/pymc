@@ -2,8 +2,6 @@ from .checks import *
 from .models import *
 import pymc as pm
 import numpy as np
-import warnings
-import nose
 
 # Test if multiprocessing is available
 import multiprocessing
@@ -130,7 +128,11 @@ def test_multi_slice():
     assert np.all([tr[v][0].shape == (iterations, start[v].size) for v in tr.varnames])
 
 
-def test_summary_1_value_model():
+## For all the summary tests, the number of dimensions refer to the
+## original variable dimensions, not the MCMC trace dimensions.
+
+
+def test_summary_0d_variable_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
@@ -140,7 +142,7 @@ def test_summary_1_value_model():
     pm.summary(trace)
 
 
-def test_summary_2_value_model():
+def test_summary_1d_variable_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
@@ -150,7 +152,7 @@ def test_summary_2_value_model():
     pm.summary(trace)
 
 
-def test_summary_2dim_value_model():
+def test_summary_2d_variable_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
@@ -158,11 +160,7 @@ def test_summary_2dim_value_model():
                    testval=np.tile(.1, (2, 2)))
         step = Metropolis(model.vars, np.diag([1.]))
         trace = sample(100, step=step)
-
-    with warnings.catch_warnings(record=True) as wrn:
-        pm.summary(trace)
-        assert len(wrn) == 1
-        assert str(wrn[0].message) == 'Skipping x (above 1 dimension)'
+    pm.summary(trace)
 
 
 def test_summary_format_values():
@@ -186,38 +184,25 @@ def test_stat_summary_format_hpd_values():
             assert val == '1.00'
 
 
-@nose.tools.raises(IndexError)
-def test_calculate_stats_variable_size1_not_adjusted():
+def test_calculate_stats_0d_variable():
     sample = np.arange(10)
-    list(pm.trace._calculate_stats(sample, 5, 0.05))
+    result = list(pm.trace._calculate_stats(sample, 5, 0.05))
+    assert result[0] == ()
+    assert len(result) == 2
 
 
-def test_calculate_stats_variable_size1_adjusted():
-    sample = np.arange(10)[:, None]
-    result_size = len(list(pm.trace._calculate_stats(sample, 5, 0.05)))
-    assert result_size == 1
-
-def test_calculate_stats_variable_size2():
-    ## 2 traces of 5
+def test_calculate_stats_variable_1d_variable():
     sample = np.arange(10).reshape(5, 2)
-    result_size = len(list(pm.trace._calculate_stats(sample, 5, 0.05)))
-    assert result_size == 2
+    result= list(pm.trace._calculate_stats(sample, 5, 0.05))
+    assert result[0] == ()
+    assert len(result) == 3
 
-
-@nose.tools.raises(IndexError)
-def test_calculate_pquantiles_variable_size1_not_adjusted():
-    sample = np.arange(10)
-    qlist = (0.25, 25, 50, 75, 0.98)
-    list(pm.trace._calculate_posterior_quantiles(sample,
-                                                 qlist))
-
-
-def test_calculate_pquantiles_variable_size1_adjusted():
+def test_calculate_pquantiles_0d_variable():
     sample = np.arange(10)[:, None]
     qlist = (0.25, 25, 50, 75, 0.98)
-    result_size = len(list(pm.trace._calculate_posterior_quantiles(sample,
-                                                                   qlist)))
-    assert result_size == 1
+    result = list(pm.trace._calculate_posterior_quantiles(sample, qlist))
+    assert result[0] == ()
+    assert len(result) == 2
 
 
 def test_stats_value_line():
@@ -244,7 +229,22 @@ def test_post_quantile_value_line():
     assert result == expected
 
 
-def test_stats_output_lines():
+def test_stats_output_lines_0d_variable():
+    roundto = 1
+    x = np.arange(5)
+
+    summ = pm.trace._StatSummary(roundto, 5, 0.05)
+
+    expected = ['  Mean             SD               MC Error         95% HPD interval',
+                '  -------------------------------------------------------------------',
+                '  ',
+                '  2.0              1.4              0.6              [0.0, 4.0]',]
+
+    result = list(summ._get_lines(x))
+    assert result == expected
+
+
+def test_stats_output_lines_1d_variable():
     roundto = 1
     x = np.arange(10).reshape(5, 2)
 
@@ -252,13 +252,48 @@ def test_stats_output_lines():
 
     expected = ['  Mean             SD               MC Error         95% HPD interval',
                 '  -------------------------------------------------------------------',
+                '  ',
                 '  4.0              2.8              1.3              [0.0, 8.0]',
                 '  5.0              2.8              1.3              [1.0, 9.0]',]
     result = list(summ._get_lines(x))
     assert result == expected
 
 
-def test_posterior_quantiles_output_lines():
+def test_stats_output_lines_2d_variable():
+    roundto = 1
+    x = np.arange(20).reshape(5, 2, 2)
+
+    summ = pm.trace._StatSummary(roundto, 5, 0.05)
+
+    expected = ['  Mean             SD               MC Error         95% HPD interval',
+                '  -------------------------------------------------------------------',
+                '  ..............................[0, :]...............................',
+                '  8.0              5.7              2.5              [0.0, 16.0]',
+                '  9.0              5.7              2.5              [1.0, 17.0]',
+                '  ..............................[1, :]...............................',
+                '  10.0             5.7              2.5              [2.0, 18.0]',
+                '  11.0             5.7              2.5              [3.0, 19.0]',]
+    result = list(summ._get_lines(x))
+    assert result == expected
+
+
+def test_posterior_quantiles_output_lines_0d_variable():
+    roundto = 1
+    x = np.arange(5)
+
+    summ = pm.trace._PosteriorQuantileSummary(roundto, 0.05)
+
+    expected = ['  Posterior quantiles:',
+                '  2.5            25             50             75             97.5',
+                '  |--------------|==============|==============|--------------|',
+                '  ',
+                '  0.0            1.0            2.0            3.0            4.0',]
+
+    result = list(summ._get_lines(x))
+    assert result == expected
+
+
+def test_posterior_quantiles_output_lines_1d_variable():
     roundto = 1
     x = np.arange(10).reshape(5, 2)
 
@@ -267,8 +302,62 @@ def test_posterior_quantiles_output_lines():
     expected = ['  Posterior quantiles:',
                 '  2.5            25             50             75             97.5',
                 '  |--------------|==============|==============|--------------|',
+                '  ',
                 '  0.0            2.0            4.0            6.0            8.0',
                 '  1.0            3.0            5.0            7.0            9.0']
 
     result = list(summ._get_lines(x))
     assert result == expected
+
+
+def test_posterior_quantiles_output_lines_2d_variable():
+    roundto = 1
+    x = np.arange(20).reshape(5, 2, 2)
+
+    summ = pm.trace._PosteriorQuantileSummary(roundto, 0.05)
+
+    expected = ['  Posterior quantiles:',
+                '  2.5            25             50             75             97.5',
+                '  |--------------|==============|==============|--------------|',
+                '  .............................[0, :].............................',
+                '  0.0            4.0            8.0            12.0           16.0',
+                '  1.0            5.0            9.0            13.0           17.0',
+                '  .............................[1, :].............................',
+                '  2.0            6.0            10.0           14.0           18.0',
+                '  3.0            7.0            11.0           15.0           19.0',]
+
+    result = list(summ._get_lines(x))
+    assert result == expected
+
+
+def test_groupby_leading_idxs_0d_variable():
+    result = {k: list(v) for k, v in pm.trace._groupby_leading_idxs(())}
+    assert list(result.keys()) == [()]
+    assert result[()] == [()]
+
+
+def test_groupby_leading_idxs_1d_variable():
+    result = {k: list(v) for k, v in pm.trace._groupby_leading_idxs((2,))}
+    assert list(result.keys()) == [()]
+    assert result[()] == [(0,), (1,)]
+
+
+def test_groupby_leading_idxs_2d_variable():
+    result = {k: list(v) for k, v in pm.trace._groupby_leading_idxs((2, 3))}
+
+    expected_keys = [(0,), (1,)]
+    keys = list(result.keys())
+    assert len(keys) == len(expected_keys)
+    for key in keys:
+        assert result[key] == [key + (0,), key + (1,), key + (2,)]
+
+
+def test_groupby_leading_idxs_3d_variable():
+    result = {k: list(v) for k, v in pm.trace._groupby_leading_idxs((2, 3, 2))}
+
+    expected_keys = [(0, 0), (0, 1), (0, 2),
+                     (1, 0), (1, 1), (1, 2)]
+    keys = list(result.keys())
+    assert len(keys) == len(expected_keys)
+    for key in keys:
+        assert result[key] == [key + (0,), key + (1,)]

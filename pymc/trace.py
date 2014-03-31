@@ -3,7 +3,7 @@ from .core import *
 from .stats import *
 import copy
 import types
-import warnings
+import itertools
 
 __all__ = ['NpTrace', 'MultiTrace', 'summary']
 
@@ -151,12 +151,7 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
     for var in vars:
         # Extract sampled values
         sample = trace[var][start:]
-        if sample.ndim == 1:
-            sample = sample[:, None]
-        elif sample.ndim > 2:
-            ## trace dimensions greater than 2 (variable greater than 1)
-            warnings.warn('Skipping {} (above 1 dimension)'.format(var))
-            continue
+        sample = np.squeeze(sample)
 
         print('\n%s:' % var)
         print(' ')
@@ -172,6 +167,7 @@ class _Summary(object):
         self.header_lines = None
         self.leader = '  '
         self.spaces = None
+        self.width = None
 
     def print_output(self, sample):
         print('\n'.join(list(self._get_lines(sample))) + '\n')
@@ -185,8 +181,18 @@ class _Summary(object):
 
     def _create_value_output(self, lines):
         for values in lines:
-            self._format_values(values)
-            yield self.value_line.format(pad=self.spaces, **values).strip()
+            try:
+                self._format_values(values)
+                yield self.value_line.format(pad=self.spaces, **values).strip()
+            except AttributeError:
+            # This is a key for the leading indices, not a normal row.
+            # `values` will be an empty tuple unless it is 2d or above.
+                if values:
+                    leading_idxs = [str(v) for v in values]
+                    numpy_idx = '[{}, :]'.format(', '.join(leading_idxs))
+                    yield self._create_idx_row(numpy_idx)
+                else:
+                    yield ''
 
     def _calculate_values(self, sample):
         raise NotImplementedError
@@ -195,6 +201,9 @@ class _Summary(object):
         for key, val in summary_values.items():
             summary_values[key] = '{:.{ndec}f}'.format(
                 float(val), ndec=self.roundto)
+
+    def _create_idx_row(self, value):
+        return '{:.^{}}'.format(value, self.width)
 
 
 class _StatSummary(_Summary):
@@ -205,7 +214,8 @@ class _StatSummary(_Summary):
         value_line = '{mean:<{pad}}{sd:<{pad}}{mce:<{pad}}{hpd:<{pad}}'
         header = value_line.format(mean='Mean', sd='SD', mce='MC Error',
                                   hpd=hpd_name, pad=spaces).strip()
-        hline = '-' * len(header)
+        self.width = len(header)
+        hline = '-' * self.width
 
         self.header_lines = [header, hline]
         self.spaces = spaces
@@ -237,6 +247,7 @@ class _PosteriorQuantileSummary(_Summary):
         qlist = (lo, 25, 50, 75, hi)
         header = value_line.format(lo=lo, q25=25, q50=50, q75=75, hi=hi,
                                    pad=spaces).strip()
+        self.width = len(header)
         hline = '|{thin}|{thick}|{thick}|{thin}|'.format(
             thin='-' * (spaces - 1), thick='=' * (spaces - 1))
 
@@ -255,10 +266,12 @@ def _calculate_stats(sample, batches, alpha):
     sds = sample.std(0)
     mces = mc_error(sample, batches)
     intervals = hpd(sample, alpha)
-    for index in range(sample.shape[1]):
-        mean, sd, mce = [stat[index] for stat in (means, sds, mces)]
-        interval = intervals[index].squeeze().tolist()
-        yield {'mean': mean, 'sd': sd, 'mce': mce, 'hpd': interval}
+    for key, idxs in _groupby_leading_idxs(sample.shape[1:]):
+        yield key
+        for idx in idxs:
+            mean, sd, mce = [stat[idx] for stat in (means, sds, mces)]
+            interval = intervals[idx].squeeze().tolist()
+            yield {'mean': mean, 'sd': sd, 'mce': mce, 'hpd': interval}
 
 
 def _calculate_posterior_quantiles(sample, qlist):
@@ -266,5 +279,44 @@ def _calculate_posterior_quantiles(sample, qlist):
     ## Replace ends of qlist with 'lo' and 'hi'
     qends = {qlist[0]: 'lo', qlist[-1]: 'hi'}
     qkeys = {q: qends[q] if q in qends else 'q{}'.format(q) for q in qlist}
-    for index in range(sample.shape[1]):
-        yield {qkeys[q]: var_quantiles[q][index] for q in qlist}
+    for key, idxs in _groupby_leading_idxs(sample.shape[1:]):
+        yield key
+        for idx in idxs:
+            yield {qkeys[q]: var_quantiles[q][idx] for q in qlist}
+
+
+def _groupby_leading_idxs(shape):
+    """Group the indices for `shape` by the leading indices of `shape`.
+
+    All dimensions except for the rightmost dimension are used to create
+    groups.
+
+    A 3d shape will be grouped by the indices for the two leading
+    dimensions.
+
+        >>> for key, idxs in _groupby_leading_idxs((3, 2, 2)):
+        ...     print('key: {}'.format(key))
+        ...     print(list(idxs))
+        key: (0, 0)
+        [(0, 0, 0), (0, 0, 1)]
+        key: (0, 1)
+        [(0, 1, 0), (0, 1, 1)]
+        key: (1, 0)
+        [(1, 0, 0), (1, 0, 1)]
+        key: (1, 1)
+        [(1, 1, 0), (1, 1, 1)]
+        key: (2, 0)
+        [(2, 0, 0), (2, 0, 1)]
+        key: (2, 1)
+        [(2, 1, 0), (2, 1, 1)]
+
+    A 1d shape will only have one group.
+
+        >>> for key, idxs in _groupby_leading_idxs((2,)):
+        ...     print('key: {}'.format(key))
+        ...     print(list(idxs))
+        key: ()
+        [(0,), (1,)]
+    """
+    idxs = itertools.product(*[range(s) for s in shape])
+    return itertools.groupby(idxs, lambda x: x[:-1])
