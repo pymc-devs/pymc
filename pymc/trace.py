@@ -167,6 +167,7 @@ class _Summary(object):
         self.header_lines = None
         self.leader = '  '
         self.spaces = None
+        self.width = None
 
     def print_output(self, sample):
         print('\n'.join(list(self._get_lines(sample))) + '\n')
@@ -184,9 +185,14 @@ class _Summary(object):
                 self._format_values(values)
                 yield self.value_line.format(pad=self.spaces, **values).strip()
             except AttributeError:
-                # If it's not a dictionary, provide it without
-                # formatting.
-                yield values
+            # This is a key for the leading indices, not a normal row.
+            # `values` will be an empty tuple unless it is 2d or above.
+                if values:
+                    leading_idxs = [str(v) for v in values]
+                    numpy_idx = '[{}, :]'.format(', '.join(leading_idxs))
+                    yield self._create_idx_row(numpy_idx)
+                else:
+                    yield ''
 
     def _calculate_values(self, sample):
         raise NotImplementedError
@@ -195,6 +201,9 @@ class _Summary(object):
         for key, val in summary_values.items():
             summary_values[key] = '{:.{ndec}f}'.format(
                 float(val), ndec=self.roundto)
+
+    def _create_idx_row(self, value):
+        return '{:.^{}}'.format(value, self.width)
 
 
 class _StatSummary(_Summary):
@@ -205,7 +214,8 @@ class _StatSummary(_Summary):
         value_line = '{mean:<{pad}}{sd:<{pad}}{mce:<{pad}}{hpd:<{pad}}'
         header = value_line.format(mean='Mean', sd='SD', mce='MC Error',
                                   hpd=hpd_name, pad=spaces).strip()
-        hline = '-' * len(header)
+        self.width = len(header)
+        hline = '-' * self.width
 
         self.header_lines = [header, hline]
         self.spaces = spaces
@@ -237,6 +247,7 @@ class _PosteriorQuantileSummary(_Summary):
         qlist = (lo, 25, 50, 75, hi)
         header = value_line.format(lo=lo, q25=25, q50=50, q75=75, hi=hi,
                                    pad=spaces).strip()
+        self.width = len(header)
         hline = '|{thin}|{thick}|{thick}|{thin}|'.format(
             thin='-' * (spaces - 1), thick='=' * (spaces - 1))
 
@@ -255,8 +266,8 @@ def _calculate_stats(sample, batches, alpha):
     sds = sample.std(0)
     mces = mc_error(sample, batches)
     intervals = hpd(sample, alpha)
-    for _, idxs in _groupby_leading_idxs(sample.shape[1:]):
-        yield ''
+    for key, idxs in _groupby_leading_idxs(sample.shape[1:]):
+        yield key
         for idx in idxs:
             mean, sd, mce = [stat[idx] for stat in (means, sds, mces)]
             interval = intervals[idx].squeeze().tolist()
@@ -268,8 +279,8 @@ def _calculate_posterior_quantiles(sample, qlist):
     ## Replace ends of qlist with 'lo' and 'hi'
     qends = {qlist[0]: 'lo', qlist[-1]: 'hi'}
     qkeys = {q: qends[q] if q in qends else 'q{}'.format(q) for q in qlist}
-    for _, idxs in _groupby_leading_idxs(sample.shape[1:]):
-        yield ''
+    for key, idxs in _groupby_leading_idxs(sample.shape[1:]):
+        yield key
         for idx in idxs:
             yield {qkeys[q]: var_quantiles[q][idx] for q in qlist}
 

@@ -187,21 +187,21 @@ def test_stat_summary_format_hpd_values():
 def test_calculate_stats_0d_variable():
     sample = np.arange(10)
     result = list(pm.trace._calculate_stats(sample, 5, 0.05))
-    assert result[0] == ''
+    assert result[0] == ()
     assert len(result) == 2
 
 
 def test_calculate_stats_variable_1d_variable():
     sample = np.arange(10).reshape(5, 2)
     result= list(pm.trace._calculate_stats(sample, 5, 0.05))
-    assert result[0] == ''
+    assert result[0] == ()
     assert len(result) == 3
 
 def test_calculate_pquantiles_0d_variable():
     sample = np.arange(10)[:, None]
     qlist = (0.25, 25, 50, 75, 0.98)
     result = list(pm.trace._calculate_posterior_quantiles(sample, qlist))
-    assert result[0] == ''
+    assert result[0] == ()
     assert len(result) == 2
 
 
@@ -267,10 +267,10 @@ def test_stats_output_lines_2d_variable():
 
     expected = ['  Mean             SD               MC Error         95% HPD interval',
                 '  -------------------------------------------------------------------',
-                '  ',
+                '  ..............................[0, :]...............................',
                 '  8.0              5.7              2.5              [0.0, 16.0]',
                 '  9.0              5.7              2.5              [1.0, 17.0]',
-                '  ',
+                '  ..............................[1, :]...............................',
                 '  10.0             5.7              2.5              [2.0, 18.0]',
                 '  11.0             5.7              2.5              [3.0, 19.0]',]
     result = list(summ._get_lines(x))
@@ -319,10 +319,10 @@ def test_posterior_quantiles_output_lines_2d_variable():
     expected = ['  Posterior quantiles:',
                 '  2.5            25             50             75             97.5',
                 '  |--------------|==============|==============|--------------|',
-                '  ',
+                '  .............................[0, :].............................',
                 '  0.0            4.0            8.0            12.0           16.0',
                 '  1.0            5.0            9.0            13.0           17.0',
-                '  ',
+                '  .............................[1, :].............................',
                 '  2.0            6.0            10.0           14.0           18.0',
                 '  3.0            7.0            11.0           15.0           19.0',]
 
