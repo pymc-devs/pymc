@@ -144,6 +144,25 @@ def test_normal():
             lambda value, mu, sd: sp.norm.logpdf(value, mu, sd)
             )
 
+
+def test_half_normal():
+    pymc_matches_scipy(
+            HalfNormal, Rplus, {'sd': Rplus},
+            lambda value, sd: sp.halfnorm.logpdf(value, scale=sd)
+            )
+
+def test_chi_squared():
+    pymc_matches_scipy(
+            ChiSquared, Rplus, {'nu': Rplusdunif},
+            lambda value, nu: sp.chi2.logpdf(value, df=nu)
+            )
+
+def test_wald():
+    pymc_matches_scipy(
+            Wald, Rplus, {'mu': Rplus},
+            lambda value, mu: sp.invgauss.logpdf(value, mu)
+            )
+
 def test_beta():
     pymc_matches_scipy(
             Beta, Unit, {'alpha': Rplus, 'beta': Rplus},

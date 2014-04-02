@@ -6,7 +6,7 @@ Created on Mar 7, 2011
 from __future__ import division
 import theano.tensor as t
 from theano.tensor import (
-    sum, switch, log, exp,
+    sum, switch, log, exp, sqrt,
     eq, neq, lt, gt, le, ge, all, any,
     cast, round, arange, max, min,
     maximum, minimum, floor, ceil,
