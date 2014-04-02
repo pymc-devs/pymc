@@ -12,7 +12,7 @@ from numpy.random import uniform as runiform, normal as rnormal
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
-           'Tpos', 'Lognormal']
+           'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald']
 
 def get_tau(tau=None, sd=None):
     if tau is None:
@@ -108,6 +108,65 @@ class Normal(Continuous):
         return bound(
             (-tau * (value - mu) ** 2 + log(tau / pi / 2.)) / 2.,
             tau > 0)
+
+
+class HalfNormal(Continuous):
+    """
+    Half-normal log-likelihood, a normal distribution with mean 0 limited
+    to the domain :math:`x \in [0, \infty)`.
+
+    .. math::
+        f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
+
+    :Parameters:
+      - `x` : :math:`x \ge 0`
+      - `tau` : tau > 0
+
+    """
+    def __init__(self, tau=None, sd=None, *args, **kwargs):
+        super(HalfNormal, self).__init__(*args, **kwargs)
+        self.tau = get_tau(tau=tau, sd=sd)
+        self.mean = sqrt(2 / (pi * self.tau))
+        self.variance = (1. - 2/pi) / self.tau
+
+    def logp(self, value):
+        tau = self.tau
+
+        return bound(
+            -0.5 * tau * value**2 + 0.5 * log(tau * 2. / pi),
+            tau > 0)
+
+
+class Wald(Continuous):
+    """
+    Wald (inverse Gaussian) log likelihood.
+
+    .. math::
+        f(x \mid \mu) = \sqrt{\frac{1}{2\pi x^3}} \exp\left\{ \frac{-(x-\mu)^2}{2 \mu^2 x} \right\}
+
+    Parameters
+    ----------
+    mu : float
+        Mean of the distribution.
+
+    .. note::
+    - :math:`E(X) = \mu`
+    - :math:`Var(X) = \mu^3`
+    """
+    def __init__(self, mu, *args, **kwargs):
+        super(Wald, self).__init__(*args, **kwargs)
+        self.mu = mu
+        self.mean = mu
+        self.variance = mu**3
+
+    def logp(self, value):
+        mu = self.mu
+
+        return bound(
+            ((- (value - mu) ** 2) /
+                (2. * value * (mu ** 2))) + logpow(2. * pi * value **3, -0.5),
+            mu > 0)
+
 
 
 class Beta(Continuous):
@@ -391,6 +450,27 @@ class Gamma(Continuous):
             value >= 0,
             alpha > 0,
             beta > 0)
+
+
+class ChiSquared(Gamma):
+    """
+    Chi-squared :math:`\chi^2` log-likelihood.
+
+    .. math::
+        f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
+
+    :Parameters:
+      - `x` : > 0
+      - `nu` : [int] Degrees of freedom ( nu > 0 )
+
+    .. note::
+      - :math:`E(X)=\nu`
+      - :math:`Var(X)=2\nu`
+    """
+    def __init__(self, nu, *args, **kwargs):
+        self.nu = nu
+        super(ChiSquared, self).__init__(alpha=nu/2., beta=0.5, *args, **kwargs)
+
 
 class Weibull(Continuous):
     """
