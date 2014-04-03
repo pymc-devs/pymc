@@ -11,6 +11,13 @@ def simple_model():
 
     return model.test_point, model, (mu, tau ** -1)
 
+def multidimensional_model():
+    mu = -2.1
+    tau = 1.3
+    with Model() as model:
+        x = Normal('x', mu, tau, shape=(3,2), testval=.1*np.ones((3,2)) )
+
+    return model.test_point, model, (mu, tau ** -1)
 
 def simple_init():
     start, model, moments = simple_model()
