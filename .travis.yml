@@ -22,10 +22,10 @@ install:
   - pip install git+https://github.com/mahmoudimus/nose-timer.git
 
 env:
-  - TESTCMD="nosetests -vv --with-timer --timer-verbose -e test_glm -e test_examples -e test_distributions"
-  - TESTCMD="nosetests -vv --with-timer --timer-verbose pymc.tests.test_distributions"
-  - TESTCMD="nosetests -vv --with-timer --timer-verbose pymc.tests.test_examples:test_examples0"
-  - TESTCMD="nosetests -vv --with-timer --timer-verbose pymc.tests.test_examples:test_examples1"
-  - TESTCMD="nosetests -vv --with-timer --timer-verbose pymc.tests.test_examples:test_examples2"
+  - TESTCMD="nosetests -vv --with-timer -e test_glm -e test_examples -e test_distributions"
+  - TESTCMD="nosetests -vv --with-timer pymc.tests.test_distributions"
+  - TESTCMD="nosetests -vv --with-timer pymc.tests.test_examples:test_examples0"
+  - TESTCMD="nosetests -vv --with-timer pymc.tests.test_examples:test_examples1"
+  - TESTCMD="nosetests -vv --with-timer pymc.tests.test_examples:test_examples2"
 
 script: "$TESTCMD"
