@@ -29,7 +29,7 @@ def test_plots():
 def test_plots_multidimensional():
 
     # Test single trace
-    from models import multidimensional_model
+    from .models import multidimensional_model
 
 
     start, model, _ = multidimensional_model()
