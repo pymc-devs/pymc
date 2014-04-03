@@ -2,7 +2,7 @@ import matplotlib
 matplotlib.use('Agg', warn=False)
 
 import numpy as np 
-from checks import close_to
+from .checks import close_to
 
 import pymc.plots
 from pymc.plots import *
