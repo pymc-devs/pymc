@@ -1,7 +1,7 @@
 from pymc import Model, Normal, Metropolis, MvNormal
 import numpy as np
 import pymc as pm
-
+from theano.tensor import log
 
 def simple_model():
     mu = -2.1
@@ -25,6 +25,7 @@ def simple_2model():
     p = .4
     with Model() as model:
         x = pm.Normal('x', mu, tau, testval=.1)
+        logx = pm.Deterministic('logx', log(x))
         y = pm.Bernoulli('y', p)
 
     return model.test_point, model
