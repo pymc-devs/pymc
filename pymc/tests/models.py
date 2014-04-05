@@ -2,7 +2,7 @@ from pymc import Model, Normal, Metropolis, MvNormal
 import numpy as np
 import pymc as pm
 from itertools import product
-
+from theano.tensor import log
 
 def simple_model():
     mu = -2.1
@@ -33,6 +33,7 @@ def simple_2model():
     p = .4
     with Model() as model:
         x = pm.Normal('x', mu, tau, testval=.1)
+        logx = pm.Deterministic('logx', log(x))
         y = pm.Bernoulli('y', p)
 
     return model.test_point, model
@@ -64,10 +65,10 @@ def mv_simple_discrete():
     with pm.Model() as model:
         x = pm.Multinomial('x', n, pm.constant(p), shape=d, testval=np.array([1,4]))
         mu = n * p
-        
+
         #covariance matrix
         C = np.zeros((d,d))
-        for (i, j) in product(range(d), range(d)): 
+        for (i, j) in product(range(d), range(d)):
             if i == j:
                 C[i,i] = n * p[i]*(1-p[i])
             else:

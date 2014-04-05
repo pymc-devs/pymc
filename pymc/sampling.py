@@ -181,7 +181,7 @@ def psample(draws, step, start=None, trace=None, tune=None, progressbar=True,
         start = threads * [start]
 
     if trace is None:
-        trace = model.vars
+        trace = model.unobserved_RVs
 
     if type(trace) is MultiTrace:
         mtrace = trace
