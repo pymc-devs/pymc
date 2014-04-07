@@ -388,7 +388,6 @@ class HalfCauchy(Continuous):
         f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}
 
     :Parameters:
-      - `alpha` : Location parameter.
       - `beta` : Scale parameter (beta > 0).
 
     .. note::
