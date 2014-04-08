@@ -117,195 +117,207 @@ PdMatrix3 = Domain([
     ],
     edges = (None,None))
 
-def test_uniform():
+# def test_uniform():
+#     pymc_matches_scipy(
+#             Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif},
+#             lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower)
+#             )
+#
+#
+# def test_discrete_unif():
+#     pymc_matches_scipy(
+#             DiscreteUniform, Rdunif,
+#             {'lower': -Rplusdunif, 'upper': Rplusdunif},
+#             lambda value, lower, upper: sp.randint.logpmf(value, lower, upper+1)
+#             )
+#
+# def test_flat():
+#     pymc_matches_scipy(
+#             Flat, Runif, {},
+#             lambda value: 0
+#             )
+#
+#
+# def test_normal():
+#     pymc_matches_scipy(
+#             Normal, R, {'mu': R, 'sd': Rplus},
+#             lambda value, mu, sd: sp.norm.logpdf(value, mu, sd)
+#             )
+#
+#
+# def test_half_normal():
+#     pymc_matches_scipy(
+#             HalfNormal, Rplus, {'sd': Rplus},
+#             lambda value, sd: sp.halfnorm.logpdf(value, scale=sd)
+#             )
+#
+# def test_chi_squared():
+#     pymc_matches_scipy(
+#             ChiSquared, Rplus, {'nu': Rplusdunif},
+#             lambda value, nu: sp.chi2.logpdf(value, df=nu)
+#             )
+#
+# def test_wald():
+#     pymc_matches_scipy(
+#             Wald, Rplus, {'mu': Rplus},
+#             lambda value, mu: sp.invgauss.logpdf(value, mu)
+#             )
+#
+# def test_beta():
+#     pymc_matches_scipy(
+#             Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
+#             lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta)
+#             )
+#
+#
+# def test_exponential():
+#     pymc_matches_scipy(
+#             Exponential, Rplus, {'lam': Rplus},
+#             lambda value, lam: sp.expon.logpdf(value, 0, 1/lam)
+#             )
+#
+# def test_geometric():
+#     pymc_matches_scipy(
+#             Geometric, Nat, {'p': Unit},
+#             lambda value, p: np.log(sp.geom.pmf(value, p))
+#             )
+#
+#
+# def test_negative_binomial():
+#     pymc_matches_scipy(
+#             NegativeBinomial, Nat, {'mu': Rplus, 'alpha': Rplus},
+#             lambda value, mu, alpha: sp.nbinom.logpmf(value, alpha, 1 - mu/(mu + alpha))
+#             )
+#
+#
+# def test_laplace():
+#     pymc_matches_scipy(
+#             Laplace, R, {'mu': R, 'b': Rplus},
+#             lambda value, mu, b: sp.laplace.logpdf(value, mu, b)
+#             )
+#
+#
+# def test_lognormal():
+#     pymc_matches_scipy(
+#             Lognormal, Rplus, {'mu': R, 'tau': Rplusbig},
+#             lambda value, mu, tau: sp.lognorm.logpdf(value, tau**-.5, 0, np.exp(mu))
+#             )
+#
+# def test_t():
+#     pymc_matches_scipy(
+#             T, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
+#             lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5)
+#             )
+#
+#
+# def test_cauchy():
+#     pymc_matches_scipy(
+#             Cauchy, R, {'alpha': R, 'beta': Rplusbig},
+#             lambda value, alpha, beta: sp.cauchy.logpdf(value, alpha, beta)
+#             )
+#
+# def test_half_cauchy():
+#     pymc_matches_scipy(
+#             HalfCauchy, Rplus, {'beta': Rplusbig},
+#             lambda value, beta: sp.halfcauchy.logpdf(value, scale=beta)
+#             )
+#
+# def test_gamma():
+#     pymc_matches_scipy(
+#             Gamma, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
+#             lambda value, alpha, beta: sp.gamma.logpdf(value, alpha, scale=1.0/beta)
+#             )
+
+def test_inverse_gamma():
     pymc_matches_scipy(
-            Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif},
-            lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower)
+            InverseGamma, Rplus, {'alpha': Rplus, 'beta': Rplus},
+            lambda value, alpha, beta: sp.invgamma.logpdf(value, alpha, scale=beta)
             )
 
-
-def test_discrete_unif():
+def test_pareto():
     pymc_matches_scipy(
-            DiscreteUniform, Rdunif,
-            {'lower': -Rplusdunif, 'upper': Rplusdunif},
-            lambda value, lower, upper: sp.randint.logpmf(value, lower, upper+1)
+            Pareto, Rplus, {'alpha': Rplusbig, 'm': Rplusbig},
+            lambda value, alpha, m: sp.pareto.logpdf(value, alpha, scale=m)
             )
 
-def test_flat():
-    pymc_matches_scipy(
-            Flat, Runif, {},
-            lambda value: 0
-            )
-
-
-def test_normal():
-    pymc_matches_scipy(
-            Normal, R, {'mu': R, 'sd': Rplus},
-            lambda value, mu, sd: sp.norm.logpdf(value, mu, sd)
-            )
-
-
-def test_half_normal():
-    pymc_matches_scipy(
-            HalfNormal, Rplus, {'sd': Rplus},
-            lambda value, sd: sp.halfnorm.logpdf(value, scale=sd)
-            )
-
-def test_chi_squared():
-    pymc_matches_scipy(
-            ChiSquared, Rplus, {'nu': Rplusdunif},
-            lambda value, nu: sp.chi2.logpdf(value, df=nu)
-            )
-
-def test_wald():
-    pymc_matches_scipy(
-            Wald, Rplus, {'mu': Rplus},
-            lambda value, mu: sp.invgauss.logpdf(value, mu)
-            )
-
-def test_beta():
-    pymc_matches_scipy(
-            Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
-            lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta)
-            )
-
-
-def test_exponential():
-    pymc_matches_scipy(
-            Exponential, Rplus, {'lam': Rplus},
-            lambda value, lam: sp.expon.logpdf(value, 0, 1/lam)
-            )
-
-def test_geometric():
-    pymc_matches_scipy(
-            Geometric, Nat, {'p': Unit},
-            lambda value, p: np.log(sp.geom.pmf(value, p))
-            )
-
-
-def test_negative_binomial():
-    pymc_matches_scipy(
-            NegativeBinomial, Nat, {'mu': Rplus, 'alpha': Rplus},
-            lambda value, mu, alpha: sp.nbinom.logpmf(value, alpha, 1 - mu/(mu + alpha))
-            )
-
-
-def test_laplace():
-    pymc_matches_scipy(
-            Laplace, R, {'mu': R, 'b': Rplus},
-            lambda value, mu, b: sp.laplace.logpdf(value, mu, b)
-            )
-
-
-def test_lognormal():
-    pymc_matches_scipy(
-            Lognormal, Rplus, {'mu': R, 'tau': Rplusbig},
-            lambda value, mu, tau: sp.lognorm.logpdf(value, tau**-.5, 0, np.exp(mu))
-            )
-
-def test_t():
-    pymc_matches_scipy(
-            T, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
-            lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5)
-            )
-
-
-def test_cauchy():
-    pymc_matches_scipy(
-            Cauchy, R, {'alpha': R, 'beta': Rplusbig},
-            lambda value, alpha, beta: sp.cauchy.logpdf(value, alpha, beta)
-            )
-
-def test_half_cauchy():
-    pymc_matches_scipy(
-            HalfCauchy, Rplus, {'beta': Rplusbig},
-            lambda value, beta: sp.halfcauchy.logpdf(value, scale=beta)
-            )
-
-def test_gamma():
-    pymc_matches_scipy(
-            Gamma, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
-            lambda value, alpha, beta: sp.gamma.logpdf(value, alpha, scale=1.0/beta)
-            )
-
-def scipy_exponweib_sucks(value, alpha, beta):
-    """
-    This function is required because SciPy's implementation of
-    the Weibull PDF fails for some valid combinations of parameters, while the
-    log-PDF fails for others.
-    """
-    pdf = numpy.log(sp.exponweib.pdf(value, 1, alpha, scale=beta))
-    logpdf = sp.exponweib.logpdf(value, 1, alpha, scale=beta)
-
-    if np.isinf(pdf):
-        return logpdf
-    return pdf
-
-def test_weibull():
-    pymc_matches_scipy(
-            Weibull, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
-            scipy_exponweib_sucks
-            )
-
-def test_tpos():
-    #TODO: this actually shouldn't pass
-    pymc_matches_scipy(
-            Tpos, Rplus, {'nu': Rplus, 'mu': R, 'lam': Rplus},
-            lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5)
-            )
-
-
-def test_binomial():
-    pymc_matches_scipy(
-            Binomial, Nat, {'n': NatSmall, 'p': Unit},
-            lambda value, n, p: sp.binom.logpmf(value, n, p)
-            )
-
-def test_betabin():
-    checkd(BetaBin, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': NatSmall})
-
-
-def test_bernoulli():
-    pymc_matches_scipy(
-            Bernoulli, Bool, {'p': Unit},
-            lambda value, p: sp.bernoulli.logpmf(value, p)
-            )
-
-def test_poisson():
-    pymc_matches_scipy(
-            Poisson, Nat, {'mu': Rplus},
-            lambda value, mu: sp.poisson.logpmf(value, mu)
-            )
-
-def test_constantdist():
-    pymc_matches_scipy(
-            ConstantDist, I, {'c': I},
-            lambda value, c: np.log(c == value)
-            )
-
-def test_zeroinflatedpoisson():
-    checkd(ZeroInflatedPoisson, I, {'theta': Rplus, 'z': Bool})
-
-def test_mvnormal():
-    for n in [2,3]:
-        yield check_mvnormal, n
-
-def check_mvnormal(n):
-    pymc_matches_scipy(
-            MvNormal, Vector(R,n), {'mu': Vector(R,n), 'tau': PdMatrix(n)},
-            normal_logpdf
-            )
-
-def normal_logpdf(value, mu, tau):
-    (k,) = value.shape
-    return  (-k/2)* np.log(2*np.pi) + .5 * np.log(np.linalg.det(tau)) - .5*(value-mu).dot(tau).dot(value -mu)
-
-def test_wishart():
-    for n in [2,3]:
-        yield check_wishart,n
-
-def check_wishart(n):
-    checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix(n) }, checks = [check_dlogp], extra_args={'p' : n})
+# def scipy_exponweib_sucks(value, alpha, beta):
+#     """
+#     This function is required because SciPy's implementation of
+#     the Weibull PDF fails for some valid combinations of parameters, while the
+#     log-PDF fails for others.
+#     """
+#     pdf = numpy.log(sp.exponweib.pdf(value, 1, alpha, scale=beta))
+#     logpdf = sp.exponweib.logpdf(value, 1, alpha, scale=beta)
+#
+#     if np.isinf(pdf):
+#         return logpdf
+#     return pdf
+#
+# def test_weibull():
+#     pymc_matches_scipy(
+#             Weibull, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
+#             scipy_exponweib_sucks
+#             )
+#
+# def test_tpos():
+#     #TODO: this actually shouldn't pass
+#     pymc_matches_scipy(
+#             Tpos, Rplus, {'nu': Rplus, 'mu': R, 'lam': Rplus},
+#             lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5)
+#             )
+#
+#
+# def test_binomial():
+#     pymc_matches_scipy(
+#             Binomial, Nat, {'n': NatSmall, 'p': Unit},
+#             lambda value, n, p: sp.binom.logpmf(value, n, p)
+#             )
+#
+# def test_betabin():
+#     checkd(BetaBin, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': NatSmall})
+#
+#
+# def test_bernoulli():
+#     pymc_matches_scipy(
+#             Bernoulli, Bool, {'p': Unit},
+#             lambda value, p: sp.bernoulli.logpmf(value, p)
+#             )
+#
+# def test_poisson():
+#     pymc_matches_scipy(
+#             Poisson, Nat, {'mu': Rplus},
+#             lambda value, mu: sp.poisson.logpmf(value, mu)
+#             )
+#
+# def test_constantdist():
+#     pymc_matches_scipy(
+#             ConstantDist, I, {'c': I},
+#             lambda value, c: np.log(c == value)
+#             )
+#
+# def test_zeroinflatedpoisson():
+#     checkd(ZeroInflatedPoisson, I, {'theta': Rplus, 'z': Bool})
+#
+# def test_mvnormal():
+#     for n in [2,3]:
+#         yield check_mvnormal, n
+#
+# def check_mvnormal(n):
+#     pymc_matches_scipy(
+#             MvNormal, Vector(R,n), {'mu': Vector(R,n), 'tau': PdMatrix(n)},
+#             normal_logpdf
+#             )
+#
+# def normal_logpdf(value, mu, tau):
+#     (k,) = value.shape
+#     return  (-k/2)* np.log(2*np.pi) + .5 * np.log(np.linalg.det(tau)) - .5*(value-mu).dot(tau).dot(value -mu)
+#
+# def test_wishart():
+#     for n in [2,3]:
+#         yield check_wishart,n
+#
+# def check_wishart(n):
+#     checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix(n) }, checks = [check_dlogp], extra_args={'p' : n})
 
 def betafn(a):
     return scipy.special.gammaln(a).sum() - scipy.special.gammaln(a.sum())
