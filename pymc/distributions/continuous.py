@@ -374,10 +374,8 @@ class Pareto(Continuous):
         super(Pareto, self).__init__(*args, **kwargs)
         self.alpha = alpha
         self.m = m
-        # Mean and variance return inf when parameter constraint not satisfied
-        self.mean = (alpha>1) * alpha * m / (alpha - 1.) or inf
-        self.variance = ((alpha>2) * (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2)
-                            or inf)
+        self.mean = switch(alpha>1, alpha * m / (alpha - 1.), inf)
+        self.variance = switch(alpha>2, (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2), inf)
 
     def logp(self, value):
         alpha = self.alpha
@@ -521,8 +519,7 @@ class InverseGamma(Continuous):
         self.beta = beta
         self.mean = (alpha > 1) * beta / (alpha - 1.) or inf
         self.mode = beta / (alpha + 1.)
-        # Variance returns inf when parameter constraint not satisfied
-        self.variance = (alpha > 2) * (beta ** 2) / (alpha * (alpha - 1.)**2) or inf
+        self.variance = switch(alpha > 2, (beta ** 2) / (alpha * (alpha - 1.)**2), inf)
 
     def logp(self, value):
         alpha = self.alpha
