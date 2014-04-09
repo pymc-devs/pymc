@@ -228,6 +228,18 @@ def test_gamma():
             lambda value, alpha, beta: sp.gamma.logpdf(value, alpha, scale=1.0/beta)
             )
 
+def test_inverse_gamma():
+    pymc_matches_scipy(
+            InverseGamma, Rplus, {'alpha': Rplus, 'beta': Rplus},
+            lambda value, alpha, beta: sp.invgamma.logpdf(value, alpha, scale=beta)
+            )
+
+def test_pareto():
+    pymc_matches_scipy(
+            Pareto, Rplus, {'alpha': Rplusbig, 'm': Rplusbig},
+            lambda value, alpha, m: sp.pareto.logpdf(value, alpha, scale=m)
+            )
+
 def scipy_exponweib_sucks(value, alpha, beta):
     """
     This function is required because SciPy's implementation of

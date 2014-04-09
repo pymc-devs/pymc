@@ -12,7 +12,8 @@ from numpy.random import uniform as runiform, normal as rnormal
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
-           'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald']
+           'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
+           'Pareto', 'InverseGamma']
 
 def get_tau(tau=None, sd=None):
     if tau is None:
@@ -347,6 +348,46 @@ class T(Continuous):
             nu > 0)
 
 
+class Pareto(Continuous):
+    """
+    Pareto log-likelihood. The Pareto is a continuous, positive
+    probability distribution with two parameters. It is often used
+    to characterize wealth distribution, or other examples of the
+    80/20 rule.
+
+    .. math::
+        f(x \mid \alpha, m) = \frac{\alpha m^{\alpha}}{x^{\alpha+1}}
+
+    Parameters
+    ----------
+    alpha : float
+        Shape parameter (alpha>0)
+    m : float
+        Scale parameter (m>0)
+
+    .. note::
+       - :math:`E(x)=\frac{\alpha m}{\alpha-1} if \alpha > 1`
+       - :math:`Var(x)=\frac{m^2 \alpha}{(\alpha-1)^2(\alpha-2)} if \alpha > 2`
+
+    """
+    def __init__(self, alpha, m, *args, **kwargs):
+        super(Pareto, self).__init__(*args, **kwargs)
+        self.alpha = alpha
+        self.m = m
+        self.mean = switch(gt(alpha,1), alpha * m / (alpha - 1.), inf)
+        self.variance = switch(gt(alpha,2), (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2), inf)
+
+    def logp(self, value):
+        alpha = self.alpha
+        m = self.m
+        return bound(
+            log(alpha) + logpow(m, alpha) - logpow(value, alpha+1),
+
+            alpha > 0,
+            m > 0,
+            value >= m)
+
+
 class Cauchy(Continuous):
     """
     Cauchy log-likelihood. The Cauchy distribution is also known as the
@@ -448,6 +489,45 @@ class Gamma(Continuous):
                 beta, alpha) - beta * value + logpow(value, alpha - 1),
 
             value >= 0,
+            alpha > 0,
+            beta > 0)
+
+
+class InverseGamma(Continuous):
+    """
+    Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
+
+    .. math::
+        f(x \mid \alpha, \beta) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1} \exp\left(\frac{-\beta}{x}\right)
+
+    Parameters
+    ----------
+      alpha : float
+          Shape parameter (alpha > 0).
+      beta : float
+          Scale parameter (beta > 0).
+
+    .. note::
+
+       :math:`E(X)=\frac{\beta}{\alpha-1}`  for :math:`\alpha > 1`
+       :math:`Var(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha)}`  for :math:`\alpha > 2`
+
+    """
+    def __init__(self, alpha, beta=1, *args, **kwargs):
+        super(InverseGamma, self).__init__(*args, **kwargs)
+        self.alpha = alpha
+        self.beta = beta
+        self.mean = (alpha > 1) * beta / (alpha - 1.) or inf
+        self.mode = beta / (alpha + 1.)
+        self.variance = switch(gt(alpha, 2), (beta ** 2) / (alpha * (alpha - 1.)**2), inf)
+
+    def logp(self, value):
+        alpha = self.alpha
+        beta = self.beta
+        return bound(
+            logpow(beta, alpha) - gammaln(alpha) - beta / value + logpow(value, -alpha-1),
+
+            value > 0,
             alpha > 0,
             beta > 0)
 

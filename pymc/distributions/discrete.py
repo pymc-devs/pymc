@@ -168,9 +168,12 @@ class NegativeBinomial(Discrete):
     .. math::
         f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
 
-    :Parameters:
-      - `mu` : mu > 0
-      - `alpha` : alpha > 0
+    Parameters
+    ----------
+      mu : float
+          mu > 0
+      alpha : float
+          alpha > 0
 
     .. note::
       - :math:`E[x]=\mu`
@@ -207,8 +210,10 @@ class Geometric(Discrete):
     .. math::
         f(x \mid p) = p(1-p)^{x-1}
 
-    :Parameters:
-      - `p` : Probability of success on an individual trial, :math:`p \in [0,1]`
+    Parameters
+    ----------
+    p : float
+        Probability of success on an individual trial, :math:`p \in [0,1]`
 
     .. note::
       - :math:`E(X)=1/p`
@@ -233,9 +238,12 @@ class DiscreteUniform(Discrete):
     .. math::
         f(x \mid lower, upper) = \frac{1}{upper-lower}
 
-    :Parameters:
-      - `lower` : Lower limit.
-      - `upper` : Upper limit (upper > lower).
+    Parameters
+    ----------
+    lower : int
+        Lower limit.
+    upper : int
+        Upper limit (upper > lower).
 
     """
     def __init__(self, lower, upper, *args, **kwargs):
@@ -261,8 +269,10 @@ class Categorical(Discrete):
 
     for :math:`i \in 0 \ldots k-1`.
 
-    :Parameters:
-      - `p` : [float] :math:`p > 0`, :math:`\sum p = 1`
+    Parameters
+    ----------
+    p : float
+        :math:`p > 0`, :math:`\sum p = 1`
 
     """
     def __init__(self, p, *args, **kwargs):
