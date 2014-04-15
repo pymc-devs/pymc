@@ -39,3 +39,28 @@ class TestMissing(TestCase):
 
         # Check for standard normal output
         assert_almost_equal(sum(sd2) / 10000., 0.95, decimal=1)
+
+    def test_non_missing(self):
+        """
+        Test to ensure that masks without any missing values are not imputed.
+        """
+
+        fake_data = rnormal(0, 1, size=10)
+        m = ma.masked_array(fake_data, fake_data==-999)
+
+        # Priors
+        mu = Normal('mu', mu=0, tau=0.0001)
+        s = Uniform('s', lower=0, upper=100, value=10)
+        tau = s ** -2
+
+        # Likelihood with missing data
+        x = Normal('x', mu=mu, tau=tau, value=m, observed=True)
+
+        # Instantiate sampler
+        M = MCMC([mu, s, tau, x])
+
+        # Run sampler
+        M.sample(20000, 19000, progress_bar=0)
+
+        # Ensure likelihood does not have a trace
+        assert_raises(AttributeError, x.__getattribute__, 'trace')

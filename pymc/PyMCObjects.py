@@ -688,14 +688,17 @@ class Stochastic(StochasticBase):
                 # If there are missing values, store mask to missing elements
                 self._mask = value.mask
 
-                # Set to value of mean of observed data
-                if value.fill_value == '?':
-                    value.fill_value = value.mean()
-                value = value.filled()
+                # This check ensures that the mask has missing values
+                if value.mask.sum():
 
-                # Set observed flag to False, so that missing values will
-                # update
-                self._observed = False
+                    # Set to value of mean of observed data
+                    if value.fill_value == '?':
+                        value.fill_value = value.mean()
+                    value = value.filled()
+
+                    # Set observed flag to False, so that missing values will
+                    # update
+                    self._observed = False
 
             except AttributeError:
                 # Must not have missing values
