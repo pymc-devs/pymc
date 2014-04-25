@@ -14,7 +14,7 @@ from pymc.distributions.timeseries import *
 
 # <codecell>
 
-data = pd.read_csv(get_data_file('pymc.examples', 'data/pancreatitis/input_data.csv'))
+data = pd.read_csv(get_data_file('pymc.examples', 'data/pancreatitis.csv'))
 countries = ['CYP', 'DNK', 'ESP', 'FIN','GBR', 'ISL']
 data = data[data.area.isin(countries)]
 
@@ -86,7 +86,7 @@ with model:
     s = trace[-1]
 
     step = NUTS(scaling = s)
-    
+
 def run(n=3000):
     if n == "short":
         n = 150
@@ -113,7 +113,7 @@ def run(n=3000):
     # <codecell>
 
     autocorrplot(trace, vars = [coeff_sd,sd ])
-    
+
 if __name__ == '__main__':
     run()
 
