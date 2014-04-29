@@ -39,7 +39,7 @@ if __name__ == "__main__":
           long_description=LONG_DESCRIPTION,
           packages=['pymc', 'pymc.distributions',
                     'pymc.step_methods', 'pymc.tuning',
-                    'pymc.tests', 'pymc.glm', 'pymc.examples',
-                    'pymc.examples.data'],
+                    'pymc.tests', 'pymc.glm', 'pymc.examples'],
+          package_data = {'pymc.examples': ['data/*']},
           classifiers=classifiers,
           install_requires=required)
