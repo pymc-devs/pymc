@@ -146,8 +146,6 @@ class Wishart(Continuous):
     :Parameters:
       n : int
         Degrees of freedom, > 0.
-      p : int
-        Dimensionality, > 0
       V : ndarray
         p x p positive definite matrix
 
@@ -156,10 +154,10 @@ class Wishart(Continuous):
       X : matrix
         Symmetric, positive definite.
     """
-    def __init__(self, n, p, V, *args, **kwargs):
+    def __init__(self, n, V, *args, **kwargs):
         super(Wishart, self).__init__(*args, **kwargs)
         self.n = n
-        self.p = p
+        self.p = V.shape[0]
         self.V = V
         self.mean = n * V
         self.mode = switch(1*(n >= p + 1),
