@@ -176,4 +176,4 @@ class Wishart(Continuous):
              n * p * log(
              2) - n * log(IVI) - 2 * multigammaln(p, n / 2)) / 2,
 
-            all(n > p - 1))
+             n > (p - 1))
