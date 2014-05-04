@@ -157,7 +157,7 @@ class Wishart(Continuous):
     def __init__(self, n, V, *args, **kwargs):
         super(Wishart, self).__init__(*args, **kwargs)
         self.n = n
-        self.p = V.shape[0]
+        self.p = p = V.shape[0]
         self.V = V
         self.mean = n * V
         self.mode = switch(1*(n >= p + 1),
