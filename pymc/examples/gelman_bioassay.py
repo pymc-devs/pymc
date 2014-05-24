@@ -28,7 +28,7 @@ def run(n=1000):
     if n == "short":
         n = 50
     with model:
-        trace = sample(n, step, trace=model.unobserved_RVs)
+        trace = sample(n, step)
 
 if __name__ == '__main__':
     run()
