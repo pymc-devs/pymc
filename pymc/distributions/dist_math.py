@@ -97,6 +97,11 @@ def logpow(x, m):
     """
     return switch(eq(x, 0) & eq(m, 0), 0, m * log(x))
 
+def logpow_relaxed(x, m):
+    """
+    Calculates log(x**m), unless m==0 or x==0 in which case it will return 0 
+    """
+    return switch(eq(x, 0) | eq(m, 0), 0, m * log(x))
 
 def factln(n):
     return gammaln(n + 1)
