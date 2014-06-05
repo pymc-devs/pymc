@@ -16,6 +16,21 @@ import numpy as np
 import numpy.linalg as np_linalg
 from pymc.step_methods.metropolis_hastings import GenericProposal
 
+"""
+Multivariate Mixture distributions. 
+
+These distributions have a lot of potential uses. For one thing: They can be used to approximate every other density function,
+and there are a lot of algorithms for efficiently creating density estimates (i.e. Kernel Density Estimates (KDE),
+Gaussian Mixture Model learning and others.
+
+Once we have learned such a density, we could use it as a prior density. To do that, we need to be able to
+efficiently sample from it. Luckily, that's simple and efficient. Unless you use the wrong proposal distribution, of course.
+
+That's where these classes come in handy.
+
+@author Kai Londenberg ( Kai.Londenberg@gmail.com )    
+
+"""
 class MvGaussianMixture(Continuous):
     
     def __init__(self, shape, cat_var, mus, taus, model=None, *args, **kwargs):

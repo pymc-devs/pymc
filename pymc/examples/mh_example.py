@@ -18,7 +18,7 @@ with model:
         'p', Dirichlet.dist(a, shape=k),
        simplextransform)
 
-    c = Categorical('c', pa)
+    c = Categorical('c', p)
 
 def run(n=50000):
     if n == "short":

@@ -92,7 +92,7 @@ class CategoricalProposal(GenericProposal):
         
         for i, v in enumerate(vars):
             assert isinstance(v.distribution, Categorical)
-            self.paramfuncs.append(model.fastfn(v.distribution.p))
+            self.paramfuncs.append(model.fastfn(T.as_tensor_variable(v.distribution.p)))
             logpt_elems.append(v.distribution.logp(v))
         
         self.logpfunc = model.fastfn(T.add(*logpt_elems))
@@ -101,12 +101,15 @@ class CategoricalProposal(GenericProposal):
         move_logp = 0.0
         for i, v in enumerate(self.vars):
             weights = self.paramfuncs[i](point)
-            
             oldvalue = point[v.name]
-            newvalue = np.random.choice(len(weights),1, p=weights)[0]
-            'Move probability: Probability of moving from new state to old state divided by probability of moving from old state to new state'
-            move_logp += log(weights[oldvalue]) - log(weights[newvalue])  
-            point[v.name] = newvalue
+            try:
+                newvalue = np.random.choice(len(weights),1, p=weights)[0]
+                'Move probability: Probability of moving from new state to old state divided by probability of moving from old state to new state'
+                move_logp += log(weights[oldvalue]) - log(weights[newvalue])  
+                point[v.name] = newvalue
+            except:
+                print "Warning: Invalid weights passed to CategoricalProposal. Might happen on first step"
+                point[v.name] = 0
             
         self._proposal_logp_difference = move_logp
         return point
@@ -222,7 +225,7 @@ def mh_tune(scale, acc_rate):
     >0.95         x 10
 
     """
-    print "Acceptance rate: %f - scale: %f" % (acc_rate, scale)
+    #print "Acceptance rate: %f - scale: %f" % (acc_rate, scale)
     # Switch statement
     if acc_rate < 0.001:
         # reduce by 90 percent
