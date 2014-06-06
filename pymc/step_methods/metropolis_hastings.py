@@ -1,6 +1,7 @@
 from numpy.linalg import cholesky
 
 from ..core import *
+from ..model import FreeRV
 from .quadpotential import quad_potential
 
 from .arraystep import *
@@ -29,6 +30,16 @@ applications, such as efficiently sampling from a mixture model.
 
 class GenericProposal(object):
     
+    def __init__(self, vars):
+        '''
+        Constructor for GenericProposal. To be called by subclass constructors.
+        Arguments:
+            vars: List of variables (FreeRV instances) this GenericProposal is responsible for.
+        '''
+        for v in vars:
+            assert isinstance(v, FreeRV)
+        self.vars = vars
+    
     '''
     Asymmetric proposal distribution. 
     Has to be able to calculate move propabilities 
@@ -41,10 +52,13 @@ class GenericProposal(object):
         '''
         return 0.0   
         
-    def propose_move(self, point):
+    def propose_move(self, from_point, point):
         ''' 
         Propose a move: Return a new point proposal
         Destructively writes to the given point, destroying the old values in it
+        Arguments:
+            old_point: State before proposals. Calculate previous logp with respect to this point
+            point: New proposal. Update it, and calculate new logp with respect to the updated version of this point.
         '''
         raise NotImplementedError("Called abstract method")
     
@@ -58,15 +72,16 @@ class GenericProposal(object):
 class ProposalAdapter(GenericProposal):
     
     def __init__(self, vars, proposal_dist=NormalProposal, scale=None):
-        self.vars = vars
+        super(ProposalAdapter, self).__init__(vars)
         self.ordering = ArrayOrdering(vars)
         if scale is None:
             scale = np.ones(sum(v.dsize for v in vars))
         self.proposal = proposal_dist(scale)
         self.discrete = np.array([v.dtype in discrete_types for v in vars])
         self.stepsize_factor = 1.0
+        
 
-    def propose_move(self, point):
+    def propose_move(self, from_point, point):
         i = 0
         delta = np.atleast_1d( self.proposal() * self.stepsize_factor)
         for var, slc, shp in self.ordering.vmap:
@@ -83,6 +98,7 @@ class ProposalAdapter(GenericProposal):
 class CategoricalProposal(GenericProposal):
     
     def __init__(self, vars, model=None):
+        super(CategoricalProposal, self).__init__(vars)
         model = modelcontext(model)
         self.vars = vars
         varidx = T.iscalar('varidx')
@@ -97,19 +113,16 @@ class CategoricalProposal(GenericProposal):
         
         self.logpfunc = model.fastfn(T.add(*logpt_elems))
         
-    def propose_move(self, point):
+    def propose_move(self, from_point, point):
         move_logp = 0.0
         for i, v in enumerate(self.vars):
             weights = self.paramfuncs[i](point)
             oldvalue = point[v.name]
-            try:
-                newvalue = np.random.choice(len(weights),1, p=weights)[0]
-                'Move probability: Probability of moving from new state to old state divided by probability of moving from old state to new state'
+            newvalue = np.random.choice(len(weights),1, p=weights)[0]
+            'Move probability: Probability of moving from new state to old state divided by probability of moving from old state to new state'
+            if (oldvalue!=newvalue):
                 move_logp += log(weights[oldvalue]) - log(weights[newvalue])  
                 point[v.name] = newvalue
-            except:
-                print "Warning: Invalid weights passed to CategoricalProposal. Might happen on first step"
-                point[v.name] = 0
             
         self._proposal_logp_difference = move_logp
         return point
@@ -119,14 +132,15 @@ class CategoricalProposal(GenericProposal):
     
 
 class MetropolisHastings(object):
+    
     """
     Metropolis-Hastings sampling step
 
     Parameters
     ----------
     vars : list
-        List of variables for sampler
-    proposals : array of GenericProposal instances
+        List of variables for sampler. 
+    proposals : array of GenericProposal instances. For variables not covered by these, but present in "vars" list above, the constructor will choose Proposal distributions automatically
     scaling : scalar or array
         Initial scale factor for proposal. Defaults to 1.
     tune : bool
@@ -135,29 +149,45 @@ class MetropolisHastings(object):
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
-    def __init__(self, proposals=None, scaling=1., tune=True, tune_interval=100, model=None):
+    def __init__(self, vars=None, proposals=None, scaling=1., tune=True, tune_interval=100, model=None):
         model = modelcontext(model)
-        self.model = model    
+        self.model = model
+        if ((vars is None) and (proposals is None)):
+            vars = model.vars
+            
+        covered_vars = set()
+        if (proposals is not None):
+            for p in proposals:
+                for v in p.vars:
+                    covered_vars.add(v)
+        if (vars is not None):
+            vset = set(vars) | set(covered_vars)
+        else:
+            vset = set(covered_vars)
+        self.vars = list(vset)
+        remaining_vars = vset-covered_vars
         if (proposals is None):
+            proposals = []
+        if (len(remaining_vars)>0):
             cvars = []
             ovars = []
-            for v in model.vars:
+            for v in vars: # We don't iterate over remaining vars, because the ordering of the vars might be important somehow..
+                if (v in covered_vars):
+                    continue
                 if (isinstance(v.distribution, Categorical)):
                     cvars.append(v)
                 else:
                     ovars.append(v)
+            # Make sure we sample the categorical ones first. Others might switch their regime accordingly ..
             if (len(cvars)>0):
-                proposals = [ CategoricalProposal(cvars), ProposalAdapter(ovars, NormalProposal) ]
-            else:
-                proposals = [ ProposalAdapter(ovars, NormalProposal) ]
+                proposals = [ CategoricalProposal(cvars)] + proposals
+            if (len(ovars)>0):
+                proposals.append(ProposalAdapter(ovars, NormalProposal))
         self.proposals = proposals
-        var_set = set()
+        vars = self.vars
         for p in proposals:
             p.tune_stepsize(scaling)
-            for v in p.vars:
-                var_set.add(v)
-        vars = list(var_set)
-        
+            
         self.scaling = scaling
         self.tune = tune
         self.tune_interval = tune_interval
@@ -165,13 +195,14 @@ class MetropolisHastings(object):
         self.accepted = 0
         self.fastlogp = self.model.fastlogp
         self.oldlogp = None
+        self.acceptance_rate = []
     
     def step(self, point):
         self._ensure_tuned()
         proposal = point.copy()
         proposal_symmetry = 0.0
         for prop in self.proposals:
-            proposal = prop.propose_move(proposal)
+            proposal = prop.propose_move(point, proposal)
             proposal_symmetry += prop.proposal_logp_difference()
 
         
@@ -186,11 +217,12 @@ class MetropolisHastings(object):
         move_logp = proposal_symmetry + proposal_logp - self.oldlogp
         
         # Accept / Reject
-        if isfinite(move_logp) and log(uniform()) < move_logp:
+        if (move_logp==np.nan):
+            print "Warning: Invalid proposal in MetropolisHastings.step(..) (logp is not a number)"
+        if move_logp!=np.nan and log(uniform()) < move_logp:
             # Accept proposed value
             newpoint = proposal
             self.oldlogp = proposal_logp
-            self.accepted += 1
         else:
             # Reject proposed value
             newpoint = point#
@@ -202,8 +234,9 @@ class MetropolisHastings(object):
     def _ensure_tuned(self):
         if self.tune and not self.steps_until_tune:
             # Tune scaling parameter
-            self.scaling = mh_tune(
-                self.scaling, self.accepted / float(self.tune_interval))
+            acc_rate = self.accepted / float(self.tune_interval)
+            self.acceptance_rate.append(acc_rate)
+            self.scaling = mh_tune(self.scaling, acc_rate)
             for p in self.proposals:
                 p.tune_stepsize(self.scaling)
             # Reset counter

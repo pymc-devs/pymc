@@ -50,7 +50,7 @@ def bound_scalar(logp, *conditions):
     -inf if some are false
     """        
     cond = alltrue(conditions)
-    return ifelse(cond, logp, impossible)
+    return ifelse(cond, t.cast(logp, dtype='float64'), impossible)
 
   
 def bound(logp, *conditions):
@@ -69,6 +69,8 @@ def bound(logp, *conditions):
     """
     if (guess_is_scalar(logp)):
         for c in conditions:
+            if (type(c)==bool):
+                continue
             if (not guess_is_scalar(c)):
                 break
             return bound_scalar(logp, *conditions)

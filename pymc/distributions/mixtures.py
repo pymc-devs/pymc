@@ -47,7 +47,7 @@ class MvGaussianMixture(Continuous):
         assert isinstance(cat_var, FreeRV)
         assert isinstance(cat_var.distribution, Categorical)
         self.cat_var = cat_var
-        model = modelcontext(model)
+        self.model = modelcontext(model)
         weights = cat_var.distribution.p
         self.weights = weights
         self.mus = mus
@@ -56,9 +56,9 @@ class MvGaussianMixture(Continuous):
         self.tau_t = T.stacklists(taus)
         self.shape = shape
         self.testval = np.zeros(self.shape, self.dtype)
-        self.param_fn = model.fastfn([self.mu_t[self.cat_var], self.tau_t[self.cat_var]])
-        self.last_cov_value = None
-        self.last_tau_value = None
+        self.last_cov_value = {}
+        self.last_tau_value = {}
+        self.param_fn = None
         
     def logp(self, value):
         mu = self.mu_t[self.cat_var]
@@ -69,39 +69,47 @@ class MvGaussianMixture(Continuous):
 
         return 1/2. * (-k * log(2*pi) + log(det(tau)) - dot(delta.T, dot(tau, delta)))
     
-    def draw_mvn(self, mu, tau):
-        if (tau==self.last_tau_value):
-            mcov = self.last_cov_value
-        else:
-            mcov = np_linalg.inv(tau)
-            self.last_cov_value = mcov
+    def draw_mvn(self, mu, cov):
         
-        return np.random.multivariate_normal(mean=mu, mcov=tau)
+        return np.random.multivariate_normal(mean=mu, cov=cov)
     
     def draw(self, point):
-        mu, tau = self.param_fn(point)
-        if (tau==self.last_tau_value):
-            mcov = self.last_cov_value
+        if (self.param_fn is None):
+            self.param_fn = model.fastfn([self.cat_var, self.mu_t[self.cat_var], self.tau_t[self.cat_var]])
+        
+        cat, mu, tau = self.param_fn(point)
+        # Cache cov = inv(tau) for each value of cat
+        cat = int(cat)
+        last_tau = self.last_tau_value.get(cat, None)
+        if (last_tau is not None and np.allclose(tau,last_tau)):
+            mcov = self.last_cov_value[cat]
         else:
             mcov = np_linalg.inv(tau)
-            self.last_cov_value = mcov
-        return self.draw_mvn
+            self.last_cov_value[cat] = mcov
+            self.last_tau_value[cat] = tau
+        
+        return self.draw_mvn(mu, mcov)
     
-
+_impossible = float('-inf')
 class GMMProposal(GenericProposal):
     
     def __init__(self, gmm_var, model=None):
+        super(GMMProposal, self).__init__([gmm_var])
         assert isinstance(gmm_var.distribution, MvGaussianMixture)
         model = modelcontext(model)
         self.gmm_var = gmm_var
-        self.logpfunc = model.fastfn(gmm_var.distribution.logp)
+        self.logpfunc = model.fastfn(gmm_var.distribution.logp(gmm_var))
         self._proposal_logp_difference = 0.0
         
-    def propose_move(self, point):
-        old_logp = self.logpfunc(point)
-        point[self.gmm_var.name] = self.gmm_var.draw(point)
-        new_logp = self.logpfunc(point)
-        self._proposal_logp_difference = old_logp-new_logp
+        
+    def propose_move(self, from_point, point):
+        old_logp = self.logpfunc(from_point) 
+        point[self.gmm_var.name] = self.gmm_var.distribution.draw(point)
+        new_logp = self.logpfunc(point) 
+        if (old_logp!=np.nan and old_logp!=_impossible):
+            self._proposal_logp_difference = old_logp-new_logp
+        else:
+            self._proposal_logp_difference = 0.0            
         return point
 
     def proposal_logp_difference(self):
