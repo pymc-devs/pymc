@@ -114,7 +114,7 @@ def plot_p_prior_vs_posterior(prior_trace, posterior_trace, fig=None):
     plt.legend()
     plt.show()
 
-def run(n=5000):
+def run(n=10000):
     m1, step1 = create_model(False)
     m2, step2 = create_model(True)
     with m1:
