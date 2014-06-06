@@ -285,7 +285,7 @@ class Categorical(Discrete):
         p = self.p
         k = self.k
 
-        return bound(log(p[value]),
+        return bound_scalar(t.sum(log(p[value])),
             value >= 0,
             value <= (k - 1),
             le(abs(sum(p) - 1), 1e-5))
