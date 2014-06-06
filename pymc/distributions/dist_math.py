@@ -33,21 +33,6 @@ def guess_is_scalar(c):
     tt = t.as_tensor_variable(c)
     return tt.type.broadcastable == ()
 
-def bound(logp, *conditions):
-    if (guess_is_scalar(logp)):
-        return bound_scalar(logp, *conditions)
-    seqs = [logp]
-    non_seqs = []
-    for i, c in enumerate(conditions):
-        if (guess_is_scalar(c)):
-            non_seqs.append(c)
-        else:
-            seqs.append(c)
-    logp_vec, updates = theano.scan(fn=bound_scalar,
-                                      outputs_info=None,
-                                      sequences=seqs, non_sequences=non_seqs)
-    return logp_vec
-
 impossible = constant(-inf, dtype=float64) # We re-use that constant
 
 def bound_scalar(logp, *conditions):
@@ -57,7 +42,7 @@ def bound_scalar(logp, *conditions):
     Parameters
     ----------
     logp : float
-    *conditionss : booleans
+    *conditions : booleans
 
     Returns
     -------
@@ -68,7 +53,7 @@ def bound_scalar(logp, *conditions):
     return ifelse(cond, logp, impossible)
 
   
-def bound_switched(logp, *conditions):
+def bound(logp, *conditions):
     """
     Bounds a log probability density with several conditions
 
@@ -82,6 +67,11 @@ def bound_switched(logp, *conditions):
     logp if all conditions are true
     -inf if some are false
     """
+    if (guess_is_scalar(logp)):
+        for c in conditions:
+            if (not guess_is_scalar(c)):
+                break
+            return bound_scalar(logp, *conditions)
     return switch(alltrue(conditions), logp, impossible)
 
 def alltrue(vals):
