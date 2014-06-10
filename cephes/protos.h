@@ -19,7 +19,7 @@ extern double beta ( double a, double b );
 extern double lbeta ( double a, double b );
 extern double btdtr ( double a, double b, double x );
 extern double cbrt ( double x );
-extern double chbevl ( double x, void *P, int n );
+extern double chbevl ( double x, double *P, int n );
 extern double chdtrc ( double df, double x );
 extern double chdtr ( double df, double x );
 extern double chdtri ( double df, double y );
