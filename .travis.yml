@@ -4,6 +4,8 @@ python:
   - "3.3"
 before_install:
   - sudo apt-get install liblapack-dev gfortran libblas-dev
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
 install:
   - pip install numpy
   - pip install scipy

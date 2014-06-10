@@ -1527,7 +1527,7 @@ def laplace_like(x, mu, tau):
 
     :Parameters:
       - `x` : :math:`-\infty < x < \infty`
-      - `mu` : Location parameter :math: `-\infty < mu < \infty`
+      - `mu` : Location parameter :math:`-\infty < mu < \infty`
       - `tau` : Scale parameter :math:`\tau > 0`
 
     .. note::
@@ -1685,7 +1685,7 @@ def multinomial_like(x, n, p):
        - :math:`E(X_i)=n p_i`
        - :math:`Var(X_i)=n p_i(1-p_i)`
        - :math:`Cov(X_i,X_j) = -n p_i p_j`
-       - If :math: `\sum_i p_i < 0.999999` a log-likelihood value of -inf
+       - If :math:`\sum_i p_i < 0.999999` a log-likelihood value of -inf
        will be returned.
 
     """
@@ -2393,7 +2393,7 @@ def skew_normal_like(x, mu, tau, alpha):
     .. math::
         f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
 
-    where :math: \Phi is the normal CDF and :math: \phi is the normal PDF.
+    where :math:\Phi is the normal CDF and :math: \phi is the normal PDF.
 
     :Parameters:
       - `x` : Input data.
