@@ -305,7 +305,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
         for varname in vars:
             var_quantiles = trace_quantiles[chain][varname]
 
-            quants = list(var_quantiles.values())
+            quants = [var_quantiles[v] for v in qlist]
             var_hpd = hpd_intervals[chain][varname].T
 
             # Substitute HPD interval for quantile
