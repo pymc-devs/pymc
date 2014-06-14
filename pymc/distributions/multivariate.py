@@ -237,7 +237,6 @@ class InverseWishart(Continuous):
         self.Z = log(2.)*(v * p / 2.) + multigammaln(p, v / 2.) - log(det(S)) * v / 2.,
         self.mean = ifelse(gt(v, p-1), S / ( v - p - 1), self.invalid) 
 
-         
     def logp(self, X):
         v = self.v
         p = self.p
@@ -245,3 +244,34 @@ class InverseWishart(Continuous):
         Z = self.Z
         result = -Z + log(det(X)) * -(v + p + 1.) / 2. - trace(S.dot(matrix_inverse(X))) / 2.
         return ifelse(gt(v, p-1), result, self.invalid) 
+    
+        
+def noninformative_covariance_prior(name1, name2, d, model=None):
+    '''
+    Construct a two part noninformative prior for the covariance matrix
+    following Huang and Wang, "Simple Marginally Noninformative Prior Distributions
+    for Covariance Matrices" ( http://ba.stat.cmu.edu/journal/2013/vol08/issue02/huang.pdf )
+    
+    The resulting prior has an almost flat half-t distribution over the variables variances,
+    while providing an uniform-prior (range [-1,1]for the offdiagonal elements of the 
+    correlation matrix corresponding to the covariance matrix.
+    
+
+    
+    Arguments:
+        name1: Name for the Inverse Wishart distribution which will be created
+        name2: Name for the Inverse Gamma distribution which will be created as a prior for the diagonal elements of the inv_S param of the Inverse Wishart
+        d: Dimensionality, i.e. number of variables to create a joint covariance prior for.
+        model: (optional) the model
+    '''
+    from sys import float_info
+    import numpy as np
+    from pymc.distributions.continuous import InverseGamma
+    from theano.sandbox.linalg.ops import diag, psd
+    A = float_info.max / 4. # Large number
+    d_ones = np.ones(d, dtype=np.float64)
+    a_hyperprior = InverseGamma(name=name2, d_ones/2., d_ones / A, model=model)
+    '  Note that the InverseWishart in this library is parameterized with the inverse of S, So we do not divide by a_hyperprior, but use it more directly.'
+    invert a diagonal matrix.'
+    cov_prior = InverseWishart(name=name1, d+1, 4. * a_hyperprior, model=model)
+    return cov_prior, a_hyperprior
