@@ -1,7 +1,8 @@
 from .dist_math import *
 
 from theano.sandbox.linalg import det, solve, matrix_inverse, trace
-from theano.tensor import dot, cast
+from theano.tensor import dot, cast, gt
+from theano.ifelse import ifelse
 from theano.printing import Print
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
@@ -134,46 +135,113 @@ class Wishart(Continuous):
     distribution of the maximum-likelihood estimator (MLE) of the precision
     matrix of a multivariate normal distribution. If V=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
+    
+    It is also the conjugate Prior for the Precision Matrix parameter of a
+    multivariate normal.
 
-    For an alternative parameterization based on :math:`C=T{-1}` (Not yet implemented)
-
-    .. math::
-        f(X \mid n, T) = \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2}}{2^{nk/2}
-        \Gamma_p(n/2)} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
-
-    where :math:`k` is the rank of X.
-
+    This follows the parameterization given in formula 290 and 291 on page 24
+    of [Kevin Murphy, Conjugate Bayesian Analysis of the Gaussian Distribution]
+    available at http://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf
+    see that paper for further details and references.
+    
+    To create noninformative priors for covariance or precision matrices, see
+    Huang and Wang, "Simple Marginally Noninformative Prior Distributions
+    for Covariance Matrices" ( http://ba.stat.cmu.edu/journal/2013/vol08/issue02/huang.pdf )
+    and Gelman, "Prior Distributions for variance parameters in hierarchical models"
+    ( https://faculty.washington.edu/jmiyamot/bayes/gelmana%20prior%20distributions%20f%20variance%20parameters%20i%20hierarchical%20mods.pdf )
+    as well as http://www.themattsimpson.com/2012/08/20/prior-distributions-for-covariance-matrices-the-scaled-inverse-wishart-prior/
+    and http://dahtah.wordpress.com/2012/03/07/why-an-inverse-wishart-prior-may-not-be-such-a-good-idea/
+    for a discussion of possible problems with priors of covariance and / or precision matrices
+    
     :Parameters:
-      n : int
-        Degrees of freedom, > 0.
+      v : int
+        Degrees of freedom, v > p-1 .
       V : ndarray
         p x p positive definite matrix
+
+    :Support:
+      X : matrix
+        Symmetric, positive definite.
+    """
+    def __init__(self, v, S, *args, **kwargs):
+        super(Wishart, self).__init__(*args, **kwargs)
+        self.v = v
+        self.p = p = S.shape[0]
+        self.S = S
+        
+        self.mean = v * S
+        self.mode = switch(1*(v > p + 1),
+                     (v - p - 1) * S,
+                      nan)
+        'TODO: We should pre-compute the following if the parameters are fixed'
+        self.invalid = theano.tensor.fill(S, nan) # Invalid result, if v<p
+        self.Z = log(2.)*(v * p / 2.) + multigammaln(p, v / 2.) + log(det(S)) * v / 2.,
+        self.inv_S = matrix_inverse(S)    
+
+    def logp(self, X):
+        v = self.v
+        p = self.p
+        Z = self.Z
+        inv_S = self.inv_S 
+        result = -Z + log(det(X)) * (v - p - 1) / 2. - trace(inv_S.dot(X)) / 2.
+        return ifelse(gt(v, p-1), result, self.invalid) 
+    
+    @staticmethod
+    def jeffreys_prior():
+        
+
+
+
+class InverseWishart(Continuous):
+    """
+    The Inverse Wishart distribution is the conjugate prior
+    for the covariance matrix of a multivariate normal. It is also 
+    the distribution of the maximum-likelihood estimator (MLE) of the covariance
+    matrix of a multivariate normal distribution. 
+    
+    This follows the parameterization given in formula 296 and 297 on page 25
+    of [Kevin Murphy, Conjugate Bayesian Analysis of the Gaussian Distribution]
+    available at http://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf
+    see that paper for further details and references.
+
+    To create noninformative priors for covariance or precision matrices, see
+    Huang and Wang, "Simple Marginally Noninformative Prior Distributions
+    for Covariance Matrices" ( http://ba.stat.cmu.edu/journal/2013/vol08/issue02/huang.pdf )
+    and Gelman, "Prior Distributions for variance parameters in hierarchical models"
+    ( https://faculty.washington.edu/jmiyamot/bayes/gelmana%20prior%20distributions%20f%20variance%20parameters%20i%20hierarchical%20mods.pdf )
+    as well as http://www.themattsimpson.com/2012/08/20/prior-distributions-for-covariance-matrices-the-scaled-inverse-wishart-prior/
+    and http://dahtah.wordpress.com/2012/03/07/why-an-inverse-wishart-prior-may-not-be-such-a-good-idea/
+    for a discussion of possible problems with priors of covariance and / or precision matrices
+    
+    :Parameters:
+      v : int
+        Degrees of freedom, v > p - 1
+      inv_S : ndarray
+        p x p positive definite matrix (inverted scale matrix)
 
 
     :Support:
       X : matrix
         Symmetric, positive definite.
     """
-    def __init__(self, n, V, *args, **kwargs):
+    def __init__(self, v, inv_S, *args, **kwargs):
         super(Wishart, self).__init__(*args, **kwargs)
-        self.n = n
-        self.p = p = V.shape[0]
-        self.V = V
-        self.mean = n * V
-        self.mode = switch(1*(n >= p + 1),
-                     (n - p - 1) * V,
-                      nan)
+        self.v = v
+        self.p = p = inv_S.shape[0]
+        self.inv_S = inv_S
+        
+        'TODO: We should pre-compute the following if the parameters are fixed'
+        S = matrix_inverse(inv_S)   
+        self.S = S
+        self.invalid = theano.tensor.fill(inv_S, nan) # Invalid result, if v<p
+        self.Z = log(2.)*(v * p / 2.) + multigammaln(p, v / 2.) - log(det(S)) * v / 2.,
+        self.mean = ifelse(gt(v, p-1), S / ( v - p - 1), self.invalid) 
 
+         
     def logp(self, X):
-        n = self.n
+        v = self.v
         p = self.p
-        V = self.V
-
-        IVI = det(V)
-
-        return bound(
-            ((n - p - 1) * log(IVI) - trace(matrix_inverse(V).dot(X)) -
-             n * p * log(
-             2) - n * log(IVI) - 2 * multigammaln(p, n / 2)) / 2,
-
-             n > (p - 1))
+        S = self.S
+        Z = self.Z
+        result = -Z + log(det(X)) * -(v + p + 1.) / 2. - trace(S.dot(matrix_inverse(X))) / 2.
+        return ifelse(gt(v, p-1), result, self.invalid) 
