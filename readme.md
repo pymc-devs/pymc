@@ -24,6 +24,9 @@ Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-de
  * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/2.3/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py)
  * [Global Health Metrics & Evaluation model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc/examples/GHME%202013.ipynb) case study for GHME 2013
  * [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc/examples/stochastic_volatility.ipynb)
+ * [Several blog posts on linear regression](http://twiecki.github.io/tag/bayesian-statistics.html)
+ * [Talk at PyData NYC 2013 on PyMC3](http://twiecki.github.io/blog/2013/12/12/bayesian-data-analysis-pymc3/)
+ * [The PyMC examples folder](https://github.com/pymc-devs/pymc/tree/master/pymc/examples)
 
 ## Installation
 
