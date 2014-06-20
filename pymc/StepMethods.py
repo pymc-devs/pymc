@@ -1941,10 +1941,15 @@ class Slicer(StepMethod):
         except ZeroProbability:
             y_new = -np.infty
         while(y_new<y):
-            if (self.stochastic.value < self.stochastic.last_value):
-                L = float(self.stochastic.value)
-            else:
-                R = float(self.stochastic.value)
+            try:
+                if (self.stochastic.value < self.stochastic.last_value):
+                    L = float(self.stochastic.value)
+                else:
+                    R = float(self.stochastic.value)
+            except ValueError:
+                smaller_value = self.stochastic.value < self.stochastic.last_value
+                L = [(l,v)[s] for l,v,s in zip(L, self.stochastic.value, smaller_value)]
+                R = [(r,v)[s] for r,v,s in zip(R, self.stochastic.value, smaller_value^True)]
             self.stochastic.revert()
             self.stochastic.value = runiform(L,R)
             try:
