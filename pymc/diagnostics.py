@@ -15,7 +15,8 @@ __all__ = [
     'raftery_lewis',
     'validate',
     'discrepancy',
-    'iat']
+    'iat',
+    'ppp_value']
 
 
 def open01(x, limit=1.e-6):
@@ -616,3 +617,36 @@ def iat(x, maxlag=None):
         print_("Not enough lag to calculate IAT")
 
     return np.sum(2 * gammas[:cut + 1]) - 1.0
+
+@diagnostic()
+def ppp_value(simdata, trueval, round=3):
+    """
+    Calculates posterior predictive p-values on data simulated from the posterior
+     predictive distribution, returning the quantile of the observed data relative to 
+     simulated.
+
+    :Arguments:
+        simdata: array or PyMC object
+            Trace of simulated data or the PyMC stochastic object containing trace.
+
+        trueval: numeric
+            True (observed) value of the data
+            
+        round: int
+            Rounding of returned quantile (defaults to 3)
+
+    """
+
+    if ndim(trueval) == 1 and ndim(simdata == 2):
+        # Iterate over more than one set of data
+        return [post_pred_checks(simdata[:,i], trueval[i]) for i in range(len(trueval))]
+        
+    n = float(len(simdata))
+    
+    sorted_values = np.sort(simdata)
+    
+    # In the case of discrete variables, see how many sampled values are equal
+    equal_count = (trueval == sorted_values).sum()
+    less_count = (trueval < sorted_values).sum()
+    
+    return  (less_count + equal_count/2.) / n
