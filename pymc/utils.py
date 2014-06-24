@@ -36,7 +36,8 @@ __all__ = ['append', 'check_list', 'autocorr', 'calc_min_interval',
            'make_indices', 'normcdf', 'quantiles', 'rec_getattr',
            'rec_setattr', 'round_array', 'trace_generator', 'msqrt', 'safe_len',
            'log_difference', 'find_generations', 'crawl_dataless', 'logit',
-           'invlogit', 'stukel_logit', 'stukel_invlogit', 'symmetrize', 'value']
+           'invlogit', 'stukel_logit', 'stukel_invlogit', 'symmetrize', 'value',
+           'post_pred_checks']
 
 symmetrize = flib.symmetrize
 
@@ -965,3 +966,36 @@ def find_element(names, modules, error_on_fail):
             modules))
 
     return function
+
+def post_pred_checks(simdata, trueval, round=3):
+    """
+    Performs posterior predictive checks, returning the quantile of the observed data relative to simulated.
+
+    :Arguments:
+        simdata: array or PyMC object
+            Trace of simulated data or the PyMC stochastic object containing trace.
+
+        trueval: numeric
+            True (observed) value of the data
+            
+        round: int
+            Rounding of returned quantile (defaults to 3)
+
+    """
+
+    if isinstance(simdata, Variable):
+        simdata = simdata.trace()
+
+    if ndim(trueval) == 1 and ndim(simdata == 2):
+        # Iterate over more than one set of data
+        return [post_pred_checks(simdata[:,i], trueval[i]) for i in range(len(trueval))]
+        
+    n = float(len(simdata))
+    
+    sorted_values = np.sort(simdata)
+    
+    # In the case of discrete variables, see how many sampled values are equal
+    equal_count = (trueval == sorted_values).sum()
+    less_count = (trueval < sorted_values).sum()
+    
+    return  (less_count + equal_count/2.) / n
