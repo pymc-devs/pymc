@@ -624,6 +624,13 @@ def ppp_value(simdata, trueval, round=3):
     Calculates posterior predictive p-values on data simulated from the posterior
      predictive distribution, returning the quantile of the observed data relative to 
      simulated.
+     
+     The posterior predictive p-value is computed by:
+
+       .. math:: Pr(T(y^{\text{sim}} > T(y) | y)
+       
+     where T is a test statistic of interest and :math:`y^{\text{sim}}` is the simulated
+     data.
 
     :Arguments:
         simdata: array or PyMC object
@@ -640,13 +647,5 @@ def ppp_value(simdata, trueval, round=3):
     if ndim(trueval) == 1 and ndim(simdata == 2):
         # Iterate over more than one set of data
         return [post_pred_checks(simdata[:,i], trueval[i]) for i in range(len(trueval))]
-        
-    n = float(len(simdata))
     
-    sorted_values = np.sort(simdata)
-    
-    # In the case of discrete variables, see how many sampled values are equal
-    equal_count = (trueval == sorted_values).sum()
-    less_count = (trueval < sorted_values).sum()
-    
-    return  (less_count + equal_count/2.) / n
+    return (simdata > trueval).mean()
