@@ -21,11 +21,11 @@ class TestSlice(TestCase):
     
     def test_dice_sample(self):
         M = pymc.MCMC(dice())
-        M.use_step_method(pymc.Slicer, M.prob, w=.1, n_tune=500)
+        M.use_step_method(pymc.Slicer, M.prob, w=.1)
         M.sample(iter=1000, tune_interval=1)
 
     def test_bioassay_sample(self):
         M = pymc.MCMC(gelman_bioassay)
         for stoch in M.stochastics:
-            M.use_step_method(pymc.Slicer, stoch, w=.1, n_tune=500)
+            M.use_step_method(pymc.Slicer, stoch, w=.1)
         M.sample(iter=1000, tune_interval=1)

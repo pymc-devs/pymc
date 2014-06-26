@@ -296,37 +296,32 @@ class StepMethod(object):
     def tune(self, *args, **kwargs):
         return False
 
-    def _get_loglike(self):
-        # Fetch log-probability (as sum of childrens' log probability)
+    @property
+    def loglike(self):
+        '''
+        The summed log-probability of all stochastic variables that depend on 
+        self.stochastics, with self.stochastics removed.
+        '''
         sum = logp_of_set(self.children)
         if self.verbose > 2:
             print_('\t' + self._id + ' Current log-likelihood ', sum)
         return sum
 
-    # Make get property for retrieving log-probability
-    loglike = property(
-        fget=_get_loglike,
-        doc="The summed log-probability of all stochastic variables that depend on \n self.stochastics, with self.stochastics removed.")
-
-    def _get_logp_plus_loglike(self):
+    @property
+    def logp_plus_loglike(self):
+        '''
+        The summed log-probability of all stochastic variables that depend on 
+        self.stochastics, and self.stochastics.
+        '''
         sum = logp_of_set(self.markov_blanket)
         if self.verbose > 2:
-            print_(
-                '\t' +
-                self._id +
-                ' Current log-likelihood plus current log-probability',
-                sum)
+            print_('\t' + self._id +
+                ' Current log-likelihood plus current log-probability', sum)
         return sum
 
-    # Make get property for retrieving log-probability
-    logp_plus_loglike = property(
-        fget=_get_logp_plus_loglike,
-        doc="The summed log-probability of all stochastic variables that depend on \n self.stochastics, and self.stochastics.")
-
-    def _get_logp_gradient(self):
+    @property
+    def logp_gradient(self):
         return logp_gradient_of_set(self.stochastics, self.markov_blanket)
-
-    logp_gradient = property(fget=_get_logp_gradient)
 
     def current_state(self):
         """Return a dictionary with the current value of the variables defining
@@ -1876,15 +1871,29 @@ class TWalk(StepMethod):
             # Update value list
             self.values[0] = self.stochastic.value
 
-
+# Slice sampler implementation contributed by Dominik Wabersich
 class Slicer(StepMethod):
     """ 
-    Slice Sampler Step Method
+    Univariate slice sampler step method
     
-    (c) 2013 Dominik Wabersich <dominik.wabersich [aet] gmail.com>
+    :Parameters:
+      - stochastic : Stochastic
+          The variable over which self has jurisdiction.
+      - w (optional): float
+          Initial width of slice (Defaults to 1)
+      - m (optional): int
+          Multiplier defining maximum slice size to :math:`mw` (Defaults to 1000)
+      - tune (optional): bool
+          Tune initial slice width (defaults to True)
+      - doubling (optional): bool
+          Flag for using doubling procedure instead of stepping out (Defaults to False)
+      - tally (optional) : bool
+          Flag for recording values for trace (Defaults to True).
+      - verbose(optional) : int
+          Set verbosity level (Defaults to -1)
     """
 
-    def __init__(self, stochastic, w=1, m=20, n_tune=0, verbose=-1, tally=False):
+    def __init__(self, stochastic, w=1, m=1000, tune=True, doubling=False, tally=False, verbose=-1):
         """ 
         Slice sampler class initialization
         """
@@ -1901,18 +1910,21 @@ class Slicer(StepMethod):
         else:
             self.verbose = stochastic.verbose
 
-        self.w_tune = []
-        self.n_tune = n_tune
-        self._tuning_info = ["w_tune", "n_tune"]
+        self._tune = tune
+        if tune:
+            self.w_tune = []
         self.w = w
         self.m = m
+        self.doubling = doubling
 
     @staticmethod
     def competence(s):
         """ 
         The competence function for Slice
+        
+        Works best for continuous scalar variables.
         """
-        if s.dtype in float_dtypes:
+        if (s.dtype in float_dtypes) and not s.shape:
             return 1
         else:
             return 0
@@ -1920,47 +1932,55 @@ class Slicer(StepMethod):
     def step(self):
         """ 
         Slice step method
+        
+        From Neal 2003 (doi:10.1214/aos/1056562461)
         """
-        y = self.loglike - rexponential(1)
+        logy = self.loglike - rexponential(1)
 
-        # Stepping out procedure
-        L = self.stochastic.value - self.w*random()
+        L = self.stochastic.value - runiform(0, self.w)
         R = L + self.w
-        J = np.floor(self.m*random())
-        K = (self.m-1)-J
-        while(J>0 and y<self.fll(L)):
-            L = L - self.w
-            J = J - 1
-        while(K>0 and y<self.fll(R)):
-            R = R + self.w
-            K = K - 1
-        #self.stochastic.last_value = self.stochastic.value
+        
+        if self.doubling:
+            # Doubling procedure
+            K = self.m
+            while (K and (logy<self.fll(L) or logy<self.fll(R))):
+                if random() < 0.5:
+                    L -= R - L
+                else:
+                    R += R - L
+                K -= 1
+        else:
+            # Stepping out procedure
+            J = np.floor(runiform(0, self.m))
+            K = (self.m-1)-J
+            while(J>0 and logy<self.fll(L)):
+                L -= self.w
+                J -= 1
+            while(K>0 and logy<self.fll(R)):
+                R += self.w
+                K -= 1
+            
+        # Shrinkage procedure
         self.stochastic.value = runiform(L,R)
         try:
-            y_new = self.loglike
+            logy_new = self.loglike
         except ZeroProbability:
-            y_new = -np.infty
-        while(y_new<y):
-            try:
-                if (self.stochastic.value < self.stochastic.last_value):
-                    L = float(self.stochastic.value)
-                else:
-                    R = float(self.stochastic.value)
-            except ValueError:
-                smaller_value = self.stochastic.value < self.stochastic.last_value
-                L = [(l,v)[s] for l,v,s in zip(L, self.stochastic.value, smaller_value)]
-                R = [(r,v)[s] for r,v,s in zip(R, self.stochastic.value, smaller_value^True)]
+            logy_new = -np.infty
+        while(logy_new < logy):
+            if (self.stochastic.value < self.stochastic.last_value):
+                L = float(self.stochastic.value)
+            else:
+                R = float(self.stochastic.value)
             self.stochastic.revert()
-            self.stochastic.value = runiform(L,R)
+            self.stochastic.value = runiform(L, R)
             try:
-                y_new = self.loglike
+                logy_new = self.loglike
             except ZeroProbability:
-                y_new = -np.infty
+                logy_new = -np.infty
   
-
     def fll(self, value):
         """
-        fll(value) returns loglike of value
+        Returns loglike of value
         """
         self.stochastic.value = value
         try:
@@ -1970,11 +1990,11 @@ class Slicer(StepMethod):
         self.stochastic.revert()
         return ll
 
-    def tune(self, verbose=-1):
+    def tune(self, verbose=None):
         """
-        Slice tune method
+        Tuning initial slice width parameter
         """
-        if (len(self.w_tune) >= self.n_tune):
+        if not self._tune:
             return False
         else:
             self.w_tune.append(abs(self.stochastic.last_value - self.stochastic.value))
