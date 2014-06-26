@@ -168,6 +168,7 @@ class TestPickle(TestRam):
                            dbname=os.path.join(testdir, 'Disaster.pickle'),
                            dbmode='w')
         self.S.use_step_method(pymc.Metropolis, self.S.early_mean, tally=True)
+        self.S.use_step_method(pymc.Metropolis, self.S.late_mean, tally=True)
 
     def load(self):
         return pymc.database.pickle.load(os.path.join(testdir, 'Disaster.pickle'))
@@ -188,6 +189,7 @@ class TestPickle(TestRam):
             db = self.load()
             S = pymc.MCMC(disaster_model, db=db)
             S.use_step_method(pymc.Metropolis, S.early_mean, tally=True)
+            S.use_step_method(pymc.Metropolis, S.late_mean, tally=True)
             S.sample(5, progress_bar=0)
             assert_array_equal(db.trace('early_mean', chain=-1)[:].shape, (5,))
             assert_array_equal(
@@ -219,6 +221,8 @@ class TestPickle(TestRam):
         try:
             db = self.load()
             S = pymc.MCMC(disaster_model, db=db)
+            S.use_step_method(pymc.Metropolis, S.early_mean)
+            S.use_step_method(pymc.Metropolis, S.late_mean)
             S.sample(10, progress_bar=0)
             sm = S.step_methods.pop()
             assert_equal(sm.accepted + sm.rejected, 75)
@@ -264,6 +268,9 @@ class TestTxt(TestPickle):
                            db='txt',
                            dbname=os.path.join(testdir, 'Disaster.txt'),
                            dbmode='w')
+        self.S.use_step_method(pymc.Metropolis, self.S.late_mean)
+        self.S.use_step_method(pymc.Metropolis, self.S.early_mean)
+        
 
     def load(self):
         return pymc.database.txt.load(os.path.join(testdir, 'Disaster.txt'))
