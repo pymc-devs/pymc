@@ -17,10 +17,11 @@ import copy
 
 np.random.seed(467)
 
+iterations = 10000
+burnin = 9000
+
 S = pymc.MCMC(model, 'ram')
-S.sample(10000, 2000, progress_bar=0)
-# a = S.a.trace()
-# b = S.b.trace()
+S.sample(iterations, burnin, progress_bar=0)
 
 # Known data for testing integrated autocorrelation time = 2.28
 x = np.array([0.98073604, 0.98073604, 0.98073604, 0.98073604, 0.98073604,
@@ -89,7 +90,7 @@ class test_gelman_rubin(TestCase):
     def test_simple(self):
 
         S2 = copy.copy(S)
-        S2.sample(10000, 2000, progress_bar=0)
+        S2.sample(iterations, burnin, progress_bar=0)
 
         gr = pymc.gelman_rubin(S2)
 
