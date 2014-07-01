@@ -1,10 +1,10 @@
 package:
   name: pymc
-  version: 2.3.2
+  version: 2.3.3
 
 source:
-  fn:  pymc-2.3.2.tar.gz
-  url: https://pypi.python.org/packages/source/p/pymc/pymc-2.3.2.tar.gz
+  fn:  pymc-2.3.3.tar.gz
+  url: https://pypi.python.org/packages/source/p/pymc/pymc-2.3.3.tar.gz
   md5: ea95fd6186a5c08937744f38f85390b9
 
 requirements:
