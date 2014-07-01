@@ -38,6 +38,7 @@ __all__ = ['Trace', 'Database', 'load']
 class TraceObject(base.Trace):
 
     """HDF5 Trace for Objects."""
+
     def __init__(self, name, getfunc=None, db=None, vlarrays=None):
         """Create a Trace instance.
 
@@ -227,6 +228,7 @@ class Database(pickle.Database):
     stochastics and deterministics are stored as arrays in each group.
 
     """
+
     def __init__(self, dbname, dbmode='a',
                  dbcomplevel=0, dbcomplib='zlib', **kwds):
         """Create an HDF5 database instance, where samples are stored in tables.
@@ -254,7 +256,7 @@ class Database(pickle.Database):
         self.mode = dbmode
 
         self.trace_names = []
-            # A list of sequences of names of the objects to tally.
+        # A list of sequences of names of the objects to tally.
         self._traces = {}  # A dictionary of the Trace objects.
 
         # Deprecation of complevel and complib
@@ -560,7 +562,8 @@ Error:
         if len(groups) == 0:
             return []
         else:
-            return [gr.PyMCsamples for gr in groups if gr._v_name[:5] == 'chain']
+            return [
+                gr.PyMCsamples for gr in groups if gr._v_name[:5] == 'chain']
 
     def close(self):
         self._h5file.close()

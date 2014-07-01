@@ -168,6 +168,6 @@ class Database(base.Database):
         self.__Trace__ = Trace
         self.dbname = dbname
         self.trace_names = []
-            # A list of sequences of names of the objects to tally.
+        # A list of sequences of names of the objects to tally.
         self._traces = {}  # A dictionary of the Trace objects.
         self.chains = 0

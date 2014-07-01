@@ -221,7 +221,7 @@ def histogram(a, bins=10, range=None, normed=False,
     # Number of bins
     nbin = len(edges) - 1
 
-        # Measure of bin precision.
+    # Measure of bin precision.
     decimal = int(-log10(dedges.min()) + 10)
 
     # Choose the fastest histogramming method
@@ -260,8 +260,8 @@ def histogram(a, bins=10, range=None, normed=False,
                 count = apply_along_axis(_splitinmiddle, axis, at,
                                          _histogram_searchsort_weighted, edges)
             elif strategy == 'digitize':
-                    count = apply_along_axis(_splitinmiddle, axis, at,
-                                             _histogram_digitize, edges, normed)
+                count = apply_along_axis(_splitinmiddle, axis, at,
+                                         _histogram_digitize, edges, normed)
         else:
             if strategy == 'binsize':
                 count = apply_along_axis(
@@ -432,14 +432,15 @@ def normcdf(x, log=False):
     y = np.atleast_1d(x).copy()
     flib.normcdf(y)
     if log:
-        return np.where(y>0, np.log(y), -np.inf)
+        return np.where(y > 0, np.log(y), -np.inf)
     return y
 
 
 def lognormcdf(x, mu, tau):
     """Log-normal cumulative density function"""
     x = np.atleast_1d(x)
-    return np.array([0.5 * (1 - flib.derf(-(np.sqrt(tau / 2)) * (np.log(y) - mu))) for y in x])
+    return np.array(
+        [0.5 * (1 - flib.derf(-(np.sqrt(tau / 2)) * (np.log(y) - mu))) for y in x])
 
 
 def invcdf(x):
@@ -962,6 +963,6 @@ def find_element(names, modules, error_on_fail):
         raise NameError(
             "no function or variable " + str(
                 names) + " in " + str(
-            modules))
+                modules))
 
     return function

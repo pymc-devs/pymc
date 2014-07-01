@@ -24,7 +24,8 @@ def make_model():
     @deterministic(verbose=0)
     def C(eval_fun=matern.euclidean,
           diff_degree=diff_degree, amp=amp, scale=scale):
-        return Covariance(eval_fun, diff_degree=diff_degree, amp=amp, scale=scale)
+        return Covariance(
+            eval_fun, diff_degree=diff_degree, amp=amp, scale=scale)
 
     # Prior parameters of M
     a = Normal('a', mu=1., tau=1., verbose=0)

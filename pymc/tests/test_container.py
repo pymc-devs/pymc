@@ -3,13 +3,14 @@ from numpy import *
 from pymc.examples import disaster_model as DM
 from pymc import Container, Normal
 
+
 class test_Container(TestCase):
+
     def test_container_parents(self):
         A = Normal('A', 0, 1)
         B = Normal('B', 0, 1)
 
         C = Normal('C', [A, B], 1)
-
 
         assert_equal(Container([A, B]).value, [A.value, B.value])
         assert_equal(C.parents.value['mu'], [A.value, B.value])
@@ -22,10 +23,9 @@ class test_Container(TestCase):
         except NotImplementedError:
             pass
 
-
     def test(self):
 
-# Test set container:
+        # Test set container:
 
         S = [DM.early_mean, DM.switchpoint, DM.late_mean]
         R = Container(S)
@@ -43,7 +43,8 @@ class test_Container(TestCase):
 
         # Test list/dictionary container:
 
-        A = [[DM.early_mean, DM.switchpoint], [DM.late_mean, DM.disasters, 3.], 54.323]
+        A = [[DM.early_mean, DM.switchpoint],
+             [DM.late_mean, DM.disasters, 3.], 54.323]
         C = Container(A)
 
         for i in range(2):
@@ -60,11 +61,10 @@ class test_Container(TestCase):
         # Test array container:
 
         B = ndarray((3, 3), dtype=object)
-        B[0,:] = DM.early_mean
-        B[1,:] = 1.
-        B[2,:] = A
+        B[0, :] = DM.early_mean
+        B[1, :] = 1.
+        B[2, :] = A
         D = Container(B)
-
 
         for i in range(2):
             assert(D[0, i] == DM.early_mean)
@@ -72,8 +72,8 @@ class test_Container(TestCase):
             assert(D[1, i] == 1.)
             assert(D.value[1, i] == 1.)
 
-        P = D[2,:]
-        Q = D.value[2,:]
+        P = D[2, :]
+        Q = D.value[2, :]
 
         for i in range(2):
             for j in range(2):

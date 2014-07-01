@@ -14,6 +14,7 @@ from .Covariance import Covariance
 from pymc import six
 xrange = six.moves.xrange
 
+
 class NearlyFullRankCovariance(Covariance):
 
     """
@@ -38,10 +39,17 @@ class NearlyFullRankCovariance(Covariance):
 
     :SeeAlso: Mean, BasisCovariance, SeparableBasisCovariance, Realization, observe
     """
-    def __init__(self, eval_fun, relative_precision = 1.0E-15, **params):
-        Covariance.__init__(self, eval_fun, relative_precision, rank_limit=0, **params)
 
-    def cholesky(self, x, apply_pivot = True, observed=True, nugget=None, regularize=True, rank_limit=0):
+    def __init__(self, eval_fun, relative_precision=1.0E-15, **params):
+        Covariance.__init__(
+            self,
+            eval_fun,
+            relative_precision,
+            rank_limit=0,
+            **params)
+
+    def cholesky(self, x, apply_pivot=True, observed=True,
+                 nugget=None, regularize=True, rank_limit=0):
         """
 
         U = C.cholesky(x[, observed=True, nugget=None, rank_limit=0])
@@ -70,11 +78,12 @@ class NearlyFullRankCovariance(Covariance):
             -   `nugget`: The 'nugget' parameter, which will essentially be
                 added to the diagonal of C(x,x) before Cholesky factorizing.
 
-            -   `rank_limit`: If rank_limit > 0, the factor will have at most 
+            -   `rank_limit`: If rank_limit > 0, the factor will have at most
                 rank_limit rows.
         """
         if rank_limit > 0:
-            raise ValueError('NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.')
+            raise ValueError(
+                'NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.')
 
         if regularize:
             x = regularize_array(x)
@@ -84,7 +93,7 @@ class NearlyFullRankCovariance(Covariance):
 
         # Special fast version for single points.
         if N_new == 1:
-            V = self.__call__(x, regularize = False, observed = observed)
+            V = self.__call__(x, regularize=False, observed=observed)
             if nugget is not None:
                 V += nugget
             U = asmatrix(sqrt(V))
@@ -99,7 +108,6 @@ class NearlyFullRankCovariance(Covariance):
             for i in xrange(N_new):
                 C[i, i] += nugget[i]
 
-
         # =======================================
         # = Call to Fortran function ichol_full =
         # =======================================
@@ -109,18 +117,21 @@ class NearlyFullRankCovariance(Covariance):
 
         # Arrange output matrix and return.
         if m < 0:
-            raise ValueError("Matrix does not appear to be positive semidefinite")
+            raise ValueError(
+                "Matrix does not appear to be positive semidefinite")
 
         if not apply_pivot:
-            # Useful for self.observe and Realization.__call__. U is upper triangular.
-            U = U[:m,:]
+            # Useful for self.observe and Realization.__call__. U is upper
+            # triangular.
+            U = U[:m, :]
             return {'pivots': piv, 'U': U}
 
         else:
             # Useful for users. U.T*U = C(x,x)
             return U[:m, argsort(piv)]
 
-    def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot = True, observed=True, nugget=None, regularize=True, assume_full_rank=False, rank_limit=0):
+    def continue_cholesky(self, x, x_old, chol_dict_old, apply_pivot=True,
+                          observed=True, nugget=None, regularize=True, assume_full_rank=False, rank_limit=0):
         """
 
         U = C.continue_cholesky(x, x_old, chol_dict_old[, observed=True, nugget=None,
@@ -158,18 +169,20 @@ class NearlyFullRankCovariance(Covariance):
 
             -   `nugget`: The 'nugget' parameter, which will essentially be
                 added to the diagonal of C(x,x) before Cholesky factorizing.
-                
-            -   `rank_limit`: If rank_limit > 0, the factor will have at most 
+
+            -   `rank_limit`: If rank_limit > 0, the factor will have at most
                 rank_limit rows.
         """
         if regularize:
             x = regularize_array(x)
 
         if rank_limit > 0:
-            raise ValueError('NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.')
+            raise ValueError(
+                'NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.')
 
         if rank_limit > 0:
-            raise ValueError('NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.')
+            raise ValueError(
+                'NearlyFullRankCovariance does not accept a rank_limit argument. Use Covariance instead.')
 
         # Concatenation of the old points and new points.
         xtot = vstack((x_old, x))
@@ -186,7 +199,14 @@ class NearlyFullRankCovariance(Covariance):
         N_new = x.shape[0]
 
         # Compute off-diagonal part of Cholesky factor
-        offdiag = self.__call__(x=x_old[piv_old[:m_old],:], y=x, observed=observed, regularize=False)
+        offdiag = self.__call__(
+            x=x_old[
+                piv_old[
+                    :m_old],
+                :],
+            y=x,
+            observed=observed,
+            regularize=False)
         trisolve(U_old[:, :m_old], offdiag, uplo='U', transa='T', inplace=True)
 
         # Compute new diagonal part of Cholesky factor
@@ -194,34 +214,49 @@ class NearlyFullRankCovariance(Covariance):
         if nugget is not None:
             for i in xrange(N_new):
                 C_new[i, i] += nugget[i]
-        C_new -= offdiag.T*offdiag
+        C_new -= offdiag.T * offdiag
         if not assume_full_rank:
-            U_new, m_new, piv_new = ichol_full(c=C_new, reltol=self.relative_precision)
+            U_new, m_new, piv_new = ichol_full(
+                c=C_new, reltol=self.relative_precision)
         else:
             U_new = cholesky(C_new).T
             m_new = U_new.shape[0]
             piv_new = arange(m_new)
-        U_new = asmatrix(U_new[:m_new,:])
-        U = asmatrix(zeros((m_new + m_old, N_old + N_new), dtype=float, order='F'))
+        U_new = asmatrix(U_new[:m_new, :])
+        U = asmatrix(
+            zeros(
+                (m_new +
+                 m_old,
+                 N_old +
+                 N_new),
+                dtype=float,
+                order='F'))
 
         # Top portion of U
         U[:m_old, :m_old] = U_old[:, :m_old]
-        U[:m_old, N_new+m_old:] = U_old[:, m_old:]
+        U[:m_old, N_new + m_old:] = U_old[:, m_old:]
         offdiag = offdiag[:, piv_new]
-        U[:m_old, m_old:N_new+m_old] = offdiag
+        U[:m_old, m_old:N_new + m_old] = offdiag
 
         # Lower portion of U
-        U[m_old:, m_old:m_old+N_new] = U_new
+        U[m_old:, m_old:m_old + N_new] = U_new
         if m_old < N_old and m_new > 0:
-            offdiag_lower = self.__call__(  x=x[piv_new[:m_new],:],
-                                            y=x_old[piv_old[m_old:],:], observed=observed, regularize=False)
-            offdiag_lower -= offdiag[:, :m_new].T*U[:m_old, m_old+N_new:]
-            trisolve(U_new[:, :m_new], offdiag_lower, uplo='U', transa='T', inplace=True)
-            U[m_old:, m_old+N_new:] = offdiag_lower
+            offdiag_lower = self.__call__(x=x[piv_new[:m_new], :],
+                                          y=x_old[piv_old[m_old:], :], observed=observed, regularize=False)
+            offdiag_lower -= offdiag[:, :m_new].T * U[:m_old, m_old + N_new:]
+            trisolve(
+                U_new[
+                    :,
+                    :m_new],
+                offdiag_lower,
+                uplo='U',
+                transa='T',
+                inplace=True)
+            U[m_old:, m_old + N_new:] = offdiag_lower
 
         # Rank and pivots
-        m = m_old+m_new
-        piv = hstack((piv_old[:m_old], piv_new+N_old, piv_old[m_old:]))
+        m = m_old + m_new
+        piv = hstack((piv_old[:m_old], piv_new + N_old, piv_old[m_old:]))
 
         # Arrange output matrix and return.
         if m < 0:
@@ -230,7 +265,7 @@ class NearlyFullRankCovariance(Covariance):
         if not apply_pivot:
             # Useful for self.observe. U is upper triangular.
             if assume_full_rank:
-                return {'pivots':piv,'U':U,'C_eval':C_new,'U_new':U_new}
+                return {'pivots': piv, 'U': U, 'C_eval': C_new, 'U_new': U_new}
             else:
                 return {'pivots': piv, 'U': U}
 

@@ -42,7 +42,8 @@ def disasters(value=disasters_array,
               late_mean=late_mean,
               switchpoint=switchpoint):
     """Annual occurences of coal mining disasters."""
-    return pm.poisson_like(value[:switchpoint], early_mean) + pm.poisson_like(value[switchpoint:], late_mean)
+    return pm.poisson_like(
+        value[:switchpoint], early_mean) + pm.poisson_like(value[switchpoint:], late_mean)
 
 
 @pm.deterministic
@@ -50,7 +51,8 @@ def disasters_sim(early_mean=early_mean,
                   late_mean=late_mean,
                   switchpoint=switchpoint):
     """Coal mining disasters sampled from the posterior predictive distribution"""
-    return concatenate((pm.rpoisson(early_mean, size=switchpoint), pm.rpoisson(late_mean, size=n - switchpoint)))
+    return concatenate((pm.rpoisson(early_mean, size=switchpoint), pm.rpoisson(
+        late_mean, size=n - switchpoint)))
 
 
 @pm.deterministic
@@ -62,7 +64,8 @@ def expected_values(early_mean=early_mean,
     # Sample size
     n = len(disasters_array)
     # Expected values
-    return concatenate((ones(switchpoint) * early_mean, ones(n - switchpoint) * late_mean))
+    return concatenate(
+        (ones(switchpoint) * early_mean, ones(n - switchpoint) * late_mean))
 
 
 if __name__ == '__main__':

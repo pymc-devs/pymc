@@ -40,6 +40,8 @@ List of References
 
 .. [Lutz2007] M. Lutz. Learning Python. O’Reilly, 2007.
 
+.. [Neal2003] R.M. Neal. Slice sampling. Annals of Statistics. 2003. doi:10.2307/3448413.
+
 .. [Oberhumer2008] M.F.X.J. Oberhumer. LZO Real-Time Data Compression Library. 2008. URL http://www.oberhumer.com/opensource/lzo/.
 
 .. [Plummer2008] M. Plummer, N. Best, K. Cowles and K. Vines. coda: Output Analysis and Diagnostics for MCMC. R package version 0.13-3, 2008. URL http://CRAN.R-project.org/package=coda.

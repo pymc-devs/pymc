@@ -69,6 +69,8 @@ performance have been achieved. Most notably, the PyMC 2 series provides:
 
 * New adaptive blocked Metropolis step method.
 
+* New slice sampler method.
+
 * Much more!
 
 
@@ -134,7 +136,11 @@ of PyMC.
 PyMC 2.2 was released in April 2012. It contains numerous bugfixes and
 optimizations, as well as a few new features, inculding improved output
 plotting, csv table output, improved imputation syntax, and posterior
-predictive check plots. This user guide has been updated  for version 2.2.
+predictive check plots. PyMC 2.3 was released on October 31, 2013. It included 
+Python 3 compatibility, the addition of the half-Cauchy distribution, improved summary 
+plots, and some important bug fixes.
+
+This user guide has been updated for version 2.3.
 
 
 Relationship to other packages

@@ -70,6 +70,7 @@ class Lambda(pm.Deterministic):
       Deterministic, Logit, StukelLogit, StukelInvLogit, Logit, InvLogit,
       LinearCombination, Index
     """
+
     def __init__(self, name, lam_fun,
                  doc='A Deterministic made from an anonymous function', *args, **kwds):
         (parent_names, junk0, junk1,
@@ -139,6 +140,7 @@ class Logit(pm.Deterministic):
     :SeeAlso:
       Deterministic, Lambda, InvLogit, StukelLogit, StukelInvLogit
     """
+
     def __init__(self, name, theta,
                  doc='A logit transformation', *args, **kwds):
         pm.Deterministic.__init__(
@@ -171,6 +173,7 @@ class InvLogit(pm.Deterministic):
     :SeeAlso:
       Deterministic, Lambda, Logit, StukelLogit, StukelInvLogit
     """
+
     def __init__(self, name, ltheta,
                  doc='An inverse logit transformation', *args, **kwds):
         pm.Deterministic.__init__(
@@ -216,6 +219,7 @@ class StukelLogit(pm.Deterministic):
     :SeeAlso:
       Deterministic, Lambda, Logit, InvLogit, StukelInvLogit
     """
+
     def __init__(self, name, theta, a1, a2,
                  doc="Stukel's link function", *args, **kwds):
         pm.Deterministic.__init__(self, eval=stukel_logit,
@@ -256,6 +260,7 @@ class StukelInvLogit(pm.Deterministic):
     :SeeAlso:
       Deterministic, Lambda, Logit, InvLogit, StukelLogit
     """
+
     def __init__(self, name, ltheta, a1, a2,
                  doc="Stukel's inverse link function", *args, **kwds):
         pm.Deterministic.__init__(self, eval=stukel_invlogit,
@@ -284,6 +289,7 @@ class CompletedDirichlet(pm.Deterministic):
     :SeeAlso:
       Deterministic, Lambda, Index, LinearCombination
     """
+
     def __init__(self, name, D, doc=None, trace=True,
                  cache_depth=2, plot=None, verbose=-1):
 
@@ -445,6 +451,7 @@ class Index(pm.Deterministic):
     :SeeAlso:
       Deterministic, Lambda, LinearCombination
     """
+
     def __init__(self, name, x, index,
                  doc="Selects one of a list of several variables", *args, **kwds):
         self.index = Lambda('index', lambda i=index: np.int(i))
@@ -483,7 +490,8 @@ def pufunc(func):
 
         def wrapper(**kwargs):
             return func(*[kwargs['in%i' % i] for i in xrange(func.nin)])
-        return pm.Deterministic(wrapper, doc_str, name, parents, trace=False, plot=False)
+        return pm.Deterministic(
+            wrapper, doc_str, name, parents, trace=False, plot=False)
     dtrm_generator.__name__ = func.__name__ + '_deterministic_generator'
     dtrm_generator.__doc__ = """
 Deterministic-generating wrapper for %s. Original docstring:
@@ -565,7 +573,8 @@ def pfunc(func):
                 return func(*wargs, **wkwds)
             eval_fun = wrapper
 
-        return pm.Deterministic(eval_fun, doc_str, name, parents, trace=False, plot=False)
+        return pm.Deterministic(
+            eval_fun, doc_str, name, parents, trace=False, plot=False)
     dtrm_generator.__name__ = func.__name__ + '_deterministic_generator'
     dtrm_generator.__doc__ = """
 Deterministic-generating wrapper for %s. Original docstring:
@@ -631,6 +640,7 @@ def create_casting_method(op, klass):
     for target class. The method is called __op_name__.
     """
     # This function will become the actual method.
+
     def new_method(self, op=op):
         if not check_special_methods():
             raise NotImplementedError(
@@ -716,6 +726,7 @@ def create_rl_lin_comb_method(op_name, klass, x_roles, y_roles):
     for target class. The method is called __op_name__.
     """
     # This function will became the methods.
+
     def new_method(self, other, x_roles=x_roles, y_roles=y_roles):
         if not check_special_methods():
             raise NotImplementedError(
@@ -738,7 +749,8 @@ def create_rl_lin_comb_method(op_name, klass, x_roles, y_roles):
             else:
                 y.append(yr)
         # This code will create one of two Deterministic objects.
-        return LinearCombination('(' + '_'.join([self.__name__, op_name, str(other)]) + ')', x, y, trace=False, plot=False)
+        return LinearCombination(
+            '(' + '_'.join([self.__name__, op_name, str(other)]) + ')', x, y, trace=False, plot=False)
 
     # Convert the functions into methods for klass.
     new_method.__name__ = '__' + op_name + '__'
@@ -757,6 +769,7 @@ def create_bin_method(op_name, klass):
     A.__eq__(B) <=> A==B, for target class. The method is called __op_name__.
     """
     # This function will become the method.
+
     def new_method(self, other):
         if not check_special_methods():
             raise NotImplementedError(
@@ -793,6 +806,7 @@ def create_nonimplemented_method(op_name, klass):
     """
     Creates a new method that raises NotImplementedError.
     """
+
     def new_method(self, *args):
         raise NotImplementedError(
             'Special method %s has not been implemented for PyMC variables.' %
@@ -849,7 +863,7 @@ try:
         'div',
         Variable,
         jacobians=op_to_jacobians(
-        'div',
+            'div',
             locals(
             )))
 except NameError:
@@ -877,7 +891,8 @@ pos_jacobians = {'self': lambda self: np.ones(shape(self))}
 
 abs_jacobians = {'self': lambda self: np.sign(self)}
 
-for op in ['neg', 'abs', 'invert']:  # no need for pos and __index__ seems to cause a lot of problems
+# no need for pos and __index__ seems to cause a lot of problems
+for op in ['neg', 'abs', 'invert']:
     create_uni_method(op, Variable, jacobians=op_to_jacobians(op, locals()))
 
 # Casting operators

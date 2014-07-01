@@ -189,7 +189,8 @@ reporting the bug.
             The cumulative distribution function of self conditional on parents
             evaluated at self's current value
             """
-            return self.rv.cdf(self.value, *self._pymc_dists_to_value(self.args), **self.kwds)
+            return self.rv.cdf(
+                self.value, *self._pymc_dists_to_value(self.args), **self.kwds)
         cdf = property(_cdf, doc=_cdf.__doc__)
 
         def _sf(self):
@@ -197,7 +198,8 @@ reporting the bug.
             The survival function of self conditional on parents
             evaluated at self's current value
             """
-            return self.rv.sf(self.value, *self._pymc_dists_to_value(self.args), **self.kwds)
+            return self.rv.sf(
+                self.value, *self._pymc_dists_to_value(self.args), **self.kwds)
         sf = property(_sf, doc=_sf.__doc__)
 
         def ppf(self, q):
@@ -227,11 +229,13 @@ reporting the bug.
 
         def stats(self, moments='mv'):
             """The first few moments of self's distribution conditional on parents"""
-            return self.rv.stats(moments=moments, *self._pymc_dists_to_value(self.args), **self.kwds)
+            return self.rv.stats(
+                moments=moments, *self._pymc_dists_to_value(self.args), **self.kwds)
 
         def _entropy(self):
             """The entropy of self's distribution conditional on its parents"""
-            return self.rv.entropy(*self._pymc_dists_to_value(self.args), **self.kwds)
+            return self.rv.entropy(
+                *self._pymc_dists_to_value(self.args), **self.kwds)
         entropy = property(_entropy, doc=_entropy.__doc__)
 
     newer_class.__name__ = new_class.__name__
@@ -241,7 +245,8 @@ if sp_old:
 
     for scipy_dist_name in sc_dst.__all__:
         scipy_dist = sc_dst.__dict__[scipy_dist_name]
-        if isinstance(scipy_dist, rv_continuous) or isinstance(scipy_dist, rv_discrete):
+        if isinstance(scipy_dist, rv_continuous) or isinstance(
+                scipy_dist, rv_discrete):
             new_dist = stochastic_from_scipy_dist(scipy_dist)
             locals()[new_dist.__name__] = new_dist
             __all__.append(new_dist.__name__)

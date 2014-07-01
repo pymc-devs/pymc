@@ -8,6 +8,8 @@ from numpy.linalg import pinv, cholesky
 from numpy.random import randint, random
 from numpy.random import normal as rnormal
 from numpy.random import poisson as rpoisson
+from numpy.random import uniform as runiform
+from numpy.random import exponential as rexponential
 from .PyMCObjects import Stochastic, Potential, Deterministic
 from .Container import Container
 from .Node import ZeroProbability, Node, Variable, StochasticBase
@@ -52,7 +54,8 @@ __all__ = [
     'Gibbs',
     'conjugate_Gibbs_competence',
     'nonconjugate_Gibbs_competence',
-    'DrawFromPrior']
+    'DrawFromPrior',
+    'Slicer']
 
 
 StepMethodRegistry = []
@@ -76,9 +79,6 @@ def pick_best_methods(stochastic):
         try:
             competence = method.competence(stochastic)
         except:
-#             print_('\n\tWarning, there was an error while step method %s assessed its competence \n \
-# \tto handle stochastic %s. It is being excluded from consideration.\n' \
-#                     %(method.__name__, stochastic))
             competence = 0
 
         # If better than current best method, promote it
@@ -293,37 +293,32 @@ class StepMethod(object):
     def tune(self, *args, **kwargs):
         return False
 
-    def _get_loglike(self):
-        # Fetch log-probability (as sum of childrens' log probability)
+    @property
+    def loglike(self):
+        '''
+        The summed log-probability of all stochastic variables that depend on
+        self.stochastics, with self.stochastics removed.
+        '''
         sum = logp_of_set(self.children)
         if self.verbose > 2:
             print_('\t' + self._id + ' Current log-likelihood ', sum)
         return sum
 
-    # Make get property for retrieving log-probability
-    loglike = property(
-        fget=_get_loglike,
-        doc="The summed log-probability of all stochastic variables that depend on \n self.stochastics, with self.stochastics removed.")
-
-    def _get_logp_plus_loglike(self):
+    @property
+    def logp_plus_loglike(self):
+        '''
+        The summed log-probability of all stochastic variables that depend on
+        self.stochastics, and self.stochastics.
+        '''
         sum = logp_of_set(self.markov_blanket)
         if self.verbose > 2:
-            print_(
-                '\t' +
-                self._id +
-                ' Current log-likelihood plus current log-probability',
-                sum)
+            print_('\t' + self._id +
+                   ' Current log-likelihood plus current log-probability', sum)
         return sum
 
-    # Make get property for retrieving log-probability
-    logp_plus_loglike = property(
-        fget=_get_logp_plus_loglike,
-        doc="The summed log-probability of all stochastic variables that depend on \n self.stochastics, and self.stochastics.")
-
-    def _get_logp_gradient(self):
+    @property
+    def logp_gradient(self):
         return logp_gradient_of_set(self.stochastics, self.markov_blanket)
-
-    logp_gradient = property(fget=_get_logp_gradient)
 
     def current_state(self):
         """Return a dictionary with the current value of the variables defining
@@ -336,6 +331,7 @@ class StepMethod(object):
     @prop
     def ratio():
         """Acceptance ratio"""
+
         def fget(self):
             return self.accepted / (self.accepted + self.rejected)
         return locals()
@@ -350,6 +346,7 @@ class NoStepper(StepMethod):
 
     Useful for holding stochastics constant without setting observed=True.
     """
+
     def step(self):
         pass
 
@@ -650,6 +647,7 @@ class Metropolis(StepMethod):
 class PDMatrixMetropolis(Metropolis):
 
     """Metropolis sampler with proposals customised for symmetric positive definite matrices"""
+
     def __init__(self, stochastic, scale=1.,
                  proposal_sd=None, verbose=-1, tally=True):
         Metropolis.__init__(
@@ -668,7 +666,8 @@ class PDMatrixMetropolis(Metropolis):
         """
         # MatrixMetropolis handles the Wishart family, which are valued as
         # _symmetric_ matrices.
-        if any([isinstance(s, cls) for cls in [distributions.Wishart, distributions.WishartCov]]):
+        if any([isinstance(s, cls)
+                for cls in [distributions.Wishart, distributions.WishartCov]]):
             return 2
         else:
             return 0
@@ -699,6 +698,7 @@ class Gibbs(Metropolis):
     """
     Base class for the Gibbs step methods
     """
+
     def __init__(self, stochastic, verbose=-1):
         Metropolis.__init__(self, stochastic, verbose=verbose, tally=False)
 
@@ -734,6 +734,7 @@ class DrawFromPrior(StepMethod):
     """
     Handles dataless submodels.
     """
+
     def __init__(self, variables, generations, verbose=-1):
         StepMethod.__init__(self, variables, verbose, tally=False)
         self.generations = generations
@@ -791,6 +792,7 @@ class DiscreteMetropolis(Metropolis):
     Just like Metropolis, but rounds the variable's value.
     Good for discrete stochastics.
     """
+
     def __init__(self, stochastic, scale=1., proposal_sd=None,
                  proposal_distribution="Poisson", positive=False, verbose=-1, tally=True):
         # DiscreteMetropolis class initialization
@@ -945,7 +947,6 @@ class BinaryMetropolis(Metropolis):
                     (self._id, self.stochastic))
 
     def propose(self):
-        # Propose new values
 
         if self.proposal_distribution == 'Prior':
             self.stochastic.random()
@@ -1032,6 +1033,7 @@ class AdaptiveMetropolis(StepMethod):
       Haario, H., E. Saksman and J. Tamminen, An adaptive Metropolis algorithm,
           Bernouilli, vol. 7 (2), pp. 223-242, 2001.
     """
+
     def __init__(self, stochastic, cov=None, delay=1000, interval=200,
                  greedy=True, shrink_if_necessary=False, scales=None, verbose=-1, tally=False):
 
@@ -1148,7 +1150,7 @@ class AdaptiveMetropolis(StepMethod):
 
         if np.squeeze(ord_sc).shape[0] != self.dim:
             raise ValueError("Improper initial scales, dimension don't match",
-                            (np.squeeze(ord_sc), self.dim))
+                             (np.squeeze(ord_sc), self.dim))
 
         # Scale identity matrix
         return np.eye(self.dim) * ord_sc
@@ -1526,6 +1528,7 @@ class TWalk(StepMethod):
       - tally (optional) : bool
           Flag for recording values for trace (Defaults to True).
     """
+
     def __init__(self, stochastic, inits=None, kernel_probs=[
                  0.4918, 0.4918, 0.0082, 0.0082], walk_theta=1.5, traverse_theta=6.0, n1=4, support=lambda x: True, verbose=-1, tally=True):
 
@@ -1714,7 +1717,8 @@ class TWalk(StepMethod):
 
         nphi = sum(self.phi)
 
-        return (nphi / 2.0) * log(2 * pi) + nphi * log(s) + 0.5 * sum((h - xp) ** 2) / (s ** 2)
+        return (nphi / 2.0) * log(2 * pi) + nphi * \
+            log(s) + 0.5 * sum((h - xp) ** 2) / (s ** 2)
 
     def hop(self):
         """Hop proposal kernel"""
@@ -1874,10 +1878,137 @@ class TWalk(StepMethod):
             # Update value list
             self.values[0] = self.stochastic.value
 
+# Slice sampler implementation contributed by Dominik Wabersich
 
-class IIDSStepper(StepMethod):
+
+class Slicer(StepMethod):
 
     """
-    See written documentation.
+    Univariate slice sampler step method
+
+    :Parameters:
+      - stochastic : Stochastic
+          The variable over which self has jurisdiction.
+      - w (optional): float
+          Initial width of slice (Defaults to 1)
+      - m (optional): int
+          Multiplier defining maximum slice size to :math:`mw` (Defaults to 1000)
+      - tune (optional): bool
+          Tune initial slice width (defaults to True)
+      - doubling (optional): bool
+          Flag for using doubling procedure instead of stepping out (Defaults to False)
+      - tally (optional) : bool
+          Flag for recording values for trace (Defaults to True).
+      - verbose(optional) : int
+          Set verbosity level (Defaults to -1)
     """
-    pass
+
+    def __init__(self, stochastic, w=1, m=1000, tune=True,
+                 doubling=False, tally=False, verbose=-1):
+        """
+        Slice sampler class initialization
+        """
+        # Initialize superclass
+        StepMethod.__init__(self, [stochastic], tally=tally)
+
+        # id string
+        self._id = "Slicer"
+
+        # Set public attributes
+        self.stochastic = stochastic
+        if verbose > -1:
+            self.verbose = verbose
+        else:
+            self.verbose = stochastic.verbose
+
+        self._tune = tune
+        if tune:
+            self.w_tune = []
+        self.w = w
+        self.m = m
+        self.doubling = doubling
+
+    @staticmethod
+    def competence(s):
+        """
+        The competence function for Slice
+
+        Works best for continuous scalar variables.
+        """
+        if (s.dtype in float_dtypes) and not s.shape:
+            return 1
+        else:
+            return 0
+
+    def step(self):
+        """
+        Slice step method
+
+        From Neal 2003 (doi:10.1214/aos/1056562461)
+        """
+        logy = self.loglike - rexponential(1)
+
+        L = self.stochastic.value - runiform(0, self.w)
+        R = L + self.w
+
+        if self.doubling:
+            # Doubling procedure
+            K = self.m
+            while (K and (logy < self.fll(L) or logy < self.fll(R))):
+                if random() < 0.5:
+                    L -= R - L
+                else:
+                    R += R - L
+                K -= 1
+        else:
+            # Stepping out procedure
+            J = np.floor(runiform(0, self.m))
+            K = (self.m - 1) - J
+            while(J > 0 and logy < self.fll(L)):
+                L -= self.w
+                J -= 1
+            while(K > 0 and logy < self.fll(R)):
+                R += self.w
+                K -= 1
+
+        # Shrinkage procedure
+        self.stochastic.value = runiform(L, R)
+        try:
+            logy_new = self.loglike
+        except ZeroProbability:
+            logy_new = -np.infty
+        while(logy_new < logy):
+            if (self.stochastic.value < self.stochastic.last_value):
+                L = float(self.stochastic.value)
+            else:
+                R = float(self.stochastic.value)
+            self.stochastic.revert()
+            self.stochastic.value = runiform(L, R)
+            try:
+                logy_new = self.loglike
+            except ZeroProbability:
+                logy_new = -np.infty
+
+    def fll(self, value):
+        """
+        Returns loglike of value
+        """
+        self.stochastic.value = value
+        try:
+            ll = self.loglike
+        except ZeroProbability:
+            ll = -np.infty
+        self.stochastic.revert()
+        return ll
+
+    def tune(self, verbose=None):
+        """
+        Tuning initial slice width parameter
+        """
+        if not self._tune:
+            return False
+        else:
+            self.w_tune.append(
+                abs(self.stochastic.last_value - self.stochastic.value))
+            self.w = 2 * (sum(self.w_tune) / len(self.w_tune))
+            return True

@@ -2,10 +2,11 @@
 
 __docformat__ = 'reStructuredText'
 __all__ = ['observe', 'plot_envelope', 'predictive_check', 'regularize_array', 'trimult', 'trisolve', 'vecs_to_datmesh', 'caching_call', 'caching_callable',
-            'fast_matrix_copy', 'point_predict', 'square_and_sum', 'point_eval']
+           'fast_matrix_copy', 'point_predict', 'square_and_sum', 'point_eval']
 
 
-# TODO: Implement lintrans, allow obs_V to be a huge matrix or an ndarray in observe().
+# TODO: Implement lintrans, allow obs_V to be a huge matrix or an ndarray
+# in observe().
 
 from numpy import *
 from numpy.linalg import solve, cholesky, eigh
@@ -29,24 +30,29 @@ except ImportError:
 
 half_log_2pi = .5 * log(2. * pi)
 
+
 def fast_matrix_copy(f, t=None, n_threads=1):
     """
     Not any faster than a serial copy so far.
     """
     if not f.flags['F_CONTIGUOUS']:
-        raise RuntimeError('This will not be fast unless input array f is Fortran-contiguous.')
+        raise RuntimeError(
+            'This will not be fast unless input array f is Fortran-contiguous.')
 
     if t is None:
         t = asmatrix(empty(f.shape, order='F'))
     elif not t.flags['F_CONTIGUOUS']:
-        raise RuntimeError('This will not be fast unless input array t is Fortran-contiguous.')
+        raise RuntimeError(
+            'This will not be fast unless input array t is Fortran-contiguous.')
 
     # Figure out how to divide job up between threads.
     dcopy_wrap(ravel(asarray(f.T)), ravel(asarray(t.T)))
     return t
 
+
 def zero_lower_triangle(C):
     pass
+
 
 def caching_call(f, x, x_sofar, f_sofar):
     """
@@ -65,7 +71,8 @@ def caching_call(f, x, x_sofar, f_sofar):
     # Check which observations have already been made.
     if x_sofar is not None:
 
-        f_unique, new_indices, N_new_indices  = check_repeats(x_unique, x_sofar, f_sofar)
+        f_unique, new_indices, N_new_indices = check_repeats(
+            x_unique, x_sofar, f_sofar)
 
         # If there are any new input points, draw values over them.
         if N_new_indices > 0:
@@ -92,7 +99,8 @@ def caching_call(f, x, x_sofar, f_sofar):
     f[repeat_to] = f[repeat_from]
 
     return f, x_sofar, f_sofar
-    
+
+
 def square_and_sum(a, s):
     """
     Writes np.sum(a**2,axis=0) into s
@@ -101,7 +109,9 @@ def square_and_sum(a, s):
     map_noreturn(asqs, [(a, s, cmin[i], cmax[i]) for i in xrange(len(cmax))])
     return a
 
+
 class caching_callable(object):
+
     """
     F = caching_callable(f[, x_sofar, f_sofar, update_cache=True])
 
@@ -110,13 +120,15 @@ class caching_callable(object):
     f_sofar, if provided, is the value of f at x_sofar.
     update_cache tells whether x_sofar and f_sofar should be updated as additional calls are made.
     """
+
     def __init__(self, f, x_sofar=None, f_sofar=None, update_cache=True):
         self.f = f
         self.x_sofar = x_sofar
         self.f_sofar = f_sofar
         self.update_cache = update_cache
         if self.x_sofar is not None and self.f_sofar is None:
-            junk, self.x_sofar, self.f_sofar = caching_call(self.f, self.x_sofar)
+            junk, self.x_sofar, self.f_sofar = caching_call(
+                self.f, self.x_sofar)
         self.last_x = x_sofar
         self.last_f = f_sofar
 
@@ -125,13 +137,15 @@ class caching_callable(object):
             return self.f_sofar
         elif x is self.last_x:
             return self.last_f
-        f, x_sofar, f_sofar = caching_call(self.f, x, self.x_sofar, self.f_sofar)
+        f, x_sofar, f_sofar = caching_call(
+            self.f, x, self.x_sofar, self.f_sofar)
         self.last_x = x
         self.last_f = f
         if self.update_cache:
             self.x_sofar = x_sofar
             self.f_sofar = f_sofar
         return f
+
 
 def vecs_to_datmesh(x, y):
     """
@@ -140,11 +154,12 @@ def vecs_to_datmesh(x, y):
     """
     x, y = meshgrid(x, y)
     out = zeros(x.shape + (2,), dtype=float)
-    out[:,:, 0] = x
-    out[:,:, 1] = y
+    out[:, :, 0] = x
+    out[:, :, 1] = y
     return out
 
-def trimult(U,x,uplo='U',transa='N',alpha=1.,inplace=False):
+
+def trimult(U, x, uplo='U', transa='N', alpha=1., inplace=False):
     """
     b = trimult(U,x, uplo='U')
 
@@ -160,7 +175,7 @@ def trimult(U,x,uplo='U',transa='N',alpha=1.,inplace=False):
     return b
 
 
-def trisolve(U,b,uplo='U',transa='N',alpha=1.,inplace=False):
+def trisolve(U, b, uplo='U', transa='N', alpha=1., inplace=False):
     """
     x = trisolve(U,b, uplo='U')
 
@@ -179,6 +194,7 @@ def trisolve(U,b,uplo='U',transa='N',alpha=1.,inplace=False):
         raise ValueError('Attempted to solve zero-rank triangular system')
     dtrsm_wrap(a=U, b=x, side='L', uplo=uplo, transa=transa, alpha=alpha)
     return x
+
 
 def regularize_array(A):
     """
@@ -212,6 +228,7 @@ def regularize_array(A):
     else:
         return A
 
+
 def plot_envelope(M, C, mesh):
     """
     plot_envelope(M,C,mesh)
@@ -236,14 +253,16 @@ def plot_envelope(M, C, mesh):
         mean, var = point_eval(M, C, mesh)
         sig = sqrt(var)
         mean = M(mesh)
-        y = concatenate((mean-sig, (mean+sig)[::-1]))
+        y = concatenate((mean - sig, (mean + sig)[::-1]))
         # clf()
         fill(x, y, facecolor='.8', edgecolor='1.')
         plot(mesh, mean, 'k-.')
     except ImportError:
         print_("Matplotlib is not installed; plotting is disabled.")
 
-def observe(M, C, obs_mesh, obs_vals, obs_V = 0, lintrans = None, cross_validate = True):
+
+def observe(M, C, obs_mesh, obs_vals, obs_V=0, lintrans=None,
+            cross_validate=True):
     """
     (M, C, obs_mesh, obs_vals[, obs_V = 0, lintrans = None, cross_validate = True])
 
@@ -288,8 +307,10 @@ def observe(M, C, obs_mesh, obs_vals, obs_V = 0, lintrans = None, cross_validate
     # Cross-validate if not asked not to.
     if obs_mesh_new.shape[0] < obs_mesh.shape[0]:
         if cross_validate:
-            if not predictive_check(obs_vals, obs_mesh, M, C.obs_piv, sqrt(C.relative_precision)):
-                raise ValueError("These data seem extremely improbable given your GP prior. \n Suggestions: decrease observation precision, or adjust the covariance to \n allow the function to be less smooth.")
+            if not predictive_check(
+                    obs_vals, obs_mesh, M, C.obs_piv, sqrt(C.relative_precision)):
+                raise ValueError(
+                    "These data seem extremely improbable given your GP prior. \n Suggestions: decrease observation precision, or adjust the covariance to \n allow the function to be less smooth.")
 
 
 def predictive_check(obs_vals, obs_mesh, M, posdef_indices, tolerance):
@@ -312,14 +333,16 @@ def predictive_check(obs_vals, obs_mesh, M, posdef_indices, tolerance):
         -   `tolerance`: The maximum allowable deviation at M(obs_mesh[non_posdef_indices]).
     """
 
-    non_posdef_indices = array(list(set(range(len(obs_vals))) - set(posdef_indices)), dtype=int)
+    non_posdef_indices = array(
+        list(set(range(len(obs_vals))) - set(posdef_indices)), dtype=int)
     if len(non_posdef_indices) > 0:
-        M_under = M(obs_mesh[non_posdef_indices,:]).ravel()
+        M_under = M(obs_mesh[non_posdef_indices, :]).ravel()
         dev = abs((M_under - obs_vals[non_posdef_indices]))
         if dev.max() > tolerance:
             return False
 
     return True
+
 
 def point_predict(f, x, size=1, nugget=None):
     """
@@ -343,32 +366,32 @@ def point_predict(f, x, size=1, nugget=None):
 def point_eval(M, C, x):
     """
     Evaluates M(x) and C(x).
-    
+
     Minimizes computation; evaluating M(x) and C(x) separately would
     evaluate the off-diagonal covariance term twice, but callling
     point_eval(M,C,x) would only evaluate it once.
-    
+
     Also chunks the evaluations if the off-diagonal term.
     """
-    
+
     x_ = regularize_array(x)
-    
+
     M_out = empty(x_.shape[0])
     V_out = empty(x_.shape[0])
-    
+
     if isinstance(C, pymc.gp.BasisCovariance):
         y_size = len(C.basis)
     elif C.obs_mesh is not None:
         y_size = C.obs_mesh.shape[0]
     else:
         y_size = 1
-    
-    n_chunks = ceil(y_size*x_.shape[0]/float(chunksize))
-    bounds = array(linspace(0, x_.shape[0], n_chunks+1), dtype='int')
+
+    n_chunks = ceil(y_size * x_.shape[0] / float(chunksize))
+    bounds = array(linspace(0, x_.shape[0], n_chunks + 1), dtype='int')
     cmin = bounds[:-1]
     cmax = bounds[1:]
-    for (cmin, cmax) in zip(bounds[:-1], bounds[1:]):           
-        x__ = x_[cmin:cmax] 
+    for (cmin, cmax) in zip(bounds[:-1], bounds[1:]):
+        x__ = x_[cmin:cmax]
         V_out[cmin:cmax], Uo_Cxo = C(x__, regularize=False, return_Uo_Cxo=True)
         M_out[cmin:cmax] = M(x__, regularize=False, Uo_Cxo=Uo_Cxo)
 

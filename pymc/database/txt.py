@@ -100,7 +100,7 @@ class Database(base.Database):
         self.mode = dbmode
 
         self.trace_names = []
-            # A list of sequences of names of the objects to tally.
+        # A list of sequences of names of the objects to tally.
         self._traces = {}  # A dictionary of the Trace objects.
         self.chains = 0
 
@@ -118,7 +118,8 @@ class Database(base.Database):
         try:
             content = os.listdir(self._directory)
             for c in content:
-                if os.path.isdir(os.path.join(self._directory, c)) and c.startswith(CHAIN_NAME[:-2]):
+                if os.path.isdir(os.path.join(self._directory, c)) and c.startswith(
+                        CHAIN_NAME[:-2]):
                     chains.append(c)
         except:
             pass
@@ -163,7 +164,7 @@ def load(dirname):
             if name not in data:
                 data[
                     name] = {
-                    }  # This could be simplified using "collections.defaultdict(dict)". New in Python 2.5
+                }  # This could be simplified using "collections.defaultdict(dict)". New in Python 2.5
             # Read the shape information
             with open(os.path.join(folder, file)) as f:
                 f.readline()

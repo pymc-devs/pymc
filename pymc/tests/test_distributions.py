@@ -69,7 +69,8 @@ def cauchy(x, x0, gamma):
 
 
 def gamma(x, alpha, beta):
-    return x ** (alpha - 1) * exp(-x / beta) / (special.gamma(alpha) * beta ** alpha)
+    return x ** (alpha - 1) * exp(-x / beta) / \
+        (special.gamma(alpha) * beta ** alpha)
 
 
 def multinomial_beta(alpha):
@@ -442,6 +443,7 @@ class test_categorical(TestCase):
         assert categorical_like([-1], [[0.4, 0.4, 0.2]]) < -1e300
         assert categorical_like([3], [[0.4, 0.4, 0.2]]) < -1e300
 
+
 class test_cauchy(TestCase):
 
     def test_consistency(self):
@@ -482,6 +484,7 @@ class test_chi2(TestCase):
 
     """Based on flib.gamma, so no need to make the calling check and
     normalization check."""
+
     def test_consistency(self):
         parameters = {'nu': 2}
         hist, like, figdata = consistency(
@@ -494,6 +497,7 @@ class test_chi2(TestCase):
 class test_dirichlet(TestCase):
 
     """Multivariate Dirichlet distribution"""
+
     def test_random(self):
         theta = np.array([2., 3., 5.])
         r = rdirichlet(theta, 2000)
@@ -534,6 +538,7 @@ class test_dirichlet(TestCase):
 class test_exponential(TestCase):
 
     """Based on gamma."""
+
     def test_consistency(self):
         parameters = {'beta': 4}
         hist, like, figdata = consistency(rexponential, exponential_like,
@@ -548,6 +553,7 @@ class test_laplace(TestCase):
     parameters = {'mu': 10, 'tau': 0.5}
 
     """Based on gamma."""
+
     def test_consistency(self):
         hist, like, figdata = consistency(rlaplace, laplace_like,
                                           self.parameters, nrandom=5000)
@@ -559,14 +565,19 @@ class test_laplace(TestCase):
         x = [8, 9]
         if SP:
             assert_almost_equal(
-            laplace.logpdf(x, loc=self.parameters['mu'], scale=1./self.parameters['tau']).sum(),
-            laplace_like(x, **self.parameters)
+                laplace.logpdf(
+                    x,
+                    loc=self.parameters['mu'],
+                    scale=1. /
+                    self.parameters['tau']).sum(),
+                laplace_like(x, **self.parameters)
             )
 
 
 class test_logistic(TestCase):
 
     """Based on gamma."""
+
     def test_consistency(self):
         parameters = {'mu': 1, 'tau': 0.5}
         hist, like, figdata = consistency(rlogistic, logistic_like,
@@ -579,6 +590,7 @@ class test_logistic(TestCase):
 class test_t(TestCase):
 
     """Based on gamma."""
+
     def test_consistency(self):
         parameters = {'nu': 5}
         hist, like, figdata = consistency(rt, t_like,
@@ -591,6 +603,7 @@ class test_t(TestCase):
 class test_noncentral_t(TestCase):
 
     """Based on gamma."""
+
     def test_consistency(self):
         parameters = {'mu': -10, 'lam': 0.2, 'nu': 5}
         hist, like, figdata = consistency(rnoncentral_t, noncentral_t_like,
@@ -674,6 +687,7 @@ class test_gamma(TestCase):
 class test_geometric(TestCase):
 
     """Based on gamma."""
+
     def test_consistency(self):
         parameters = {'p': .6}
         hist, like, figdata = discrete_consistency(
@@ -1153,7 +1167,7 @@ class test_weibull(TestCase):
         r = rweibull(parameters['alpha'], parameters['beta'], size=100000)
         assert_almost_equal(r.mean(), weibull_expval(**parameters), 1)
 
-#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------
 # Test Wishart / Inverse Wishart distributions
 _Tau_test = np.matrix([[209.47883244, 10.88057915, 13.80581557],
                        [10.88057915, 213.58694978, 11.18453854],
@@ -1295,8 +1309,14 @@ class test_shape_consistency(TestCase):
             return (np.ones(shape) * mean).ravel()
 
         # data has shape (10,5) but means returns an array of shape (10 * 5,)
-        assert_raises(ValueError, Normal, "obs", mu=means, tau=1, observed=
-                      True, value=data)
+        assert_raises(
+            ValueError,
+            Normal,
+            "obs",
+            mu=means,
+            tau=1,
+            observed=True,
+            value=data)
 
 
 def test_unicode():

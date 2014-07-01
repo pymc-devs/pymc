@@ -102,7 +102,8 @@ Docstring of class %s: \n\n%s""" % (metro_class.__name__, metro_class.__name__, 
 
         @staticmethod
         def competence(stochastic, metro_class=metro_class):
-            if any([isinstance(child, GaussianProcess) for child in stochastic.extended_children]):
+            if any([isinstance(child, GaussianProcess)
+                    for child in stochastic.extended_children]):
                 return metro_class.competence(stochastic) + .01
             else:
                 return 0
@@ -159,6 +160,7 @@ class _GPEvaluationMetropolis(pm.Metropolis):
     to the prior distribution, an attempt to minimize jumps to values
     forbidden by the prior.
     """
+
     def __init__(self, stochastic, proposal_sd=1, **kwds):
         pm.Metropolis.__init__(
             self,
@@ -216,6 +218,7 @@ class GPEvaluationGibbs(pm.Metropolis):
 
     if ti is None.
     """
+
     def __init__(self, submod, V, eps_p_f, ti=None, tally=True, verbose=0):
 
         self.f_eval = submod.f_eval
@@ -350,6 +353,6 @@ class GPEvaluationGibbs(pm.Metropolis):
                 size=sig_step.shape[
                     1])).view(
                         np.ndarray).ravel(
-                        )
+        )
         # Propose the rest of the field from its conditional prior.
         self.f.rand()

@@ -144,7 +144,8 @@ def Container(*args):
         return iterable
 
     for container_class, containing_classes in ContainerRegistry:
-        if any([isinstance(iterable, containing_class) for containing_class in containing_classes]):
+        if any([isinstance(iterable, containing_class)
+                for containing_class in containing_classes]):
             return container_class(iterable)
 
     # Wrap mutable objects

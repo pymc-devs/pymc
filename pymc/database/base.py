@@ -225,7 +225,7 @@ class Database(object):
         self.__name__ = 'base'
         self.dbname = dbname
         self.trace_names = []
-            # A list of sequences of names of the objects to tally.
+        # A list of sequences of names of the objects to tally.
         self._traces = {}  # A dictionary of the Trace objects.
         self.chains = 0
 
@@ -252,7 +252,6 @@ class Database(object):
                         db=self)
 
             self._traces[name]._initialize(self.chains, length)
-
 
         self.trace_names.append(list(funs_to_tally.keys()))
 

@@ -104,11 +104,13 @@ class ParentDict(DictContainer):
 
     :SeeAlso: DictContainer
     """
+
     def __init__(self, regular_dict, owner):
         DictContainer.__init__(self, dict(regular_dict))
         self.owner = owner
         self.owner.extended_parents = extend_parents(self.variables)
-        if isinstance(self.owner, StochasticBase) or isinstance(self.owner, PotentialBase):
+        if isinstance(self.owner, StochasticBase) or isinstance(
+                self.owner, PotentialBase):
             self.has_logp = True
         else:
             self.has_logp = False
@@ -149,7 +151,8 @@ class ParentDict(DictContainer):
         old_parent = self[key]
 
         # Possibly remove owner from old parent's children set.
-        if isinstance(old_parent, Variable) or isinstance(old_parent, ContainerBase):
+        if isinstance(old_parent, Variable) or isinstance(
+                old_parent, ContainerBase):
 
             # Tell all extended parents to forget about owner
             if self.has_logp:
@@ -160,16 +163,19 @@ class ParentDict(DictContainer):
 
             if isinstance(old_parent, Variable):
                 # See if owner only claims the old parent via this key.
-                if sum([parent is old_parent for parent in six.itervalues(self)]) == 1:
+                if sum(
+                        [parent is old_parent for parent in six.itervalues(self)]) == 1:
                     old_parent.children.remove(self.owner)
 
             if isinstance(old_parent, ContainerBase):
                 for variable in old_parent.variables:
-                    if sum([parent is variable for parent in six.itervalues(self)]) == 1:
+                    if sum(
+                            [parent is variable for parent in six.itervalues(self)]) == 1:
                         variable.children.remove(self.owner)
 
         # If the new parent is a variable, add owner to its children set.
-        if isinstance(new_parent, Variable) or isinstance(new_parent, ContainerBase):
+        if isinstance(new_parent, Variable) or isinstance(
+                new_parent, ContainerBase):
 
             self.val_keys.append(key)
             self.nonval_keys.remove(key)
@@ -360,7 +366,8 @@ class Potential(PotentialBase):
 
                     gradient = gradient + grad_func.get()
 
-        return np.reshape(gradient, np.shape(variable.value))  # np.reshape(gradient, np.shape(variable.value))
+        # np.reshape(gradient, np.shape(variable.value))
+        return np.reshape(gradient, np.shape(variable.value))
 
 
 class Deterministic(DeterministicBase):
@@ -499,8 +506,9 @@ class Deterministic(DeterministicBase):
         if self.verbose > 0:
             print_('\t' + self.__name__ + ': logp_partial_gradient accessed.')
 
-        if not (datatypes.is_continuous(variable) and datatypes.is_continuous(self)):
-                return zeros(shape(variable.value))
+        if not (datatypes.is_continuous(variable)
+                and datatypes.is_continuous(self)):
+            return zeros(shape(variable.value))
 
         # loop through all the parameters and add up all the gradients of log p
         # with respect to the approrpiate variable
@@ -524,11 +532,13 @@ class Deterministic(DeterministicBase):
         return jacobian * gradient
 
     def broadcast_operation_jacobian(self, variable, jacobian, gradient):
-        return calc_utils.sum_to_shape(id(variable), id(self), jacobian * gradient, shape(variable.value))
+        return calc_utils.sum_to_shape(
+            id(variable), id(self), jacobian * gradient, shape(variable.value))
 
     def accumulation_operation_jacobian(self, variable, jacobian, gradient):
         for i in range(ndim(jacobian)):
-            if i >= ndim(gradient) or shape(gradient)[i] != shape(variable.value)[i]:
+            if i >= ndim(gradient) or shape(
+                    gradient)[i] != shape(variable.value)[i]:
                 expand_dims(gradient, i)
         return gradient * jacobian
 
@@ -795,7 +805,7 @@ class Stochastic(StochasticBase):
         self._logp = LazyFunction(fun=self._logp_fun,
                                   arguments=arguments,
                                   ultimate_args=self.extended_parents | set(
-                                  [self]),
+                                      [self]),
                                   cache_depth=self._cache_depth)
         self._logp.force_compute()
 
@@ -804,7 +814,7 @@ class Stochastic(StochasticBase):
             lazy_logp_partial_gradient = LazyFunction(fun=function,
                                                       arguments=arguments,
                                                       ultimate_args=self.extended_parents | set(
-                                                      [self]),
+                                                          [self]),
                                                       cache_depth=self._cache_depth)
             lazy_logp_partial_gradient.force_compute()
             self._logp_partial_gradients[
@@ -939,7 +949,8 @@ class Stochastic(StochasticBase):
         # NEED some sort of check to see if the log p calculation has recently
         # failed, in which case not to continue
 
-        return self.logp_partial_gradient(self, calculation_set) + builtins.sum([child.logp_partial_gradient(self, calculation_set) for child in self.children])
+        return self.logp_partial_gradient(self, calculation_set) + builtins.sum(
+            [child.logp_partial_gradient(self, calculation_set) for child in self.children])
 
     def logp_partial_gradient(self, variable, calculation_set=None):
         """
@@ -980,7 +991,8 @@ class Stochastic(StochasticBase):
     def _pgradient(self, variable, parameter, value):
         if value is variable:
             try:
-                return np.reshape(self._logp_partial_gradients[parameter].get(), np.shape(variable.value))
+                return np.reshape(
+                    self._logp_partial_gradients[parameter].get(), np.shape(variable.value))
             except KeyError:
                 raise NotImplementedError(
                     repr(

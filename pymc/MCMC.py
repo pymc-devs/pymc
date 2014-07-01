@@ -56,6 +56,7 @@ class MCMC(Sampler):
 
     :SeeAlso: Model, Sampler, StepMethod.
     """
+
     def __init__(self, input=None, db='ram',
                  name='MCMC', calc_deviance=True, **kwds):
         """Initialize an MCMC instance.
@@ -426,7 +427,7 @@ class MCMC(Sampler):
                 mean_value = np.mean(
                     self.db.trace(
                         stochastic.__name__)(
-                        ),
+                    ),
                     axis=0)
 
                 # Set current value to mean

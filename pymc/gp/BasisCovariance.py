@@ -335,7 +335,8 @@ class BasisCovariance(Covariance):
     def _unobs_reg(self, M):
         # reg_mat = chol(self.basis_o.T * self.coef_cov * self.basis_o + diag(obs_V)).T.I * self.basis_o.T * self.coef_cov *
         # chol(self(obs_mesh_*, obs_mesh_*)).T.I * M.dev
-        return self.Uo_cov.T * asmatrix(trisolve(self.Uo, M.dev, uplo='U', transa='T')).T
+        return self.Uo_cov.T * \
+            asmatrix(trisolve(self.Uo, M.dev, uplo='U', transa='T')).T
 
     def _obs_reg(self, M, dev_new, m_old):
         # reg_mat = chol(self.basis_o.T * self.coef_cov * self.basis_o + diag(obs_V)).T.I * self.basis_o.T * self.coef_cov *
@@ -384,6 +385,7 @@ class SeparableBasisCovariance(BasisCovariance):
 
     :SeeAlso: Mean, Realization, Covariance, SeparableBasisCovariance, observe
     """
+
     def __init__(self, basis, coef_cov,
                  relative_precision=1.0E-15, **params):
         BasisCovariance.__init__(

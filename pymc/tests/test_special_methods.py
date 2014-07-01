@@ -14,11 +14,11 @@ submod = pm.gp.GPSubmodel(
     pm.gp.Mean(
         lambda x: 0 * x),
     pm.gp.FullRankCovariance(
-    pm.gp.cov_funs.exponential.euclidean,
+        pm.gp.cov_funs.exponential.euclidean,
         amp=1,
         scale=1),
     np.linspace(
-    -1,
+        -1,
         1,
         21))
 x = [pm.MvNormalCov('x0', np.zeros(5), np.eye(5)),

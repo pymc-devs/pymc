@@ -27,6 +27,7 @@ class CircularStochastic(Stochastic):
 
     :SeeAlso: Stochastic
     """
+
     def __init__(self, lo, hi, *args, **kwargs):
         self.interval_parents = Container([hi, lo])
         Stochastic.__init__(self, *args, **kwargs)
@@ -52,6 +53,7 @@ class CircVonMises(CircularStochastic):
 
     Docstring of log-probability function:
     """ + von_mises_like.__doc__
+
     def __init__(self,
                  name,
                  mu, kappa,

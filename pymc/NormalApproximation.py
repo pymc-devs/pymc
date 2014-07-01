@@ -36,6 +36,7 @@ class NormApproxMu(object):
     will give the approximate posterior mean of the ravelled, concatenated
     values of p1 and p2.
     """
+
     def __init__(self, owner):
         self.owner = owner
 
@@ -81,6 +82,7 @@ class NormApproxC(object):
     will give the approximate covariance matrix of the ravelled, concatenated
     values of p1 and p2
     """
+
     def __init__(self, owner):
         self.owner = owner
 
@@ -150,6 +152,7 @@ class MAP(Model):
 
     :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
+
     def __init__(self, input=None, eps=.001, diff_order=5, verbose=-1):
         if not scipy_imported:
             raise ImportError(
@@ -419,7 +422,8 @@ class MAP(Model):
 
         old_val = copy(self[j])
 
-        if not self.stochastic_indices[i][0] in self.stochastic_indices[j][0].moral_neighbors:
+        if not self.stochastic_indices[i][
+                0] in self.stochastic_indices[j][0].moral_neighbors:
             return 0.
 
         def diff_for_diff(val):
@@ -517,6 +521,7 @@ class NormApprox(MAP, Sampler):
 
     :SeeAlso: Model, EM, Sampler, scipy.optimize
     """
+
     def __init__(self, input=None, db='ram', eps=.001, diff_order=5, **kwds):
         if not scipy_imported:
             raise ImportError(
