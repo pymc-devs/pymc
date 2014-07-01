@@ -77,8 +77,10 @@ class StandardRealization(object):
     """
 
     # pickle support
+
     def __getstate__(self):
-        return (self.M, self.C, self.x_sofar, self.f_sofar, self.check_repeats, False)
+        return (self.M, self.C, self.x_sofar,
+                self.f_sofar, self.check_repeats, False)
 
     def __setstate__(self, state):
         self.__init__(*state)

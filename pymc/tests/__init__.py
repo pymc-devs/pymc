@@ -4,8 +4,8 @@ try:
     from numpy.testing import Tester
 
     with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            test = Tester().test
+        warnings.simplefilter('ignore')
+        test = Tester().test
 
 except ImportError:
     warnings.warn(

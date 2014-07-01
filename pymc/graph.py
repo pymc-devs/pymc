@@ -57,8 +57,8 @@ def moral_graph(model, format='raw', prog='dot', path=None, name=None):
             if not other_s in gone_already:
                 model.moral_dot_object.add_edge(
                     pydot.Edge(src=other_s.__name__,
-                                               dst=s.__name__,
-                                               arrowhead='none'))
+                               dst=s.__name__,
+                               arrowhead='none'))
 
     # Draw the graph
     ext = format
@@ -238,12 +238,14 @@ def graph(
                 const_node_name = key_val.__class__.__name__
 
             if isinstance(key_val, Variable):
-                if any([maybe_connect_parent(name, node.__name__, label) for name in get_obj_names(key_val, None)]):
+                if any([maybe_connect_parent(name, node.__name__, label)
+                        for name in get_obj_names(key_val, None)]):
                     connect_parents(key_val)
 
             elif isinstance(key_val, ContainerBase):
                 for var in key_val.variables:
-                    if any([maybe_connect_parent(name, node.__name__, label) for name in get_obj_names(var, None)]):
+                    if any([maybe_connect_parent(name, node.__name__, label)
+                            for name in get_obj_names(var, None)]):
                         connect_parents(var)
 
             elif consts:

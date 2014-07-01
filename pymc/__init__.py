@@ -19,7 +19,8 @@ except ImportError:
 from .threadpool import *
 import os
 import pymc
-if os.getcwd().find(os.path.abspath(os.path.split(os.path.split(pymc.__file__)[0])[0])) > -1:
+if os.getcwd().find(
+        os.path.abspath(os.path.split(os.path.split(pymc.__file__)[0])[0])) > -1:
     from .six import print_
     print_('\n\tWarning: You are importing PyMC from inside its source tree.')
 from .Node import *

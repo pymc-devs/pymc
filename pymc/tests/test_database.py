@@ -171,7 +171,8 @@ class TestPickle(TestRam):
         self.S.use_step_method(pymc.Metropolis, self.S.late_mean, tally=True)
 
     def load(self):
-        return pymc.database.pickle.load(os.path.join(testdir, 'Disaster.pickle'))
+        return pymc.database.pickle.load(
+            os.path.join(testdir, 'Disaster.pickle'))
 
     def test_xload(self):
         db = self.load()
@@ -270,7 +271,6 @@ class TestTxt(TestPickle):
                            dbmode='w')
         self.S.use_step_method(pymc.Metropolis, self.S.late_mean)
         self.S.use_step_method(pymc.Metropolis, self.S.early_mean)
-        
 
     def load(self):
         return pymc.database.txt.load(os.path.join(testdir, 'Disaster.txt'))
@@ -291,7 +291,8 @@ class TestSqlite(TestPickle):
                            dbmode='w')
 
     def load(self):
-        return pymc.database.sqlite.load(os.path.join(testdir, 'Disaster.sqlite'))
+        return pymc.database.sqlite.load(
+            os.path.join(testdir, 'Disaster.sqlite'))
 
     def test_yrestore_state(self):
         raise nose.SkipTest("Not implemented.")

@@ -72,7 +72,8 @@ def get_analytic_partial_gradient(deterministic, parameter, variable, grad):
             deterministic) + " has no jacobian for " + str(parameter))
     mapping = deterministic._jacobian_formats.get(parameter, 'full')
 
-    return deterministic._format_mapping[mapping](deterministic, variable, jacobian, grad)
+    return deterministic._format_mapping[mapping](
+        deterministic, variable, jacobian, grad)
 
 
 def get_numeric_partial_gradient(deterministic, pvalue, grad):
@@ -138,12 +139,12 @@ def check_gradients(stochastic):
 
     for s, analytic_gradient in six.iteritems(gradients):
 
-            numeric_gradient = get_numeric_gradient(stochastics, s)
+        numeric_gradient = get_numeric_gradient(stochastics, s)
 
-            assert_array_almost_equal(numeric_gradient, analytic_gradient, 3,
-                                      "analytic gradient for " + str(stochastic) +
-                                      " with respect to parameter " + str(s) +
-                                      " is not correct.")
+        assert_array_almost_equal(numeric_gradient, analytic_gradient, 3,
+                                  "analytic gradient for " + str(stochastic) +
+                                  " with respect to parameter " + str(s) +
+                                  " is not correct.")
 
 
 def get_numeric_gradient(stochastic, pvalue):
@@ -314,7 +315,7 @@ class test_gradients(TestCase):
             lower=zeros(
                 shape) + .05,
             upper=ones(
-            shape) - .05)
+                shape) - .05)
         n = 5
 
         a.value = 2 * ones(shape)

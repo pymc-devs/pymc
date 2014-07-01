@@ -54,14 +54,22 @@ class test_geweke(TestCase):
     def test_independent(self):
         # Use IID data
 
-        x = [pymc.geweke(np.random.normal(size=1000), intervals=5)[0][1] for _ in range(10000)]
+        x = [
+            pymc.geweke(
+                np.random.normal(
+                    size=1000),
+                intervals=5)[0][1] for _ in range(10000)]
 
         assert_approx_equal(np.var(x), 1, 1)
 
         # If the model has converged, 95% the scores should lie
         # within 2 standard deviations of zero, under standard normal model
         intervals = 40
-        x = np.transpose(pymc.geweke(np.random.normal(size=10000), intervals=intervals))[1]
+        x = np.transpose(
+            pymc.geweke(
+                np.random.normal(
+                    size=10000),
+                intervals=intervals))[1]
         assert(sum(np.abs(x) < 2) >= int(0.9 * intervals))
 
     def test_simple(self):

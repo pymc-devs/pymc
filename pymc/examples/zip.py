@@ -14,7 +14,7 @@ n = 100
 
 # Simulate some data
 data = np.array([rpoisson(mu_true) * (np.random.random() < psi_true)
-                for i in range(n)])
+                 for i in range(n)])
 
 # Uniorm prior on Poisson mean
 mu = Uniform('mu', 0, 20)

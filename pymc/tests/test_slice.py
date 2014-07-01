@@ -4,10 +4,12 @@ import numpy as np
 from numpy.testing import *
 
 # Easy dice example (analytically solvable)
+
+
 def dice(data=None):
 
-    if data == None:
-        x = [pymc.rbernoulli(1.0/6.0) for i in range(0,100)]
+    if data is None:
+        x = [pymc.rbernoulli(1.0 / 6.0) for i in range(0, 100)]
     else:
         x = data
 
@@ -17,8 +19,9 @@ def dice(data=None):
 
     return locals()
 
+
 class TestSlice(TestCase):
-    
+
     def test_dice_sample(self):
         M = pymc.MCMC(dice())
         M.use_step_method(pymc.Slicer, M.prob, w=.1)

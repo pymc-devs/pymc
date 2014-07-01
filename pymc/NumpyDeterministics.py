@@ -62,7 +62,8 @@ def deterministic_from_funcs(
     docstr += 'Docstring of evaluatio function:\n'
     docstr += eval.__doc__
 
-    return new_deterministic_class(dtype, name, parent_names, parents_default, docstr, eval, jacobians, jacobian_formats)
+    return new_deterministic_class(
+        dtype, name, parent_names, parents_default, docstr, eval, jacobians, jacobian_formats)
 
 
 def new_deterministic_class(*new_class_args):
@@ -141,7 +142,7 @@ def new_deterministic_class(*new_class_args):
                     'Keywords ' + str(
                         kwds.keys(
                         )) + ' not recognized. Arguments recognized are ' + str(
-                    args_needed))
+                        args_needed))
 
             # Call base class initialization method
             if arg_dict_out.pop('debug'):

@@ -52,7 +52,8 @@ class TextProgressBar(ProgressBar):
 
     def progbar(self, i, elapsed):
         bar = self.bar(self.percentage(i))
-        return "[%s] %i of %i complete in %.1f sec" % (bar, i, self.iterations, round(elapsed, 1))
+        return "[%s] %i of %i complete in %.1f sec" % (
+            bar, i, self.iterations, round(elapsed, 1))
 
     def bar(self, percent):
         all_full = self.width - 2
@@ -103,18 +104,18 @@ class IPythonNotebookPB(ProgressBar):
 
         display(
             Javascript("$('div#%s').width('%i%%')" %
-               (self.divid, percentage)))
+                       (self.divid, percentage)))
         display(
             Javascript("$('label#%s').text('%i%% in %.1f sec')" %
-               (self.sec_id, fraction, round(elapsed, 1))))
+                       (self.sec_id, fraction, round(elapsed, 1))))
 
 
 def run_from_ipython():
-        try:
-            __IPYTHON__
-            return True
-        except NameError:
-            return False
+    try:
+        __IPYTHON__
+        return True
+    except NameError:
+        return False
 
 
 def progress_bar(iters):

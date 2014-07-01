@@ -79,9 +79,6 @@ def pick_best_methods(stochastic):
         try:
             competence = method.competence(stochastic)
         except:
-#             print_('\n\tWarning, there was an error while step method %s assessed its competence \n \
-# \tto handle stochastic %s. It is being excluded from consideration.\n' \
-#                     %(method.__name__, stochastic))
             competence = 0
 
         # If better than current best method, promote it
@@ -299,7 +296,7 @@ class StepMethod(object):
     @property
     def loglike(self):
         '''
-        The summed log-probability of all stochastic variables that depend on 
+        The summed log-probability of all stochastic variables that depend on
         self.stochastics, with self.stochastics removed.
         '''
         sum = logp_of_set(self.children)
@@ -310,13 +307,13 @@ class StepMethod(object):
     @property
     def logp_plus_loglike(self):
         '''
-        The summed log-probability of all stochastic variables that depend on 
+        The summed log-probability of all stochastic variables that depend on
         self.stochastics, and self.stochastics.
         '''
         sum = logp_of_set(self.markov_blanket)
         if self.verbose > 2:
             print_('\t' + self._id +
-                ' Current log-likelihood plus current log-probability', sum)
+                   ' Current log-likelihood plus current log-probability', sum)
         return sum
 
     @property
@@ -334,6 +331,7 @@ class StepMethod(object):
     @prop
     def ratio():
         """Acceptance ratio"""
+
         def fget(self):
             return self.accepted / (self.accepted + self.rejected)
         return locals()
@@ -348,6 +346,7 @@ class NoStepper(StepMethod):
 
     Useful for holding stochastics constant without setting observed=True.
     """
+
     def step(self):
         pass
 
@@ -648,6 +647,7 @@ class Metropolis(StepMethod):
 class PDMatrixMetropolis(Metropolis):
 
     """Metropolis sampler with proposals customised for symmetric positive definite matrices"""
+
     def __init__(self, stochastic, scale=1.,
                  proposal_sd=None, verbose=-1, tally=True):
         Metropolis.__init__(
@@ -666,7 +666,8 @@ class PDMatrixMetropolis(Metropolis):
         """
         # MatrixMetropolis handles the Wishart family, which are valued as
         # _symmetric_ matrices.
-        if any([isinstance(s, cls) for cls in [distributions.Wishart, distributions.WishartCov]]):
+        if any([isinstance(s, cls)
+                for cls in [distributions.Wishart, distributions.WishartCov]]):
             return 2
         else:
             return 0
@@ -697,6 +698,7 @@ class Gibbs(Metropolis):
     """
     Base class for the Gibbs step methods
     """
+
     def __init__(self, stochastic, verbose=-1):
         Metropolis.__init__(self, stochastic, verbose=verbose, tally=False)
 
@@ -732,6 +734,7 @@ class DrawFromPrior(StepMethod):
     """
     Handles dataless submodels.
     """
+
     def __init__(self, variables, generations, verbose=-1):
         StepMethod.__init__(self, variables, verbose, tally=False)
         self.generations = generations
@@ -789,6 +792,7 @@ class DiscreteMetropolis(Metropolis):
     Just like Metropolis, but rounds the variable's value.
     Good for discrete stochastics.
     """
+
     def __init__(self, stochastic, scale=1., proposal_sd=None,
                  proposal_distribution="Poisson", positive=False, verbose=-1, tally=True):
         # DiscreteMetropolis class initialization
@@ -1029,6 +1033,7 @@ class AdaptiveMetropolis(StepMethod):
       Haario, H., E. Saksman and J. Tamminen, An adaptive Metropolis algorithm,
           Bernouilli, vol. 7 (2), pp. 223-242, 2001.
     """
+
     def __init__(self, stochastic, cov=None, delay=1000, interval=200,
                  greedy=True, shrink_if_necessary=False, scales=None, verbose=-1, tally=False):
 
@@ -1145,7 +1150,7 @@ class AdaptiveMetropolis(StepMethod):
 
         if np.squeeze(ord_sc).shape[0] != self.dim:
             raise ValueError("Improper initial scales, dimension don't match",
-                            (np.squeeze(ord_sc), self.dim))
+                             (np.squeeze(ord_sc), self.dim))
 
         # Scale identity matrix
         return np.eye(self.dim) * ord_sc
@@ -1523,6 +1528,7 @@ class TWalk(StepMethod):
       - tally (optional) : bool
           Flag for recording values for trace (Defaults to True).
     """
+
     def __init__(self, stochastic, inits=None, kernel_probs=[
                  0.4918, 0.4918, 0.0082, 0.0082], walk_theta=1.5, traverse_theta=6.0, n1=4, support=lambda x: True, verbose=-1, tally=True):
 
@@ -1711,7 +1717,8 @@ class TWalk(StepMethod):
 
         nphi = sum(self.phi)
 
-        return (nphi / 2.0) * log(2 * pi) + nphi * log(s) + 0.5 * sum((h - xp) ** 2) / (s ** 2)
+        return (nphi / 2.0) * log(2 * pi) + nphi * \
+            log(s) + 0.5 * sum((h - xp) ** 2) / (s ** 2)
 
     def hop(self):
         """Hop proposal kernel"""
@@ -1872,10 +1879,13 @@ class TWalk(StepMethod):
             self.values[0] = self.stochastic.value
 
 # Slice sampler implementation contributed by Dominik Wabersich
+
+
 class Slicer(StepMethod):
-    """ 
+
+    """
     Univariate slice sampler step method
-    
+
     :Parameters:
       - stochastic : Stochastic
           The variable over which self has jurisdiction.
@@ -1893,8 +1903,9 @@ class Slicer(StepMethod):
           Set verbosity level (Defaults to -1)
     """
 
-    def __init__(self, stochastic, w=1, m=1000, tune=True, doubling=False, tally=False, verbose=-1):
-        """ 
+    def __init__(self, stochastic, w=1, m=1000, tune=True,
+                 doubling=False, tally=False, verbose=-1):
+        """
         Slice sampler class initialization
         """
         # Initialize superclass
@@ -1919,9 +1930,9 @@ class Slicer(StepMethod):
 
     @staticmethod
     def competence(s):
-        """ 
+        """
         The competence function for Slice
-        
+
         Works best for continuous scalar variables.
         """
         if (s.dtype in float_dtypes) and not s.shape:
@@ -1930,20 +1941,20 @@ class Slicer(StepMethod):
             return 0
 
     def step(self):
-        """ 
+        """
         Slice step method
-        
+
         From Neal 2003 (doi:10.1214/aos/1056562461)
         """
         logy = self.loglike - rexponential(1)
 
         L = self.stochastic.value - runiform(0, self.w)
         R = L + self.w
-        
+
         if self.doubling:
             # Doubling procedure
             K = self.m
-            while (K and (logy<self.fll(L) or logy<self.fll(R))):
+            while (K and (logy < self.fll(L) or logy < self.fll(R))):
                 if random() < 0.5:
                     L -= R - L
                 else:
@@ -1952,16 +1963,16 @@ class Slicer(StepMethod):
         else:
             # Stepping out procedure
             J = np.floor(runiform(0, self.m))
-            K = (self.m-1)-J
-            while(J>0 and logy<self.fll(L)):
+            K = (self.m - 1) - J
+            while(J > 0 and logy < self.fll(L)):
                 L -= self.w
                 J -= 1
-            while(K>0 and logy<self.fll(R)):
+            while(K > 0 and logy < self.fll(R)):
                 R += self.w
                 K -= 1
-            
+
         # Shrinkage procedure
-        self.stochastic.value = runiform(L,R)
+        self.stochastic.value = runiform(L, R)
         try:
             logy_new = self.loglike
         except ZeroProbability:
@@ -1977,7 +1988,7 @@ class Slicer(StepMethod):
                 logy_new = self.loglike
             except ZeroProbability:
                 logy_new = -np.infty
-  
+
     def fll(self, value):
         """
         Returns loglike of value
@@ -1997,6 +2008,7 @@ class Slicer(StepMethod):
         if not self._tune:
             return False
         else:
-            self.w_tune.append(abs(self.stochastic.last_value - self.stochastic.value))
-            self.w = 2 * (sum(self.w_tune)/len(self.w_tune))
+            self.w_tune.append(
+                abs(self.stochastic.last_value - self.stochastic.value))
+            self.w = 2 * (sum(self.w_tune) / len(self.w_tune))
             return True

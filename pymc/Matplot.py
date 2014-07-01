@@ -249,6 +249,7 @@ class centered_envelope(object):
 
     :SeeAlso: func_envelopes
     """
+
     def __init__(self, sorted_func_stack, mass):
         if mass < 0 or mass > 1:
             raise ValueError('mass must be between 0 and 1')
@@ -821,7 +822,7 @@ def gof_plot(
                 trueval[
                     i],
                 '%s[%i]' % (
-                n,
+                    n,
                     i),
                 bins=bins,
                 format=format,
@@ -1404,7 +1405,7 @@ def summary_plot(
 
             if k > 1:
                 pyplot([min(r, 2) for r in R[varname]], [-(j + i)
-                       for j in range(k)], 'bo', markersize=4)
+                                                         for j in range(k)], 'bo', markersize=4)
             else:
                 pyplot(min(R[varname], 2), -i, 'bo', markersize=4)
 

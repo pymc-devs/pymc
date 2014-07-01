@@ -46,7 +46,7 @@ class TestMissing(TestCase):
         """
 
         fake_data = rnormal(0, 1, size=10)
-        m = ma.masked_array(fake_data, fake_data==-999)
+        m = ma.masked_array(fake_data, fake_data == -999)
 
         # Priors
         mu = Normal('mu', mu=0, tau=0.0001)

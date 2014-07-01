@@ -77,6 +77,7 @@ class Model(ObjectContainer):
 
     :SeeAlso: Sampler, MAP, NormalApproximation, weight, Container, graph.
     """
+
     def __init__(self, input=None, name=None, verbose=-1):
         """Initialize a Model instance.
 
@@ -171,6 +172,7 @@ class Sampler(Model):
 
     :SeeAlso: Model, MCMC.
     """
+
     def __init__(self, input=None, db='ram', name='Sampler',
                  reinit_model=True, calc_deviance=False, verbose=0, **kwds):
         """Initialize a Sampler instance.
@@ -587,7 +589,8 @@ class Sampler(Model):
         """
         self.status = 'paused'
         # The _loop method will react to 'paused' status and stop looping.
-        if hasattr(self, '_sampling_thread') and self._sampling_thread.isAlive():
+        if hasattr(
+                self, '_sampling_thread') and self._sampling_thread.isAlive():
             print_('Waiting for current iteration to finish...')
             while self._sampling_thread.isAlive():
                 sleep(.1)
@@ -596,7 +599,8 @@ class Sampler(Model):
         """Halt a sampling running in another thread."""
         self.status = 'halt'
         # The _halt method is called by _loop.
-        if hasattr(self, '_sampling_thread') and self._sampling_thread.isAlive():
+        if hasattr(
+                self, '_sampling_thread') and self._sampling_thread.isAlive():
             print_('Waiting for current iteration to finish...')
             while self._sampling_thread.isAlive():
                 sleep(.1)

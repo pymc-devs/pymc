@@ -169,7 +169,8 @@ class GPSubmodel(pm.ObjectContainer):
             self.f_eval = None
         else:
 
-            @pm.deterministic(trace=tally_all, name='%s_covariance_bits' % name)
+            @pm.deterministic(
+                trace=tally_all, name='%s_covariance_bits' % name)
             def covariance_bits(C=C, mesh=mesh):
                 """
                 Both the realization 'f' and the on-mesh evaluation 'f_eval' need the
@@ -208,7 +209,7 @@ class GPSubmodel(pm.ObjectContainer):
                     name,
                     name),
                 trace=tally_all or kwds.get(
-                'tally_C_eval',
+                    'tally_C_eval',
                     False))
             C_obs = pm.Lambda(
                 '%s_C_obs' % name,
@@ -218,7 +219,7 @@ class GPSubmodel(pm.ObjectContainer):
                     name,
                     name),
                 trace=tally_all or kwds.get(
-                'tally_C_obs',
+                    'tally_C_obs',
                     False))
             Uo_Cxo = pm.Lambda(
                 '%s_Uo_Cxo' % name,
@@ -228,7 +229,7 @@ class GPSubmodel(pm.ObjectContainer):
                     name,
                     name),
                 trace=tally_all or kwds.get(
-                'tally_Uo_Cxo',
+                    'tally_Uo_Cxo',
                     False))
             M_eval = pm.Lambda(
                 '%s_M_eval' % name,
@@ -241,7 +242,7 @@ class GPSubmodel(pm.ObjectContainer):
                     'tally_M_eval',
                     False),
                 doc="The evaluation %s.M(%s.mesh)" % (
-                name,
+                    name,
                     name))
 
             @pm.potential(name='%s_fr_check' % name)
@@ -259,7 +260,8 @@ class GPSubmodel(pm.ObjectContainer):
                 '%s_f_eval' % name, mu=M_eval, sig=S_eval, value=init_vals, trace=kwds.get('tally_f_eval', True), observed=obs_on_mesh,
                 doc="The evaluation %s.f(%s.mesh).\nThis is a multivariate normal variable with mean %s.M_eval and covariance %s.C_eval." % (name, name, name, name))
 
-            @pm.deterministic(trace=tally_all or kwds.get('tally_M_obs', False), name='%s_M_obs' % name)
+            @pm.deterministic(
+                trace=tally_all or kwds.get('tally_M_obs', False), name='%s_M_obs' % name)
             def M_obs(M=M, f_eval=f_eval, C_obs=C_obs, mesh=mesh):
                 """
                 Creates an observed mean object to match %sC_obs.
@@ -288,4 +290,5 @@ class GPSubmodel(pm.ObjectContainer):
 
     def getobjects(self):
         names = ['M_eval', 'C_eval', 'S_eval', 'f_eval', 'f', 'fr_check']
-        return dict(zip(['%s_%s' % (self.name, name) for name in names], [getattr(self, name) for name in names]))
+        return dict(zip(['%s_%s' % (self.name, name) for name in names], [
+                    getattr(self, name) for name in names]))

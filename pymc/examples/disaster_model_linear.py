@@ -33,7 +33,8 @@ def params_of_mean(value=array([-.005, 1.]), tau=.1, rate=4.):
 
     def logp(value, tau, rate):
         if value[1] > 0 and value[1] + value[0] * 110 > 0:
-            return normal_like(value[0], 0., tau) + exponential_like(value[1], rate)
+            return normal_like(value[0], 0., tau) + \
+                exponential_like(value[1], rate)
         else:
             return -Inf
 

@@ -59,7 +59,8 @@ def logp_gradient(variable, calculation_set=None):
     Calculates the gradient of the joint log posterior with respect to variable.
     Calculation of the log posterior is restricted to the variables in calculation_set.
     """
-    return variable.logp_partial_gradient(variable, calculation_set) + sum([child.logp_partial_gradient(variable, calculation_set) for child in variable.children])
+    return variable.logp_partial_gradient(variable, calculation_set) + sum(
+        [child.logp_partial_gradient(variable, calculation_set) for child in variable.children])
 
 
 class ZeroProbability(ValueError):
@@ -107,6 +108,7 @@ class Node(object):
          The base class for :class:`Stochastics` and :class:`Deterministics`.
 
     """
+
     def __init__(self, doc, name, parents, cache_depth, verbose=-1):
 
         # Name and docstrings
@@ -158,7 +160,8 @@ class Node(object):
         return self.__repr__()
 
     def __repr__(self):
-        return object.__repr__(self).replace(' object ', " '%s' " % self.__name__)
+        return object.__repr__(self).replace(
+            ' object ', " '%s' " % self.__name__)
 
     def gen_lazy_function(self):
         pass
@@ -416,7 +419,8 @@ class ContainerBase(object):
 
     def _get_logp(self):
         # Return total log-probabilities from all elements
-        return logp_of_set(self.stochastics | self.potentials | self.observed_stochastics)
+        return logp_of_set(
+            self.stochastics | self.potentials | self.observed_stochastics)
 
     # Define log-probability property
     logp = property(
