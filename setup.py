@@ -94,7 +94,7 @@ if __name__ == '__main__':
             description="Markov Chain Monte Carlo sampling toolkit.",
             author="Christopher Fonnesbeck, Anand Patil and David Huard",
             author_email="fonnesbeck@gmail.com ",
-            url="github.com/pymc-devs/pymc",
+            url="http://github.com/pymc-devs/pymc",
             license="Academic Free License",
             classifiers=[
                 'Development Status :: 5 - Production/Stable',
