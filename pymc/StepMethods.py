@@ -473,7 +473,7 @@ class Metropolis(StepMethod):
             # If the stochastic's binary or discrete, I can't do it.
             return 0
         else:
-            return 1
+            return 2
 
     def hastings_factor(self):
         """
