@@ -477,7 +477,7 @@ class Gamma(Continuous):
         self.alpha = alpha
         self.beta = beta
         self.mean = alpha / beta
-        self.median = maximum((alpha - 1) / beta, 0)
+        self.mode = maximum((alpha - 1) / beta, 0)
         self.variance = alpha / beta ** 2
 
     def logp(self, value):
