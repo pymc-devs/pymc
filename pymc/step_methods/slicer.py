@@ -2,14 +2,14 @@
 
 from ..core import *
 from .arraystep import *
+from .compound import SingleComponentStep
 from numpy import floor, abs, atleast_1d, empty, isfinite, sum
 from numpy.random import standard_exponential, random, uniform
 
-__all__ = ['Slice']
+__all__ = ['Slice', 'SingleComponentSlice']
 
 
 class Slice(ArrayStep):
-
     """Slice sampler"""
     def __init__(self, vars=None, w=1, tune=True, model=None):
 
@@ -71,3 +71,7 @@ class Slice(ArrayStep):
             self.w = 2 * sum(self.w_tune, 0) / len(self.w_tune)
 
         return q
+
+class SingleComponentSlice(SingleComponentStep):
+    """Slice sampler that is applied to each random variable separately. Step methods are called in sequence."""
+    step_method = Slice
