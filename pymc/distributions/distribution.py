@@ -13,7 +13,7 @@ class Distribution(object):
         except TypeError:
             raise TypeError("No model on context stack, which is needed to use the Normal('x', 0,1) syntax. Add a 'with model:' block")
 
-        if isinstance(name, str):  
+        if isinstance(name, str):
             data = kwargs.pop('observed', None)
             dist = cls.dist(*args, **kwargs)
             return model.Var(name, dist, data)
@@ -23,7 +23,7 @@ class Distribution(object):
             raise TypeError("needed name or None but got: " + name)
 
     def __getnewargs__(self):
-        return None, 
+        return None,
 
     @classmethod
     def dist(cls, *args, **kwargs):
@@ -64,12 +64,12 @@ class Distribution(object):
 def TensorType(dtype, shape):
     return t.TensorType(str(dtype), np.atleast_1d(shape) == 1)
 
-class Discrete(Distribution): 
+class Discrete(Distribution):
     """Base class for discrete distributions"""
     def __init__(self, shape=(), dtype='int64', *args, **kwargs):
         super(Discrete, self).__init__(shape, dtype, defaults=['mode'], *args, **kwargs)
 
-class Continuous(Distribution): 
+class Continuous(Distribution):
     """Base class for continuous distributions"""
     def __init__(self, shape=(), dtype='float64', *args, **kwargs):
         super(Continuous, self).__init__(shape, dtype, defaults=['median', 'mean', 'mode'], *args, **kwargs)
@@ -79,3 +79,11 @@ class DensityDist(Distribution):
     def __init__(self, logp, shape=(), dtype='float64',testval=0, *args, **kwargs):
         super(DensityDist, self).__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
+
+class MultivariateContinuous(Continuous):
+
+    pass
+
+class MultivariateDiscrete(Discrete):
+
+    pass

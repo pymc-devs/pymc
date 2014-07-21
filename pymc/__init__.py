@@ -4,7 +4,7 @@ from .core import *
 from .distributions import *
 from .math import *
 
-from .trace import *
+from .stats import summary
 from .sampling import *
 from .step_methods import *
 from .tuning import *

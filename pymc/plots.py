@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.stats import kde
 from .stats import *
-from .trace import *
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
@@ -23,8 +22,8 @@ def traceplot(trace, vars=None, figsize=None,
         lines to the posteriors and horizontal lines on sample values
         e.g. mean of posteriors, true values of a simulation
     combined : bool
-        Flag for combining MultiTrace into a single trace. If False (default)
-        traces will be plotted separately on the same set of axes.
+        Flag for combining multiple chains into a single chain. If False
+        (default), chains will be plotted separately.
     grid : bool
         Flag for adding gridlines to histogram. Defaults to True.
 
@@ -38,14 +37,6 @@ def traceplot(trace, vars=None, figsize=None,
     if vars is None:
         vars = trace.varnames
 
-    if isinstance(trace, MultiTrace):
-        if combined:
-            traces = [trace.combined()]
-        else:
-            traces = trace.traces
-    else:
-        traces = [trace]
-
     n = len(vars)
 
     if figsize is None:
@@ -53,11 +44,11 @@ def traceplot(trace, vars=None, figsize=None,
 
     fig, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
 
-    for trace in traces:
-        for i, v in enumerate(vars):
-            d = make_2d(trace[v])
-
-            if trace[v].dtype.kind == 'i':
+    for i, v in enumerate(vars):
+        for d in trace.get_values(v, combine=combined, squeeze=False):
+            d = np.squeeze(d)
+            d = make_2d(d)
+            if d.dtype.kind == 'i':
                 histplot_op(ax[i, 0], d)
             else:
                 kdeplot_op(ax[i, 0], d)
@@ -141,35 +132,23 @@ def kde2plot(x, y, grid=200):
 def autocorrplot(trace, vars=None, fontmap=None, max_lag=100):
     """Bar plot of the autocorrelation function for a trace"""
     import matplotlib.pyplot as plt
-    try:
-        # MultiTrace
-        traces = trace.traces
-
-    except AttributeError:
-        # NpTrace
-        traces = [trace]
-
     if fontmap is None:
         fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
     if vars is None:
-        vars = traces[0].varnames
+        vars = trace.varnames
+    else:
+        vars = [str(var) for var in vars]
 
-    # Extract sample data
-    samples = [{v: trace[v] for v in vars} for trace in traces]
+    chains = trace.nchains
 
-    chains = len(traces)
+    f, ax = plt.subplots(len(vars), chains, squeeze=False)
 
-    n = len(samples[0])
-    f, ax = plt.subplots(n, chains, squeeze=False)
-
-    max_lag = min(len(samples[0][vars[0]])-1, max_lag)
+    max_lag = min(len(trace) - 1, max_lag)
 
     for i, v in enumerate(vars):
-
         for j in range(chains):
-
-            d = np.squeeze(samples[j][v])
+            d = np.squeeze(trace.get_values(v, chains=[j]))
 
             ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
 
@@ -287,41 +266,26 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
     interval_plot = None
     rhat_plot = None
 
-    try:
-        # First try MultiTrace type
-        traces = trace_obj.traces
+    nchains = trace_obj.nchains
+    if nchains > 1:
+        from .diagnostics import gelman_rubin
 
-        if rhat and len(traces) > 1:
-
-            from .diagnostics import gelman_rubin
-
-            R = gelman_rubin(trace_obj)
-            if vars is not None:
-                R = {v: R[v] for v in vars}
-
-        else:
-
-            rhat = False
-
-    except AttributeError:
-
-        # Single NpTrace
-        traces = [trace_obj]
-
+        R = gelman_rubin(trace_obj)
+        if vars is not None:
+            R = {v: R[v] for v in vars}
+    else:
         # Can't calculate Gelman-Rubin with a single trace
         rhat = False
 
     if vars is None:
-        vars = traces[0].varnames
+        vars = trace_obj.varnames
 
     # Empty list for y-axis labels
     labels = []
 
-    chains = len(traces)
-
     if gs is None:
         # Initialize plot
-        if rhat and chains > 1:
+        if rhat and nchains > 1:
             gs = gridspec.GridSpec(1, 2, width_ratios=[3, 1])
 
         else:
@@ -331,21 +295,18 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
         # Subplot for confidence intervals
         interval_plot = plt.subplot(gs[0])
 
-    for j, tr in enumerate(traces):
 
-        # Get quantiles
-        trace_quantiles = quantiles(tr, qlist)
-        hpd_intervals = hpd(tr, alpha)
+    trace_quantiles = quantiles(trace_obj, qlist, squeeze=False)
+    hpd_intervals = hpd(trace_obj, alpha, squeeze=False)
 
+    for j, chain in enumerate(trace_obj.chains):
         # Counter for current variable
         var = 1
-
         for varname in vars:
+            var_quantiles = trace_quantiles[chain][varname]
 
-            var_quantiles = trace_quantiles[varname]
-
-            quants = list(var_quantiles.values())
-            var_hpd = hpd_intervals[varname].T
+            quants = [var_quantiles[v] for v in qlist]
+            var_hpd = hpd_intervals[chain][varname].T
 
             # Substitute HPD interval for quantile
             quants[0] = var_hpd[0].T
@@ -362,7 +323,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
                 plotrange = [np.min(quants), np.max(quants)]
 
             # Number of elements in current variable
-            value = tr[varname][0]
+            value = trace_obj.get_values(varname, chains=[chain])[0]
             k = np.size(value)
 
             # Append variable name(s) to list
@@ -376,7 +337,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
 
             # Add spacing for each chain, if more than one
             e = [0] + [(chain_spacing * ((i + 2) / 2)) *
-                       (-1) ** i for i in range(chains - 1)]
+                       (-1) ** i for i in range(nchains - 1)]
 
             # Deal with multivariate nodes
             if k > 1:
@@ -488,7 +449,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
     plt.axvline(vline, color='k', linestyle='--')
 
     # Genenerate Gelman-Rubin plot
-    if rhat and chains > 1:
+    if rhat and nchains > 1:
 
         # If there are multiple chains, calculate R-hat
         rhat_plot = plt.subplot(gs[1])
@@ -506,7 +467,8 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
         i = 1
         for varname in vars:
 
-            value = traces[0][varname][0]
+            chain = trace_obj.chains[0]
+            value = trace_obj.get_values(varname, chains=[chain])[0]
             k = np.size(value)
 
             if k > 1:

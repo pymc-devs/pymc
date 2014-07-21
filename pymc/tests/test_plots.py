@@ -6,7 +6,7 @@ from .checks import close_to
 
 import pymc.plots
 from pymc.plots import *
-from pymc import psample, Slice, Metropolis, find_hessian, sample
+from pymc import Slice, Metropolis, find_hessian, sample
 
 
 def test_plots():
@@ -52,7 +52,7 @@ def test_multichain_plots():
         step1 = Slice([dm.early_mean, dm.late_mean])
         step2 = Metropolis([dm.switchpoint])
         start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
-        ptrace = psample(1000, [step1, step2], start, threads=2)
+        ptrace = sample(1000, [step1, step2], start, njobs=2)
 
     forestplot(ptrace, vars=['early_mean', 'late_mean'])
 

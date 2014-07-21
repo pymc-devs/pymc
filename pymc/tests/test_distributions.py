@@ -317,7 +317,7 @@ def test_wishart():
         yield check_wishart,n
 
 def check_wishart(n):
-    checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix(n) }, checks = [check_dlogp], extra_args={'p' : n})
+    checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix(n) }, checks = [check_dlogp])
 
 def betafn(a):
     return scipy.special.gammaln(a).sum() - scipy.special.gammaln(a.sum())

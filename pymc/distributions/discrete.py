@@ -154,7 +154,7 @@ class Poisson(Discrete):
         return bound(
             logpow(mu, value) - factln(value) - mu,
 
-            mu > 0, value >= 0)
+            mu >= 0, value >= 0)
 
 
 class NegativeBinomial(Discrete):

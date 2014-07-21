@@ -44,9 +44,9 @@ class TestGLM(unittest.TestCase):
             step = Slice(model.vars)
             trace = sample(2000, step, start, progressbar=False)
 
-            self.assertAlmostEqual(np.mean(trace.samples['Intercept'].value), true_intercept, 1)
-            self.assertAlmostEqual(np.mean(trace.samples['x'].value), true_slope, 1)
-            self.assertAlmostEqual(np.mean(trace.samples['sigma'].value), true_sd, 1)
+            self.assertAlmostEqual(np.mean(trace['Intercept']), true_intercept, 1)
+            self.assertAlmostEqual(np.mean(trace['x']), true_slope, 1)
+            self.assertAlmostEqual(np.mean(trace['sigma']), true_sd, 1)
 
     @unittest.skip("Fails only on travis. Investigate")
     def test_glm(self):
@@ -57,9 +57,9 @@ class TestGLM(unittest.TestCase):
             step = Slice(model.vars)
             trace = sample(2000, step, progressbar=False)
 
-            self.assertAlmostEqual(np.mean(trace.samples['Intercept'].value), true_intercept, 1)
-            self.assertAlmostEqual(np.mean(trace.samples['x'].value), true_slope, 1)
-            self.assertAlmostEqual(np.mean(trace.samples['sigma'].value), true_sd, 1)
+            self.assertAlmostEqual(np.mean(trace['Intercept']), true_intercept, 1)
+            self.assertAlmostEqual(np.mean(trace['x']), true_slope, 1)
+            self.assertAlmostEqual(np.mean(trace['sigma']), true_sd, 1)
 
     def test_glm_link_func(self):
         with Model() as model:
@@ -71,5 +71,5 @@ class TestGLM(unittest.TestCase):
             step = Slice(model.vars)
             trace = sample(2000, step, progressbar=False)
 
-            self.assertAlmostEqual(np.mean(trace.samples['Intercept'].value), true_intercept, 1)
-            self.assertAlmostEqual(np.mean(trace.samples['x'].value), true_slope, 0)
+            self.assertAlmostEqual(np.mean(trace['Intercept']), true_intercept, 1)
+            self.assertAlmostEqual(np.mean(trace['x']), true_slope, 0)
