@@ -1,4 +1,3 @@
-from .point import *
 from pymc import backends
 from pymc.backends.base import merge_traces, BaseTrace, MultiTrace
 from pymc.backends.ndarray import NDArray

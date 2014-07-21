@@ -1,4 +1,3 @@
-from .point import *
 from .vartypes import *
 
 from theano import theano, tensor as t, function
