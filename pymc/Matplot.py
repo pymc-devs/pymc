@@ -1153,8 +1153,11 @@ def summary_plot(
 
         except AttributeError:
 
-            # Assume an iterable
-            vars = pymc_obj
+            if isinstance(pymc_obj, Variable):
+                vars = [pymc_obj]
+            else:
+                # Assume an iterable
+                vars = pymc_obj
 
     from .diagnostics import gelman_rubin
 
@@ -1167,7 +1170,7 @@ def summary_plot(
                 R = {}
                 for variable in vars:
                     R[variable.__name__] = gelman_rubin(variable)
-            except ValueError:
+            except (ValueError, TypeError):
                 print(
                     'Could not calculate Gelman-Rubin statistics. Requires multiple chains of equal length.')
                 rhat = False
