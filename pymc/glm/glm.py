@@ -1,6 +1,7 @@
 import numpy as np
 from ..core import *
 from ..distributions import *
+from ..tuning.starting import find_MAP
 import patsy
 import theano
 import pandas as pd
