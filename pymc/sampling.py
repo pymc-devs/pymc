@@ -1,6 +1,6 @@
-from pymc import backends
-from pymc.backends.base import merge_traces, BaseTrace, MultiTrace
-from pymc.backends.ndarray import NDArray
+from . import backends
+from .backends.base import merge_traces, BaseTrace, MultiTrace
+from .backends.ndarray import NDArray
 import multiprocessing as mp
 from time import time
 from .core import *

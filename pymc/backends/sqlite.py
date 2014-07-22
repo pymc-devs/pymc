@@ -20,7 +20,7 @@ import numpy as np
 import sqlite3
 import warnings
 
-from pymc.backends import base
+from ..backends import base
 
 TEMPLATES = {
     'table':            ('CREATE TABLE IF NOT EXISTS [{table}] '

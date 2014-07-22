@@ -4,7 +4,7 @@ See the docstring for pymc.backends for more information (includng
 creating custom backends).
 """
 import numpy as np
-from pymc.model import modelcontext
+from ..model import modelcontext
 
 
 class BaseTrace(object):

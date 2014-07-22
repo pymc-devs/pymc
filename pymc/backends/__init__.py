@@ -109,9 +109,9 @@ defined that returns a MultiTrace object.
 
 For specific examples, see pymc.backends.{ndarray,text,sqlite}.py.
 """
-from pymc.backends.ndarray import NDArray
-from pymc.backends.text import Text
-from pymc.backends.sqlite import SQLite
+from ..backends.ndarray import NDArray
+from ..backends.text import Text
+from ..backends.sqlite import SQLite
 
 _shortcuts = {'text': {'backend': Text,
                        'name': 'mcmc'},
