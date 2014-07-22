@@ -3,7 +3,7 @@
 Store sampling values in memory as a NumPy array.
 """
 import numpy as np
-from pymc.backends import base
+from ..backends import base
 
 
 class NDArray(base.BaseTrace):

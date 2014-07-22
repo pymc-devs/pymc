@@ -9,7 +9,8 @@ except ImportError:
     Poisson = None
 
 from .links import *
-import pymc
+from ..model import modelcontext
+from ..distributions import Normal, T, Uniform, Bernoulli, Poisson
 
 __all__ = ['Normal', 'T', 'Binomial', 'Poisson']
 
@@ -38,7 +39,7 @@ class Family(object):
         -------
         dict : mapping name -> pymc distribution
         """
-        model = pymc.modelcontext(model)
+        model = modelcontext(model)
         priors = {}
         for key, val in self.priors.items():
             if isinstance(val, numbers.Number):
@@ -81,29 +82,29 @@ class Family(object):
 class Normal(Family):
     sm_family = Gaussian
     link = Identity
-    likelihood = pymc.Normal
+    likelihood = Normal
     parent = 'mu'
-    priors = {'sd': ('sigma', pymc.Uniform.dist(0, 100))}
+    priors = {'sd': ('sigma', Uniform.dist(0, 100))}
 
 
 class T(Family):
     sm_family = Gaussian
     link = Identity
-    likelihood = pymc.T
+    likelihood = T
     parent = 'mu'
-    priors = {'lam': ('sigma', pymc.Uniform.dist(0, 100)),
+    priors = {'lam': ('sigma', Uniform.dist(0, 100)),
               'nu': 1}
 
 
 class Binomial(Family):
     link = Logit
     sm_family = Binomial
-    likelihood = pymc.Bernoulli
+    likelihood = Bernoulli
     parent = 'p'
 
 
 class Poisson(Family):
     link = Log
     sm_family = Poisson
-    likelihood = pymc.Poisson
+    likelihood = Poisson
     parent = ''

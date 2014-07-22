@@ -31,8 +31,8 @@ import glob
 import json
 import numpy as np
 
-from pymc.backends import base
-from pymc.backends.ndarray import NDArray
+from ..backends import base
+from ..backends.ndarray import NDArray
 
 
 class Text(NDArray):
