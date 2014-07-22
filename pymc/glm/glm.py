@@ -1,5 +1,6 @@
 import numpy as np
-from pymc import *
+from ..core import *
+from ..distributions import *
 import patsy
 import theano
 import pandas as pd
