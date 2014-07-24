@@ -86,7 +86,6 @@ class SalmonSampler(MCMC):
 
 
         @observed
-        @stochastic
         def obs_frye(value=lfrye, mu = SR.f_eval, mesh=labundance, tau = frye_tau):
             """
             The log of the frye count.

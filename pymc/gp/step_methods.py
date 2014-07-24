@@ -37,6 +37,8 @@ class GPStepMethod(pm.NoStepper):
         else:
             return 0
 
+    def tune(self, verbose=0):
+        return False
 
 def wrap_metropolis_for_gp_parents(metro_class):
     """

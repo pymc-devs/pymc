@@ -1164,16 +1164,13 @@ def summary_plot(
     # Calculate G-R diagnostics
     if rhat:
         try:
-            R = gelman_rubin(pymc_obj)
+            R = {}
+            for variable in vars:
+                R[variable.__name__] = gelman_rubin(variable)
         except (ValueError, TypeError):
-            try:
-                R = {}
-                for variable in vars:
-                    R[variable.__name__] = gelman_rubin(variable)
-            except (ValueError, TypeError):
-                print(
-                    'Could not calculate Gelman-Rubin statistics. Requires multiple chains of equal length.')
-                rhat = False
+            print(
+                'Could not calculate Gelman-Rubin statistics. Requires multiple chains of equal length.')
+            rhat = False
 
     # Empty list for y-axis labels
     labels = []
