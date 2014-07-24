@@ -794,7 +794,7 @@ class DiscreteMetropolis(Metropolis):
     """
 
     def __init__(self, stochastic, scale=1., proposal_sd=None,
-                 proposal_distribution="Poisson", positive=False, verbose=-1, tally=True):
+                 proposal_distribution="Poisson", positive=True, verbose=-1, tally=True):
         # DiscreteMetropolis class initialization
 
         # Initialize superclass
