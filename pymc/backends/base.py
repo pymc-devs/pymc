@@ -143,6 +143,11 @@ class MultiTrace(object):
                 raise ValueError("Chains are not unique.")
             self._traces[trace.chain] = trace
 
+    def __repr__(self):
+        template = '<{}: {} chains, {} iterations, {} variables>'
+        return template.format(self.__class__.__name__,
+                               self.nchains, len(self), len(self.varnames))
+
     @property
     def nchains(self):
         return len(self._traces)
