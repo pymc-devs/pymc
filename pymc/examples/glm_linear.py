@@ -4,7 +4,7 @@ import sys
 try:
     import statsmodels.api as sm
 except ImportError:
-    print("Example requires statsmodels")
+    print "Example requires statsmodels"
     sys.exit(0)
 
 from pymc import *
