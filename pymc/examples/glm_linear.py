@@ -1,4 +1,7 @@
+from __future__ import print_function
+
 import numpy as np
+import sys
 
 try:
     import statsmodels.api as sm
