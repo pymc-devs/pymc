@@ -37,7 +37,7 @@ def run(n=2000):
     import matplotlib.pyplot as plt
 
     with model:
-        trace = sample(n, Slice(model.vars))
+        trace = sample(n, Slice())
 
     plt.plot(x, y, 'x')
     glm.plot_posterior_predictive(trace)

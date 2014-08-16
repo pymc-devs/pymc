@@ -19,9 +19,8 @@ def run (n=3000):
 
         start = model.test_point
         h = find_hessian(start)
-        step = Metropolis(model.vars, h)
+        step = Metropolis(model.vars, h, blocked=True)
         trace = sample(n, step, start)
 
 if __name__ == "__main__":
     run()
-

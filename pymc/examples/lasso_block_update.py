@@ -43,7 +43,7 @@ with Model() as model:
 # <codecell>
 
 with model:
-    step1 = Metropolis([m1, m2])
+    step1 = Metropolis([m1, m2], blocked=True)
 
     step2 = Metropolis([s], proposal_dist=LaplaceProposal)
 
@@ -67,5 +67,3 @@ def run(n=5000):
 # <codecell>
 if __name__ == '__main__':
     run()
-
-
