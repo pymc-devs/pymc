@@ -3,7 +3,6 @@ language: python
 python:
   - "2.7"
   - "3.3"
-  - "3.4"
 
 before_install:
   - sudo apt-get install liblapack-dev gfortran python-scipy libblas-dev libsuitesparse-dev swig
