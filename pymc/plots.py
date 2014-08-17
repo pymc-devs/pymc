@@ -129,7 +129,7 @@ def kde2plot(x, y, grid=200):
     return f
 
 
-def autocorrplot(trace, vars=None, fontmap=None, max_lag=100):
+def autocorrplot(trace, vars=None, fontmap=None, max_lag=100,burn=0, thin=1):
     """Bar plot of the autocorrelation function for a trace"""
     import matplotlib.pyplot as plt
     if fontmap is None:
@@ -148,7 +148,7 @@ def autocorrplot(trace, vars=None, fontmap=None, max_lag=100):
 
     for i, v in enumerate(vars):
         for j in range(chains):
-            d = np.squeeze(trace.get_values(v, chains=[j]))
+            d = np.squeeze(trace.get_values(v, chains=[j],burn=burn,thin=thin))
 
             ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
 
