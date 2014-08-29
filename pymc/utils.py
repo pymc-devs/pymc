@@ -612,7 +612,7 @@ def hpd(x, alpha):
         dims = shape(tx)
 
         # Container list for intervals
-        intervals = np.resize(0.0, dims[:-1] + (2,))
+        intervals = np.resize(0.0, (2,) + dims[:-1])
 
         for index in make_indices(dims[:-1]):
 
@@ -625,8 +625,8 @@ def hpd(x, alpha):
             sx = sort(tx[index])
 
             # Append to list
-            intervals[index] = calc_min_interval(sx, alpha)
-
+            intervals[0][index], intervals[1][index] = calc_min_interval(sx, alpha)
+        
         # Transpose back before returning
         return array(intervals)
 

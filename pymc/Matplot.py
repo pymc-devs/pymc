@@ -1221,7 +1221,7 @@ def summary_plot(
         if hpd:
             # Substitute HPD interval
             for i, d in enumerate(traces):
-                hpd_interval = calc_hpd(d, alpha).T
+                hpd_interval = calc_hpd(d, alpha)
                 data[i][quantiles[0]] = hpd_interval[0]
                 data[i][quantiles[-1]] = hpd_interval[1]
 
@@ -1245,10 +1245,10 @@ def summary_plot(
 
         # Number of elements in current variable
         k = size(value)
-
+        
         # Append variable name(s) to list
         if k > 1:
-            names = var_str(varname, shape(value))
+            names = var_str(varname, shape(value)[int(shape(value)[0]==1):])
             labels += names
         else:
             labels.append(varname)
@@ -1263,9 +1263,13 @@ def summary_plot(
 
             # Deal with multivariate nodes
             if k > 1:
+                
+                ravelled_quants = map(ravel, quants)
+                
+                for i, quant in enumerate(transpose(ravelled_quants)):
 
-                for i, q in enumerate(transpose(quants)):
-
+                    q = ravel(quant)
+                    
                     # Y coordinate with jitter
                     y = -(var + i) + e[j]
 
