@@ -20,7 +20,7 @@ from pylab import errorbar
 from numpy import arange, ravel, rank, swapaxes, concatenate, asarray, ndim
 from numpy import mean, std, sort, prod, floor, shape, size, transpose
 from numpy import min as nmin, max as nmax, abs, log2, log, sqrt, isnan
-from numpy import append, ones, dtype, indices, array, unique, zeros
+from numpy import append, ones, dtype, indices, array, unique, zeros, ndarray
 from .utils import quantiles as calc_quantiles, hpd as calc_hpd
 try:
     from scipy import special
@@ -805,11 +805,11 @@ def gof_plot(
 
     if fontmap is None:
         fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
-    try:
-        if ndim(simdata) == 1:
-            simdata = simdata.trace()
-    except ValueError:
-        pass
+
+    if not isinstance(simdata, ndarray):
+        ## Can't just try and catch because ndarray objects also have
+        ## `trace` method.
+        simdata = simdata.trace()
 
     if ndim(trueval) == 1 and ndim(simdata == 2):
         # Iterate over more than one set of data
