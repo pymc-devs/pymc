@@ -1,3 +1,9 @@
+'''
+Created on Aug 29, 2014
+
+@author: Heiko Strathmann
+'''
+
 from scipy.spatial.distance import squareform, pdist
 
 from theano import function
