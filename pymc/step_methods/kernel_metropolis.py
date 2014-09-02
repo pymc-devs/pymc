@@ -60,7 +60,7 @@ class KameleonOracle(ArrayStep):
 
     """
     def __init__(self, vars=None, Z=None, gamma2=0.1, nu2=1., kernel=None,
-                 tune=True, tune_interval=100, tune_stop=1000, model=None, dist=None):
+                 tune=True, tune_interval=100, model=None, dist=None):
         model = modelcontext(model)
         if vars is None:
             vars = model.vars
@@ -70,18 +70,16 @@ class KameleonOracle(ArrayStep):
         self.gamma2 = gamma2
         self.nu2 = nu2
         self.tune = tune
-        self.tune_stop = tune_stop
         
         # empty proposal distribution and last likelihood
         self.q_dist = None
         self.log_target = -np.inf
         
         # statistics for tuning scaling
-        self.iterations = 0
-        self.steps_since_tune = 0
-        self.accepted = 0
         self.tune = tune
         self.tune_interval = tune_interval
+        self.steps_until_tune = tune_interval
+        self.accepted = 0
         
         super(KameleonOracle, self).__init__(vars, [model.fastlogp])
 
@@ -101,22 +99,20 @@ class KameleonOracle(ArrayStep):
                                   - self.log_pdf_target - self.q_dist.log_pdf(q), q, q0)
         
         # adapt
-        if self.iterations <= self.tune_stop and \
-           self.tune \
-           and self.steps_since_tune == self.tune_interval:
+        if self.tune and not self.steps_until_tune:
             # tune scaling parameter using metropolis  method
             self.nu2 = tune(self.nu2, self.accepted / float(self.tune_interval))
             # Reset counter
-            self.steps_since_tune = 0
+            self.steps_until_tune = self.tune_interval
             self.accepted = 0
-        self.steps_since_tune += 1
-        self.iterations += 1
-        
+            
         # update log-pdf and proposal distribution object on accept
         if any(q_new != q0):
+            self.accepted += 1
             self.q_dist = q_dist
             self.log_pdf_target = logp_q
-            self.accepted += 1
+
+        self.steps_until_tune -= 1
 
         return q_new
 
