@@ -2097,7 +2097,7 @@ def negative_binomial_like(x, mu, alpha):
         f(x \mid \mu, \alpha) = \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
 
     :Parameters:
-      - `x` : Input data (x > 0).
+      - `x` : x = 0,1,2,...
       - `mu` : mu > 0
       - `alpha` : alpha > 0
 

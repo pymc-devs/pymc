@@ -331,7 +331,7 @@ class Variable(Node):
             m = str(round(statdict['mean'][index], roundto))
             sd = str(round(statdict['standard deviation'][index], roundto))
             mce = str(round(statdict['mc error'][index], roundto))
-            hpd = str(statdict[interval][index].squeeze().round(roundto))
+            hpd = str(statdict[interval][:,index].squeeze().round(roundto))
 
             # Build up string buffer of values
             valstr = m
