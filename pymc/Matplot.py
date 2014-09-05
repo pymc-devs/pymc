@@ -1056,8 +1056,8 @@ def var_str(name, shape):
 
 def summary_plot(
     pymc_obj, name='model', format='png', suffix='-summary', path='./',
-    alpha=0.05, quartiles=True, hpd=True, rhat=True, main=None, xlab=None, x_range=None,
-        custom_labels=None, chain_spacing=0.05, vline_pos=0):
+    alpha=0.05, chain=None, quartiles=True, hpd=True, rhat=True, main=None,
+    xlab=None, x_range=None, custom_labels=None, chain_spacing=0.05, vline_pos=0):
     """
     Model summary plot
 
@@ -1082,6 +1082,10 @@ def summary_plot(
 
         alpha (optional): float
             Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
+            
+        chain (optional): int
+            Where there are multiple chains, specify a particular chain to plot.
+            If not specified (chain=None), all chains are plotted.
 
         quartiles (optional): bool
             Flag for plotting the interquartile range, in addition to the
@@ -1129,9 +1133,6 @@ def summary_plot(
 
     # Range for x-axis
     plotrange = None
-
-    # Number of chains
-    chains = None
 
     # Gridspec
     gs = None
@@ -1192,17 +1193,12 @@ def summary_plot(
         varname = variable.__name__
 
         # Retrieve trace(s)
-        i = 0
-        traces = []
-        while True:
-            try:
-                # traces.append(pymc_obj.trace(varname, chain=i)[:])
-                traces.append(variable.trace(chain=i))
-                i += 1
-            except (KeyError, IndexError):
-                break
-
-        chains = len(traces)
+        if chain is not None:
+            chains = 1
+            traces = [variable.trace(chain=chain)]
+        else:
+            chains = variable.trace.db.chains
+            traces = [variable.trace(chain=i) for i in range(chains)]
 
         if gs is None:
             # Initialize plot
