@@ -191,7 +191,7 @@ class Trace(object):
                 'standard deviation': trace.std(0),
                 'mean': trace.mean(0),
                 '%s%s HPD interval' % (int(100 * (1 - alpha)), '%'): utils.hpd(trace, alpha),
-                'mc error': batchsd(trace, batches),
+                'mc error': batchsd(trace, min(n, batches)),
                 'quantiles': utils.quantiles(trace, qlist=quantiles)
             }
         except:

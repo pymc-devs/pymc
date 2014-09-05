@@ -273,7 +273,7 @@ class Database(pickle.Database):
             dbcomplib = kwds.get('complib')
 
         db_exists = os.path.exists(self.dbname)
-        self._h5file = tables.openFile(self.dbname, self.mode)
+        self._h5file = tables.open_file(self.dbname, self.mode)
 
         default_filter = tables.Filters(
             complevel=dbcomplevel,
@@ -289,7 +289,7 @@ class Database(pickle.Database):
             self._tables) * [None,
                              ]  # This should be a dict keyed by chain.
         self._chains = [
-            gr for gr in self._h5file.listNodes(
+            gr for gr in self._h5file.list_nodes(
                 "/") if gr._v_name[
                     :5] == 'chain']  # This should be a dict keyed by chain.
         self.chains = len(self._chains)
@@ -306,7 +306,7 @@ class Database(pickle.Database):
             # the list to have the chains in chronological order.
             objects = {}
             for chain in self._chains:
-                for node in db._h5file.walkNodes(chain, classname='VLArray'):
+                for node in db._h5file.walk_nodes(chain, classname='VLArray'):
                     if node._v_name != '_state_':
                         try:
                             objects[node._v_name].append(node)
@@ -325,7 +325,7 @@ class Database(pickle.Database):
                 setattr(db, k, getattr(table.attrs, k))
 
             # Restore group attributes.
-            for k in db._chains[-1]._f_listNodes():
+            for k in db._chains[-1]._f_list_nodes():
                 if k.__class__ not in [tables.Table, tables.Group]:
                     setattr(db, k.name, k)
 
@@ -383,7 +383,7 @@ class Database(pickle.Database):
 
     def nchains(self):
         """Return the number of existing chains."""
-        return len(self._h5file.listNodes('/'))
+        return len(self._h5file.list_nodes('/'))
 
     def _initialize(self, funs_to_tally, length):
         """
@@ -396,13 +396,13 @@ class Database(pickle.Database):
         """
         i = self.chains
         self._chains.append(
-            self._h5file.createGroup(
+            self._h5file.create_group(
                 "/",
                 'chain%d' %
                 i,
                 'Chain #%d' %
                 i))
-        current_object_group = self._h5file.createGroup(
+        current_object_group = self._h5file.create_group(
             self._chains[-1],
             'group0',
             'Group storing objects.')
@@ -418,7 +418,7 @@ class Database(pickle.Database):
 
             if arr.dtype is np.dtype('object'):
 
-                self._traces[name]._vlarrays.append(self._h5file.createVLArray(
+                self._traces[name]._vlarrays.append(self._h5file.create_vlarray(
                     current_object_group,
                     name,
                     tables.ObjectAtom(),
@@ -428,7 +428,7 @@ class Database(pickle.Database):
                 object_counter += 1
                 if object_counter % 4096 == 0:
                     group_counter += 1
-                    current_object_group = self._h5file.createGroup(
+                    current_object_group = self._h5file.create_group(
                         self._chains[-1],
                         'group%d' % group_counter, 'Group storing objects.')
 
@@ -436,7 +436,7 @@ class Database(pickle.Database):
                 table_descr[name] = tables.Col.from_dtype(
                     dtype((arr.dtype, arr.shape)))
 
-        table = self._h5file.createTable(self._chains[-1],
+        table = self._h5file.create_table(self._chains[-1],
                                          'PyMCsamples',
                                          table_descr,
                                          title='PyMC samples',
@@ -502,7 +502,7 @@ Error:
         if hasattr(cur_chain, '_state_'):
             cur_chain._state_[0] = state
         else:
-            s = self._h5file.createVLArray(
+            s = self._h5file.create_vlarray(
                 cur_chain,
                 '_state_',
                 tables.ObjectAtom(),
@@ -558,7 +558,7 @@ Error:
         """Return a list of hdf5 tables name PyMCsamples.
         """
 
-        groups = self._h5file.listNodes("/")
+        groups = self._h5file.list_nodes("/")
         if len(groups) == 0:
             return []
         else:
@@ -581,14 +581,14 @@ Error:
         table = self._tables[chain]
 
         if array is False:
-            table.setAttr(name, object)
+            table.set_attr(name, object)
             obj = getattr(table.attrs, name)
         else:
             # Create an array in the group
             if description == '':
                 description = name
             group = table._g_getparent()
-            self._h5file.createArray(group, name, object, description)
+            self._h5file.create_array(group, name, object, description)
             obj = getattr(group, name)
 
         setattr(self, name, obj)
@@ -629,7 +629,7 @@ def restore_sampler(fname):
     """
     Creates a new sampler from an hdf5 database.
     """
-    hf = tables.openFile(fname)
+    hf = tables.open_file(fname)
     fnode = hf.root.__sampler__
     import pickle
     sampler = pickle.load(fnode)

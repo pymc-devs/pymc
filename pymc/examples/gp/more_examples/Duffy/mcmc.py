@@ -45,7 +45,7 @@ n = len(DuffySampler.trace('V_b')[:])
 # ==========================
 
 import tables
-covariate_raster = tables.openFile('africa.hdf5')
+covariate_raster = tables.open_file('africa.hdf5')
 xplot = covariate_raster.root.lon[:]*pi/180.
 yplot = covariate_raster.root.lat[:]*pi/180.
 

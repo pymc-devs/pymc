@@ -159,7 +159,7 @@ class Database(pickle.Database):
         self.mode = dbmode
 
         db_exists = os.path.exists(self.dbname)
-        self._h5file = tables.openFile(self.dbname, self.mode)
+        self._h5file = tables.open_file(self.dbname, self.mode)
 
         default_filter = tables.Filters(
             complevel=dbcomplevel,
@@ -238,7 +238,7 @@ class Database(pickle.Database):
         """Create a group named ``chain#`` to store all data for this chain."""
 
         chain = self.nchains
-        self._chains[chain] = self._h5file.createGroup(
+        self._chains[chain] = self._h5file.create_group(
             '/', 'chain%d' % chain, 'chain #%d' % chain)
 
         for name, fun in six.iteritems(funs_to_tally):
@@ -277,7 +277,7 @@ class Database(pickle.Database):
     #     if chain in self._states:
     #         self._states[chain] = state
     #     else:
-    #         s = self._h5file.createVLArray(chain,'_state_',tables.ObjectAtom(),title='The saved state of the sampler',filters=self.filter)
+    #         s = self._h5file.create_vlarray(chain,'_state_',tables.ObjectAtom(),title='The saved state of the sampler',filters=self.filter)
     #         s.append(state)
     #     self._h5file.flush()
     # def getstate(self, chain=-1):
