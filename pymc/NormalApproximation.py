@@ -236,7 +236,7 @@ class MAP(Model):
 
         self.func_for_diff = func_for_diff
 
-    def fit(self, method='fmin', iterlim=1000, tol=.0001, verbose=0):
+    def fit(self, method='fmin_powell', iterlim=1000, tol=.0001, verbose=0):
         """
         N.fit(method='fmin', iterlim=1000, tol=.001):
 
