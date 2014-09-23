@@ -413,7 +413,7 @@ def plot(
         fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
     # If there is only one data array, go ahead and plot it ...
-    if rank(data) == 1:
+    if ndim(data) == 1:
 
         if verbose > 0:
             print_('Plotting', name)

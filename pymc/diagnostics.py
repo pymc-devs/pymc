@@ -264,7 +264,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
     Geweke (1992)
     """
 
-    if np.rank(x) > 1:
+    if np.ndim(x) > 1:
         return [geweke(y, first, last, intervals) for y in np.transpose(x)]
 
     # Filter out invalid intervals
@@ -352,7 +352,7 @@ def raftery_lewis(x, q, r, s=.95, epsilon=.001, verbose=1):
 
         See the fortran source file `gibbsit.f` for more details and references.
     """
-    if np.rank(x) > 1:
+    if np.ndim(x) > 1:
         return [raftery_lewis(y, q, r, s, epsilon, verbose)
                 for y in np.transpose(x)]
 
