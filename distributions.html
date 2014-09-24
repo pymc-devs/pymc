@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>9. Probability distributions &mdash; PyMC 2.3 documentation</title>
+    <title>9. Probability distributions &mdash; PyMC 2.3.4 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '2.3',
+        VERSION:     '2.3.4',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -23,8 +23,8 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="http//cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
-    <link rel="top" title="PyMC 2.3 documentation" href="index.html" />
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="PyMC 2.3.4 documentation" href="index.html" />
     <link rel="next" title="10. Conclusion" href="conclusion.html" />
     <link rel="prev" title="8. Extending PyMC" href="extending.html" /> 
   </head>
@@ -44,7 +44,7 @@
         <li class="right" >
           <a href="extending.html" title="8. Extending PyMC"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">PyMC 2.3 documentation</a> &raquo;</li> 
+        <li><a href="index.html">PyMC 2.3.4 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -247,7 +247,7 @@ based on this mixture interpretation.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><cite>x</cite> : Input data (x &gt; 0).</li>
+<li><cite>x</cite> : x = 0,1,2,...</li>
 <li><cite>mu</cite> : mu &gt; 0</li>
 <li><cite>alpha</cite> : alpha &gt; 0</li>
 </ul>
@@ -627,7 +627,7 @@ events. It is often used as a heavier-tailed alternative to the normal.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><cite>x</cite> : <span class="math">\(-\infty &lt; x &lt; \infty\)</span></li>
-<li><cite>mu</cite> : Location parameter :math: <cite>-infty &lt; mu &lt; infty</cite></li>
+<li><cite>mu</cite> : Location parameter <span class="math">\(-\infty &lt; mu &lt; \infty\)</span></li>
 <li><cite>tau</cite> : Scale parameter <span class="math">\(\tau &gt; 0\)</span></li>
 </ul>
 </td>
@@ -795,7 +795,7 @@ to characterize wealth distribution, or other examples of the
 <dd><p>Azzalini&#8217;s skew-normal log-likelihood</p>
 <div class="math">
 \[f(x \mid \mu, \tau, \alpha) = 2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)\]</div>
-<p>where :math: Phi is the normal CDF and :math: phi is the normal PDF.</p>
+<p>where :math:Phi is the normal CDF and :math: phi is the normal PDF.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1033,7 +1033,7 @@ observed. <span class="math">\(\sum_{i=1}^k x_i=n\)</span>, <span class="math">\
 <li><span class="math">\(E(X_i)=n p_i\)</span></li>
 <li><span class="math">\(Var(X_i)=n p_i(1-p_i)\)</span></li>
 <li><span class="math">\(Cov(X_i,X_j) = -n p_i p_j\)</span></li>
-<li>If :math: <cite>sum_i p_i &lt; 0.999999</cite> a log-likelihood value of -inf</li>
+<li>If <span class="math">\(\sum_i p_i &lt; 0.999999\)</span> a log-likelihood value of -inf</li>
 </ul>
 <p class="last">will be returned.</p>
 </div>
@@ -1290,12 +1290,12 @@ is identical to the chi-square distribution with n degrees of freedom.</p>
         <li class="right" >
           <a href="extending.html" title="8. Extending PyMC"
              >previous</a> |</li>
-        <li><a href="index.html">PyMC 2.3 documentation</a> &raquo;</li> 
+        <li><a href="index.html">PyMC 2.3.4 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2012, Christopher J. Fonnesbeck.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
+        &copy; Copyright 2014, Christopher J. Fonnesbeck.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

@@ -2,7 +2,7 @@
 Installation
 ************
 
-:Date: 6 September 2013
+:Date: 1 July 2014
 :Authors: Chris Fonnesbeck, Anand Patil, David Huard, John Salvatier
 :Contact: chris.fonnesbeck@vanderbilt.edu
 :Web site: http://github.com/pymc-devs/pymc

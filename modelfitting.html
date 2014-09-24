@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>5. Fitting Models &mdash; PyMC 2.3 documentation</title>
+    <title>5. Fitting Models &mdash; PyMC 2.3.4 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '2.3',
+        VERSION:     '2.3.4',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -23,8 +23,8 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="http://mathjax.connectmv.com/MathJax.js?config=default"></script>
-    <link rel="top" title="PyMC 2.3 documentation" href="index.html" />
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="PyMC 2.3.4 documentation" href="index.html" />
     <link rel="next" title="6. Saving and managing sampling results" href="database.html" />
     <link rel="prev" title="4. Building models" href="modelbuilding.html" /> 
   </head>
@@ -44,7 +44,7 @@
         <li class="right" >
           <a href="modelbuilding.html" title="4. Building models"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">PyMC 2.3 documentation</a> &raquo;</li> 
+        <li><a href="index.html">PyMC 2.3.4 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -403,14 +403,14 @@ MCMC steps conditional on the rest of the model. Each subclass of
 a method called <tt class="docutils literal"><span class="pre">tune()</span></tt>, which causes them to assess performance (based on
 the acceptance rates of proposed values for the variable) so far and adjust.</p>
 <p>The major subclasses of <tt class="docutils literal"><span class="pre">StepMethod</span></tt> are <tt class="docutils literal"><span class="pre">Metropolis</span></tt>,
-<tt class="docutils literal"><span class="pre">AdaptiveMetropolis</span></tt> and <tt class="docutils literal"><span class="pre">Gibbs</span></tt>. PyMC provides several flavors of the
-basic Metropolis steps. The <tt class="docutils literal"><span class="pre">Gibbs</span></tt> steps are not ready for use as of the
-current release, but since it is feasible to write Gibbs step methods for
-particular applications, the <tt class="docutils literal"><span class="pre">Gibbs</span></tt> base class will be documented here.</p>
+<tt class="docutils literal"><span class="pre">AdaptiveMetropolis</span></tt> and <tt class="docutils literal"><span class="pre">Slicer</span></tt>. PyMC provides several flavors of the
+basic Metropolis steps. There are Gibbs sampling (<tt class="docutils literal"><span class="pre">Gibbs</span></tt>) steps, but they are not
+ready for use as of the current release, but since it is feasible to write Gibbs step
+methods for particular applications, the <tt class="docutils literal"><span class="pre">Gibbs</span></tt> base class will be documented here.</p>
 <div class="section" id="metropolis-step-methods">
 <span id="metropolis"></span><h3>5.7.1. Metropolis step methods<a class="headerlink" href="#metropolis-step-methods" title="Permalink to this headline">¶</a></h3>
 <p><tt class="docutils literal"><span class="pre">Metropolis</span></tt> and subclasses implement Metropolis-Hastings steps. To tell an
-<tt class="docutils literal"><span class="pre">MCMC</span></tt> object <span class="math">\(M\)</span> to handle a variable <span class="math">\(x\)</span> with a Metropolis step
+<tt class="docutils literal"><span class="pre">MCMC</span></tt> object <span class="math">\(M\)</span> to handle a variable <tt class="docutils literal"><span class="pre">x</span></tt> with a Metropolis step
 method, you might do the following:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">M</span><span class="o">.</span><span class="n">use_step_method</span><span class="p">(</span><span class="n">pymc</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">proposal_sd</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">proposal_distribution</span><span class="o">=</span><span class="s">&#39;Normal&#39;</span><span class="p">)</span>
 </pre></div>
@@ -488,7 +488,7 @@ step method, with the exception that its variables are block-updated using a
 multivariate jump distribution whose covariance is tuned during sampling.
 Although the chain is non-Markovian, it has correct ergodic properties (see
 <a class="reference internal" href="references.html#haario2001" id="id7">[Haario2001]</a>).</p>
-<p>To tell an <tt class="docutils literal"><span class="pre">MCMC</span></tt> object <span class="math">\(M\)</span> to handle variables <span class="math">\(x\)</span>, <span class="math">\(y\)</span>
+<p>To tell an <tt class="docutils literal"><span class="pre">MCMC</span></tt> object <span class="math">\(M\)</span> to handle variables <tt class="docutils literal"><span class="pre">x</span></tt>, <tt class="docutils literal"><span class="pre">y</span></tt>
 and <span class="math">\(z\)</span> with an <tt class="docutils literal"><span class="pre">AdaptiveMetropolis</span></tt> instance, you might do the
 following:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">M</span><span class="o">.</span><span class="n">use_step_method</span><span class="p">(</span><span class="n">pymc</span><span class="o">.</span><span class="n">AdaptiveMetropolis</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">],</span> \
@@ -527,7 +527,7 @@ with covariance matrix <span class="math">\(\Sigma\)</span>. The algorithm first
 have been accepted). At this point, <span class="math">\(\Sigma\)</span> is given the value of the
 empirical covariance of the trace so far and sampling resumes. The covariance
 is then updated each <tt class="docutils literal"><span class="pre">interval</span></tt> iterations throughout the entire sampling run
-<a class="footnote-reference" href="#id13" id="id8">[1]</a>. It is this constant adaptation of the proposal distribution that makes
+<a class="footnote-reference" href="#id14" id="id8">[1]</a>. It is this constant adaptation of the proposal distribution that makes
 the chain non-Markovian.</p>
 </div>
 <div class="section" id="the-discretemetropolis-class">
@@ -551,11 +551,74 @@ init method specifies how probable a change is. Like <tt class="docutils literal
 since this requires no additional expense. The <tt class="docutils literal"><span class="pre">p_jump</span></tt> and
 <tt class="docutils literal"><span class="pre">adaptive_scale_factor</span></tt> parameters are not used in this case.</p>
 </div>
+<div class="section" id="the-slicer-class">
+<h3>5.7.5. The Slicer class<a class="headerlink" href="#the-slicer-class" title="Permalink to this headline">¶</a></h3>
+<p>The <tt class="docutils literal"><span class="pre">Slicer</span></tt> class implements Slice sampling (<a class="reference internal" href="references.html#neal2003" id="id9">[Neal2003]</a>). To tell an
+<tt class="docutils literal"><span class="pre">MCMC</span></tt> object <span class="math">\(M\)</span> to handle a variable <tt class="docutils literal"><span class="pre">x</span></tt> with a Slicer step
+method, you might do the following:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">M</span><span class="o">.</span><span class="n">use_step_method</span><span class="p">(</span><span class="n">pymc</span><span class="o">.</span><span class="n">Slicer</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">m</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">doubling</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><tt class="docutils literal"><span class="pre">Slicer</span></tt>&#8216;s init method takes the following arguments:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">stochastics</span></tt>:</dt>
+<dd>The stochastic variables to handle. These will be updated jointly.</dd>
+<dt><tt class="docutils literal"><span class="pre">w</span></tt> (optional):</dt>
+<dd>The initial width of the horizontal slice (Defaults to 1). This will be updated
+via either stepping-out or doubling procedures.</dd>
+<dt><tt class="docutils literal"><span class="pre">m</span></tt> (optional):</dt>
+<dd>The multiplier defining the maximum slice size as <span class="math">\(mw\)</span> (Defaults to 1000).</dd>
+<dt><tt class="docutils literal"><span class="pre">tune</span></tt> (optional):</dt>
+<dd>A flag indicating whether to tune the initial slice width (Defaults to <tt class="docutils literal"><span class="pre">True</span></tt>).</dd>
+<dt><tt class="docutils literal"><span class="pre">doubling</span></tt> (optional):</dt>
+<dd>A flag for using doubling procedure instead of stepping out (Defaults to <tt class="docutils literal"><span class="pre">False</span></tt>)</dd>
+<dt><tt class="docutils literal"><span class="pre">tally</span></tt> (optional):</dt>
+<dd>Flag for recording values for trace (Defaults to <tt class="docutils literal"><span class="pre">True</span></tt>).</dd>
+<dt><tt class="docutils literal"><span class="pre">verbose</span></tt>:</dt>
+<dd>An integer from -1 to 4 controlling the verbosity of the step method&#8217;s
+printed output (Defaults to -1).</dd>
+</dl>
+<p>The <strong>*slice sampler*</strong> generates posterior samples by alternately drawing &#8220;slices&#8221; from
+the vertical (y) and horizontal (x) planes of a distribution. It first samples from the
+conditional distribution for <tt class="docutils literal"><span class="pre">y</span></tt> given some current value of <tt class="docutils literal"><span class="pre">x</span></tt>, which is
+uniform over the <span class="math">\((0, f (x))\)</span>. Conditional on this value for <tt class="docutils literal"><span class="pre">y</span></tt>, it then
+samples <tt class="docutils literal"><span class="pre">x</span></tt>, which is uniform on <span class="math">\(S = {x : y &lt; f (x)}\)</span>; that is the “slice”
+defined by the <tt class="docutils literal"><span class="pre">y</span></tt> value. Hence, this algorithm automatically adapts its to the
+local characteristics of the posterior.</p>
+<p>The steps required to perform a single iteration of the slice sampler to update the
+current value of <span class="math">\(x_i\)</span> is as follows:</p>
+<ol class="arabic simple">
+<li>Sample <tt class="docutils literal"><span class="pre">y</span></tt> uniformly on <span class="math">\((0,f(x_i))\)</span>.</li>
+<li>Use this value <tt class="docutils literal"><span class="pre">y</span></tt> to define a horizontal <em>slice</em> <span class="math">\(S = \{x : y &lt; f (x)\}\)</span>.</li>
+<li>Establish an interval, <span class="math">\(I = (x_{a}, x_{b})\)</span>, around <span class="math">\(x_i\)</span> that contains most of the slice.</li>
+<li>Sample <span class="math">\(x_{i+1}\)</span> from the region of the slice overlaping <tt class="docutils literal"><span class="pre">I</span></tt>.</li>
+</ol>
+<p>Hence, slice sampling employs an <em>auxilliary variable</em> (<tt class="docutils literal"><span class="pre">y</span></tt>) that is not retained at the
+end of the iteration. Note that in practice one may operate on the log scale such that
+<span class="math">\(g(x) = \log(f (x))\)</span> to avoid floating-point underflow. In this case, the auxiliary
+variable becomes <span class="math">\(z = log(y) = g(x_i) − e\)</span>, where <span class="math">\(e \sim \text{Exp}(1)\)</span>,
+resulting in the slice <span class="math">\(S = \{x : z &lt; g(x)\}\)</span>.</p>
+<p>There are many ways of establishing and sampling from the interval <tt class="docutils literal"><span class="pre">I</span></tt>, with the only
+restriction being that the resulting Markov chain leaves <span class="math">\(f(x)\)</span> invariant. The
+objective is to include as much of the slice as possible, so that the potential step
+size can be large, but not (much) larger than the slice, so that the sampling of
+invalid points is minimized. Ideally, we would like it to be the slice itself, but it
+may not always be feasible to determine (and certainly not automatically).</p>
+<p>One method for determining a sampling interval for <span class="math">\(x_{i+1}\)</span> involves specifying an
+initial &#8220;guess&#8221; at the slice width <tt class="docutils literal"><span class="pre">w</span></tt>, and iteratively moving the endpoints out
+(growing the interval) until either (1) the interval reaches a maximum pre-specified
+width or (2) <tt class="docutils literal"><span class="pre">y</span></tt> is less than the <span class="math">\(f(x)\)</span> evaluated both at the left and the
+right interval endpoints. This is the <em>stepping out</em> method. The efficiency of
+stepping out depends largely on the ability to pick a reasonable interval <cite>w</cite> from
+which to sample. Otherwise, the <em>doubling</em> procedure may be preferable, as it can be
+expanded faster. It simply doubles the size of the interval until both endpoints
+are outside the slice.</p>
+</div>
 </div>
 <div class="section" id="gibbs-step-methods">
 <span id="gibbs"></span><h2>5.8. Gibbs step methods<a class="headerlink" href="#gibbs-step-methods" title="Permalink to this headline">¶</a></h2>
 <p>Gibbs step methods handle conjugate submodels. These models usually have two
-components: the <a href="#id9"><span class="problematic" id="id10">`</span></a>parent&#8217; and the <a href="#id11"><span class="problematic" id="id12">`</span></a>children&#8217;. For example, a gamma-distributed
+components: the <a href="#id10"><span class="problematic" id="id11">`</span></a>parent&#8217; and the <a href="#id12"><span class="problematic" id="id13">`</span></a>children&#8217;. For example, a gamma-distributed
 variable serving as the precision of several normally-distributed variables is
 a conjugate submodel; the gamma variable is the parent and the normal variables
 are the children.</p>
@@ -588,13 +651,13 @@ not. In this case the parent&#8217;s value is proposed from the likelihood and
 accepted based on its prior. The acceptance rate in the nonconjugate case will
 be less than one.</p>
 <p>The inherited class method <tt class="docutils literal"><span class="pre">Gibbs.competence</span></tt> will determine the new step
-method&#8217;s ability to handle a variable <span class="math">\(x\)</span> by checking whether:</p>
+method&#8217;s ability to handle a variable <tt class="docutils literal"><span class="pre">x</span></tt> by checking whether:</p>
 <ul class="simple">
-<li>all <span class="math">\(x\)</span>&#8216;s children are of class <tt class="docutils literal"><span class="pre">child_class</span></tt>, and either apply
+<li>all <tt class="docutils literal"><span class="pre">x</span></tt>&#8216;s children are of class <tt class="docutils literal"><span class="pre">child_class</span></tt>, and either apply
 <tt class="docutils literal"><span class="pre">parent_label</span></tt> to <cite>x</cite> directly or (if <tt class="docutils literal"><span class="pre">linear_OK=True</span></tt>) to a
 <tt class="docutils literal"><span class="pre">LinearCombination</span></tt> object (<a class="reference internal" href="modelbuilding.html#chap-modelbuilding"><em>Building models</em></a>), one of whose
-parents contains $x$.</li>
-<li><span class="math">\(x\)</span> is of class <tt class="docutils literal"><span class="pre">parent_class</span></tt></li>
+parents contains <tt class="docutils literal"><span class="pre">x</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">x</span></tt> is of class <tt class="docutils literal"><span class="pre">parent_class</span></tt></li>
 </ul>
 <p>If both conditions are met, <tt class="docutils literal"><span class="pre">pymc.conjugate_Gibbs_competence</span></tt> will be
 returned. If only the first is met, <tt class="docutils literal"><span class="pre">pymc.nonconjugate_Gibbs_competence</span></tt> will
@@ -634,7 +697,7 @@ cannot safely handle the variable and 3 meaning it will most likely perform
 well for variables like this. The <tt class="docutils literal"><span class="pre">MCMC</span></tt> object assigns the step method that
 returns the highest competence value to each of its stochastic variables.</p>
 <p class="rubric">Footnotes</p>
-<table class="docutils footnote" frame="void" id="id13" rules="none">
+<table class="docutils footnote" frame="void" id="id14" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
 <tr><td class="label"><a class="fn-backref" href="#id8">[1]</a></td><td>The covariance is estimated recursively from the previous value and the last
@@ -668,6 +731,7 @@ returns the highest competence value to each of its stochastic variables.</p>
 <li><a class="reference internal" href="#the-adaptivemetropolis-class">5.7.2. The AdaptiveMetropolis class</a></li>
 <li><a class="reference internal" href="#the-discretemetropolis-class">5.7.3. The DiscreteMetropolis class</a></li>
 <li><a class="reference internal" href="#the-binarymetropolis-class">5.7.4. The BinaryMetropolis class</a></li>
+<li><a class="reference internal" href="#the-slicer-class">5.7.5. The Slicer class</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#gibbs-step-methods">5.8. Gibbs step methods</a><ul>
@@ -722,12 +786,12 @@ returns the highest competence value to each of its stochastic variables.</p>
         <li class="right" >
           <a href="modelbuilding.html" title="4. Building models"
              >previous</a> |</li>
-        <li><a href="index.html">PyMC 2.3 documentation</a> &raquo;</li> 
+        <li><a href="index.html">PyMC 2.3.4 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2012, Christopher J. Fonnesbeck.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
+        &copy; Copyright 2014, Christopher J. Fonnesbeck.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

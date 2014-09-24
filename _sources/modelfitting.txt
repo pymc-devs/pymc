@@ -421,10 +421,10 @@ a method called ``tune()``, which causes them to assess performance (based on
 the acceptance rates of proposed values for the variable) so far and adjust.
 
 The major subclasses of ``StepMethod`` are ``Metropolis``, 
-``AdaptiveMetropolis`` and ``Gibbs``. PyMC provides several flavors of the 
-basic Metropolis steps. The ``Gibbs`` steps are not ready for use as of the 
-current release, but since it is feasible to write Gibbs step methods for 
-particular applications, the ``Gibbs`` base class will be documented here.
+``AdaptiveMetropolis`` and ``Slicer``. PyMC provides several flavors of the 
+basic Metropolis steps. There are Gibbs sampling (``Gibbs``) steps, but they are not 
+ready for use as of the current release, but since it is feasible to write Gibbs step 
+methods for particular applications, the ``Gibbs`` base class will be documented here.
 
 .. _metropolis:
 
@@ -432,7 +432,7 @@ Metropolis step methods
 -----------------------
 
 ``Metropolis`` and subclasses implement Metropolis-Hastings steps. To tell an 
-``MCMC`` object :math:`M` to handle a variable :math:`x` with a Metropolis step 
+``MCMC`` object :math:`M` to handle a variable ``x`` with a Metropolis step 
 method, you might do the following::
 
     M.use_step_method(pymc.Metropolis, x, proposal_sd=1., proposal_distribution='Normal')
@@ -520,7 +520,7 @@ multivariate jump distribution whose covariance is tuned during sampling.
 Although the chain is non-Markovian, it has correct ergodic properties (see 
 [Haario2001]_).
 
-To tell an ``MCMC`` object :math:`M` to handle variables :math:`x`, :math:`y` 
+To tell an ``MCMC`` object :math:`M` to handle variables ``x``, ``y`` 
 and :math:`z` with an ``AdaptiveMetropolis`` instance, you might do the 
 following::
 
@@ -594,6 +594,79 @@ For scalar-valued variables, ``BinaryMetropolis`` behaves like a Gibbs sampler,
 since this requires no additional expense. The ``p_jump`` and 
 ``adaptive_scale_factor`` parameters are not used in this case.
 
+The Slicer class
+----------------
+
+The ``Slicer`` class implements Slice sampling ([Neal2003]_). To tell an 
+``MCMC`` object :math:`M` to handle a variable ``x`` with a Slicer step 
+method, you might do the following::
+
+    M.use_step_method(pymc.Slicer, x, w=10, m=10000, doubling=True)
+
+
+``Slicer``'s init method takes the following arguments:
+
+``stochastics``:
+   The stochastic variables to handle. These will be updated jointly.
+
+``w`` (optional):
+   The initial width of the horizontal slice (Defaults to 1). This will be updated 
+   via either stepping-out or doubling procedures.
+
+``m`` (optional):
+   The multiplier defining the maximum slice size as :math:`mw` (Defaults to 1000).
+
+``tune`` (optional):
+   A flag indicating whether to tune the initial slice width (Defaults to ``True``).
+
+``doubling`` (optional):
+   A flag for using doubling procedure instead of stepping out (Defaults to ``False``)
+
+``tally`` (optional):
+   Flag for recording values for trace (Defaults to ``True``).
+
+``verbose``:
+   An integer from -1 to 4 controlling the verbosity of the step method's 
+   printed output (Defaults to -1).
+
+The ***slice sampler*** generates posterior samples by alternately drawing "slices" from
+the vertical (y) and horizontal (x) planes of a distribution. It first samples from the
+conditional distribution for ``y`` given some current value of ``x``, which is
+uniform over the :math:`(0, f (x))`. Conditional on this value for ``y``, it then
+samples ``x``, which is uniform on :math:`S = {x : y < f (x)}`; that is the “slice”
+defined by the ``y`` value. Hence, this algorithm automatically adapts its to the
+local characteristics of the posterior.
+
+The steps required to perform a single iteration of the slice sampler to update the
+current value of :math:`x_i` is as follows:
+
+1. Sample ``y`` uniformly on :math:`(0,f(x_i))`. 
+2. Use this value ``y`` to define a horizontal *slice* :math:`S = \{x : y < f (x)\}`. 
+3. Establish an interval, :math:`I = (x_{a}, x_{b})`, around :math:`x_i` that contains most of the slice.
+4. Sample :math:`x_{i+1}` from the region of the slice overlaping ``I``.
+
+Hence, slice sampling employs an *auxilliary variable* (``y``) that is not retained at the
+end of the iteration. Note that in practice one may operate on the log scale such that
+:math:`g(x) = \log(f (x))` to avoid floating-point underflow. In this case, the auxiliary
+variable becomes :math:`z = log(y) = g(x_i) − e`, where :math:`e \sim \text{Exp}(1)`,
+resulting in the slice :math:`S = \{x : z < g(x)\}`.
+
+There are many ways of establishing and sampling from the interval ``I``, with the only
+restriction being that the resulting Markov chain leaves :math:`f(x)` invariant. The
+objective is to include as much of the slice as possible, so that the potential step
+size can be large, but not (much) larger than the slice, so that the sampling of
+invalid points is minimized. Ideally, we would like it to be the slice itself, but it
+may not always be feasible to determine (and certainly not automatically).
+
+One method for determining a sampling interval for :math:`x_{i+1}` involves specifying an
+initial "guess" at the slice width ``w``, and iteratively moving the endpoints out
+(growing the interval) until either (1) the interval reaches a maximum pre-specified
+width or (2) ``y`` is less than the :math:`f(x)` evaluated both at the left and the
+right interval endpoints. This is the *stepping out* method. The efficiency of
+stepping out depends largely on the ability to pick a reasonable interval `w` from
+which to sample. Otherwise, the *doubling* procedure may be preferable, as it can be
+expanded faster. It simply doubles the size of the interval until both endpoints
+are outside the slice. 
 
 .. _gibbs:
 
@@ -641,14 +714,14 @@ accepted based on its prior. The acceptance rate in the nonconjugate case will
 be less than one.
 
 The inherited class method ``Gibbs.competence`` will determine the new step 
-method's ability to handle a variable :math:`x` by checking whether:
+method's ability to handle a variable ``x`` by checking whether:
 
-* all :math:`x`'s children are of class ``child_class``, and either apply 
+* all ``x``'s children are of class ``child_class``, and either apply 
   ``parent_label`` to `x` directly or (if ``linear_OK=True``) to a 
   ``LinearCombination`` object (:ref:`chap_modelbuilding`), one of whose 
-  parents contains $x$.
+  parents contains ``x``.
 
-* :math:`x` is of class ``parent_class``
+* ``x`` is of class ``parent_class``
 
 If both conditions are met, ``pymc.conjugate_Gibbs_competence`` will be 
 returned. If only the first is met, ``pymc.nonconjugate_Gibbs_competence`` will 
