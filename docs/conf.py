@@ -87,7 +87,7 @@ pygments_style = 'sphinx'
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
 
-mathjax_path = 'https://c328740.ssl.cf1.rackcdn.com/mathjax/latest/MathJax.js?config=default'
+mathjax_path = 'https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'
 
 # -- Options for HTML output ---------------------------------------------------
 
