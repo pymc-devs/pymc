@@ -290,10 +290,8 @@ def geweke(x, first=.1, last=.5, intervals=20):
         last_slice = x_trunc[int(last * n):]
 
         z = (first_slice.mean() - last_slice.mean())
-        z /= np.sqrt(first_slice.var() /
-                     len(first_slice) +
-                     last_slice.var() /
-                     len(last_slice))
+        z /= np.sqrt(first_slice.var() +
+                     last_slice.var())
         zscores[i] = len(x) - len(x_trunc), z
 
         x_trunc = x_trunc[int(first * n):]
