@@ -51,15 +51,18 @@ DIR = 'testresults'
 
 
 class test_geweke(TestCase):
+    
+    try:
+        import statsmodels
+    except ImportError:
+        raise nose.SkipTest
 
     def test_independent(self):
         # Use IID data
 
-        try:
-            x = [pymc.geweke(np.random.normal(size=1000),intervals=5, maxlag=5)[0][1] 
-                for _ in range(1000)]
-        except ImportError:
-            raise nose.SkipTest
+        x = [pymc.geweke(np.random.normal(size=1000),intervals=5, maxlag=5)[0][1] 
+            for _ in range(1000)]
+
 
         assert_approx_equal(np.var(x), 1, 1)
 
@@ -73,10 +76,8 @@ class test_geweke(TestCase):
     def test_simple(self):
 
         intervals = 20
-        try:
-            scores = pymc.geweke(S, intervals=intervals, maxlag=5)
-        except ImportError:
-            raise nose.SkipTest
+        
+        scores = pymc.geweke(S, intervals=intervals, maxlag=5)
         a_scores = scores['a']
         assert_equal(len(a_scores), intervals)
 
