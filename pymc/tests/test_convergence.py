@@ -8,6 +8,7 @@ from __future__ import with_statement
 from numpy.testing import assert_equal, assert_array_equal
 from numpy.testing import assert_approx_equal, TestCase
 import unittest
+import nose
 import numpy as np
 import pymc
 import pymc.examples.weibull_fit as model
@@ -54,28 +55,28 @@ class test_geweke(TestCase):
     def test_independent(self):
         # Use IID data
 
-        x = [
-            pymc.geweke(
-                np.random.normal(
-                    size=1000),
-                intervals=5)[0][1] for _ in range(10000)]
+        try:
+            x = [pymc.geweke(np.random.normal(size=1000),intervals=5, maxlag=5)[0][1] 
+                for _ in range(1000)]
+        except ImportError:
+            raise nose.SkipTest
 
         assert_approx_equal(np.var(x), 1, 1)
 
         # If the model has converged, 95% the scores should lie
         # within 2 standard deviations of zero, under standard normal model
         intervals = 40
-        x = np.transpose(
-            pymc.geweke(
-                np.random.normal(
-                    size=10000),
-                intervals=intervals))[1]
+        x = np.transpose(pymc.geweke(
+                np.random.normal(size=10000),intervals=intervals))[1]
         assert(sum(np.abs(x) < 2) >= int(0.9 * intervals))
 
     def test_simple(self):
 
         intervals = 20
-        scores = pymc.geweke(S, intervals=intervals)
+        try:
+            scores = pymc.geweke(S, intervals=intervals, maxlag=5)
+        except ImportError:
+            raise nose.SkipTest
         a_scores = scores['a']
         assert_equal(len(a_scores), intervals)
 

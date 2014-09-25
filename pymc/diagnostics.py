@@ -5,6 +5,12 @@ from .utils import autocorr, autocov
 from copy import copy
 import pdb
 
+try:
+    from statsmodels.regression.linear_model import yule_walker
+    has_sm = True
+except ImportError:
+    has_sm = False
+
 from . import six
 from .six import print_
 xrange = six.moves.xrange
@@ -220,9 +226,13 @@ def validate(sampler, replicates=20, iterations=10000, burn=5000,
 
     return stats
 
+def spec(x, order=2):
+    
+    beta, sigma = yule_walker(x, order)
+    return sigma**2 / (1. - np.sum(beta))**2
 
 @diagnostic()
-def geweke(x, first=.1, last=.5, intervals=20):
+def geweke(x, first=.1, last=.5, intervals=20, maxlag=20):
     """Return z-scores for convergence diagnostics.
 
     Compare the mean of the first % of series with the mean of the last % of
@@ -241,6 +251,8 @@ def geweke(x, first=.1, last=.5, intervals=20):
       at the beginning.
     intervals : int
       The number of segments.
+    maxlag : int
+      Maximum autocorrelation lag for estimation of spectral variance
 
     Returns
     -------
@@ -263,6 +275,10 @@ def geweke(x, first=.1, last=.5, intervals=20):
     ----------
     Geweke (1992)
     """
+    
+    if not has_sm:
+        print("statsmodels not available. Geweke diagnostic cannot be calculated.")
+        return
 
     if np.ndim(x) > 1:
         return [geweke(y, first, last, intervals) for y in np.transpose(x)]
@@ -276,13 +292,14 @@ def geweke(x, first=.1, last=.5, intervals=20):
     # Initialize list of z-scores
     zscores = [None] * intervals
 
-    # Make a copy we can truncate
-    x_trunc = x[:]
+    # Starting points for calculations
+    starts = np.linspace(0, int(len(x)*(1.-last)), intervals).astype(int)
 
     # Loop over start indices
-    for i in range(intervals):
+    for i,s in enumerate(starts):
 
         # Size of remaining array
+        x_trunc = x[s:]
         n = len(x_trunc)
 
         # Calculate slices
@@ -290,11 +307,9 @@ def geweke(x, first=.1, last=.5, intervals=20):
         last_slice = x_trunc[int(last * n):]
 
         z = (first_slice.mean() - last_slice.mean())
-        z /= np.sqrt(first_slice.var() +
-                     last_slice.var())
-        zscores[i] = len(x) - len(x_trunc), z
-
-        x_trunc = x_trunc[int(first * n):]
+        z /= np.sqrt(spec(first_slice)/len(first_slice) +
+                     spec(last_slice)/len(last_slice))
+        zscores[i] = len(x) - n, z
 
     return zscores
 
