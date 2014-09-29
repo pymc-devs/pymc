@@ -7,7 +7,7 @@ import time
 from .sampling import iter_sample
 
 
-__all__ = ['isample']
+__all__ = ['nbsample']
 
 _javascript = """<script type="text/javascript">
     require(["widgets/js/widget"], function(WidgetManager){
@@ -65,7 +65,7 @@ class ISampleWidget(widgets.DOMWidget):
         if message == "stop":
             self.stopped = True
 
-def isample(draws, step, start=None, trace=None, chain=0, tune=None, model=None, random_seed=None):
+def nbsample(draws, step, start=None, trace=None, chain=0, tune=None, model=None, random_seed=None):
     display.display_html(_javascript, raw=True)
     w = ISampleWidget()
     display.display(w)
@@ -74,7 +74,8 @@ def isample(draws, step, start=None, trace=None, chain=0, tune=None, model=None,
 
     w.max_samples = draws
     w.current_samples = 0
-    for i,backend in enumerate(iter_sample(draws, step, start=start, trace=trace, chain=chain, model=model), 1):
+    for i,backend in enumerate(iter_sample(draws, step, start=start, trace=trace,
+        chain=chain, tune=tune, model=model, random_seed=None), 1):
         elapsed = time.time() - t_start
         elapsed_last = time.time() - t_last
 
