@@ -325,13 +325,14 @@ class Variable(Node):
         indices = range(size)
         if len(indices) == 1:
             indices = [None]
-
+            
         for index in indices:
             # Extract statistics and convert to string
-            m = str(round(statdict['mean'][index], roundto))
-            sd = str(round(statdict['standard deviation'][index], roundto))
-            mce = str(round(statdict['mc error'][index], roundto))
-            hpd = str(statdict[interval][:,index].squeeze().round(roundto))
+            m = str(np.round(statdict['mean'].ravel()[index], roundto))
+            sd = str(np.round(statdict['standard deviation'].ravel()[index], roundto))
+            mce = str(np.round(statdict['mc error'].ravel()[index], roundto))
+            hpd = str(statdict[interval].reshape(
+                    (2, size))[:,index].squeeze().round(roundto))
 
             # Build up string buffer of values
             valstr = m
@@ -354,7 +355,7 @@ class Variable(Node):
         for index in indices:
             quantile_str = ''
             for i, q in enumerate((2.5, 25, 50, 75, 97.5)):
-                qstr = str(round(statdict['quantiles'][q][index], roundto))
+                qstr = str(np.round(statdict['quantiles'][q].ravel()[index], roundto))
                 quantile_str += qstr + ' ' * (17 - i - len(qstr))
             buffer += [quantile_str.strip()]
 
