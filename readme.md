@@ -26,6 +26,7 @@ Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-de
  * [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc/examples/stochastic_volatility.ipynb)
  * [Several blog posts on linear regression](http://twiecki.github.io/tag/bayesian-statistics.html)
  * [Talk at PyData NYC 2013 on PyMC3](http://twiecki.github.io/blog/2013/12/12/bayesian-data-analysis-pymc3/)
+ * [PyMC3 port of the models presented in the book "Doing Bayesian Data Analysis" by John Kruschke](https://github.com/aloctavodia/Doing_bayesian_data_analysis)
  * [The PyMC examples folder](https://github.com/pymc-devs/pymc/tree/master/pymc/examples)
 
 ## Installation
