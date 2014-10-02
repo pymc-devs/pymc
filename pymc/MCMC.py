@@ -261,7 +261,7 @@ class MCMC(Sampler):
         self._burn_till_tuned = burn_till_tuned
         self._save_interval = save_interval
 
-        length = max(int(np.floor((1.0 * iter - burn) / thin)), 1)
+        length = max(int(np.round((1.0 * iter - burn) / thin, 0)), 1)
         self.max_trace_length = length
 
         # Flags for tuning
