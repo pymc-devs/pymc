@@ -133,7 +133,7 @@ decorator, which converts the ordinary Python function ``rate`` into a
    @deterministic(plot=False)
    def rate(s=switchpoint, e=early_mean, l=late_mean):
        ''' Concatenate Poisson means '''
-       out = empty(len(disasters_array))
+       out = np.empty(len(disasters_array))
        out[:s] = e
        out[s:] = l
        return out
@@ -333,7 +333,7 @@ Let's take a closer look at our definition of ``rate``::
     @deterministic(plot=False)
     def rate(s=switchpoint, e=early_mean, l=late_mean):
         ''' Concatenate Poisson means '''
-        out = empty(len(disasters_array))
+        out = np.empty(len(disasters_array))
         out[:s] = e
         out[s:] = l
         return out
