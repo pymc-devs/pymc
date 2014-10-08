@@ -506,8 +506,7 @@ def gelman_rubin(x):
     Parameters
     ----------
     x : array-like
-      A two-dimensional array containing the parallel traces (minimum 2)
-      of some stochastic parameter.
+      An array containing the 2 or more traces of a stochastic parameter. That is, an array of dimension m x n x k, where m is the number of traces, n the number of samples, and k the dimension of the stochastic.
 
     Returns
     -------
