@@ -52,8 +52,7 @@ freely available online.
   run the test suite).
 
 There are prebuilt distributions that include all required dependencies. For
-Mac OS X and Windows users, we recommend the `Enthought Python Distribution`_. The
-Enthought Python Distribution comes  bundled with these prerequisites. Note
+Mac OS X and Windows users, we recommend the `Anaconda Python distribution`_. Anaconda comes bundled with most of these prerequisites. Note
 that depending on the currency of these distributions, some packages may need
 to be updated manually.
 
@@ -67,9 +66,6 @@ not been tested with PyMC but may work nonetheless.
 .. _`NumPy`: http://www.scipy.org/NumPy
 
 .. _`Matplotlib`: http://matplotlib.sourceforge.net/
-
-.. _`Enthought Python Distribution`:
-   http://www.enthought.com/products/epddownload.php
 
 .. _`SciPy`: http://www.scipy.org/
 
@@ -118,6 +114,16 @@ Fortunately, this should be relatively straightforward.
 
 .. _`GitHub download page`: http://github.com/pymc-devs/pymc/downloads
 
+Anaconda
+--------
+
+If you are running the `Anaconda Python distribution`_ you can install a PyMC binary from the `Binstar`_ package management service, using the `conda` utility:
+
+    conda install -c https://conda.binstar.org/pymc pymc
+   
+.. _`Anaconda Python distribution`: http://continuum.io/downloads
+
+.. _`Binstar` : https://binstar.org/pymc/pymc
 
 Compiling the source code
 =========================
@@ -188,13 +194,13 @@ In addition, the python-dev package may be required to install PyMC on Linux sys
 .. _`PyPI`: http://pypi.python.org/pypi/pymc/
 
 
-Development version
-===================
+Installing from GitHub
+======================
 
-You can check out the development version of the code from the `GitHub`_
+You can check out the 2.3 branch of PyMC from the `GitHub`_
 repository::
 
-    git clone git://github.com/pymc-devs/pymc.git
+    git clone -b 2.3 git://github.com/pymc-devs/pymc.git@2.3
 
 Previous versions are available in the ``/tags`` directory.
 
