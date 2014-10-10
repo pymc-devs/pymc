@@ -107,8 +107,7 @@ architecture for interactive parallel computing.</li>
 run the test suite).</li>
 </ul>
 <p>There are prebuilt distributions that include all required dependencies. For
-Mac OS X and Windows users, we recommend the <a class="reference external" href="http://www.enthought.com/products/epddownload.php">Enthought Python Distribution</a>. The
-Enthought Python Distribution comes  bundled with these prerequisites. Note
+Mac OS X and Windows users, we recommend the <a class="reference external" href="http://continuum.io/downloads">Anaconda Python distribution</a>. Anaconda comes bundled with most of these prerequisites. Note
 that depending on the currency of these distributions, some packages may need
 to be updated manually.</p>
 <p>If, instead of installing the prebuilt binaries, you prefer (or have) to build
@@ -140,6 +139,12 @@ instructions.</p>
 </div></blockquote>
 <p>For other platforms, you will need to build the package yourself from source.
 Fortunately, this should be relatively straightforward.</p>
+<div class="section" id="anaconda">
+<h3>2.3.1. Anaconda<a class="headerlink" href="#anaconda" title="Permalink to this headline">¶</a></h3>
+<p>If you are running the <a class="reference external" href="http://continuum.io/downloads">Anaconda Python distribution</a> you can install a PyMC binary from the <a class="reference external" href="https://binstar.org/pymc/pymc">Binstar</a> package management service, using the <cite>conda</cite> utility:</p>
+<blockquote>
+<div>conda install -c <a class="reference external" href="https://conda.binstar.org/pymc">https://conda.binstar.org/pymc</a> pymc</div></blockquote>
+</div>
 </div>
 <div class="section" id="compiling-the-source-code">
 <h2>2.4. Compiling the source code<a class="headerlink" href="#compiling-the-source-code" title="Permalink to this headline">¶</a></h2>
@@ -185,11 +190,11 @@ The <cite>sudo</cite> command may be required to install PyMC into the Python
 <p>In addition, the python-dev package may be required to install PyMC on Linux systems.</p>
 </div>
 </div>
-<div class="section" id="development-version">
-<h2>2.5. Development version<a class="headerlink" href="#development-version" title="Permalink to this headline">¶</a></h2>
-<p>You can check out the development version of the code from the <a class="reference external" href="https://github.com/pymc-devs/pymc">GitHub</a>
+<div class="section" id="installing-from-github">
+<h2>2.5. Installing from GitHub<a class="headerlink" href="#installing-from-github" title="Permalink to this headline">¶</a></h2>
+<p>You can check out the 2.3 branch of PyMC from the <a class="reference external" href="https://github.com/pymc-devs/pymc">GitHub</a>
 repository:</p>
-<div class="highlight-python"><div class="highlight"><pre>git clone git://github.com/pymc-devs/pymc.git
+<div class="highlight-python"><div class="highlight"><pre>git clone -b 2.3 git://github.com/pymc-devs/pymc.git@2.3
 </pre></div>
 </div>
 <p>Previous versions are available in the <tt class="docutils literal"><span class="pre">/tags</span></tt> directory.</p>
@@ -230,13 +235,16 @@ addressed to PyMC&#8217;s <a class="reference external" href="mailto:pymc&#37;&#
 <li><a class="reference internal" href="#">2. Installation</a><ul>
 <li><a class="reference internal" href="#dependencies">2.1. Dependencies</a></li>
 <li><a class="reference internal" href="#installation-using-easyinstall">2.2. Installation using EasyInstall</a></li>
-<li><a class="reference internal" href="#installing-from-pre-built-binaries">2.3. Installing from pre-built binaries</a></li>
+<li><a class="reference internal" href="#installing-from-pre-built-binaries">2.3. Installing from pre-built binaries</a><ul>
+<li><a class="reference internal" href="#anaconda">2.3.1. Anaconda</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#compiling-the-source-code">2.4. Compiling the source code</a><ul>
 <li><a class="reference internal" href="#windows">2.4.1. Windows</a></li>
 <li><a class="reference internal" href="#mac-os-x-or-linux">2.4.2. Mac OS X or Linux</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#development-version">2.5. Development version</a></li>
+<li><a class="reference internal" href="#installing-from-github">2.5. Installing from GitHub</a></li>
 <li><a class="reference internal" href="#running-the-test-suite">2.6. Running the test suite</a></li>
 <li><a class="reference internal" href="#bugs-and-feature-requests">2.7. Bugs and feature requests</a></li>
 </ul>
