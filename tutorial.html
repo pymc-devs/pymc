@@ -120,7 +120,7 @@ this class would be <tt class="docutils literal"><span class="pre">DeterminedByV
 variables are characterized by probability distributions that express how
 plausible their candidate values are, given values for their parents. The
 <tt class="docutils literal"><span class="pre">Stochastic</span></tt> class represents these variables. A more descriptive name for
-these objects might be <tt class="docutils literal"><span class="pre">RandomEvenGivenValuesOfParents</span></tt>.</p>
+these objects might be <tt class="docutils literal"><span class="pre">RandomEvenGivenValuesOfParePynts</span></tt>.</p>
 <p>We can represent model <a href="#equation-disaster_model">(1)</a> in a file called
 <tt class="docutils literal"><span class="pre">disaster_model.py</span></tt> (the actual file can be found in <tt class="docutils literal"><span class="pre">pymc/examples/</span></tt>) as
 follows. First, we import the PyMC and NumPy namespaces:</p>
@@ -168,7 +168,7 @@ decorator, which converts the ordinary Python function <tt class="docutils liter
 <div class="highlight-python"><div class="highlight"><pre><span class="nd">@deterministic</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">rate</span><span class="p">(</span><span class="n">s</span><span class="o">=</span><span class="n">switchpoint</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="n">early_mean</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="n">late_mean</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39; Concatenate Poisson means &#39;&#39;&#39;</span>
-    <span class="n">out</span> <span class="o">=</span> <span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">disasters_array</span><span class="p">))</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np.empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">disasters_array</span><span class="p">))</span>
     <span class="n">out</span><span class="p">[:</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span>
     <span class="n">out</span><span class="p">[</span><span class="n">s</span><span class="p">:]</span> <span class="o">=</span> <span class="n">l</span>
     <span class="k">return</span> <span class="n">out</span>
@@ -603,7 +603,7 @@ the MCMC algorithm, just as unknown model parameters.</p>
 <span class="nd">@deterministic</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">rate</span><span class="p">(</span><span class="n">s</span><span class="o">=</span><span class="n">switch</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="n">early_mean</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="n">late_mean</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Allocate appropriate mean to time series&quot;&quot;&quot;</span>
-    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">disasters_array</span><span class="p">))</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">np.empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">disasters_array</span><span class="p">))</span>
     <span class="c"># Early mean prior to switchpoint</span>
     <span class="n">out</span><span class="p">[:</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span>
     <span class="c"># Late mean following switchpoint</span>
