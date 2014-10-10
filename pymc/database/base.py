@@ -416,10 +416,8 @@ def batchsd(trace, batches=5):
         except ValueError:
             # If batches do not divide evenly, trim excess samples
             resid = len(trace) % batches
-            batched_traces = np.resize(
-                trace[:-resid],
-                (batches,
-                 len(trace) / batches))
+            batched_traces = np.resize(trace[:-resid], 
+                (batches, len(trace[:-resid]) / batches))
 
         means = np.mean(batched_traces, 1)
 

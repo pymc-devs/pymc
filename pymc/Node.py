@@ -299,6 +299,7 @@ class Variable(Node):
             start=start,
             batches=batches,
             chain=chain)
+        
         size = np.size(statdict['mean'])
 
         print_('\n%s:' % self.__name__)
