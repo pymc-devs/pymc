@@ -1565,7 +1565,7 @@ def inverse_gamma_like(x, alpha, beta):
     .. note::
 
        :math:`E(X)=\frac{\beta}{\alpha-1}`  for :math:`\alpha > 1`
-       :math:`Var(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha)}`  for :math:`\alpha > 2`
+       :math:`Var(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha-2)}`  for :math:`\alpha > 2`
 
     """
 
