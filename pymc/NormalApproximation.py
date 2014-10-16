@@ -314,14 +314,30 @@ class MAP(Model):
                         disp=verbose, **kwargs)
 
         elif self.method == 'fmin_l_bfgs_b':
-            p = fmin_l_bfgs_b(func=self.func,
-                              x0=p,
-                              fprime=self.gradfunc,
-                              epsilon=self.eps,
-                              # callback=callback,
-                              pgtol=tol,
-                              iprint=verbose - 1, **kwargs)[0]
-
+            from scipy import __version__ as sp_version
+            from distutils.version import LooseVersion
+            if LooseVersion(sp_version) >= LooseVersion('0.12.0'):
+                p = fmin_l_bfgs_b(func=self.func,
+                                  x0=p,
+                                  fprime=self.gradfunc,
+                                  epsilon=self.eps,
+                                  callback=callback,
+                                  pgtol=tol,
+                                  iprint=verbose - 1,
+                                  **kwargs)[0]
+            else:
+                if verbose > 0:
+                    from warnings import warn
+                    warn("Callbacks are not available for fmin_l_bfgs_b in "
+                         "SciPy < 0.12.0. Optimization progress will not be"
+                         "displayed.", UserWarning)
+                p = fmin_l_bfgs_b(func=self.func,
+                                  x0=p,
+                                  fprime=self.gradfunc,
+                                  epsilon=self.eps,
+                                  pgtol=tol,
+                                  iprint=verbose - 1,
+                                  **kwargs)[0]
         else:
             raise ValueError('Method unknown.')
 
