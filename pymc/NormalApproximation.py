@@ -236,7 +236,8 @@ class MAP(Model):
 
         self.func_for_diff = func_for_diff
 
-    def fit(self, method='fmin_powell', iterlim=1000, tol=.0001, verbose=0):
+    def fit(self, method='fmin_powell', iterlim=1000, tol=.0001, verbose=0,
+            **kwargs):
         """
         N.fit(method='fmin', iterlim=1000, tol=.001):
 
@@ -248,6 +249,9 @@ class MAP(Model):
             -fmin_cg
             -fmin_powell
             -fmin
+
+        The kwargs are passed to the scipy.optimize functions. See there
+        for more information.
         """
         self.tol = tol
         self.method = method
@@ -280,7 +284,8 @@ class MAP(Model):
                          maxiter=iterlim,
                          callback=callback,
                          avextol=tol,
-                         disp=verbose)
+                         disp=verbose,
+                         **kwargs)
 
         elif self.method == 'fmin':
 
@@ -289,7 +294,7 @@ class MAP(Model):
                      callback=callback,
                      maxiter=iterlim,
                      ftol=tol,
-                     disp=verbose)
+                     disp=verbose, **kwargs)
 
         elif self.method == 'fmin_powell':
             p = fmin_powell(func=self.func,
@@ -297,7 +302,7 @@ class MAP(Model):
                             callback=callback,
                             maxiter=iterlim,
                             ftol=tol,
-                            disp=verbose)
+                            disp=verbose, **kwargs)
 
         elif self.method == 'fmin_cg':
             p = fmin_cg(f=self.func, x0=p,
@@ -306,7 +311,7 @@ class MAP(Model):
                         callback=callback,
                         maxiter=iterlim,
                         gtol=tol,
-                        disp=verbose)
+                        disp=verbose, **kwargs)
 
         elif self.method == 'fmin_l_bfgs_b':
             p = fmin_l_bfgs_b(func=self.func,
@@ -315,7 +320,7 @@ class MAP(Model):
                               epsilon=self.eps,
                               # callback=callback,
                               pgtol=tol,
-                              iprint=verbose - 1)[0]
+                              iprint=verbose - 1, **kwargs)[0]
 
         else:
             raise ValueError('Method unknown.')
