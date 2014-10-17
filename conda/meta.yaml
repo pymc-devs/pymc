@@ -4,7 +4,7 @@ package:
 
 source:
   fn:  pymc-2.3.4.tar.gz
-  url: https://pypi.python.org/packages/source/p/pymc/pymc-2.3.4.tar.gz
+  url: https://github.com/pymc-devs/pymc/archive/2.3.4.tar.gz
   md5: b4e02abc30717fd0d565713c252f8b78
 
 requirements:
