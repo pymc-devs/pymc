@@ -56,7 +56,7 @@ def test_summary_0d_variable_model():
     tau = 1.3
     with Model() as model:
         x = Normal('x', mu, tau, testval=.1)
-        step = Metropolis(model.vars, np.diag([1.]))
+        step = Metropolis(model.vars, np.diag([1.]), blocked=True)
         trace = pm.sample(100, step=step)
     pm.summary(trace)
 
@@ -66,7 +66,7 @@ def test_summary_1d_variable_model():
     tau = 1.3
     with Model() as model:
         x = Normal('x', mu, tau, shape=2, testval=[.1, .1])
-        step = Metropolis(model.vars, np.diag([1.]))
+        step = Metropolis(model.vars, np.diag([1.]), blocked=True)
         trace = pm.sample(100, step=step)
     pm.summary(trace)
 
@@ -77,7 +77,7 @@ def test_summary_2d_variable_model():
     with Model() as model:
         x = Normal('x', mu, tau, shape=(2, 2),
                    testval=np.tile(.1, (2, 2)))
-        step = Metropolis(model.vars, np.diag([1.]))
+        step = Metropolis(model.vars, np.diag([1.]), blocked=True)
         trace = pm.sample(100, step=step)
     pm.summary(trace)
 

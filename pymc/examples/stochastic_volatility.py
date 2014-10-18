@@ -112,9 +112,9 @@ with model:
 
 with model:
     step = NUTS(model.vars, hessian(start, 6))
-    
-    
-    
+
+
+
 def run(n=2000):
     if n == "short":
         n = 50
@@ -136,7 +136,7 @@ def run(n=2000):
 
     # figsize(12,6)
     traceplot(trace, model.vars[:-1])
-    
+
 if __name__ == '__main__':
     run()
 

@@ -1,7 +1,7 @@
 import matplotlib
 matplotlib.use('Agg', warn=False)
 
-import numpy as np 
+import numpy as np
 from .checks import close_to
 
 import pymc.plots
@@ -58,7 +58,7 @@ def test_multichain_plots():
 
     autocorrplot(ptrace, vars=['switchpoint'])
 
-def test_make_2d(): 
+def test_make_2d():
 
     a = np.arange(4)
     close_to(pymc.plots.make_2d(a), a[:,None], 0)

@@ -85,6 +85,6 @@ def run(n=5000):
         step2 = BinaryMetropolis([z])
 
         trace = sample(n, [step1, step2], start)
-        
+
 if __name__ == '__main__':
     run()

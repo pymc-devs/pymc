@@ -9,9 +9,9 @@ __all__ = ['Slice']
 
 
 class Slice(ArrayStep):
-
     """Slice sampler"""
-    def __init__(self, vars=None, w=1, tune=True, model=None):
+    default_blocked = False
+    def __init__(self, vars=None, w=1, tune=True, model=None, **kwargs):
 
         model = modelcontext(model)
 
@@ -23,7 +23,7 @@ class Slice(ArrayStep):
         self.w_tune = []
         self.model = model
 
-        super(Slice, self).__init__(vars, [model.fastlogp])
+        super(Slice, self).__init__(vars, [model.fastlogp], **kwargs)
 
     def astep(self, q0, logp):
 

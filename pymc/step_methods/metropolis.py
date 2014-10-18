@@ -65,8 +65,10 @@ class Metropolis(ArrayStep):
         Optional model for sampling step. Defaults to None (taken from context).
 
     """
+    default_blocked = False
+
     def __init__(self, vars=None, S=None, proposal_dist=NormalProposal, scaling=1.,
-                 tune=True, tune_interval=100, model=None):
+                 tune=True, tune_interval=100, model=None, **kwargs):
 
         model = modelcontext(model)
 
@@ -84,7 +86,7 @@ class Metropolis(ArrayStep):
         # Determine type of variables
         self.discrete = np.array([v.dtype in discrete_types for v in vars])
 
-        super(Metropolis, self).__init__(vars, [model.fastlogp])
+        super(Metropolis, self).__init__(vars, [model.fastlogp], **kwargs)
 
     def astep(self, q0, logp):
 
