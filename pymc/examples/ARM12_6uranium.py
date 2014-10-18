@@ -69,4 +69,4 @@ def run(n=3000):
 
         trace = sample(n, step, start)
 if __name__ == '__main__':
-    run()      
+    run()

@@ -1,8 +1,12 @@
+from __future__ import print_function
+
 import numpy as np
+import sys
 
 try:
     import statsmodels.api as sm
 except ImportError:
+    print("Example requires statsmodels")
     sys.exit(0)
 
 from pymc import *
@@ -33,7 +37,7 @@ def run(n=2000):
     import matplotlib.pyplot as plt
 
     with model:
-        trace = sample(n, Slice(model.vars))
+        trace = sample(n, Slice())
 
     plt.plot(x, y, 'x')
     glm.plot_posterior_predictive(trace)

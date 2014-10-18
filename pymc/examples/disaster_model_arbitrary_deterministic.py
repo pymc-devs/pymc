@@ -1,17 +1,13 @@
 """
-A model for coal mining disasters data with a changepoint
-
-switchpoint ~ U(0, 110)
-early_mean ~ Exp(1.)
-late_mean ~ Exp(1.)
-disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
-
+Similar to disaster_model.py, but for arbitrary 
+determinsitics which are not not working with Theano.
+Note that gradient based samplers will not work.
 """
 
-from pymc import *
 
+from pymc import *
 import theano.tensor as t
-from numpy import arange, array, ones, concatenate
+from numpy import arange, array, ones, concatenate, empty
 from numpy.random import randint
 
 __all__ = ['disasters_data', 'switchpoint', 'early_mean', 'late_mean', 'rate',
@@ -27,6 +23,16 @@ disasters_data = array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 years = len(disasters_data)
 
+#here is the trick
+@theano.compile.ops.as_op(itypes=[t.lscalar, t.dscalar, t.dscalar],otypes=[t.dvector])
+def rateFunc(switchpoint,early_mean, late_mean):
+    ''' Concatenate Poisson means '''
+    out = empty(years)
+    out[:switchpoint] = early_mean
+    out[switchpoint:] = late_mean
+    return out
+
+
 with Model() as model:
 
     # Prior for distribution of switchpoint location
@@ -38,26 +44,23 @@ with Model() as model:
     # Allocate appropriate Poisson rates to years before and after current
     # switchpoint location
     idx = arange(years)
-    rate = switch(switchpoint >= idx, early_mean, late_mean)
+    #theano style:
+    #rate = switch(switchpoint >= idx, early_mean, late_mean)
+    #non-theano style
+    rate = rateFunc(switchpoint, early_mean, late_mean)
 
     # Data likelihood
     disasters = Poisson('disasters', rate, observed=disasters_data)
 
+    # Initial values for stochastic nodes
+    start = {'early_mean': 2., 'late_mean': 3.}
 
-def run(n=1000):
-    if n == "short":
-        n = 50
-    with model:
+    # Use slice sampler for means
+    step1 = Slice([early_mean, late_mean])
+    # Use Metropolis for switchpoint, since it accomodates discrete variables
+    step2 = Metropolis([switchpoint])
 
-        # Initial values for stochastic nodes
-        start = {'early_mean': 2., 'late_mean': 3.}
-
-        # Use slice sampler for means
-        step1 = Slice([early_mean, late_mean])
-        # Use Metropolis for switchpoint, since it accomodates discrete variables
-        step2 = Metropolis([switchpoint])
-
-        tr = sample(n, tune=500, start=start, step=[step1, step2])
-
-if __name__ == '__main__':
-    run()
+    # njobs>1 works only with most recent (mid August 2014) Thenao version:
+    # https://github.com/Theano/Theano/pull/2021
+    tr = sample(1000, tune=500, start=start, step=[step1, step2],njobs=1)
+    traceplot(tr)

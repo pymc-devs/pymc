@@ -26,7 +26,9 @@ def unif(step_size, elow=.85, ehigh=1.15):
 
 
 class HamiltonianMC(ArrayStep):
-    def __init__(self, vars=None, scaling=None, step_scale=.25, path_length=2., is_cov=False, step_rand=unif, state=None, model=None):
+    default_blocked = True
+
+    def __init__(self, vars=None, scaling=None, step_scale=.25, path_length=2., is_cov=False, step_rand=unif, state=None, model=None, **kwargs):
         """
         Parameters
         ----------
@@ -69,7 +71,7 @@ class HamiltonianMC(ArrayStep):
             state = SamplerHist()
         self.state = state
 
-        super(HamiltonianMC, self).__init__(vars, [model.fastlogp, model.fastdlogp(vars)])
+        super(HamiltonianMC, self).__init__(vars, [model.fastlogp, model.fastdlogp(vars)], **kwargs)
 
     def astep(self, q0, logp, dlogp):
         H = Hamiltonian(logp, dlogp, self.potential)

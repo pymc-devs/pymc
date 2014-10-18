@@ -41,7 +41,7 @@ the first 1000 iterations from each chain.
 
     >>> trace.get_values('x', burn=1000)
 
-Setting the `combined` flag will concatenate the results from all the
+Setting the `combine` flag will concatenate the results from all the
 chains.
 
     >>> trace.get_values('x', burn=1000, combine=True)

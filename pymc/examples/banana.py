@@ -63,5 +63,3 @@ def run(n = 3000):
         pl.figure()
         extent = np.min(xs), np.max(xs), np.min(ys), np.max(ys)
         pl.imshow(post, extent=extent)
-
-

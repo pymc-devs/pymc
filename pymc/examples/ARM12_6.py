@@ -63,6 +63,6 @@ def run(n=3000):
         step = HamiltonianMC(model.vars, h)
 
         trace = sample(n, step, start)
-        
+
 if __name__ == '__main__':
     run()

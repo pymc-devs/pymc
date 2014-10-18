@@ -6,7 +6,7 @@ import sys
 try:
     import statsmodels.api as sm
 except ImportError:
-    sys.exit(0)
+    raise SkipTest("Test requires statsmodels.")
 
 from pymc.examples import glm_linear, glm_robust
 
