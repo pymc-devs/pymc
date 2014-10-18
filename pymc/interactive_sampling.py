@@ -75,7 +75,7 @@ if IPython:
     def nbsample(draws, step, start=None, trace=None, chain=0, tune=None, model=None, random_seed=None):
         try:
             assert(hasattr(IPython.get_ipython(), 'comm_manager'))
-        except (AssertionError, NameError, KeyError), e:
+        except (AssertionError, NameError, KeyError) as e:
             raise NotImplementedError(_no_notebook_error_message)
     
         display.display_html(_javascript, raw=True)
