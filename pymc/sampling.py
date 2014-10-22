@@ -144,7 +144,7 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     sampling = _iter_sample(draws, step, start, trace, chain, tune,
                             model, random_seed)
     for i, trace in enumerate(sampling):
-        yield trace[:i + 1]
+        yield MultiTrace([trace[:i + 1]])
 
 
 def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
