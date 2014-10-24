@@ -237,7 +237,7 @@ class MAP(Model):
         self.func_for_diff = func_for_diff
 
     def fit(self, method='fmin_powell', iterlim=1000, tol=.0001, verbose=0,
-            **kwargs):
+            no_callback=False, **kwargs):
         """
         N.fit(method='fmin', iterlim=1000, tol=.001):
 
@@ -249,6 +249,11 @@ class MAP(Model):
             -fmin_cg
             -fmin_powell
             -fmin
+
+        no_callback: Boolean indicating whether or not to use a callback
+        function. If True and a callback keyword is provided in kwargs, then
+        the user-supplied callback will be used. Otherwise, if False,
+        and verbose > 0, a default callback will print iteration progress.
 
         The kwargs are passed to the scipy.optimize functions. See there
         for more information.
@@ -265,12 +270,19 @@ class MAP(Model):
             if not scipy_imported:
                 raise ImportError('Scipy is required to use EM and NormApprox')
 
-        if self.verbose > 0:
+        default_callback = (verbose > 0 and not no_callback)
+        if default_callback and 'callback' in kwargs:
+            raise ValueError("For user-provided callback and verbose output"
+                             " set use_callback to True")
+
+        if default_callback:
             def callback(p):
                 try:
                     print_('Current log-probability : %f' % self.logp)
                 except ZeroProbability:
                     print_('Current log-probability : %f' % -Inf)
+        elif 'callback' in kwargs:
+            callback = kwargs.pop('callback')
         else:
             def callback(p):
                 pass
