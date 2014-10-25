@@ -185,18 +185,39 @@ class Beta(Continuous):
     beta : float
         beta > 0
 
+    Alternative parameterization:
+    mu : float
+        1 > mu > 0
+    sd : float
+        sd > 0
+    .. math::
+        alpha = mu * sd
+        beta = (1 - mu) * sd
+
     .. note::
     - :math:`E(X)=\frac{\alpha}{\alpha+\beta}`
     - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
     """
-    def __init__(self, alpha, beta, *args, **kwargs):
+    def __init__(self, alpha=None, beta=None, mu=None, sd=None, *args, **kwargs):
         super(Beta, self).__init__(*args, **kwargs)
+        alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
         self.beta = beta
         self.mean = alpha / (alpha + beta)
         self.variance = alpha * beta / (
             (alpha + beta) ** 2 * (alpha + beta + 1))
+
+    def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
+        if (alpha is not None) and (beta is not None):
+            pass
+        elif (mu is not None) and (sd is not None):
+            alpha = mu * sd
+            beta = (1 - mu) * sd
+        else:
+            raise ValueError('Incompatible parameterization. Either use alpha and beta, or mu and sd to specify distribution. ')
+
+        return alpha, beta
 
     def logp(self, value):
         alpha = self.alpha
@@ -467,18 +488,39 @@ class Gamma(Continuous):
     beta : float
         Rate parameter (beta > 0).
 
+    Alternative parameterization:
+    mu : float
+        mu > 0
+    sd : float
+        sd > 0
+    .. math::
+        alpha =  \frac{mu^2}{sd^2}
+        beta = \frac{mu}{sd^2}
+
     .. note::
     - :math:`E(X) = \frac{\alpha}{\beta}`
     - :math:`Var(X) = \frac{\alpha}{\beta^2}`
 
     """
-    def __init__(self, alpha, beta, *args, **kwargs):
+    def __init__(self, alpha=None, beta=None, mu=None, sd=None, *args, **kwargs):
         super(Gamma, self).__init__(*args, **kwargs)
+        alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
         self.beta = beta
         self.mean = alpha / beta
         self.mode = maximum((alpha - 1) / beta, 0)
         self.variance = alpha / beta ** 2
+
+    def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
+        if (alpha is not None) and (beta is not None):
+            pass
+        elif (mu is not None) and (sd is not None):
+            alpha = mu ** 2 / sd ** 2
+            beta = mu / sd ** 2
+        else:
+            raise ValueError('Incompatible parameterization. Either use alpha and beta, or mu and sd to specify distribution. ')
+
+        return alpha, beta
 
     def logp(self, value):
         alpha = self.alpha

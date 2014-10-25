@@ -168,6 +168,10 @@ def test_beta():
             Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
             lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta)
             )
+    pymc_matches_scipy(
+            Beta, Unit, {'mu': Unit, 'sd': Rplus},
+            lambda value, mu, sd: sp.beta.logpdf(value, mu * sd, (1 - mu) * sd)
+            )
 
 
 def test_exponential():
@@ -226,6 +230,10 @@ def test_gamma():
     pymc_matches_scipy(
             Gamma, Rplus, {'alpha': Rplusbig, 'beta': Rplusbig},
             lambda value, alpha, beta: sp.gamma.logpdf(value, alpha, scale=1.0/beta)
+            )
+    pymc_matches_scipy(
+            Gamma, Rplus, {'mu': Rplusbig, 'sd': Rplusbig},
+            lambda value, mu, sd: sp.gamma.logpdf(value, mu**2 / sd**2, scale=1.0/(mu / sd**2))
             )
 
 def test_inverse_gamma():

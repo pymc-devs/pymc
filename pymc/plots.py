@@ -89,7 +89,7 @@ def kdeplot_op(ax, data):
 
         ax.plot(x, density(x))
 
-def make_2d(a): 
+def make_2d(a):
     """Ravel the dimensions after the first.
     """
     a = np.atleast_2d(a.T).T
