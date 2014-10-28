@@ -1046,10 +1046,7 @@ def var_str(name, shape):
 
     size = prod(shape)
     ind = (indices(shape) + 1).reshape(-1, size)
-    names = ['[' + ','.join(map(str, i)) + ']' for i in zip(*ind)]
-    # if len(name)>12:
-    #     name = '\n'.join(name.split('_'))
-    #     name += '\n'
+    names = ['[' + ','.join(list(map(str, i))) + ']' for i in zip(*ind)]
     names[0] = '%s %s' % (name, names[0])
     return names
 
@@ -1259,8 +1256,7 @@ def summary_plot(
 
             # Deal with multivariate nodes
             if k > 1:
-                
-                ravelled_quants = map(ravel, quants)
+                ravelled_quants = list(map(ravel, quants))
                 
                 for i, quant in enumerate(transpose(ravelled_quants)):
 

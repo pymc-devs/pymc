@@ -290,10 +290,10 @@ def var_str(shape):
 
     size = np.prod(shape)
     indices = (np.indices(shape) + 1).reshape(-1, size)
-    return ['v' + '_'.join(map(str, i)) for i in zip(*indices)]
+    return ['v' + '_'.join(list(map(str, i))) for i in zip(*indices)]
     if shape in [None, ()]:
         return ['v1', ]
 
     size = np.prod(shape)
     indices = (np.indices(shape) + 1).reshape(-1, size)
-    return ['v' + '_'.join(map(str, i)) for i in zip(*indices)]
+    return ['v' + '_'.join(list(map(str, i))) for i in zip(*indices)]

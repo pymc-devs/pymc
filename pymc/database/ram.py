@@ -47,7 +47,7 @@ class Trace(base.Trace):
             self._index = {}
         else:
             self._trace = value
-            self._index = dict(zip(value.keys(), map(len, value.values())))
+            self._index = dict(zip(value.keys(), list(map(len, value.values()))))
 
         base.Trace.__init__(self, name=name, getfunc=getfunc, db=db)
 

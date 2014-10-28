@@ -443,7 +443,7 @@ class Sampler(Model):
         # Index to interval label
         iindex = [key.split()[-1] for key in stats.keys()].index('interval')
         interval = list(stats.keys())[iindex]
-        buffer += ', '.join(stats[interval][index].astype(str))
+        buffer += ', '.join(stats[interval].T[index].astype(str))
 
         # Process quantiles
         qvalues = stats['quantiles']
