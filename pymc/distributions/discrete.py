@@ -197,7 +197,7 @@ class NegativeBinomial(Discrete):
                      logpow(mu / (mu + alpha), value) + logpow(alpha / (mu + alpha), alpha),
                       mu > 0, alpha > 0, value >= 0)
 
-        return switch(alpha > 1e10,
+        return switch(1*(alpha > 1e10),
                       pois,
                       negbinom)
 
