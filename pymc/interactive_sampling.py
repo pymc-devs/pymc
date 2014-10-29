@@ -6,7 +6,8 @@ try:
     import json
     from numpy.random import seed
     import time
-    from .sampling import iter_sample
+    from .backends.base import MultiTrace
+    from .sampling import _iter_sample
 except ImportError:
     IPython = False
 
@@ -86,8 +87,12 @@ if IPython:
 
         w.max_samples = draws
         w.current_samples = 0
-        for i,backend in enumerate(iter_sample(draws, step, start=start, trace=trace,
-            chain=chain, tune=tune, model=model, random_seed=None), 1):
+
+        sampling = _iter_sample(draws, step, start=start, trace=trace,
+                                chain=chain, tune=tune, model=model,
+                                random_seed=None)
+
+        for i, trace in enumerate(sampling, 1):
             elapsed = time.time() - t_start
             elapsed_last = time.time() - t_last
 
@@ -97,9 +102,10 @@ if IPython:
                 w.clock = "%02i:%02i:%02i" % (elapsed / 60 / 60, elapsed / 60 % 60, elapsed % 60)
                 get_ipython().kernel.do_one_iteration()
                 if w.stopped:
+                    trace.close()
                     break
         w.current_samples = i
-        return backend
+        return MultiTrace([trace])
 else:
     def nbsample(*args, **kwargs):
         raise NotImplemented(_no_notebook_error_message)
