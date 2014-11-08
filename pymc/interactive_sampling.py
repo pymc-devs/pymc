@@ -90,7 +90,7 @@ if IPython:
 
         sampling = _iter_sample(draws, step, start=start, trace=trace,
                                 chain=chain, tune=tune, model=model,
-                                random_seed=None)
+                                random_seed=random_seed)
 
         for i, trace in enumerate(sampling, 1):
             elapsed = time.time() - t_start
