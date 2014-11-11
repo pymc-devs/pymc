@@ -34,8 +34,14 @@ class TransformedDistribution(Distribution):
         transform : Transform
         args, kwargs
             arguments to Distribution"""
-        forward = transform.forward 
+        forward = transform.forward
+        defaults = dist.defaults 
         try:
+            # If we don't do this, we will have problems
+            # with invalid mode values of transformed Dirichlet variables where one of the hyperparams is exactly 1
+            self.default_val = forward(dist.default())
+            defaults = ['default_val'] + defaults
+            
             testval = forward(dist.testval)
         except TypeError:
             testval = dist.testval
@@ -52,7 +58,7 @@ class TransformedDistribution(Distribution):
 
         super(TransformedDistribution, self).__init__(v.shape.tag.test_value,
                 v.dtype, 
-                testval, dist.defaults, 
+                testval, defaults, 
                 *args, **kwargs)
 
 

@@ -8,6 +8,7 @@ nodes in PyMC.
 from __future__ import division
 
 from .dist_math import *
+import numpy
 from numpy.random import uniform as runiform, normal as rnormal
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -54,7 +55,7 @@ class Uniform(Continuous):
         upper = self.upper
 
         return bound(
-            -log(upper - lower),
+            -log(upper - lower), # Inserted cast to prevent exception in theano.ifelse.ifelse
             lower <= value, value <= upper)
 
     def random(self, size=None):

@@ -13,14 +13,46 @@ from theano.tensor import (
     zeros_like, ones, ones_like,
     concatenate, constant, argmax)
 
+import theano
 
-from numpy import pi, inf, nan
+
+from numpy import pi, inf, nan, float64, array
 from .special import gammaln, multigammaln
-
+from theano.ifelse import ifelse
 from theano.printing import Print
 from .distribution import *
 
+def guess_is_scalar(c):
+    bcast = None
+    if (isinstance(c, t.TensorType)):
+        return c.broadcastable == ()
+    
+    if (isinstance(c, t.Variable) or isinstance(c, t.Constant)):
+        return c.type.broadcastable == ()
+    
+    tt = t.as_tensor_variable(c)
+    return tt.type.broadcastable == ()
 
+impossible = constant(-inf, dtype=float64) # We re-use that constant
+
+def bound_scalar(logp, *conditions):
+    """
+    Bounds a log probability density with several conditions
+
+    Parameters
+    ----------
+    logp : float
+    *conditions : booleans
+
+    Returns
+    -------
+    logp if all conditions are true
+    -inf if some are false
+    """        
+    cond = alltrue(conditions)
+    return ifelse(cond, t.cast(logp, dtype='float64'), impossible)
+
+  
 def bound(logp, *conditions):
     """
     Bounds a log probability density with several conditions
@@ -35,9 +67,14 @@ def bound(logp, *conditions):
     logp if all conditions are true
     -inf if some are false
     """
-
-    return switch(alltrue(conditions), logp, -inf)
-
+    if (guess_is_scalar(logp)):
+        for c in conditions:
+            if (type(c)==bool):
+                continue
+            if (not guess_is_scalar(c)):
+                break
+            return bound_scalar(logp, *conditions)
+    return switch(alltrue(conditions), logp, impossible)
 
 def alltrue(vals):
     ret = 1
@@ -52,6 +89,11 @@ def logpow(x, m):
     """
     return switch(eq(x, 0) & eq(m, 0), 0, m * log(x))
 
+def logpow_relaxed(x, m):
+    """
+    Calculates log(x**m), unless m==0 or x==0 in which case it will return 0 
+    """
+    return switch(eq(x, 0) | eq(m, 0), 0, m * log(x))
 
 def factln(n):
     return gammaln(n + 1)
