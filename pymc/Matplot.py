@@ -774,7 +774,7 @@ def discrepancy_plot(
 
 def gof_plot(
     simdata, trueval, name=None, bins=None, format='png', suffix='-gof', path='./',
-        fontmap=None, verbose=1):
+        fontmap=None, verbose=0):
     """
     Plots histogram of replicated data, indicating the location of the observed data
 
