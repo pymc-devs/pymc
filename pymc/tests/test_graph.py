@@ -2,6 +2,7 @@ import pymc as pm
 from numpy.testing import *
 import numpy as np
 import nose
+import sys
 
 from pymc import six
 xrange = six.moves.xrange
@@ -35,9 +36,9 @@ def powerset(seq):
             yield [seq[0]] + item
             yield item
 
-
 class test_graph(TestCase):
 
+    @dec.knownfailureif(sys.version_info.major==3)
     def test_graph(self):
         try:
             import pydot
@@ -48,7 +49,8 @@ class test_graph(TestCase):
             for args in powerset([('collapse_deterministics', True), ('collapse_potentials', True), ('label_edges', False), ('legend', True), ('consts', True)]):
                 M = pm.Model(mods)
                 pm.graph.graph(M, path=DIR, **dict(args))
-
+                
+    @dec.knownfailureif(sys.version_info.major==3)
     def test_moral(self):
         try:
             import pydot

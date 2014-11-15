@@ -7,6 +7,7 @@ from copy import copy
 from pymc import six
 xrange = six.moves.xrange
 
+random.seed(42)
 
 def zero_fun(x):
     return zeros(x.shape[:-1], dtype=float)
