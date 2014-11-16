@@ -38,7 +38,7 @@ def powerset(seq):
 
 class test_graph(TestCase):
 
-    @dec.knownfailureif(sys.version_info.major==3)
+    @dec.skipif(sys.version_info.major==3)
     def test_graph(self):
         try:
             import pydot
@@ -50,7 +50,7 @@ class test_graph(TestCase):
                 M = pm.Model(mods)
                 pm.graph.graph(M, path=DIR, **dict(args))
                 
-    @dec.knownfailureif(sys.version_info.major==3)
+    @dec.skipif(sys.version_info.major==3)
     def test_moral(self):
         try:
             import pydot
