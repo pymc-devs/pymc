@@ -1,6 +1,6 @@
 from .dist_math import *
 
-from theano.tensor.nlinalg import det, solve, matrix_inverse, trace
+from theano.tensor.nlinalg import det, matrix_inverse, trace
 from theano.tensor import dot, cast
 from theano.printing import Print
 
