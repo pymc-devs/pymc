@@ -2107,7 +2107,7 @@ def negative_binomial_like(x, mu, alpha):
       - In Wikipedia's parameterization,
         :math:`r=\alpha`
         :math:`p=\alpha/(\mu+\alpha)`
-        :math:`\mu=r(1-p)/p`
+        :math:`\mu=rp/(1-p)`
 
     """
     alpha = np.array(alpha)
