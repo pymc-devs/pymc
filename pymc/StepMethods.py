@@ -563,6 +563,7 @@ class Metropolis(StepMethod):
         This method is called by step() to generate proposed values
         if self.proposal_distribution is "Normal" (i.e. no proposal specified).
         """
+    
         if self.proposal_distribution == "Normal":
             self.stochastic.value = rnormal(
                 self.stochastic.value,
@@ -606,6 +607,8 @@ class Metropolis(StepMethod):
         if not (self.accepted + self.rejected):
             return tuning
         acc_rate = self.accepted / (self.accepted + self.rejected)
+        
+        current_factor = self.adaptive_scale_factor
 
         # Switch statement
         if acc_rate < 0.001:
@@ -632,6 +635,11 @@ class Metropolis(StepMethod):
         # Re-initialize rejection count
         self.rejected = 0.
         self.accepted = 0.
+        
+        # Prevent from tuning to zero
+        if not self.adaptive_scale_factor:
+            self.adaptive_scale_factor = current_factor
+            return False
 
         # More verbose feedback, if requested
         if verbose > 0:

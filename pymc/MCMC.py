@@ -342,14 +342,6 @@ class MCMC(Sampler):
         Tell all step methods to tune themselves.
         """
 
-        # =======================================
-        # = This is what makes price.py puke... =
-        # =======================================
-        # Only tune during burn-in
-        # if self._current_iter > self._burn:
-        #     self._tuning = False
-        #     return
-
         if self.verbose > 0:
             print_('\tTuning at iteration', self._current_iter)
 
@@ -364,7 +356,7 @@ class MCMC(Sampler):
             tuning_count += step_method.tune(verbose=self.verbose)
             if verbose > 1:
                 print_(
-                    '\t\tTuning step method %s, returned %i\n' %
+                    '\t\tTuning step method %s, returned %i\n' %i
                     (step_method._id, tuning_count))
                 sys.stdout.flush()
 
