@@ -29,7 +29,9 @@ __docformat__ = 'reStructuredText'
 
 from . import flib, utils
 import numpy as np
-from scipy.stats.kde import gaussian_kde
+# from scipy.stats.kde import gaussian_kde
+import scipy.stats as stats
+gaussian_kde = stats.kde
 from .Node import ZeroProbability
 from .PyMCObjects import Stochastic, Deterministic
 from .CommonDeterministics import Lambda
@@ -897,7 +899,6 @@ def binomial_like(x, n, p):
 
     # Temporary hack to avoid issue #614
     return flib.binomial(x, np.resize(n, np.size(x)), np.resize(p, np.size(x)))
-
 
 binomial_grad_like = {'p': flib.binomial_gp}
 

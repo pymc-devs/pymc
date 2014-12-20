@@ -268,6 +268,7 @@ class Variable(Node):
         return self.trace.stats(alpha=alpha, start=start, batches=batches,
                                 chain=chain, quantiles=quantiles)
 
+
     def summary(self, alpha=0.05, start=0, batches=100, chain=None, roundto=3):
         """
         Generate a pretty-printed summary of the node.
@@ -308,11 +309,6 @@ class Variable(Node):
         # Initialize buffer
         buffer = []
 
-        # Title
-        # buffer += ['Summary statistics']
-        # buffer += ['%s' % '='*len(buffer[-1])]
-        # buffer += ['']*2
-
         # Index to interval label
         iindex = [key.split()[-1] for key in statdict.keys()].index('interval')
         interval = list(statdict.keys())[iindex]
@@ -326,12 +322,14 @@ class Variable(Node):
         indices = range(size)
         if len(indices) == 1:
             indices = [None]
+        
+        _format_str = lambda x, i=None, roundto=2: str(np.round(x.ravel()[i].squeeze(), roundto))
             
         for index in indices:
             # Extract statistics and convert to string
-            m = str(np.round(statdict['mean'].ravel()[index], roundto))
-            sd = str(np.round(statdict['standard deviation'].ravel()[index], roundto))
-            mce = str(np.round(statdict['mc error'].ravel()[index], roundto))
+            m = _format_str(statdict['mean'], index, roundto)
+            sd = _format_str(statdict['standard deviation'], index, roundto)
+            mce = _format_str(statdict['mc error'], index, roundto)
             hpd = str(statdict[interval].reshape(
                     (2, size))[:,index].squeeze().round(roundto))
 
@@ -356,7 +354,7 @@ class Variable(Node):
         for index in indices:
             quantile_str = ''
             for i, q in enumerate((2.5, 25, 50, 75, 97.5)):
-                qstr = str(np.round(statdict['quantiles'][q].ravel()[index], roundto))
+                qstr = _format_str(statdict['quantiles'][q], index, roundto)
                 quantile_str += qstr + ' ' * (17 - i - len(qstr))
             buffer += [quantile_str.strip()]
 
