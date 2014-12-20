@@ -305,6 +305,7 @@ class Potential(PotentialBase):
                 parameter] = lazy_logp_partial_gradients
 
     def get_logp(self):
+        
         if self.verbose > 1:
             print_('\t' + self.__name__ + ': log-probability accessed.')
         logp = self._logp.get()
@@ -736,7 +737,7 @@ class Stochastic(StochasticBase):
         # Initialize value, either from value provided or from random function.
         try:
             if dtype.kind != 'O' and value is not None:
-                self._value = asanyarray(value, dtype=dtype)
+                self._value = np.array(value, dtype=dtype)
                 self._value.flags['W'] = False
             else:
                 self._value = value
@@ -810,15 +811,15 @@ class Stochastic(StochasticBase):
         self._logp.force_compute()
 
         self._logp_partial_gradients = {}
+
         for parameter, function in six.iteritems(self._logp_partial_gradient_functions):
             lazy_logp_partial_gradient = LazyFunction(fun=function,
                                                       arguments=arguments,
                                                       ultimate_args=self.extended_parents | set(
                                                           [self]),
                                                       cache_depth=self._cache_depth)
-            lazy_logp_partial_gradient.force_compute()
-            self._logp_partial_gradients[
-                parameter] = lazy_logp_partial_gradient
+            # lazy_logp_partial_gradient.force_compute()
+            self._logp_partial_gradients[parameter] = lazy_logp_partial_gradient
 
     def get_value(self):
         # Define value attribute

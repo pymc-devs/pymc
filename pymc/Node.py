@@ -135,11 +135,6 @@ class Node(object):
     def _set_parents(self, new_parents):
         # Define parents of this object
 
-        # THERE DOES NOT APPEAR TO BE A detach_children() METHOD IN CLASS
-        # Remove from current parents
-        # if hasattr(self,'_parents'):
-        #             self._parents.detach_children()
-
         # Specify new parents
         self._parents = self.ParentDict(
             regular_dict=new_parents,

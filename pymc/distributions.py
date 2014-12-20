@@ -898,7 +898,7 @@ def binomial_like(x, n, p):
     """
 
     # Temporary hack to avoid issue #614
-    return flib.binomial(x, np.resize(n, np.size(x)), np.resize(p, np.size(x)))
+    return flib.binomial(x, n, p)
 
 binomial_grad_like = {'p': flib.binomial_gp}
 
