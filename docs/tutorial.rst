@@ -30,9 +30,9 @@ in mining safety regulations.
 
 We represent our conceptual model formally as a statistical model:
 
-.. math::
-    :label: disaster_model
+.. disaster_model:
 
+.. math::
          \begin{array}{ccc}  (D_t | s, e, l) \sim\text{Poisson}\left(r_t\right), & r_t=\left\{\begin{array}{lll}             e &\text{if}& t< s\\ l &\text{if}& t\ge s             \end{array}\right.,&t\in[t_l,t_h]\\         s\sim \text{Discrete Uniform}(t_l, t_h)\\         e\sim \text{Exponential}(r_e)\\         l\sim \text{Exponential}(r_l)     \end{array}
 
 The symbols are defined as:

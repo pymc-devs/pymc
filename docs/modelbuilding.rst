@@ -89,7 +89,7 @@ There are three main ways to create stochastic variables, called the
    Stochastic variables with standard distributions provided by PyMC (see
    chapter :ref:`chap_distributions`) can be created in a single line using
    special subclasses of ``Stochastic``. For example, the uniformly-distributed
-   discrete variable :math:`switchpoint` in (:eq:`disaster_model`) is created
+   discrete variable ``switchpoint`` in (:ref:`disaster_model`) is created
    using the automatic interface as follows::
 
       switchpoint = DiscreteUniform('switchpoint', lower=0, upper=110, doc='Switchpoint[year]')
@@ -104,8 +104,8 @@ There are three main ways to create stochastic variables, called the
    included with PyMC.
 
 **Decorator**
-   Uniformly-distributed discrete stochastic variable :math:`switchpoint` in
-   (:eq:`disaster_model`) could alternatively be created from a function that
+   Uniformly-distributed discrete stochastic variable ``switchpoint`` in
+   (:ref:`disaster_model`) could alternatively be created from a function that
    computes its log-probability as follows::
 
       @pymc.stochastic(dtype=int)
@@ -123,9 +123,9 @@ There are three main ways to create stochastic variables, called the
    Generally, decorators enhance functions with additional properties or
    functionality. The ``Stochastic`` object produced by the ``@stochastic``
    decorator will evaluate its log-probability using the function
-   :math:`switchpoint`. The ``value`` argument, which is required, provides an
+   ``switchpoint``. The ``value`` argument, which is required, provides an
    initial value for the variable. The remaining arguments will be assigned as
-   parents of :math:`switchpoint` (*i.e.* they will populate the ``parents``
+   parents of ``switchpoint`` (*i.e.* they will populate the ``parents``
    dictionary).
 
    To emphasize, the Python function decorated by ``@stochastic`` should
@@ -161,7 +161,7 @@ There are three main ways to create stochastic variables, called the
               return np.round( (t_l - t_h) * random() ) + t_l
 
    The stochastic variable again gets its name, docstring and parents from
-   function :math:`switchpoint`, but in this case it will evaluate its
+   function ``switchpoint``, but in this case it will evaluate its
    log-probability using the ``logp`` function. The ``random`` function will be
    used when ``switchpoint.random()`` is called. Note that ``random`` doesn't
    take a ``value`` argument, as it generates values itself.
@@ -260,7 +260,7 @@ The Deterministic class
 
 The ``Deterministic`` class represents variables whose values are completely
 determined by the values of their parents. For example, in model
-(:eq:`disaster_model`), :math:`rate` is a ``deterministic`` variable. Recall it
+(:ref:`disaster_model`), ``rate`` is a ``deterministic`` variable. Recall it
 was defined by
 
 .. math::
@@ -272,8 +272,8 @@ was defined by
           \end{array}\right.,
   \end{eqnarray*}
 
-so :math:`rate`'s value can be computed exactly from the values of its parents
-:math:`early_mean`, :math:`late_mean` and :math:`switchpoint`.
+so ``rate``'s value can be computed exactly from the values of its parents
+``early_mean``, ``late_mean`` and ``switchpoint``.
 
 A ``deterministic`` variable's most important attribute is ``value``, which
 gives the current value of the variable given the values of its parents. Like
