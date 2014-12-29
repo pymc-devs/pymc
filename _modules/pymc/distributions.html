@@ -79,7 +79,9 @@
 
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">flib</span><span class="p">,</span> <span class="n">utils</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">scipy.stats.kde</span> <span class="kn">import</span> <span class="n">gaussian_kde</span>
+<span class="c"># from scipy.stats.kde import gaussian_kde</span>
+<span class="kn">import</span> <span class="nn">scipy.stats</span> <span class="kn">as</span> <span class="nn">stats</span>
+<span class="n">gaussian_kde</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">kde</span>
 <span class="kn">from</span> <span class="nn">.Node</span> <span class="kn">import</span> <span class="n">ZeroProbability</span>
 <span class="kn">from</span> <span class="nn">.PyMCObjects</span> <span class="kn">import</span> <span class="n">Stochastic</span><span class="p">,</span> <span class="n">Deterministic</span>
 <span class="kn">from</span> <span class="nn">.CommonDeterministics</span> <span class="kn">import</span> <span class="n">Lambda</span>
@@ -945,8 +947,8 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="c"># Temporary hack to avoid issue #614</span>
     <span class="k">return</span> <span class="n">flib</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
-
 </div>
 <span class="n">binomial_grad_like</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;p&#39;</span><span class="p">:</span> <span class="n">flib</span><span class="o">.</span><span class="n">binomial_gp</span><span class="p">}</span>
 
@@ -1615,7 +1617,7 @@
 <span class="sd">    .. note::</span>
 
 <span class="sd">       :math:`E(X)=\frac{\beta}{\alpha-1}`  for :math:`\alpha &gt; 1`</span>
-<span class="sd">       :math:`Var(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha)}`  for :math:`\alpha &gt; 2`</span>
+<span class="sd">       :math:`Var(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha-2)}`  for :math:`\alpha &gt; 2`</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -2156,7 +2158,7 @@
 <span class="sd">      - In Wikipedia&#39;s parameterization,</span>
 <span class="sd">        :math:`r=\alpha`</span>
 <span class="sd">        :math:`p=\alpha/(\mu+\alpha)`</span>
-<span class="sd">        :math:`\mu=r(1-p)/p`</span>
+<span class="sd">        :math:`\mu=rp/(1-p)`</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>

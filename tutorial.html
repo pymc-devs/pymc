@@ -73,8 +73,8 @@ series, and from one with a smaller rate in the later part. We are interested
 in locating the change point in the series, which perhaps is related to changes
 in mining safety regulations.</p>
 <p>We represent our conceptual model formally as a statistical model:</p>
-<div class="math" id="equation-disaster_model">
-<span class="eqno">(1)</span>\[\begin{split}     \begin{array}{ccc}  (D_t | s, e, l) \sim\text{Poisson}\left(r_t\right), &amp; r_t=\left\{\begin{array}{lll}             e &amp;\text{if}&amp; t&lt; s\\ l &amp;\text{if}&amp; t\ge s             \end{array}\right.,&amp;t\in[t_l,t_h]\\         s\sim \text{Discrete Uniform}(t_l, t_h)\\         e\sim \text{Exponential}(r_e)\\         l\sim \text{Exponential}(r_l)     \end{array}\end{split}\]</div>
+<div class="math">
+\[\begin{split}\begin{array}{ccc}  (D_t | s, e, l) \sim\text{Poisson}\left(r_t\right), &amp; r_t=\left\{\begin{array}{lll}             e &amp;\text{if}&amp; t&lt; s\\ l &amp;\text{if}&amp; t\ge s             \end{array}\right.,&amp;t\in[t_l,t_h]\\         s\sim \text{Discrete Uniform}(t_l, t_h)\\         e\sim \text{Exponential}(r_e)\\         l\sim \text{Exponential}(r_l)     \end{array}\end{split}\]</div>
 <p>The symbols are defined as:</p>
 <blockquote>
 <div><ul class="simple">
@@ -120,8 +120,8 @@ this class would be <tt class="docutils literal"><span class="pre">DeterminedByV
 variables are characterized by probability distributions that express how
 plausible their candidate values are, given values for their parents. The
 <tt class="docutils literal"><span class="pre">Stochastic</span></tt> class represents these variables. A more descriptive name for
-these objects might be <tt class="docutils literal"><span class="pre">RandomEvenGivenValuesOfParePynts</span></tt>.</p>
-<p>We can represent model <a href="#equation-disaster_model">(1)</a> in a file called
+these objects might be <tt class="docutils literal"><span class="pre">RandomEvenGivenValuesOfParents</span></tt>.</p>
+<p>We can represent model <a href="#equation-disaster_model">(?)</a> in a file called
 <tt class="docutils literal"><span class="pre">disaster_model.py</span></tt> (the actual file can be found in <tt class="docutils literal"><span class="pre">pymc/examples/</span></tt>) as
 follows. First, we import the PyMC and NumPy namespaces:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pymc</span> <span class="kn">import</span> <span class="n">DiscreteUniform</span><span class="p">,</span> <span class="n">Exponential</span><span class="p">,</span> <span class="n">deterministic</span><span class="p">,</span> <span class="n">Poisson</span><span class="p">,</span> <span class="n">Uniform</span>
@@ -168,7 +168,7 @@ decorator, which converts the ordinary Python function <tt class="docutils liter
 <div class="highlight-python"><div class="highlight"><pre><span class="nd">@deterministic</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">rate</span><span class="p">(</span><span class="n">s</span><span class="o">=</span><span class="n">switchpoint</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="n">early_mean</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="n">late_mean</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39; Concatenate Poisson means &#39;&#39;&#39;</span>
-    <span class="n">out</span> <span class="o">=</span> <span class="n">np.empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">disasters_array</span><span class="p">))</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">disasters_array</span><span class="p">))</span>
     <span class="n">out</span><span class="p">[:</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span>
     <span class="n">out</span><span class="p">[</span><span class="n">s</span><span class="p">:]</span> <span class="o">=</span> <span class="n">l</span>
     <span class="k">return</span> <span class="n">out</span>
@@ -189,7 +189,7 @@ dependence on its parent <tt class="docutils literal"><span class="pre">rate</sp
 just a quirk of PyMC&#8217;s syntax; Bayesian hierarchical notation itself makes no
 distinction between random variables and data. The reason is simple: to use
 Bayes&#8217; theorem to compute the posterior <span class="math">\(p(e,s,l \mid D)\)</span> of model
-<a href="#equation-disaster_model">(1)</a>, we require the likelihood <span class="math">\(p(D \mid e,s,l)\)</span>. Even
+<a href="#equation-disaster_model">(?)</a>, we require the likelihood <span class="math">\(p(D \mid e,s,l)\)</span>. Even
 though <cite>disasters</cite>&#8216;s value is known and fixed, we need to formally assign it a
 probability distribution as if it were a random variable. Remember, the
 likelihood and the probability function are essentially the same, except that
@@ -198,7 +198,7 @@ function of the data.</p>
 <p>This point can be counterintuitive at first, as many peoples&#8217; instinct is to
 regard data as fixed a priori and unknown variables as dependent on the data.
 One way to understand this is to think of statistical models like
-<a href="#equation-disaster_model">(1)</a> as predictive models for data, or as models of the
+<a href="#equation-disaster_model">(?)</a> as predictive models for data, or as models of the
 processes that gave rise to data. Before observing the value of <cite>disasters</cite>, we
 could have sampled from its prior predictive distribution <span class="math">\(p(D)\)</span> (<em>i.e.</em>
 the marginal distribution of the data) as follows:</p>
@@ -360,7 +360,7 @@ statistical distributions provided by PyMC.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="nd">@deterministic</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">rate</span><span class="p">(</span><span class="n">s</span><span class="o">=</span><span class="n">switchpoint</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="n">early_mean</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="n">late_mean</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39; Concatenate Poisson means &#39;&#39;&#39;</span>
-    <span class="n">out</span> <span class="o">=</span> <span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">disasters_array</span><span class="p">))</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">disasters_array</span><span class="p">))</span>
     <span class="n">out</span><span class="p">[:</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span>
     <span class="n">out</span><span class="p">[</span><span class="n">s</span><span class="p">:]</span> <span class="o">=</span> <span class="n">l</span>
     <span class="k">return</span> <span class="n">out</span>
@@ -603,7 +603,7 @@ the MCMC algorithm, just as unknown model parameters.</p>
 <span class="nd">@deterministic</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">rate</span><span class="p">(</span><span class="n">s</span><span class="o">=</span><span class="n">switch</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="n">early_mean</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="n">late_mean</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Allocate appropriate mean to time series&quot;&quot;&quot;</span>
-    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">np.empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">disasters_array</span><span class="p">))</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">disasters_array</span><span class="p">))</span>
     <span class="c"># Early mean prior to switchpoint</span>
     <span class="n">out</span><span class="p">[:</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span>
     <span class="c"># Late mean following switchpoint</span>

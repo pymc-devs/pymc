@@ -108,28 +108,28 @@ distribution:</p>
 \[\begin{eqnarray*}
       x_p | x \sim \textup{Truncnorm}(x, \sigma, \max(D), \infty).
 \end{eqnarray*}\]</div><p>We can implement this Metropolis-Hastings algorithm with the following step method class:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">TruncatedMetropolis</span><span class="p">(</span><span class="n">pymc</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stochastic</span><span class="p">,</span> <span class="n">low_bound</span><span class="p">,</span> <span class="n">up_bound</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">low_bound</span> <span class="o">=</span> <span class="n">low_bound</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">up_bound</span> <span class="o">=</span> <span class="n">up_bound</span>
-        <span class="n">pymc</span><span class="o">.</span><span class="n">Metropolis</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stochastic</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre>class TruncatedMetropolis(pymc.Metropolis):
+    def __init__(self, stochastic, low_bound, up_bound, *args, **kwargs):
+        self.low_bound = low_bound
+        self.up_bound = up_bound
+        pymc.Metropolis.__init__(self, stochastic, *args, **kwargs)
 
-    <span class="k">def</span> <span class="nf">propose</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">tau</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adaptive_scale_factor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">proposal_sd</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">stochastic</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> \
-        <span class="n">pymc</span><span class="o">.</span><span class="n">rtruncnorm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stochastic</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">low_bound</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_bound</span><span class="p">)</span>
+    def propose(self):
+        tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
+        self.stochastic.value = \
+        pymc.rtruncnorm(self.stochastic.value, tau, self.low_bound, self.up_bound)
 
-    <span class="k">def</span> <span class="nf">hastings_factor</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">tau</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adaptive_scale_factor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">proposal_sd</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
-        <span class="n">cur_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stochastic</span><span class="o">.</span><span class="n">value</span>
-        <span class="n">last_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stochastic</span><span class="o">.</span><span class="n">last_value</span>
+    def hastings_factor(self):
+        tau = 1./(self.adaptive_scale_factor * self.proposal_sd)**2
+        cur_val = self.stochastic.value
+        last_val = self.stochastic.last_value
 
-        <span class="n">lp_for</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">truncnorm_like</span><span class="p">(</span><span class="n">cur_val</span><span class="p">,</span> <span class="n">last_val</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">low_bound</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_bound</span><span class="p">)</span>
-        <span class="n">lp_bak</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">truncnorm_like</span><span class="p">(</span><span class="n">last_val</span><span class="p">,</span> <span class="n">cur_val</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">low_bound</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">up_bound</span><span class="p">)</span>
+        lp_for = pymc.truncnorm_like(cur_val, last_val, tau, self.low_bound, self.up_bound)
+        lp_bak = pymc.truncnorm_like(last_val, cur_val, tau, self.low_bound, self.up_bound)
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">_id</span> <span class="o">+</span> <span class="s">&#39;: Hastings factor </span><span class="si">%f</span><span class="s">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">lp_bak</span> <span class="o">-</span> <span class="n">lp_for</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">lp_bak</span> <span class="o">-</span> <span class="n">lp_for</span>
+        if self.verbose &gt; 1:
+            print self._id + &#39;: Hastings factor %f&#39;%(lp_bak - lp_for)
+        return lp_bak - lp_for
 </pre></div>
 </div>
 <p>The <tt class="docutils literal"><span class="pre">propose</span></tt> method sets the step method&#8217;s stochastic&#8217;s value to a new

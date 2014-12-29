@@ -125,7 +125,7 @@ type is enforced.</dd>
 <dd><p class="first">Stochastic variables with standard distributions provided by PyMC (see
 chapter <a class="reference internal" href="distributions.html#chap-distributions"><em>Probability distributions</em></a>) can be created in a single line using
 special subclasses of <tt class="docutils literal"><span class="pre">Stochastic</span></tt>. For example, the uniformly-distributed
-discrete variable <span class="math">\(switchpoint\)</span> in (<a href="#equation-disaster_model">(?)</a>) is created
+discrete variable <tt class="docutils literal"><span class="pre">switchpoint</span></tt> in (<em class="xref std std-ref">disaster_model</em>) is created
 using the automatic interface as follows:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">switchpoint</span> <span class="o">=</span> <span class="n">DiscreteUniform</span><span class="p">(</span><span class="s">&#39;switchpoint&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">110</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="s">&#39;Switchpoint[year]&#39;</span><span class="p">)</span>
 </pre></div>
@@ -139,8 +139,8 @@ the submodule <tt class="docutils literal"><span class="pre">pymc.SciPyDistribut
 included with PyMC.</p>
 </dd>
 <dt><strong>Decorator</strong></dt>
-<dd><p class="first">Uniformly-distributed discrete stochastic variable <span class="math">\(switchpoint\)</span> in
-(<a href="#equation-disaster_model">(?)</a>) could alternatively be created from a function that
+<dd><p class="first">Uniformly-distributed discrete stochastic variable <tt class="docutils literal"><span class="pre">switchpoint</span></tt> in
+(<em class="xref std std-ref">disaster_model</em>) could alternatively be created from a function that
 computes its log-probability as follows:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="nd">@pymc.stochastic</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">switchpoint</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">1900</span><span class="p">,</span> <span class="n">t_l</span><span class="o">=</span><span class="mi">1851</span><span class="p">,</span> <span class="n">t_h</span><span class="o">=</span><span class="mi">1962</span><span class="p">):</span>
@@ -158,9 +158,9 @@ called a <strong>decorator</strong> <a class="reference internal" href="referenc
 Generally, decorators enhance functions with additional properties or
 functionality. The <tt class="docutils literal"><span class="pre">Stochastic</span></tt> object produced by the <tt class="docutils literal"><span class="pre">&#64;stochastic</span></tt>
 decorator will evaluate its log-probability using the function
-<span class="math">\(switchpoint\)</span>. The <tt class="docutils literal"><span class="pre">value</span></tt> argument, which is required, provides an
+<tt class="docutils literal"><span class="pre">switchpoint</span></tt>. The <tt class="docutils literal"><span class="pre">value</span></tt> argument, which is required, provides an
 initial value for the variable. The remaining arguments will be assigned as
-parents of <span class="math">\(switchpoint\)</span> (<em>i.e.</em> they will populate the <tt class="docutils literal"><span class="pre">parents</span></tt>
+parents of <tt class="docutils literal"><span class="pre">switchpoint</span></tt> (<em>i.e.</em> they will populate the <tt class="docutils literal"><span class="pre">parents</span></tt>
 dictionary).</p>
 <p>To emphasize, the Python function decorated by <tt class="docutils literal"><span class="pre">&#64;stochastic</span></tt> should
 compute the <em>log</em>-density or <em>log</em>-probability of the variable. That is why
@@ -193,7 +193,7 @@ on its parents.</p>
 </pre></div>
 </div>
 <p class="last">The stochastic variable again gets its name, docstring and parents from
-function <span class="math">\(switchpoint\)</span>, but in this case it will evaluate its
+function <tt class="docutils literal"><span class="pre">switchpoint</span></tt>, but in this case it will evaluate its
 log-probability using the <tt class="docutils literal"><span class="pre">logp</span></tt> function. The <tt class="docutils literal"><span class="pre">random</span></tt> function will be
 used when <tt class="docutils literal"><span class="pre">switchpoint.random()</span></tt> is called. Note that <tt class="docutils literal"><span class="pre">random</span></tt> doesn&#8217;t
 take a <tt class="docutils literal"><span class="pre">value</span></tt> argument, as it generates values itself.</p>
@@ -285,15 +285,15 @@ def ...
 <span id="deterministic"></span><h2>4.3. The Deterministic class<a class="headerlink" href="#the-deterministic-class" title="Permalink to this headline">¶</a></h2>
 <p>The <tt class="docutils literal"><span class="pre">Deterministic</span></tt> class represents variables whose values are completely
 determined by the values of their parents. For example, in model
-(<a href="#equation-disaster_model">(?)</a>), <span class="math">\(rate\)</span> is a <tt class="docutils literal"><span class="pre">deterministic</span></tt> variable. Recall it
+(<em class="xref std std-ref">disaster_model</em>), <tt class="docutils literal"><span class="pre">rate</span></tt> is a <tt class="docutils literal"><span class="pre">deterministic</span></tt> variable. Recall it
 was defined by</p>
 <div class="math">
 \[\begin{eqnarray*}
     r_t=\left\{\begin{array}{ll}
         e & t\le s\\ l & t>s
         \end{array}\right.,
-\end{eqnarray*}\]</div><p>so <span class="math">\(rate\)</span>&#8216;s value can be computed exactly from the values of its parents
-<span class="math">\(early_mean\)</span>, <span class="math">\(late_mean\)</span> and <span class="math">\(switchpoint\)</span>.</p>
+\end{eqnarray*}\]</div><p>so <tt class="docutils literal"><span class="pre">rate</span></tt>&#8216;s value can be computed exactly from the values of its parents
+<tt class="docutils literal"><span class="pre">early_mean</span></tt>, <tt class="docutils literal"><span class="pre">late_mean</span></tt> and <tt class="docutils literal"><span class="pre">switchpoint</span></tt>.</p>
 <p>A <tt class="docutils literal"><span class="pre">deterministic</span></tt> variable&#8217;s most important attribute is <tt class="docutils literal"><span class="pre">value</span></tt>, which
 gives the current value of the variable given the values of its parents. Like
 <tt class="docutils literal"><span class="pre">Stochastic</span></tt>&#8216;s <tt class="docutils literal"><span class="pre">logp</span></tt> attribute, this attribute is computed on-demand and
