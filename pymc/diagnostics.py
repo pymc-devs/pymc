@@ -4,7 +4,7 @@ import numpy as np
 from .stats import autocorr, autocov, statfunc
 from copy import copy
 
-__all__ = ['geweke', 'gelman_rubin', 'trace_to_dataframe']
+__all__ = ['geweke', 'gelman_rubin', 'trace_to_dataframe', 'effective_n']
 
 
 @statfunc
@@ -168,6 +168,103 @@ def gelman_rubin(mtrace):
 
     return Rhat
 
+
+def effective_n(mtrace):
+    """ Returns estimate of the effective sample size of a set of traces.
+
+    Parameters
+    ----------
+    mtrace : MultiTrace
+      A MultiTrace object containing parallel traces (minimum 2)
+      of one or more stochastic parameters.
+    
+    Returns
+    -------
+    n_eff : float
+      Return the effective sample size, :math:`\hat{n}_{eff}`
+
+    Notes
+    -----
+
+    The diagnostic is computed by:
+
+      .. math:: \hat{n}_{eff} = \frac{mn}}{1 + 2 \sum_{t=1}^T \hat{\rho}_t}
+
+    where :math:`\hat{\rho}_t` is the estimated autocorrelation at lag t, and T
+    is the first odd positive integer for which the sum :math:`\hat{\rho}_{T+1} + \hat{\rho}_{T+1}` 
+    is negative.
+
+    References
+    ----------
+    Gelman et al. (2014)"""
+    
+    if mtrace.nchains < 2:
+        raise ValueError(
+            'Calculation of effective sample size requires multiple chains of the same length.')
+
+    def calc_vhat(x):
+
+        try:
+            # When the variable is multidimensional, this assignment will fail, triggering
+            # a ValueError that will handle the multidimensional case
+            m, n = x.shape
+
+            # Calculate between-chain variance
+            B = n * np.var(np.mean(x, axis=1), ddof=1)
+
+            # Calculate within-chain variance
+            W = np.mean(np.var(x, axis=1, ddof=1))
+
+            # Estimate of marginal posterior variance
+            Vhat = W*(n - 1)/n + B/n
+
+            return Vhat
+
+        except ValueError:
+
+            # Tricky transpose here, shifting the last dimension to the first
+            rotated_indices = np.roll(np.arange(x.ndim), 1)
+            # Now iterate over the dimension of the variable
+            return np.squeeze([calc_vhat(xi) for xi in x.transpose(rotated_indices)])
+    
+    def calc_n_eff(x):
+        
+        m, n = x.shape
+        
+        negative_autocorr = False
+        t = 1
+        
+        Vhat = calc_vhat(x)
+        
+        variogram = lambda t: (sum(sum((x[j][i] - x[j][i-t])**2 
+                            for i in range(t,n)) for j in range(m)) / (m*(n - t)))
+        
+        rho = np.ones(n)
+        # Iterate until the sum of consecutive estimates of autocorrelation is negative
+        while not negative_autocorr and (t < n):
+        
+            rho[t] = 1. - variogram(t)/(2.*Vhat)
+        
+            if not t % 2:
+                negative_autocorr = sum(rho[t-1:t+1]) < 0
+        
+            t += 1
+            
+        return int(m*n / (1. + 2*rho[1:t].sum()))
+    
+    n_eff = {}
+    for var in mtrace.varnames:
+
+        # Get all traces for var
+        x = np.array(mtrace.get_values(var))
+
+        try:
+            n_eff[var] = calc_n_eff(x)
+        except ValueError:
+            n_eff[var] = [calc_n_eff(y.transpose()) for y in x.transpose()]
+
+    return n_eff
+    
 
 def trace_to_dataframe(trace):
     """Convert a PyMC trace consisting of 1-D variables to a pandas DataFrame

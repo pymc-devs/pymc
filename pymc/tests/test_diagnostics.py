@@ -37,3 +37,23 @@ def test_geweke(n=3000):
     # These should all be z-scores
     print(max(abs(z_switch[:, 1])))
     assert max(abs(z_switch[:, 1])) < 1
+
+
+def test_effective_n(k=3, n=1000):
+    """Unit test for effective sample size"""
+    
+    model = Model()
+    with model:
+        x = Normal('x', 0, 1., shape=5)
+
+        # start sampling at the MAP
+        start = find_MAP()
+
+        step = NUTS(scaling=start)
+    
+        ptrace = sample(n, step, start, njobs=k,
+                        random_seed=42)
+        
+    n_eff = effective_n(ptrace)
+    
+    assert np.isclose(n_eff, k*n, 2).all()

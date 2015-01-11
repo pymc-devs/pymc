@@ -6,8 +6,7 @@ import theano
 # pydevd.set_pm_excepthook()
 np.seterr(invalid='raise')
 
-data = np.random.normal(size=(3, 20))
-n = 1
+n = 3
 
 model = Model()
 with model:
