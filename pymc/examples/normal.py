@@ -15,7 +15,7 @@ with model:
     # start sampling at the MAP
     start = find_MAP()
 
-    step = Slicer()
+    step = NUTS(scaling=start)
 
 def run(n=3000):
     if n == "short":
