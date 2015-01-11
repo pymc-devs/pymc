@@ -1,7 +1,6 @@
 from pymc import *
 
 from pymc.examples import disaster_model as dm
-from pymc.examples import normal as nm
 
 def test_gelman_rubin(n=1000):
 
@@ -43,8 +42,15 @@ def test_geweke(n=3000):
 def test_effective_n(k=3, n=1000):
     """Unit test for effective sample size"""
     
-    with nm.model:
-        # Run sampler
+    model = Model()
+    with model:
+        x = Normal('x', 0, 1., shape=5)
+
+        # start sampling at the MAP
+        start = find_MAP()
+
+        step = NUTS(scaling=start)
+    
         ptrace = sample(n, step, start, njobs=k,
                         random_seed=42)
         
