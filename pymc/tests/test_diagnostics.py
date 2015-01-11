@@ -1,6 +1,7 @@
 from pymc import *
 
 from pymc.examples import disaster_model as dm
+from pymc.examples import normal as nm
 
 def test_gelman_rubin(n=1000):
 
@@ -37,3 +38,16 @@ def test_geweke(n=3000):
     # These should all be z-scores
     print(max(abs(z_switch[:, 1])))
     assert max(abs(z_switch[:, 1])) < 1
+
+
+class test_effective_n(k=3, n=1000):
+    """Unit test for effective sample size"""
+    
+    with nm.model:
+        # Run sampler
+        ptrace = sample(n, step, start, njobs=k,
+                        random_seed=42)
+        
+    n_eff = effective_n(ptrace)
+    
+    assert np.isclose(n_eff, k*n, 2).all()
