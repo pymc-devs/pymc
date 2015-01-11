@@ -22,7 +22,8 @@ __all__ = [
     'validate',
     'discrepancy',
     'iat',
-    'ppp_value']
+    'ppp_value',
+    'effective_n']
 
 
 def open01(x, limit=1.e-6):
@@ -490,10 +491,69 @@ def discrepancy(observed, simulated, expected):
     print_('Bayesian p-value: p=%.3f' % (1. * count / len(D_obs)))
 
     return D_obs, D_sim
-
+    
 
 @diagnostic(all_chains=True)
-def gelman_rubin(x):
+def effective_n(x):
+    """ Returns estimate of the effective sample size of a set of traces.
+
+    Parameters
+    ----------
+    x : array-like
+      An array containing the 2 or more traces of a stochastic parameter. That is, an array of dimension m x n x k, where m is the number of traces, n the number of samples, and k the dimension of the stochastic.
+    
+    Returns
+    -------
+    n_eff : float
+      Return the effective sample size, :math:`\hat{n}_{eff}`
+
+    Notes
+    -----
+
+    The diagnostic is computed by:
+
+      .. math:: \hat{n}_{eff} = \frac{mn}}{1 + 2 \sum_{t=1}^T \hat{\rho}_t}
+
+    where :math:`\hat{\rho}_t` is the estimated autocorrelation at lag t, and T
+    is the first odd positive integer for which the sum :math:`\hat{\rho}_{T+1} + \hat{\rho}_{T+1}` 
+    is negative.
+
+    References
+    ----------
+    Gelman et al. (2014)"""
+    
+    if np.shape(x) < (2,):
+        raise ValueError(
+            'Calculation of effective sample size requires multiple chains of the same length.')
+
+    try:
+        m, n = np.shape(x)
+    except ValueError:
+        return [effective_n(np.transpose(y)) for y in np.transpose(x)]
+        
+    s2 = gelman_rubin(x, return_var=True)
+    
+    negative_autocorr = False
+    t = 1
+    
+    variogram = lambda t: (sum(sum((x[j][i] - x[j][i-t])**2 for i in range(t,n)) for j in range(m)) 
+                                / (m*(n - t)))
+    rho = np.ones(n)
+    # Iterate until the sum of consecutive estimates of autocorrelation is negative
+    while not negative_autocorr and (t < n):
+        
+        rho[t] = 1. - variogram(t)/(2.*s2)
+        
+        if not t % 2:
+            negative_autocorr = sum(rho[t-1:t+1]) < 0
+        
+        t += 1
+        
+    return int(m*n / (1 + 2*rho[1:t].sum()))
+    
+
+@diagnostic(all_chains=True)
+def gelman_rubin(x, return_var=False):
     """ Returns estimate of R for a set of traces.
 
     The Gelman-Rubin diagnostic tests for lack of convergence by comparing
@@ -507,6 +567,9 @@ def gelman_rubin(x):
     ----------
     x : array-like
       An array containing the 2 or more traces of a stochastic parameter. That is, an array of dimension m x n x k, where m is the number of traces, n the number of samples, and k the dimension of the stochastic.
+      
+    return_var : bool
+      Flag for returning the marginal posterior variance instead of R-hat (defaults of False).
 
     Returns
     -------
@@ -551,6 +614,9 @@ def gelman_rubin(x):
 
     # (over) estimate of variance
     s2 = W * (n - 1) / n + B_over_n
+    
+    if return_var:
+        return s2
 
     # Pooled posterior variance estimate
     V = s2 + B_over_n / m

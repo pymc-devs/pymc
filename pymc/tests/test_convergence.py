@@ -89,6 +89,17 @@ class test_geweke(TestCase):
             pass
 
 
+class test_effective_n(TestCase):
+    """Unit test for effective sample size"""
+    
+    def test_independent_normal(self, m=3, n=1000, k=1000):
+        
+        n_eff = np.mean([pymc.effective_n(np.random.normal(size=(m,n))) for i in range(1000)])
+        
+        assert_approx_equal(n_eff, m*n, 2)
+        
+
+
 class test_gelman_rubin(TestCase):
 
     """Unit test for Gelman-Rubin diagnostic"""
