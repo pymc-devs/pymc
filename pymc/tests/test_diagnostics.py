@@ -56,4 +56,4 @@ def test_effective_n(k=3, n=1000):
         
     n_eff = effective_n(ptrace)
     
-    assert np.isclose(n_eff, k*n, 2).all()
+    assert np.isclose(np.array(n_eff, int), k*n, 2).all()
