@@ -174,5 +174,5 @@ class Wishart(Continuous):
 
         return bound(
             ((n - p - 1) * log(IXI) - trace(matrix_inverse(V).dot(X)) -
-                n * p * log(2) - n * log(IVI) - 2 * multigammaln(p, n / 2)) / 2,
+                n * p * log(2) - n * log(IVI) - 2 * multigammaln(n / 2., p)) / 2,
              n > (p - 1))
