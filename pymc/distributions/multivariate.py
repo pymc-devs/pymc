@@ -32,7 +32,9 @@ class MvNormal(Continuous):
         delta = value - mu
         k = tau.shape[0]
 
-        return 1/2. * (-k * log(2*pi) + log(det(tau)) - dot(delta.T, dot(tau, delta)))
+        result = k * log(2*pi) + log(1./det(tau))
+        result += (delta.dot(tau) * delta).sum(axis=delta.ndim - 1)
+        return -1/2. * result
 
 
 class Dirichlet(Continuous):
