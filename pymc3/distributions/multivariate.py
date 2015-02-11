@@ -4,7 +4,7 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 from theano.tensor import dot, cast, eye, diag, eq
 from theano.printing import Print
 
-__all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
+__all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart', 'LKJCorr']
 
 class MvNormal(Continuous):
     """
@@ -231,7 +231,7 @@ class LKJCorr(Continuous):
         p = self.p
         
         result = self._normalizing_constant(n, p)
-        result = (n - 1.) * log(det(X))
+        result += (n - 1.) * log(det(X))
         return bound(result,
             n > 0,
             all(diag(X) == 1),
