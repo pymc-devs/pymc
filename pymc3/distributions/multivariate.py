@@ -1,7 +1,7 @@
 from .dist_math import *
 
 from theano.tensor.nlinalg import det, matrix_inverse, trace
-from theano.tensor import dot, cast
+from theano.tensor import dot, cast, eye, diag, eq
 from theano.printing import Print
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart']
@@ -178,3 +178,63 @@ class Wishart(Continuous):
             ((n - p - 1) * log(IXI) - trace(matrix_inverse(V).dot(X)) -
                 n * p * log(2) - n * log(IVI) - 2 * multigammaln(n / 2., p)) / 2,
              n > (p - 1))
+
+
+class LKJCorr(Continuous):
+    """
+    The LKJ (Lewandowski, Kurowicka and Joe) is a prior distribution for
+    correlation matrices. For n=1 this corresponds to the uniform distribution
+    over correlation matrices. When n>1 the LKJ prior approaches the identity
+    matrix.
+
+    For more details see:
+    http://www.sciencedirect.com/science/article/pii/S0047259X09000876
+
+    :Parameters:
+      n : float
+        Shape parameter, Uniform at n=1, > 0
+      p : int
+        Dimension of correlation matrix
+
+
+    :Support:
+      X : matrix
+        Symmetric, [-1,1].
+    """
+    def __init__(self, n, p, *args, **kwargs):
+        self.n = n
+        self.p = p
+        self.mean = eye(p)
+        super(LKJCorr, self).__init__(shape=(p, p), *args, **kwargs)
+
+    def _normalizing_constant(self, n, p):
+        if n == 1:
+            result = gammaln(2. * arange(1, int((p-1) / 2) + 1)).sum()
+            if p % 2 == 1:
+                result += (0.25 * (p ** 2 - 1) * log(pi)
+                    - 0.25 * (p - 1) ** 2 * log(2.)
+                    - (p - 1) * gammaln(int((p + 1) / 2))
+                )
+            else:
+                result += (0.25 * p * (p - 2) * log(pi)
+                    + 0.25 * (3 * p ** 2 - 4 * p) * log(2.)
+                    + p * gammaln(p / 2) - (p-1) * gammaln(p)
+                )
+        else:
+            result = -(p - 1) * gammaln(n + 0.5 * (p - 1))
+            k = arange(1, p)
+            result += (0.5 * k * log(pi) + gammaln(n + 0.5 * (p - 1 - k))).sum()
+        return result
+
+    def logp(self, X):
+        n = self.n
+        p = self.p
+        
+        result = self._normalizing_constant(n, p)
+        result = (n - 1.) * log(det(X))
+        return bound(result,
+            n > 0,
+            all(diag(X) == 1),
+            all(eq(X, X.T)),
+            all(X <= 1),
+            all(X >= -1))
