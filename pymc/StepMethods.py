@@ -27,11 +27,6 @@ from .six import print_
 
 __docformat__ = 'reStructuredText'
 
-
-# Changeset history
-# 22/03/2007 -DH- Added a _state attribute containing the name of the attributes that make up the state of the step method, and a method to return that state in a dict. Added an id.
-# TODO: Test cases for binary and discrete Metropolises.
-
 conjugate_Gibbs_competence = 0
 nonconjugate_Gibbs_competence = 0
 
@@ -901,6 +896,10 @@ class BinaryMetropolis(Metropolis):
             return 2
 
         elif isinstance(stochastic, distributions.Bernoulli):
+            return 2
+            
+        elif (isinstance(stochastic, distributions.Categorical) and 
+            (len(stochastic.parents['p'])==2)):
             return 2
 
         else:

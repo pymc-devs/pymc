@@ -67,7 +67,7 @@ class Database(base.Database):
                 container[name] = self._traces[name]._trace
             container['_state_'] = self._state_
 
-            file = open(self.filename, 'wb')
+            file = open(self.filename, 'w+b')
             std_pickle.dump(container, file)
             file.close()
         except AttributeError:
