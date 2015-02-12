@@ -53,10 +53,9 @@ def multigammaln(a, p):
         p : int degrees of freedom
             p > 0
     """
-    a = t.shape_padright(a)
-    i = arange(p)
+    i = arange(1, p + 1)
 
-    return p * (p - 1) * log(pi) / 4. + t.sum(gammaln(a + i / 2.), axis=a.ndim - 1)
+    return p * (p - 1) * log(pi) / 4. + t.sum(gammaln(a + (1. - i) / 2.), axis=0)
 
 
 cpsifunc = """
