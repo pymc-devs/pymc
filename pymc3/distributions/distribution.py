@@ -19,7 +19,7 @@ class Distribution(object):
             return model.Var(name, dist, data)
         elif name is None:
             return object.__new__(cls) #for pickle
-        else: 
+        else:
             raise TypeError("needed name or None but got: " + name)
 
     def __getnewargs__(self):
@@ -79,6 +79,15 @@ class DensityDist(Distribution):
     def __init__(self, logp, shape=(), dtype='float64',testval=0, *args, **kwargs):
         super(DensityDist, self).__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
+
+def TransformedVar(*args, **kwargs):
+    try:
+        model = Model.get_context()
+    except TypeError:
+        raise TypeError("No model on context stack, which is needed to use the Normal('x', 0,1) syntax. Add a 'with model:' block")
+
+    return model.TransformedVar(*args, **kwargs)
+
 
 class MultivariateContinuous(Continuous):
 
