@@ -3,9 +3,9 @@ from setuptools import setup
 import sys
 
 
-DISTNAME = 'pymc'
-DESCRIPTION = "PyMC 3"
-LONG_DESCRIPTION    = """Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC), is an increasingly relevant approach to statistical estimation. However, few statistical software packages implement MCMC samplers, and they are non-trivial to code by hand. ``pymc`` is a python package that implements the Metropolis-Hastings algorithm as a python class, and is extremely flexible and applicable to a large suite of problems. ``pymc`` includes methods for summarizing output, plotting, goodness-of-fit and convergence diagnostics."""
+DISTNAME = 'pymc3'
+DESCRIPTION = "PyMC3"
+LONG_DESCRIPTION    = """Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC), is an increasingly relevant approach to statistical estimation. However, few statistical software packages implement MCMC samplers, and they are non-trivial to code by hand. ``pymc3`` is a python package that implements the Metropolis-Hastings algorithm as a python class, and is extremely flexible and applicable to a large suite of problems. ``pymc3`` includes methods for summarizing output, plotting, goodness-of-fit and convergence diagnostics."""
 MAINTAINER = 'John Salvatier'
 MAINTAINER_EMAIL = 'jsalvati@u.washington.edu'
 AUTHOR = 'John Salvatier and Christopher Fonnesbeck'
@@ -46,11 +46,11 @@ if __name__ == "__main__":
           license=LICENSE,
           url=URL,
           long_description=LONG_DESCRIPTION,
-          packages=['pymc', 'pymc.distributions',
-                    'pymc.step_methods', 'pymc.tuning',
-                    'pymc.tests', 'pymc.glm', 'pymc.examples',
-                    'pymc.backends'],
-          package_data = {'pymc.examples': ['data/*']},
+          packages=['pymc3', 'pymc3.distributions',
+                    'pymc3.step_methods', 'pymc3.tuning',
+                    'pymc3.tests', 'pymc3.glm', 'pymc3.examples',
+                    'pymc3.backends'],
+          package_data = {'pymc3.examples': ['data/*']},
           classifiers=classifiers,
           install_requires=install_reqs,
           dependency_links=dep_links,
