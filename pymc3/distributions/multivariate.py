@@ -1,7 +1,7 @@
 from .dist_math import *
 
 from theano.tensor.nlinalg import det, matrix_inverse, trace
-from theano.tensor import dot, cast, eye, diag, eq
+from theano.tensor import dot, cast, eye, diag, eq, le, ge, all
 from theano.printing import Print
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart', 'LKJCorr']
@@ -234,7 +234,7 @@ class LKJCorr(Continuous):
         result += (n - 1.) * log(det(X))
         return bound(result,
             n > 0,
-            all(diag(X) == 1),
+            all(eq(diag(X), 1)),
             all(eq(X, X.T)),
-            all(X <= 1),
-            all(X >= -1))
+            all(le(X, 1)),
+            all(ge(X, -1)))
