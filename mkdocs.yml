@@ -1,10 +1,7 @@
-site_name: Zipline
-repo_url: https://github.com/quantopian/zipline
-site_author: Quantopian Inc.
+site_name: PyMC3
+repo_url: https://github.com/pymc-devs/pymc
+site_author: PyMC devs
 
 pages:
 - ['index.md', 'Overview']
-- ['tutorial.md', 'Tutorial', 'Getting started']
-- ['release-notes/zipline-0.8.0.md', 'Release notes']
-- ['release-notes/zipline-0.7.0.md', 'Release notes']
-- ['release-notes/zipline-0.6.1.md', 'Release notes']
+- ['getting_started.md', 'Tutorial', 'Getting started']
