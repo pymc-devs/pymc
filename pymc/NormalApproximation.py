@@ -239,7 +239,7 @@ class MAP(Model):
     def fit(self, method='fmin_powell', iterlim=1000, tol=.0001, verbose=0,
             no_callback=False, **kwargs):
         """
-        N.fit(method='fmin', iterlim=1000, tol=.001):
+        N.fit(method='fmin_powell', iterlim=1000, tol=.001):
 
         Causes the normal approximation object to fit itself.
 
