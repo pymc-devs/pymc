@@ -147,7 +147,7 @@ following::
     >>> M = pymc.MAP(gelman_bioassay)
     >>> M.fit()
 
-This call will cause :math:`M` to fit the model using Nelder-Mead optimization, 
+This call will cause :math:`M` to fit the model using modified Powell optimization, 
 which does not require derivatives. The variables in ``DisasterModel`` have now 
 been set to their maximum *a posteriori* values::
 
@@ -165,7 +165,7 @@ In addition, the AIC and BIC of the model are now available::
 
 ``MAP`` has two useful methods:
 
-``fit(method ='fmin', iterlim=1000, tol=.0001)``:
+``fit(method='fmin_powell', iterlim=1000, tol=.0001)``:
    The optimization method may be ``fmin``, ``fmin_l_bfgs_b``, ``fmin_ncg``, 
    ``fmin_cg``, or ``fmin_powell``. See the documentation of SciPy's 
    ``optimize`` package for the details of these methods. The ``tol`` and 
