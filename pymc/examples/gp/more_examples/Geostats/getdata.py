@@ -3,7 +3,7 @@ from numpy import *
 # Whhether to thin dataset; definitely thin it if you're running this example on your laptop!
 thin = False
 
-l = file('walker_01.dat').read().splitlines()[8:-1]
+l = open('walker_01.dat').read().splitlines()[8:-1]
 a = array([fromstring(line,sep='\t') for line in l])
 if thin:
     a=a[::5]
