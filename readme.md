@@ -21,14 +21,14 @@ Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-de
  * Simple extensibility
 
 ## Getting started
- * [PyMC 3 Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc/examples/tutorial.ipynb)
- * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/2.3/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py)
- * [Global Health Metrics & Evaluation model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc/examples/GHME%202013.ipynb) case study for GHME 2013
- * [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc/examples/stochastic_volatility.ipynb)
+ * [PyMC 3 Tutorial](http://nbviewer.ipython.org/github/pymc-devs/pymc/blob/master/pymc3/examples/tutorial.ipynb)
+ * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/2.3/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc/blob/master/pymc3/examples/disaster_model.py)
+ * [Global Health Metrics & Evaluation model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc3/examples/GHME%202013.ipynb) case study for GHME 2013
+ * [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc3/examples/stochastic_volatility.ipynb)
  * [Several blog posts on linear regression](http://twiecki.github.io/tag/bayesian-statistics.html)
  * [Talk at PyData NYC 2013 on PyMC3](http://twiecki.github.io/blog/2013/12/12/bayesian-data-analysis-pymc3/)
  * [PyMC3 port of the models presented in the book "Doing Bayesian Data Analysis" by John Kruschke](https://github.com/aloctavodia/Doing_bayesian_data_analysis)
- * [The PyMC examples folder](https://github.com/pymc-devs/pymc/tree/master/pymc/examples)
+ * [The PyMC examples folder](https://github.com/pymc-devs/pymc/tree/master/pymc3/examples)
 
 ## Installation
 
