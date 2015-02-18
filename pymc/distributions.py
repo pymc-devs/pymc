@@ -2976,6 +2976,8 @@ def valuewrapper(f, arguments=None):
     """
     def wrapper(**kwds):
         value = kwds.pop('value')
+        # Handle Pandas DataFrames
+        value = getattr(value, 'values', value)
         return f(value, **kwds)
 
     if arguments is None:

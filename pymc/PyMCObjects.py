@@ -736,6 +736,8 @@ class Stochastic(StochasticBase):
 
         # Initialize value, either from value provided or from random function.
         try:
+            # Convert Pandas DataFrames and Series to numpy arrays
+            value = getattr(value, 'values', value)
             if dtype.kind != 'O' and value is not None:
                 self._value = np.array(value, dtype=dtype)
                 self._value.flags['W'] = False

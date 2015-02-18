@@ -1,23 +1,15 @@
-#
-# Test that decorators return the appropriate object.
-# David Huard
-# June 21, 2007
-#
-
-#
-# TODO
-# ----
-# Add test for deterministic
-# Check discrete and binary stochastics
-# Test the distribution instantiators.
-#
-
 from numpy.testing import *
 import pymc
 from pymc import Sampler, observed, stochastic, deterministic, \
     Stochastic, Deterministic
-from numpy import array, log, sum, ones, concatenate, inf
+from numpy import array, log, sum, ones, concatenate, inf, ndarray
 from pymc import uniform_like, exponential_like, poisson_like
+
+try:
+    import pandas as pd
+    has_pandas = True
+except ImportError:
+    has_pandas = False
 
 D_array = array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                  3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
@@ -67,14 +59,23 @@ def F(value=D_array * .5,
     """Annual occurences of coal mining disasters."""
     return poisson_like(value[:s], e) + poisson_like(value[s:], l)
 
+class test_pandas_data(TestCase):
 
-@observed
-def G(value=D_array * .5,
-        s=s,
-        e=e,
-        l=l):
-    """Annual occurences of coal mining disasters."""
-    return poisson_like(value[:s], e) + poisson_like(value[s:], l)
+    def test_data(self):
+        
+        if has_pandas:
+            
+            D_array_series = pd.Series(D_array)
+            
+            @observed
+            def G(value=D_array_series * .5,
+                    s=s,
+                    e=e,
+                    l=l):
+                """Annual occurences of coal mining disasters."""
+                return poisson_like(value[:s], e) + poisson_like(value[s:], l)
+                
+            assert(isinstance(G.value, ndarray))
 
 
 class test_instantiation(TestCase):
@@ -86,8 +87,6 @@ class test_instantiation(TestCase):
         assert(E.observed)
         assert(isinstance(F, Stochastic))
         assert(F.observed)
-        assert(isinstance(G, Stochastic))
-        assert(G.observed)
 
     def test_stochastic(self):
         assert(isinstance(l, Stochastic))
