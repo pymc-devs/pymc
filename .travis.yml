@@ -2,7 +2,7 @@ language: python
 
 python:
   - "2.7"
-  - "3.3"
+  - "3.4"
 
 before_install:
   - sudo apt-get install liblapack-dev gfortran python-scipy libblas-dev libsuitesparse-dev swig
@@ -24,9 +24,9 @@ install:
 
 env:
   - TESTCMD="nosetests -vv --with-timer -e test_glm -e test_examples -e test_distributions"
-  - TESTCMD="nosetests -vv --with-timer pymc.tests.test_distributions"
-  - TESTCMD="nosetests -vv --with-timer pymc.tests.test_examples:test_examples0"
-  - TESTCMD="nosetests -vv --with-timer pymc.tests.test_examples:test_examples1"
-  - TESTCMD="nosetests -vv --with-timer pymc.tests.test_examples:test_examples2"
+  - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_distributions"
+  - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_examples:test_examples0"
+  - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_examples:test_examples1"
+  - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_examples:test_examples2"
 
 script: "$TESTCMD"
