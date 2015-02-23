@@ -1,0 +1,7 @@
+site_name: PyMC3
+repo_url: https://github.com/pymc-devs/pymc
+site_author: PyMC devs
+
+pages:
+- ['index.md', 'Overview']
+- ['getting_started.md', 'Tutorial', 'Getting started']
