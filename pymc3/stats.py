@@ -192,7 +192,8 @@ def mc_error(x, batches=5):
         except ValueError:
             # If batches do not divide evenly, trim excess samples
             resid = len(x) % batches
-            batched_traces = np.resize(x[:-resid], (batches, len(x)/batches))
+            new_shape = (batches, (len(x) - resid) / batches)
+            batched_traces = np.resize(x[:-resid], new_shape)
 
         means = np.mean(batched_traces, 1)
 
