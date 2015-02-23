@@ -15,18 +15,22 @@ __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
            'Pareto', 'InverseGamma']
 
-def get_tau(tau=None, sd=None):
+def get_tau_sd(tau=None, sd=None):
     if tau is None:
         if sd is None:
-            return 1.
+            sd = 1.
+            tau = 1.
         else:
-            return sd ** -2
+            tau = sd ** -2
 
     else:
         if sd is not None:
             raise ValueError("Can't pass both tau and sd")
         else:
-            return tau
+            sd = tau ** -.5
+
+    return (tau, sd)
+
 
 class Uniform(Continuous):
     """
@@ -99,16 +103,19 @@ class Normal(Continuous):
     def __init__(self, mu=0.0, tau=None, sd=None, *args, **kwargs):
         super(Normal, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
-        self.tau = get_tau(tau=tau, sd=sd)
+        self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.variance = 1. / self.tau
 
     def logp(self, value):
         tau = self.tau
+        sd = self.sd
         mu = self.mu
 
         return bound(
             (-tau * (value - mu) ** 2 + log(tau / pi / 2.)) / 2.,
-            tau > 0)
+            tau > 0,
+            sd > 0
+        )
 
 
 class HalfNormal(Continuous):
@@ -122,20 +129,25 @@ class HalfNormal(Continuous):
     :Parameters:
       - `x` : :math:`x \ge 0`
       - `tau` : tau > 0
+      - `sd` : sd > 0 (alternative parameterization)
 
     """
     def __init__(self, tau=None, sd=None, *args, **kwargs):
         super(HalfNormal, self).__init__(*args, **kwargs)
-        self.tau = get_tau(tau=tau, sd=sd)
+        self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.mean = sqrt(2 / (pi * self.tau))
         self.variance = (1. - 2/pi) / self.tau
 
     def logp(self, value):
         tau = self.tau
+        sd = self.sd
 
         return bound(
             -0.5 * tau * value**2 + 0.5 * log(tau * 2. / pi),
-            tau > 0)
+            tau > 0,
+            sd > 0,
+            value >= 0
+        )
 
 
 class Wald(Continuous):
