@@ -1,13 +1,13 @@
 # PyMC 3
 [![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/pymc-devs/pymc?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-[![Build Status](https://travis-ci.org/pymc-devs/pymc.png?branch=master)](https://travis-ci.org/pymc-devs/pymc)
+[![Build Status](https://travis-ci.org/pymc-devs/pymc3.png?branch=master)](https://travis-ci.org/pymc-devs/pymc3)
 
 PyMC is a python module for Bayesian statistical modeling and model fitting which focuses on advanced Markov chain Monte Carlo fitting algorithms. Its flexibility and extensibility make it applicable to a large suite of problems.
 
 Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc/examples/tutorial.ipynb)!
 
-***PyMC 3 is alpha software*** and is not ready for use in production. We encourage most new users to use the current release version in the [PyMC 2.3 branch](https://github.com/pymc-devs/pymc/tree/2.3). Release versions are also available on [PyPI](https://pypi.python.org/pypi/pymc) and [Binstar](https://binstar.org/pymc/pymc).
+***PyMC 3 is alpha software*** and is not ready for use in production. We encourage most new users to use the current release version in the [PyMC 2 repository](https://github.com/pymc-devs/pymc). Release versions are also available on [PyPI](https://pypi.python.org/pypi/pymc) and [Binstar](https://binstar.org/pymc/pymc).
 
 ## Features
 
@@ -21,21 +21,21 @@ Check out the [Tutorial](http://nbviewer.ipython.org/urls/raw.github.com/pymc-de
  * Simple extensibility
 
 ## Getting started
- * [PyMC 3 Tutorial](http://nbviewer.ipython.org/github/pymc-devs/pymc/blob/master/pymc3/examples/tutorial.ipynb)
- * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/2.3/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc/blob/master/pymc3/examples/disaster_model.py)
- * [Global Health Metrics & Evaluation model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc3/examples/GHME%202013.ipynb) case study for GHME 2013
- * [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc3/examples/stochastic_volatility.ipynb)
+ * [PyMC 3 Tutorial](http://nbviewer.ipython.org/github/pymc-devs/pymc3/blob/master/pymc3/examples/tutorial.ipynb)
+ * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py)
+ * [Global Health Metrics & Evaluation model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/GHME%202013.ipynb) case study for GHME 2013
+ * [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/stochastic_volatility.ipynb)
  * [Several blog posts on linear regression](http://twiecki.github.io/tag/bayesian-statistics.html)
  * [Talk at PyData NYC 2013 on PyMC3](http://twiecki.github.io/blog/2013/12/12/bayesian-data-analysis-pymc3/)
  * [PyMC3 port of the models presented in the book "Doing Bayesian Data Analysis" by John Kruschke](https://github.com/aloctavodia/Doing_bayesian_data_analysis)
- * [The PyMC examples folder](https://github.com/pymc-devs/pymc/tree/master/pymc3/examples)
+ * [The PyMC examples folder](https://github.com/pymc-devs/pymc3/tree/master/pymc3/examples)
 
 ## Installation
 
 The latest version of PyMC 3 can be installed from the master branch using pip:
 
 ```
-pip install --process-dependency-links git+https://github.com/pymc-devs/pymc
+pip install --process-dependency-links git+https://github.com/pymc-devs/pymc3
 ```
 
 The `--process-dependency-links` flag ensures that the developmental branch of Theano, which PyMC requires, is installed. If a recent developmental version of Theano has been installed with another method, this flag can be dropped.
@@ -69,4 +69,4 @@ pip install git+https://github.com/njsmith/scikits-sparse.git
 
 
 ## License
-[Apache License, Version 2.0](https://github.com/pymc-devs/pymc/blob/master/LICENSE)
+[Apache License, Version 2.0](https://github.com/pymc-devs/pymc3/blob/master/LICENSE)
