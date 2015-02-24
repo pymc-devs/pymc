@@ -147,9 +147,6 @@ def glm(*args, **kwargs):
     data = args[1]
     y_data = np.asarray(patsy.dmatrices(formula, data)[0]).T
 
-    # Create GLM
-    kwargs['family'] = family.create_statsmodel_family()
-
     y_est, coeffs = linear_component(*args, **kwargs)
     family.create_likelihood(y_est, y_data)
 

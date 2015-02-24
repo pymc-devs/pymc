@@ -2,15 +2,15 @@ import numbers
 from copy import copy
 
 try:
-    from statsmodels.genmod.families.family import (Gaussian, Binomial, Poisson)
+    import statsmodels.genmod.families.family as sm_family
 except ImportError:
-    Gaussian = None
-    Binomial = None
-    Poisson = None
+    GaussianSM = None
+    BinomialSM = None
+    PoissonSM = None
 
 from .links import *
 from ..model import modelcontext
-from ..distributions import Normal, T, Uniform, Bernoulli, Poisson
+import ..distributions as pm_dists
 
 __all__ = ['Normal', 'T', 'Binomial', 'Poisson']
 
@@ -45,7 +45,7 @@ class Family(object):
             if isinstance(val, numbers.Number):
                 priors[key] = val
             else:
-                priors[key] = model.Var(val[0], val[1])
+                priors[key] = model.Var(key, val)
 
         return priors
 
@@ -80,31 +80,32 @@ class Family(object):
 
 
 class Normal(Family):
-    sm_family = Gaussian
+    sm_family = sm_family.Gaussian
     link = Identity
-    likelihood = Normal
+    likelihood = pm_dists.Normal
     parent = 'mu'
-    priors = {'sd': ('sigma', Uniform.dist(0, 100))}
+    priors = {'sd': pm_dists.HalfCauchy.dist(0, 100)}
 
 
 class T(Family):
-    sm_family = Gaussian
+    sm_family = sm_family.Gaussian
     link = Identity
-    likelihood = T
+    likelihood = pm_dists.T
     parent = 'mu'
-    priors = {'lam': ('sigma', Uniform.dist(0, 100)),
+    priors = {'lam': pm_dists.HalfCauchy.dist(0, 100)),
               'nu': 1}
 
 
 class Binomial(Family):
     link = Logit
-    sm_family = Binomial
-    likelihood = Bernoulli
+    sm_family = sm_family.Binomial
+    likelihood = pm_dists.Bernoulli
     parent = 'p'
 
 
 class Poisson(Family):
     link = Log
-    sm_family = Poisson
-    likelihood = Poisson
-    parent = ''
+    sm_family = sm_family.Poisson
+    likelihood = pm_dists.Poisson
+    parent = 'mu'
+    priors = {'mu': pm_dists.HalfNormal.dist(sd=1)}
