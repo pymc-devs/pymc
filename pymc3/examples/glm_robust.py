@@ -26,9 +26,9 @@ y = np.append(y, [8, 6, 9])
 data_outlier = dict(x=x, y=y)
 
 with Model() as model:
-    family = glm.families.T(link=glm.links.Identity,
-			                priors={'nu': 1.5,
-				                    'lam': ('sigma', Uniform.dist(0, 20))})
+    family = glm.families.T(link=glm.families.identity,
+                            priors={'nu': 1.5,
+                                    'lam': Uniform.dist(0, 20)})
     glm.glm('y ~ x', data_outlier, family=family)
 
 def run(n=2000):
@@ -45,5 +45,3 @@ def run(n=2000):
 
 if __name__ == '__main__':
     run()
-
-
