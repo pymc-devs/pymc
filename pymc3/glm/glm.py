@@ -8,7 +8,6 @@ import pandas as pd
 from collections import defaultdict
 from pandas.tools.plotting import scatter_matrix
 
-from . import links
 from . import families
 
 def linear_component(formula, data, priors=None,
@@ -66,7 +65,7 @@ def linear_component(formula, data, priors=None,
     reg_names = dmatrix.design_info.column_names
 
     if init_vals is None:
-        init_vals = defaultdict(lambda: None)
+        init_vals = {}
 
     # Create individual coefficients
     model = modelcontext(model)
@@ -75,13 +74,15 @@ def linear_component(formula, data, priors=None,
     if reg_names[0] == 'Intercept':
         prior = priors.get('Intercept', intercept_prior)
         coeff = model.Var(reg_names.pop(0), prior)
-        coeff.tag.test_value = init_vals['Intercept']
+        if 'Intercept' in init_vals:
+            coeff.tag.test_value = init_vals['Intercept']
         coeffs.append(coeff)
 
     for reg_name in reg_names:
         prior = priors.get(reg_name, regressor_prior)
         coeff = model.Var(reg_name, prior)
-        coeff.tag.test_value = init_vals[reg_name]
+        if reg_name in init_vals:
+            coeff.tag.test_value = init_vals[reg_name]
         coeffs.append(coeff)
 
     y_est = theano.dot(np.asarray(dmatrix), theano.tensor.stack(*coeffs)).reshape((1, -1))

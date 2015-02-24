@@ -3,12 +3,6 @@ from __future__ import print_function
 import numpy as np
 import sys
 
-try:
-    import statsmodels.api as sm
-except ImportError:
-    print("Example requires statsmodels")
-    sys.exit(0)
-
 from pymc3 import *
 
 # Generate data

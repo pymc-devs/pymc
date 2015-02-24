@@ -3,12 +3,15 @@ from copy import copy
 
 import theano.tensor
 from ..model import modelcontext
-import ..distributions as pm_dists
+from .. import distributions as pm_dists
 
 __all__ = ['Normal', 'T', 'Binomial', 'Poisson']
 
 # Define link functions
-identity = lambda self, x: x
+@staticmethod
+def identity(x):
+    return x
+
 logit = theano.tensor.nnet.sigmoid
 inverse = theano.tensor.inv
 log = theano.tensor.log
@@ -78,7 +81,7 @@ class T(Family):
     link = identity
     likelihood = pm_dists.T
     parent = 'mu'
-    priors = {'lam': pm_dists.HalfCauchy.dist(beta=10)),
+    priors = {'lam': pm_dists.HalfCauchy.dist(beta=10),
               'nu': 1}
 
 
@@ -86,6 +89,7 @@ class Binomial(Family):
     link = logit
     likelihood = pm_dists.Bernoulli
     parent = 'p'
+    priors = {'p': pm_dists.Beta.dist(alpha=1, beta=1)}
 
 
 class Poisson(Family):
