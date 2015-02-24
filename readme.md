@@ -50,7 +50,7 @@ PyMC is tested on Python 2.7 and 3.3 and depends on Theano, NumPy, SciPy, and Ma
 
 ### Optional
 
-The GLM submodule relies on Pandas, Patsy, Statsmodels.
+The GLM submodule relies on Pandas and Patsy.
 
 [`scikits.sparse`](https://github.com/njsmith/scikits-sparse) enables sparse scaling matrices which are useful for large problems. Installation on Ubuntu is easy:
 

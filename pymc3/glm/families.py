@@ -1,24 +1,23 @@
 import numbers
 from copy import copy
 
-try:
-    import statsmodels.genmod.families.family as sm_family
-except ImportError:
-    GaussianSM = None
-    BinomialSM = None
-    PoissonSM = None
-
-from .links import *
+import theano.tensor
 from ..model import modelcontext
 import ..distributions as pm_dists
 
 __all__ = ['Normal', 'T', 'Binomial', 'Poisson']
 
+# Define link functions
+identity = lambda self, x: x
+logit = theano.tensor.nnet.sigmoid
+inverse = theano.tensor.inv
+log = theano.tensor.log
+
 class Family(object):
     """Base class for Family of likelihood distribution and link functions.
     """
     priors = {}
-    link = Identity
+    link = identity
 
     def __init__(self, **kwargs):
         # Overwrite defaults
@@ -28,9 +27,6 @@ class Family(object):
                 self.priors.update(val)
             else:
                 setattr(self, key, val)
-
-        # Instantiate link function
-        self.link_func = self.link()
 
     def _get_priors(self, model=None):
         """Return prior distributions of the likelihood.
@@ -61,16 +57,8 @@ class Family(object):
         """
         priors = self._get_priors(model=model)
         # Wrap y_est in link function
-        priors[self.parent] = self.link_func.theano(y_est)
+        priors[self.parent] = self.link(y_est)
         return self.likelihood('y', observed=y_data, **priors)
-
-    def create_statsmodel_family(self):
-        """Instantiate and return statsmodel family object.
-        """
-        if self.sm_family is None:
-            return None
-        else:
-            return self.sm_family(self.link.sm)
 
     def __repr__(self):
         return """Family {klass}:
@@ -80,32 +68,28 @@ class Family(object):
 
 
 class Normal(Family):
-    sm_family = sm_family.Gaussian
-    link = Identity
+    link = identity
     likelihood = pm_dists.Normal
     parent = 'mu'
-    priors = {'sd': pm_dists.HalfCauchy.dist(0, 100)}
+    priors = {'sd': pm_dists.HalfCauchy.dist(beta=10)}
 
 
 class T(Family):
-    sm_family = sm_family.Gaussian
-    link = Identity
+    link = identity
     likelihood = pm_dists.T
     parent = 'mu'
-    priors = {'lam': pm_dists.HalfCauchy.dist(0, 100)),
+    priors = {'lam': pm_dists.HalfCauchy.dist(beta=10)),
               'nu': 1}
 
 
 class Binomial(Family):
-    link = Logit
-    sm_family = sm_family.Binomial
+    link = logit
     likelihood = pm_dists.Bernoulli
     parent = 'p'
 
 
 class Poisson(Family):
-    link = Log
-    sm_family = sm_family.Poisson
+    link = log
     likelihood = pm_dists.Poisson
     parent = 'mu'
-    priors = {'mu': pm_dists.HalfNormal.dist(sd=1)}
+    priors = {'mu': pm_dists.HalfCauchy.dist(beta=10)}
