@@ -8,10 +8,13 @@ from .. import distributions as pm_dists
 __all__ = ['Normal', 'T', 'Binomial', 'Poisson']
 
 # Define link functions
-@staticmethod
-def identity(x):
-    return x
 
+# Hack as assigning a function in the class definition automatically binds it as a method.
+class Identity():
+    def __call__(self, x):
+        return x
+
+identity = Identity()
 logit = theano.tensor.nnet.sigmoid
 inverse = theano.tensor.inv
 log = theano.tensor.log
@@ -20,7 +23,7 @@ class Family(object):
     """Base class for Family of likelihood distribution and link functions.
     """
     priors = {}
-    link = identity
+    link = None
 
     def __init__(self, **kwargs):
         # Overwrite defaults
@@ -70,13 +73,6 @@ class Family(object):
     Link function: {link}.""".format(klass=self.__class__, likelihood=self.likelihood.__name__, parent=self.parent, priors=self.priors, link=self.link)
 
 
-class Normal(Family):
-    link = identity
-    likelihood = pm_dists.Normal
-    parent = 'mu'
-    priors = {'sd': pm_dists.HalfCauchy.dist(beta=10)}
-
-
 class T(Family):
     link = identity
     likelihood = pm_dists.T
@@ -84,6 +80,11 @@ class T(Family):
     priors = {'lam': pm_dists.HalfCauchy.dist(beta=10),
               'nu': 1}
 
+class Normal(Family):
+    link = identity
+    likelihood = pm_dists.Normal
+    parent = 'mu'
+    priors = {'sd': pm_dists.HalfCauchy.dist(beta=10)}
 
 class Binomial(Family):
     link = logit

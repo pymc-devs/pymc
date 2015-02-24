@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import numpy as np
 import sys
 
@@ -20,7 +18,7 @@ y = np.append(y, [8, 6, 9])
 data_outlier = dict(x=x, y=y)
 
 with Model() as model:
-    family = glm.families.T(link=glm.families.identity,
+    family = glm.families.T(#link=glm.families.identity,
                             priors={'nu': 1.5,
                                     'lam': Uniform.dist(0, 20)})
     glm.glm('y ~ x', data_outlier, family=family)

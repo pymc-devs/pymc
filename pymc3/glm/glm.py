@@ -124,7 +124,7 @@ def glm(*args, **kwargs):
     # Logistic regression
     vars = glm('male ~ height + weight',
                data,
-               family=glm.families.Binomial(link=glm.links.Logit))
+               family=glm.families.Binomial(link=glm.families.logit))
     """
 
     model = modelcontext(kwargs.get('model'))
