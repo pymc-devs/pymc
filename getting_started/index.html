@@ -71,6 +71,27 @@
                     </li>
                 
                 
+                
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Examples <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            <li >
+                                <a href="../BEST">BEST</a>
+                            </li>
+                        
+                            <li >
+                                <a href="../stochastic_volatility">Stochastic Volatility</a>
+                            </li>
+                        
+                            <li >
+                                <a href="../hierarchical">Hierarchical</a>
+                            </li>
+                        
+                        </ul>
+                    </li>
+                
+                
                 </ul>
             
 
@@ -84,8 +105,8 @@
                         <i class="fa fa-arrow-left"></i> Previous
                     </a>
                 </li>
-                <li class="disabled">
-                    <a rel="prev" >
+                <li >
+                    <a rel="prev" href="../BEST">
                         Next <i class="fa fa-arrow-right"></i>
                     </a>
                 </li>
@@ -139,30 +160,11 @@
 <h1 id="probabilistic-programming-in-python-using-pymc">Probabilistic Programming in Python using PyMC</h1>
 <p>Authors: Thomas V. Wiecki, John Salvatier, Christopher Fonnesbeck</p>
 <h2 id="abstract">Abstract</h2>
-<p>Probabilistic Programming (PP) allows flexible specification of statistical
-Bayesian models in code. PyMC3 is a new, open-source PP framework that features
-next generation Markov chain Monte Carlo (MCMC) sampling algorithms such as
-Hamiltonian Monte Carlo (HMC). In contrast to most other PP frameworks, PyMC3
-allows model specification in Python using intuitive syntax. The software itself
-is written in pure Python which makes it very extensible. The model
-specification is transparently transcoded via Theano to C and compiled to
-machine code for maximum speed. Theano also natively supports automatic
-differentation for computing the gradient required for HMC. In addition, PyMC3
-supports parallel sampling natively and allows saving traces to various backends
-including sqlite. Special syntax for describing general linear models allow for
-specification of hierarchical multifactor models into oneliners.</p>
+<p>Probabilistic Programming (PP) allows flexible specification of statistical Bayesian models in code. PyMC3 is a new, open-source PP framework that features next generation Markov chain Monte Carlo (MCMC) sampling algorithms such as Hamiltonian Monte Carlo (HMC). In contrast to most other PP frameworks, PyMC3 allows model specification in Python using intuitive syntax. The software itself is written in pure Python which makes it very extensible. The model specification is transparently transcoded via Theano to C and compiled to machine code for maximum speed. Theano also natively supports automatic differentation for computing the gradient required for HMC. In addition, PyMC3 supports parallel sampling natively and allows saving traces to various backends including sqlite. Special syntax for describing general linear models allow for specification of hierarchical multifactor models into oneliners.</p>
 <h2 id="installation">Installation</h2>
-<p>As PyMC3 is written in pure Python, installation is thus greatly simplified over
-PyMC2 which required compilation of Fortran code. PyMC3 has the following
-dependencies: <code>Theano</code>, <code>NumPy</code>, <code>SciPy</code>, and <code>Matplotlib</code>; as well as the
-following optional dependencies: <code>Pandas</code>, <code>Patsy</code>, <code>Statsmodels</code>.</p>
-<p>The code is hosted on GitHub at https://github.com/pymc-devs/pymc and is
-distributed under the liberal <a href="https://github.com/pymc-
-devs/pymc/blob/master/LICENSE">Apache License 2.0</a> and contributions are encouraged.</p>
-<p>A complete Python installation can most easily be obtained by installing the
-free <a href="https://store.continuum.io/cshop/anaconda/"><code>Anaconda Python
-Distribution</code></a> by ContinuumIO. After
-successfull installation, <code>PyMC3</code> can be installed using <code>pip</code>:</p>
+<p>As PyMC3 is written in pure Python, installation is thus greatly simplified over PyMC2 which required compilation of Fortran code. PyMC3 has the following dependencies: <code>Theano</code>, <code>NumPy</code>, <code>SciPy</code>, and <code>Matplotlib</code>; as well as the following optional dependencies: <code>Pandas</code>, <code>Patsy</code>, <code>Statsmodels</code>.</p>
+<p>The code is hosted on GitHub at https://github.com/pymc-devs/pymc and is distributed under the liberal <a href="https://github.com/pymc-devs/pymc/blob/master/LICENSE">Apache License 2.0</a> and contributions are encouraged.</p>
+<p>A complete Python installation can most easily be obtained by installing the free <a href="https://store.continuum.io/cshop/anaconda/"><code>Anaconda Python Distribution</code></a> by ContinuumIO. After successfull installation, <code>PyMC3</code> can be installed using <code>pip</code>:</p>
 <pre><code>pip install git+https://github.com/pymc-devs/pymc
 </code></pre>
 
@@ -172,10 +174,7 @@ $$ \alpha \sim \mathcal{N}(0, 1) $$
 $$ \beta \sim \mathcal{N}(0, 1) $$
 $$ \sigma \sim \lvert\mathcal{N}(0, 1) {\rvert}$$
 $$ Y  \sim \mathcal{N}(\alpha + X \beta, \epsilon) $$</p>
-<p>where $X$ is a vector of predictors, and $Y$ is a vector outcome variable;
-$\alpha$ the intercept, and $\beta$ the slope regression coefficients which
-follow a standard normal distribution. $\sigma$ represents the error term and is
-modeled as the absolute of a Normal distribution (so-called <em>HalfNormal</em>).</p>
+<p>where $X$ is a vector of predictors, and $Y$ is a vector outcome variable; $\alpha$ the intercept, and $\beta$ the slope regression coefficients which follow a standard normal distribution. $\sigma$ represents the error term and is modeled as the absolute of a Normal distribution (so-called <em>HalfNormal</em>).</p>
 <p>The data might look as follows:</p>
 <pre><code>def print_public(module):
     import pprint
@@ -209,10 +208,7 @@ with pm.Model() as model_linear:
     sigma = pm.HalfNormal('sigma', sd=1)
     Y_obs = pm.Normal('Y_obs', mu=alpha + beta * X, sd=sigma, observed=Y)
 </code></pre>
-<p>As you can see, with a few minor modifications, specification of this model in
-Python code using <code>PyMC3</code> closely follows the statistical model printed above.
-<code>PyMC3</code> comes with most commonly used discrete and continuous probability
-distributions:</p>
+<p>As you can see, with a few minor modifications, specification of this model in Python code using <code>PyMC3</code> closely follows the statistical model printed above. <code>PyMC3</code> comes with most commonly used discrete and continuous probability distributions:</p>
 <pre><code>print_public(pm.distributions)
 
 ['Bernoulli',
@@ -265,8 +261,7 @@ distributions:</p>
  'transform',
  'transforms']
 </code></pre>
-<p>The first argument is the name of the random variable (RV). Following arguments
-specify the priors of the distribution which are described in the doc string:</p>
+<p>The first argument is the name of the random variable (RV). Following arguments specify the priors of the distribution which are described in the doc string:</p>
 <pre><code>help(pm.Normal)
 
 Help on class Normal in module pymc.distributions.continuous:
@@ -335,21 +330,14 @@ ight\}
 <pre><code class="python">    Y_obs = pm.Normal('Y_obs', mu=alpha + beta * X, sd=eps, observed=Y)
 </code></pre>
 
-<p>This argument expects a <code>numpy.ndarray</code> object or a <code>pandas.DataFrame</code> and turns
-Y_obs into a likelihood function.</p>
-<p>Also note that this command executes very fast. That's because no computation
-has taken place yet (more on this below).</p>
+<p>This argument expects a <code>numpy.ndarray</code> object or a <code>pandas.DataFrame</code> and turns Y_obs into a likelihood function.</p>
+<p>Also note that this command executes very fast. That's because no computation has taken place yet (more on this below).</p>
 <p>Finally, let's take a look at this line:</p>
 <pre><code class="python">with pm.Model() as model:
 </code></pre>
 
-<p>First, the <code>with</code> statement instantiates a new <code>pm.Model()</code> object and binds it
-to <code>model</code>. Moreover, the <code>with</code> statement puts this <code>model</code> object in a context
-variable where it is access from inside upon instantiation of the RVs which
-register themselves to <code>model</code>.</p>
-<p><code>Theano</code> has advanced matrix notation capabilities that enable <code>PyMC3</code> to handle
-multivariate statistics, including advanced indexing and slicing. Using matrix
-algebra, the above model can succinctly be rewritten as:</p>
+<p>First, the <code>with</code> statement instantiates a new <code>pm.Model()</code> object and binds it to <code>model</code>. Moreover, the <code>with</code> statement puts this <code>model</code> object in a context variable where it is access from inside upon instantiation of the RVs which register themselves to <code>model</code>.</p>
+<p><code>Theano</code> has advanced matrix notation capabilities that enable <code>PyMC3</code> to handle multivariate statistics, including advanced indexing and slicing. Using matrix algebra, the above model can succinctly be rewritten as:</p>
 <pre><code>import theano.tensor as T
 
 # Turn X into a 2-D array with a column of 1s for the intercept
@@ -360,13 +348,8 @@ with pm.Model() as model_matrix:
     sigma = pm.HalfNormal('sigma', sd=1)
     Y_obs = pm.Normal('Y_obs', T.dot(theta.T, X_1), sd=sigma, observed=Y)
 </code></pre>
-<p>The <code>shape</code> kwarg turns theta into random vector with 2 elements, both of which
-are distributed according to the standard normal distribution.</p>
-<p>To perform the reduction in the <code>Y_obs</code> instantiaion we use the <code>theano</code> <code>dot()</code>
-function to compute the dot product. At this point it is worth noting that RVs
-in <code>PyMC3</code> behave like <code>theano</code> expressions which makes them very versatile. For
-example, using <code>theano</code>'s sigmoid function from the neural net (<code>nnet</code>)
-submodule we can easily turn this linear regression into a logistic regression:</p>
+<p>The <code>shape</code> kwarg turns theta into random vector with 2 elements, both of which are distributed according to the standard normal distribution.</p>
+<p>To perform the reduction in the <code>Y_obs</code> instantiaion we use the <code>theano</code> <code>dot()</code> function to compute the dot product. At this point it is worth noting that RVs in <code>PyMC3</code> behave like <code>theano</code> expressions which makes them very versatile. For example, using <code>theano</code>'s sigmoid function from the neural net (<code>nnet</code>) submodule we can easily turn this linear regression into a logistic regression:</p>
 <pre><code># Turn X into a 2-D array with a column of 1s for the intercept
 Y_logistic = Y &gt; np.median(Y) # Binarize Y by splitting at the 50% percentile
 
@@ -376,17 +359,9 @@ with pm.Model() as model_logistic:
     Y_obs = pm.Bernoulli('Y_obs', p=logistic, 
                          observed=Y_logistic)
 </code></pre>
-<p>Further below we describe how more complex GLMs can easily be created in one
-line using the <code>glm</code> submodule of <code>PyMC3</code> but let us first turn our attention to
-inference.</p>
+<p>Further below we describe how more complex GLMs can easily be created in one line using the <code>glm</code> submodule of <code>PyMC3</code> but let us first turn our attention to inference.</p>
 <h3 id="note-on-random-variables-and-probability-distributions">Note on Random Variables and Probability Distributions</h3>
-<p>As a final note on model specification, <code>PyMC3</code> differentiates between RVs and
-probability distributions. A RV is specified by a probability distribution, but
-its also associated to a model and has a specific name -- those are the ones we
-created above. Probability distributions, however, can exist outside of a pymc
-model and don't need names. By default, a call to <code>pm.Normal()</code> as used above
-creates a RV but we can also create just the probability distribution by using
-the <code>.dist</code> classmethod:</p>
+<p>As a final note on model specification, <code>PyMC3</code> differentiates between RVs and probability distributions. A RV is specified by a probability distribution, but its also associated to a model and has a specific name -- those are the ones we created above. Probability distributions, however, can exist outside of a pymc model and don't need names. By default, a call to <code>pm.Normal()</code> as used above creates a RV but we can also create just the probability distribution by using the <code>.dist</code> classmethod:</p>
 <pre><code>normal_dist = pm.Normal.dist(mu=0, sd=1)
 theano_expr = normal_dist.logp(np.array([0, .1]))
 theano_expr
@@ -396,9 +371,7 @@ theano_expr
 
 Elemwise{switch,no_inplace}.0
 </code></pre>
-<p>As you can see, by default the <code>logp</code> method only returns a <code>theano</code> expression
-graph. We have to call <code>.eval()</code> to actually force <code>theano</code> to evaluate the
-expression graph and compute a value:</p>
+<p>As you can see, by default the <code>logp</code> method only returns a <code>theano</code> expression graph. We have to call <code>.eval()</code> to actually force <code>theano</code> to evaluate the expression graph and compute a value:</p>
 <pre><code>theano_expr.eval()
 
 
@@ -407,17 +380,8 @@ expression graph and compute a value:</p>
 array([-0.91893858, -0.92393858])
 </code></pre>
 <h2 id="inference">Inference</h2>
-<p>As mentioned above, the code examples above have not actually performed any
-computation. All what was done was to compute -- behind the scenes -- a <code>theano</code>
-expression graph that allows computation of the summed log probability of the
-model. On demand, we can ask <code>theano</code> to perform algebraic simplifications and
-compile the symbolic computation graph to C-code and then natively using the
-system's <code>gcc</code> compiler. All of this functionality happens transparently and
-does not burden the <code>PyMC3</code> code base.</p>
-<p>A central issue to achieving good convergence is selection of a good starting
-point to initialize the samplers. <code>PyMC3</code> offers optimization routines to
-estimate the maximum aposterior (MAP) which is often a sensible choice as a
-starting value.</p>
+<p>As mentioned above, the code examples above have not actually performed any computation. All what was done was to compute -- behind the scenes -- a <code>theano</code> expression graph that allows computation of the summed log probability of the model. On demand, we can ask <code>theano</code> to perform algebraic simplifications and compile the symbolic computation graph to C-code and then natively using the system's <code>gcc</code> compiler. All of this functionality happens transparently and does not burden the <code>PyMC3</code> code base. </p>
+<p>A central issue to achieving good convergence is selection of a good starting point to initialize the samplers. <code>PyMC3</code> offers optimization routines to estimate the maximum aposterior (MAP) which is often a sensible choice as a starting value.</p>
 <pre><code>with model_matrix:
     start = pm.find_MAP()
 print(start)
@@ -425,29 +389,16 @@ print(start)
 {'theta': array([[ 1.0330429 ],
        [ 0.96214962]]), 'eps': array(1.1214199169216592)}
 </code></pre>
-<p>By default, <code>PyMC3</code> uses BFGS optimization but also allows selection of other
-optimization algorithms from the <code>scipy</code> module:</p>
+<p>By default, <code>PyMC3</code> uses BFGS optimization but also allows selection of other optimization algorithms from the <code>scipy</code> module:</p>
 <pre><code>from scipy import optimize
 with model_matrix:
     start = pm.find_MAP(fmin=optimize.fmin_powell)
 print(start)
 </code></pre>
-<p>To actually run MCMC sampling to generate posterior samples we have instantiate
-a step object that corresponds to a certain kind of MCMC. The
-<code>pymc.step_methods</code> submodule contains the following samplers, as well as
-proposal distributions:</p>
+<p>To actually run MCMC sampling to generate posterior samples we have instantiate a step object that corresponds to a certain kind of MCMC. The <code>pymc.step_methods</code> submodule contains the following samplers, as well as proposal distributions:</p>
 <pre><code>print_public(pm.step_methods)
 </code></pre>
-<p>As you can see, <code>PyMC3</code> supports all samplers that are commonly included in
-other propalistic programming frameworks like <code>BUGS</code> or <code>JAGS</code>, including
-Metropolis Hastings with various proposal distributions and Slice sampling. Of
-special note are the new class of Hamiltonian Monte Carlo samplers like
-<code>HamiltonianMC</code> as well as the auto-tuned version of it -- the No-U-Turn Sampler
-(<code>NUTS</code>). This last sampling algorithm is one of the main selling points of the
-new <code>stan</code> MCMC package (CITE). These Hamiltonian samplers require evaluation of
-the gradient, something that requires differentation of the logp of the model.
-Fortunately, <code>theano</code> already supports gradient computation via automatic
-differentation on the compute graph that <code>PyMC3</code> creates.</p>
+<p>As you can see, <code>PyMC3</code> supports all samplers that are commonly included in other propalistic programming frameworks like <code>BUGS</code> or <code>JAGS</code>, including Metropolis Hastings with various proposal distributions and Slice sampling. Of special note are the new class of Hamiltonian Monte Carlo samplers like <code>HamiltonianMC</code> as well as the auto-tuned version of it -- the No-U-Turn Sampler (<code>NUTS</code>). This last sampling algorithm is one of the main selling points of the new <code>stan</code> MCMC package (CITE). These Hamiltonian samplers require evaluation of the gradient, something that requires differentation of the logp of the model. Fortunately, <code>theano</code> already supports gradient computation via automatic differentation on the compute graph that <code>PyMC3</code> creates.</p>
 <pre><code>with model_matrix:
     step = pm.NUTS(scaling=start) # instantiate sampler
     trace = pm.sample(500, step, start=start) # draw 500 posterior samplers
@@ -457,11 +408,8 @@ differentation on the compute graph that <code>PyMC3</code> creates.</p>
 /home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/scan_module/scan_perform_ext.py:117: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
   from scan_perform.scan_perform import *
 </code></pre>
-<p>As <code>NUTS</code> requires a scaling matrix we can either compute the Hessian using
-<code>pm.find_hessian()</code> or pass in a point from which <code>NUTS</code> will compute a diagonal
-scaling matrix.</p>
-<p>The returned <code>trace</code> object can be queried in a similar way as a <code>dict</code>
-containing a map from RVs to <code>numpy.array</code>s:</p>
+<p>As <code>NUTS</code> requires a scaling matrix we can either compute the Hessian using <code>pm.find_hessian()</code> or pass in a point from which <code>NUTS</code> will compute a diagonal scaling matrix.</p>
+<p>The returned <code>trace</code> object can be queried in a similar way as a <code>dict</code> containing a map from RVs to <code>numpy.array</code>s:</p>
 <pre><code>trace['theta'][-3:]
 
 
@@ -476,18 +424,14 @@ array([[[ 0.8046511 ],
        [[ 0.99479954],
         [ 0.85411475]]])
 </code></pre>
-<p>As mentioned above, we can also run multiple chains in parallel to speed up
-sampling:</p>
+<p>As mentioned above, we can also run multiple chains in parallel to speed up sampling:</p>
 <pre><code>with model_matrix:
     step = pm.NUTS(scaling=start) # instantiate sampler
     trace = pm.sample(500, step, start=start, njobs=4) # draw 500 posterior samplers
 
  [-----------------100%-----------------] 500 of 500 complete in 1.6 sec
 </code></pre>
-<p>Behind the scenes, <code>PyMC3</code> will launch multiple Python processes using the
-<code>multiprocessing</code> module, pickle the model object, distribute it to the workers,
-and gather the samples in a <code>MultiTrace</code> backend. The resulting <code>trace</code> object
-will have four chains associated with it:</p>
+<p>Behind the scenes, <code>PyMC3</code> will launch multiple Python processes using the <code>multiprocessing</code> module, pickle the model object, distribute it to the workers, and gather the samples in a <code>MultiTrace</code> backend. The resulting <code>trace</code> object will have four chains associated with it:</p>
 <pre><code>trace
 
 
@@ -518,19 +462,12 @@ array([[[ 0.77248584],
 </code></pre>
 <p>More details on the backend can be found further below.</p>
 <h2 id="posterior-analysis">Posterior analysis</h2>
-<p><code>PyMC3</code> comes with various statistical and plotting capabilities to examine the
-output. A simple posterior plot can be created using <code>pm.traceplot</code>:</p>
+<p><code>PyMC3</code> comes with various statistical and plotting capabilities to examine the output. A simple posterior plot can be created using <code>pm.traceplot</code>:</p>
 <pre><code>pm.traceplot(trace);
 </code></pre>
 <p><img alt="png" src="../getting_started_files/getting_started_41_0.png" /></p>
-<p>The left column consists of a kernel density estimation (KDE) of the marginal
-posterios of each RV while the right column contains the trace. As we ran four
-chains, each subplot will have 4 differently colored lines, one corresponding to
-each chain. Because <code>theta</code> is a 2-D RV we see two (times four) posteriors in
-the top row. This allows easy visual inspection of all chains converged to the
-same posterior.</p>
-<p>A forest plot allows for a more succint overview of the posteriors as well as
-their Gelman-Rubin $\hat{R}$ score (CITE):</p>
+<p>The left column consists of a kernel density estimation (KDE) of the marginal posterios of each RV while the right column contains the trace. As we ran four chains, each subplot will have 4 differently colored lines, one corresponding to each chain. Because <code>theta</code> is a 2-D RV we see two (times four) posteriors in the top row. This allows easy visual inspection of all chains converged to the same posterior.</p>
+<p>A forest plot allows for a more succint overview of the posteriors as well as their Gelman-Rubin $\hat{R}$ score (CITE):</p>
 <pre><code>pm.forestplot(trace)
 
 
@@ -539,8 +476,7 @@ their Gelman-Rubin $\hat{R}$ score (CITE):</p>
 &lt;matplotlib.gridspec.GridSpec at 0x7f0a99c12c90&gt;
 </code></pre>
 <p><img alt="png" src="../getting_started_files/getting_started_44_1.png" /></p>
-<p>In addition, <code>pm.stats.summary()</code> provides a text-based output of common
-posterior statistics:</p>
+<p>In addition, <code>pm.stats.summary()</code> provides a text-based output of common posterior statistics:</p>
 <pre><code>pm.stats.summary(trace)
 
 
@@ -576,17 +512,14 @@ eps:
   0.863          0.942          0.988          1.039          1.155
 </code></pre>
 <p>Here the 2-D RV is split into its individual components.</p>
-<p>As you can see, <code>PyMC3</code> handles multiple chains as well as multivariate
-statistics natively.</p>
+<p>As you can see, <code>PyMC3</code> handles multiple chains as well as multivariate statistics natively.</p>
 <h2 id="backends">Backends</h2>
-<p><code>PyMC3</code> has support for a small but growing number of backends to store traces
-in. These can be found in <code>pymc.backends</code>:</p>
+<p><code>PyMC3</code> has support for a small but growing number of backends to store traces in. These can be found in <code>pymc.backends</code>:</p>
 <pre><code>print_public(pm.backends)
 
 ['NDArray', 'SQLite', 'Text', 'base', 'ndarray', 'sqlite', 'text']
 </code></pre>
-<p>By default, an in-memory <code>ndarray</code> is used but if the samples would get too
-large to be held in memory we could use the <code>sqlite</code> backend:</p>
+<p>By default, an in-memory <code>ndarray</code> is used but if the samples would get too large to be held in memory we could use the <code>sqlite</code> backend:</p>
 <pre><code>with model_matrix:
     backend = pm.backends.SQLite('trace.sqlite')
     trace = pm.sample(500, step, start=start, trace=backend)
@@ -604,17 +537,11 @@ trace_loaded
 
 &lt;MultiTrace: 1 chains, 1000 iterations, 2 variables&gt;
 </code></pre>
-<p>More information about <code>backends</code> can be found in the docstring of
-<code>pymc.backends</code>.</p>
+<p>More information about <code>backends</code> can be found in the docstring of <code>pymc.backends</code>.</p>
 <h2 id="defining-arbitrary-stochastic-distributions">Defining arbitrary stochastic distributions</h2>
 <p><code>PyMC3</code> supports two methods to define new distributions:</p>
 <h3 id="1-defining-a-distribution-as-a-theano-expression">1. Defining a distribution as a theano expression</h3>
-<p>By using <code>pymc.DensityDist</code> you can define new log probability functions that
-can be used like any other RV. The following is an example inspired by a blog
-post by Jake Vanderplas on which priors to use for a linear regression.
-(https://jakevdp.github.io/blog/2014/06/14/frequentism-and-bayesianism-4
--bayesian-in-python/). For more detail on the derivation of these priors we
-refer to the blog post. The code to use these custom priors is as follows:</p>
+<p>By using <code>pymc.DensityDist</code> you can define new log probability functions that can be used like any other RV. The following is an example inspired by a blog post by Jake Vanderplas on which priors to use for a linear regression. (https://jakevdp.github.io/blog/2014/06/14/frequentism-and-bayesianism-4-bayesian-in-python/). For more detail on the derivation of these priors we refer to the blog post. The code to use these custom priors is as follows:</p>
 <pre><code>import theano.tensor as T
 
 with pm.Model() as model:
@@ -625,46 +552,20 @@ with pm.Model() as model:
     # Create likelihood
     like = pm.Normal('y_est', mu=alpha + beta * X, sd=eps, observed=Y)
 </code></pre>
-<p>As you can see, <code>DensityDist</code> takes a function (here we are using an anonymous
-<code>lambda</code> function) that takes the parameter value as input and returns the log
-probability for that setting.</p>
+<p>As you can see, <code>DensityDist</code> takes a function (here we are using an anonymous <code>lambda</code> function) that takes the parameter value as input and returns the log probability for that setting.</p>
 <h3 id="2-defining-a-distribution-as-a-blackbox-function">2. Defining a distribution as a blackbox function</h3>
-<p>Above we used <code>theano</code> to define the math of the probability function. However,
-often it might not be possible to write a probability distributions as a
-<code>theano</code> expression. This is the case in many scientific fields including
-psychology and astrophysics where the likelihood functions are often a model of
-the process in question and has a complex form that might require numerical
-approximation. As the rest of <code>PyMC3</code> still expects a <code>theano</code> expression we
-have to wrap a function as a blackbox <code>theano</code> expression. This is possible with
-the <code>as_op</code> decorator. As a simple example we can reformulate the above
-distribution for <code>beta</code> to only use <code>numpy</code> internally.</p>
+<p>Above we used <code>theano</code> to define the math of the probability function. However, often it might not be possible to write a probability distributions as a <code>theano</code> expression. This is the case in many scientific fields including psychology and astrophysics where the likelihood functions are often a model of the process in question and has a complex form that might require numerical approximation. As the rest of <code>PyMC3</code> still expects a <code>theano</code> expression we have to wrap a function as a blackbox <code>theano</code> expression. This is possible with the <code>as_op</code> decorator. As a simple example we can reformulate the above distribution for <code>beta</code> to only use <code>numpy</code> internally. </p>
 <pre><code>import theano
 
 @theano.compile.ops.as_op(itypes=[T.dscalar], otypes=[T.dscalar])
 def beta_prior(value):
     return -1.5 * np.log(1 + value**2)
 </code></pre>
-<p>As can be seen, the decorator requires definition of the input and output types.
-For an overview of the available types, see
-http://deeplearning.net/software/theano/library/tensor/basic.html#all-fully-
-typed-constructors.</p>
-<p><strong>Note</strong>: Because this function is now a blackbox function it is not possible
-for <code>theano</code> to inspect it and compute the gradient required for the Hamiltonian
-samplers. It is thus not possible to use the <code>HMC</code> or <code>NUTS</code> samplers for a
-model that uses such a distribution and you have to use e.g. <code>Metropolis</code> or
-<code>Slice</code> sampling.</p>
-<p>For a more elaborate example of the usage of <code>as_op</code> we refer to the coal mining
-disaster model: https://github.com/pymc-
-devs/pymc/blob/master/pymc/examples/disaster_model_arbitrary_deterministic.py.</p>
+<p>As can be seen, the decorator requires definition of the input and output types. For an overview of the available types, see http://deeplearning.net/software/theano/library/tensor/basic.html#all-fully-typed-constructors.</p>
+<p><strong>Note</strong>: Because this function is now a blackbox function it is not possible for <code>theano</code> to inspect it and compute the gradient required for the Hamiltonian samplers. It is thus not possible to use the <code>HMC</code> or <code>NUTS</code> samplers for a model that uses such a distribution and you have to use e.g. <code>Metropolis</code> or <code>Slice</code> sampling.</p>
+<p>For a more elaborate example of the usage of <code>as_op</code> we refer to the coal mining disaster model: https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model_arbitrary_deterministic.py.</p>
 <h2 id="parameter-transformations">Parameter Transformations</h2>
-<p>To ease the sampling process it is often advisable to transform certain
-variables. For example, scale parameters can only be positive and thus have a
-sharp edge at 0 in their posterior probability. This often creates problems for
-samples, especially those that require the gradient because of non-
-differentiable areas in the posterior. Parameter transformation can remedy this
-problem. For example, log-transforming a scale variable allows us to sample
-across the whole parameter space. <code>PyMC3</code> supports transformations by calling
-the <code>model.TransformedVar</code> method:</p>
+<p>To ease the sampling process it is often advisable to transform certain variables. For example, scale parameters can only be positive and thus have a sharp edge at 0 in their posterior probability. This often creates problems for samples, especially those that require the gradient because of non-differentiable areas in the posterior. Parameter transformation can remedy this problem. For example, log-transforming a scale variable allows us to sample across the whole parameter space. <code>PyMC3</code> supports transformations by calling the <code>model.TransformedVar</code> method:</p>
 <pre><code>with pm.Model() as model_linear:
     alpha = pm.Normal('alpha', mu=0, sd=1)
     beta = pm.Normal('beta', mu=0, sd=1)
@@ -675,17 +576,9 @@ the <code>model.TransformedVar</code> method:</p>
 
     Y_obs = pm.Normal('Y_obs', mu=alpha + beta * X, sd=sigma, observed=Y)
 </code></pre>
-<p>Of special note is that <code>TransformedVar</code> returns two distributions: one variable
-in the transformed space and one in the normal space. The one in the transformed
-space (here log(sigma)) is the one over which sampling will occur, and the one
-in the normal space is the one to use throughout the rest of the model.</p>
+<p>Of special note is that <code>TransformedVar</code> returns two distributions: one variable in the transformed space and one in the normal space. The one in the transformed space (here log(sigma)) is the one over which sampling will occur, and the one in the normal space is the one to use throughout the rest of the model.</p>
 <h2 id="deterministic">Deterministic</h2>
-<p>Above you have already seen that RVs in <code>PyMC3</code> can be easily combined and
-transformed (see the logistic regression example above). These transformations
-are called <em>deterministic</em>. However, note that in the above example we do not
-retain the samples of our transformed values (i.e. the <code>d</code>).  Using the
-<code>Deterministic</code> class we can explicitly add these deterministic variables to the
-trace.</p></div>
+<p>Above you have already seen that RVs in <code>PyMC3</code> can be easily combined and transformed (see the logistic regression example above). These transformations are called <em>deterministic</em>. However, note that in the above example we do not retain the samples of our transformed values (i.e. the <code>d</code>).  Using the <code>Deterministic</code> class we can explicitly add these deterministic variables to the trace.</p></div>
             
         </div>
 

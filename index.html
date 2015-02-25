@@ -71,6 +71,27 @@
                     </li>
                 
                 
+                
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Examples <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            <li >
+                                <a href="BEST/">BEST</a>
+                            </li>
+                        
+                            <li >
+                                <a href="stochastic_volatility/">Stochastic Volatility</a>
+                            </li>
+                        
+                            <li >
+                                <a href="hierarchical/">Hierarchical</a>
+                            </li>
+                        
+                        </ul>
+                    </li>
+                
+                
                 </ul>
             
 
@@ -132,7 +153,7 @@
 <p><a href="https://gitter.im/pymc-devs/pymc?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge&amp;utm_content=badge"><img alt="Gitter" src="https://badges.gitter.im/Join" title="Chat.svg" /></a></p>
 <p><a href="https://travis-ci.org/pymc-devs/pymc3"><img alt="Build Status" src="https://travis-ci.org/pymc-devs/pymc3.png?branch=master" /></a></p>
 <p>PyMC is a python module for Bayesian statistical modeling and model fitting which focuses on advanced Markov chain Monte Carlo fitting algorithms. Its flexibility and extensibility make it applicable to a large suite of problems.</p>
-<p>Check out the <a href="http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc/master/pymc/examples/tutorial.ipynb">Tutorial</a>!</p>
+<p>Check out the <a href="http://nbviewer.ipython.org/github/pymc-devs/pymc3/blob/master/pymc3/examples/tutorial.ipynb">Tutorial</a>!</p>
 <p><strong><em>PyMC 3 is alpha software</em></strong> and is not ready for use in production. We encourage most new users to use the current release version in the <a href="https://github.com/pymc-devs/pymc">PyMC 2 repository</a>. Release versions are also available on <a href="https://pypi.python.org/pypi/pymc">PyPI</a> and <a href="https://binstar.org/pymc/pymc">Binstar</a>.</p>
 <h2 id="features">Features</h2>
 <ul>
@@ -167,7 +188,7 @@
 <h2 id="dependencies">Dependencies</h2>
 <p>PyMC is tested on Python 2.7 and 3.3 and depends on Theano, NumPy, SciPy, and Matplotlib (see setup.py for version information).</p>
 <h3 id="optional">Optional</h3>
-<p>The GLM submodule relies on Pandas, Patsy, Statsmodels.</p>
+<p>The GLM submodule relies on Pandas and Patsy.</p>
 <p><a href="https://github.com/njsmith/scikits-sparse"><code>scikits.sparse</code></a> enables sparse scaling matrices which are useful for large problems. Installation on Ubuntu is easy:</p>
 <pre><code>sudo apt-get install libsuitesparse-dev
 pip install git+https://github.com/njsmith/scikits-sparse.git
