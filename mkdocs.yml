@@ -5,3 +5,6 @@ site_author: PyMC devs
 pages:
 - ['index.md', 'Overview']
 - ['getting_started.md', 'Tutorial', 'Getting started']
+- ['BEST.md', 'Examples', 'BEST']
+- ['stochastic_volatility.md', 'Examples', 'Stochastic Volatility']
+- ['hierarchical.md', 'Examples', 'Hierarchical']
