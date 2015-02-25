@@ -174,11 +174,11 @@
 
 <h2 id="model-specification">Model specification</h2>
 <p>Consider the following linear Bayesian model:
-$$ \alpha \sim \mathcal{N}(0, 1) $$
-$$ \beta \sim \mathcal{N}(0, 1) $$
-$$ \sigma \sim \lvert\mathcal{N}(0, 1) {\rvert}$$
-$$ Y  \sim \mathcal{N}(\alpha + X \beta, \epsilon) $$</p>
-<p>where $X$ is a vector of predictors, and $Y$ is a vector outcome variable; $\alpha$ the intercept, and $\beta$ the slope regression coefficients which follow a standard normal distribution. $\sigma$ represents the error term and is modeled as the absolute of a Normal distribution (so-called <em>HalfNormal</em>).</p>
+<mathjax>$$ \alpha \sim \mathcal{N}(0, 1) $$</mathjax>
+<mathjax>$$ \beta \sim \mathcal{N}(0, 1) $$</mathjax>
+<mathjax>$$ \sigma \sim \lvert\mathcal{N}(0, 1) {\rvert}$$</mathjax>
+<mathjax>$$ Y  \sim \mathcal{N}(\alpha + X \beta, \epsilon) $$</mathjax></p>
+<p>where <mathjax>$X$</mathjax> is a vector of predictors, and <mathjax>$Y$</mathjax> is a vector outcome variable; <mathjax>$\alpha$</mathjax> the intercept, and <mathjax>$\beta$</mathjax> the slope regression coefficients which follow a standard normal distribution. <mathjax>$\sigma$</mathjax> represents the error term and is modeled as the absolute of a Normal distribution (so-called <em>HalfNormal</em>).</p>
 <p>The data might look as follows:</p>
 <pre><code>def print_public(module):
     import pprint
@@ -471,7 +471,7 @@ array([[[ 0.77248584],
 </code></pre>
 <p><img alt="png" src="../getting_started_files/getting_started_41_0.png" /></p>
 <p>The left column consists of a kernel density estimation (KDE) of the marginal posterios of each RV while the right column contains the trace. As we ran four chains, each subplot will have 4 differently colored lines, one corresponding to each chain. Because <code>theta</code> is a 2-D RV we see two (times four) posteriors in the top row. This allows easy visual inspection of all chains converged to the same posterior.</p>
-<p>A forest plot allows for a more succint overview of the posteriors as well as their Gelman-Rubin $\hat{R}$ score (CITE):</p>
+<p>A forest plot allows for a more succint overview of the posteriors as well as their Gelman-Rubin <mathjax>$\hat{R}$</mathjax> score (CITE):</p>
 <pre><code>pm.forestplot(trace)
 
 
@@ -599,6 +599,10 @@ def beta_prior(value):
         <script src="../js/prettify-1.0.min.js"></script>
         <script src="../js/highlight.pack.js"></script>
         <script src="../js/base.js"></script>
-        <script src="../MathJax.js"></script>
+        <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+        <script src="../js/mathjaxhelper.js"></script>
+        <script src="../js/fabric.custom.min.js"></script>
+        <script src="../js/texturecanvas.js"></script>
+        <script src="../js/analytics.js"></script>
     </body>
 </html>

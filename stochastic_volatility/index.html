@@ -162,11 +162,11 @@ from scipy import optimize
 Populating the interactive namespace from numpy and matplotlib
 </code></pre>
 <p>Asset prices have time-varying volatility (variance of day over day <code>returns</code>). In some periods, returns are highly variable, while in others very stable. Stochastic volatility models model this with a latent volatility variable, modeled as a stochastic process. The following model is similar to the one described in the No-U-Turn Sampler paper, Hoffman (2011) p21.</p>
-<p>$$ \sigma \sim Exponential(50) $$</p>
-<p>$$ \nu \sim Exponential(.1) $$</p>
-<p>$$ s_i \sim Normal(s_{i-1}, \sigma^{-2}) $$</p>
-<p>$$ log(\frac{y_i}{y_{i-1}}) \sim t(\nu, 0, exp(-2 s_i)) $$</p>
-<p>Here, $y$ is the daily return series and $s$ is the latent log volatility process.</p>
+<p><mathjax>$$ \sigma \sim Exponential(50) $$</mathjax></p>
+<p><mathjax>$$ \nu \sim Exponential(.1) $$</mathjax></p>
+<p><mathjax>$$ s_i \sim Normal(s_{i-1}, \sigma^{-2}) $$</mathjax></p>
+<p><mathjax>$$ log(\frac{y_i}{y_{i-1}}) \sim t(\nu, 0, exp(-2 s_i)) $$</mathjax></p>
+<p>Here, <mathjax>$y$</mathjax> is the daily return series and <mathjax>$s$</mathjax> is the latent log volatility process.</p>
 <h2 id="build-model">Build Model</h2>
 <p>First we load some daily returns of the S&amp;P 500.</p>
 <pre><code>n = 400
@@ -190,7 +190,7 @@ plt.plot(returns)
 </code></pre>
 <p><img alt="png" src="../stochastic_volatility_files/stochastic_volatility_6_1.png" /></p>
 <p>Specifying the model in pymc3 mirrors its statistical specification. </p>
-<p>However, it is easier to sample the scale of the log volatility process innovations, $\sigma$, on a log scale, so we create it using <code>TransformedVar</code> and use <code>logtransform</code>. <code>TransformedVar</code> creates one variable in the transformed space and one in the normal space. The one in the transformed space (here $\text{log}(\sigma) $) is the one over which sampling will occur, and the one in the normal space is the one to use throughout the rest of the model.</p>
+<p>However, it is easier to sample the scale of the log volatility process innovations, <mathjax>$\sigma$</mathjax>, on a log scale, so we create it using <code>TransformedVar</code> and use <code>logtransform</code>. <code>TransformedVar</code> creates one variable in the transformed space and one in the normal space. The one in the transformed space (here <mathjax>$\text{log}(\sigma) $</mathjax>) is the one over which sampling will occur, and the one in the normal space is the one to use throughout the rest of the model.</p>
 <p>It takes a variable name, a distribution and a transformation to use.</p>
 <pre><code>model = pm.Model()
 with model:
@@ -268,6 +268,10 @@ ylabel('returns')
         <script src="../js/prettify-1.0.min.js"></script>
         <script src="../js/highlight.pack.js"></script>
         <script src="../js/base.js"></script>
-        <script src="../MathJax.js"></script>
+        <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+        <script src="../js/mathjaxhelper.js"></script>
+        <script src="../js/fabric.custom.min.js"></script>
+        <script src="../js/texturecanvas.js"></script>
+        <script src="../js/analytics.js"></script>
     </body>
 </html>
