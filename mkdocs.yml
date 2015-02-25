@@ -9,5 +9,7 @@ pages:
 - ['getting_started.md', 'Tutorial', 'Getting started']
 - ['BEST.md', 'Examples', 'BEST']
 - ['stochastic_volatility.md', 'Examples', 'Stochastic Volatility']
-- ['hierarchical.md', 'Examples', 'Hierarchical']
+- ['hierarchical.md', 'Examples', 'Hierarchical model']
+- ['GLM-blog-linear.md', 'Examples', 'Linear Regression']
+- ['GLM-blog-robust.md', 'Examples', 'Robust Regression']
 - ['glm_hierarchical.md', 'Examples', 'Hierarchical linear regression']
