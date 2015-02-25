@@ -362,23 +362,25 @@ class T(Continuous):
     lam : float
         Scale parameter (defaults to 1)
     """
-    def __init__(self, nu, mu=0, lam=1, *args, **kwargs):
+    def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
         super(T, self).__init__(*args, **kwargs)
         self.nu = nu
-        self.lam = lam
+        self.lam, self.sd = get_tau_sd(tau=lam, sd=sd)
         self.mean = self.median = self.mode = self.mu = mu
 
-        self.variance = switch((nu > 2) * 1, nu / (nu - 2) / lam, inf)
+        self.variance = switch((nu > 2) * 1, nu / (nu - 2) / self.lam, inf)
 
     def logp(self, value):
         nu = self.nu
         mu = self.mu
         lam = self.lam
+        sd = self.sd
 
         return bound(
             gammaln((nu + 1.0) / 2.0) + .5 * log(lam / (nu * pi)) - gammaln(nu / 2.0) - (nu + 1.0) / 2.0 * log(1.0 + lam * (value - mu) ** 2 / nu),
             lam > 0,
-            nu > 0)
+            nu > 0,
+            sd > 0)
 
 
 class Pareto(Continuous):
