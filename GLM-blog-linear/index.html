@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="PyMC devs">
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+
+	<title>Linear Regression - PyMC3</title>
+
+        <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="../css/highlight.css">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="..">PyMC3</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            
+                <!-- Main navigation -->
+                <ul class="nav navbar-nav">
+                
+                
+                    <li >
+                        <a href="..">Overview</a>
+                    </li>
+                
+                
+                
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            <li >
+                                <a href="../getting_started">Getting started</a>
+                            </li>
+                        
+                        </ul>
+                    </li>
+                
+                
+                
+                    <li class="dropdown active">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Examples <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            <li >
+                                <a href="../BEST">BEST</a>
+                            </li>
+                        
+                            <li >
+                                <a href="../stochastic_volatility">Stochastic Volatility</a>
+                            </li>
+                        
+                            <li >
+                                <a href="../hierarchical">Hierarchical model</a>
+                            </li>
+                        
+                            <li class="active">
+                                <a href=".">Linear Regression</a>
+                            </li>
+                        
+                            <li >
+                                <a href="../GLM-blog-robust">Robust Regression</a>
+                            </li>
+                        
+                            <li >
+                                <a href="../glm_hierarchical">Hierarchical linear regression</a>
+                            </li>
+                        
+                        </ul>
+                    </li>
+                
+                
+                </ul>
+            
+
+            
+            <!-- Search, Navigation and Repo links -->
+            <ul class="nav navbar-nav navbar-right">
+                
+                
+                <li >
+                    <a rel="next" href="../hierarchical">
+                        <i class="fa fa-arrow-left"></i> Previous
+                    </a>
+                </li>
+                <li >
+                    <a rel="prev" href="../GLM-blog-robust">
+                        Next <i class="fa fa-arrow-right"></i>
+                    </a>
+                </li>
+                
+                
+                <li>
+                    <a href="https://github.com/pymc-devs/pymc">
+                        
+                            <i class="fa fa-github"></i>
+                        
+                        GitHub
+                    </a>
+                </li>
+                
+            </ul>
+            
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            
+                <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#linear-regression">Linear Regression</a></li>
+        
+    
+        <li class="main "><a href="#probabilistic-reformulation">Probabilistic Reformulation</a></li>
+        
+    
+        <li class="main "><a href="#bayesian-glms-in-pymc3">Bayesian GLMs in PyMC3</a></li>
+        
+            <li><a href="#generating-data">Generating data</a></li>
+        
+            <li><a href="#estimating-the-model">Estimating the model</a></li>
+        
+            <li><a href="#analyzing-the-model">Analyzing the model</a></li>
+        
+    
+        <li class="main "><a href="#summary">Summary</a></li>
+        
+            <li><a href="#further-reading">Further reading</a></li>
+        
+    
+    </ul>
+</div></div>
+                <div class="col-md-9" role="main">
+
+<p>This is the first blog post in a small series on Bayesian GLMs:</p>
+<ol>
+<li><a href="http://twiecki.github.com/blog/2013/08/12/bayesian-glms-1/">The Inference Button: Bayesian GLMs made easy with PyMC3</a></li>
+<li><a href="http://twiecki.github.io/blog/2013/08/27/bayesian-glms-2/">This world is far from Normal(ly distributed): Robust Regression in PyMC3</a></li>
+<li><a href="http://twiecki.github.io/blog/2014/03/17/bayesian-glms-3/">The Best Of Both Worlds: Hierarchical Linear Regression in PyMC3</a></li>
+</ol>
+<p>In this blog post I will talk about:</p>
+<ul>
+<li>How the Bayesian Revolution in many scientific disciplines is hindered by poor usability of current Probabilistic Programming languages.</li>
+<li>A gentle introduction to Bayesian linear regression and how it differs from the frequentist approach.</li>
+<li>A preview of <a href="https://github.com/pymc-devs/pymc/tree/pymc3">PyMC3</a> (currently in alpha) and its new GLM submodule I wrote to allow creation and estimation of Bayesian GLMs as easy as frequentist GLMs in R.</li>
+</ul>
+<p>Ready? Lets get started!</p>
+<p>There is a huge paradigm shift underway in many scientific disciplines: The Bayesian Revolution. </p>
+<p>While the theoretical benefits of Bayesian over Frequentist stats have been discussed at length elsewhere (see <em>Further Reading</em> below), there is a major obstacle that hinders wider adoption -- <em>usability</em> (this is one of the reasons DARPA wrote out a huge grant to <a href="http://www.darpa.mil/Our_Work/I2O/Programs/Probabilistic_Programming_for_Advanced_Machine_Learning_%28PPAML%29.aspx">improve Probabilistic Programming</a>). </p>
+<p>This is mildly ironic because the beauty of Bayesian statistics is their generality. Frequentist stats have a bazillion different tests for every different scenario. In Bayesian land you define your model exactly as you think is appropriate and hit the <em>Inference Button(TM)</em> (i.e. running the magical MCMC sampling algorithm).</p>
+<p>Yet when I ask my colleagues why they use frequentist stats (even though they would like to use Bayesian stats) the answer is that software packages like SPSS or R make it very easy to run all those individuals tests with a single command (and more often then not, they don't know the exact model and inference method being used).</p>
+<p>While there are great Bayesian software packages like <a href="http://mcmc-jags.sourceforge.net/">JAGS</a>, <a href="http://www.mrc-bsu.cam.ac.uk/bugs/">BUGS</a>, <a href="http://mc-stan.org/">Stan</a> and <a href="http://pymc-devs.github.io/pymc/">PyMC</a>, they are written for Bayesians statisticians who know very well what model they want to build. </p>
+<p>Unfortunately, <a href="http://simplystatistics.org/2013/06/14/the-vast-majority-of-statistical-analysis-is-not-performed-by-statisticians/">"the vast majority of statistical analysis is not performed by statisticians"</a> -- so what we really need are tools for <em>scientists</em> and not for statisticians.</p>
+<p>In the interest of putting my code where my mouth is I wrote a submodule for the upcoming <a href="https://github.com/pymc-devs/pymc/tree/pymc3">PyMC3</a> that makes construction of Bayesian Generalized Linear Models (GLMs) as easy as Frequentist ones in R.</p>
+<h2 id="linear-regression">Linear Regression</h2>
+<p>While future blog posts will explore more complex models, I will start here with the simplest GLM -- linear regression.
+In general, frequentists think about Linear Regression as follows:</p>
+<p><mathjax>$$ Y = X\beta + \epsilon $$</mathjax></p>
+<p>where <mathjax>$Y$</mathjax> is the output we want to predict (or <em>dependent</em> variable), <mathjax>$X$</mathjax> is our predictor (or <em>independent</em> variable), and <mathjax>$\beta$</mathjax> are the coefficients (or parameters) of the model we want to estimate. <mathjax>$\epsilon$</mathjax> is an error term which is assumed to be normally distributed. </p>
+<p>We can then use Ordinary Least Squares or Maximum Likelihood to find the best fitting <mathjax>$\beta$</mathjax>.</p>
+<h2 id="probabilistic-reformulation">Probabilistic Reformulation</h2>
+<p>Bayesians take a probabilistic view of the world and express this model in terms of probability distributions. Our above linear regression can be rewritten to yield:</p>
+<p><mathjax>$$ Y \sim \mathcal{N}(X \beta, \sigma^2) $$</mathjax></p>
+<p>In words, we view <mathjax>$Y$</mathjax> as a random variable (or random vector) of which each element (data point) is distributed according to a Normal distribution. The mean of this normal distribution is provided by our linear predictor with variance <mathjax>$\sigma^2$</mathjax>.</p>
+<p>While this is essentially the same model, there are two critical advantages of Bayesian estimation:</p>
+<ul>
+<li>Priors: We can quantify any prior knowledge we might have by placing priors on the paramters. For example, if we think that <mathjax>$\sigma$</mathjax> is likely to be small we would choose a prior with more probability mass on low values.</li>
+<li>Quantifying uncertainty: We do not get a single estimate of <mathjax>$\beta$</mathjax> as above but instead a complete posterior distribution about how likely different values of <mathjax>$\beta$</mathjax> are. For example, with few data points our uncertainty in <mathjax>$\beta$</mathjax> will be very high and we'd be getting very wide posteriors.</li>
+</ul>
+<h2 id="bayesian-glms-in-pymc3">Bayesian GLMs in PyMC3</h2>
+<p>With the new GLM module in PyMC3 it is very easy to build this and much more complex models.</p>
+<p>First, lets import the required modules.</p>
+<pre><code>from pymc import  *
+
+import numpy as np
+import matplotlib.pyplot as plt
+</code></pre>
+<h3 id="generating-data">Generating data</h3>
+<p>Create some toy data to play around with and scatter-plot it. </p>
+<p>Essentially we are creating a regression line defined by intercept and slope and add data points by sampling from a Normal with the mean set to the regression line.</p>
+<pre><code>size = 200
+true_intercept = 1
+true_slope = 2
+
+x = np.linspace(0, 1, size)
+# y = a + b*x
+true_regression_line = true_intercept + true_slope * x
+# add noise
+y = true_regression_line + np.random.normal(scale=.5, size=size)
+
+data = dict(x=x, y=y)
+
+
+fig = plt.figure(figsize=(7, 7))
+ax = fig.add_subplot(111, xlabel='x', ylabel='y', title='Generated data and underlying model')
+ax.plot(x, y, 'x', label='sampled data')
+ax.plot(x, true_regression_line, label='true regression line', lw=2.)
+plt.legend(loc=0);
+</code></pre>
+<p><img alt="png" src="../GLM-blog-linear_files/GLM-blog-linear_6_0.png" /></p>
+<h3 id="estimating-the-model">Estimating the model</h3>
+<p>Lets fit a Bayesian linear regression model to this data. As you can see, model specifications in <code>PyMC3</code> are wrapped in a <code>with</code> statement. </p>
+<p>Here we use the awesome new <a href="http://arxiv.org/abs/1111.4246">NUTS sampler</a> (our Inference Button) to draw 2000 posterior samples.</p>
+<pre><code>with Model() as model: # model specifications in PyMC3 are wrapped in a with-statement
+    # Define priors
+    sigma = Uniform('sigma', 0, 20)
+    intercept = Normal('Intercept', 0, sd=20)
+    x_coeff = Normal('x', 0, sd=20)
+
+    # Define likelihood
+    likelihood = Normal('y', mu=intercept + x_coeff * x, sd=sigma, observed=y)
+
+    # Inference!
+    start = find_MAP() # Find starting value by optimization
+    step = NUTS(state=start) # Instantiate MCMC sampling algorithm
+    trace = sample(2000, step, start=start, progressbar=False) # draw 2000 posterior samples using NUTS sampling
+</code></pre>
+<p>This should be fairly readable for people who know probabilistic programming. However, would my non-statistican friend know what all this does? Moreover, recall that this is an extremely simple model that would be one line in R. Having multiple, potentially transformed regressors, interaction terms or link-functions would also make this much more complex and error prone. </p>
+<p>The new <code>glm()</code> function instead takes a <a href="http://patsy.readthedocs.org/en/latest/quickstart.html">Patsy</a> linear model specifier from which it creates a design matrix. <code>glm()</code> then adds random variables for each of the coefficients and an appopriate likelihood to the model. </p>
+<pre><code>with Model() as model:
+    # specify glm and pass in data. The resulting linear model, its likelihood and 
+    # and all its parameters are automatically added to our model.
+    glm.glm('y ~ x', data)
+    step = NUTS() # Instantiate MCMC sampling algorithm
+    trace = sample(2000, step, progressbar=False) # draw 2000 posterior samples using NUTS sampling
+</code></pre>
+<p>Much shorter, but this code does the exact same thing as the above model specification (you can change priors and everything else too if we wanted). <code>glm()</code> parses the <code>Patsy</code> model string, adds random variables for each regressor (<code>Intercept</code> and slope <code>x</code> in this case), adds a likelihood (by default, a Normal is chosen), and all other variables (<code>sigma</code>). Finally, <code>glm()</code> then initializes the parameters to a good starting point by estimating a frequentist linear model using <a href="http://statsmodels.sourceforge.net/devel/">statsmodels</a>.</p>
+<p>If you are not familiar with R's syntax, <code>'y ~ x'</code> specifies that we have an output variable <code>y</code> that we want to estimate as a linear function of <code>x</code>.</p>
+<h3 id="analyzing-the-model">Analyzing the model</h3>
+<p>Bayesian inference does not give us only one best fitting line (as maximum likelihood does) but rather a whole posterior distribution of likely parameters. Lets plot the posterior distribution of our parameters and the individual samples we drew.</p>
+<pre><code>plt.figure(figsize=(7, 7))
+traceplot(trace)
+plt.tight_layout();
+
+
+&lt;matplotlib.figure.Figure at 0xeb14bec&gt;
+</code></pre>
+<p><img alt="png" src="../GLM-blog-linear_files/GLM-blog-linear_15_1.png" /></p>
+<p>The left side shows our marginal posterior -- for each parameter value on the x-axis we get a probability on the y-axis that tells us how likely that parameter value is.</p>
+<p>There are a couple of things to see here. The first is that our sampling chains for the individual parameters (left side) seem well converged and stationary (there are no large drifts or other odd patterns).</p>
+<p>Secondly, the maximum posterior estimate of each variable (the peak in the left side distributions) is very close to the true parameters used to generate the data (<code>x</code> is the regression coefficient and <code>sigma</code> is the standard deviation of our normal).</p>
+<p>In the GLM we thus do not only have one best fitting regression line, but many. A posterior predictive plot takes multiple samples from the posterior (intercepts and slopes) and plots a regression line for each of them. Here we are using the <code>glm.plot_posterior_predictive()</code> convenience function for this.</p>
+<pre><code>plt.figure(figsize=(7, 7))
+plt.plot(x, y, 'x', label='data')
+glm.plot_posterior_predictive(trace, samples=100, 
+                              label='posterior predictive regression lines')
+plt.plot(x, true_regression_line, label='true regression line', lw=3., c='y')
+
+plt.title('Posterior predictive regression lines')
+plt.legend(loc=0)
+plt.xlabel('x')
+plt.ylabel('y');
+</code></pre>
+<p><img alt="png" src="../GLM-blog-linear_files/GLM-blog-linear_18_0.png" /></p>
+<p>As you can see, our estimated regression lines are very similar to the true regression line. But since we only have limited data we have <em>uncertainty</em> in our estimates, here expressed by the variability of the lines.</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li>Usability is currently a huge hurdle for wider adoption of Bayesian statistics.</li>
+<li><code>PyMC3</code> allows GLM specification with convenient syntax borrowed from R.</li>
+<li>Posterior predictive plots allow us to evaluate fit and our uncertainty in it.</li>
+</ul>
+<h3 id="further-reading">Further reading</h3>
+<p>This is the first post of a small series on Bayesian GLMs I am preparing. Next week I will describe how the Student T distribution can be used to perform robust linear regression.</p>
+<p>Then there are also other good resources on Bayesian statistics:</p>
+<ul>
+<li>The excellent book <a href="http://www.indiana.edu/~kruschke/DoingBayesianDataAnalysis/">Doing Bayesian Data Analysis by John Kruschke</a>.</li>
+<li><a href="http://andrewgelman.com/">Andrew Gelman's blog</a></li>
+<li><a href="https://plus.google.com/u/0/107971134877020469960/posts/KpeRdJKR6Z1">Baeu Cronins blog post on Probabilistic Programming</a></li>
+</ul></div>
+            
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            
+            <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+
+        
+
+        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../js/prettify-1.0.min.js"></script>
+        <script src="../js/highlight.pack.js"></script>
+        <script src="../js/base.js"></script>
+        <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+        <script src="../js/mathjaxhelper.js"></script>
+    </body>
+</html>
