@@ -1,6 +1,8 @@
 site_name: PyMC3
 repo_url: https://github.com/pymc-devs/pymc
 site_author: PyMC devs
+markdown_extensions: ['extra', 'mathjax']
+extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML','js/mathjaxhelper.js']
 
 pages:
 - ['index.md', 'Overview']
@@ -8,3 +10,4 @@ pages:
 - ['BEST.md', 'Examples', 'BEST']
 - ['stochastic_volatility.md', 'Examples', 'Stochastic Volatility']
 - ['hierarchical.md', 'Examples', 'Hierarchical']
+- ['glm_hierarchical.md', 'Examples', 'Hierarchical linear regression']
