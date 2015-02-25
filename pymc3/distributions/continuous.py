@@ -368,7 +368,7 @@ class T(Continuous):
         self.lam, self.sd = get_tau_sd(tau=lam, sd=sd)
         self.mean = self.median = self.mode = self.mu = mu
 
-        self.variance = switch((nu > 2) * 1, nu / (nu - 2) / self.lam, inf)
+        self.variance = switch((nu > 2) * 1, (1 / self.lam) * (nu / (nu - 2)) , inf)
 
     def logp(self, value):
         nu = self.nu
