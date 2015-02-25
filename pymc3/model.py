@@ -349,6 +349,7 @@ class ObservedRV(Factor):
 
         self.logp_elemwiset = distribution.logp(*args)
         self.model = model
+        self.distribution = distribution
 
 def Deterministic(name, var, model=None):
     """Create a named deterministic variable
