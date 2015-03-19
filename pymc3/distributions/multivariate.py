@@ -1,5 +1,7 @@
 from .dist_math import *
 
+import numpy as np
+
 from theano.tensor.nlinalg import det, matrix_inverse, trace
 from theano.tensor import dot, cast, eye, diag, eq, le, ge, all
 from theano.printing import Print
@@ -183,29 +185,44 @@ class Wishart(Continuous):
 class LKJCorr(Continuous):
     """
     The LKJ (Lewandowski, Kurowicka and Joe) is a prior distribution for
-    correlation matrices. For n=1 this corresponds to the uniform distribution
-    over correlation matrices. When n>1 the LKJ prior approaches the identity
+    correlation matrices. If n = 1 this corresponds to the uniform distribution
+    over correlation matrices. For n -> oo the LKJ prior approaches the identity
     matrix.
 
     For more details see:
     http://www.sciencedirect.com/science/article/pii/S0047259X09000876
 
+    This implementation only returns the values of the upper triangular matrix
+    excluding the diagonal. Here is a schematic for p = 5, showing the indexes
+    of the elements:
+        [[- 0 1 2 3]
+         [- - 4 5 6]
+         [- - - 7 8]
+         [- - - - 9]
+         [- - - - -]]
+
     :Parameters:
       n : float
-        Shape parameter, Uniform at n=1, > 0
+        Shape parameter, Uniform distribution at n=1, > 0
       p : int
         Dimension of correlation matrix
 
 
     :Support:
-      X : matrix
-        Symmetric, [-1,1].
+      x : array of size p * (p - 1) / 2
+        Upper triangular matrix values [-1,1].
     """
     def __init__(self, n, p, *args, **kwargs):
         self.n = n
         self.p = p
-        self.mean = eye(p)
-        super(LKJCorr, self).__init__(shape=(p, p), *args, **kwargs)
+        n_elem = p * (p - 1) / 2
+        self.mean = np.zeros(n_elem)
+        super(LKJCorr, self).__init__(shape=n_elem, *args, **kwargs)
+
+        self.tri_index = np.zeros([p, p], dtype=int)
+        self.tri_index[np.triu_indices(p, k=1)] = np.arange(n_elem)
+        self.tri_index[np.triu_indices(p, k=1)[::-1]] = np.arange(n_elem)
+
 
     def _normalizing_constant(self, n, p):
         if n == 1:
@@ -226,15 +243,16 @@ class LKJCorr(Continuous):
             result += (0.5 * k * log(pi) + gammaln(n + 0.5 * (p - 1 - k))).sum()
         return result
 
-    def logp(self, X):
+    def logp(self, x):
         n = self.n
         p = self.p
+
+        X = x[self.tri_index]
+        X = t.fill_diagonal(X, 1)
         
         result = self._normalizing_constant(n, p)
         result += (n - 1.) * log(det(X))
         return bound(result,
             n > 0,
-            all(eq(diag(X), 1)),
-            all(eq(X, X.T)),
             all(le(X, 1)),
             all(ge(X, -1)))

@@ -21,7 +21,7 @@ corr = array([[ 1.  ,  0.75,  0.  ,  0.15],
               [ 0.15,  0.19, -0.04,  1.  ]])
 cov_matrix = diag(stds).dot(corr.dot(diag(stds)))
 
-data = multivariate_normal(mu, cov, size=n_obs)
+data = multivariate_normal(mu, cov_matrix, size=n_obs)
 
 with Model() as model:
     
