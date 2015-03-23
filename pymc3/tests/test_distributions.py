@@ -327,6 +327,25 @@ def test_wishart():
 def check_wishart(n):
     checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix(n) }, checks = [check_dlogp])
 
+def test_lkj():
+    tri = np.array([0.7, 0.0, -0.7])
+    test_cases = [
+        (tri, 1, 1.5963125911388549),
+        (tri, 3, -7.7963493376312742),
+        (tri, 0, -np.inf),
+        (np.array([1.1, 0.0, -0.7]), 1, -np.inf),
+        (np.array([0.7, 0.0, -1.1]), 1, -np.inf)
+    ]
+    for t, n, logp in test_cases:
+        yield check_lkj, t, n, 3, logp
+    
+def check_lkj(x, n, p, lp):
+    with Model() as model:
+        lkj = LKJCorr('lkj', n=n, p=p)
+    pt = {'lkj': x}
+    assert_almost_equal(model.fastlogp({'lkj': x}),
+                        lp, decimal=6, err_msg=str(pt))
+
 def betafn(a):
     return scipy.special.gammaln(a).sum() - scipy.special.gammaln(a.sum())
 
