@@ -79,11 +79,11 @@ class Dirichlet(Continuous):
 
         # only defined for sum(value) == 1
         return bound(
-            sum(logpow(
-                value, a - 1) - gammaln(a), axis=0) + gammaln(sum(a)),
-
+            sum(logpow(value, a - 1) - gammaln(a), axis=0) + gammaln(sum(a)),
             k > 1,
-            all(a > 0))
+            all(a > 0),
+            all(value >= 0),
+            all(value <= 1))
 
 
 class Multinomial(Discrete):
