@@ -1,24 +1,29 @@
 import numbers
 from copy import copy
 
-try:
-    from statsmodels.genmod.families.family import (Gaussian, Binomial, Poisson)
-except ImportError:
-    Gaussian = None
-    Binomial = None
-    Poisson = None
-
-from .links import *
+import theano.tensor
 from ..model import modelcontext
-from ..distributions import Normal, T, Uniform, Bernoulli, Poisson
+from .. import distributions as pm_dists
 
 __all__ = ['Normal', 'T', 'Binomial', 'Poisson']
+
+# Define link functions
+
+# Hack as assigning a function in the class definition automatically binds it as a method.
+class Identity():
+    def __call__(self, x):
+        return x
+
+identity = Identity()
+logit = theano.tensor.nnet.sigmoid
+inverse = theano.tensor.inv
+log = theano.tensor.log
 
 class Family(object):
     """Base class for Family of likelihood distribution and link functions.
     """
     priors = {}
-    link = Identity
+    link = None
 
     def __init__(self, **kwargs):
         # Overwrite defaults
@@ -28,9 +33,6 @@ class Family(object):
                 self.priors.update(val)
             else:
                 setattr(self, key, val)
-
-        # Instantiate link function
-        self.link_func = self.link()
 
     def _get_priors(self, model=None):
         """Return prior distributions of the likelihood.
@@ -45,7 +47,7 @@ class Family(object):
             if isinstance(val, numbers.Number):
                 priors[key] = val
             else:
-                priors[key] = model.Var(val[0], val[1])
+                priors[key] = model.Var(key, val)
 
         return priors
 
@@ -61,16 +63,8 @@ class Family(object):
         """
         priors = self._get_priors(model=model)
         # Wrap y_est in link function
-        priors[self.parent] = self.link_func.theano(y_est)
+        priors[self.parent] = self.link(y_est)
         return self.likelihood('y', observed=y_data, **priors)
-
-    def create_statsmodel_family(self):
-        """Instantiate and return statsmodel family object.
-        """
-        if self.sm_family is None:
-            return None
-        else:
-            return self.sm_family(self.link.sm)
 
     def __repr__(self):
         return """Family {klass}:
@@ -79,32 +73,28 @@ class Family(object):
     Link function: {link}.""".format(klass=self.__class__, likelihood=self.likelihood.__name__, parent=self.parent, priors=self.priors, link=self.link)
 
 
-class Normal(Family):
-    sm_family = Gaussian
-    link = Identity
-    likelihood = Normal
-    parent = 'mu'
-    priors = {'sd': ('sigma', Uniform.dist(0, 100))}
-
-
 class T(Family):
-    sm_family = Gaussian
-    link = Identity
-    likelihood = T
+    link = identity
+    likelihood = pm_dists.T
     parent = 'mu'
-    priors = {'lam': ('sigma', Uniform.dist(0, 100)),
+    priors = {'lam': pm_dists.HalfCauchy.dist(beta=10),
               'nu': 1}
 
+class Normal(Family):
+    link = identity
+    likelihood = pm_dists.Normal
+    parent = 'mu'
+    priors = {'sd': pm_dists.HalfCauchy.dist(beta=10)}
 
 class Binomial(Family):
-    link = Logit
-    sm_family = Binomial
-    likelihood = Bernoulli
+    link = logit
+    likelihood = pm_dists.Bernoulli
     parent = 'p'
+    priors = {'p': pm_dists.Beta.dist(alpha=1, beta=1)}
 
 
 class Poisson(Family):
-    link = Log
-    sm_family = Poisson
-    likelihood = Poisson
-    parent = ''
+    link = log
+    likelihood = pm_dists.Poisson
+    parent = 'mu'
+    priors = {'mu': pm_dists.HalfCauchy.dist(beta=10)}

@@ -6,17 +6,14 @@ import patsy
 import theano
 import pandas as pd
 from collections import defaultdict
-from statsmodels.formula.api import glm as glm_sm
-import statsmodels.api as sm
 from pandas.tools.plotting import scatter_matrix
 
-from . import links
 from . import families
 
 def linear_component(formula, data, priors=None,
                      intercept_prior=None,
                      regressor_prior=None,
-                     init=True, init_vals=None, family=None,
+                     init_vals=None, family=None,
                      model=None):
     """Create linear model according to patsy specification.
 
@@ -35,9 +32,6 @@ def linear_component(formula, data, priors=None,
     regressor_prior : pymc3 distribution
         Prior to use for all regressor(s).
         Default: Normal.dist(mu=0, tau=1.0E-12)
-    init : bool
-        Whether to set the starting values via statsmodels
-        Default: True
     init_vals : dict
         Set starting values externally: parameter -> value
         Default: None
@@ -70,10 +64,8 @@ def linear_component(formula, data, priors=None,
     _, dmatrix = patsy.dmatrices(formula, data)
     reg_names = dmatrix.design_info.column_names
 
-    if init_vals is None and init:
-        init_vals = glm_sm(formula, data, family=family).fit().params
-    else:
-        init_vals = defaultdict(lambda: None)
+    if init_vals is None:
+        init_vals = {}
 
     # Create individual coefficients
     model = modelcontext(model)
@@ -82,13 +74,15 @@ def linear_component(formula, data, priors=None,
     if reg_names[0] == 'Intercept':
         prior = priors.get('Intercept', intercept_prior)
         coeff = model.Var(reg_names.pop(0), prior)
-        coeff.tag.test_value = init_vals['Intercept']
+        if 'Intercept' in init_vals:
+            coeff.tag.test_value = init_vals['Intercept']
         coeffs.append(coeff)
 
     for reg_name in reg_names:
         prior = priors.get(reg_name, regressor_prior)
         coeff = model.Var(reg_name, prior)
-        coeff.tag.test_value = init_vals[reg_name]
+        if reg_name in init_vals:
+            coeff.tag.test_value = init_vals[reg_name]
         coeffs.append(coeff)
 
     y_est = theano.dot(np.asarray(dmatrix), theano.tensor.stack(*coeffs)).reshape((1, -1))
@@ -114,15 +108,10 @@ def glm(*args, **kwargs):
     regressor_prior : pymc3 distribution
         Prior to use for all regressor(s).
         Default: Normal.dist(mu=0, tau=1.0E-12)
-    init : bool
-        Whether initialize test values via statsmodels
-        Default: True
     init_vals : dict
         Set starting values externally: parameter -> value
         Default: None
-    find_MAP : bool
-        Whether to call find_MAP on non-initialized nodes.
-    family : statsmodels.family
+    family : Family object
         Distribution of likelihood, see pymc3.glm.families
         (init has to be True).
 
@@ -135,7 +124,7 @@ def glm(*args, **kwargs):
     # Logistic regression
     vars = glm('male ~ height + weight',
                data,
-               family=glm.families.Binomial(link=glm.links.Logit))
+               family=glm.families.Binomial(link=glm.families.logit))
     """
 
     model = modelcontext(kwargs.get('model'))
@@ -147,21 +136,10 @@ def glm(*args, **kwargs):
     data = args[1]
     y_data = np.asarray(patsy.dmatrices(formula, data)[0]).T
 
-    # Create GLM
-    kwargs['family'] = family.create_statsmodel_family()
-
     y_est, coeffs = linear_component(*args, **kwargs)
     family.create_likelihood(y_est, y_data)
 
-    # Find vars we have not initialized yet
-    non_init_vars = set(model.vars).difference(set(coeffs))
-    if len(non_init_vars) != 0 and call_find_map:
-        start = find_MAP(vars=non_init_vars)
-
-        for var in non_init_vars:
-            var.tag.test_value = start[var.name]
-
-    return [y_est] + coeffs + list(non_init_vars)
+    return [y_est] + coeffs
 
 
 def plot_posterior_predictive(trace, eval=None, lm=None, samples=30, **kwargs):

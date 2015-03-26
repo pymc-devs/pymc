@@ -1,13 +1,7 @@
-from __future__ import print_function
-
-import numpy as np
 import sys
 
-try:
-    import statsmodels.api as sm
-except ImportError:
-    print("Example requires statsmodels")
-    sys.exit(0)
+import numpy as np
+import scipy.optimize as opt
 
 from pymc3 import *
 
@@ -31,7 +25,8 @@ def run(n=2000):
     import matplotlib.pyplot as plt
 
     with model:
-        trace = sample(n, Slice())
+        start = find_MAP(fmin=opt.fmin_powell)
+        trace = sample(n, Slice(), start=start)
 
     plt.plot(x, y, 'x')
     glm.plot_posterior_predictive(trace)
@@ -39,5 +34,3 @@ def run(n=2000):
 
 if __name__ == '__main__':
     run()
-
-
