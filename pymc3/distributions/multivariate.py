@@ -3,7 +3,7 @@ from .dist_math import *
 import numpy as np
 
 from theano.tensor.nlinalg import det, matrix_inverse, trace
-from theano.tensor import dot, cast, eye, diag, eq, le, ge, all
+from theano.tensor import dot, cast, eye, diag, eq, le, ge, gt, all
 from theano.printing import Print
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart', 'LKJCorr']
@@ -179,7 +179,8 @@ class Wishart(Continuous):
         return bound(
             ((n - p - 1) * log(IXI) - trace(matrix_inverse(V).dot(X)) -
                 n * p * log(2) - n * log(IVI) - 2 * multigammaln(n / 2., p)) / 2,
-             n > (p - 1))
+             n > (p - 1),
+             all(gt(X, 0)))
 
 
 class LKJCorr(Continuous):
