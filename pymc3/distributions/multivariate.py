@@ -1,9 +1,11 @@
+import warnings
+
 from .dist_math import *
 
 import numpy as np
 
-from theano.tensor.nlinalg import det, matrix_inverse, trace
-from theano.tensor import dot, cast, eye, diag, eq, le, ge, all
+from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
+from theano.tensor import dot, cast, eye, diag, eq, le, ge, gt, all
 from theano.printing import Print
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart', 'LKJCorr']
@@ -160,6 +162,7 @@ class Wishart(Continuous):
     """
     def __init__(self, n, V, *args, **kwargs):
         super(Wishart, self).__init__(*args, **kwargs)
+        warnings.warn('The Wishart distribution can currently not be used for MCMC sampling. The probability of sampling a symmetric matrix is basically zero. Instead, please use the LKJCorr prior. For more information on the issues surrounding the Wishart see here: https://github.com/pymc-devs/pymc3/issues/538.', UserWarning)
         self.n = n
         self.p = p = V.shape[0]
         self.V = V
@@ -179,7 +182,10 @@ class Wishart(Continuous):
         return bound(
             ((n - p - 1) * log(IXI) - trace(matrix_inverse(V).dot(X)) -
                 n * p * log(2) - n * log(IVI) - 2 * multigammaln(n / 2., p)) / 2,
-             n > (p - 1))
+            gt(n, (p - 1)),
+            all(gt(eigh(X)[0], 0)),
+            eq(X, X.T)
+        )
 
 
 class LKJCorr(Continuous):
@@ -249,7 +255,7 @@ class LKJCorr(Continuous):
 
         X = x[self.tri_index]
         X = t.fill_diagonal(X, 1)
-        
+
         result = self._normalizing_constant(n, p)
         result += (n - 1.) * log(det(X))
         return bound(result,
