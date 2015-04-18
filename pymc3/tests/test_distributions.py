@@ -321,8 +321,13 @@ def normal_logpdf(value, mu, tau):
     return  (-k/2)* np.log(2*np.pi) + .5 * np.log(np.linalg.det(tau)) - .5*(value-mu).dot(tau).dot(value -mu)
 
 def test_wishart():
-    for n in [2,3]:
-        yield check_wishart,n
+    # for n in [2,3]:
+    #     yield check_wishart,n
+    # This check compares the autodiff gradient to the numdiff gradient.
+    # However, due to the strict constraints of the wishart,
+    # it is impossible to numerically determine the gradient as a small
+    # pertubation breaks the symmetry. Thus disabling.
+    pass
 
 def check_wishart(n):
     checkd(Wishart, PdMatrix(n), {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix(n) }, checks = [check_dlogp])
@@ -342,7 +347,7 @@ def test_lkj():
     ]
     for t, n, logp in test_cases:
         yield check_lkj, t, n, 3, logp
-    
+
 def check_lkj(x, n, p, lp):
     with Model() as model:
         lkj = LKJCorr('lkj', n=n, p=p)
