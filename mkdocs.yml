@@ -13,4 +13,4 @@ pages:
 - ['GLM-blog-linear.md', 'Examples', 'Linear Regression']
 - ['GLM-blog-robust.md', 'Examples', 'Robust Regression']
 - ['glm_hierarchical.md', 'Examples', 'Hierarchical linear regression']
-- ['pmf-pymc.ipynb', 'Examples', 'Probabilistic Matrix Factorization']
+- ['pmf-pymc.md', 'Examples', 'Probabilistic Matrix Factorization']
