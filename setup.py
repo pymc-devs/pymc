@@ -46,7 +46,7 @@ if __name__ == "__main__":
                     'pymc3.step_methods', 'pymc3.tuning',
                     'pymc3.tests', 'pymc3.glm', 'pymc3.examples',
                     'pymc3.backends'],
-          package_data = {'pymc3.examples': ['data/*']},
+          package_data = {'pymc3.examples': ['data/*', 'data/pmf-map-d5/*']},
           classifiers=classifiers,
           install_requires=install_reqs,
           tests_require=test_reqs,
