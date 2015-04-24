@@ -27,7 +27,7 @@ div.source-links {
 
 div.col-md-9 img {
     max-width: 100%;
-    display: block;
+    display: inline;
     padding: 4px;
     line-height: 1.428571429;
     background-color: #fff;
@@ -38,6 +38,14 @@ div.col-md-9 img {
 
 h1, h2, h3 {
     color: #444;
+}
+
+h1[id]:before, h2[id]:before, h3[id]:before, h4[id]:before, h5[id]:before, h6[id]:before {
+    content: "";
+    display: block;
+    margin-top: -75px;
+    height: 75px;
+    pointer-events: none;
 }
 
 h1 {
@@ -115,6 +123,7 @@ footer {
 .bs-sidebar .nav > li > a {
     display: block;
     padding: 5px 20px;
+    z-index: 1;
 }
 .bs-sidebar .nav > li > a:hover,
 .bs-sidebar .nav > li > a:focus {

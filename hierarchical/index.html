@@ -64,7 +64,7 @@
                         <ul class="dropdown-menu">
                         
                             <li >
-                                <a href="../getting_started">Getting started</a>
+                                <a href="../getting_started/">Getting started</a>
                             </li>
                         
                         </ul>
@@ -77,27 +77,31 @@
                         <ul class="dropdown-menu">
                         
                             <li >
-                                <a href="../BEST">BEST</a>
+                                <a href="../BEST/">BEST</a>
                             </li>
                         
                             <li >
-                                <a href="../stochastic_volatility">Stochastic Volatility</a>
+                                <a href="../stochastic_volatility/">Stochastic Volatility</a>
                             </li>
                         
                             <li class="active">
-                                <a href=".">Hierarchical model</a>
+                                <a href="./">Hierarchical model</a>
                             </li>
                         
                             <li >
-                                <a href="../GLM-blog-linear">Linear Regression</a>
+                                <a href="../GLM-blog-linear/">Linear Regression</a>
                             </li>
                         
                             <li >
-                                <a href="../GLM-blog-robust">Robust Regression</a>
+                                <a href="../GLM-blog-robust/">Robust Regression</a>
                             </li>
                         
                             <li >
-                                <a href="../glm_hierarchical">Hierarchical linear regression</a>
+                                <a href="../glm_hierarchical/">Hierarchical linear regression</a>
+                            </li>
+                        
+                            <li >
+                                <a href="../pmf-pymc/">Probabilistic Matrix Factorization</a>
                             </li>
                         
                         </ul>
@@ -113,12 +117,12 @@
                 
                 
                 <li >
-                    <a rel="next" href="../stochastic_volatility">
+                    <a rel="next" href="../stochastic_volatility/">
                         <i class="fa fa-arrow-left"></i> Previous
                     </a>
                 </li>
                 <li >
-                    <a rel="prev" href="../GLM-blog-linear">
+                    <a rel="prev" href="../GLM-blog-linear/">
                         Next <i class="fa fa-arrow-right"></i>
                     </a>
                 </li>
@@ -157,7 +161,7 @@ import numpy as np
 
 random.seed(1)
 
-n_groups = 10
+n_groups = 1
 no_pergroup = 30
 n_observed = no_pergroup * n_groups
 n_group_predictors = 1
@@ -183,7 +187,7 @@ with model:
         "group_effects", 0, .1, shape=(1, n_group_predictors, n_predictors))
 
     # sg ~ Uniform(.05, 10)
-    sg = Uniform("sg", .05, 10, testval=2.)
+    sg = Uniform("sg", .0, 10, testval=2.)
 
 
     # m ~ N(mg * pg, sg)
@@ -210,23 +214,70 @@ with model:
 Populating the interactive namespace from numpy and matplotlib
 
 
-/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/scan_module/scan_perform_ext.py:117: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
-  from scan_perform.scan_perform import *
+
+n_predictors
 
 
 
-%pdb
 
-Automatic pdb calling has been turned ON
-
+3
 
 
-trace = sample(3e3, step, model=model)
-
- [-----------------100%-----------------] 3000 of 3000 complete in 57.7 sec
 
 
-%prun -q -D sample_nuts.prof sample(3e3, step, model=model)
+group
+
+
+
+
+array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0])
+
+
+
+
+n_groups
+
+
+
+
+1
+
+
+
+
+import pymc3 as pm
+pm.debug.eval_univariate?
+
+
+model.free_RVs
+
+
+
+
+[group_effects, sg, effects, s]
+
+
+
+
+lp = lambda x, y: model.logp({'group_effects': [[[0, 0, 0]]], 'sg': x, 'effects':[[y, y, y]], 's': [.05]})
+lp = np.vectorize(lp)
+
+
+import seaborn as sns
+
+
+x, y = np.mgrid[0.001:0.1:.001, -.05:.05:.001]
+plt.contourf(x, y, lp(x, y))
+
+
+
+
+&lt;matplotlib.contour.QuadContourSet instance at 0x7ffe77d0ccf8&gt;
+</code></pre>
+<p><img alt="png" src="../hierarchical_files/hierarchical_8_1.png" /></p>
+<p>best of 3: 6.94 s per loop</p>
+<pre><code>%prun -q -D sample_nuts.prof sample(3e3, step, model=model)
 
  [-----------------100%-----------------] 3000 of 3000 complete in 74.1 sec 
 *** Profile stats marshalled to file u'sample_nuts.prof'.
@@ -242,7 +293,7 @@ trace = sample(3e3, step, model=model)
 
 traceplot(trace);
 </code></pre>
-<p><img alt="png" src="../hierarchical_files/hierarchical_5_0.png" /></p></div>
+<p><img alt="png" src="../hierarchical_files/hierarchical_12_0.png" /></p></div>
             
         </div>
 
@@ -254,12 +305,16 @@ traceplot(trace);
 
         
 
-        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="../js/jquery-1.10.2.min.js"></script>
         <script src="../js/bootstrap-3.0.3.min.js"></script>
-        <script src="../js/prettify-1.0.min.js"></script>
         <script src="../js/highlight.pack.js"></script>
         <script src="../js/base.js"></script>
         <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
         <script src="../js/mathjaxhelper.js"></script>
+
+        <!--
+        MkDocs version  : 0.12.2
+        Docs Build Date : 2015-04-24 02:41:45.291331
+        -->
     </body>
 </html>

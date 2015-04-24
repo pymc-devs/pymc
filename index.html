@@ -100,6 +100,10 @@
                                 <a href="glm_hierarchical/">Hierarchical linear regression</a>
                             </li>
                         
+                            <li >
+                                <a href="pmf-pymc/">Probabilistic Matrix Factorization</a>
+                            </li>
+                        
                         </ul>
                     </li>
                 
@@ -166,7 +170,7 @@
 <p><a href="https://travis-ci.org/pymc-devs/pymc3"><img alt="Build Status" src="https://travis-ci.org/pymc-devs/pymc3.png?branch=master" /></a></p>
 <p>PyMC is a python module for Bayesian statistical modeling and model fitting which focuses on advanced Markov chain Monte Carlo fitting algorithms. Its flexibility and extensibility make it applicable to a large suite of problems.</p>
 <p>Check out the <a href="http://nbviewer.ipython.org/github/pymc-devs/pymc3/blob/master/pymc3/examples/tutorial.ipynb">Tutorial</a>!</p>
-<p><strong><em>PyMC 3 is alpha software</em></strong> and is not ready for use in production. We encourage most new users to use the current release version in the <a href="https://github.com/pymc-devs/pymc">PyMC 2 repository</a>. Release versions are also available on <a href="https://pypi.python.org/pypi/pymc">PyPI</a> and <a href="https://binstar.org/pymc/pymc">Binstar</a>.</p>
+<p><strong><em>PyMC 3 is alpha software</em></strong> and is not ready for use in production. We encourage most new users to use the current release version in the <a href="https://github.com/pymc-devs/pymc">PyMC 2 repository</a>.</p>
 <h2 id="features">Features</h2>
 <ul>
 <li>Intuitive model specification syntax, for example, <code>x ~ N(0,1)</code> translates to <code>x = Normal(0,1)</code></li>
@@ -191,16 +195,15 @@
 </ul>
 <h2 id="installation">Installation</h2>
 <p>The latest version of PyMC 3 can be installed from the master branch using pip:</p>
-<pre><code>pip install --process-dependency-links git+https://github.com/pymc-devs/pymc3
+<pre><code>pip install git+https://github.com/pymc-devs/pymc3
 </code></pre>
 
-<p>The <code>--process-dependency-links</code> flag ensures that the developmental branch of Theano, which PyMC requires, is installed. If a recent developmental version of Theano has been installed with another method, this flag can be dropped.</p>
 <p>Another option is to clone the repository and install PyMC using <code>python setup.py install</code> or <code>python setup.py develop</code>.</p>
 <p><strong>Note:</strong> Running <code>pip install pymc</code> will install PyMC 2.3, not PyMC 3, from PyPI.</p>
 <h2 id="dependencies">Dependencies</h2>
 <p>PyMC is tested on Python 2.7 and 3.3 and depends on Theano, NumPy, SciPy, and Matplotlib (see setup.py for version information).</p>
 <h3 id="optional">Optional</h3>
-<p>The GLM submodule relies on Pandas, Patsy, Statsmodels.</p>
+<p>The GLM submodule relies on Pandas and Patsy.</p>
 <p><a href="https://github.com/njsmith/scikits-sparse"><code>scikits.sparse</code></a> enables sparse scaling matrices which are useful for large problems. Installation on Ubuntu is easy:</p>
 <pre><code>sudo apt-get install libsuitesparse-dev
 pip install git+https://github.com/njsmith/scikits-sparse.git
@@ -225,12 +228,16 @@ pip install git+https://github.com/njsmith/scikits-sparse.git
 
         
 
-        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="./js/jquery-1.10.2.min.js"></script>
         <script src="./js/bootstrap-3.0.3.min.js"></script>
-        <script src="./js/prettify-1.0.min.js"></script>
         <script src="./js/highlight.pack.js"></script>
         <script src="./js/base.js"></script>
         <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
         <script src="./js/mathjaxhelper.js"></script>
+
+        <!--
+        MkDocs version  : 0.12.2
+        Docs Build Date : 2015-04-24 02:41:45.215167
+        -->
     </body>
 </html>

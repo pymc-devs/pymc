@@ -64,7 +64,7 @@
                         <ul class="dropdown-menu">
                         
                             <li class="active">
-                                <a href=".">Getting started</a>
+                                <a href="./">Getting started</a>
                             </li>
                         
                         </ul>
@@ -77,27 +77,31 @@
                         <ul class="dropdown-menu">
                         
                             <li >
-                                <a href="../BEST">BEST</a>
+                                <a href="../BEST/">BEST</a>
                             </li>
                         
                             <li >
-                                <a href="../stochastic_volatility">Stochastic Volatility</a>
+                                <a href="../stochastic_volatility/">Stochastic Volatility</a>
                             </li>
                         
                             <li >
-                                <a href="../hierarchical">Hierarchical model</a>
+                                <a href="../hierarchical/">Hierarchical model</a>
                             </li>
                         
                             <li >
-                                <a href="../GLM-blog-linear">Linear Regression</a>
+                                <a href="../GLM-blog-linear/">Linear Regression</a>
                             </li>
                         
                             <li >
-                                <a href="../GLM-blog-robust">Robust Regression</a>
+                                <a href="../GLM-blog-robust/">Robust Regression</a>
                             </li>
                         
                             <li >
-                                <a href="../glm_hierarchical">Hierarchical linear regression</a>
+                                <a href="../glm_hierarchical/">Hierarchical linear regression</a>
+                            </li>
+                        
+                            <li >
+                                <a href="../pmf-pymc/">Probabilistic Matrix Factorization</a>
                             </li>
                         
                         </ul>
@@ -118,7 +122,7 @@
                     </a>
                 </li>
                 <li >
-                    <a rel="prev" href="../BEST">
+                    <a rel="prev" href="../BEST/">
                         Next <i class="fa fa-arrow-right"></i>
                     </a>
                 </li>
@@ -146,15 +150,17 @@
     
         <li class="main active"><a href="#probabilistic-programming-in-python-using-pymc">Probabilistic Programming in Python using PyMC</a></li>
         
-            <li><a href="#abstract">Abstract</a></li>
+            <li><a href="#introduction">Introduction</a></li>
         
             <li><a href="#installation">Installation</a></li>
         
             <li><a href="#model-specification">Model specification</a></li>
         
-            <li><a href="#inference">Inference</a></li>
+            <li><a href="#posterior-inference">Posterior Inference</a></li>
         
             <li><a href="#posterior-analysis">Posterior analysis</a></li>
+        
+            <li><a href="#case-study-occupancy-estimation">Case study: Occupancy estimation</a></li>
         
             <li><a href="#backends">Backends</a></li>
         
@@ -162,7 +168,14 @@
         
             <li><a href="#parameter-transformations">Parameter Transformations</a></li>
         
-            <li><a href="#deterministic">Deterministic</a></li>
+            <li><a href="#deterministic-transformations">Deterministic transformations</a></li>
+        
+    
+        <li class="main "><a href="#generalized-linear-models">Generalized Linear Models</a></li>
+        
+            <li><a href="#conclusions">Conclusions</a></li>
+        
+            <li><a href="#references">References</a></li>
         
     
     </ul>
@@ -170,58 +183,96 @@
                 <div class="col-md-9" role="main">
 
 <h1 id="probabilistic-programming-in-python-using-pymc">Probabilistic Programming in Python using PyMC</h1>
-<p>Authors: Thomas V. Wiecki, John Salvatier, Christopher Fonnesbeck</p>
-<h2 id="abstract">Abstract</h2>
-<p>Probabilistic Programming (PP) allows flexible specification of statistical Bayesian models in code. PyMC3 is a new, open-source PP framework that features next generation Markov chain Monte Carlo (MCMC) sampling algorithms such as Hamiltonian Monte Carlo (HMC). In contrast to most other PP frameworks, PyMC3 allows model specification in Python using intuitive syntax. The software itself is written in pure Python which makes it very extensible. The model specification is transparently transcoded via Theano to C and compiled to machine code for maximum speed. Theano also natively supports automatic differentation for computing the gradient required for HMC. In addition, PyMC3 supports parallel sampling natively and allows saving traces to various backends including sqlite. Special syntax for describing general linear models allow for specification of hierarchical multifactor models into oneliners.</p>
+<p>Authors: John Salvatier, Thomas V. Wiecki, Christopher Fonnesbeck</p>
+<h2 id="introduction">Introduction</h2>
+<p>Probabilistic Programming (PP) allows flexible specification of statistical Bayesian models in code. PyMC3 is a new, open-source PP framework that features next generation Markov chain Monte Carlo (MCMC) sampling algorithms such as Hamiltonian Monte Carlo (HMC; Duane 87). This class of sampler allows PP to work on models that previously where extremely challenging to estimate because of their high dimensionality or complex posterior distribution. As such, PyMC3, together with the Stan () package, is currently the only PP package to offer HMC.</p>
+<p>In contrast to most other PP frameworks, PyMC3 allows model specification in Python using an intuitive, readable syntax. Implementing a probabilistic programming system in Python confers a number of advantages including multi-platform compatibility, ease of use (particularly for non-computer scientists), and extensibility. While most of PyMC3 is written in pure Python, it relies on Theano (Bergstra et al., 2010) to transparently transcode models to C and compile it to machine code, thereby boosting performance. Additionally, Theano natively supports automatic differentation for computing gradients, which is required to implement modern gradient-based sampling algorithms, such as Hamilitonian Monte Carlo (HMC) and the No U-Turn Sampler (NUTS).</p>
+<p>PyMC3 is a complete rewrite of PyMC version 2 (Patil et al. 2010), which is engineered to take advantage of the expression evaluation engine of Theano, while retaining the concise, approachable syntax of previous versions. Importantly, implementing PyMC in Theano obivated the need for the large library Fortran extensions required by PyMC2 which made installing the software inconvenient for many users. Moreover, the incorporation of the Patsy package has allowed for the specification of general linear models with hierarchical structure into one-line expressions. </p>
+<p>A list of key PyMC3 features includes:</p>
+<ul>
+<li>Intuitive model specification syntax, for example, x ~ N(0,1) translates to x = Normal(0,1)</li>
+<li>Powerful sampling algorithms such as Hamiltonian Monte Carlo</li>
+<li>Easy optimization for finding the maximum a posteriori point</li>
+<li>Theano features<ul>
+<li>Numpy broadcasting and advanced indexing</li>
+<li>Linear algebra operators</li>
+<li>Computation optimization and dynamic C compilation</li>
+</ul>
+</li>
+<li>Simple extensibility</li>
+<li>Database backends for storing simulation output</li>
+<li>Parallel sampling</li>
+</ul>
 <h2 id="installation">Installation</h2>
-<p>As PyMC3 is written in pure Python, installation is thus greatly simplified over PyMC2 which required compilation of Fortran code. PyMC3 has the following dependencies: <code>Theano</code>, <code>NumPy</code>, <code>SciPy</code>, and <code>Matplotlib</code>; as well as the following optional dependencies: <code>Pandas</code>, <code>Patsy</code>, <code>Statsmodels</code>.</p>
-<p>The code is hosted on GitHub at https://github.com/pymc-devs/pymc and is distributed under the liberal <a href="https://github.com/pymc-devs/pymc/blob/master/LICENSE">Apache License 2.0</a> and contributions are encouraged.</p>
-<p>A complete Python installation can most easily be obtained by installing the free <a href="https://store.continuum.io/cshop/anaconda/"><code>Anaconda Python Distribution</code></a> by ContinuumIO. After successfull installation, <code>PyMC3</code> can be installed using <code>pip</code>:</p>
-<pre><code>pip install git+https://github.com/pymc-devs/pymc
+<p>Running PyMC requires a working Python interpreter, either version 2.7 (or more recent) or 3.4 (or more recent); we recommend that new users install version 3.4. A complete Python installation for Mac OSX, Linux and Windows can most easily be obtained by downloading the free <a href="https://store.continuum.io/cshop/anaconda/"><code>Anaconda Python Distribution</code></a> by ContinuumIO, and installing it. </p>
+<p>Prior to installing PyMC3, there are several third-party Python packages upon which it depends. The four required dependencies are: <code>Theano</code>, <code>NumPy</code>, <code>SciPy</code>, and <code>Matplotlib</code>. To take full advantage of PyMC, the optional dependencies <code>Pandas</code> and <code>Patsy</code> should also be installed. The source code for PyMC is hosted on GitHub at https://github.com/pymc-devs/pymc and is distributed under the liberal <a href="https://github.com/pymc-devs/pymc/blob/master/LICENSE">Apache License 2.0</a>. On the GitHub site, users may also report bugs and other issues, as well as contribute code to the project, which we actively encourage.</p>
+<p>After successfull installation, <code>PyMC3</code> can be installed using <code>pip</code>:</p>
+<pre><code>pip install git+https://github.com/pymc-devs/pymc3
 </code></pre>
 
 <h2 id="model-specification">Model specification</h2>
-<p>Consider the following linear Bayesian model:
-<mathjax>$$ \alpha \sim \mathcal{N}(0, 1) $$</mathjax>
-<mathjax>$$ \beta \sim \mathcal{N}(0, 1) $$</mathjax>
-<mathjax>$$ \sigma \sim \lvert\mathcal{N}(0, 1) {\rvert}$$</mathjax>
-<mathjax>$$ Y  \sim \mathcal{N}(\alpha + X \beta, \epsilon) $$</mathjax></p>
+<p>Consider the following linear Bayesian model:</p>
+<p><mathjax>$$\begin{aligned} 
+Y  &amp;\sim \mathcal{N}(\alpha + X \beta, \epsilon) \\
+\alpha &amp;\sim \mathcal{N}(0, 1) \\
+\beta &amp;\sim \mathcal{N}(0, 1) \\
+\epsilon &amp;\sim \mathcal{N}(0, \sigma) \\
+\sigma &amp;\sim \lvert\mathcal{N}(0, 1){\rvert}
+\end{aligned}$$</mathjax></p>
 <p>where <mathjax>$X$</mathjax> is a vector of predictors, and <mathjax>$Y$</mathjax> is a vector outcome variable; <mathjax>$\alpha$</mathjax> the intercept, and <mathjax>$\beta$</mathjax> the slope regression coefficients which follow a standard normal distribution. <mathjax>$\sigma$</mathjax> represents the error term and is modeled as the absolute of a Normal distribution (so-called <em>HalfNormal</em>).</p>
-<p>The data might look as follows:</p>
-<pre><code>def print_public(module):
-    import pprint
-    pprint.pprint([name for name in dir(module) if not name.startswith('_')])
+<p>We can simulate some data from this model, and use PyMC to estimate the corresponding parameters.</p>
+<pre><code>import numpy as np
 
-
-import numpy as np
+# Intialize random number generator
 np.random.seed(123)
+
+# Size of dataset
 size = 100
+
+# Predictor variable
 X = np.linspace(0, 1, size)
-alpha = 1
-beta = 1
+
+# True parameter values
+alpha, beta = 1, 1
+
+# Simulate outcome variable
 Y = alpha + X*beta + np.random.randn(size)
 
-
-%matplotlib inline
-import matplotlib.pyplot as plt
-plt.scatter(X, Y)
-
-
-
-
-&lt;matplotlib.collections.PathCollection at 0x7f21eaff0d10&gt;
+# Define helper function
+def print_public(module):
+    import pprint
+    pprint.pprint([name for name in dir(module) if name[0].istitle()])
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_4_1.png" /></p>
-<pre><code>import pymc3 as pm
+<p>Here is what the simulated data look like.</p>
+<pre><code>%matplotlib inline
+import pylab as pl
 
-with pm.Model() as model_linear:
-    alpha = pm.Normal('alpha', mu=0, sd=1)
-    beta = pm.Normal('beta', mu=0, sd=1)
-    sigma = pm.HalfNormal('sigma', sd=1)
-    Y_obs = pm.Normal('Y_obs', mu=alpha + beta * X, sd=sigma, observed=Y)
+pl.scatter(X, Y);
 </code></pre>
-<p>As you can see, with a few minor modifications, specification of this model in Python code using <code>PyMC3</code> closely follows the statistical model printed above. <code>PyMC3</code> comes with most commonly used discrete and continuous probability distributions:</p>
-<pre><code>print_public(pm.distributions)
+<p><img alt="png" src="../getting_started_files/getting_started_5_0.png" /></p>
+<p>Implementing the model in PyMC3 is straightforward because the syntax is as close to writing pseudo-code as possible. For the most part, each line of Python code corresponds to each line in the model notation above. First, let's import the components we will need from PyMC.</p>
+<pre><code>from pymc3 import Model, Normal, HalfNormal
+
+:0: FutureWarning: IPython widgets are experimental and may change in the future.
+</code></pre>
+<p>Now we write the model as follows:</p>
+<pre><code>with Model() as model_linear:
+
+    # Unknown model parameters
+    alpha = Normal('alpha', mu=0, sd=1)
+    beta = Normal('beta', mu=0, sd=1)
+    sigma = HalfNormal('sigma', sd=1)
+
+    # Expected value of outcome
+    mu = alpha + beta * X
+
+    # Data likelihood
+    Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
+</code></pre>
+<p>Though we only required two distributions for this model, <code>PyMC3</code> includes the most commonly-used discrete and continuous probability distributions in the <code>distibutions</code> sub-module.</p>
+<pre><code>from pymc3 import distributions
+
+print_public(distributions)
 
 ['Bernoulli',
  'Beta',
@@ -245,6 +296,7 @@ with pm.Model() as model_linear:
  'HalfCauchy',
  'HalfNormal',
  'InverseGamma',
+ 'LKJCorr',
  'Laplace',
  'Lognormal',
  'Multinomial',
@@ -259,26 +311,15 @@ with pm.Model() as model_linear:
  'Wald',
  'Weibull',
  'Wishart',
- 'ZeroInflatedPoisson',
- 'continuous',
- 'discrete',
- 'dist_math',
- 'distribution',
- 'logtransform',
- 'meta',
- 'multivariate',
- 'simplextransform',
- 'special',
- 'timeseries',
- 'transform',
- 'transforms']
+ 'ZeroInflatedPoisson']
 </code></pre>
-<p>The first argument is the name of the random variable (RV). Following arguments specify the priors of the distribution which are described in the doc string:</p>
-<pre><code>help(pm.Normal)
+<p>Each of <code>alpha</code>, <code>beta</code> and <code>sigma</code> are <strong>stochastic</strong> nodes in the model graph, meaning that it takes on a value that is only partly determined by the values of its parents. Therfore, stochastic nodes are assigned functional forms that describe the prior uncertainty in their values, conditional on its parents. The first argument for the built-in distributions is the <em>name</em> of the random variable (RV), so that values can be indexed from the model conveniently by their name. Next are the parameters of the distribution, which in most cases are one or two values which determine the location, shape or scale of the random variable, depending on the parameterization of the distribution.</p>
+<p>Detailed notes about each PyMC object are available via the <code>help</code> function.</p>
+<pre><code>help(Normal)
 
-Help on class Normal in module pymc.distributions.continuous:
+Help on class Normal in module pymc3.distributions.continuous:
 
-class Normal(pymc.distributions.distribution.Continuous)
+class Normal(pymc3.distributions.distribution.Continuous)
  |  Normal log-likelihood.
  |  
  |  .. math::
@@ -300,9 +341,9 @@ ight\}
  |  
  |  Method resolution order:
  |      Normal
- |      pymc.distributions.distribution.Continuous
- |      pymc.distributions.distribution.Distribution
- |      __builtin__.object
+ |      pymc3.distributions.distribution.Continuous
+ |      pymc3.distributions.distribution.Distribution
+ |      builtins.object
  |  
  |  Methods defined here:
  |  
@@ -311,7 +352,7 @@ ight\}
  |  logp(self, value)
  |  
  |  ----------------------------------------------------------------------
- |  Methods inherited from pymc.distributions.distribution.Distribution:
+ |  Methods inherited from pymc3.distributions.distribution.Distribution:
  |  
  |  __getnewargs__(self)
  |  
@@ -320,17 +361,17 @@ ight\}
  |  get_test_val(self, val, defaults)
  |  
  |  ----------------------------------------------------------------------
- |  Class methods inherited from pymc.distributions.distribution.Distribution:
+ |  Class methods inherited from pymc3.distributions.distribution.Distribution:
  |  
- |  dist(cls, *args, **kwargs) from __builtin__.type
+ |  dist(*args, **kwargs) from builtins.type
  |  
  |  ----------------------------------------------------------------------
- |  Static methods inherited from pymc.distributions.distribution.Distribution:
+ |  Static methods inherited from pymc3.distributions.distribution.Distribution:
  |  
  |  __new__(cls, name, *args, **kwargs)
  |  
  |  ----------------------------------------------------------------------
- |  Data descriptors inherited from pymc.distributions.distribution.Distribution:
+ |  Data descriptors inherited from pymc3.distributions.distribution.Distribution:
  |  
  |  __dict__
  |      dictionary for instance variables (if defined)
@@ -338,108 +379,182 @@ ight\}
  |  __weakref__
  |      list of weak references to the object (if defined)
 </code></pre>
-<p>Make special note of the <code>observed</code> keyword argument supplied here:</p>
-<pre><code class="python">    Y_obs = pm.Normal('Y_obs', mu=alpha + beta * X, sd=eps, observed=Y)
+<p>The <code>mu</code> node is a <strong>deterministic</strong> object, meaning that its value is completely determined by its parents' values. Hence, there is no stochasticity beyond the uncertainty in the parents' values. Here, <code>mu</code> is just the sum of the intercept <code>alpha</code> and the product of the slope <code>beta</code> and the predictor variable. Notice how PyMC objects and data can be arbitrarily added, subtracted, divided and multiplied together, allowing for great model expressivity.</p>
+<p>The final piece of the model, <code>Y_obs</code>, is an <strong>observed stochastic</strong>, and represents the data likelihood of the model. It provides the evidence from the data to the model, and is identical to a standard stochastic, except that it is given an <code>observed</code> argument. his is how the data are passed to the model, in the form of a <code>numpy.ndarray</code> or <code>pandas.DataFrame</code> object, and indicates to PyMC that the value of the node should not change, since the data are fixed.</p>
+<p>Notice that the model resides in an indented block, following the line:</p>
+<pre><code class="python">with Model() as model:
 </code></pre>
 
-<p>This argument expects a <code>numpy.ndarray</code> object or a <code>pandas.DataFrame</code> and turns Y_obs into a likelihood function.</p>
-<p>Also note that this command executes very fast. That's because no computation has taken place yet (more on this below).</p>
-<p>Finally, let's take a look at this line:</p>
-<pre><code class="python">with pm.Model() as model:
-</code></pre>
+<p>The <code>with</code> statement denotes a <strong>context manager</strong>, whereby the <code>Model</code> (that we here bind to the label <code>model</code>) is associated with each of the PyMC objects that are introduced withing the subsequent block. PyMC uses this context to register each variable with <code>model</code>. Absent this context manager idiom, we would be forced to manually associate each of the variables with <code>model</code>.</p>
+<p><code>Theano</code> has advanced matrix notation capabilities that enable <code>PyMC3</code> to handle multivariate statistics, including advanced indexing and slicing. Using matrix algebra, the above model can be rewritten in a more succinct form, using a vector of linear model covariates:</p>
+<p><mathjax>$$\theta = [\alpha, \beta]$$</mathjax></p>
+<p>For this, we require a column of ones to properly specify the intercept term.</p>
+<pre><code>import pandas as pd
 
-<p>First, the <code>with</code> statement instantiates a new <code>pm.Model()</code> object and binds it to <code>model</code>. Moreover, the <code>with</code> statement puts this <code>model</code> object in a context variable where it is access from inside upon instantiation of the RVs which register themselves to <code>model</code>.</p>
-<p><code>Theano</code> has advanced matrix notation capabilities that enable <code>PyMC3</code> to handle multivariate statistics, including advanced indexing and slicing. Using matrix algebra, the above model can succinctly be rewritten as:</p>
+X_1 = pd.DataFrame([np.ones_like(X), X]).T
+X_1.head()
+</code></pre>
+<div style="max-height:1000px;max-width:1500px;overflow:auto;">
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>0</th>
+      <th>1</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td> 1</td>
+      <td> 0.000000</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td> 1</td>
+      <td> 0.010101</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td> 1</td>
+      <td> 0.020202</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td> 1</td>
+      <td> 0.030303</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td> 1</td>
+      <td> 0.040404</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>The corresponding model now employs a single vector-valued stochastic <code>theta</code> that represents the linear coefficients (notice that we have specified <code>shape=2</code>). Further, we can use Theano's dot product function <code>dot</code> to perform matrix array multiplication.</p>
 <pre><code>import theano.tensor as T
 
-# Turn X into a 2-D array with a column of 1s for the intercept
-X_1 = np.vstack([np.ones_like(X), X])
+with Model() as model_matrix:
 
-with pm.Model() as model_matrix:
-    theta = pm.Normal('theta', 0, 1, shape=(2, 1))
-    sigma = pm.HalfNormal('sigma', sd=1)
-    Y_obs = pm.Normal('Y_obs', T.dot(theta.T, X_1), sd=sigma, observed=Y)
+    theta = Normal('theta', 0, 1, shape=2)
+    sigma = HalfNormal('sigma', sd=1)
+    mu = T.dot(X_1, theta)
+    Y_obs = Normal('Y_obs', mu, sd=sigma, observed=Y)
 </code></pre>
-<p>The <code>shape</code> kwarg turns theta into random vector with 2 elements, both of which are distributed according to the standard normal distribution.</p>
-<p>To perform the reduction in the <code>Y_obs</code> instantiaion we use the <code>theano</code> <code>dot()</code> function to compute the dot product. At this point it is worth noting that RVs in <code>PyMC3</code> behave like <code>theano</code> expressions which makes them very versatile. For example, using <code>theano</code>'s sigmoid function from the neural net (<code>nnet</code>) submodule we can easily turn this linear regression into a logistic regression:</p>
-<pre><code># Turn X into a 2-D array with a column of 1s for the intercept
-Y_logistic = Y &gt; np.median(Y) # Binarize Y by splitting at the 50% percentile
+<p>At this point it is worth noting that RVs in <code>PyMC3</code> behave like Theano expressions, which makes them very versatile. For example, using Theano's <code>sigmoid</code> function from the neural net (<code>nnet</code>) submodule, we can easily turn this linear regression into a logistic regression.</p>
+<p>Perhaps we are now trying to predict the values of <code>Y</code> that are greater than zero:</p>
+<pre><code>Z = Y &gt; 0
+</code></pre>
+<p>We now use a Bernoulli likelihood, with probability <mathjax>$p = \text{sig}(X \theta)$</mathjax> in place of the normal likelihood.</p>
+<pre><code>from pymc3 import Bernoulli
 
-with pm.Model() as model_logistic:
-    theta = pm.Normal('theta', 0, 1, shape=(2, 1))
-    logistic = T.nnet.sigmoid(T.dot(theta.T, X_1))
-    Y_obs = pm.Bernoulli('Y_obs', p=logistic, 
-                         observed=Y_logistic)
+with Model() as model_logistic:
+
+    theta = Normal('theta', 0, 1, shape=(2, 1))
+    p = T.nnet.sigmoid(T.dot(X_1, theta))
+    Z_obs = Bernoulli('Y_obs', p=p, observed=Z)
 </code></pre>
-<p>Further below we describe how more complex GLMs can easily be created in one line using the <code>glm</code> submodule of <code>PyMC3</code> but let us first turn our attention to inference.</p>
+<p>Later, we describe how more complex GLMs can easily be created in one line using the <code>glm</code> submodule of <code>PyMC3</code> but let us first turn our attention to inference.</p>
+<blockquote>
 <h3 id="note-on-random-variables-and-probability-distributions">Note on Random Variables and Probability Distributions</h3>
-<p>As a final note on model specification, <code>PyMC3</code> differentiates between RVs and probability distributions. A RV is specified by a probability distribution, but its also associated to a model and has a specific name -- those are the ones we created above. Probability distributions, however, can exist outside of a pymc model and don't need names. By default, a call to <code>pm.Normal()</code> as used above creates a RV but we can also create just the probability distribution by using the <code>.dist</code> classmethod:</p>
-<pre><code>normal_dist = pm.Normal.dist(mu=0, sd=1)
-theano_expr = normal_dist.logp(np.array([0, .1]))
-theano_expr
-
-
-
-
-Elemwise{switch,no_inplace}.0
+<p>As a final note on model specification, <code>PyMC3</code> differentiates between RVs and probability distributions. RVs, as we specified in the models above, are specified by a probability distribution and a name, and are associated with a model. In contrast, probability distributions can exist outside of a <code>Model</code> context and don't require names. </p>
+<p>To create a probability distribution instead of a RV, we use the <code>.dist</code> classmethod for the distribution of interest. For example:</p>
+</blockquote>
+<pre><code>normal_dist = Normal.dist(mu=0, sd=1)
 </code></pre>
-<p>As you can see, by default the <code>logp</code> method only returns a <code>theano</code> expression graph. We have to call <code>.eval()</code> to actually force <code>theano</code> to evaluate the expression graph and compute a value:</p>
-<pre><code>theano_expr.eval()
+<blockquote>
+<p>To use the distribution, we pass values to its <code>logp</code> method, then force Theano to evaluate the resulting expression graph with the <code>eval</code> method.</p>
+</blockquote>
+<pre><code>normal_dist.logp(2.1).eval()
 
 
 
 
-array([-0.91893858, -0.92393858])
+array(-3.1239385332046727)
 </code></pre>
-<h2 id="inference">Inference</h2>
-<p>As mentioned above, the code examples above have not actually performed any computation. All what was done was to compute -- behind the scenes -- a <code>theano</code> expression graph that allows computation of the summed log probability of the model. On demand, we can ask <code>theano</code> to perform algebraic simplifications and compile the symbolic computation graph to C-code and then natively using the system's <code>gcc</code> compiler. All of this functionality happens transparently and does not burden the <code>PyMC3</code> code base. </p>
-<p>A central issue to achieving good convergence is selection of a good starting point to initialize the samplers. <code>PyMC3</code> offers optimization routines to estimate the maximum aposterior (MAP) which is often a sensible choice as a starting value.</p>
-<pre><code>with model_matrix:
-    start = pm.find_MAP()
+<h2 id="posterior-inference">Posterior Inference</h2>
+<p>So far, we have simply specified models, resulting in a Theano expression graph  that allows computation of the summed log probability of the model. On demand, we can ask Theano to perform algebraic simplifications and compile the symbolic computation graph to C code and compile this, in turn, to machine code. All of this functionality happens transparently and does not burden the <code>PyMC3</code> code base. </p>
+<p>Our objective in constructing probabilistic models is to obtain posterior inference for the unobserved stochastics in the model.</p>
+<p><mathjax>$$Pr(\theta | y) \propto Pr(y | \theta) Pr(\theta)$$</mathjax></p>
+<p>where <mathjax>$Pr(\theta)$</mathjax> is the joint prior of the stochastics and <mathjax>$Pr(y | \theta)$</mathjax> is the observed stochastic, or data likelihood; deterministic nodes are not relevant to the joint posterior probability.</p>
+<p>For most models of interest, the normalizing constant for Bayes' formula is not available in closed form, and must be obtained by optimization or simulation-based methods. One such approach is the <strong>maximum a posteriori (MAP)</strong> estimate, which uses optimization to obtain the modes of the unnormalized posterior distribution (which are equivalent to the normalized modes). The <code>find_MAP</code> function provides this method.</p>
+<pre><code>from pymc3 import find_MAP
+
+with model_matrix:
+    start = find_MAP()
+
 print(start)
 
-{'theta': array([[ 1.0330429 ],
-       [ 0.96214962]]), 'eps': array(1.1214199169216592)}
+{'theta': array([ 1.03304292,  0.96214966]), 'sigma': array(1.1214199548852277)}
 </code></pre>
+<p>Notice that <code>find_MAP</code> is executed in the model's context, and therefore does not require the model as an argument.</p>
 <p>By default, <code>PyMC3</code> uses BFGS optimization but also allows selection of other optimization algorithms from the <code>scipy</code> module:</p>
 <pre><code>from scipy import optimize
+
 with model_matrix:
-    start = pm.find_MAP(fmin=optimize.fmin_powell)
+    start = find_MAP(fmin=optimize.fmin_powell)
+
 print(start)
+
+{'theta': array([ 1.03338202,  0.9618749 ]), 'sigma': array(1.1207891768837501)}
 </code></pre>
-<p>To actually run MCMC sampling to generate posterior samples we have instantiate a step object that corresponds to a certain kind of MCMC. The <code>pymc.step_methods</code> submodule contains the following samplers, as well as proposal distributions:</p>
-<pre><code>print_public(pm.step_methods)
+<p>Though MAP is a fast and easy way of obtaining estimates of the unknown model parameters, it is not usually sufficient for infernce because there is no associated estimate of uncertainty of the MAP estimates. Instead, a simulation-based approach such as Markov chain Monte Carlo (MCMC) can be used to obtain a Markov chain of values that, given the satisfaction of certain conditions, are indistinguishable from independent samples from the true posterior. </p>
+<p>To conduct MCMC sampling to generate posterior samples in PyMC3, we have instantiate a <strong>step method</strong> object that corresponds to a particular MCMC algorithm, such as Metropolis or Slice sampling. PyMC's <code>step_methods</code> submodule contains the following samplers, as well as proposal distributions that are used by several of the samplers:</p>
+<pre><code>from pymc3 import step_methods
+
+print_public(step_methods)
+
+['BinaryMetropolis',
+ 'CauchyProposal',
+ 'CompoundStep',
+ 'ElemwiseCategoricalStep',
+ 'HamiltonianMC',
+ 'LaplaceProposal',
+ 'Metropolis',
+ 'MultivariateNormalProposal',
+ 'NUTS',
+ 'NormalProposal',
+ 'PoissonProposal',
+ 'Slice']
 </code></pre>
-<p>As you can see, <code>PyMC3</code> supports all samplers that are commonly included in other propalistic programming frameworks like <code>BUGS</code> or <code>JAGS</code>, including Metropolis Hastings with various proposal distributions and Slice sampling. Of special note are the new class of Hamiltonian Monte Carlo samplers like <code>HamiltonianMC</code> as well as the auto-tuned version of it -- the No-U-Turn Sampler (<code>NUTS</code>). This last sampling algorithm is one of the main selling points of the new <code>stan</code> MCMC package (CITE). These Hamiltonian samplers require evaluation of the gradient, something that requires differentation of the logp of the model. Fortunately, <code>theano</code> already supports gradient computation via automatic differentation on the compute graph that <code>PyMC3</code> creates.</p>
-<pre><code>with model_matrix:
-    step = pm.NUTS(scaling=start) # instantiate sampler
-    trace = pm.sample(500, step, start=start) # draw 500 posterior samplers
+<p>Of special note are the new class of Hamiltonian Monte Carlo samplers like <code>HamiltonianMC</code>, as well as the auto-tuned version of it, the No-U-Turn Sampler (<code>NUTS</code>). These Hamiltonian samplers require evaluation of the model gradient, something that requires differentation of the log-probability of the model. PyMC relies on Theano to compute model gradients via automatic differentation on the compute graph that PyMC3's syntax specifies.</p>
+<p>Though we may not want to use MAP for inference, it is a useful tool for selecting reasonable starting values for the MCMC simulation. These values are used as an argument to instantiate the sampler class, and the resulting instance is passed to the <code>sample</code> function to execute the MCMC run. In the case of the <code>NUTS</code> sampler, it requires a scaling matrix that can be provided by computing the Hessian using <code>find_hessian</code>, or from a point (e.g. the MAP estimate) that will be used to compute a diagonal scaling matrix.</p>
+<pre><code>from pymc3 import NUTS, sample
+
+with model_matrix:
+
+    # obtain starting values via MAP
+    start = find_MAP(fmin=optimize.fmin_powell)
+
+    # instantiate sampler
+    step = NUTS(scaling=start)
+
+    # draw 500 posterior samplers
+    trace = sample(500, step, start=start)
 
  [-----------------100%-----------------] 500 of 500 complete in 0.9 sec
 
-/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/scan_module/scan_perform_ext.py:117: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
-  from scan_perform.scan_perform import *
+/usr/local/Cellar/python3/3.4.2_1/Frameworks/Python.framework/Versions/3.4/lib/python3.4/importlib/_bootstrap.py:321: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
+  return f(*args, **kwds)
 </code></pre>
-<p>As <code>NUTS</code> requires a scaling matrix we can either compute the Hessian using <code>pm.find_hessian()</code> or pass in a point from which <code>NUTS</code> will compute a diagonal scaling matrix.</p>
 <p>The returned <code>trace</code> object can be queried in a similar way as a <code>dict</code> containing a map from RVs to <code>numpy.array</code>s:</p>
 <pre><code>trace['theta'][-3:]
 
 
 
 
-array([[[ 0.8046511 ],
-        [ 1.47561769]],
-
-       [[ 0.74341003],
-        [ 1.32937156]],
-
-       [[ 0.99479954],
-        [ 0.85411475]]])
+array([[ 1.03678681,  0.93736604],
+       [ 1.06234722,  0.87207175],
+       [ 0.99420198,  0.91966894]])
 </code></pre>
 <p>As mentioned above, we can also run multiple chains in parallel to speed up sampling:</p>
-<pre><code>with model_matrix:
-    step = pm.NUTS(scaling=start) # instantiate sampler
-    trace = pm.sample(500, step, start=start, njobs=4) # draw 500 posterior samplers
+<pre><code>from pymc3 import NUTS
+
+with model_matrix:
+    step = NUTS(scaling=start) # instantiate sampler
+    trace = sample(500, step, start=start, njobs=4) # draw 500 posterior samplers
 
  [-----------------100%-----------------] 500 of 500 complete in 1.6 sec
 </code></pre>
@@ -457,74 +572,126 @@ array([[[ 0.8046511 ],
 
 
 
-array([[[ 0.77248584],
-        [ 1.67067534]],
-
-       [[ 0.73602855],
-        [ 1.51512773]],
-
-       [[ 0.71991322],
-        [ 1.57903929]],
-
-       [[ 0.76396846],
-        [ 1.22617319]],
-
-       [[ 0.58214555],
-        [ 1.3127707 ]]])
+array([[ 1.37503729,  0.21765711],
+       [ 1.34749754,  0.572307  ],
+       [ 1.17585266,  0.86610551],
+       [ 1.17585266,  0.86610551],
+       [ 1.01984078,  0.85076492]])
 </code></pre>
 <p>More details on the backend can be found further below.</p>
 <h2 id="posterior-analysis">Posterior analysis</h2>
 <p><code>PyMC3</code> comes with various statistical and plotting capabilities to examine the output. A simple posterior plot can be created using <code>pm.traceplot</code>:</p>
-<pre><code>pm.traceplot(trace);
+<pre><code>from pymc3 import traceplot
+
+traceplot(trace, );
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_41_0.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_48_0.png" /></p>
 <p>The left column consists of a kernel density estimation (KDE) of the marginal posterios of each RV while the right column contains the trace. As we ran four chains, each subplot will have 4 differently colored lines, one corresponding to each chain. Because <code>theta</code> is a 2-D RV we see two (times four) posteriors in the top row. This allows easy visual inspection of all chains converged to the same posterior.</p>
-<p>A forest plot allows for a more succint overview of the posteriors as well as their Gelman-Rubin <mathjax>$\hat{R}$</mathjax> score (CITE):</p>
-<pre><code>pm.forestplot(trace)
+<p>A forest plot allows for a more succint overview of the posteriors as well as their Gelman-
+Rubin <mathjax>$\hat{R}$</mathjax> score (CITE):</p>
+<pre><code>from pymc3 import forestplot
+
+forestplot(trace)
 
 
 
 
-&lt;matplotlib.gridspec.GridSpec at 0x7f0a99c12c90&gt;
+&lt;matplotlib.gridspec.GridSpec at 0x1151596d8&gt;
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_44_1.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_51_1.png" /></p>
 <p>In addition, <code>pm.stats.summary()</code> provides a text-based output of common posterior statistics:</p>
-<pre><code>pm.stats.summary(trace)
+<pre><code>from pymc3 import summary
+
+summary(trace)
 
 
 theta:
 
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
-  ..............................[0, :]...............................
-  0.769            0.177            0.009            [0.394, 1.087]
-  ..............................[1, :]...............................
-  1.210            0.305            0.014            [0.601, 1.786]
+
+  1.045            0.219            0.010            [0.611, 1.458]
+  0.935            0.380            0.017            [0.193, 1.670]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
-  .............................[0, :].............................
-  0.423          0.645          0.772          0.889          1.126
-  .............................[1, :].............................
-  0.618          1.002          1.209          1.427          1.811
+
+  0.616          0.894          1.049          1.190          1.475
+  0.195          0.678          0.939          1.192          1.672
 
 
-eps:
+sigma:
 
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.993            0.073            0.002            [0.858, 1.144]
+  1.147            0.084            0.002            [0.997, 1.323]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.863          0.942          0.988          1.039          1.155
+  0.995          1.090          1.144          1.200          1.321
 </code></pre>
 <p>Here the 2-D RV is split into its individual components.</p>
 <p>As you can see, <code>PyMC3</code> handles multiple chains as well as multivariate statistics natively.</p>
+<h2 id="case-study-occupancy-estimation">Case study: Occupancy estimation</h2>
+<p>Ecologists often use survey data to make inferences regarding the abundance and distribution of plants and animals. Such survey data is often <em>zero-inflated</em>, whereby there are more zeros than you would expect if the data were distributed according to some common distribution. This is sometimes due to habitat heterogeneity, which causes areas of low quality to be unoccupied by a particular species. However, some sites may be unoccupied simply due to chance.</p>
+<p>Here is an example of such data; each element in the array (n=100) represents a count of a particular species among a set of sites. The data are clearly zero-inflated:</p>
+<pre><code>y = np.array([0, 2, 1, 0, 4, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 2, 1,
+       2, 0, 0, 0, 1, 0, 0, 0, 4, 2, 0, 0, 0, 1, 0, 2, 4, 0, 0, 1, 0, 0, 0,
+       0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0,
+       0, 0, 3, 0, 2, 0, 1, 2, 2, 2, 2, 3, 0, 0, 0, 0, 1, 0, 3, 1, 0, 0, 0,
+       0, 0, 2, 0, 0, 1, 0, 0])
+
+pl.hist(y, bins=range(7))
+
+
+
+
+(array([ 67.,  11.,  15.,   3.,   3.,   1.]),
+ array([0, 1, 2, 3, 4, 5, 6]),
+ &lt;a list of 6 Patch objects&gt;)
+</code></pre>
+<p><img alt="png" src="../getting_started_files/getting_started_56_1.png" /></p>
+<p>We can use a <em>mixture model</em> to represent this data. The mixture is of two processes: an occupancy process, which determines whether a patch is suitable or not, and an abundance process that models the counts of organisms, conditional on occupancy. One way to tackle the problem is to model the latent state of 'occupancy' as a Bernoulli variable at each site, with some unknown probability. Then, the counts can be modeled using a discrete probability mass function, such as the Poisson, where its expected value represents the expected number of organisms sighted over a standard survey interval.</p>
+<p>PyMC3 includes a zero-inflated Poisson distribution among its standard distributions, which takes a conditional mean parameter as well as an array of indicators for the excess zeros. Since we do not know which zeros are excess a priori, this array is an unknown stochastic node in the model, distributed as a Bernoulli random variable, with a hyperparameter representing the occupancy rate.</p>
+<pre><code>from pymc3 import Beta, Bernoulli, ZeroInflatedPoisson, Uniform
+
+with Model() as zip_model:
+
+    # Estimated occupancy
+    p = Beta('p', 1, 1)
+
+    # Latent variable for occupancy
+    z = Bernoulli('z', p, y.shape)
+
+    # Estimated mean count
+    theta = Uniform('theta', 0, 100)
+
+    # Poisson likelihood
+    yd = ZeroInflatedPoisson('y', theta, z, observed=y)
+</code></pre>
+<p>Notice that this model includes discrete random variables, the latent occupancy indicators. Hence, we cannot use a gradient-based MCMC step method like HMC or NUTS. Instead, we will sample using a <code>BinaryMetropolis</code> sampler that proposes only binary values at each iteration; for the continuous-valued parameters, we will use a standard <code>Metropolis</code> sampler. </p>
+<pre><code>from pymc3 import Metropolis, BinaryMetropolis
+
+with zip_model:
+
+    start = {'p': 0.5, 'z': (y &gt; 0).astype(int), 'theta': 5}
+
+    step1 = Metropolis([theta, p])
+
+    step2 = BinaryMetropolis([z])
+
+    trace = sample(10000, [step1, step2], start)
+
+ [-----------------100%-----------------] 10000 of 10000 complete in 6.2 sec
+</code></pre>
+<p>The resulting posteriors for the unknown parameters suggest an occupancy rate in the neighborhood of 0.3 to 0.35, and an expected count (conditional on occupancy) of just over 2.</p>
+<pre><code>traceplot(trace, ['p', 'theta']);
+</code></pre>
+<p><img alt="png" src="../getting_started_files/getting_started_62_0.png" /></p>
 <h2 id="backends">Backends</h2>
 <p><code>PyMC3</code> has support for a small but growing number of backends to store traces in. These can be found in <code>pymc.backends</code>:</p>
 <pre><code>print_public(pm.backends)
@@ -536,7 +703,7 @@ eps:
     backend = pm.backends.SQLite('trace.sqlite')
     trace = pm.sample(500, step, start=start, trace=backend)
 
- [-----------------100%-----------------] 500 of 500 complete in 0.9 sec
+ [-----------------100%-----------------] 500 of 500 complete in 1.0 sec
 </code></pre>
 <p>The stored trace can then later be loaded using the <code>load</code> command:</p>
 <pre><code>with model_matrix:
@@ -547,7 +714,7 @@ trace_loaded
 
 
 
-&lt;MultiTrace: 1 chains, 1000 iterations, 2 variables&gt;
+&lt;MultiTrace: 1 chains, 500 iterations, 3 variables&gt;
 </code></pre>
 <p>More information about <code>backends</code> can be found in the docstring of <code>pymc.backends</code>.</p>
 <h2 id="defining-arbitrary-stochastic-distributions">Defining arbitrary stochastic distributions</h2>
@@ -583,14 +750,88 @@ def beta_prior(value):
     beta = pm.Normal('beta', mu=0, sd=1)
 
     sigma, log_sigma = model.TransformedVar('sigma', 
-                                            pm.HalfNormal.dist(sd=1),
+                                            pm.HalfNormal.dist(sd=1, testval=.1),
                                             pm.logtransform)
 
     Y_obs = pm.Normal('Y_obs', mu=alpha + beta * X, sd=sigma, observed=Y)
 </code></pre>
-<p>Of special note is that <code>TransformedVar</code> returns two distributions: one variable in the transformed space and one in the normal space. The one in the transformed space (here log(sigma)) is the one over which sampling will occur, and the one in the normal space is the one to use throughout the rest of the model.</p>
-<h2 id="deterministic">Deterministic</h2>
-<p>Above you have already seen that RVs in <code>PyMC3</code> can be easily combined and transformed (see the logistic regression example above). These transformations are called <em>deterministic</em>. However, note that in the above example we do not retain the samples of our transformed values (i.e. the <code>d</code>).  Using the <code>Deterministic</code> class we can explicitly add these deterministic variables to the trace.</p></div>
+<p>Of special note is that <code>TransformedVar</code> returns two distributions: one variable in the transformed space and one in the original space. The one in the transformed space (here <code>log(sigma)</code>) is the one over which sampling will occur in an unconstrained manner, and the one in the original space is the one to use throughout the rest of the model.</p>
+<h2 id="deterministic-transformations">Deterministic transformations</h2>
+<p>Above you have already seen that RVs in <code>PyMC3</code> can be easily combined and transformed (see the logistic regression example above). These transformations are called <em>deterministic</em>. However, note that in the above example we do not retain the samples of our transformed values (i.e. the <code>d</code>).  Using the <code>Deterministic</code> class we can explicitly add these deterministic variables to the trace.</p>
+<h1 id="generalized-linear-models">Generalized Linear Models</h1>
+<p>Generalized Linear Models (GLMs) are a class of widely used and flexible models to estimate relationships between a single outcome variable and one or multiple predictors. Above we have built Bayesian versions of linear as well as logistic regression. Because these models are so common, <code>PyMC3</code> offers a <code>glm</code> submodule that allows flexible creation of various GLMs with an intuitive <code>R</code>-like syntax that is implemented via the <code>patsy</code> module.</p>
+<p>As the <code>glm</code> submodule requires data to be a <code>pandas</code> <code>DataFrame</code> we first have to convert <code>X</code> and <code>Y</code>:</p>
+<pre><code># Convert X and Y to a pandas DataFrame
+import pandas as pd
+df = pd.DataFrame({'x': X, 'y': Y})
+</code></pre>
+<p>The above linear regression can then equivalently be written with the <code>glm</code> module as follows:</p>
+<pre><code>with pm.Model() as model_glm:
+    pm.glm.glm('y ~ x', df)
+</code></pre>
+<p>The <code>glm</code> doc string provides an overview of the capabilities.</p>
+<pre><code>help(pm.glm.glm)
+
+Help on function glm in module pymc3.glm.glm:
+
+glm(*args, **kwargs)
+    Create GLM after Patsy model specification string.
+
+    Parameters
+    ----------
+    formula : str
+        Patsy linear model descriptor.
+    data : array
+        Labeled array (e.g. pandas DataFrame, recarray).
+    priors : dict
+        Mapping prior name to prior distribution.
+        E.g. {'Intercept': Normal.dist(mu=0, sd=1)}
+    intercept_prior : pymc3 distribution
+        Prior to use for the intercept.
+        Default: Normal.dist(mu=0, tau=1.0E-12)
+    regressor_prior : pymc3 distribution
+        Prior to use for all regressor(s).
+        Default: Normal.dist(mu=0, tau=1.0E-12)
+    init_vals : dict
+        Set starting values externally: parameter -&gt; value
+        Default: None
+    family : Family object
+        Distribution of likelihood, see pymc3.glm.families
+        (init has to be True).
+
+    Output
+    ------
+    vars : List of created random variables (y_est, coefficients etc)
+
+    Example
+    -------
+    # Logistic regression
+    vars = glm('male ~ height + weight',
+               data,
+               family=glm.families.Binomial(link=glm.families.logit))
+</code></pre>
+<p>We can thus also specify a logistic regression by passing in a <code>Binomial</code> family object.</p>
+<pre><code>df_logistic = pd.DataFrame({'x': X, 'y': Y_logistic})
+
+with pm.Model() as model_glm_logistic:
+    pm.glm.glm('y ~ x', 
+               df_logistic,
+               family=pm.glm.families.Binomial()
+    )
+</code></pre>
+<h2 id="conclusions">Conclusions</h2>
+<p>PyMC3 offers state-of-the-art sampling algorithms including Hamiltonian Monte Carlo. PyMC3 is also fast due to just-in-time compilation of the model to C, mathematical simplifications of the and caching of previously computed values we gain speed by just-in-time compilation of the model log-likelihood and it's gradient to C,  automatic gradient calculation</p>
+<h2 id="references">References</h2>
+<p>Patil, A., D. Huard and C.J. Fonnesbeck. (2010) PyMC: Bayesian Stochastic Modelling in Python. Journal of Statistical Software, 35(4), pp. 1-81</p>
+<p>Bastien, F., Lamblin, P., Pascanu, R., Bergstra, J., Goodfellow, I., Bergeron, A., Bouchard, N., Warde-Farley, D., and Bengio, Y. (2012) “Theano: new features and speed improvements”. NIPS 2012 deep learning workshop.</p>
+<p>Bergstra, J., Breuleux, O., Bastien, F., Lamblin, P., Pascanu, R., Desjardins, G., Turian, J., Warde-Farley, D., and Bengio, Y. (2010) “Theano: A CPU and GPU Math Expression Compiler”. Proceedings of the Python for Scientific Computing Conference (SciPy) 2010. June 30 - July 3, Austin, TX</p>
+<p>Lunn, D.J., Thomas, A., Best, N., and Spiegelhalter, D. (2000) WinBUGS -- a Bayesian modelling framework: concepts, structure, and extensibility. Statistics and Computing, 10:325--337.</p>
+<p>Neal, R.M. Slice sampling. Annals of Statistics. (2003). doi:10.2307/3448413.</p>
+<p>van Rossum, G. The Python Library Reference Release 2.6.5., (2010). URL http://docs. python.org/library/.</p>
+<p>Duane, S., Kennedy, A. D., Pendleton, B. J., and Roweth, D. (1987) “Hybrid Monte Carlo”, Physics Letters, vol. 195, pp. 216-222.</p>
+<p>Stan Development Team. (2014). Stan: A C++ Library for Probability and Sampling, Version 2.5.0.   http://mc-stan.org. </p>
+<p>Gamerman, D. Markov Chain Monte Carlo: statistical simulation for Bayesian inference. Chapman and Hall, 1997.</p>
+<p>Hoffman, M. D., &amp; Gelman, A. (2014). The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo. The Journal of Machine Learning Research, 30.</p></div>
             
         </div>
 
@@ -602,12 +843,16 @@ def beta_prior(value):
 
         
 
-        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="../js/jquery-1.10.2.min.js"></script>
         <script src="../js/bootstrap-3.0.3.min.js"></script>
-        <script src="../js/prettify-1.0.min.js"></script>
         <script src="../js/highlight.pack.js"></script>
         <script src="../js/base.js"></script>
         <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
         <script src="../js/mathjaxhelper.js"></script>
+
+        <!--
+        MkDocs version  : 0.12.2
+        Docs Build Date : 2015-04-24 02:41:45.272809
+        -->
     </body>
 </html>
