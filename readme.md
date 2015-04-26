@@ -21,7 +21,7 @@ Check out the [Tutorial](http://pymc-devs.github.io/pymc3/getting_started/)!
  * Simple extensibility
 
 ## Getting started
- * [PyMC 3 Tutorial](http://nbviewer.ipython.org/github/pymc-devs/pymc3/blob/master/pymc3/examples/tutorial.ipynb)
+ * [PyMC 3 Tutorial](http://pymc-devs.github.io/pymc3/getting_started/)
  * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py)
  * [Global Health Metrics & Evaluation model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/GHME%202013.ipynb) case study for GHME 2013
  * [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/stochastic_volatility.ipynb)
