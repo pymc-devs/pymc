@@ -1,5 +1,5 @@
 site_name: PyMC3
-repo_url: https://github.com/pymc-devs/pymc
+repo_url: https://github.com/pymc-devs/pymc3
 site_author: PyMC devs
 markdown_extensions: ['extra', 'mathjax']
 extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML','js/mathjaxhelper.js']
