@@ -129,7 +129,7 @@ class Multinomial(Discrete):
         # only defined for sum(p) == 1
         return bound(
             factln(n) + sum(x * log(p) - factln(x)),
-            n > 0,
+            n >= 0,
             eq(sum(x), n),
             all(0 <= x), all(x <= n))
 
