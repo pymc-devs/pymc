@@ -89,7 +89,7 @@
                             </li>
                         
                             <li >
-                                <a href="../GLM-blog-linear/">Linear Regression</a>
+                                <a href="../GLM-linear/">Linear Regression</a>
                             </li>
                         
                             <li class="active">
@@ -97,7 +97,7 @@
                             </li>
                         
                             <li >
-                                <a href="../glm_hierarchical/">Hierarchical linear regression</a>
+                                <a href="../GLM-hierarchical/">Hierarchical linear regression</a>
                             </li>
                         
                             <li >
@@ -117,12 +117,12 @@
                 
                 
                 <li >
-                    <a rel="next" href="../GLM-blog-linear/">
+                    <a rel="next" href="../GLM-linear/">
                         <i class="fa fa-arrow-left"></i> Previous
                     </a>
                 </li>
                 <li >
-                    <a rel="prev" href="../glm_hierarchical/">
+                    <a rel="prev" href="../GLM-hierarchical/">
                         Next <i class="fa fa-arrow-right"></i>
                     </a>
                 </li>
@@ -148,7 +148,10 @@
                 <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
     <ul class="nav bs-sidenav">
     
-        <li class="main active"><a href="#robust-regression">Robust Regression</a></li>
+        <li class="main active"><a href="#this-world-is-far-from-normally-distributed-bayesian-robust-regression-in-pymc3">This world is far from Normal(ly distributed): Bayesian Robust Regression in PyMC3</a></li>
+        
+    
+        <li class="main "><a href="#robust-regression">Robust Regression</a></li>
         
             <li><a href="#summary">Summary</a></li>
         
@@ -157,7 +160,9 @@
 </div></div>
                 <div class="col-md-9" role="main">
 
-<p>This is the second blog post in a small series on Bayesian GLMs:</p>
+<h1 id="this-world-is-far-from-normally-distributed-bayesian-robust-regression-in-pymc3">This world is far from Normal(ly distributed): Bayesian Robust Regression in PyMC3</h1>
+<p>Author: Thomas Wiecki</p>
+<p>This tutorial first appeard as a post in small series on Bayesian GLMs on my blog:</p>
 <ol>
 <li><a href="http://twiecki.github.com/blog/2013/08/12/bayesian-glms-1/">The Inference Button: Bayesian GLMs made easy with PyMC3</a></li>
 <li><a href="http://twiecki.github.io/blog/2013/08/27/bayesian-glms-2/">This world is far from Normal(ly distributed): Robust Regression in PyMC3</a></li>
@@ -173,7 +178,9 @@
 <p>This worked splendidly on simulated data. The problem with simulated data though is that it's, well, simulated. In the real world things tend to get more messy and assumptions like normality are easily violated by a few outliers. </p>
 <p>Lets see what happens if we add some outliers to our simulated data from the last post.</p>
 <p>Again, import our modules.</p>
-<pre><code>import pymc as pm
+<pre><code>%matplotlib inline
+
+import pymc3 as pm
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -204,12 +211,17 @@ ax.plot(x_out, y_out, 'x', label='sampled data')
 ax.plot(x, true_regression_line, label='true regression line', lw=2.)
 plt.legend(loc=0);
 </code></pre>
-<p><img alt="png" src="../GLM-blog-robust_files/GLM-blog-robust_6_0.png" /></p>
+<p><img alt="png" src="../GLM-robust_files/GLM-robust_6_0.png" /></p>
 <h1 id="robust-regression">Robust Regression</h1>
 <p>Lets see what happens if we estimate our Bayesian linear regression model using the <code>glm()</code> function as before. This function takes a <a href="http://patsy.readthedocs.org/en/latest/quickstart.html"><code>Patsy</code></a> string to describe the linear model and adds a Normal likelihood by default. </p>
 <pre><code>with pm.Model() as model:
     pm.glm.glm('y ~ x', data)
-    trace = pm.sample(2000, pm.NUTS(), progressbar=False)
+    start = pm.find_MAP()
+    step = pm.NUTS(scaling=start)
+    trace = pm.sample(2000, step, progressbar=False)
+
+/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/scan_module/scan_perform_ext.py:133: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
+  from scan_perform.scan_perform import *
 </code></pre>
 <p>To evaluate the fit, I am plotting the posterior predictive regression lines by taking regression parameters from the posterior distribution and plotting a regression line for each (this is all done inside of <code>plot_posterior_predictive()</code>).</p>
 <pre><code>plt.subplot(111, xlabel='x', ylabel='y', 
@@ -222,7 +234,7 @@ plt.plot(x, true_regression_line,
 
 plt.legend(loc=0);
 </code></pre>
-<p><img alt="png" src="../GLM-blog-robust_files/GLM-blog-robust_10_0.png" /></p>
+<p><img alt="png" src="../GLM-robust_files/GLM-robust_10_0.png" /></p>
 <p>As you can see, the fit is quite skewed and we have a fair amount of uncertainty in our estimate as indicated by the wide range of different posterior predictive regression lines. Why is this? The reason is that the normal distribution does not have a lot of mass in the tails and consequently, an outlier will affect the fit strongly.</p>
 <p>A Frequentist would estimate a <a href="http://en.wikipedia.org/wiki/Robust_regression">Robust Regression</a> and use a non-quadratic distance measure to evaluate the fit.</p>
 <p>But what's a Bayesian to do? Since the problem is the light tails of the Normal distribution we can instead assume that our data is not normally distributed but instead distributed according to the <a href="http://en.wikipedia.org/wiki/Student%27s_t-distribution">Student T distribution</a> which has heavier tails as shown next (I read about this trick in <a href="http://www.indiana.edu/~kruschke/DoingBayesianDataAnalysis/">"The Kruschke"</a>, aka the puppy-book; but I think <a href="http://www.stat.columbia.edu/~gelman/book/">Gelman</a> was the first to formulate this).</p>
@@ -236,14 +248,15 @@ plt.xlabel('x')
 plt.ylabel('Probability density')
 plt.legend();
 </code></pre>
-<p><img alt="png" src="../GLM-blog-robust_files/GLM-blog-robust_12_0.png" /></p>
+<p><img alt="png" src="../GLM-robust_files/GLM-robust_12_0.png" /></p>
 <p>As you can see, the probability of values far away from the mean (0 in this case) are much more likely under the <code>T</code> distribution than under the Normal distribution.</p>
 <p>To define the usage of a T distribution in <code>PyMC3</code> we can pass a family object -- <code>T</code> -- that specifies that our data is Student T-distributed (see <code>glm.families</code> for more choices). Note that this is the same syntax as <code>R</code> and <code>statsmodels</code> use.</p>
 <pre><code>with pm.Model() as model_robust:
     family = pm.glm.families.T()
     pm.glm.glm('y ~ x', data, family=family)
-
-    trace_robust = pm.sample(2000, pm.NUTS(), progressbar=False)
+    start = pm.find_MAP()
+    step = pm.NUTS(scaling=start)
+    trace_robust = pm.sample(2000, step, progressbar=False)
 
 plt.figure(figsize=(5, 5))
 plt.plot(x_out, y_out, 'x')
@@ -253,7 +266,7 @@ plt.plot(x, true_regression_line,
          label='true regression line', lw=3., c='y')
 plt.legend();
 </code></pre>
-<p><img alt="png" src="../GLM-blog-robust_files/GLM-blog-robust_14_0.png" /></p>
+<p><img alt="png" src="../GLM-robust_files/GLM-robust_14_0.png" /></p>
 <p>There, much better! The outliers are barely influencing our estimation at all because our likelihood function assumes that outliers are much more probable than under the Normal distribution.</p>
 <h2 id="summary">Summary</h2>
 <ul>
@@ -287,7 +300,7 @@ plt.legend();
 
         <!--
         MkDocs version  : 0.12.2
-        Docs Build Date : 2015-04-26 18:58:22.103327
+        Docs Build Date : 2015-04-28 05:52:00.874669
         -->
     </body>
 </html>
