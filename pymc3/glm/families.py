@@ -77,14 +77,14 @@ class T(Family):
     link = identity
     likelihood = pm_dists.T
     parent = 'mu'
-    priors = {'lam': pm_dists.HalfCauchy.dist(beta=10),
+    priors = {'lam': pm_dists.HalfCauchy.dist(beta=10, testval=1.),
               'nu': 1}
 
 class Normal(Family):
     link = identity
     likelihood = pm_dists.Normal
     parent = 'mu'
-    priors = {'sd': pm_dists.HalfCauchy.dist(beta=10)}
+    priors = {'sd': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
 
 class Binomial(Family):
     link = logit
@@ -97,4 +97,4 @@ class Poisson(Family):
     link = log
     likelihood = pm_dists.Poisson
     parent = 'mu'
-    priors = {'mu': pm_dists.HalfCauchy.dist(beta=10)}
+    priors = {'mu': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
