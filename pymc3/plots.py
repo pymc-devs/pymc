@@ -225,7 +225,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
         xrange (optional): list or tuple
             Range for x-axis. Defaults to matplotlib's best guess.
 
-        ylabels (optional): list
+        ylabels (optional): list or array
             User-defined labels for each variable. If not provided, the node
             __name__ attributes are used.
 
@@ -404,7 +404,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
             # Increment index
             var += k
 
-    labels = ylabels or labels
+    labels = ylabels if ylabels is not None else labels
 
     # Update margins
     left_margin = np.max([len(x) for x in labels]) * 0.015
