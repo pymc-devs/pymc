@@ -2,7 +2,7 @@ import theano.tensor as t
 import numpy as np
 from ..model import Model
 
-__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete']
+__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete', 'NoDistribution']
 
 
 class Distribution(object):
@@ -63,6 +63,10 @@ class Distribution(object):
 
 def TensorType(dtype, shape):
     return t.TensorType(str(dtype), np.atleast_1d(shape) == 1)
+
+class NoDistribution(Distribution):
+    def logp(self, x):
+        return 0
 
 class Discrete(Distribution):
     """Base class for discrete distributions"""
