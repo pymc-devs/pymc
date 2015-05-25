@@ -244,7 +244,7 @@ class Model(Context, Factor):
         if point is None: 
             point = self.test_point
 
-        for i in xrange(n):
+        for i in range(n):
             f(**point)
 
         return f.profile
