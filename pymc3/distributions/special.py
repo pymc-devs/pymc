@@ -30,10 +30,7 @@ class GammaLn(scalar.UnaryScalarOp):
     def c_code(self, node, name, inp, out, sub):
         x, = inp
         z, = out
-        if node.inputs[0].type in [scalar.float32, scalar.float64]:
-            return """%(z)s =
-                lgamma(%(x)s);""" % locals()
-        raise NotImplementedError('only floatingpoint is implemented')
+        return """%(z)s = lgamma(%(x)s);""" % locals()
 
     def __eq__(self, other):
         return type(self) == type(other)
@@ -119,10 +116,10 @@ class Psi(scalar.UnaryScalarOp):
     def c_code(self, node, name, inp, out, sub):
         x, = inp
         z, = out
-        if node.inputs[0].type in [scalar.float32, scalar.float64]:
-            return """%(z)s =
-                _psi(%(x)s);""" % locals()
-        raise NotImplementedError('only floatingpoint is implemented')
+        if node.inputs[0].type in scalar.complex_types:
+            raise NotImplementedError('type not supported', node.inputs[0].type)
+        
+        return """%(z)s = _psi(%(x)s);""" % locals()
 
     def __eq__(self, other):
         return type(self) == type(other)
