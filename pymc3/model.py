@@ -346,20 +346,31 @@ class FreeRV(Factor, TensorVariable):
             self.logp_elemwiset = distribution.logp(self)
             self.model = model
 
-def as_tensor(data, name):
-    if getattr(data, 'mask', None) is None: 
-        return t.constant(data, name=name)
-
+def pandas_to_array(data):
+    if hasattr(data, 'values'): #pandas
+        if data.isnull().any().any(): #missing values
+            return np.ma.MaskedArray(data.values, data.isnull().values)
+        else: 
+            return data.values
     else:
+        return data
+        
+
+def as_tensor(data, name):
+    data = pandas_to_array(data)
+
+    if hasattr(data, 'mask'): 
         from .distributions import NoDistribution
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=data.dtype, testval=data.mask.mean().astype(data.dtype))
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist)
 
-        constant = t.constant(data.filled())
+        constant = t.as_tensor_variable(data.filled())
 
         dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()], missing_values) 
         dataTensor.missing_values = missing_values
         return dataTensor
+    else:
+        return t.as_tensor_variable(data, name=name)
 
 class ObservedRV(Factor):
     """Observed random variable that a model is specified in terms of.
@@ -378,7 +389,6 @@ class ObservedRV(Factor):
         model : Model
         """
         self.name = name
-        data = getattr(data, 'values', data) #handle pandas
         data_arrays = as_iterargs(data)
 
         if len(data_arrays) > 1:
@@ -456,8 +466,6 @@ class TransformedRV(TensorVariable):
 def as_iterargs(data):
     if isinstance(data, tuple):
         return data
-    if hasattr(data, 'columns'):  # data frames
-        return [np.asarray(data[c]) for c in data.columns]
     else:
         return [data]
 
