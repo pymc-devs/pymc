@@ -103,7 +103,7 @@ class Model(Context, Factor):
     @property
     def vars(self):
         """List of unobserved random variables used as inputs to the model (which excludes deterministics)."""
-        return self.free_RVs + self.missing_values
+        return self.free_RVs
 
     @property
     def basic_RVs(self):
@@ -147,6 +147,7 @@ class Model(Context, Factor):
         else:
             var = ObservedRV(name=name, data=data, distribution=dist, model=self)
             self.observed_RVs.append(var)
+            self.free_RVs += var.missing_values
             self.missing_values += var.missing_values
 
         self.add_random_variable(var)
@@ -331,17 +332,14 @@ def as_tensor(data, name):
         return t.constant(data, name=name)
 
     else:
-        type = t.TensorType(str(data.dtype), (False,))
-        free = TensorVariable(type, owner=None, index=None, name=name + '_missing')
-        #this stuff needs to be made generic with FreeRV
-        free.tag.test_value = np.full(data.mask.sum(), data.mean(), dtype=data.dtype)
-        free.dshape = (data.mask.sum(),)
-        free.dsize = data.mask.sum()
+        from distributions import NoDistribution
+        fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=data.dtype, testval=data.mask.mean().astype(data.dtype))
+        missing_values = FreeRV(name=name + '_missing', distribution=fakedist)
 
         constant = t.constant(data.filled())
 
-        dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()], free) 
-        dataTensor.unobserved = free
+        dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()], missing_values) 
+        dataTensor.missing_values = missing_values
         return dataTensor
 
 class ObservedRV(Factor):
@@ -371,7 +369,7 @@ class ObservedRV(Factor):
 
         data_arrays = [as_tensor(data, name) for data, name in zip(data_arrays,names)]
         self.data = data_arrays
-        self.missing_values = [d.unobserved for d in data_arrays if hasattr(d, 'unobserved')]
+        self.missing_values = [d.missing_values for d in data_arrays if hasattr(d, 'missing_values')]
 
         self.logp_elemwiset = distribution.logp(*data_arrays)
         self.model = model
