@@ -342,10 +342,10 @@ class ObservedRV(Factor):
 
         if len(args) > 1:
             params = getargspec(distribution.logp).args
-            args = [t.constant(d, name=name + "_" + param)
+            args = [t.as_tensor_variable(d, name=name + "_" + param)
                     for d,param in zip(args,params) ]
         else:
-            args = [t.constant(args[0], name=name)]
+            args = [t.as_tensor_variable(args[0], name=name)]
 
         self.logp_elemwiset = distribution.logp(*args)
         self.model = model
