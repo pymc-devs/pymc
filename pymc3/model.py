@@ -222,6 +222,24 @@ class Model(Context, Factor):
         return FastPointFunc(self.makefn(outs, mode, *args, **kwargs))
 
     def profile(self, outs, n=1000, point=None, profile=True, *args, **kwargs):
+        """Compiles and profiles a Theano function which returns `outs` and takes values of model
+        vars as a dict as an argument.
+
+        Parameters
+        ----------
+        outs : Theano variable or iterable of Theano variables
+        n : int, default 1000
+            Number of iterations to run
+        point : point
+            Point to pass to the function
+        profile : True or ProfileStats
+        *args, **kwargs 
+            Compilation args
+
+        Returns
+        -------
+        ProfileStats
+            Use .summary() to print stats."""
         f = self.makefn(outs, profile=profile, *args, **kwargs)
         if point is None: 
             point = self.test_point
