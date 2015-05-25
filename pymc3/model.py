@@ -332,7 +332,7 @@ def as_tensor(data, name):
         return t.constant(data, name=name)
 
     else:
-        from distributions import NoDistribution
+        from .distributions import NoDistribution
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=data.dtype, testval=data.mask.mean().astype(data.dtype))
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist)
 
