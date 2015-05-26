@@ -95,12 +95,20 @@ class Simplex(object):
         return
 
 def PdMatrix(n):
-    if n == 2:
+    if n == 1:
+        return PdMatrix1 
+    elif n == 2:
         return PdMatrix2
     elif n == 3:
         return PdMatrix3
     else:
         raise ValueError("n out of bounds")
+
+PdMatrix1 = Domain([
+    np.eye(1),
+    [[.5]]
+    ],
+    edges = (None,None))
 
 PdMatrix2 = Domain([
     np.eye(2),
@@ -307,7 +315,7 @@ def test_zeroinflatedpoisson():
     checkd(ZeroInflatedPoisson, I, {'theta': Rplus, 'z': Bool})
 
 def test_mvnormal():
-    for n in [2,3]:
+    for n in [1, 2]:
         yield check_mvnormal, n
 
 def check_mvnormal(n):
