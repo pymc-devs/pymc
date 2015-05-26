@@ -175,7 +175,7 @@ class Model(Context, Factor):
         return self.named_vars[key]
 
     @memoize
-    def makefn(self, outs, mode=None):
+    def makefn(self, outs, mode=None, *args, **kwargs):
         """Compiles a Theano function which returns `outs` and takes the variable
         ancestors of `outs` as inputs.
 
@@ -190,9 +190,10 @@ class Model(Context, Factor):
         return function(self.vars, outs,
                      allow_input_downcast=True,
                      on_unused_input='ignore',
-                     mode=mode)
+                     accept_inplace=True,
+                     mode=mode, *args, **kwargs)
 
-    def fn(self, outs, mode=None):
+    def fn(self, outs, mode=None, *args, **kwargs):
         """Compiles a Theano function which returns the values of `outs` and takes values of model
         vars as arguments.
 
@@ -204,9 +205,9 @@ class Model(Context, Factor):
         Returns
         -------
         Compiled Theano function"""
-        return LoosePointFunc(self.makefn(outs, mode), self)
+        return LoosePointFunc(self.makefn(outs, mode, *args, **kwargs), self)
 
-    def fastfn(self, outs, mode=None):
+    def fastfn(self, outs, mode=None, *args, **kwargs):
         """Compiles a Theano function which returns `outs` and takes values of model
         vars as a dict as an argument.
 
@@ -218,9 +219,39 @@ class Model(Context, Factor):
         Returns
         -------
         Compiled Theano function as point function."""
-        return FastPointFunc(self.makefn(outs, mode))
+        return FastPointFunc(self.makefn(outs, mode, *args, **kwargs))
 
-def fn(outs, mode=None, model=None):
+    def profile(self, outs, n=1000, point=None, profile=True, *args, **kwargs):
+        """Compiles and profiles a Theano function which returns `outs` and takes values of model
+        vars as a dict as an argument.
+
+        Parameters
+        ----------
+        outs : Theano variable or iterable of Theano variables
+        n : int, default 1000
+            Number of iterations to run
+        point : point
+            Point to pass to the function
+        profile : True or ProfileStats
+        *args, **kwargs 
+            Compilation args
+
+        Returns
+        -------
+        ProfileStats
+            Use .summary() to print stats."""
+        f = self.makefn(outs, profile=profile, *args, **kwargs)
+        if point is None: 
+            point = self.test_point
+
+        for i in range(n):
+            f(**point)
+
+        return f.profile
+
+        
+
+def fn(outs, mode=None, model=None, *args, **kwargs):
     """Compiles a Theano function which returns the values of `outs` and takes values of model
     vars as arguments.
 
@@ -233,7 +264,7 @@ def fn(outs, mode=None, model=None):
     -------
     Compiled Theano function"""
     model = modelcontext(model)
-    return model.fn(outs,mode)
+    return model.fn(outs,mode, *args, **kwargs)
 
 def fastfn(outs, mode=None, model=None):
     """Compiles a Theano function which returns `outs` and takes values of model
