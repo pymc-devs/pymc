@@ -105,8 +105,9 @@ def PdMatrix(n):
         raise ValueError("n out of bounds")
 
 PdMatrix1 = Domain([
-    np.eye(2),
-    [[.5]],
+    np.eye(1),
+    [[.5]]
+    ],
     edges = (None,None))
 
 PdMatrix2 = Domain([
