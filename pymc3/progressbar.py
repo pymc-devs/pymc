@@ -11,9 +11,7 @@ import uuid
 try:
     __IPYTHON__
     from IPython.core.display import HTML, Javascript, display
-except NameError:
-    pass
-except ImportError:
+except (NameError, ImportError):
     pass
 
 __all__ = ['progress_bar']

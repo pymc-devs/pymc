@@ -9,9 +9,7 @@ try:
     import time
     from .backends.base import MultiTrace
     from .sampling import _iter_sample
-except NameError:
-    IPython = False
-except ImportError:
+except (NameError, ImportError):
     IPython = False
 
 _no_notebook_error_message = "nbsample can only be run inside IPython Notebook."
