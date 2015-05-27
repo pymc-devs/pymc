@@ -1,4 +1,5 @@
 try:
+    __IPYTHON__
     import IPython
     from IPython.html import widgets
     from IPython.core import display
@@ -8,6 +9,8 @@ try:
     import time
     from .backends.base import MultiTrace
     from .sampling import _iter_sample
+except NameError:
+    IPython = False
 except ImportError:
     IPython = False
 
