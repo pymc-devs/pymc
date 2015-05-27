@@ -1,4 +1,5 @@
 try:
+    __IPYTHON__
     import IPython
     from IPython.html import widgets
     from IPython.core import display
@@ -8,7 +9,7 @@ try:
     import time
     from .backends.base import MultiTrace
     from .sampling import _iter_sample
-except ImportError:
+except (NameError, ImportError):
     IPython = False
 
 _no_notebook_error_message = "nbsample can only be run inside IPython Notebook."
