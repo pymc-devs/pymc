@@ -117,6 +117,7 @@ class Bernoulli(Discrete):
         p = self.p
         return bound(
             switch(value, log(p), log(1 - p)),
+            value >= 0, value <= 1,
             0 <= p, p <= 1)
 
 
