@@ -285,8 +285,13 @@ class Categorical(Discrete):
     def logp(self, value):
         p = self.p
         k = self.k
-
-        return bound(log(p[value]),
+        
+        try:
+            pv = log(p[value])
+        except IndexError:
+            pv = log(constant(p)[value])
+        
+        return bound(pv,
             value >= 0,
             value <= (k - 1),
             le(abs(sum(p) - 1), 1e-5))
