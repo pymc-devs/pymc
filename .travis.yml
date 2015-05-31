@@ -29,4 +29,5 @@ env:
   - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_examples:test_examples1"
   - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_examples:test_examples2"
 
-script: "$TESTCMD"
+script:
+  - nosetests pymc3

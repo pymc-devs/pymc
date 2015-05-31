@@ -64,7 +64,7 @@ class TestGLM(unittest.TestCase):
     def test_glm_link_func(self):
         with Model() as model:
             vars = glm.glm('y ~ x', data_logistic,
-                           family=glm.families.Binomial(link=glm.links.Logit))
+                           family=glm.families.Binomial(link=glm.families.logit))
 
             for coeff, true_val in zip(vars[1:], [true_intercept, true_slope]):
                 self.assertAlmostEqual(coeff.tag.test_value, true_val, 0)
