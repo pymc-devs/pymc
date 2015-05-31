@@ -11,7 +11,7 @@ from .dist_math import *
 from numpy.random import uniform as runiform, normal as rnormal
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
-           'T', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
+           'T', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
            'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
            'Pareto', 'InverseGamma']
 
@@ -381,6 +381,8 @@ class T(Continuous):
             lam > 0,
             nu > 0,
             sd > 0)
+
+StudentT = T
 
 
 class Pareto(Continuous):
