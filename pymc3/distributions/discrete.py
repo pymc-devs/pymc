@@ -1,4 +1,5 @@
 from .dist_math import *
+from theano.tensor import as_tensor_variable
 
 __all__ = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson', 'NegativeBinomial',
 'ConstantDist', 'ZeroInflatedPoisson', 'DiscreteUniform', 'Geometric',
@@ -279,19 +280,14 @@ class Categorical(Discrete):
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
         self.k = p.shape[0]
-        self.p = p
+        self.p = as_tensor_variable(p)
         self.mode = argmax(p)
 
     def logp(self, value):
         p = self.p
         k = self.k
-        
-        try:
-            pv = log(p[value])
-        except IndexError:
-            pv = log(constant(p)[value])
-        
-        return bound(pv,
+
+        return bound(log(p[value]),
             value >= 0,
             value <= (k - 1),
             le(abs(sum(p) - 1), 1e-5))
