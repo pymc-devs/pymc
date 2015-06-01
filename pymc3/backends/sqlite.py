@@ -272,6 +272,8 @@ class _SQLiteDB(object):
         self.connected = False
 
 
+# TODO Consider merging `_create_colnames` and `_create_shape` with
+# very similar functions in the csv backend.
 def _create_colnames(shape):
     """Return column names based on `shape`.
 

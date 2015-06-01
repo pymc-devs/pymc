@@ -7,6 +7,10 @@ import numpy as np
 from ..model import modelcontext
 
 
+class BackendError(Exception):
+    pass
+
+
 class BaseTrace(object):
     """Base trace object
 
