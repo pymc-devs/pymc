@@ -16,12 +16,31 @@ __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'Pareto', 'InverseGamma']
 
 def get_tau_sd(tau=None, sd=None):
+    """
+    Find precision and standard deviation
+
+    .. math::
+        \tau = \frac{1}{\sigma^2}
+
+    Parameters
+    ----------
+    tau : array-like, optional
+    sd : array-like, optional
+
+    Results
+    -------
+    Returns tuple (tau, sd)
+
+    Notes
+    -----
+    If neither tau nor sd is provided, returns (1., 1.)
+    """
     if tau is None:
         if sd is None:
             sd = 1.
             tau = 1.
         else:
-            tau = sd ** -2
+            tau = sd ** -2.
 
     else:
         if sd is not None:

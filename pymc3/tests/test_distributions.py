@@ -449,6 +449,10 @@ def test_bound():
 
         check_dlogp(model, value, Rplus2, {})
 
+def test_get_tau_sd():
+    sd = np.array([2])
+    assert_almost_equal(distributions.continuous.get_tau_sd(sd=sd), [1./sd**2, sd])
+
 def check_int_to_1(model, value, domain, paramdomains):
     pdf = model.fastfn(exp(model.logpt))
 
