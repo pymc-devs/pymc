@@ -33,8 +33,10 @@ class BaseTrace(object):
 
         ## Get variable shapes. Most backends will need this
         ## information.
-        var_values = zip(self.varnames, self.fn(model.test_point))
+        var_values = list(zip(self.varnames, self.fn(model.test_point)))
         self.var_shapes = {var: value.shape
+                           for var, value in var_values}
+        self.var_dtypes = {var: value.dtype
                            for var, value in var_values}
         self.chain = None
 

@@ -54,6 +54,9 @@ TEMPLATES = {
                          'WHERE (chain = :chain) AND (draw = :draw)'),
 }
 
+sqlite3.register_adapter(np.int32, int)
+sqlite3.register_adapter(np.int64, int)
+
 
 class SQLite(base.BaseTrace):
     """SQLite trace object
@@ -112,9 +115,13 @@ class SQLite(base.BaseTrace):
         template = TEMPLATES['table']
         with self.db.con:
             for varname, var_cols in self._var_cols.items():
-                var_float = ', '.join([v + ' FLOAT' for v in var_cols])
+                if np.issubdtype(self.var_dtypes[varname], np.int):
+                    dtype = 'INT'
+                else:
+                    dtype = 'FLOAT'
+                colnames = ', '.join([v + ' ' + dtype for v in var_cols])
                 statement = template.format(table=varname,
-                                            value_cols=var_float)
+                                            value_cols=colnames)
                 self.db.cursor.execute(statement)
 
     def _create_insert_queries(self, chain):

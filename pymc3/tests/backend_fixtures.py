@@ -23,7 +23,7 @@ class ModelBackendSetupTestCase(unittest.TestCase):
     - shape
     """
     def setUp(self):
-        self.test_point, self.model, _ = models.non_normal(self.shape)
+        self.test_point, self.model, _ = models.beta_bernoulli(self.shape)
         with self.model:
             self.trace = self.backend(self.name)
         self.draws, self.chain = 3, 0
@@ -52,7 +52,7 @@ class ModelBackendSampledTestCase(unittest.TestCase):
     """
     @classmethod
     def setUpClass(cls):
-        cls.test_point, cls.model, _ = models.non_normal(cls.shape)
+        cls.test_point, cls.model, _ = models.beta_bernoulli(cls.shape)
         with cls.model:
             trace0 = cls.backend(cls.name)
             trace1 = cls.backend(cls.name)
@@ -64,11 +64,14 @@ class ModelBackendSampledTestCase(unittest.TestCase):
         varnames = list(cls.test_point.keys())
         shapes = {varname: value.shape
                   for varname, value in cls.test_point.items()}
+        dtypes = {varname: value.dtype
+                  for varname, value in cls.test_point.items()}
 
         cls.expected = {0: {}, 1: {}}
         for varname in varnames:
             mcmc_shape = (cls.draws,) + shapes[varname]
-            values = np.arange(cls.draws * np.prod(shapes[varname]))
+            values = np.arange(cls.draws * np.prod(shapes[varname]),
+                               dtype=dtypes[varname])
             cls.expected[0][varname] = values.reshape(mcmc_shape)
             cls.expected[1][varname] = values.reshape(mcmc_shape) * 100
 
@@ -143,6 +146,11 @@ class SelectionTestCase(ModelBackendSampledTestCase):
 
     def test_len(self):
         self.assertEqual(len(self.mtrace), self.draws)
+
+    def test_dtypes(self):
+        for varname in self.mtrace.varnames:
+            self.assertEqual(self.expected[0][varname].dtype,
+                             self.mtrace.get_values(varname, chains=0).dtype)
 
     def test_get_values_thin_keyword(self):
         thin = 2
@@ -292,6 +300,11 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
     def test_chain_length(self):
         assert self.mtrace0.nchains == self.mtrace1.nchains
         assert len(self.mtrace0) == len(self.mtrace1)
+
+    def test_dtype(self):
+        for varname in self.mtrace.varnames:
+            self.assertEqual(self.mtrace0.get_values(varname, chains=0).dtype,
+                             self.mtrace1.get_values(varname, chains=0).dtype)
 
     def test_number_of_draws(self):
         values0 = self.mtrace0.get_values('x', squeeze=False)
