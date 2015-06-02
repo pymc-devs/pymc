@@ -148,11 +148,16 @@ class Model(Context, Factor):
                 var = TransformedRV(name=name, distribution=dist, model=self, transform=dist.transform) 
                 self.deterministics.append(var)
                 return var
-        else:
-            var = ObservedRV(name=name, data=data, distribution=dist, model=self)
+        elif isinstance(data, dict):
+            var = MultiObservedRV(name=name, data=data, distribution=dist, model=self)
             self.observed_RVs.append(var)
             self.free_RVs += var.missing_values
             self.missing_values += var.missing_values
+        else: 
+            var = ObservedRV(name=name, data=data, distribution=dist, model=self)
+            self.observed_RVs.append(var)
+            self.free_RVs.append(var.missing_values)
+            self.missing_values.append(var.missing_values)
 
         self.add_random_variable(var)
         return var
@@ -367,12 +372,37 @@ def as_tensor(data, name):
         constant = t.as_tensor_variable(data.filled())
 
         dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()], missing_values) 
-        dataTensor.missing_values = missing_values
-        return dataTensor
+        return dataTensor, missing_values
     else:
-        return t.as_tensor_variable(data, name=name)
+        return t.as_tensor_variable(data, name=name), None
 
-class ObservedRV(Factor):
+class ObservedRV(Factor, TensorVariable):
+    """Observed random variable that a model is specified in terms of.
+    Potentially partially observed.
+    """
+    def __init__(self, name, data, distribution, model):
+        """
+        Parameters
+        ----------
+
+        type : theano type (optional)
+        owner : theano owner (optional)
+
+        name : str
+        distribution : Distribution
+        model : Model
+        """
+        super(TensorVariable, self).__init__(distribution.type, None, None, name)
+
+        data, self.missing_values = as_tensor(data) 
+
+        self.logp_elemwiset = distribution.logp(data)
+        self.model = model
+        self.distribution = distribution
+
+        theano.gof.Apply(identity, inputs=[data], outputs=[self])
+
+class MultiObservedRV(Factor):
     """Observed random variable that a model is specified in terms of.
     Potentially partially observed.
     """
@@ -397,8 +427,8 @@ class ObservedRV(Factor):
             names = [name]
 
         data_arrays = [as_tensor(data, name) for data, name in zip(data_arrays,names)]
-        self.data = data_arrays
-        self.missing_values = [d.missing_values for d in data_arrays if hasattr(d, 'missing_values')]
+        self.data = [d for d, missing in data_arrays]
+        self.missing_values = [missing for d, missing in data_arrays if missing is not None]
 
         self.logp_elemwiset = distribution.logp(*data_arrays)
         self.model = model
