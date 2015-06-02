@@ -361,7 +361,7 @@ class ObservedRV(Factor, TensorVariable):
     """Observed random variable that a model is specified in terms of.
     Potentially partially observed.
     """
-    def __init__(self, name, data, distribution, model):
+    def __init__(self, type=None, owner=None, index=None, name=None, data=None, distribution=None, model=None):
         """
         Parameters
         ----------
@@ -373,15 +373,23 @@ class ObservedRV(Factor, TensorVariable):
         distribution : Distribution
         model : Model
         """
-        super(TensorVariable, self).__init__(distribution.type, None, None, name)
+        from .distributions import TensorType
+        if type is None:
+            data = pandas_to_array(data)
+            type = TensorType(data.dtype, data.shape)
 
-        data, self.missing_values = as_tensor(data) 
+        super(TensorVariable, self).__init__(type, None, None, name)
 
-        self.logp_elemwiset = distribution.logp(data)
-        self.model = model
-        self.distribution = distribution
+        if distribution is not None:
+            data, self.missing_values = as_tensor(data, name) 
 
-        theano.gof.Apply(identity, inputs=[data], outputs=[self])
+            self.logp_elemwiset = distribution.logp(data)
+            self.model = model
+            self.distribution = distribution
+
+            #make this RV a view on the combined missing/nonmissing array
+            theano.gof.Apply(theano.compile.view_op, inputs=[data], outputs=[self])
+            self.tag.test_value = data.tag.test_value
 
 class MultiObservedRV(Factor):
     """Observed random variable that a model is specified in terms of.
