@@ -48,6 +48,11 @@ def get_tau_sd(tau=None, sd=None):
         else:
             sd = tau ** -.5
 
+    # cast tau and sd to float in a way that works for both np.arrays
+    # and pure python
+    tau = 1.*tau
+    sd = 1.*sd
+
     return (tau, sd)
 
 
