@@ -29,7 +29,7 @@ After a backend is finished sampling, it returns a MultiTrace object.
 Values can be accessed in a few ways. The easiest way is to index the
 backend object with a variable or variable name.
 
-    >>> trace['x']  # or trace[x]
+    >>> trace['x']  # or trace.x or trace[x]
 
 The call will return a list containing the sampling values of `x` for
 all chains. (For a single call to `sample`, the number of chains will

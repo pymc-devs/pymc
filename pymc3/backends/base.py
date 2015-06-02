@@ -122,7 +122,9 @@ class MultiTrace(object):
     three ways:
 
     1. Indexing with a variable or variable name (str) returns all
-       values for that variable.
+       values for that variable. For convenience during interactive
+       use, values can also be accessed using the variable an
+       attribute.
     2. Indexing with an integer returns a dictionary with values for
        each variable at the given index (corresponding to a single
        sampling iteration).
@@ -169,6 +171,19 @@ class MultiTrace(object):
         except TypeError:
             pass
         return self.get_values(idx)
+
+    _attrs = set(['_traces', 'varnames', 'chains'])
+
+    def __getattr__(self, name):
+        # Avoid infinite recursion when called before __init__
+        # variables are set up (e.g., when pickling).
+        if name in self._attrs:
+            raise AttributeError
+
+        if name in self.varnames:
+            return self[name]
+        raise AttributeError("'{}' object has no attribute '{}'".format(
+            type(self).__name__, name))
 
     def __len__(self):
         chain = self.chains[-1]
