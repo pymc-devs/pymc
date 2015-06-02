@@ -126,4 +126,4 @@ class IdentityOp(scalar.UnaryScalarOp):
         return hash(type(self))
 
 scalar_identity = IdentityOp(scalar.upgrade_to_float, name='scalar_identity')
-identity = tensor.Elemwise(scalar_identity, name='identity')
+identity = t.Elemwise(scalar_identity, name='identity')
