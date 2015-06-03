@@ -91,6 +91,12 @@ class ModelBackendSampledTestCase(unittest.TestCase):
         if cls.name is not None:
             remove_file_or_directory(cls.name)
 
+    def test_varnames_nonempty(self):
+        # Make sure the test_point has variables names because many
+        # tests rely on looping through these and would pass silently
+        # if the loop is never entered.
+        assert list(self.test_point.keys())
+
 
 class SamplingTestCase(ModelBackendSetupTestCase):
     """Test backend sampling.
@@ -108,7 +114,7 @@ class SamplingTestCase(ModelBackendSetupTestCase):
             self.trace.record(point=point)
         self.trace.close()
 
-        for varname in self.trace.varnames:
+        for varname in self.test_point.keys():
             npt.assert_equal(self.trace[varname][0, ...],
                              np.zeros(self.trace.var_shapes[varname]))
             last_idx = self.draws - 1
@@ -118,7 +124,7 @@ class SamplingTestCase(ModelBackendSetupTestCase):
     def test_clean_interrupt(self):
         self.trace.record(point=self.test_point)
         self.trace.close()
-        for varname in self.trace.varnames:
+        for varname in self.test_point.keys():
             self.assertEqual(self.trace[varname].shape[0], 1)
 
 
@@ -131,14 +137,14 @@ class SelectionTestCase(ModelBackendSampledTestCase):
     - shape
     """
     def test_get_values_default(self):
-        for varname in self.mtrace.varnames:
+        for varname in self.test_point.keys():
             expected = [self.expected[0][varname], self.expected[1][varname]]
             result = self.mtrace.get_values(varname)
             npt.assert_equal(result, expected)
 
     def test_get_values_burn_keyword(self):
         burn = 2
-        for varname in self.mtrace.varnames:
+        for varname in self.test_point.keys():
             expected = [self.expected[0][varname][burn:],
                         self.expected[1][varname][burn:]]
             result = self.mtrace.get_values(varname, burn=burn)
@@ -148,13 +154,13 @@ class SelectionTestCase(ModelBackendSampledTestCase):
         self.assertEqual(len(self.mtrace), self.draws)
 
     def test_dtypes(self):
-        for varname in self.mtrace.varnames:
+        for varname in self.test_point.keys():
             self.assertEqual(self.expected[0][varname].dtype,
                              self.mtrace.get_values(varname, chains=0).dtype)
 
     def test_get_values_thin_keyword(self):
         thin = 2
-        for varname in self.mtrace.varnames:
+        for varname in self.test_point.keys():
             expected = [self.expected[0][varname][::thin],
                         self.expected[1][varname][::thin]]
             result = self.mtrace.get_values(varname, thin=thin)
@@ -163,7 +169,7 @@ class SelectionTestCase(ModelBackendSampledTestCase):
     def test_get_point(self):
         idx = 2
         result = self.mtrace.point(idx)
-        for varname in self.mtrace.varnames:
+        for varname in self.test_point.keys():
             expected = self.expected[1][varname][idx]
             npt.assert_equal(result[varname], expected)
 
@@ -174,18 +180,18 @@ class SelectionTestCase(ModelBackendSampledTestCase):
                              for varname in self.mtrace.varnames})
         result = self.mtrace[:2]
         for chain in [0, 1]:
-            for varname in self.mtrace.varnames:
+            for varname in self.test_point.keys():
                 npt.assert_equal(result.get_values(varname, chains=[chain]),
                                  expected[chain][varname])
 
     def test_get_values_one_chain(self):
-        for varname in self.mtrace.varnames:
+        for varname in self.test_point.keys():
             expected = self.expected[0][varname]
             result = self.mtrace.get_values(varname, chains=[0])
             npt.assert_equal(result, expected)
 
     def test_get_values_chains_reversed(self):
-        for varname in self.mtrace.varnames:
+        for varname in self.test_point.keys():
             expected = [self.expected[1][varname], self.expected[0][varname]]
             result = self.mtrace.get_values(varname, chains=[1, 0])
             npt.assert_equal(result, expected)
@@ -194,32 +200,40 @@ class SelectionTestCase(ModelBackendSampledTestCase):
         self.mtrace.nchains == 2
 
     def test_get_values_one_chain_int_arg(self):
-        varname = self.mtrace.varnames[0]
-        npt.assert_equal(self.mtrace.get_values(varname, chains=[0]),
-                         self.mtrace.get_values(varname, chains=0))
+        for varname in self.test_point.keys():
+            npt.assert_equal(self.mtrace.get_values(varname, chains=[0]),
+                             self.mtrace.get_values(varname, chains=0))
 
     def test_get_values_combine(self):
-        varname = self.mtrace.varnames[0]
-        expected = np.concatenate([self.expected[chain][varname]
-                                   for chain in [0, 1]])
-        result = self.mtrace.get_values('x', combine=True)
-        npt.assert_equal(result, expected)
+        for varname in self.test_point.keys():
+            expected = np.concatenate([self.expected[chain][varname]
+                                       for chain in [0, 1]])
+            result = self.mtrace.get_values(varname, combine=True)
+            npt.assert_equal(result, expected)
 
     def test_get_values_combine_burn_arg(self):
-        varname = self.mtrace.varnames[0]
         burn = 2
-        expected = np.concatenate([self.expected[chain][varname][burn:]
-                                   for chain in [0, 1]])
-        result = self.mtrace.get_values('x', combine=True, burn=burn)
-        npt.assert_equal(result, expected)
+        for varname in self.test_point.keys():
+            expected = np.concatenate([self.expected[chain][varname][burn:]
+                                       for chain in [0, 1]])
+            result = self.mtrace.get_values(varname, combine=True, burn=burn)
+            npt.assert_equal(result, expected)
 
     def test_get_values_combine_thin_arg(self):
-        varname = self.mtrace.varnames[0]
         thin = 2
-        expected = np.concatenate([self.expected[chain][varname][::thin]
-                                   for chain in [0, 1]])
-        result = self.mtrace.get_values('x', combine=True, thin=thin)
-        npt.assert_equal(result, expected)
+        for varname in self.test_point.keys():
+            expected = np.concatenate([self.expected[chain][varname][::thin]
+                                       for chain in [0, 1]])
+            result = self.mtrace.get_values(varname, combine=True, thin=thin)
+            npt.assert_equal(result, expected)
+
+    def test_selection_method_equivalence(self):
+        varname = self.mtrace.varnames[0]
+        mtrace = self.mtrace
+        npt.assert_equal(mtrace.get_values(varname),
+                         mtrace[varname])
+        npt.assert_equal(mtrace[varname],
+                         mtrace.__getattr__(varname))
 
 
 class SelectionNoSliceTestCase(SelectionTestCase):
@@ -263,7 +277,7 @@ class DumpLoadTestCase(ModelBackendSampledTestCase):
         trace = self.mtrace
         dumped = self.dumped
         for chain in trace.chains:
-            for varname in trace.varnames:
+            for varname in self.test_point.keys():
                 data = trace.get_values(varname, chains=[chain])
                 dumped_data = dumped.get_values(varname, chains=[chain])
                 npt.assert_equal(data, dumped_data)
@@ -302,71 +316,88 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
         assert len(self.mtrace0) == len(self.mtrace1)
 
     def test_dtype(self):
-        for varname in self.mtrace.varnames:
+        for varname in self.test_point.keys():
             self.assertEqual(self.mtrace0.get_values(varname, chains=0).dtype,
                              self.mtrace1.get_values(varname, chains=0).dtype)
 
     def test_number_of_draws(self):
-        values0 = self.mtrace0.get_values('x', squeeze=False)
-        values1 = self.mtrace1.get_values('x', squeeze=False)
-        assert values0[0].shape[0] == self.draws
-        assert values1[0].shape[0] == self.draws
+        for varname in self.test_point.keys():
+            values0 = self.mtrace0.get_values(varname, squeeze=False)
+            values1 = self.mtrace1.get_values(varname, squeeze=False)
+            assert values0[0].shape[0] == self.draws
+            assert values1[0].shape[0] == self.draws
 
     def test_get_item(self):
-        npt.assert_equal(self.mtrace0['x'], self.mtrace1['x'])
+        for varname in self.test_point.keys():
+            npt.assert_equal(self.mtrace0[varname], self.mtrace1[varname])
 
     def test_get_values(self):
-        for cf in [False, True]:
-            npt.assert_equal(self.mtrace0.get_values('x', combine=cf),
-                             self.mtrace1.get_values('x', combine=cf))
+        for varname in self.test_point.keys():
+            for cf in [False, True]:
+                npt.assert_equal(self.mtrace0.get_values(varname, combine=cf),
+                                 self.mtrace1.get_values(varname, combine=cf))
 
     def test_get_values_no_squeeze(self):
-        npt.assert_equal(self.mtrace0.get_values('x', combine=False,
-                                                 squeeze=False),
-                         self.mtrace1.get_values('x', combine=False,
-                                                 squeeze=False))
+        for varname in self.test_point.keys():
+            npt.assert_equal(self.mtrace0.get_values(varname, combine=False,
+                                                     squeeze=False),
+                             self.mtrace1.get_values(varname, combine=False,
+                                                     squeeze=False))
 
     def test_get_values_combine_and_no_squeeze(self):
-        npt.assert_equal(self.mtrace0.get_values('x', combine=True,
-                                                 squeeze=False),
-                         self.mtrace1.get_values('x', combine=True,
-                                                 squeeze=False))
+        for varname in self.test_point.keys():
+            npt.assert_equal(self.mtrace0.get_values(varname, combine=True,
+                                                     squeeze=False),
+                             self.mtrace1.get_values(varname, combine=True,
+                                                     squeeze=False))
 
     def test_get_values_with_burn(self):
-        for cf in [False, True]:
-            npt.assert_equal(self.mtrace0.get_values('x', combine=cf, burn=3),
-                             self.mtrace1.get_values('x', combine=cf, burn=3))
-            ## Burn to one value.
-            npt.assert_equal(self.mtrace0.get_values('x', combine=cf,
-                                                     burn=self.draws - 1),
-                             self.mtrace1.get_values('x', combine=cf,
-                                                     burn=self.draws - 1))
+        for varname in self.test_point.keys():
+            for cf in [False, True]:
+                npt.assert_equal(self.mtrace0.get_values(varname, combine=cf,
+                                                         burn=3),
+                                 self.mtrace1.get_values(varname, combine=cf,
+                                                         burn=3))
+                ## Burn to one value.
+                npt.assert_equal(self.mtrace0.get_values(varname, combine=cf,
+                                                         burn=self.draws - 1),
+                                 self.mtrace1.get_values(varname, combine=cf,
+                                                         burn=self.draws - 1))
 
     def test_get_values_with_thin(self):
-        for cf in [False, True]:
-            npt.assert_equal(self.mtrace0.get_values('x', combine=cf, thin=2),
-                             self.mtrace1.get_values('x', combine=cf, thin=2))
+        for varname in self.test_point.keys():
+            for cf in [False, True]:
+                npt.assert_equal(self.mtrace0.get_values(varname, combine=cf,
+                                                         thin=2),
+                             self.mtrace1.get_values(varname, combine=cf,
+                                                     thin=2))
 
     def test_get_values_with_burn_and_thin(self):
-        for cf in [False, True]:
-            npt.assert_equal(self.mtrace0.get_values('x', combine=cf,
-                                                     burn=2, thin=2),
-                             self.mtrace1.get_values('x', combine=cf,
-                                                     burn=2, thin=2))
+        for varname in self.test_point.keys():
+            for cf in [False, True]:
+                npt.assert_equal(self.mtrace0.get_values(varname, combine=cf,
+                                                         burn=2, thin=2),
+                                 self.mtrace1.get_values(varname, combine=cf,
+                                                         burn=2, thin=2))
 
     def test_get_values_with_chains_arg(self):
-        for cf in [False, True]:
-            npt.assert_equal(self.mtrace0.get_values('x', chains=[0]),
-                             self.mtrace1.get_values('x', chains=[0]))
+        for varname in self.test_point.keys():
+            for cf in [False, True]:
+                npt.assert_equal(self.mtrace0.get_values(varname, chains=[0],
+                                                         combine=cf),
+                                 self.mtrace1.get_values(varname, chains=[0],
+                                                         combine=cf))
 
     def test_get_point(self):
         npoint, spoint = self.mtrace0[4], self.mtrace1[4]
-        npt.assert_equal(npoint['x'], spoint['x'])
+        for varname in self.test_point.keys():
+            npt.assert_equal(npoint[varname], spoint[varname])
 
     def test_point_with_chain_arg(self):
         npoint = self.mtrace0.point(4, chain=0)
         spoint = self.mtrace1.point(4, chain=0)
-        npt.assert_equal(npoint['x'], spoint['x'])
+        for varname in self.test_point.keys():
+            npt.assert_equal(npoint[varname], spoint[varname])
 
 
 def remove_file_or_directory(name):
