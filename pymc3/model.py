@@ -140,30 +140,18 @@ class Model(Context, Factor):
             FreeRV or ObservedRV
         """
         if data is None:
-            var = FreeRV(name=name, distribution=dist, model=self)
-            self.free_RVs.append(var)
+            if getattr(dist, "transform", None) is None:
+                var = FreeRV(name=name, distribution=dist, model=self)
+                self.free_RVs.append(var)
+            else:
+                var = TransformedRV(name=name, distribution=dist, model=self, transform=dist.transform) 
+                self.deterministics.append(var)
         else:
             var = ObservedRV(name=name, data=data, distribution=dist, model=self)
             self.observed_RVs.append(var)
         self.add_random_variable(var)
         return var
 
-    def TransformedVar(self, name, dist, trans):
-        """Create random variable that after being transformed has the given prior.
-
-        Parameters
-        ----------
-        name : str
-        dist : Distribution
-        trans : Transform
-
-        Returns
-        -------
-        Random Variable
-        """
-        tvar = self.Var(trans.name + '_' + name, trans.apply(dist))
-
-        return Deterministic(name, trans.backward(tvar)), tvar
 
     def add_random_variable(self, var):
         """Add a random variable to the named variables of the model."""
@@ -412,6 +400,33 @@ def Potential(name, var, model=None):
     var.name = name
     modelcontext(model).potentials.append(var)
     return var
+
+class TransformedRV(TensorVariable):
+    def __init__(self, type=None, owner=None, index=None, name=None, distribution=None, model=None, transform=None):
+        """
+        Parameters
+        ----------
+
+        type : theano type (optional)
+        owner : theano owner (optional)
+
+        name : str
+        distribution : Distribution
+        model : Model"""
+        if type is None:
+            type = distribution.type
+        super(TransformedRV, self).__init__(type, owner, index, name)
+
+        if distribution is not None:
+            self.model = model
+
+            self.transformed = model.Var(name + "_" + transform.name, transform.apply(distribution))
+
+            normalRV = transform.backward(self.transformed)
+
+            theano.Apply(theano.compile.view_op, inputs=[normalRV], outputs=[self])
+
+
 
 def as_iterargs(data):
     if isinstance(data, tuple):

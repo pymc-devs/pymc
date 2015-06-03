@@ -9,6 +9,7 @@ from __future__ import division
 
 from .dist_math import *
 from numpy.random import uniform as runiform, normal as rnormal
+from .transforms import logtransform, logoddstransform
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
@@ -132,11 +133,12 @@ class HalfNormal(Continuous):
       - `sd` : sd > 0 (alternative parameterization)
 
     """
-    def __init__(self, tau=None, sd=None, *args, **kwargs):
+    def __init__(self, tau=None, sd=None, transform=logtransform, *args, **kwargs):
         super(HalfNormal, self).__init__(*args, **kwargs)
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.mean = sqrt(2 / (pi * self.tau))
         self.variance = (1. - 2/pi) / self.tau
+        self.transform = transform
 
     def logp(self, value):
         tau = self.tau
@@ -211,7 +213,7 @@ class Beta(Continuous):
     - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
     """
-    def __init__(self, alpha=None, beta=None, mu=None, sd=None, *args, **kwargs):
+    def __init__(self, alpha=None, beta=None, mu=None, sd=None, transform=logoddstransform, *args, **kwargs):
         super(Beta, self).__init__(*args, **kwargs)
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
@@ -219,6 +221,7 @@ class Beta(Continuous):
         self.mean = alpha / (alpha + beta)
         self.variance = alpha * beta / (
             (alpha + beta) ** 2 * (alpha + beta + 1))
+        self.transform=transform
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
