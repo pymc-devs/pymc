@@ -53,7 +53,7 @@ class Slice(ArrayStep):
         while True:
 
             # Sample uniformly from slice
-            qi = uniform(ql, qr)
+            qi = uniform(ql, qr, size=1)
 
             yi = logp(qi)
 
