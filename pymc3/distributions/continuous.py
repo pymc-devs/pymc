@@ -364,7 +364,7 @@ class T(Continuous):
     """
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
         super(T, self).__init__(*args, **kwargs)
-        self.nu = nu
+        self.nu = nu = as_tensor_variable(nu)
         self.lam, self.sd = get_tau_sd(tau=lam, sd=sd)
         self.mean = self.median = self.mode = self.mu = mu
 
