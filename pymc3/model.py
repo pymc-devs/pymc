@@ -146,6 +146,7 @@ class Model(Context, Factor):
             else:
                 var = TransformedRV(name=name, distribution=dist, model=self, transform=dist.transform) 
                 self.deterministics.append(var)
+                return var
         else:
             var = ObservedRV(name=name, data=data, distribution=dist, model=self)
             self.observed_RVs.append(var)
@@ -425,6 +426,7 @@ class TransformedRV(TensorVariable):
             normalRV = transform.backward(self.transformed)
 
             theano.Apply(theano.compile.view_op, inputs=[normalRV], outputs=[self])
+            self.tag.test_value = normalRV.tag.test_value
 
 
 

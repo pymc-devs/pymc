@@ -58,14 +58,15 @@ logtransform = transform("log", log, exp, idfn)
 
 
 logistic = t.nnet.sigmoid
-def logit(x): 
-    return log(x/(1-x))
-
 def logistic_jacobian(x):
     ex = exp(-x)
     return log(ex/(ex +1)**2)
 
+def logit(x): 
+    return log(x/(1-x))
 logoddstransform = transform("logodds", logit, logistic, logistic_jacobian)
+
+
 
 simplextransform = transform("simplex",
                              lambda p: p[:-1],

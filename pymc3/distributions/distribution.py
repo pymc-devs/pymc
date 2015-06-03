@@ -31,12 +31,13 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, shape, dtype, testval=None, defaults=[]):
+    def __init__(self, shape, dtype, testval=None, defaults=[], transform=None):
         self.shape = np.atleast_1d(shape)
         self.dtype = dtype
         self.type = TensorType(self.dtype, self.shape)
         self.testval = testval
         self.defaults = defaults
+        self.transform = None
 
     def default(self):
         return self.get_test_val(self.testval, self.defaults)

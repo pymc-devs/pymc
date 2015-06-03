@@ -549,7 +549,7 @@ def build_model(distfam, valuedomain, vardomains, extra_args={}):
         vars.update(extra_args)
 
         value = distfam(
-            'value', shape=valuedomain.shape, **vars)
+            'value', shape=valuedomain.shape, transform=None, **vars)
     return m
 
 

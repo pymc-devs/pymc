@@ -16,6 +16,18 @@ __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
            'Pareto', 'InverseGamma']
 
+class PositiveContinuous(Continuous):
+    """Base class for positive continuous distributions"""
+    def __init__(self, transform=logtransform, *args, **kwargs):
+        super(PositiveContinuous, self).__init__(*args, **kwargs)
+        self.transform = transform
+
+class UnitContinuous(Continuous):
+    """Base class for continuous distributions on [0,1]"""
+    def __init__(self, transform=logoddstransform, *args, **kwargs):
+        super(UnitContinuous, self).__init__(*args, **kwargs)
+        self.transform = transform
+
 def get_tau_sd(tau=None, sd=None):
     if tau is None:
         if sd is None:
@@ -119,7 +131,7 @@ class Normal(Continuous):
         )
 
 
-class HalfNormal(Continuous):
+class HalfNormal(PositiveContinuous):
     """
     Half-normal log-likelihood, a normal distribution with mean 0 limited
     to the domain :math:`x \in [0, \infty)`.
@@ -184,7 +196,7 @@ class Wald(Continuous):
 
 
 
-class Beta(Continuous):
+class Beta(UnitContinuous):
     """
     Beta log-likelihood. The conjugate prior for the parameter
     :math:`p` of the binomial distribution.
@@ -247,7 +259,7 @@ class Beta(Continuous):
             beta > 0)
 
 
-class Exponential(Continuous):
+class Exponential(PositiveContinuous):
     """
     Exponential distribution
 
@@ -299,7 +311,7 @@ class Laplace(Continuous):
         return -log(2 * b) - abs(value - mu) / b
 
 
-class Lognormal(Continuous):
+class Lognormal(PositiveContinuous):
     """
     Log-normal log-likelihood.
 
@@ -388,7 +400,7 @@ class T(Continuous):
 StudentT = T
 
 
-class Pareto(Continuous):
+class Pareto(PositiveContinuous):
     """
     Pareto log-likelihood. The Pareto is a continuous, positive
     probability distribution with two parameters. It is often used
@@ -461,7 +473,7 @@ class Cauchy(Continuous):
                                             value - alpha) / beta) ** 2),
             beta > 0)
 
-class HalfCauchy(Continuous):
+class HalfCauchy(PositiveContinuous):
     """
     Half-Cauchy log-likelihood. Simply the absolute value of Cauchy.
 
@@ -488,7 +500,7 @@ class HalfCauchy(Continuous):
             value >= 0)
 
 
-class Gamma(Continuous):
+class Gamma(PositiveContinuous):
     """
     Gamma log-likelihood.
 
@@ -553,7 +565,7 @@ class Gamma(Continuous):
             beta > 0)
 
 
-class InverseGamma(Continuous):
+class InverseGamma(PositiveContinuous):
     """
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
@@ -612,7 +624,7 @@ class ChiSquared(Gamma):
         super(ChiSquared, self).__init__(alpha=nu/2., beta=0.5, *args, **kwargs)
 
 
-class Weibull(Continuous):
+class Weibull(PositiveContinuous):
     """
     Weibull log-likelihood
 
