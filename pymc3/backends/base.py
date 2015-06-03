@@ -29,7 +29,7 @@ class BaseTrace(object):
             vars = model.unobserved_RVs
         self.vars = vars
         self.varnames = [str(var) for var in vars]
-        self.fn = model.fastfn(vars)
+        self.fn = lambda p: (p[v] for v in self.varnames) # model.fastfn(vars)
 
         ## Get variable shapes. Most backends will need this
         ## information.
