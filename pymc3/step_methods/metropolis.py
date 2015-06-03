@@ -92,7 +92,7 @@ class Metropolis(ArrayStep):
 
     def astep(self, q0, logp):
 
-        if self.tune and not self.steps_until_tune:
+        if not self.steps_until_tune and self.tune:
             # Tune scaling parameter
             self.scaling = tune(
                 self.scaling, self.accepted / float(self.tune_interval))
@@ -111,7 +111,7 @@ class Metropolis(ArrayStep):
 
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
-        if q_new is q0:
+        if q_new is q:
             self.accepted += 1
 
         self.steps_until_tune -= 1
