@@ -227,6 +227,14 @@ class SelectionTestCase(ModelBackendSampledTestCase):
             result = self.mtrace.get_values(varname, combine=True, thin=thin)
             npt.assert_equal(result, expected)
 
+    def test_selection_method_equivalence(self):
+        varname = self.mtrace.varnames[0]
+        mtrace = self.mtrace
+        npt.assert_equal(mtrace.get_values(varname),
+                         mtrace[varname])
+        npt.assert_equal(mtrace[varname],
+                         mtrace.__getattr__(varname))
+
 
 class SelectionNoSliceTestCase(SelectionTestCase):
     def test_get_slice(self):
