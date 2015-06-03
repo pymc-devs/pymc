@@ -9,7 +9,7 @@ from __future__ import division
 
 from .dist_math import *
 from numpy.random import uniform as runiform, normal as rnormal
-from .transforms import logtransform, logoddstransform
+from .transforms import logtransform, logoddstransform, interval_transform
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
@@ -59,12 +59,15 @@ class Uniform(Continuous):
     upper : float
         Upper limit (defaults to 1)
     """
-    def __init__(self, lower=0, upper=1, *args, **kwargs):
+    def __init__(self, lower=0, upper=1, transform=None, *args, **kwargs):
         super(Uniform, self).__init__(*args, **kwargs)
+        
         self.lower = lower
         self.upper = upper
         self.mean = (upper + lower) / 2.
         self.median = self.mean
+        if transform is None:
+            self.transform=interval_transform(lower, upper)
 
     def logp(self, value):
         lower = self.lower

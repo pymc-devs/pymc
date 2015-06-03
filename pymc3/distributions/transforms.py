@@ -67,6 +67,23 @@ def logit(x):
 logoddstransform = transform("logodds", logit, logistic, logistic_jacobian)
 
 
+def interval_transform(a, b):
+    def interval_real(x):
+        r= log((x-a)/(b-x))
+        return r
+
+    def real_interval(x):
+        r =  (b-a)*exp(x)/(1+exp(x)) + a
+        return r
+
+    def real_interval_jacobian(x):
+        ex = exp(-x)
+        jac = log(ex*(b-a)/(ex + 1)**2)
+        return jac
+
+    return transform("interval", interval_real, real_interval, real_interval_jacobian)
+
+
 
 simplextransform = transform("simplex",
                              lambda p: p[:-1],
