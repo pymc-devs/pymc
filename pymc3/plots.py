@@ -76,7 +76,8 @@ def histplot_op(ax, data):
 
         mind = np.min(d)
         maxd = np.max(d)
-        ax.hist(d, bins=range(mind, maxd + 2), align='left')
+        step = max((maxd-mind)//100, 1)
+        ax.hist(d, bins=range(mind, maxd + 2, step), align='left')
         ax.set_xlim(mind - .5, maxd + .5)
 
 def kdeplot_op(ax, data):

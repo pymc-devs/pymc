@@ -31,7 +31,7 @@ class Binomial(Discrete):
         super(Binomial, self).__init__(*args, **kwargs)
         self.n = n
         self.p = p
-        self.mode = cast(round(n * p), 'int8')
+        self.mode = cast(round(n * p), self.dtype)
 
     def logp(self, value):
         n = self.n

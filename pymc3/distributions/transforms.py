@@ -35,15 +35,7 @@ class TransformedDistribution(Distribution):
         args, kwargs
             arguments to Distribution"""
         forward = transform.forward 
-        try:
-            testval = forward(dist.testval)
-        except TypeError:
-            testval = dist.testval
-        
-        if hasattr(dist, "mode"):
-            self.mode = forward(dist.mode)
-        if hasattr(dist, "median"):
-            self.mode = forward(dist.median)
+        testval = forward(dist.default())
         
         self.dist = dist
         self.transform = transform
