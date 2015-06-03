@@ -77,7 +77,7 @@ class Metropolis(ArrayStep):
         if S is None:
             S = np.ones(sum(v.dsize for v in vars))
         self.proposal_dist = proposal_dist(S)
-        self.scaling = scaling
+        self.scaling = np.atleast_1d(scaling)
         self.tune = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
@@ -85,6 +85,8 @@ class Metropolis(ArrayStep):
 
         # Determine type of variables
         self.discrete = np.array([v.dtype in discrete_types for v in vars])
+        self.any_discrete = self.discrete.any()
+        self.all_discrete = self.discrete.all()
 
         super(Metropolis, self).__init__(vars, [model.fastlogp], **kwargs)
 
@@ -98,15 +100,18 @@ class Metropolis(ArrayStep):
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
 
-        delta = np.atleast_1d(self.proposal_dist() * self.scaling)
-        if np.any(self.discrete):
-            delta[self.discrete] = round(delta[self.discrete], 0).astype(int)
+        delta = self.proposal_dist() * self.scaling
+        if self.any_discrete:
+            if self.all_discrete:
+                delta = round(delta, 0).astype(int)
+            else:
+                delta[self.discrete] = round(delta[self.discrete], 0).astype(int)
 
         q = q0 + delta
 
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
-        if (any(q_new != q0) or all(q0 == q)):
+        if q_new is q0:
             self.accepted += 1
 
         self.steps_until_tune -= 1
