@@ -17,6 +17,7 @@ class Slice(ArrayStep):
 
         if vars is None:
             vars = model.cont_vars
+        vars = inputvars(vars)
 
         self.w = w
         self.tune = tune
