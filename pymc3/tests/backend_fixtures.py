@@ -375,8 +375,10 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
     def test_get_values_with_chains_arg(self):
         for varname in self.test_point.keys():
             for cf in [False, True]:
-                npt.assert_equal(self.mtrace0.get_values(varname, chains=[0]),
-                                 self.mtrace1.get_values(varname, chains=[0]))
+                npt.assert_equal(self.mtrace0.get_values(varname, chains=[0],
+                                                         combine=cf),
+                                 self.mtrace1.get_values(varname, chains=[0],
+                                                         combine=cf))
 
     def test_get_point(self):
         npoint, spoint = self.mtrace0[4], self.mtrace1[4]
