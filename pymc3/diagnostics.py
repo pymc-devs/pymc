@@ -50,7 +50,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
     Geweke (1992)
     """
 
-    if np.rank(x) > 1:
+    if np.ndim(x) > 1:
         return [geweke(y, first, last, intervals) for y in np.transpose(x)]
 
     # Filter out invalid intervals
