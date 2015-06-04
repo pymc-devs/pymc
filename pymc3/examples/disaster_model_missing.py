@@ -58,7 +58,7 @@ def run(n=1000):
         # Use slice sampler for means
         step1 = Slice([early_mean, late_mean])
         # Use Metropolis for switchpoint, since it accomodates discrete variables
-        step2 = Metropolis([switchpoint])
+        step2 = Metropolis([switchpoint, disasters.missing_values ])
 
         tr = sample(n, tune=500, start=start, step=[step1, step2])
         
