@@ -68,24 +68,6 @@ with model:
 # To get a decent scaling matrix for the Hamiltonian sampler, we find the Hessian at a point. The method `Model.d2logpc` gives us a `Theano` compiled function that returns the matrix of 2nd derivatives.
 #
 # However, the 2nd derivatives for the degrees of freedom parameter, `nu`, are negative and thus not very informative and make the matrix non-positive definite, so we replace that entry with a reasonable guess at the scale. The interactions between `log_sigma`/`nu` and `s` are also not very useful, so we set them to zero.
-#
-# The Hessian matrix is also sparse, so we can get faster sampling by
-# using a sparse scaling matrix. If you have `scikits.sparse` installed,
-# convert the Hessian to a csc matrixs by uncommenting the appropriate
-# line below.
-
-# <codecell>
-
-H = model.fastd2logp()
-
-
-def hessian(point, nusd):
-    h = H(Point(point))
-    h[1, 1] = nusd ** -2
-    h[:2, 2:] = h[2:, :2] = 0
-
-    # h = csc_matrix(h)
-    return h
 
 # <markdowncell>
 
@@ -93,11 +75,6 @@ def hessian(point, nusd):
 #
 # We use L-BFGS because it is more efficient for high dimensional
 # functions (`s` has n elements).
-
-# <codecell>
-
-with model:
-    start = find_MAP(vars=[s], fmin=optimize.fmin_l_bfgs_b)
 
 # <markdowncell>
 
@@ -108,20 +85,17 @@ with model:
 
 # <codecell>
 
-with model:
-    step = NUTS(model.vars, hessian(start, 6))
-
-
-
 def run(n=2000):
     if n == "short":
         n = 50
     with model:
-        trace = sample(5, step, start, trace=model.vars + [sigma])
+        start = find_MAP(vars=[s], fmin=optimize.fmin_l_bfgs_b)
+        step = NUTS(model.vars, scaling=start, gamma=.25)
+        trace = sample(5, step, start)
 
         # Start next run at the last sampled position.
         start2 = trace.point(-1)
-        step2 = HamiltonianMC(model.vars, hessian(start2, 6), path_length=4.)
+        step2 = NUTS(model.vars, scaling=start2, gamma=.25)
         trace = sample(n, step2, trace=trace)
 
     # <codecell>

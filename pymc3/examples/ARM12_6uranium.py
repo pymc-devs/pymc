@@ -55,8 +55,8 @@ def run(n=3000):
 
         start = Point({
                  'groupmean': obs_means.mean(),
-                 'groupsd': obs_means.std(),
-                 'sd': data.groupby('group').lradon.std().mean(),
+                 'groupsd_interval': 0,
+                 'sd_interval': 0,
                  'means': np.array(obs_means),
                  'u_m': np.array([.72]),
                  'floor_m': 0.,
