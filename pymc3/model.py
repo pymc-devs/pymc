@@ -151,13 +151,15 @@ class Model(Context, Factor):
         elif isinstance(data, dict):
             var = MultiObservedRV(name=name, data=data, distribution=dist, model=self)
             self.observed_RVs.append(var)
-            self.free_RVs += var.missing_values
-            self.missing_values += var.missing_values
+            if var.missing_values:
+                self.free_RVs += var.missing_values
+                self.missing_values += var.missing_values
         else: 
             var = ObservedRV(name=name, data=data, distribution=dist, model=self)
             self.observed_RVs.append(var)
-            self.free_RVs.append(var.missing_values)
-            self.missing_values.append(var.missing_values)
+            if var.missing_values:
+                self.free_RVs.append(var.missing_values)
+                self.missing_values.append(var.missing_values)
 
         self.add_random_variable(var)
         return var
@@ -357,8 +359,10 @@ def pandas_to_array(data):
             return np.ma.MaskedArray(data.values, data.isnull().values)
         else: 
             return data.values
-    else:
+    elif hasattr(data, 'mask'):
         return data
+    else:
+        return np.asarray(data)
         
 
 def as_tensor(data, name):
@@ -408,7 +412,8 @@ class ObservedRV(Factor, TensorVariable):
 
             #make this RV a view on the combined missing/nonmissing array
             theano.gof.Apply(theano.compile.view_op, inputs=[data], outputs=[self])
-            self.tag.test_value = data.tag.test_value
+
+            self.tag.test_value = theano.compile.view_op(data).tag.test_value
 
 class MultiObservedRV(Factor):
     """Observed random variable that a model is specified in terms of.
