@@ -47,7 +47,7 @@ class DictToArrayBijection(object):
         """
         apt = np.empty(self.ordering.dimensions)
         for var, slc, _ in self.ordering.vmap:
-                apt[slc] = np.ravel(dpt[var])
+                apt[slc] = dpt[var].ravel()
         return apt
 
     def rmap(self, apt):
@@ -61,7 +61,7 @@ class DictToArrayBijection(object):
         dpt = self.dpt.copy()
 
         for var, slc, shp in self.ordering.vmap:
-            dpt[var] = np.reshape(np.atleast_1d(apt)[slc], shp)
+            dpt[var] = apt[slc].reshape(shp)
 
         return dpt
 
