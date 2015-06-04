@@ -47,11 +47,9 @@ class TestMultiTrace(bf.ModelBackendSetupTestCase):
     shape = ()
 
     def setUp(self):
-        self.chain = 0
         super(TestMultiTrace, self).setUp()
         self.trace0 = self.trace
 
-        self.chain = 1
         super(TestMultiTrace, self).setUp()
         self.trace1 = self.trace
 

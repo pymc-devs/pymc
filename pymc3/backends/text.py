@@ -22,7 +22,7 @@ Database format
 For each chain, a directory named `chain-N` is created. In this
 directory, one file per variable is created containing the values of the
 object. To deal with multidimensional variables, the array is reshaped
-to one dimension before saving with `numpy.savetxt`. The shape
+to one dimension before saving with `numpy.savetxt`. The shape and dtype
 information is saved in a json file in the same directory and is used to
 load the database back again using `numpy.loadtxt`.
 """
@@ -85,16 +85,24 @@ def _dump_trace(name, trace):
     chain_dir = os.path.join(name, chain_name)
     os.mkdir(chain_dir)
 
-    shapes = {}
+    info = {}
     for varname in trace.varnames:
         data = trace.get_values(varname)
+
+        if np.issubdtype(data.dtype, np.int):
+            fmt = '%i'
+            is_int = True
+        else:
+            fmt = '%g'
+            is_int = False
+        info[varname] = {'shape': data.shape, 'is_int': is_int}
+
         var_file = os.path.join(chain_dir, varname + '.txt')
-        np.savetxt(var_file, data.reshape(-1, data.size))
-        shapes[varname] = data.shape
-    ## Store shape information for reloading.
-    shape_file = os.path.join(chain_dir, 'shapes.json')
-    with open(shape_file, 'w') as sfh:
-        json.dump(shapes, sfh)
+        np.savetxt(var_file, data.reshape(-1, data.size), fmt=fmt)
+    ## Store shape and dtype information for reloading.
+    info_file = os.path.join(chain_dir, 'info.json')
+    with open(info_file, 'w') as sfh:
+        json.dump(info, sfh)
 
 
 def load(name, chains=None, model=None):
@@ -120,13 +128,15 @@ def load(name, chains=None, model=None):
     traces = []
     for chain in chains:
         chain_dir = chain_dirs[chain]
-        shape_file = os.path.join(chain_dir, 'shapes.json')
-        with open(shape_file, 'r') as sfh:
-            shapes = json.load(sfh)
+        info_file = os.path.join(chain_dir, 'info.json')
+        with open(info_file, 'r') as sfh:
+            info = json.load(sfh)
         samples = {}
-        for varname, shape in shapes.items():
+        for varname, info in info.items():
             var_file = os.path.join(chain_dir, varname + '.txt')
-            samples[varname] = np.loadtxt(var_file).reshape(shape)
+            dtype = int if info['is_int'] else float
+            flat_data = np.loadtxt(var_file, dtype=dtype)
+            samples[varname] = flat_data.reshape(info['shape'])
         trace = NDArray(model=model)
         trace.samples = samples
         trace.chain = chain

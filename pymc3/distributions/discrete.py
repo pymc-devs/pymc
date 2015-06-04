@@ -1,4 +1,5 @@
 from .dist_math import *
+from theano.tensor import as_tensor_variable
 
 __all__ = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson', 'NegativeBinomial',
 'ConstantDist', 'ZeroInflatedPoisson', 'DiscreteUniform', 'Geometric',
@@ -30,7 +31,7 @@ class Binomial(Discrete):
         super(Binomial, self).__init__(*args, **kwargs)
         self.n = n
         self.p = p
-        self.mode = cast(round(n * p), 'int8')
+        self.mode = cast(round(n * p), self.dtype)
 
     def logp(self, value):
         n = self.n
@@ -279,7 +280,7 @@ class Categorical(Discrete):
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
         self.k = p.shape[0]
-        self.p = p
+        self.p = as_tensor_variable(p)
         self.mode = argmax(p)
 
     def logp(self, value):

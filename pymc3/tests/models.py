@@ -88,3 +88,9 @@ def exponential_beta(n=2):
         y = pm.Exponential('y', 1, shape=n)
 
     return model.test_point, model, None
+
+def beta_bernoulli(n=2):
+    with pm.Model() as model:
+        x = pm.Beta('x', 3, 1, shape=n)
+        y = pm.Bernoulli('y', 0.5)
+    return model.test_point, model, None

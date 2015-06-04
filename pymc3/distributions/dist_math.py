@@ -13,6 +13,8 @@ from theano.tensor import (
     zeros_like, ones, ones_like,
     concatenate, constant, argmax)
 
+from theano.tensor import as_tensor_variable
+
 
 from numpy import pi, inf, nan
 from .special import gammaln, multigammaln

@@ -44,13 +44,14 @@ class NDArray(base.BaseTrace):
             self.draws_idx = old_draws
             for varname, shape in self.var_shapes.items():
                 old_trace = self.samples[varname]
-                new_trace = np.zeros((draws, ) + shape)
+                new_trace = np.zeros((draws, ) + shape, self.var_dtypes[varname])
                 self.samples[varname] = np.concatenate((old_trace, new_trace),
                                                        axis=0)
         else:  # Otherwise, make array of zeros for each variable.
             self.draws = draws
             for varname, shape in self.var_shapes.items():
-                self.samples[varname] = np.zeros((draws, ) + shape)
+                self.samples[varname] = np.zeros((draws, ) + shape,
+                                                 dtype=self.var_dtypes[varname])
 
     def record(self, point):
         """Record results of a sampling iteration.
