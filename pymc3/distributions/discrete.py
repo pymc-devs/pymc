@@ -117,7 +117,9 @@ class Bernoulli(Discrete):
         p = self.p
         return bound(
             switch(value, log(p), log(1 - p)),
-            0 <= p, p <= 1)
+            0 <= p, p <= 1,
+            eq(value,0) | eq(value,1) 
+            )
 
 
 class Poisson(Discrete):
