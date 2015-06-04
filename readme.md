@@ -35,8 +35,10 @@ Check out the [Tutorial](http://pymc-devs.github.io/pymc3/getting_started/)!
 The latest version of PyMC 3 can be installed from the master branch using pip:
 
 ```
-pip install git+https://github.com/pymc-devs/pymc3
+pip install --process-dependency-links git+https://github.com/pymc-devs/pymc3
 ```
+
+The `--process-dependency-links` flag ensures that the developmental branch of Theano, which PyMC requires, is installed. If a recent developmental version of Theano has been installed with another method, this flag can be dropped.
 
 Another option is to clone the repository and install PyMC using `python setup.py install` or `python setup.py develop`.
 
