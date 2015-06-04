@@ -49,7 +49,7 @@ def linear_component(formula, data, priors=None,
     # Logistic regression
     y_est, coeffs = glm('male ~ height + weight',
                         htwt_data,
-                        family=glm.families.Binomial(links=glm.link.Logit))
+                        family=glm.families.Binomial(link=glm.family.logit))
     y_data = Bernoulli('y', y_est, observed=data.male)
     """
     if intercept_prior is None:

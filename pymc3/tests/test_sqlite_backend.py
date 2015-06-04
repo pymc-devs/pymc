@@ -5,44 +5,44 @@ from pymc3.backends import ndarray, sqlite
 
 class TestSQlite0dSampling(bf.SamplingTestCase):
     backend = sqlite.SQLite
-    name = 'test.db'
+    name = '/tmp/test.db'
     shape = ()
 
 
 class TestSQlite1dSampling(bf.SamplingTestCase):
     backend = sqlite.SQLite
-    name = 'test.db'
+    name = '/tmp/test.db'
     shape = 2
 
 
 class TestSQlite2dSampling(bf.SamplingTestCase):
     backend = sqlite.SQLite
-    name = 'test.db'
+    name = '/tmp/test.db'
     shape = (2, 3)
 
 
 class TestSQLite0dSelection(bf.SelectionNoSliceTestCase):
     backend = sqlite.SQLite
-    name = 'test.db'
+    name = '/tmp/test.db'
     shape = ()
 
 
 class TestSQLite1dSelection(bf.SelectionNoSliceTestCase):
     backend = sqlite.SQLite
-    name = 'test.db'
+    name = '/tmp/test.db'
     shape = 2
 
 
 class TestSQLite2dSelection(bf.SelectionNoSliceTestCase):
     backend = sqlite.SQLite
-    name = 'test.db'
+    name = '/tmp/test.db'
     shape = (2, 3)
 
 
 class TestSQLiteDumpLoad(bf.DumpLoadTestCase):
     backend = sqlite.SQLite
     load_func = staticmethod(sqlite.load)
-    name = 'test.db'
+    name = '/tmp/test.db'
     shape = (2, 3)
 
 
@@ -50,7 +50,7 @@ class TestNDArraySqliteEquality(bf.BackendEqualityTestCase):
     backend0 = ndarray.NDArray
     name0 = None
     backend1 = sqlite.SQLite
-    name1 = 'test.db'
+    name1 = '/tmp/test.db'
     shape = (2, 3)
 
 
