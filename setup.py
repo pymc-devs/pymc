@@ -27,11 +27,15 @@ classifiers = ['Development Status :: 3 - Alpha',
                'Operating System :: OS Independent']
 
 install_reqs = ['numpy>=1.7.1', 'scipy>=0.12.0', 'matplotlib>=1.2.1',
-                'Theano>=0.7.0']
+                'Theano<=0.7dev']
 
 test_reqs = ['nose']
 if sys.version_info[0] == 2:  # py3 has mock in stdlib
     test_reqs.append('mock')
+
+## The current release of Theano does not support `as_op` decorator, so
+## we're using the developmental version from github.
+dep_links = ['https://github.com/Theano/Theano/tarball/master#egg=Theano-0.7dev']
 
 if __name__ == "__main__":
     setup(name=DISTNAME,
@@ -49,5 +53,6 @@ if __name__ == "__main__":
           package_data = {'pymc3.examples': ['data/*.*']},
           classifiers=classifiers,
           install_requires=install_reqs,
+          dependency_links=dep_links,
           tests_require=test_reqs,
           test_suite='nose.collector')
