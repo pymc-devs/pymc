@@ -65,8 +65,8 @@ class Dirichlet(Continuous):
         Only the first `k-1` elements of `x` are expected. Can be used
         as a parent of Multinomial and Categorical nevertheless.
     """
-    def __init__(self, a, *args, **kwargs):
-        super(Dirichlet, self).__init__(*args, **kwargs)
+    def __init__(self, a, transform=simplextransform, *args, **kwargs):
+        super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
         self.a = a
         self.k = a.shape[0]
         self.mean = a / sum(a)

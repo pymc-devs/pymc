@@ -19,14 +19,12 @@ __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
     def __init__(self, transform=logtransform, *args, **kwargs):
-        super(PositiveContinuous, self).__init__(*args, **kwargs)
-        self.transform = transform
+        super(PositiveContinuous, self).__init__(transform=transform, *args, **kwargs)
 
 class UnitContinuous(Continuous):
     """Base class for continuous distributions on [0,1]"""
     def __init__(self, transform=logoddstransform, *args, **kwargs):
-        super(UnitContinuous, self).__init__(*args, **kwargs)
-        self.transform = transform
+        super(UnitContinuous, self).__init__(transform=transform, *args, **kwargs)
 
 def get_tau_sd(tau=None, sd=None):
     if tau is None:
@@ -59,15 +57,16 @@ class Uniform(Continuous):
     upper : float
         Upper limit (defaults to 1)
     """
-    def __init__(self, lower=0, upper=1, transform=None, *args, **kwargs):
+    def __init__(self, lower=0, upper=1, transform='interval', *args, **kwargs):
         super(Uniform, self).__init__(*args, **kwargs)
         
         self.lower = lower
         self.upper = upper
         self.mean = (upper + lower) / 2.
         self.median = self.mean
-        if transform is None:
-            self.transform=interval_transform(lower, upper)
+
+        if transform is 'interval':
+            self.transform = interval_transform(lower, upper)
 
     def logp(self, value):
         lower = self.lower
@@ -148,12 +147,11 @@ class HalfNormal(PositiveContinuous):
       - `sd` : sd > 0 (alternative parameterization)
 
     """
-    def __init__(self, tau=None, sd=None, transform=logtransform, *args, **kwargs):
+    def __init__(self, tau=None, sd=None, *args, **kwargs):
         super(HalfNormal, self).__init__(*args, **kwargs)
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.mean = sqrt(2 / (pi * self.tau))
         self.variance = (1. - 2/pi) / self.tau
-        self.transform = transform
 
     def logp(self, value):
         tau = self.tau
@@ -228,7 +226,7 @@ class Beta(UnitContinuous):
     - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
 
     """
-    def __init__(self, alpha=None, beta=None, mu=None, sd=None, transform=logoddstransform, *args, **kwargs):
+    def __init__(self, alpha=None, beta=None, mu=None, sd=None, *args, **kwargs):
         super(Beta, self).__init__(*args, **kwargs)
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
@@ -236,7 +234,6 @@ class Beta(UnitContinuous):
         self.mean = alpha / (alpha + beta)
         self.variance = alpha * beta / (
             (alpha + beta) ** 2 * (alpha + beta + 1))
-        self.transform=transform
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
