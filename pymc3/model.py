@@ -346,12 +346,12 @@ def pandas_to_array(data):
         return np.asarray(data)
         
 
-def as_tensor(data, name,model):
-    data = pandas_to_array(data)
+def as_tensor(data, name,model, dtype):
+    data = pandas_to_array(data).astype(dtype)
 
     if hasattr(data, 'mask'): 
         from .distributions import NoDistribution
-        fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=data.dtype, testval=data.mask.mean().astype(data.dtype))
+        fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype, testval=data.mean().astype(dtype))
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist, model=model)
 
         constant = t.as_tensor_variable(data.filled())
@@ -383,12 +383,12 @@ class ObservedRV(Factor, TensorVariable):
         from .distributions import TensorType
         if type is None:
             data = pandas_to_array(data)
-            type = TensorType(data.dtype, data.shape)
+            type = TensorType(distribution.dtype, data.shape)
 
         super(TensorVariable, self).__init__(type, None, None, name)
 
         if distribution is not None:
-            data = as_tensor(data, name,model) 
+            data = as_tensor(data, name,model,distribution.dtype) 
             self.missing_values = data.missing_values
 
             self.logp_elemwiset = distribution.logp(data)
@@ -418,7 +418,7 @@ class MultiObservedRV(Factor):
         """
         self.name = name
 
-        self.data = { name : as_tensor(data, name,model) for name, data in data.items()}
+        self.data = { name : as_tensor(data, name, model, distribution.dtype) for name, data in data.items()}
 
         self.missing_values = [ data.missing_values for data in self.data.values() if data.missing_values is not None]
         self.logp_elemwiset = distribution.logp(**self.data)
