@@ -22,4 +22,4 @@ default_type = {'discrete': 'int64',
 
 def typefilter(vars, types):
     # Returns variables of type `types` from `vars`
-    return filter(lambda v: v.dtype in types, vars)
+    return [v for v in vars if v.dtype in types] 
