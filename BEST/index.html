@@ -63,9 +63,11 @@
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
                         <ul class="dropdown-menu">
                         
-                            <li >
-                                <a href="../getting_started/">Getting started</a>
-                            </li>
+                            
+<li >
+    <a href="../getting_started/">Getting started</a>
+</li>
+
                         
                         </ul>
                     </li>
@@ -76,33 +78,47 @@
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">Examples <b class="caret"></b></a>
                         <ul class="dropdown-menu">
                         
-                            <li class="active">
-                                <a href="./">BEST</a>
-                            </li>
+                            
+<li class="active">
+    <a href="./">BEST</a>
+</li>
+
                         
-                            <li >
-                                <a href="../stochastic_volatility/">Stochastic Volatility</a>
-                            </li>
+                            
+<li >
+    <a href="../stochastic_volatility/">Stochastic Volatility</a>
+</li>
+
                         
-                            <li >
-                                <a href="../hierarchical/">Hierarchical model</a>
-                            </li>
+                            
+<li >
+    <a href="../hierarchical/">Hierarchical model</a>
+</li>
+
                         
-                            <li >
-                                <a href="../GLM-linear/">Linear Regression</a>
-                            </li>
+                            
+<li >
+    <a href="../GLM-blog-linear/">Linear Regression</a>
+</li>
+
                         
-                            <li >
-                                <a href="../GLM-robust/">Robust Regression</a>
-                            </li>
+                            
+<li >
+    <a href="../GLM-blog-robust/">Robust Regression</a>
+</li>
+
                         
-                            <li >
-                                <a href="../GLM-hierarchical/">Hierarchical linear regression</a>
-                            </li>
+                            
+<li >
+    <a href="../glm_hierarchical/">Hierarchical linear regression</a>
+</li>
+
                         
-                            <li >
-                                <a href="../pmf-pymc/">Probabilistic Matrix Factorization</a>
-                            </li>
+                            
+<li >
+    <a href="../pmf-pymc/">Probabilistic Matrix Factorization</a>
+</li>
+
                         
                         </ul>
                     </li>
@@ -111,34 +127,35 @@
                 </ul>
             
 
-            
-            <!-- Search, Navigation and Repo links -->
             <ul class="nav navbar-nav navbar-right">
-                
-                
-                <li >
-                    <a rel="next" href="../getting_started/">
-                        <i class="fa fa-arrow-left"></i> Previous
-                    </a>
-                </li>
-                <li >
-                    <a rel="prev" href="../stochastic_volatility/">
-                        Next <i class="fa fa-arrow-right"></i>
-                    </a>
-                </li>
-                
-                
                 <li>
-                    <a href="https://github.com/pymc-devs/pymc3">
-                        
-                            <i class="fa fa-github"></i>
-                        
-                        GitHub
+                    <a href="#" data-toggle="modal" data-target="#mkdocs_search_modal">
+                        <i class="fa fa-search"></i> Search
                     </a>
                 </li>
+                
+                    <li >
+                        <a rel="next" href="../getting_started/">
+                            <i class="fa fa-arrow-left"></i> Previous
+                        </a>
+                    </li>
+                    <li >
+                        <a rel="prev" href="../stochastic_volatility/">
+                            Next <i class="fa fa-arrow-right"></i>
+                        </a>
+                    </li>
+                
+                
+                    <li>
+                        <a href="https://github.com/pymc-devs/pymc3">
+                            
+                                <i class="fa fa-github"></i>
+                            
+                            GitHub
+                        </a>
+                    </li>
                 
             </ul>
-            
         </div>
     </div>
 </div>
@@ -200,7 +217,7 @@ with pm.Model() as model:
     effect_size = pm.Deterministic('effect size', diff_of_means / pm.sqrt((group1_std**2 + group2_std**2) / 2))
 
     step = pm.NUTS()
-    trace = pm.sample(5000, step, start=start)
+    trace = pm.sample(5000, step)
 
  [-----------------100%-----------------] 5000 of 5000 complete in 29.0 sec
 
@@ -334,18 +351,39 @@ effect size:
             <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
 
-        
-
         <script src="../js/jquery-1.10.2.min.js"></script>
         <script src="../js/bootstrap-3.0.3.min.js"></script>
         <script src="../js/highlight.pack.js"></script>
+        <script>var base_url = '..';</script>
+        <script data-main="../mkdocs/js/search.js" src="../mkdocs/js/require.js"></script>
         <script src="../js/base.js"></script>
         <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
         <script src="../js/mathjaxhelper.js"></script>
 
-        <!--
-        MkDocs version  : 0.12.2
-        Docs Build Date : 2015-04-28 05:52:00.790424
-        -->
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="exampleModalLabel">Search</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>
+                            From here you can search these documents. Enter
+                            your search terms below.
+                        </p>
+                        <form role="form">
+                            <div class="form-group">
+                                <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query">
+                            </div>
+                        </form>
+                        <div id="mkdocs-search-results"></div>
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </body>
 </html>
