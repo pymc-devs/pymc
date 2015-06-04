@@ -5,12 +5,14 @@ markdown_extensions: ['extra', 'mathjax']
 extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML','js/mathjaxhelper.js']
 
 pages:
-- ['index.md', 'Overview']
-- ['getting_started.md', 'Tutorial', 'Getting started']
-- ['BEST.md', 'Examples', 'BEST']
-- ['stochastic_volatility.md', 'Examples', 'Stochastic Volatility']
-- ['hierarchical.md', 'Examples', 'Hierarchical model']
-- ['GLM-blog-linear.md', 'Examples', 'Linear Regression']
-- ['GLM-blog-robust.md', 'Examples', 'Robust Regression']
-- ['glm_hierarchical.md', 'Examples', 'Hierarchical linear regression']
-- ['pmf-pymc.md', 'Examples', 'Probabilistic Matrix Factorization']
+- Overview: 'index.md'
+- Tutorial:
+  - 'Getting started': 'getting_started.md'
+- Examples:
+  - 'BEST': 'BEST.md'
+  - 'Stochastic Volatility': 'stochastic_volatility.md'
+  - 'Hierarchical model': 'hierarchical.md'
+  - 'Linear Regression': 'GLM-blog-linear.md'
+  - 'Robust Regression': 'GLM-blog-robust.md'
+  - 'Hierarchical linear regression': 'glm_hierarchical.md'
+  - 'Probabilistic Matrix Factorization': 'pmf-pymc.md'
