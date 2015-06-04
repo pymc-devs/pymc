@@ -43,12 +43,16 @@ def gradient1(f, v):
     return t.flatten(t.grad(f, v, disconnected_inputs='warn'))
 
 
+empty_gradient = t.zeros(0, dtype='float32')
 @memoize
 def gradient(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
 
-    return t.concatenate([gradient1(f, v) for v in vars], axis=0)
+    if vars: 
+        return t.concatenate([gradient1(f, v) for v in vars], axis=0)
+    else:
+        return empty_gradient
 
 
 def jacobian1(f, v):
@@ -67,7 +71,10 @@ def jacobian(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
 
-    return t.concatenate([jacobian1(f, v) for v in vars], axis=1)
+    if vars:
+        return t.concatenate([jacobian1(f, v) for v in vars], axis=1)
+    else: 
+        return empty_gradient
 
 
 @memoize
@@ -91,7 +98,10 @@ def hessian_diag(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
 
-    return -t.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+    if vars:
+        return -t.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+    else: 
+        return empty_gradient
 
 
 def makeiter(a):
