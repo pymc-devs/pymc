@@ -104,13 +104,13 @@
                         
                             
 <li >
-    <a href="../GLM-blog-robust/">Robust Regression</a>
+    <a href="../GLM-robust/">Robust Regression</a>
 </li>
 
                         
                             
 <li >
-    <a href="../glm_hierarchical/">Hierarchical linear regression</a>
+    <a href="../GLM-hierarchical/">Hierarchical linear regression</a>
 </li>
 
                         
@@ -140,7 +140,7 @@
                         </a>
                     </li>
                     <li >
-                        <a rel="prev" href="../GLM-blog-robust/">
+                        <a rel="prev" href="../GLM-robust/">
                             Next <i class="fa fa-arrow-right"></i>
                         </a>
                     </li>
@@ -165,31 +165,24 @@
                 <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
     <ul class="nav bs-sidenav">
     
-        <li class="main active"><a href="#linear-regression">Linear Regression</a></li>
+        <li class="main active"><a href="#the-inference-button-bayesian-glms-made-easy-with-pymc3">The Inference Button: Bayesian GLMs made easy with PyMC3</a></li>
         
-    
-        <li class="main "><a href="#probabilistic-reformulation">Probabilistic Reformulation</a></li>
+            <li><a href="#linear-regression">Linear Regression</a></li>
         
-    
-        <li class="main "><a href="#bayesian-glms-in-pymc3">Bayesian GLMs in PyMC3</a></li>
+            <li><a href="#probabilistic-reformulation">Probabilistic Reformulation</a></li>
         
-            <li><a href="#generating-data">Generating data</a></li>
+            <li><a href="#bayesian-glms-in-pymc3">Bayesian GLMs in PyMC3</a></li>
         
-            <li><a href="#estimating-the-model">Estimating the model</a></li>
-        
-            <li><a href="#analyzing-the-model">Analyzing the model</a></li>
-        
-    
-        <li class="main "><a href="#summary">Summary</a></li>
-        
-            <li><a href="#further-reading">Further reading</a></li>
+            <li><a href="#summary">Summary</a></li>
         
     
     </ul>
 </div></div>
                 <div class="col-md-9" role="main">
 
-<p>This is the first blog post in a small series on Bayesian GLMs:</p>
+<h1 id="the-inference-button-bayesian-glms-made-easy-with-pymc3">The Inference Button: Bayesian GLMs made easy with PyMC3</h1>
+<p>Author: Thomas Wiecki</p>
+<p>This tutorial appeared as a post in a small series on Bayesian GLMs on my blog:</p>
 <ol>
 <li><a href="http://twiecki.github.com/blog/2013/08/12/bayesian-glms-1/">The Inference Button: Bayesian GLMs made easy with PyMC3</a></li>
 <li><a href="http://twiecki.github.io/blog/2013/08/27/bayesian-glms-2/">This world is far from Normal(ly distributed): Robust Regression in PyMC3</a></li>
@@ -227,7 +220,9 @@ In general, frequentists think about Linear Regression as follows:</p>
 <h2 id="bayesian-glms-in-pymc3">Bayesian GLMs in PyMC3</h2>
 <p>With the new GLM module in PyMC3 it is very easy to build this and much more complex models.</p>
 <p>First, lets import the required modules.</p>
-<pre><code>from pymc import  *
+<pre><code>%matplotlib inline
+
+from pymc3 import  *
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -254,22 +249,23 @@ ax.plot(x, y, 'x', label='sampled data')
 ax.plot(x, true_regression_line, label='true regression line', lw=2.)
 plt.legend(loc=0);
 </code></pre>
-<p><img alt="png" src="../GLM-blog-linear_files/GLM-blog-linear_6_0.png" /></p>
+<p><img alt="png" src="../GLM-linear_files/GLM-linear_6_0.png" /></p>
 <h3 id="estimating-the-model">Estimating the model</h3>
 <p>Lets fit a Bayesian linear regression model to this data. As you can see, model specifications in <code>PyMC3</code> are wrapped in a <code>with</code> statement. </p>
 <p>Here we use the awesome new <a href="http://arxiv.org/abs/1111.4246">NUTS sampler</a> (our Inference Button) to draw 2000 posterior samples.</p>
 <pre><code>with Model() as model: # model specifications in PyMC3 are wrapped in a with-statement
     # Define priors
-    sigma = Uniform('sigma', 0, 20)
+    sigma = HalfCauchy('sigma', beta=10, testval=1.)
     intercept = Normal('Intercept', 0, sd=20)
     x_coeff = Normal('x', 0, sd=20)
 
     # Define likelihood
-    likelihood = Normal('y', mu=intercept + x_coeff * x, sd=sigma, observed=y)
+    likelihood = Normal('y', mu=intercept + x_coeff * x, 
+                        sd=sigma, observed=y)
 
     # Inference!
     start = find_MAP() # Find starting value by optimization
-    step = NUTS(state=start) # Instantiate MCMC sampling algorithm
+    step = NUTS(scaling=start) # Instantiate MCMC sampling algorithm
     trace = sample(2000, step, start=start, progressbar=False) # draw 2000 posterior samples using NUTS sampling
 </code></pre>
 <p>This should be fairly readable for people who know probabilistic programming. However, would my non-statistican friend know what all this does? Moreover, recall that this is an extremely simple model that would be one line in R. Having multiple, potentially transformed regressors, interaction terms or link-functions would also make this much more complex and error prone. </p>
@@ -278,7 +274,8 @@ plt.legend(loc=0);
     # specify glm and pass in data. The resulting linear model, its likelihood and 
     # and all its parameters are automatically added to our model.
     glm.glm('y ~ x', data)
-    step = NUTS() # Instantiate MCMC sampling algorithm
+    start = find_MAP()
+    step = NUTS(scaling=start) # Instantiate MCMC sampling algorithm
     trace = sample(2000, step, progressbar=False) # draw 2000 posterior samples using NUTS sampling
 </code></pre>
 <p>Much shorter, but this code does the exact same thing as the above model specification (you can change priors and everything else too if we wanted). <code>glm()</code> parses the <code>Patsy</code> model string, adds random variables for each regressor (<code>Intercept</code> and slope <code>x</code> in this case), adds a likelihood (by default, a Normal is chosen), and all other variables (<code>sigma</code>). Finally, <code>glm()</code> then initializes the parameters to a good starting point by estimating a frequentist linear model using <a href="http://statsmodels.sourceforge.net/devel/">statsmodels</a>.</p>
@@ -286,13 +283,13 @@ plt.legend(loc=0);
 <h3 id="analyzing-the-model">Analyzing the model</h3>
 <p>Bayesian inference does not give us only one best fitting line (as maximum likelihood does) but rather a whole posterior distribution of likely parameters. Lets plot the posterior distribution of our parameters and the individual samples we drew.</p>
 <pre><code>plt.figure(figsize=(7, 7))
-traceplot(trace)
+traceplot(trace[100:])
 plt.tight_layout();
 
 
-&lt;matplotlib.figure.Figure at 0xeb14bec&gt;
+&lt;matplotlib.figure.Figure at 0x7f574ca72b10&gt;
 </code></pre>
-<p><img alt="png" src="../GLM-blog-linear_files/GLM-blog-linear_15_1.png" /></p>
+<p><img alt="png" src="../GLM-linear_files/GLM-linear_15_1.png" /></p>
 <p>The left side shows our marginal posterior -- for each parameter value on the x-axis we get a probability on the y-axis that tells us how likely that parameter value is.</p>
 <p>There are a couple of things to see here. The first is that our sampling chains for the individual parameters (left side) seem well converged and stationary (there are no large drifts or other odd patterns).</p>
 <p>Secondly, the maximum posterior estimate of each variable (the peak in the left side distributions) is very close to the true parameters used to generate the data (<code>x</code> is the regression coefficient and <code>sigma</code> is the standard deviation of our normal).</p>
@@ -308,7 +305,7 @@ plt.legend(loc=0)
 plt.xlabel('x')
 plt.ylabel('y');
 </code></pre>
-<p><img alt="png" src="../GLM-blog-linear_files/GLM-blog-linear_18_0.png" /></p>
+<p><img alt="png" src="../GLM-linear_files/GLM-linear_18_0.png" /></p>
 <p>As you can see, our estimated regression lines are very similar to the true regression line. But since we only have limited data we have <em>uncertainty</em> in our estimates, here expressed by the variability of the lines.</p>
 <h2 id="summary">Summary</h2>
 <ul>
