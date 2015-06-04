@@ -357,9 +357,12 @@ def as_tensor(data, name):
         constant = t.as_tensor_variable(data.filled())
 
         dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()], missing_values) 
-        return dataTensor, missing_values
+        dataTensor.missing_values = missing_values
+        return dataTensor
     else:
-        return t.as_tensor_variable(data, name=name), None
+        data = t.as_tensor_variable(data, name=name)
+        data.missing_values = None
+        return data
 
 class ObservedRV(Factor, TensorVariable):
     """Observed random variable that a model is specified in terms of.
@@ -385,7 +388,8 @@ class ObservedRV(Factor, TensorVariable):
         super(TensorVariable, self).__init__(type, None, None, name)
 
         if distribution is not None:
-            data, self.missing_values = as_tensor(data, name) 
+            data = as_tensor(data, name) 
+            self.missing_values = data.missing_values
 
             self.logp_elemwiset = distribution.logp(data)
             self.model = model
@@ -413,18 +417,11 @@ class MultiObservedRV(Factor):
         model : Model
         """
         self.name = name
-        data_arrays = as_iterargs(data)
 
-        if len(data_arrays) > 1:
-            names = [name + "_" + param for param in getargspec(distribution.logp).args]
-        else:
-            names = [name]
+        self.data = { name : as_tensor(data, name) for name, data in data.items()}
 
-        data_arrays = [as_tensor(data, name) for data, name in zip(data_arrays,names)]
-        self.data = [d for d, missing in data_arrays]
-        self.missing_values = [missing for d, missing in data_arrays if missing is not None]
-
-        self.logp_elemwiset = distribution.logp(*data_arrays)
+        self.missing_values = [ data.missing_values for data in self.data.values() if data.missing_values is not None]
+        self.logp_elemwiset = distribution.logp(**self.data)
         self.model = model
         self.distribution = distribution
 
