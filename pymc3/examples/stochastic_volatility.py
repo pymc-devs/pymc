@@ -53,9 +53,7 @@ returns[:5]
 
 model = Model()
 with model:
-    sigma, log_sigma = model.TransformedVar(
-        'sigma', Exponential.dist(1. / .02, testval=.1),
-        logtransform)
+    sigma= Exponential('sigma', 1. / .02, testval=.1)
 
     nu = Exponential('nu', 1. / 10)
 

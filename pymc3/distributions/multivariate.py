@@ -3,6 +3,7 @@ import warnings
 from .dist_math import *
 
 import numpy as np
+from .transforms import simplextransform
 
 from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
 from theano.tensor import dot, cast, eye, diag, eq, le, ge, gt, all

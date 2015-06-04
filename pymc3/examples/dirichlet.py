@@ -7,9 +7,7 @@ with model:
     k = 5
     a = constant(np.array([2, 3., 4, 2, 2]))
 
-    p, p_m1 = model.TransformedVar(
-        'p', Dirichlet.dist(a, shape=k),
-        simplextransform)
+    p, p_m1 = 'p', Dirichlet('p', a, shape=k)
 
     c = Categorical('c', p, observed=np.random.randint(0, k, 5))
 

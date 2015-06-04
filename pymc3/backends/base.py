@@ -29,10 +29,7 @@ class BaseTrace(object):
             vars = model.unobserved_RVs
         self.vars = vars
         self.varnames = [str(var) for var in vars]
-        if (all(var.owner is None for var in vars)):
-            self.fn = self.values
-        else:
-            self.fn = model.fastfn(vars)
+        self.fn = model.fastfn(vars)
 
 
         ## Get variable shapes. Most backends will need this
@@ -43,9 +40,6 @@ class BaseTrace(object):
         self.var_dtypes = {var: value.dtype
                            for var, value in var_values}
         self.chain = None
-
-    def values(self, point):
-        return (point[v] for v in self.varnames)
 
     ## Sampling methods
 
