@@ -10,6 +10,7 @@ a = np.array([-10, -.01, 0, 10, 1e300, -inf, inf])
 def test_adjust_precision():
     a1 = scaling.adjust_precision(a)
 
+    print (a1)
     assert all((a1 > 0) & (a1 < 1e200))
 
 
@@ -19,3 +20,5 @@ def test_guess_scaling():
     a1 = scaling.guess_scaling(start, model=model)
 
     assert all((a1 > 0) & (a1 < 1e200))
+
+
