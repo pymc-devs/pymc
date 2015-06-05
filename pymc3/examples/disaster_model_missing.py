@@ -49,7 +49,7 @@ with Model() as model:
 
 def run(n=1000):
     if n == "short":
-        n = 500
+        n = 50
     with model:
 
         # Initial values for stochastic nodes
