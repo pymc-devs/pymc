@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats import kde
 from .stats import *
+from numpy.linalg import LinAlgError
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
@@ -81,14 +82,23 @@ def histplot_op(ax, data):
         ax.set_xlim(mind - .5, maxd + .5)
 
 def kdeplot_op(ax, data):
+    errored = []
     for i in range(data.shape[1]):
         d = data[:, i]
-        density = kde.gaussian_kde(d)
-        l = np.min(d)
-        u = np.max(d)
-        x = np.linspace(0, 1, 100) * (u - l) + l
+        try:
+            density = kde.gaussian_kde(d)
+            l = np.min(d)
+            u = np.max(d)
+            x = np.linspace(0, 1, 100) * (u - l) + l
 
-        ax.plot(x, density(x))
+            ax.plot(x, density(x))
+
+        except LinAlgError:
+            errored.append(i)
+
+    if errored:
+        ax.text(.27,.47, 'WARNING: KDE plot failed for: ' + str(errored), style='italic',
+                        bbox={'facecolor':'red', 'alpha':0.5, 'pad':10})
 
 def make_2d(a):
     """Ravel the dimensions after the first.
