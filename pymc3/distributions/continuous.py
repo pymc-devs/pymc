@@ -499,6 +499,7 @@ class HalfCauchy(Continuous):
     def __init__(self, beta, *args, **kwargs):
         super(HalfCauchy, self).__init__(*args, **kwargs)
         self.mode = 0
+        self.median = beta
         self.beta = beta
 
     def logp(self, value):
