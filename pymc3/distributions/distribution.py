@@ -31,12 +31,13 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, shape, dtype, testval=None, defaults=[]):
+    def __init__(self, shape, dtype, testval=None, defaults=[], transform=None):
         self.shape = np.atleast_1d(shape)
         self.dtype = dtype
         self.type = TensorType(self.dtype, self.shape)
         self.testval = testval
         self.defaults = defaults
+        self.transform = transform
 
     def default(self):
         return self.get_test_val(self.testval, self.defaults)
@@ -79,15 +80,6 @@ class DensityDist(Distribution):
     def __init__(self, logp, shape=(), dtype='float64',testval=0, *args, **kwargs):
         super(DensityDist, self).__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
-
-def TransformedVar(*args, **kwargs):
-    try:
-        model = Model.get_context()
-    except TypeError:
-        raise TypeError("No model on context stack, which is needed to use the Normal('x', 0,1) syntax. Add a 'with model:' block")
-
-    return model.TransformedVar(*args, **kwargs)
-
 
 class MultivariateContinuous(Continuous):
 

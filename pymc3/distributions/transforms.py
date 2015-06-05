@@ -38,7 +38,7 @@ class TransformedDistribution(Distribution):
         testval = forward(dist.default())
         
         self.dist = dist
-        self.transform = transform
+        self.transform_used = transform
         v = forward(FreeRV(name='v', distribution=dist))
         self.type = v.type
 
@@ -49,11 +49,41 @@ class TransformedDistribution(Distribution):
 
 
     def logp(self, x):
-        return self.dist.logp(self.transform.backward(x)) + self.transform.jacobian_det(x)
+        return self.dist.logp(self.transform_used.backward(x)) + self.transform_used.jacobian_det(x)
 
 transform = Transform
 
+
 logtransform = transform("log", log, exp, idfn)
+
+
+logistic = t.nnet.sigmoid
+def logistic_jacobian(x):
+    ex = exp(-x)
+    return log(ex/(ex +1)**2)
+
+def logit(x): 
+    return log(x/(1-x))
+logoddstransform = transform("logodds", logit, logistic, logistic_jacobian)
+
+
+def interval_transform(a, b):
+    def interval_real(x):
+        r= log((x-a)/(b-x))
+        return r
+
+    def real_interval(x):
+        r =  (b-a)*exp(x)/(1+exp(x)) + a
+        return r
+
+    def real_interval_jacobian(x):
+        ex = exp(-x)
+        jac = log(ex*(b-a)/(ex + 1)**2)
+        return jac
+
+    return transform("interval", interval_real, real_interval, real_interval_jacobian)
+
+
 
 simplextransform = transform("simplex",
                              lambda p: p[:-1],

@@ -45,6 +45,7 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
 
     if vars is None:
         vars = model.cont_vars
+    vars = inputvars(vars)
 
     disc_vars = list(typefilter(vars, discrete_types))
 

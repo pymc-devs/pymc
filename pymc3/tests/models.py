@@ -78,19 +78,19 @@ def mv_simple_discrete():
 
 def non_normal(n=2):
     with pm.Model() as model:
-        x = pm.Beta('x', 3, 3, shape=n)
+        x = pm.Beta('x', 3, 3, shape=n, transform=None)
 
     return model.test_point, model, (np.tile([.5], n), None)
 
 def exponential_beta(n=2):
     with pm.Model() as model:
-        x = pm.Beta('x', 3, 1, shape=n)
-        y = pm.Exponential('y', 1, shape=n)
+        x = pm.Beta('x', 3, 1, shape=n, transform=None)
+        y = pm.Exponential('y', 1, shape=n, transform=None)
 
     return model.test_point, model, None
 
 def beta_bernoulli(n=2):
     with pm.Model() as model:
-        x = pm.Beta('x', 3, 1, shape=n)
+        x = pm.Beta('x', 3, 1, shape=n, transform=None)
         y = pm.Bernoulli('y', 0.5)
     return model.test_point, model, None

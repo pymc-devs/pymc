@@ -27,6 +27,8 @@ def approx_hessian(point, vars=None, model=None):
     model = modelcontext(model)
     if vars is None:
         vars = model.cont_vars
+    vars = inputvars(vars)
+
 
     point = Point(point, model=model)
 

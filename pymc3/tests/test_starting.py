@@ -41,8 +41,8 @@ def test_find_MAP_discrete():
     yes = 15
 
     with Model() as model:
-        p = Beta('p', alpha, beta)
-        ss = Binomial('ss', n=n, p=p)
+        p = Beta('p', alpha, beta, transform=None)
+        ss = Binomial('ss', n=n, p=p, transform=None)
         s = Binomial('s', n=n, p=p, observed=yes)
 
         map_est1 = starting.find_MAP()
@@ -62,8 +62,8 @@ def test_find_MAP():
     data = (data-np.mean(data))/np.std(data)
 
     with Model() as model:
-        mu = Uniform('mu', -1, 1)
-        sigma = Uniform('sigma', .5, 1.5)
+        mu = Uniform('mu', -1, 1, transform=None)
+        sigma = Uniform('sigma', .5, 1.5, transform=None)
         y = Normal('y', mu=mu, tau=sigma**-2, observed=data)
 
         # Test gradient minimization

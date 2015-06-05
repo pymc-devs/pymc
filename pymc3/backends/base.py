@@ -31,6 +31,7 @@ class BaseTrace(object):
         self.varnames = [str(var) for var in vars]
         self.fn = model.fastfn(vars)
 
+
         ## Get variable shapes. Most backends will need this
         ## information.
         var_values = list(zip(self.varnames, self.fn(model.test_point)))
