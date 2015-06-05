@@ -451,6 +451,7 @@ class Pareto(PositiveContinuous):
         self.alpha = alpha
         self.m = m
         self.mean = switch(gt(alpha,1), alpha * m / (alpha - 1.), inf)
+        self.median = m * 2.**(1./alpha)
         self.variance = switch(gt(alpha,2), (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2), inf)
 
     def logp(self, value):
