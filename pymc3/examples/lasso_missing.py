@@ -25,26 +25,25 @@ with Model() as model:
     p_mother = Beta('p_mother', 1, 1)
     mother_imp = Bernoulli('mother_imp', p_mother, observed=masked_values(mother_hs, value=-999))
 
-    s = HalfCauchy('s', 5)
-    beta = Laplace('beta', 0, 100, shape=7)
+    s = HalfCauchy('s', 5, testval=5)
+    beta = Laplace('beta', 0, 100, shape=7, testval=.1)
 
-    p = (beta[0] + beta[1]*male + beta[2]*siblings_imp + beta[3]*disability_imp + 
+    expected_score = (beta[0] + beta[1]*male + beta[2]*siblings_imp + beta[3]*disability_imp + 
         beta[4]*age + beta[5]*mother_imp + beta[6]*early_ident)
 
     observed_score = Normal('observed_score', expected_score, s ** -2, observed=score)
 
 
 with model:
-    step1 = NUTS([beta, s, p_disab, p_mother, sib_mean])
+    start = find_MAP()
+    step1 = NUTS([beta, s, p_disab, p_mother, sib_mean], scaling=start)
 
     step2 = Metropolis([mother_imp.missing_values, 
                         disability_imp.missing_values,
                         siblings_imp.missing_values])
 
 def run(n=5000):
-
     with model:
-        start = find_MAP()
         trace = sample(n, [step1, step2], start)
 
 
