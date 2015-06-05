@@ -52,8 +52,8 @@ class Distribution(object):
             return self.getattr_value(val)
                         
         if val is None:
-            raise AttributeError(str(self) + " has no default value to use, checked for: " +
-                         str(defaults) + " pass testval argument or provide one of these.")
+            raise AttributeError(str(self) + " has no finite default value to use, checked: " +
+                         str(defaults) + " pass testval argument or adjust so value is finite.")
 
 
     def getattr_value(self, val):
