@@ -41,17 +41,21 @@ class Distribution(object):
     def default(self):
         return self.get_test_val(self.testval, self.defaults)
 
+
     def get_test_val(self, val, defaults):
         if val is None:
             for v in defaults:
-                if hasattr(self, v):
-                    val = getattr(self, v)
-                    break
-
+                if hasattr(self, v) and np.all(np.isfinite(self.getattr_value(v))):
+                    return self.getattr_value(v)
+        else:
+            return self.getattr_value(val)
+                        
         if val is None:
             raise AttributeError(str(self) + " has no default value to use, checked for: " +
                          str(defaults) + " pass testval argument or provide one of these.")
 
+
+    def getattr_value(self, val):
         if isinstance(val, str):
             val = getattr(self, val)
 
@@ -66,13 +70,13 @@ def TensorType(dtype, shape):
 
 class Discrete(Distribution):
     """Base class for discrete distributions"""
-    def __init__(self, shape=(), dtype='int64', *args, **kwargs):
-        super(Discrete, self).__init__(shape, dtype, defaults=['mode'], *args, **kwargs)
+    def __init__(self, shape=(), dtype='int64', defaults=['mode'], *args, **kwargs):
+        super(Discrete, self).__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
 class Continuous(Distribution):
     """Base class for continuous distributions"""
-    def __init__(self, shape=(), dtype='float64', *args, **kwargs):
-        super(Continuous, self).__init__(shape, dtype, defaults=['median', 'mean', 'mode'], *args, **kwargs)
+    def __init__(self, shape=(), dtype='float64', defaults=['median', 'mean', 'mode'], *args, **kwargs):
+        super(Continuous, self).__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
 class DensityDist(Distribution):
     """Distribution based on a given log density function."""
