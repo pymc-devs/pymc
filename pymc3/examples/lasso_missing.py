@@ -43,6 +43,8 @@ with model:
                         siblings_imp.missing_values])
 
 def run(n=5000):
+    if n == 'short':
+        n = 100
     with model:
         trace = sample(n, [step1, step2], start)
 
