@@ -4,11 +4,11 @@ Available backends
 ------------------
 
 1. NumPy array (pymc3.backends.NDArray)
-2. Plain text formats (pymc3.backends.Text and pymc3.backends.CSV)
+2. Text files (pymc3.backends.Text)
 3. SQLite (pymc3.backends.SQLite)
 
-The NDArray and Text backend both hold the entire trace in memory,
-whereas CSV and SQLite backends store the values while sampling.
+The NDArray backend holds the entire trace in memory, whereas the Text
+and SQLite backends store the values while sampling.
 
 Selecting a backend
 -------------------
@@ -107,16 +107,13 @@ object that provides a consistent selection interface for all backends.
 If the traces are stored on disk, then a `load` function should also be
 defined that returns a MultiTrace object.
 
-For specific examples, see pymc3.backends.{ndarray,text,csv,sqlite}.py.
+For specific examples, see pymc3.backends.{ndarray,text,sqlite}.py.
 """
 from ..backends.ndarray import NDArray
 from ..backends.text import Text
-from ..backends.csv import CSV
 from ..backends.sqlite import SQLite
 
 _shortcuts = {'text': {'backend': Text,
                        'name': 'mcmc'},
-              'csv': {'backend': CSV,
-                      'name': 'mcmc'},
               'sqlite': {'backend': SQLite,
                          'name': 'mcmc.sqlite'}}
