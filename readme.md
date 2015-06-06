@@ -46,11 +46,13 @@ Another option is to clone the repository and install PyMC using `python setup.p
 
 ## Dependencies
 
-PyMC is tested on Python 2.7 and 3.3 and depends on Theano, NumPy, SciPy, and Matplotlib (see setup.py for version information).
+PyMC is tested on Python 2.7 and 3.3 and depends on Theano, NumPy,
+SciPy, Pandas, and Matplotlib (see setup.py for version information).
 
 ### Optional
 
-The GLM submodule relies on Pandas and Patsy.
+In addtion to the above dependencies, the GLM submodule relies on
+Patsy.
 
 [`scikits.sparse`](https://github.com/njsmith/scikits-sparse) enables sparse scaling matrices which are useful for large problems. Installation on Ubuntu is easy:
 

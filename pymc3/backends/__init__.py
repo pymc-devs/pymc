@@ -7,8 +7,8 @@ Available backends
 2. Text files (pymc3.backends.Text)
 3. SQLite (pymc3.backends.SQLite)
 
-The NumPy arrays and text files both hold the entire trace in memory,
-whereas SQLite commits the trace to the database while sampling.
+The NDArray backend holds the entire trace in memory, whereas the Text
+and SQLite backends store the values while sampling.
 
 Selecting a backend
 -------------------
