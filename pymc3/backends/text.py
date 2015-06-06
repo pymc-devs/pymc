@@ -1,42 +1,31 @@
 """Text file trace backend
 
-After sampling with NDArray backend, save results as text files.
+Store sampling values as CSV files.
 
-As this other backends, this can be used by passing the backend instance
-to `sample`.
+File format
+-----------
 
-    >>> import pymc3 as pm
-    >>> db = pm.backends.Text('test')
-    >>> trace = pm.sample(..., trace=db)
+Sampling values for each chain are saved in a separate file (under a
+directory specified by the `name` argument).  The rows correspond to
+sampling iterations.  The column names consist of variable names and
+index labels.  For example, the heading
 
-Or sampling can be performed with the default NDArray backend and then
-dumped to text files after.
+  x,y__0_0,y__0_1,y__1_0,y__1_1,y__2_0,y__2_1
 
-    >>> from pymc3.backends import text
-    >>> trace = pm.sample(...)
-    >>> text.dump('test', trace)
-
-Database format
----------------
-
-For each chain, a directory named `chain-N` is created. In this
-directory, one file per variable is created containing the values of the
-object. To deal with multidimensional variables, the array is reshaped
-to one dimension before saving with `numpy.savetxt`. The shape and dtype
-information is saved in a json file in the same directory and is used to
-load the database back again using `numpy.loadtxt`.
+represents two variables, x and y, where x is a scalar and y has a
+shape of (3, 2).
 """
-import os
-import glob
-import json
+from glob import glob
 import numpy as np
+import os
+import pandas as pd
+import warnings
 
 from ..backends import base
-from ..backends.ndarray import NDArray
 
 
-class Text(NDArray):
-    """Text storage
+class Text(base.BaseTrace):
+    """Text trace object
 
     Parameters
     ----------
@@ -53,18 +42,167 @@ class Text(NDArray):
             os.mkdir(name)
         super(Text, self).__init__(name, model, vars)
 
+        self.flat_names = {v: _create_flat_names(v, shape)
+                           for v, shape in self.var_shapes.items()}
+
+        self.filename = None
+        self._fh = None
+        self.df = None
+
+    ## Sampling methods
+
+    def setup(self, draws, chain):
+        """Perform chain-specific setup.
+
+        Parameters
+        ----------
+        draws : int
+            Expected number of draws
+        chain : int
+            Chain number
+        """
+        self.chain = chain
+        self.filename = os.path.join(self.name, 'chain-{}.csv'.format(chain))
+
+        cnames = [fv for v in self.varnames for fv in self.flat_names[v]]
+
+        if os.path.exists(self.filename):
+            with open(self.filename) as fh:
+                prev_cnames = next(fh).strip().split(',')
+            if prev_cnames != cnames:
+                raise base.BackendError(
+                    "Previous file '{}' has different variables names "
+                    "than current model.".format(self.filename))
+            self._fh = open(self.filename, 'a')
+        else:
+            self._fh = open(self.filename, 'w')
+            self._fh.write(','.join(cnames) + '\n')
+
+    def record(self, point):
+        """Record results of a sampling iteration.
+
+        Parameters
+        ----------
+        point : dict
+            Values mapped to variable names
+        """
+        vals = {}
+        for varname, value in zip(self.varnames, self.fn(point)):
+            vals[varname] = value.ravel()
+        columns = [str(val) for var in self.varnames for val in vals[var]]
+        self._fh.write(','.join(columns) + '\n')
+
     def close(self):
-        super(Text, self).close()
-        _dump_trace(self.name, self)
+        self._fh.close()
+        self._fh = None  # Avoid serialization issue.
+
+    ## Selection methods
+
+    def _load_df(self):
+        if self.df is None:
+            self.df = pd.read_csv(self.filename)
+
+    def __len__(self):
+        if self.filename is None:
+            return 0
+        self._load_df()
+        return self.df.shape[0]
+
+    def get_values(self, varname, burn=0, thin=1):
+        """Get values from trace.
+
+        Parameters
+        ----------
+        varname : str
+        burn : int
+        thin : int
+
+        Returns
+        -------
+        A NumPy array
+        """
+        self._load_df()
+        var_df = self.df[self.flat_names[varname]]
+        shape = (self.df.shape[0],) + self.var_shapes[varname]
+        vals = var_df.values.ravel().reshape(shape)
+        return vals[burn::thin]
+
+    def _slice(self, idx):
+        warnings.warn('Slice for Text backend has no effect.')
+
+    def point(self, idx):
+        """Return dictionary of point values at `idx` for current chain
+        with variables names as keys.
+        """
+        idx = int(idx)
+        self._load_df()
+        pt = {}
+        for varname in self.varnames:
+            vals = self.df[self.flat_names[varname]].iloc[idx]
+            pt[varname] = vals.reshape(self.var_shapes[varname])
+        return pt
 
 
-def dump(name, trace, chains=None):
-    """Store NDArray trace as text database.
+def _create_flat_names(varname, shape):
+    """Return flat variable names for `varname` of `shape`.
+
+    Examples
+    --------
+    >>> _create_flat_names('x', (5,))
+    ['x__0', 'x__1', 'x__2', 'x__3', 'x__4']
+
+    >>> _create_flat_names('x', (2, 2))
+    ['x__0_0', 'x__0_1', 'x__1_0', 'x__1_1']
+    """
+    if not shape:
+        return [varname]
+    labels = (np.ravel(xs).tolist() for xs in np.indices(shape))
+    labels = (map(str, xs) for xs in labels)
+    return ['{}__{}'.format(varname, '_'.join(idxs)) for idxs in zip(*labels)]
+
+
+def _create_shape(flat_names):
+    "Determine shape from `_create_flat_names` output."
+    try:
+        _, shape_str = flat_names[-1].rsplit('__', 1)
+    except ValueError:
+        return ()
+    return tuple(int(i) + 1 for i in shape_str.split('_'))
+
+
+def load(name, model=None):
+    """Load Text database.
 
     Parameters
     ----------
     name : str
-        Name of directory to store text files
+        Name of directory with files (one per chain)
+    model : Model
+        If None, the model is taken from the `with` context.
+
+    Returns
+    -------
+    A MultiTrace instance
+    """
+    files = glob(os.path.join(name, 'chain-*.csv'))
+
+    traces = []
+    for f in files:
+        chain = int(os.path.splitext(f)[0].rsplit('-', 1)[1])
+        trace = Text(name, model=model)
+        trace.chain = chain
+        trace.filename = f
+        traces.append(trace)
+    return base.MultiTrace(traces)
+
+
+def dump(name, trace, chains=None):
+    """Store values from NDArray trace as CSV files.
+
+    Parameters
+    ----------
+    name : str
+        Name of directory to store CSV files in
     trace : MultiTrace of NDArray traces
         Result of MCMC run with default NDArray backend
     chains : list
@@ -74,81 +212,37 @@ def dump(name, trace, chains=None):
         os.mkdir(name)
     if chains is None:
         chains = trace.chains
+
+    var_shapes = trace._traces[chains[0]].var_shapes
+    flat_names = {v: _create_flat_names(v, shape)
+                  for v, shape in var_shapes.items()}
+
     for chain in chains:
-        _dump_trace(name, trace._traces[chain])
+        filename = os.path.join(name, 'chain-{}.csv'.format(chain))
+        df = _trace_to_df(trace._traces[chain], flat_names)
+        df.to_csv(filename, index=False)
 
 
-def _dump_trace(name, trace):
-    """Dump a single-chain trace.
-    """
-    chain_name = 'chain-{}'.format(trace.chain)
-    chain_dir = os.path.join(name, chain_name)
-    os.mkdir(chain_dir)
-
-    info = {}
-    for varname in trace.varnames:
-        data = trace.get_values(varname)
-
-        if np.issubdtype(data.dtype, np.int):
-            fmt = '%i'
-            is_int = True
-        else:
-            fmt = '%g'
-            is_int = False
-        info[varname] = {'shape': data.shape, 'is_int': is_int}
-
-        var_file = os.path.join(chain_dir, varname + '.txt')
-        np.savetxt(var_file, data.reshape(-1, data.size), fmt=fmt)
-    ## Store shape and dtype information for reloading.
-    info_file = os.path.join(chain_dir, 'info.json')
-    with open(info_file, 'w') as sfh:
-        json.dump(info, sfh)
-
-
-def load(name, chains=None, model=None):
-    """Load text database.
+def _trace_to_df(trace, flat_names=None):
+    """Convert single-chain trace to Pandas DataFrame.
 
     Parameters
     ----------
-    name : str
-        Path to root directory for text database
-    chains : list
-        Chains to load. If None, all chains are loaded.
-    model : Model
-        If None, the model is taken from the `with` context.
-
-    Returns
-    -------
-    ndarray.Trace instance
+    trace : NDarray trace
+    flat_names : dict or None
+        A dictionary that maps each variable name in `trace` to a list
+        of flat variable names (e.g., ['x__0', 'x__1', ...])
     """
-    chain_dirs = _get_chain_dirs(name)
-    if chains is None:
-        chains = list(chain_dirs.keys())
+    if flat_names is None:
+        flat_names = {v: _create_flat_names(v, shape)
+                      for v, shape in trace.var_shapes.items()}
 
-    traces = []
-    for chain in chains:
-        chain_dir = chain_dirs[chain]
-        info_file = os.path.join(chain_dir, 'info.json')
-        with open(info_file, 'r') as sfh:
-            info = json.load(sfh)
-        samples = {}
-        for varname, info in info.items():
-            var_file = os.path.join(chain_dir, varname + '.txt')
-            dtype = int if info['is_int'] else float
-            flat_data = np.loadtxt(var_file, dtype=dtype)
-            samples[varname] = flat_data.reshape(info['shape'])
-        trace = NDArray(model=model)
-        trace.samples = samples
-        trace.chain = chain
-        traces.append(trace)
-    return base.MultiTrace(traces)
-
-
-def _get_chain_dirs(name):
-    """Return mapping of chain number to directory."""
-    return {_chain_dir_to_chain(chain_dir): chain_dir
-            for chain_dir in glob.glob(os.path.join(name, 'chain-*'))}
-
-
-def _chain_dir_to_chain(chain_dir):
-    return int(os.path.basename(chain_dir).split('-')[1])
+    var_dfs = []
+    for varname, shape in trace.var_shapes.items():
+        vals = trace[varname]
+        if len(shape) == 1:
+            flat_vals = vals
+        else:
+            flat_vals = vals.reshape(len(trace), np.prod(shape))
+        var_dfs.append(pd.DataFrame(flat_vals, columns=flat_names[varname]))
+    return pd.concat(var_dfs, axis=1)
