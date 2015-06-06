@@ -5,6 +5,8 @@ Modified from original code by Corey Goldberg (2010)
 
 from __future__ import print_function
 
+import warnings
+warnings.simplefilter(action = "ignore", category = FutureWarning)
 import sys
 import time
 import uuid
