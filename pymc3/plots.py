@@ -31,7 +31,7 @@ def traceplot(trace, vars=None, figsize=None,
     Returns
     -------
 
-    fig, ax : tuple of matplotlib figure and axes
+    fig : figure object
 
     """
     import matplotlib.pyplot as plt
@@ -69,7 +69,7 @@ def traceplot(trace, vars=None, figsize=None,
                     pass
 
     plt.tight_layout()
-    return (fig, ax)
+    return fig
 
 def histplot_op(ax, data):
     for i in range(data.shape[1]):
@@ -131,38 +131,20 @@ def kde2plot_op(ax, x, y, grid=200):
 def kdeplot(data):
     f, ax = subplots(1, 1, squeeze=True)
     kdeplot_op(ax, data)
-    return f, ax
+    return f
 
 
 def kde2plot(x, y, grid=200):
     f, ax = subplots(1, 1, squeeze=True)
     kde2plot_op(ax, x, y, grid)
-    return f, ax
+    return f
 
 
-def autocorrplot(trace, vars=None, max_lag=100, burn=0):
-    """Bar plot of the autocorrelation function for a trace
-
-    Parameters
-    ----------
-
-    trace : result of MCMC run
-    vars : list of variable names
-        Variables to be plotted, if None all variable are plotted
-    max_lag: int
-        Maximum lag to calculate autocorrelation. Defaults to 100.
-    burn: int
-        Number of samples to discard from the beginning of the trace. 
-        Defaults to 0.
-
-    Returns
-    -------
-
-    fig, ax : tuple of matplotlib figure and axes
-
-    """
-    
+def autocorrplot(trace, vars=None, fontmap=None, max_lag=100,burn=0, thin=1):
+    """Bar plot of the autocorrelation function for a trace"""
     import matplotlib.pyplot as plt
+    if fontmap is None:
+        fontmap = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4}
 
     if vars is None:
         vars = trace.varnames
@@ -171,13 +153,13 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0):
 
     chains = trace.nchains
 
-    fig, ax = plt.subplots(len(vars), chains, squeeze=False)
+    f, ax = plt.subplots(len(vars), chains, squeeze=False)
 
     max_lag = min(len(trace) - 1, max_lag)
 
     for i, v in enumerate(vars):
         for j in range(chains):
-            d = np.squeeze(trace.get_values(v, chains=[j], burn=burn))
+            d = np.squeeze(trace.get_values(v, chains=[j],burn=burn,thin=thin))
 
             ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
 
@@ -187,8 +169,13 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0):
 
             if chains > 1:
                 ax[i, j].set_title("chain {0}".format(j+1))
-    
-    return (fig, ax)
+
+    # Smaller tick labels
+    tlabels = plt.gca().get_xticklabels()
+    plt.setp(tlabels, 'fontsize', fontmap[1])
+
+    tlabels = plt.gca().get_yticklabels()
+    plt.setp(tlabels, 'fontsize', fontmap[1])
 
 
 def var_str(name, shape):
