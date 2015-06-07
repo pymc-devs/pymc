@@ -69,7 +69,6 @@ def traceplot(trace, vars=None, figsize=None,
                     pass
 
     plt.tight_layout()
-    return fig
 
 def histplot_op(ax, data):
     for i in range(data.shape[1]):
