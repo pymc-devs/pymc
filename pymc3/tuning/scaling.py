@@ -8,7 +8,7 @@ import numpy as np
 from numpy import exp, log, sqrt
 from ..core import *
 
-__all__ = ['approx_hessian', 'find_hessian', 'trace_cov', 'guess_scaling']
+__all__ = ['approx_hessian', 'find_hessian', 'trace_cov', 'guess_scaling', 'adjust_precision']
 
 
 def approx_hessian(point, vars=None, model=None):
@@ -89,15 +89,19 @@ def adjust_scaling(s):
         val = adjust_precision(val)
         return eig_recompose(val, vec)
 
-def adjust_precision(tau):
-    mag = sqrt(abs(tau))
+def adjust_precision(tau, bound=1e-10):
+    """
+    use Betancourt's SoftAbs transform to make positive definite
+    softabs(x) = x * coth(x*a)
+    where a is the minimum value SoftAbs(x) should take
 
-    bounded = bound(log(mag), log(1e-10), log(1e10))
-    return exp(bounded)**2
+    Betancourt M (2012). "A General Metric for Riemannian Manifold Hamiltonian Monte Carlo."
+    arXiv, 1212(4693). URL http://arxiv.org/abs/1212.4693.
+    """
+    mag = tau * 1/np.tanh(tau/bound)
+    mag = np.where(tau != 0, mag, bound)
 
-
-def bound(a, l, u):
-    return np.maximum(np.minimum(a, u), l)
+    return np.minimum(mag, 1e10)
 
 def eig_recompose(val, vec):
     return vec.dot(np.diag(val)).dot(vec.T)

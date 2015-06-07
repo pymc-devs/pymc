@@ -90,6 +90,7 @@ class Model(Context, Factor):
         self.observed_RVs = []
         self.deterministics = []
         self.potentials = []
+        self.missing_values = []
         self.model = self
 
     @property
@@ -101,7 +102,7 @@ class Model(Context, Factor):
 
     @property
     def vars(self):
-        """List of unobserved random variables the model is defined in terms of (which excludes deterministics)."""
+        """List of unobserved random variables used as inputs to the model (which excludes deterministics)."""
         return self.free_RVs
 
     @property
@@ -112,7 +113,7 @@ class Model(Context, Factor):
     @property
     def unobserved_RVs(self):
         """List of all random variable, including deterministic ones."""
-        return self.free_RVs + self.deterministics
+        return self.vars + self.deterministics
 
 
     @property
@@ -147,9 +148,19 @@ class Model(Context, Factor):
                 var = TransformedRV(name=name, distribution=dist, model=self, transform=dist.transform) 
                 self.deterministics.append(var)
                 return var
-        else:
+        elif isinstance(data, dict):
+            var = MultiObservedRV(name=name, data=data, distribution=dist, model=self)
+            self.observed_RVs.append(var)
+            if var.missing_values:
+                self.free_RVs += var.missing_values
+                self.missing_values += var.missing_values
+        else: 
             var = ObservedRV(name=name, data=data, distribution=dist, model=self)
             self.observed_RVs.append(var)
+            if var.missing_values:
+                self.free_RVs.append(var.missing_values)
+                self.missing_values.append(var.missing_values)
+
         self.add_random_variable(var)
         return var
 
@@ -342,8 +353,76 @@ class FreeRV(Factor, TensorVariable):
             self.logp_elemwiset = distribution.logp(self)
             self.model = model
 
-class ObservedRV(Factor):
-    """Observed random variable that a model is specified in terms of."""
+def pandas_to_array(data):
+    if hasattr(data, 'values'): #pandas
+        if data.isnull().any().any(): #missing values
+            return np.ma.MaskedArray(data.values, data.isnull().values)
+        else: 
+            return data.values
+    elif hasattr(data, 'mask'):
+        return data
+    else:
+        return np.asarray(data)
+        
+
+def as_tensor(data, name,model, dtype):
+    data = pandas_to_array(data).astype(dtype)
+
+    if hasattr(data, 'mask'): 
+        from .distributions import NoDistribution
+        fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype, testval=data.mean().astype(dtype))
+        missing_values = FreeRV(name=name + '_missing', distribution=fakedist, model=model)
+
+        constant = t.as_tensor_variable(data.filled())
+
+        dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()], missing_values) 
+        dataTensor.missing_values = missing_values
+        return dataTensor
+    else:
+        data = t.as_tensor_variable(data, name=name)
+        data.missing_values = None
+        return data
+
+class ObservedRV(Factor, TensorVariable):
+    """Observed random variable that a model is specified in terms of.
+    Potentially partially observed.
+    """
+    def __init__(self, type=None, owner=None, index=None, name=None, data=None, distribution=None, model=None):
+        """
+        Parameters
+        ----------
+
+        type : theano type (optional)
+        owner : theano owner (optional)
+
+        name : str
+        distribution : Distribution
+        model : Model
+        """
+        from .distributions import TensorType
+        if type is None:
+            data = pandas_to_array(data)
+            type = TensorType(distribution.dtype, data.shape)
+
+        super(TensorVariable, self).__init__(type, None, None, name)
+
+        if distribution is not None:
+            data = as_tensor(data, name,model,distribution.dtype) 
+            self.missing_values = data.missing_values
+
+            self.logp_elemwiset = distribution.logp(data)
+            self.model = model
+            self.distribution = distribution
+
+            #make this RV a view on the combined missing/nonmissing array
+            theano.gof.Apply(theano.compile.view_op, inputs=[data], outputs=[self])
+
+            self.tag.test_value = theano.compile.view_op(data).tag.test_value
+
+class MultiObservedRV(Factor):
+    """Observed random variable that a model is specified in terms of.
+    Potentially partially observed.
+    """
     def __init__(self, name, data, distribution, model):
         """
         Parameters
@@ -357,17 +436,11 @@ class ObservedRV(Factor):
         model : Model
         """
         self.name = name
-        data = getattr(data, 'values', data) #handle pandas
-        args = as_iterargs(data)
 
-        if len(args) > 1:
-            params = getargspec(distribution.logp).args
-            args = [t.as_tensor_variable(d, name=name + "_" + param)
-                    for d,param in zip(args,params) ]
-        else:
-            args = [t.as_tensor_variable(args[0], name=name)]
+        self.data = { name : as_tensor(data, name, model, distribution.dtype) for name, data in data.items()}
 
-        self.logp_elemwiset = distribution.logp(*args)
+        self.missing_values = [ data.missing_values for data in self.data.values() if data.missing_values is not None]
+        self.logp_elemwiset = distribution.logp(**self.data)
         self.model = model
         self.distribution = distribution
 
@@ -433,8 +506,6 @@ class TransformedRV(TensorVariable):
 def as_iterargs(data):
     if isinstance(data, tuple):
         return data
-    if hasattr(data, 'columns'):  # data frames
-        return [np.asarray(data[c]) for c in data.columns]
     else:
         return [data]
 
