@@ -17,6 +17,7 @@ class Slice(ArrayStep):
 
         if vars is None:
             vars = model.cont_vars
+        vars = inputvars(vars)
 
         self.w = w
         self.tune = tune
@@ -53,7 +54,7 @@ class Slice(ArrayStep):
         while True:
 
             # Sample uniformly from slice
-            qi = uniform(ql, qr)
+            qi = uniform(ql, qr, size=ql.size)
 
             yi = logp(qi)
 

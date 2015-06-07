@@ -9,11 +9,22 @@ from __future__ import division
 
 from .dist_math import *
 from numpy.random import uniform as runiform, normal as rnormal
+from .transforms import logtransform, logoddstransform, interval_transform
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
            'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
            'Pareto', 'InverseGamma']
+
+class PositiveContinuous(Continuous):
+    """Base class for positive continuous distributions"""
+    def __init__(self, transform=logtransform, *args, **kwargs):
+        super(PositiveContinuous, self).__init__(transform=transform, *args, **kwargs)
+
+class UnitContinuous(Continuous):
+    """Base class for continuous distributions on [0,1]"""
+    def __init__(self, transform=logoddstransform, *args, **kwargs):
+        super(UnitContinuous, self).__init__(transform=transform, *args, **kwargs)
 
 def get_tau_sd(tau=None, sd=None):
     """
@@ -70,12 +81,16 @@ class Uniform(Continuous):
     upper : float
         Upper limit (defaults to 1)
     """
-    def __init__(self, lower=0, upper=1, *args, **kwargs):
+    def __init__(self, lower=0, upper=1, transform='interval', *args, **kwargs):
         super(Uniform, self).__init__(*args, **kwargs)
+        
         self.lower = lower
         self.upper = upper
         self.mean = (upper + lower) / 2.
         self.median = self.mean
+
+        if transform is 'interval':
+            self.transform = interval_transform(lower, upper)
 
     def logp(self, value):
         lower = self.lower
@@ -142,7 +157,7 @@ class Normal(Continuous):
         )
 
 
-class HalfNormal(Continuous):
+class HalfNormal(PositiveContinuous):
     """
     Half-normal log-likelihood, a normal distribution with mean 0 limited
     to the domain :math:`x \in [0, \infty)`.
@@ -206,7 +221,7 @@ class Wald(Continuous):
 
 
 
-class Beta(Continuous):
+class Beta(UnitContinuous):
     """
     Beta log-likelihood. The conjugate prior for the parameter
     :math:`p` of the binomial distribution.
@@ -268,7 +283,7 @@ class Beta(Continuous):
             beta > 0)
 
 
-class Exponential(Continuous):
+class Exponential(PositiveContinuous):
     """
     Exponential distribution
 
@@ -320,7 +335,7 @@ class Laplace(Continuous):
         return -log(2 * b) - abs(value - mu) / b
 
 
-class Lognormal(Continuous):
+class Lognormal(PositiveContinuous):
     """
     Log-normal log-likelihood.
 
@@ -409,7 +424,7 @@ class T(Continuous):
 StudentT = T
 
 
-class Pareto(Continuous):
+class Pareto(PositiveContinuous):
     """
     Pareto log-likelihood. The Pareto is a continuous, positive
     probability distribution with two parameters. It is often used
@@ -436,6 +451,7 @@ class Pareto(Continuous):
         self.alpha = alpha
         self.m = m
         self.mean = switch(gt(alpha,1), alpha * m / (alpha - 1.), inf)
+        self.median = m * 2.**(1./alpha)
         self.variance = switch(gt(alpha,2), (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2), inf)
 
     def logp(self, value):
@@ -482,7 +498,7 @@ class Cauchy(Continuous):
                                             value - alpha) / beta) ** 2),
             beta > 0)
 
-class HalfCauchy(Continuous):
+class HalfCauchy(PositiveContinuous):
     """
     Half-Cauchy log-likelihood. Simply the absolute value of Cauchy.
 
@@ -499,6 +515,7 @@ class HalfCauchy(Continuous):
     def __init__(self, beta, *args, **kwargs):
         super(HalfCauchy, self).__init__(*args, **kwargs)
         self.mode = 0
+        self.median = beta
         self.beta = beta
 
     def logp(self, value):
@@ -509,7 +526,7 @@ class HalfCauchy(Continuous):
             value >= 0)
 
 
-class Gamma(Continuous):
+class Gamma(PositiveContinuous):
     """
     Gamma log-likelihood.
 
@@ -574,7 +591,7 @@ class Gamma(Continuous):
             beta > 0)
 
 
-class InverseGamma(Continuous):
+class InverseGamma(PositiveContinuous):
     """
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
@@ -633,7 +650,7 @@ class ChiSquared(Gamma):
         super(ChiSquared, self).__init__(alpha=nu/2., beta=0.5, *args, **kwargs)
 
 
-class Weibull(Continuous):
+class Weibull(PositiveContinuous):
     """
     Weibull log-likelihood
 

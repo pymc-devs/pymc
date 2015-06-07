@@ -51,6 +51,7 @@ class HamiltonianMC(ArrayStep):
 
         if vars is None:
             vars = model.cont_vars
+        vars = inputvars(vars)
 
         if scaling is None:
             scaling = model.test_point

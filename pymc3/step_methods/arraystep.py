@@ -29,6 +29,9 @@ class ArrayStep(object):
         else: # Assume all model variables
             vars = model.vars
 
+        #get the actual inputs from the vars
+        vars = inputvars(vars) 
+
         if not blocked and len(vars) > 1:
             # In this case we create a separate sampler for each var
             # and append them to a CompoundStep

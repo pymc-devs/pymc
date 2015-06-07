@@ -7,6 +7,10 @@ import numpy as np
 from ..model import modelcontext
 
 
+class BackendError(Exception):
+    pass
+
+
 class BaseTrace(object):
     """Base trace object
 
@@ -30,6 +34,7 @@ class BaseTrace(object):
         self.vars = vars
         self.varnames = [str(var) for var in vars]
         self.fn = model.fastfn(vars)
+
 
         ## Get variable shapes. Most backends will need this
         ## information.

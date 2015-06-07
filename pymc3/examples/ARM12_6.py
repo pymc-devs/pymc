@@ -50,17 +50,14 @@ def run(n=3000):
         n = 50
     with model:
         start = {'groupmean': obs_means.mean(),
-                 'groupsd': obs_means.std(),
-                 'sd': data.groupby('group').lradon.std().mean(),
+                 'groupsd_interval': 0,
+                 'sd_interval': 0,
                  'means': np.array(obs_means),
                  'floor_m': 0.,
                  }
 
         start = find_MAP(start, [groupmean, sd, floor_m])
-        H = model.fastd2logp()
-        h = np.diag(H(start))
-
-        step = HamiltonianMC(model.vars, h)
+        step = NUTS(model.vars, scaling=start)
 
         trace = sample(n, step, start)
 
