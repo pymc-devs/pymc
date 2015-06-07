@@ -361,6 +361,8 @@ def pandas_to_array(data):
             return data.values
     elif hasattr(data, 'mask'):
         return data
+    elif isinstance(data, theano.gof.graph.Variable):
+        return data 
     else:
         return np.asarray(data)
         
