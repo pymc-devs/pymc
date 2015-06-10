@@ -116,8 +116,8 @@ def interval_transform(a,b):
     return IntervalTransform(a,b)
 
 
-class SimplexTransform(Transform): 
-    name = "simplex"
+class SumTo1Transform(Transform): 
+    name = "sumto1"
 
     def __init__(self): 
         pass
@@ -128,6 +128,30 @@ class SimplexTransform(Transform):
     def forward(self, y):  
         return concatenate([y, 1-sum(y, keepdims=True)])
 
+class SimplexTransform(Transform): 
+    def __init__(self):
+        pass
+
+    name = "simplex"
+    def forward(self, x):
+        return theano.tensor.zeros_like(t.as_tensor_variable(x[:-1]))
+
+    def backward(self, y):
+        z = logistic(y)
+        yl = concatenate([z, [1]])
+        yu = concatenate([[1], 1-z])
+        #S,_ = theano.scan(fn=lambda prior_result, s_i: prior_result * s_i, sequences=[yu], outputs_info=t.ones((), dtype='float64'))
+        S = t.extra_ops.cumprod(yu)
+        x = S * yl
+        print (x.tag.test_value)
+        return x
+
     def jacobian_det(self, y): 
-        return 0.
+        yl = logistic(y)
+        yu = concatenate([[1], 1-yl])
+        #S,_ = theano.scan(fn=lambda prior_result, s_i: prior_result * s_i, sequences=[yu], outputs_info=t.ones((), dtype='float64'))
+        S = t.extra_ops.cumprod(yu)
+        return sum(log(S[:-1]) - log(1+exp(yl)) - log(1+exp(-yl)))
 simplextransform = SimplexTransform()
+
+
