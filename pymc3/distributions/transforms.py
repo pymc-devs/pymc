@@ -137,21 +137,41 @@ class SimplexTransform(Transform):
         return theano.tensor.zeros_like(t.as_tensor_variable(x[:-1]))
 
     def backward(self, y):
-        z = logistic(y)
+        Km1 = y.shape[0]
+        k = arange(Km1)
+        eq_share = logit(1./(Km1 + 1 - k))
+        z = logistic(y + eq_share)
         yl = concatenate([z, [1]])
         yu = concatenate([[1], 1-z])
         #S,_ = theano.scan(fn=lambda prior_result, s_i: prior_result * s_i, sequences=[yu], outputs_info=t.ones((), dtype='float64'))
         S = t.extra_ops.cumprod(yu)
         x = S * yl
-        print (x.tag.test_value)
+        print (S.tag.test_value)
         return x
 
     def jacobian_det(self, y): 
-        yl = logistic(y)
+        Km1 = y.shape[0]
+        k = arange(Km1)
+        eq_share = logit(1./(Km1 + 1 - k))
+        yl = logistic(y + eq_share)
         yu = concatenate([[1], 1-yl])
         #S,_ = theano.scan(fn=lambda prior_result, s_i: prior_result * s_i, sequences=[yu], outputs_info=t.ones((), dtype='float64'))
         S = t.extra_ops.cumprod(yu)
         return sum(log(S[:-1]) - log(1+exp(yl)) - log(1+exp(-yl)))
 simplextransform = SimplexTransform()
 
+class SimplexArrTransform(Transform): 
+    def __init__(self):
+        pass
+
+    name = "simplexarr"
+    def forward(self, x):
+        return x[:-1]
+
+    def backward(self, y):  
+        return concatenate([y, 1-sum(y, keepdims=True)])
+
+    def jacobian_det(self, y): 
+        return 0.
+simplexarrtransform = SimplexArrTransform()
 
