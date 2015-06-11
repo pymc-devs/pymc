@@ -287,10 +287,13 @@ class Categorical(Discrete):
         p = self.p
         k = self.k
 
+        sumto1 = t.zero_grad(
+            le(abs(sum(p) - 1), 1e-5)
+            )
         return bound(log(p[value]),
             value >= 0,
             value <= (k - 1),
-            le(abs(sum(p) - 1), 1e-5))
+            sumto1)
 
 
 class ConstantDist(Discrete):
