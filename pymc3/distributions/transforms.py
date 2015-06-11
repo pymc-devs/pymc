@@ -13,8 +13,8 @@ class Transform(object):
         name : str
         forward : function 
             forward transformation
-        backwards : function 
-            backwards transformation
+        backward : function 
+            backward transformation
         jacobian_det : function 
             jacobian determinant of the transformation"""
         self.__dict__.update(locals())
@@ -56,12 +56,14 @@ transform = Transform
 
 class LogTransform(Transform):
     name = "log"
+    def __init__(self): 
+        pass
 
-    def backwards(self, x):
+    def backward(self, x):
         return log(x)
 
-    def forwards(self, x):
-        return exp(x):
+    def forward(self, x):
+        return exp(x)
 
     def jacobian_det(self, x):
         return x
@@ -72,7 +74,10 @@ logistic = t.nnet.sigmoid
 class LogOddsTransform(Transform):
     name = "logodds"
     
-    def backwards(self, x): 
+    def __init__(self): 
+        pass
+
+    def backward(self, x): 
         return log(x/(1-x))
 
     def forward(self, x):
@@ -91,17 +96,17 @@ class IntervalTransform(Transform):
         self.a=a
         self.b=b
 
-    def backwards(x):
+    def backward(self, x):
         a, b= self.a, self.b
         r= log((x-a)/(b-x))
         return r
 
-    def fowards(x):
+    def forward(self, x):
         a, b= self.a, self.b
         r =  (b-a)*exp(x)/(1+exp(x)) + a
         return r
 
-    def jacobian_det(x):
+    def jacobian_det(self, x):
         a, b= self.a, self.b
         ex = exp(-x)
         jac = log(ex*(b-a)/(ex + 1)**2)
@@ -114,11 +119,15 @@ def interval_transform(a,b):
 class SimplexTransform(Transform): 
     name = "simplex"
 
-    def forward(self, x):
+    def __init__(self): 
+        pass
+
+    def backward(self, x):
         return x[:-1]
 
-    def backward(self, y):  
+    def forward(self, y):  
         return concatenate([y, 1-sum(y, keepdims=True)])
 
     def jacobian_det(self, y): 
         return 0.
+simplextransform = SimplexTransform()
