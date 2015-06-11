@@ -1,7 +1,8 @@
 from .dist_math import *
 from ..model import FreeRV
+import theano
 
-__all__ = ['transform', 'logtransform', 'simplextransform']
+__all__ = ['transform', 'logtransform', 'logoddstransform', 'interval_transform', 'simplextransform']
 
 class Transform(object):
     """A transformation of a random variable from one space into another."""
@@ -53,40 +54,71 @@ class TransformedDistribution(Distribution):
 
 transform = Transform
 
+class LogTransform(Transform):
+    name = "log"
 
-logtransform = transform("log", log, exp, idfn)
+    def backwards(self, x):
+        return log(x)
 
+    def forwards(self, x):
+        return exp(x):
+
+    def jacobian_det(self, x):
+        return x
+logtransform = LogTransform()
 
 logistic = t.nnet.sigmoid
-def logistic_jacobian(x):
-    ex = exp(-x)
-    return log(ex/(ex +1)**2)
 
-def logit(x): 
-    return log(x/(1-x))
-logoddstransform = transform("logodds", logit, logistic, logistic_jacobian)
+class LogOddsTransform(Transform):
+    name = "logodds"
+    
+    def backwards(self, x): 
+        return log(x/(1-x))
+
+    def forward(self, x):
+        return logistic(x)
+
+    def jacobian_det(self, x):
+        ex = exp(-x)
+        return log(ex/(ex +1)**2)
+logoddstransform = LogOddsTransform()
 
 
-def interval_transform(a, b):
-    def interval_real(x):
+class IntervalTransform(Transform):
+    name = "interval"
+
+    def __init__(self, a,b):
+        self.a=a
+        self.b=b
+
+    def backwards(x):
+        a, b= self.a, self.b
         r= log((x-a)/(b-x))
         return r
 
-    def real_interval(x):
+    def fowards(x):
+        a, b= self.a, self.b
         r =  (b-a)*exp(x)/(1+exp(x)) + a
         return r
 
-    def real_interval_jacobian(x):
+    def jacobian_det(x):
+        a, b= self.a, self.b
         ex = exp(-x)
         jac = log(ex*(b-a)/(ex + 1)**2)
         return jac
 
-    return transform("interval", interval_real, real_interval, real_interval_jacobian)
+def interval_transform(a,b):
+    return IntervalTransform(a,b)
 
 
+class SimplexTransform(Transform): 
+    name = "simplex"
 
-simplextransform = transform("simplex",
-                             lambda p: p[:-1],
-                             lambda p: concatenate(
-                             [p, 1 - sum(p, keepdims=True)]),
-                             lambda p: constant([0]))
+    def forward(self, x):
+        return x[:-1]
+
+    def backward(self, y):  
+        return concatenate([y, 1-sum(y, keepdims=True)])
+
+    def jacobian_det(self, y): 
+        return 0.
