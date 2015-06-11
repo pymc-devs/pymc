@@ -1,3 +1,9 @@
+'''
+This model estimates the population prevalence of respiratory syncytial virus (RSV) among children in Amman, Jordan, based on 3 years of admissions diagnosed with RSV to Al Bashir hospital. 
+
+To estimate this parameter from raw counts of diagnoses, we need to establish the population of  1-year-old children from which the diagnosed individuals were sampled. This involved correcting census data (national estimate of 1-year-olds) for the proportion of the population in the city, as well as for the market share of the hospital. The latter is based on expert esimate, and hence encoded as a prior.
+'''
+
 import pymc3 as pm
 import numpy as np
 
