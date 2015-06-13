@@ -31,6 +31,12 @@ class Domain(object):
         self.lower, self.upper = edges
         self.dtype = avals.dtype
 
+    def __add__(self, other):
+        return Domain([v + other for v in self.vals], self.dtype, (self.lower + other, self.upper + other), self.shape)
+
+    def __mul__(self, other):
+        return Domain([v * other for v in self.vals], self.dtype, (self.lower * other, self.upper * other), self.shape)
+
     def __neg__(self):
         return Domain([-v for v in self.vals], self.dtype, (-self.lower, -self.upper), self.shape)
 
