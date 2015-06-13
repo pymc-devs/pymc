@@ -60,10 +60,10 @@ class LogTransform(Transform):
         pass
 
     def backward(self, x):
-        return log(x)
+        return exp(x)
 
     def forward(self, x):
-        return exp(x)
+        return log(x)
 
     def jacobian_det(self, x):
         return x
@@ -155,7 +155,6 @@ class SimplexTransform(Transform):
         z = logistic(y + eq_share)
         yl = concatenate([z, [1]])
         yu = concatenate([[1], 1-z])
-        #S,_ = theano.scan(fn=lambda prior_result, s_i: prior_result * s_i, sequences=[yu], outputs_info=t.ones((), dtype='float64'))
         S = t.extra_ops.cumprod(yu)
         x = S * yl
         return x
