@@ -2,6 +2,8 @@ from .dist_math import *
 from ..model import FreeRV
 import theano
 
+from ..theanof import jacobian
+
 __all__ = ['transform', 'logtransform', 'logoddstransform', 'interval_transform', 'simplextransform']
 
 class Transform(object):
@@ -18,6 +20,10 @@ class Transform(object):
         jacobian_det : function 
             jacobian determinant of the transformation"""
         self.__dict__.update(locals())
+
+    def jacobian_det(self, x):
+        j = jacobian(self.backward(x), [x])
+        return t.log(t.nlinalg.det(j))
 
     def apply(self, dist):
         return TransformedDistribution.dist(dist, self)
@@ -48,7 +54,6 @@ class TransformedDistribution(Distribution):
                 testval, dist.defaults, 
                 *args, **kwargs)
 
-
     def logp(self, x):
         return self.dist.logp(self.transform_used.backward(x)) + self.transform_used.jacobian_det(x)
 
@@ -65,8 +70,6 @@ class LogTransform(Transform):
     def forward(self, x):
         return log(x)
 
-    def jacobian_det(self, x):
-        return x
 logtransform = LogTransform()
 
 logistic = t.nnet.sigmoid
@@ -86,9 +89,6 @@ class LogOddsTransform(Transform):
     def forward(self, x):
         return logistic(x)
 
-    def jacobian_det(self, x):
-        ex = exp(-x)
-        return log(ex/(ex +1)**2)
 logoddstransform = LogOddsTransform()
 
 
@@ -100,20 +100,15 @@ class IntervalTransform(Transform):
         self.b=b
 
     def backward(self, x):
-        a, b= self.a, self.b
+        a, b = self.a, self.b
         r= log((x-a)/(b-x))
         return r
 
     def forward(self, x):
-        a, b= self.a, self.b
+        a, b = self.a, self.b
         r =  (b-a)*exp(x)/(1+exp(x)) + a
         return r
 
-    def jacobian_det(self, x):
-        a, b= self.a, self.b
-        ex = exp(-x)
-        jac = log(ex*(b-a)/(ex + 1)**2)
-        return jac
 
 def interval_transform(a,b):
     return IntervalTransform(a,b)
