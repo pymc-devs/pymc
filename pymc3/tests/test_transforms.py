@@ -36,19 +36,36 @@ def test_simplex_jacobian_det():
                 computed_ljd(yval), 1e-8)
 
 
+def check_jacobian_det(transform, domain):
+    y = t.dscalar('y')
+    y.tag.test_value = 0
 
+    x = transform.backward(y)
+
+    jac = t.log(t.nlinalg.det(jacobian(x, [y])))
+    #ljd = log jacobian det 
+    actual_ljd = theano.function([y], jac)
+
+    computed_ljd = theano.function([y], transform.jacobian_det(y))
+
+    for yval in domain.vals:
+        close_to(
+            actual_ljd(yval), 
+            computed_ljd(yval), 1e-8)
 
 def test_log():
     check_transform_identity(pm.logtransform, Rplusbig)
+    check_jacobian_det(pm.logtransform, Rplusbig) 
 
 def test_logodds():
     check_transform_identity(pm.logtransform, Unit)
-
+    check_jacobian_det(pm.logtransform, Unit)
 
 def test_interval():
     for a, b in [(-4, 5.5), (.1, .7), (-10, 4.3)]:
         domain = Unit * np.float64(b-a) + np.float64(a)
         check_transform_identity(pm.interval_transform(a,b), domain)
+        check_jacobian_det(pm.interval_transform(a,b), domain)
     
 
 
