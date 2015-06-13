@@ -3,7 +3,7 @@ from theano import theano, scalar,  tensor as t
 from theano.gof.graph import inputs
 from .memoize import memoize
 
-__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars', 'cont_inputs']
+__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars', 'cont_inputs', 'jacobian']
 
 def inputvars(a):
     """
