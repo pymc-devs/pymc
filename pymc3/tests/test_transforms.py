@@ -17,6 +17,9 @@ def check_transform_identity(transform, domain, constructor=t.dscalar, test=0):
     for val in domain.vals: 
         close_to(val, identity_f(val), tol)
 
+def check_vector_transform_identity(transform, domain):
+    return check_transform_identity(transform, domain, t.dvector, test=np.array([0,0]))
+
 def get_values(transform, domain=R, constructor=t.dscalar, test=0):
     x = constructor('x')
     x.tag.test_value = test
@@ -25,8 +28,8 @@ def get_values(transform, domain=R, constructor=t.dscalar, test=0):
     return np.array([f(val) for val in domain.vals])
 
 def test_simplex():
-    check_transform_identity(tr.stick_breaking, Simplex(2), t.dvector, np.array([0,0]))
-    check_transform_identity(tr.stick_breaking, Simplex(4), t.dvector, np.array([0,0]))
+    check_vector_transform_identity(tr.stick_breaking, Simplex(2))
+    check_vector_transform_identity(tr.stick_breaking, Simplex(4))
     
 def test_simplex_bounds():
     vals = get_values(tr.stick_breaking, Vector(R, 2), t.dvector, np.array([0,0]))
@@ -36,34 +39,28 @@ def test_simplex_bounds():
     close_to(vals < 1, True, tol)
 
 def test_simplex_jacobian_det():
-    y = t.dvector('y')
-    y.tag.test_value = np.array([0, 0])
-    x = tr.stick_breaking.backward(y)[:-1]
+    check_jacobian_det(tr.stick_breaking, Vector(R, 2), t.dvector, np.array([0,0]), lambda x: x[:-1])
 
-    jac = t.log(t.nlinalg.det(jacobian(x, [y])))
-    #ljd = log jacobian det 
-    actual_ljd = theano.function([y], jac)
-
-    computed_ljd = theano.function([y], tr.stick_breaking.jacobian_det(y))
+def test_sum_to_1():
+    check_vector_transform_identity(tr.sum_to_1, Simplex(2))
+    check_vector_transform_identity(tr.sum_to_1, Simplex(4))
     
-    for domain in [Vector(R, 1), Vector(R,3)]:
-        for yval in domain.vals:
-            close_to(
-                actual_ljd(yval), 
-                computed_ljd(yval), tol)
+def test_sum_to_1_jacobian_det():
+    check_jacobian_det(tr.sum_to_1, Vector(Unit, 2), t.dvector, np.array([0,0]), lambda x: x[:-1])
 
-
-def check_jacobian_det(transform, domain, constructor=t.dscalar, test=0):
+def check_jacobian_det(transform, domain, constructor=t.dscalar, test=0, make_comparable=None):
     y = constructor('y')
     y.tag.test_value = test
 
     x = transform.backward(y)
+    if make_comparable:
+        x = make_comparable(x)
 
     jac = t.log(t.nlinalg.det(jacobian(x, [y])))
     #ljd = log jacobian det 
     actual_ljd = theano.function([y], jac)
 
-    computed_ljd = theano.function([y], transform.jacobian_det(y))
+    computed_ljd = theano.function([y], t.as_tensor_variable(transform.jacobian_det(y)), on_unused_input='ignore')
 
     for yval in domain.vals:
         close_to(
