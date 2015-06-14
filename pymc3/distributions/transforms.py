@@ -4,7 +4,7 @@ import theano
 
 from ..theanof import gradient
 
-__all__ = ['transform', 'logtransform', 'logoddstransform', 'interval_transform', 'simplextransform']
+__all__ = ['transform', 'logtransform', 'simplextransform', 'stick_breaking', 'logodds', 'log']
 
 class Transform(object):
     """A transformation of a random variable from one space into another."""
@@ -62,7 +62,7 @@ class TransformedDistribution(Distribution):
 
 transform = Transform
 
-class LogTransform(ElemwiseTransform):
+class Log(ElemwiseTransform):
     name = "log"
     def __init__(self): 
         pass
@@ -71,16 +71,17 @@ class LogTransform(ElemwiseTransform):
         return exp(x)
 
     def forward(self, x):
-        return log(x)
+        return t.log(x)
 
-logtransform = LogTransform()
+log = Log()
+logtransform = log
 
 logistic = t.nnet.sigmoid
 
 def logit(x):
-    return log(x/(1-x))
+    return t.log(x/(1-x))
 
-class LogOddsTransform(ElemwiseTransform):
+class LogOdds(ElemwiseTransform):
     name = "logodds"
     
     def __init__(self): 
@@ -92,10 +93,10 @@ class LogOddsTransform(ElemwiseTransform):
     def forward(self, x):
         return logit(x)
 
-logoddstransform = LogOddsTransform()
+logodds = LogOdds()
 
 
-class IntervalTransform(ElemwiseTransform):
+class Interval(ElemwiseTransform):
     name = "interval"
 
     def __init__(self, a,b):
@@ -104,20 +105,18 @@ class IntervalTransform(ElemwiseTransform):
 
     def backward(self, x):
         a, b = self.a, self.b
-        r =  (b-a)*exp(x)/(1+exp(x)) + a
+        r =  (b - a) * t.exp(x) / (1 + t.exp(x)) + a
         return r
 
     def forward(self, x):
         a, b = self.a, self.b
-        r= log((x-a)/(b-x))
+        r = t.log((x - a) / (b - x))
         return r
 
+def interval(a,b):
+    return Interval(a,b)
 
-def interval_transform(a,b):
-    return IntervalTransform(a,b)
-
-
-class SumTo1Transform(Transform): 
+class SumTo1(Transform): 
     name = "sumto1"
 
     def __init__(self): 
@@ -128,12 +127,13 @@ class SumTo1Transform(Transform):
 
     def forward(self, y):  
         return concatenate([y, 1-sum(y, keepdims=True)])
+sum_to_1 = SumTo1()
 
-class SimplexTransform(Transform): 
+class StickBreaking(Transform): 
     def __init__(self):
         pass
 
-    name = "simplex"
+    name = "stickbreaking"
 
     def forward(self, x):
         #reverse cumsum
@@ -142,14 +142,14 @@ class SimplexTransform(Transform):
         z = x0/s
         Km1 = x.shape[0] - 1
         k = arange(Km1)
-        eq_share = - log(Km1 - k) # logit(1./(Km1 + 1 - k)) 
+        eq_share = - t.log(Km1 - k) # logit(1./(Km1 + 1 - k)) 
         y =  logit(z) - eq_share
         return y
 
     def backward(self, y):
         Km1 = y.shape[0]
         k = arange(Km1)
-        eq_share = - log(Km1 - k) # logit(1./(Km1 + 1 - k)) 
+        eq_share = - t.log(Km1 - k) # logit(1./(Km1 + 1 - k)) 
         z = logistic(y + eq_share)
         yl = concatenate([z, [1]])
         yu = concatenate([[1], 1-z])
@@ -160,25 +160,11 @@ class SimplexTransform(Transform):
     def jacobian_det(self, y): 
         Km1 = y.shape[0]
         k = arange(Km1)
-        eq_share =  -log(Km1 - k) #logit(1./(Km1 + 1 - k)) 
+        eq_share =  -t.log(Km1 - k) #logit(1./(Km1 + 1 - k)) 
         yl = y + eq_share
         yu = concatenate([[1], 1-logistic(yl)])
         S = t.extra_ops.cumprod(yu)
-        return sum(log(S[:-1]) - log(1+exp(yl)) - log(1+exp(-yl)))
-simplextransform = SimplexTransform()
+        return sum(t.log(S[:-1]) - t.log(1+exp(yl)) - t.log(1+exp(-yl)))
 
-class SimplexArrTransform(Transform): 
-    def __init__(self):
-        pass
-
-    name = "simplexarr"
-    def forward(self, x):
-        return x[:-1]
-
-    def backward(self, y):  
-        return concatenate([y, 1-sum(y, keepdims=True)])
-
-    def jacobian_det(self, y): 
-        return 0.
-simplexarrtransform = SimplexArrTransform()
-
+stick_breaking = StickBreaking()
+simplextransform = stick_breaking
