@@ -287,7 +287,7 @@ class Categorical(Discrete):
         p = self.p
         k = self.k
 
-        sumto1 = t.zero_grad(
+        sumto1 = t.gradient.zero_grad(
             le(abs(sum(p) - 1), 1e-5)
             )
         return bound(log(p[value]),

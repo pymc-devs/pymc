@@ -2,7 +2,7 @@ from .dist_math import *
 from ..model import FreeRV
 import theano
 
-from ..theanof import jacobian
+from ..theanof import gradient
 
 __all__ = ['transform', 'logtransform', 'logoddstransform', 'interval_transform', 'simplextransform']
 
@@ -21,15 +21,18 @@ class Transform(object):
             jacobian determinant of the transformation"""
         self.__dict__.update(locals())
 
-    def jacobian_det(self, x):
-        j = jacobian(self.backward(x), [x])
-        return t.log(t.nlinalg.det(j))
-
     def apply(self, dist):
         return TransformedDistribution.dist(dist, self)
 
     def __str__(self):
         return name + " transform"
+
+class ElemwiseTransform(Transform):
+    def jacobian_det(self, x):
+        grad = gradient(t.sum(self.backward(x)), [x])
+
+        j =  t.sum(t.log(t.abs_(grad)))
+        return j
 
 class TransformedDistribution(Distribution):
     """A distribution that has been transformed from one space into another."""
@@ -59,7 +62,7 @@ class TransformedDistribution(Distribution):
 
 transform = Transform
 
-class LogTransform(Transform):
+class LogTransform(ElemwiseTransform):
     name = "log"
     def __init__(self): 
         pass
@@ -77,22 +80,22 @@ logistic = t.nnet.sigmoid
 def logit(x):
     return log(x/(1-x))
 
-class LogOddsTransform(Transform):
+class LogOddsTransform(ElemwiseTransform):
     name = "logodds"
     
     def __init__(self): 
         pass
 
     def backward(self, x): 
-        return logit(x)
+        return logistic(x)
 
     def forward(self, x):
-        return logistic(x)
+        return logit(x)
 
 logoddstransform = LogOddsTransform()
 
 
-class IntervalTransform(Transform):
+class IntervalTransform(ElemwiseTransform):
     name = "interval"
 
     def __init__(self, a,b):
@@ -101,12 +104,12 @@ class IntervalTransform(Transform):
 
     def backward(self, x):
         a, b = self.a, self.b
-        r= log((x-a)/(b-x))
+        r =  (b-a)*exp(x)/(1+exp(x)) + a
         return r
 
     def forward(self, x):
         a, b = self.a, self.b
-        r =  (b-a)*exp(x)/(1+exp(x)) + a
+        r= log((x-a)/(b-x))
         return r
 
 
