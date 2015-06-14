@@ -23,7 +23,7 @@ class PositiveContinuous(Continuous):
 
 class UnitContinuous(Continuous):
     """Base class for continuous distributions on [0,1]"""
-    def __init__(self, transform=transforms.log, *args, **kwargs):
+    def __init__(self, transform=transforms.logodds, *args, **kwargs):
         super(UnitContinuous, self).__init__(transform=transform, *args, **kwargs)
 
 def get_tau_sd(tau=None, sd=None):
