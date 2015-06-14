@@ -122,11 +122,15 @@ class SumTo1(Transform):
     def __init__(self): 
         pass
 
-    def backward(self, x):
+    def backward(self, y):
+        return concatenate([y, 1-sum(y, keepdims=True)])
+
+    def forward(self, x):  
         return x[:-1]
 
-    def forward(self, y):  
-        return concatenate([y, 1-sum(y, keepdims=True)])
+    def jacobian_det(self, x):
+        return 0
+
 sum_to_1 = SumTo1()
 
 class StickBreaking(Transform): 
