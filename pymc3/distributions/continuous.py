@@ -9,7 +9,7 @@ from __future__ import division
 
 from .dist_math import *
 from numpy.random import uniform as runiform, normal as rnormal
-from .transforms import logtransform, logoddstransform, interval_transform
+from . import transforms
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
@@ -18,12 +18,12 @@ __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
 
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
-    def __init__(self, transform=logtransform, *args, **kwargs):
+    def __init__(self, transform=transforms.log, *args, **kwargs):
         super(PositiveContinuous, self).__init__(transform=transform, *args, **kwargs)
 
 class UnitContinuous(Continuous):
     """Base class for continuous distributions on [0,1]"""
-    def __init__(self, transform=logoddstransform, *args, **kwargs):
+    def __init__(self, transform=transforms.log, *args, **kwargs):
         super(UnitContinuous, self).__init__(transform=transform, *args, **kwargs)
 
 def get_tau_sd(tau=None, sd=None):
@@ -90,7 +90,7 @@ class Uniform(Continuous):
         self.median = self.mean
 
         if transform is 'interval':
-            self.transform = interval_transform(lower, upper)
+            self.transform = transforms.interval(lower, upper)
 
     def logp(self, value):
         lower = self.lower
