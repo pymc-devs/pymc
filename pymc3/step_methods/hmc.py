@@ -92,6 +92,8 @@ class HamiltonianMC(ArrayStep):
         return metrop_select(mr, q, q0)
 
 
+    
+
 
 def bern(p):
     return np.random.uniform() < p
