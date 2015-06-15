@@ -154,12 +154,15 @@ class Model(Context, Factor):
             if var.missing_values:
                 self.free_RVs += var.missing_values
                 self.missing_values += var.missing_values
+                for v in var.missing_values:
+                    self.named_vars[v.name] = v
         else: 
             var = ObservedRV(name=name, data=data, distribution=dist, model=self)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs.append(var.missing_values)
                 self.missing_values.append(var.missing_values)
+                self.named_vars[var.missing_values.name] = var.missing_values
 
         self.add_random_variable(var)
         return var
