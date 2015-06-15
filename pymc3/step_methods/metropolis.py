@@ -6,6 +6,8 @@ from .quadpotential import quad_potential
 from .arraystep import *
 from numpy.random import normal, standard_cauchy, standard_exponential, poisson, random
 from numpy import round, exp, copy, where
+from .nuts import special_logp, get_shared
+import theano
 
 
 __all__ = ['Metropolis', 'BinaryMetropolis', 'NormalProposal', 'CauchyProposal', 'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal']
@@ -44,7 +46,7 @@ class MultivariateNormalProposal(Proposal):
         return np.random.multivariate_normal(mean=np.zeros(self.s.shape[0]), cov=self.s)
 
 
-class Metropolis(ArrayStep):
+class Metropolis(ArrayStepSpecial):
     """
     Metropolis-Hastings sampling step
 
@@ -90,9 +92,17 @@ class Metropolis(ArrayStep):
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
 
-        super(Metropolis, self).__init__(vars, [model.fastlogp], **kwargs)
+        shared = get_shared(vars, model)
+        if self.all_discrete:
+            tensor_type = theano.tensor.lvector
+            print(tensor_type)
+        else:
+            tensor_type = theano.tensor.dvector
 
-    def astep(self, q0, logp):
+        self.delta_logp = special_logp(model.logpt, vars, shared, model, tensor_type)
+        super(Metropolis, self).__init__(vars, shared)
+
+    def astep(self, q0):
 
         if not self.steps_until_tune and self.tune:
             # Tune scaling parameter
@@ -113,7 +123,7 @@ class Metropolis(ArrayStep):
                 q = q0 + delta
 
 
-        q_new = metrop_select(logp(q) - logp(q0), q, q0)
+        q_new = metrop_select(self.delta_logp(q,q0), q, q0)
 
         if q_new is q:
             self.accepted += 1
@@ -162,7 +172,7 @@ def tune(scale, acc_rate):
     return scale
 
 
-class BinaryMetropolis(ArrayStep):
+class BinaryMetropolis(ArrayStepSpecial):
     """Metropolis-Hastings optimized for binary variables"""
     def __init__(self, vars, scaling=1., tune=True, tune_interval=100, model=None):
 
@@ -180,7 +190,7 @@ class BinaryMetropolis(ArrayStep):
 
         super(BinaryMetropolis, self).__init__(vars, [model.fastlogp])
 
-    def astep(self, q0, logp):
+    def astep(self, q0):
 
         # Convert adaptive_scale_factor to a jump probability
         p_jump = 1. - .5 ** self.scaling
@@ -191,6 +201,7 @@ class BinaryMetropolis(ArrayStep):
         switch_locs = where(rand_array < p_jump)
         q[switch_locs] = True - q[switch_locs]
 
-        q_new = metrop_select(logp(q) - logp(q0), q, q0)
+
+        q_new = metrop_select(self.delta_logp(q,q0), q, q0)
 
         return q_new
