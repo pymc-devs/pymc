@@ -107,7 +107,7 @@ class ArrayStepSpecial(object):
 
     def step(self, point):
         for var, share in self.shared.items():
-            share.set_value(point[var])
+            share.set_value(point[var], borrow=True)
 
         bij = DictToArrayBijection(self.ordering, point)
 
