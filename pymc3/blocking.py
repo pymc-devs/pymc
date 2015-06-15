@@ -8,7 +8,7 @@ import collections
 
 __all__ = ['ArrayOrdering', 'DictToArrayBijection', 'DictToVarBijection']
 
-VarMap = collections.namedtuple('VarMap', 'var, slc, shp')
+VarMap = collections.namedtuple('VarMap', 'var, slc, shp, dtyp')
 
 # TODO Classes and methods need to be fully documented.
 
@@ -23,7 +23,7 @@ class ArrayOrdering(object):
 
         for var in vars:
             slc = slice(dim, dim + var.dsize)
-            self.vmap.append(VarMap(str(var), slc, var.dshape))
+            self.vmap.append(VarMap(str(var), slc, var.dshape, var.dtype))
             dim += var.dsize
 
         self.dimensions = dim
@@ -46,7 +46,7 @@ class DictToArrayBijection(object):
         dpt : dict
         """
         apt = np.empty(self.ordering.dimensions)
-        for var, slc, _ in self.ordering.vmap:
+        for var, slc, _, _ in self.ordering.vmap:
                 apt[slc] = dpt[var].ravel()
         return apt
 
@@ -60,8 +60,8 @@ class DictToArrayBijection(object):
         """
         dpt = self.dpt.copy()
 
-        for var, slc, shp in self.ordering.vmap:
-            dpt[var] = apt[slc].reshape(shp)
+        for var, slc, shp, dtyp in self.ordering.vmap:
+            dpt[var] = apt[slc].reshape(shp).astype(dtyp)
 
         return dpt
 

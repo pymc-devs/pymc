@@ -106,10 +106,12 @@ class Metropolis(ArrayStep):
         if self.any_discrete:
             if self.all_discrete:
                 delta = round(delta, 0).astype(int)
+                q0 = q0.astype(int)
+                q = (q0 + delta).astype(int)
             else:
                 delta[self.discrete] = round(delta[self.discrete], 0).astype(int)
+                q = q0 + delta
 
-        q = q0 + delta
 
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
 

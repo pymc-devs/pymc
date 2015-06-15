@@ -86,7 +86,7 @@ class ElemWiseQuadPotential(object):
         return normal(size=self.s.shape) * self.inv_s
 
     def energy(self, x):
-        return .5 * dot(x, self.v * x)
+        return .5 * x.dot(self.v * x)
 
 
 class QuadPotential_Inv(object):
