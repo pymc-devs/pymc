@@ -26,4 +26,4 @@ env:
   - DEPS="ipython pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels"
 
 script:
-  - nosetests
+  - nosetests -v --processes=4 --process-timeout=3000
