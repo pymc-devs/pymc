@@ -219,7 +219,9 @@ class Model(Context, Factor):
         Returns
         -------
         Compiled Theano function as point function."""
-        return FastPointFunc(self.makefn(outs, mode, *args, **kwargs))
+        f = self.makefn(outs, mode, *args, **kwargs)
+        f.trust_input = True
+        return FastPointFunc(f)
 
     def profile(self, outs, n=1000, point=None, profile=True, *args, **kwargs):
         """Compiles and profiles a Theano function which returns `outs` and takes values of model
@@ -311,7 +313,8 @@ class FastPointFunc(object):
         self.f = f
 
     def __call__(self, state):
-        return self.f(**state)
+        inputs = [state[ind[0].name] for ind in self.f.indices]
+        return self.f(*inputs)
 
 class LoosePointFunc(object):
     """Wraps so a function so it takes a dict of arguments instead of arguments
