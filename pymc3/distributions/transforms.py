@@ -4,7 +4,7 @@ import theano
 
 from ..theanof import gradient
 
-__all__ = ['transform', 'logtransform', 'simplextransform', 'stick_breaking', 'logodds', 'log']
+__all__ = ['transform', 'stick_breaking', 'logodds', 'log']
 
 class Transform(object):
     """A transformation of a random variable from one space into another."""
@@ -74,7 +74,6 @@ class Log(ElemwiseTransform):
         return t.log(x)
 
 log = Log()
-logtransform = log
 
 logistic = t.nnet.sigmoid
 
@@ -97,10 +96,12 @@ logodds = LogOdds()
 
 
 class Interval(ElemwiseTransform):
+    """Transform from real line interval [a,b] to whole real line."""
+
     name = "interval"
 
     def __init__(self, a,b):
-        self.a=a
+        self.a = a
         self.b=b
 
     def backward(self, x):
@@ -113,10 +114,12 @@ class Interval(ElemwiseTransform):
         r = t.log((x - a) / (b - x))
         return r
 
-def interval(a,b):
-    return Interval(a,b)
+def interval(a, b):
+    return Interval(a, b)
 
 class SumTo1(Transform): 
+    """Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of values in [0,1]
+    """
     name = "sumto1"
 
     def __init__(self): 
@@ -134,10 +137,15 @@ class SumTo1(Transform):
 sum_to_1 = SumTo1()
 
 class StickBreaking(Transform): 
-    def __init__(self):
-        pass
+    """Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of real values.
+    
+    Primarily borrowed from the STAN implementation.
+    """
 
     name = "stickbreaking"
+
+    def __init__(self):
+        pass
 
     def forward(self, x):
         #reverse cumsum
@@ -171,4 +179,3 @@ class StickBreaking(Transform):
         return sum(t.log(S[:-1]) - t.log(1+exp(yl)) - t.log(1+exp(-yl)))
 
 stick_breaking = StickBreaking()
-simplextransform = stick_breaking
