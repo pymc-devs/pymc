@@ -1,7 +1,7 @@
 from .continuous import *
 from .discrete import *
 from .multivariate import *
-from .transforms import logtransform, simplextransform
+from . import transforms
 from .distribution import *
 
 from . import timeseries
