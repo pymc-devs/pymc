@@ -15,7 +15,8 @@ before_install:
 install:
   - conda create -n testenv --yes pip python=$TRAVIS_PYTHON_VERSION
   - source activate testenv
-  - conda install --yes $DEPS
+  - conda install --yes ipython pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels
+
   - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then conda install --yes mock; fi
   - pip install --no-deps numdifftools
   - pip install git+https://github.com/Theano/Theano.git
@@ -28,7 +29,5 @@ env:
   - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_examples:test_examples0"
   - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_examples:test_examples1"
   - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_examples:test_examples2"
-  - DEPS="ipython pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels"
-
 script:
   - nosetests
