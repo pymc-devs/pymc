@@ -16,3 +16,4 @@ pages:
   - 'Robust Regression': 'GLM-robust.md'
   - 'Hierarchical linear regression': 'GLM-hierarchical.md'
   - 'Probabilistic Matrix Factorization': 'pmf-pymc.md'
+  - 'Rugby Analytics example': 'rugby_analytics.md'
