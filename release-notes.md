@@ -14,3 +14,28 @@ Thus, Thomas, Chris and I are pleased to announce that PyMC3 is now in Beta.
 * Transparent missing value imputation support added with MaskedArrays or pandas.DataFrame NaNs.
 * Bad default values now ignored
 * Profile theano functions using `model.profile(model.logpt)`
+
+### Contributors since 3.0a
+A. Flaxman <abie@alum.mit.edu>
+Andrea Zonca <code@andreazonca.com>
+Andreas Klostermann <andreasklostermann@googlemail.com>
+Andrew Clegg <andrew.clegg@pearson.com>
+AustinRochford <arochford@monetate.com>
+Benjamin Edwards <bedwards@cs.unm.edu>
+Brian Naughton <briannaughton@gmail.com>
+Chad Heyne <chadheyne@gmail.com>
+Chris Fonnesbeck <chris.fonnesbeck@vanderbilt.edu>
+Corey Farwell <coreyf@rwell.org>
+John Salvatier <jsalvatier@gmail.com>
+Karlson Pfannschmidt <quietdeath@gmail.com>
+Kyle Bishop <citizenphnix@gmail.com>
+Kyle Meyer <kyle@kyleam.com>
+Mack Sweeney <mackenzie.sweeney@gmail.com>
+Osvaldo Martin <aloctavodia@gmail.com>
+Raymond Roberts <rayvroberts@gmail.com>
+Rodrigo Benenson <rodrigo.benenson@gmail.com>
+Thomas Wiecki <thomas.wiecki@gmail.com>
+Zach Ploskey <zploskey@gmail.com>
+maahnman <github@mm.maahn.de>
+paul sorenson <paul@metrak.com>
+zenourn <daniel@zeno.co.nz>
