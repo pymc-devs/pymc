@@ -24,10 +24,10 @@ install:
   - python setup.py build_ext --inplace
 
 env:
-  - TESTCMD="nosetests -vv --with-timer -e test_examples -e test_distributions"
-  - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_distributions"
-  - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_examples:test_examples0"
-  - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_examples:test_examples1"
-  - TESTCMD="nosetests -vv --with-timer pymc3.tests.test_examples:test_examples2"
+  - TESTCMD=" -vv --with-timer -e test_examples -e test_distributions"
+  - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions"
+  - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples0"
+  - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples1"
+  - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples2"
 script:
-  - nosetests
+  - nosetests $TESTMD
