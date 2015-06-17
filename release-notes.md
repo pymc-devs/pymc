@@ -8,7 +8,7 @@ PyMC3 has recently seen rapid development. With the addition of two new major fe
 
 Thus, Thomas, Chris and I are pleased to announce that PyMC3 is now in Beta.
 
-Highlights:
+### Highlights
 * Transforms now automatically applied to constrained distributions
 * Transforms now specified with a `transform=` argument on Distributions. `model.TransformedVar` is gone.
 * Transparent missing value imputation support added with MaskedArrays or pandas.DataFrame NaNs.
