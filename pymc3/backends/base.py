@@ -212,7 +212,7 @@ class MultiTrace(object):
             If True, results from `chains` will be concatenated.
         chains : int or list of ints
             Chains to retrieve. If None, all chains are used. A single
-            values can also accepted.
+            chain value can also be given.
         squeeze : bool
             Return a single array element if the resulting list of
             values only has one element. If False, the result will

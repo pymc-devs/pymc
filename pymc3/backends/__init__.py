@@ -100,8 +100,7 @@ Several selection methods must also be defined:
 - point: Returns values for each variable at a single iteration. This is
   called if the backend is indexed with a single integer.
 
-- __len__: This should return the number of draws (for the highest chain
-  number).
+- __len__: This should return the number of draws.
 
 When `pymc3.sample` finishes, it wraps all trace objects in a MultiTrace
 object that provides a consistent selection interface for all backends.

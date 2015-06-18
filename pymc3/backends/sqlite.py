@@ -8,7 +8,7 @@ For each variable, a table is created with the following format:
 
  recid (INT), draw (INT), chain (INT),  v1 (FLOAT), v2 (FLOAT), v3 (FLOAT) ...
 
-The variable column names are extended to reflect addition dimensions.
+The variable column names are extended to reflect additional dimensions.
 For example, a variable with the shape (2, 2) would be stored as
 
  key (INT), draw (INT), chain (INT),  v1_1 (FLOAT), v1_2 (FLOAT), v2_1 (FLOAT) ...
