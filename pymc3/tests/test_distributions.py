@@ -601,4 +601,26 @@ def check_ex_gaussian(value, mu, sigma, nu, logp):
     assert_almost_equal(model.fastlogp(pt),
                 logp, decimal=6, err_msg=str(pt)) 
     
-    
+
+def test_inverse_gaussian():
+    # Log probabilities calculated using the dIG function from the R package gamlss.
+    # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/.
+    #
+    # NB. Cannot use Scipy invgauss as that fixes the precision (tau) at 1.
+    test_cases = [# 
+        (0.5, 0.0010, 0.500, -124500.7257914),
+        (1.0, 0.5000, 0.001, -4.3733162),
+        (2.0, 1.0000, 1.000, -2.2086593),
+        (5.0, 2.0000, 2.500, -3.4374500),
+        (7.5, 5.0000, 5.000, -3.2199074),
+        (15.0, 10.0000, 7.500, -4.0360623),
+        (50.0, 15.0000, 10.000, -6.1801249)]
+    for value, mu, lam, logp in test_cases:
+        yield check_inverse_gaussian, value, mu, lam, logp
+             
+def check_inverse_gaussian(value, mu, lam, logp):   
+    with Model() as model:
+        ig = InverseGaussian('ig', mu=mu, lam=lam, transform=None)
+    pt = {'ig': value}
+    assert_almost_equal(model.fastlogp(pt),
+                    logp, decimal=6, err_msg=str(pt))  
