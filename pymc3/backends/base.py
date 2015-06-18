@@ -83,12 +83,9 @@ class BaseTrace(object):
             return self._slice(idx)
 
         try:
-            return self.point(idx)
-        except ValueError:
-            pass
-        except TypeError:
-            pass
-        return self.get_values(idx)
+            return self.point(int(idx))
+        except (ValueError, TypeError):  # Passed variable or variable name.
+            raise ValueError('Can only index with slice or integer')
 
     def __len__(self):
         raise NotImplementedError

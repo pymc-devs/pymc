@@ -115,17 +115,17 @@ class SamplingTestCase(ModelBackendSetupTestCase):
         self.trace.close()
 
         for varname in self.test_point.keys():
-            npt.assert_equal(self.trace[varname][0, ...],
+            npt.assert_equal(self.trace.get_values(varname)[0, ...],
                              np.zeros(self.trace.var_shapes[varname]))
             last_idx = self.draws - 1
-            npt.assert_equal(self.trace[varname][last_idx, ...],
+            npt.assert_equal(self.trace.get_values(varname)[last_idx, ...],
                              np.tile(last_idx, self.trace.var_shapes[varname]))
 
     def test_clean_interrupt(self):
         self.trace.record(point=self.test_point)
         self.trace.close()
         for varname in self.test_point.keys():
-            self.assertEqual(self.trace[varname].shape[0], 1)
+            self.assertEqual(self.trace.get_values(varname).shape[0], 1)
 
 
 class SelectionTestCase(ModelBackendSampledTestCase):
