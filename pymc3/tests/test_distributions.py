@@ -578,3 +578,27 @@ def test_std_cdf():
                         sp.norm.cdf(test_cases), 6)
     
     
+def test_ex_gaussian():
+    # Log probabilities calculated using the dexGAUS function from the R package gamlss.
+    # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/.
+    test_cases = [
+        (0.5, -50.000, 0.500, 0.500, -99.8068528),
+        (1.0, -1.000, 0.001, 0.001, -1992.5922447),
+        (2.0, 0.001, 1.000, 1.000, -1.6720416),
+        (5.0, 0.500, 2.500, 2.500, -2.4543644),
+        (7.5, 2.000, 5.000, 5.000, -2.8259429),
+        (15.0, 5.000, 7.500, 7.500, -3.3093854),
+        (50.0, 50.000, 10.000, 10.000, -3.6436067),
+        (1000.0, 500.000, 10.000, 20.000, -27.8707323)
+        ]
+    for value, mu, sigma, nu, logp in test_cases:
+        yield check_ex_gaussian, value, mu, sigma, nu, logp
+             
+def check_ex_gaussian(value, mu, sigma, nu, logp):
+    with Model() as model:
+        ig = ExGaussian('eg', mu=mu, sigma=sigma, nu=nu)
+    pt = {'eg': value}
+    assert_almost_equal(model.fastlogp(pt),
+                logp, decimal=6, err_msg=str(pt)) 
+    
+    

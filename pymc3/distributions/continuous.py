@@ -14,7 +14,7 @@ from . import transforms
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
            'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
-           'Pareto', 'InverseGamma']
+           'Pareto', 'InverseGamma', 'ExGaussian']
 
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
@@ -724,3 +724,73 @@ class Bound(object):
 
 
 Tpos = Bound(T, 0)
+
+class ExGaussian(Continuous):    
+    """
+    Expoentially modified Gaussian random variable with 
+    support :math:`x \in [-\infty, \infty]`.This results from
+    the convolution of a normal distribution with an exponential
+    distribution.
+     
+    .. math::
+       f(x \mid \mu, \sigma, \tau) = \frac{1}{\nu}\;
+       \exp\left\{\frac{\mu-x}{\nu}+\frac{\sigma^2}{2\nu^2}\right\}
+       \Phi\left(\frac{x-\mu}{\sigma}-\frac{\sigma}{\nu}\right)
+    
+    where :math:`\Phi` is the cumulative distribution function of the
+    standard normal distribution.
+     
+    Parameters
+    ----------
+    `mu` : float
+        Mean of the normal distribution (`-inf` < `mu` < `inf`).
+    `sigma` : float
+        Standard deviation of the normal distribution (`sigma` > 0).     
+    `nu` : float
+        Mean of the exponential distribution (`nu` > 0).
+         
+    .. note::    
+        - :math:`E(X) = \mu + \nu`
+        - :math:`Var(X) = \sigma^2 + \nu^2`
+     
+    References
+    ----------
+    .. [Rigby2005]
+        Rigby R.A. and Stasinopoulos D.M. (2005).
+        "Generalized additive models for location, scale and shape"
+        Applied Statististics., 54, part 3, pp 507-554.
+    .. [Lacouture2008]
+        Lacouture, Y. and Couseanou, D. (2008). 
+        "How to use MATLAB to fit the ex-Gaussian and other probability functions to a distribution of response times".
+        Tutorials in Quantitative Methods for Psychology, Vol. 4, No. 1, pp 35-45.
+    """
+    def __init__(self, mu, sigma, nu, *args, **kwargs):
+        super(ExGaussian, self).__init__(*args, **kwargs)
+        self.mu = mu     
+        self.sigma = sigma
+        self.nu = nu
+        self.mean = mu + nu
+        self.variance = (sigma ** 2) + (nu ** 2)    
+            
+    def random(self, size=None):
+        if size is None:
+            size = 1
+        u = runiform(low=0., high=1., size=size)
+        n = rnormal(mu, sigma, size=size)    
+        return n - nu * log(u)
+     
+    def logp(self, value):        
+        mu = self.mu
+        sigma = self.sigma
+        nu = self.nu
+         
+        if gt(nu,  0.05 * sigma):# This condition suggested by exGAUS.R from gamlss 
+            lp = -log(nu) + (mu - value) / nu + 0.5 * (sigma / nu) ** 2 + \
+                     logpow(std_cdf((value - mu) / sigma - sigma / nu), 1.)
+        else:
+            lp = - log(sigma * sqrt(2. * pi)) - 0.5 * ((value - mu) / sigma) ** 2
+         
+        return bound(lp,
+                 sigma > 0.,
+                 nu > 0.)
+ 
