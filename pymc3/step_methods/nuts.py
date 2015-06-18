@@ -6,12 +6,12 @@ from numpy.random import uniform
 from .hmc import leapfrog, Hamiltonian, bern, energy
 from ..tuning import guess_scaling
 import theano
-from  .. import theanof 
+from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor
 import theano.tensor
 
 __all__ = ['NUTS']
 
-class NUTS(ArrayStepSpecial):
+class NUTS(FastArrayStep):
     """
     Automatically tunes step size and adjust number of steps for good performance.
 
@@ -89,11 +89,8 @@ class NUTS(ArrayStepSpecial):
 
 
 
-        shared = get_shared(vars, model)
-        #self.logp = special_logp(model.logpt, vars, shared, model)
-        #self.dlogp = special_dlogp(theanof.gradient(model.logpt, vars), vars, shared, model)
-
-        self.leapfrog1_dE = special_leapfrog1_dE(model.logpt, theanof.gradient(model.logpt, vars), vars, shared, model, self.potential, profile=profile)
+        shared = make_shared_replacements(vars, model)
+        self.leapfrog1_dE = leapfrog1_dE(model.logpt, vars, shared, self.potential, profile=profile)
         
 
         super(NUTS, self).__init__(vars, shared, **kwargs)
@@ -143,15 +140,6 @@ def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):
         leapfrog1_dE = H
         q1, p1, dE = leapfrog1_dE(q, p, np.array(v*e))
 
-        """
-        q1, p1 = leapfrog(H, q, p, 1, v*e)
-        #E = energy(H, q1, p1)
-        #E0 = energy(H, q0, p0)
-
-
-        dE = denergy(H, q1, p1, q0, p0) #E - E0
-        """
-
         n1 = int(log(u) + dE <= 0)
         s1 = int(log(u) + dE < Emax)
         return q1, p1, q1, p1, q1, n1, s1, min(1, exp(-dE)), 1
@@ -175,80 +163,39 @@ def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):
         return qn, pn, qp, pp, q1, n1, s1, a1, na1
     return
 
+def leapfrog1_dE(logp, vars, shared, pot, profile):
+    """Computes a theano function that computes one leapfrog step and the energy difference between the beginning and end of the trajectory.
+    Parameters
+    ----------
+    logp : TensorVariable 
+    vars : list of tensor variables
+    shared : list of shared variables not to compute leapfrog over
+    pot : quadpotential
+    porifle : Boolean
 
-def get_shared(vars, model):
-    othervars = set(model.vars) - set(vars)
-    return {var.name : theano.shared(var.tag.test_value, var.name + '_shared') for var in othervars }
-
-def specialize(xs, vars, shared, model, tensor_type=theano.tensor.dvector):
-    inarray = tensor_type('inarray')
-    ordering = ArrayOrdering(vars)
-    inarray.tag.test_value = np.concatenate([var.tag.test_value.ravel() for var in vars])
-    
-    replace = {
-        model[var] : reshape_t(inarray[slc], shp).astype(dtyp)
-        for var, slc, shp, dtyp in ordering.vmap }
-
-    shared = { model[var] : value for var, value in shared.items() }
-    replace.update(shared)
-
-    
-    xs_special = [theano.clone(x, replace, strict=False) for x in xs]
-    return xs_special, inarray
-
-def reshape_t(x, shape):
-    if shape:   return x.reshape(shape)
-    else:       return x[0]
-        
-
-def special_logp(logp, vars, shared, model, tensor_type=theano.tensor.dvector):
-    
-    [logp0], inarray0 = specialize([logp], vars, shared, model, tensor_type)
-
-    inarray1 = tensor_type('inarray1')
-    inarray1.tag.test_value = inarray0.tag.test_value
-    logp1 = theano.clone(logp0, { inarray0 : inarray1}, strict=False)
-
-    f = theano.function([inarray1, inarray0], logp1 - logp0)
-
-    f.trust_input = True
-    return f
-
-def special_dlogp(dlogp, vars, shared, model):
-    [dlogp], inarray = specialize([dlogp], vars, shared, model)
-    f =  theano.function([inarray], dlogp)
-    f.trust_input = True
-    return f
-
-def denergy(H, q1, p1, q0, p0):
-    return -H.logp(q1, q0) + H.pot.energy(p1) - H.pot.energy(p0)
-
-def special_leapfrog1_dE(logp, dlogp, vars, shared, model, pot, profile):
-
-    (logp, dlogp), inarray = specialize([logp, dlogp], vars, shared, model)
-    logp = CallableTensor(logp, inarray)
-    dlogp = CallableTensor(dlogp, inarray)
+    Returns
+    -------
+    theano function which returns
+    q_new, p_new, delta_E
+    """
+    dlogp = gradient(logp, vars)
+    (logp, dlogp), q0 = join_nonshared_inputs([logp, dlogp], vars, shared)
+    logp = CallableTensor(logp)
+    dlogp = CallableTensor(dlogp)
 
     H = Hamiltonian(logp, dlogp, pot)
 
-    p = theano.tensor.dvectors('p')
-    p.tag.test_value = inarray.tag.test_value
+    p0 = theano.tensor.dvector('p0')
+    p0.tag.test_value = q0.tag.test_value
     e = theano.tensor.dscalar('e')
     e.tag.test_value = 1
 
-    q1, p1 = leapfrog(H, inarray, p, 1, e)
+    q1, p1 = leapfrog(H, q0, p0, 1, e)
     E = energy(H, q1, p1)
-    E0 = energy(H, inarray, p)
+    E0 = energy(H, q0, p0)
     dE = E - E0
 
-    f = theano.function([inarray, p, e], [q1, p1, dE], profile=profile)
+    f = theano.function([q0, p0, e], [q1, p1, dE], profile=profile)
     f.trust_input = True
     return f
 
-class CallableTensor(object):
-    def __init__(self, tensor, inarray): 
-        self.tensor = tensor
-        self.inarray = inarray
-
-    def __call__(self, input):
-        return theano.clone(self.tensor, { self.inarray : input }, strict=False)
