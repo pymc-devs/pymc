@@ -21,19 +21,19 @@ class TestText2dSampling(bf.SamplingTestCase):
     shape = (2, 3)
 
 
-class TestText0dSelection(bf.SelectionNoSliceTestCase):
+class TestText0dSelection(bf.SelectionTestCase):
     backend = text.Text
     name = 'text-db'
     shape = ()
 
 
-class TestText1dSelection(bf.SelectionNoSliceTestCase):
+class TestText1dSelection(bf.SelectionTestCase):
     backend = text.Text
     name = 'text-db'
     shape = 2
 
 
-class TestText2dSelection(bf.SelectionNoSliceTestCase):
+class TestText2dSelection(bf.SelectionTestCase):
     backend = text.Text
     name = 'text-db'
     shape = (2, 3)
@@ -65,9 +65,9 @@ class TestTraceToDf(bf.ModelBackendSampledTestCase):
     name = 'text-db'
     shape = (2, 3)
 
-    def test_trace_to_df(self):
+    def test_strace_to_df(self):
         mtrace = self.mtrace
-        df = text._trace_to_df(mtrace._traces[0])
+        df = text._strace_to_df(mtrace._straces[0])
         self.assertEqual(len(mtrace), df.shape[0])
 
         checked = False

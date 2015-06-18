@@ -43,9 +43,11 @@ class NDArray(base.BaseTrace):
             self.draws = old_draws + draws
             self.draws_idx = old_draws
             for varname, shape in self.var_shapes.items():
-                old_trace = self.samples[varname]
-                new_trace = np.zeros((draws, ) + shape, self.var_dtypes[varname])
-                self.samples[varname] = np.concatenate((old_trace, new_trace),
+                old_var_samples = self.samples[varname]
+                new_var_samples = np.zeros((draws, ) + shape,
+                                           self.var_dtypes[varname])
+                self.samples[varname] = np.concatenate((old_var_samples,
+                                                        new_var_samples),
                                                        axis=0)
         else:  # Otherwise, make array of zeros for each variable.
             self.draws = draws
@@ -70,8 +72,8 @@ class NDArray(base.BaseTrace):
             return
         ## Remove trailing zeros if interrupted before completed all
         ## draws.
-        self.samples = {var: trace[:self.draw_idx]
-                        for var, trace in self.samples.items()}
+        self.samples = {var: vtrace[:self.draw_idx]
+                        for var, vtrace in self.samples.items()}
 
     ## Selection methods
 
@@ -97,6 +99,9 @@ class NDArray(base.BaseTrace):
         return self.samples[varname][burn::thin]
 
     def _slice(self, idx):
+        # Slicing directly instead of using _slice_as_ndarray to
+        # support stop value in slice (which is needed by
+        # iter_sample).
         sliced = NDArray(model=self.model, vars=self.vars)
         sliced.chain = self.chain
         sliced.samples = {varname: values[idx]
@@ -110,3 +115,20 @@ class NDArray(base.BaseTrace):
         idx = int(idx)
         return {varname: values[idx]
                 for varname, values in self.samples.items()}
+
+
+def _slice_as_ndarray(strace, idx):
+    if idx.start is None:
+        burn = 0
+    else:
+        burn = idx.start
+    if idx.step is None:
+        thin = 1
+    else:
+        thin = idx.step
+
+    sliced = NDArray(model=strace.model, vars=strace.vars)
+    sliced.chain = strace.chain
+    sliced.samples = {v: strace.get_values(v, burn=burn, thin=thin)
+                      for v in strace.varnames}
+    return sliced

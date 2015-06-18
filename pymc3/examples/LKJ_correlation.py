@@ -27,7 +27,7 @@ dataset = multivariate_normal(mu, cov_matrix, size=n_obs)
 
 # In order to convert the upper triangular correlation values to a complete
 # correlation matrix, we need to construct an index matrix:
-n_elem = n_var * (n_var - 1) / 2
+n_elem = int(n_var * (n_var - 1) / 2)
 tri_index = np.zeros([n_var, n_var], dtype=int)
 tri_index[np.triu_indices(n_var, k=1)] = np.arange(n_elem)
 tri_index[np.triu_indices(n_var, k=1)[::-1]] = np.arange(n_elem)

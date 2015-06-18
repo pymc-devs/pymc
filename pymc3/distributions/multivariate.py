@@ -3,7 +3,7 @@ import warnings
 from .dist_math import *
 
 import numpy as np
-from .transforms import simplextransform
+from . import transforms
 
 from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
 from theano.tensor import dot, cast, eye, diag, eq, le, ge, gt, all
@@ -66,7 +66,7 @@ class Dirichlet(Continuous):
         Only the first `k-1` elements of `x` are expected. Can be used
         as a parent of Multinomial and Categorical nevertheless.
     """
-    def __init__(self, a, transform=simplextransform, *args, **kwargs):
+    def __init__(self, a, transform=transforms.stick_breaking, *args, **kwargs):
         super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
         self.a = a
         self.k = a.shape[0]
@@ -222,7 +222,7 @@ class LKJCorr(Continuous):
     def __init__(self, n, p, *args, **kwargs):
         self.n = n
         self.p = p
-        n_elem = p * (p - 1) / 2
+        n_elem = int(p * (p - 1) / 2)
         self.mean = np.zeros(n_elem)
         super(LKJCorr, self).__init__(shape=n_elem, *args, **kwargs)
 

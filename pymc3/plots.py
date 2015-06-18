@@ -7,7 +7,8 @@ __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
 
 def traceplot(trace, vars=None, figsize=None,
-              lines=None, combined=False, grid=True, ax=None):
+              lines=None, combined=False, grid=True, 
+              alpha=0.35, ax=None):
     """Plot samples histograms and values
 
     Parameters
@@ -56,13 +57,13 @@ def traceplot(trace, vars=None, figsize=None,
             d = np.squeeze(d)
             d = make_2d(d)
             if d.dtype.kind == 'i':
-                histplot_op(ax[i, 0], d)
+                histplot_op(ax[i, 0], d, alpha=alpha)
             else:
                 kdeplot_op(ax[i, 0], d)
             ax[i, 0].set_title(str(v))
             ax[i, 0].grid(grid)
             ax[i, 1].set_title(str(v))
-            ax[i, 1].plot(d, alpha=.35)
+            ax[i, 1].plot(d, alpha=alpha)
 
             ax[i, 0].set_ylabel("Frequency")
             ax[i, 1].set_ylabel("Sample value")
@@ -70,21 +71,21 @@ def traceplot(trace, vars=None, figsize=None,
             if lines:
                 try:
                     ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
-                    ax[i, 1].axhline(y=lines[v], color="r", lw=1.5, alpha=.35)
+                    ax[i, 1].axhline(y=lines[v], color="r", lw=1.5, alpha=alpha)
                 except KeyError:
                     pass
 
     plt.tight_layout()
     return ax
 
-def histplot_op(ax, data):
+def histplot_op(ax, data, alpha=.35):
     for i in range(data.shape[1]):
         d = data[:, i]
 
         mind = np.min(d)
         maxd = np.max(d)
         step = max((maxd-mind)//100, 1)
-        ax.hist(d, bins=range(mind, maxd + 2, step), align='left')
+        ax.hist(d, bins=range(mind, maxd + 2, step), alpha=alpha, align='left')
         ax.set_xlim(mind - .5, maxd + .5)
 
 def kdeplot_op(ax, data):
@@ -187,7 +188,8 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
 
     for i, v in enumerate(vars):
         for j in range(chains):
-            d = np.squeeze(trace.get_values(v, chains=[j], burn=burn))
+            d = np.squeeze(trace.get_values(v, chains=[j], burn=burn,
+                                            combine=False))
 
             ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
 
@@ -279,16 +281,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
 
     """
     import matplotlib.pyplot as plt
-    try:
-        import matplotlib.gridspec as gridspec
-    except ImportError:
-        gridspec = None
-
-    if not gridspec:
-        print_('\nYour installation of matplotlib is not recent enough to ' +
-               'support summary_plot; this function is disabled until ' +
-               'matplotlib is updated.')
-        return
+    from matplotlib import gridspec
 
     # Quantiles to be calculated
     qlist = [100 * alpha / 2, 50, 100 * (1 - alpha / 2)]

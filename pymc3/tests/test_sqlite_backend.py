@@ -25,19 +25,19 @@ class TestSQlite2dSampling(bf.SamplingTestCase):
     shape = (2, 3)
 
 
-class TestSQLite0dSelection(bf.SelectionNoSliceTestCase):
+class TestSQLite0dSelection(bf.SelectionTestCase):
     backend = sqlite.SQLite
     name = DBNAME
     shape = ()
 
 
-class TestSQLite1dSelection(bf.SelectionNoSliceTestCase):
+class TestSQLite1dSelection(bf.SelectionTestCase):
     backend = sqlite.SQLite
     name = DBNAME
     shape = 2
 
 
-class TestSQLite2dSelection(bf.SelectionNoSliceTestCase):
+class TestSQLite2dSelection(bf.SelectionTestCase):
     backend = sqlite.SQLite
     name = DBNAME
     shape = (2, 3)

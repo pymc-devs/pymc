@@ -94,12 +94,12 @@ def _sample(draws, step, start=None, trace=None, chain=0, tune=None,
                             tune, model, random_seed)
     progress = progress_bar(draws)
     try:
-        for i, trace in enumerate(sampling):
+        for i, strace in enumerate(sampling):
             if progressbar:
                 progress.update(i)
     except KeyboardInterrupt:
-        trace.close()
-    return MultiTrace([trace])
+        strace.close()
+    return MultiTrace([strace])
 
 
 def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
@@ -143,8 +143,8 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     """
     sampling = _iter_sample(draws, step, start, trace, chain, tune,
                             model, random_seed)
-    for i, trace in enumerate(sampling):
-        yield MultiTrace([trace[:i + 1]])
+    for i, strace in enumerate(sampling):
+        yield MultiTrace([strace[:i + 1]])
 
 
 def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
@@ -158,10 +158,10 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     if start is None:
         start = {}
 
-    trace = _choose_backend(trace, chain, model=model)
+    strace = _choose_backend(trace, chain, model=model)
 
-    if len(trace) > 0:
-        _soft_update(start, trace.point(-1))
+    if len(strace) > 0:
+        _soft_update(start, strace.point(-1))
     else:
         _soft_update(start, model.test_point)
 
@@ -172,22 +172,22 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
     point = Point(start, model=model)
 
-    trace.setup(draws, chain)
+    strace.setup(draws, chain)
     for i in range(draws):
         if i == tune:
             step = stop_tuning(step)
         point = step.step(point)
-        trace.record(point)
-        yield trace
+        strace.record(point)
+        yield strace
     else:
-        trace.close()
+        strace.close()
 
 
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
     if isinstance(trace, BaseTrace):
         return trace
     if isinstance(trace, MultiTrace):
-        return trace._traces[chain]
+        return trace._straces[chain]
     if trace is None:
         return NDArray(**kwds)
 

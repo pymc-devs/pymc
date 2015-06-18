@@ -1,6 +1,6 @@
 """Base backend for traces
 
-See the docstring for pymc3.backends for more information (includng
+See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
 import numpy as np
@@ -83,12 +83,9 @@ class BaseTrace(object):
             return self._slice(idx)
 
         try:
-            return self.point(idx)
-        except ValueError:
-            pass
-        except TypeError:
-            pass
-        return self.get_values(idx)
+            return self.point(int(idx))
+        except (ValueError, TypeError):  # Passed variable or variable name.
+            raise ValueError('Can only index with slice or integer')
 
     def __len__(self):
         raise NotImplementedError
@@ -112,7 +109,7 @@ class BaseTrace(object):
         """Slice trace object."""
         raise NotImplementedError
 
-    def point(self, idx, chain=None):
+    def point(self, idx):
         """Return dictionary of point values at `idx` for current chain
         with variables names as keys.
         """
@@ -127,30 +124,37 @@ class MultiTrace(object):
     three ways:
 
     1. Indexing with a variable or variable name (str) returns all
-       values for that variable. For convenience during interactive
-       use, values can also be accessed using the variable an
-       attribute.
+       values for that variable, combining values for all chains.
+
+       >>> trace[varname]
+
+       Slicing after the variable name can be used to burn and thin
+       the samples.
+
+       >>> trace[varname, 1000:]
+
+       For convenience during interactive use, values can also be
+       accessed using the variable an attribute.
+
+       >>> trace.varname
+
     2. Indexing with an integer returns a dictionary with values for
        each variable at the given index (corresponding to a single
        sampling iteration).
+
     3. Slicing with a range returns a new trace with the number of draws
        corresponding to the range.
 
     For any methods that require a single trace (e.g., taking the length
     of the MultiTrace instance, which returns the number of draws), the
     trace with the highest chain number is always used.
-
-    Parameters
-    ----------
-    traces : list of traces
-        Each object must have a unique `chain` attribute.
     """
-    def __init__(self, traces):
-        self._traces = {}
-        for trace in traces:
-            if trace.chain in self._traces:
+    def __init__(self, straces):
+        self._straces = {}
+        for strace in straces:
+            if strace.chain in self._straces:
                 raise ValueError("Chains are not unique.")
-            self._traces[trace.chain] = trace
+            self._straces[strace.chain] = strace
 
     def __repr__(self):
         template = '<{}: {} chains, {} iterations, {} variables>'
@@ -159,25 +163,34 @@ class MultiTrace(object):
 
     @property
     def nchains(self):
-        return len(self._traces)
+        return len(self._straces)
 
     @property
     def chains(self):
-        return list(sorted(self._traces.keys()))
+        return list(sorted(self._straces.keys()))
 
     def __getitem__(self, idx):
         if isinstance(idx, slice):
             return self._slice(idx)
 
         try:
-            return self.point(idx)
-        except ValueError:
+            return self.point(int(idx))
+        except (ValueError, TypeError):  # Passed variable or variable name.
             pass
-        except TypeError:
-            pass
-        return self.get_values(idx)
 
-    _attrs = set(['_traces', 'varnames', 'chains'])
+        if isinstance(idx, tuple):
+            var, vslice = idx
+            burn, thin = vslice.start, vslice.step
+            if burn is None:
+                burn = 0
+            if thin is None:
+                thin = 1
+        else:
+            var = idx
+            burn, thin = 0, 1
+        return self.get_values(var, burn=burn, thin=thin)
+
+    _attrs = set(['_straces', 'varnames', 'chains'])
 
     def __getattr__(self, name):
         # Avoid infinite recursion when called before __init__
@@ -192,14 +205,14 @@ class MultiTrace(object):
 
     def __len__(self):
         chain = self.chains[-1]
-        return len(self._traces[chain])
+        return len(self._straces[chain])
 
     @property
     def varnames(self):
         chain = self.chains[-1]
-        return self._traces[chain].varnames
+        return self._straces[chain].varnames
 
-    def get_values(self, varname, burn=0, thin=1, combine=False, chains=None,
+    def get_values(self, varname, burn=0, thin=1, combine=True, chains=None,
                    squeeze=True):
         """Get values from traces.
 
@@ -212,7 +225,7 @@ class MultiTrace(object):
             If True, results from `chains` will be concatenated.
         chains : int or list of ints
             Chains to retrieve. If None, all chains are used. A single
-            values can also accepted.
+            chain value can also be given.
         squeeze : bool
             Return a single array element if the resulting list of
             values only has one element. If False, the result will
@@ -227,15 +240,15 @@ class MultiTrace(object):
             chains = self.chains
         varname = str(varname)
         try:
-            results = [self._traces[chain].get_values(varname, burn, thin)
+            results = [self._straces[chain].get_values(varname, burn, thin)
                        for chain in chains]
         except TypeError:  # Single chain passed.
-            results = [self._traces[chains].get_values(varname, burn, thin)]
+            results = [self._straces[chains].get_values(varname, burn, thin)]
         return _squeeze_cat(results, combine, squeeze)
 
     def _slice(self, idx):
         """Return a new MultiTrace object sliced according to `idx`."""
-        new_traces = [trace._slice(idx) for trace in self._traces.values()]
+        new_traces = [trace._slice(idx) for trace in self._straces.values()]
         return MultiTrace(new_traces)
 
     def point(self, idx, chain=None):
@@ -249,7 +262,7 @@ class MultiTrace(object):
         """
         if chain is None:
             chain = self.chains[-1]
-        return self._traces[chain].point(idx)
+        return self._straces[chain].point(idx)
 
 
 def merge_traces(mtraces):
@@ -270,10 +283,10 @@ def merge_traces(mtraces):
     """
     base_mtrace = mtraces[0]
     for new_mtrace in mtraces[1:]:
-        for new_chain, trace in new_mtrace._traces.items():
-            if new_chain in base_mtrace._traces:
+        for new_chain, strace in new_mtrace._straces.items():
+            if new_chain in base_mtrace._straces:
                 raise ValueError("Chains are not unique.")
-            base_mtrace._traces[new_chain] = trace
+            base_mtrace._straces[new_chain] = strace
     return base_mtrace
 
 

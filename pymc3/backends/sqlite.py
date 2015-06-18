@@ -8,7 +8,7 @@ For each variable, a table is created with the following format:
 
  recid (INT), draw (INT), chain (INT),  v1 (FLOAT), v2 (FLOAT), v3 (FLOAT) ...
 
-The variable column names are extended to reflect addition dimensions.
+The variable column names are extended to reflect additional dimensions.
 For example, a variable with the shape (2, 2) would be stored as
 
  key (INT), draw (INT), chain (INT),  v1_1 (FLOAT), v1_2 (FLOAT), v2_1 (FLOAT) ...
@@ -18,9 +18,8 @@ The chain column denotes the chain index and starts at 0.
 """
 import numpy as np
 import sqlite3
-import warnings
 
-from ..backends import base
+from ..backends import base, ndarray
 
 TEMPLATES = {
     'table':            ('CREATE TABLE IF NOT EXISTS [{table}] '
@@ -228,7 +227,9 @@ class SQLite(base.BaseTrace):
         return values.reshape(shape)
 
     def _slice(self, idx):
-        warnings.warn('Slice for SQLite backend has no effect.')
+        if idx.stop is not None:
+            raise ValueError('Stop value in slice not supported.')
+        return ndarray._slice_as_ndarray(self, idx)
 
     def point(self, idx):
         """Return dictionary of point values at `idx` for current chain
@@ -322,15 +323,15 @@ def load(name, model=None):
     varnames = _get_table_list(db.cursor)
     chains = _get_chain_list(db.cursor, varnames[0])
 
-    traces = []
+    straces = []
     for chain in chains:
-        trace = SQLite(name, model=model)
-        trace.varnames = varnames
-        trace.chain = chain
-        trace._is_setup = True
-        trace.db = db  # Share the db with all traces.
-        traces.append(trace)
-    return base.MultiTrace(traces)
+        strace = SQLite(name, model=model)
+        strace.varnames = varnames
+        strace.chain = chain
+        strace._is_setup = True
+        strace.db = db  # Share the db with all traces.
+        straces.append(strace)
+    return base.MultiTrace(straces)
 
 
 def _get_table_list(cursor):

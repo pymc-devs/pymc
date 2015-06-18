@@ -1,7 +1,10 @@
 from .dist_math import *
 from ..model import FreeRV
+import theano
 
-__all__ = ['transform', 'logtransform', 'simplextransform']
+from ..theanof import gradient
+
+__all__ = ['transform', 'stick_breaking', 'logodds', 'log']
 
 class Transform(object):
     """A transformation of a random variable from one space into another."""
@@ -12,8 +15,8 @@ class Transform(object):
         name : str
         forward : function 
             forward transformation
-        backwards : function 
-            backwards transformation
+        backward : function 
+            backward transformation
         jacobian_det : function 
             jacobian determinant of the transformation"""
         self.__dict__.update(locals())
@@ -23,6 +26,13 @@ class Transform(object):
 
     def __str__(self):
         return name + " transform"
+
+class ElemwiseTransform(Transform):
+    def jacobian_det(self, x):
+        grad = gradient(t.sum(self.backward(x)), [x])
+
+        j = t.log(t.abs_(grad))
+        return j
 
 class TransformedDistribution(Distribution):
     """A distribution that has been transformed from one space into another."""
@@ -47,46 +57,125 @@ class TransformedDistribution(Distribution):
                 testval, dist.defaults, 
                 *args, **kwargs)
 
-
     def logp(self, x):
         return self.dist.logp(self.transform_used.backward(x)) + self.transform_used.jacobian_det(x)
 
 transform = Transform
 
+class Log(ElemwiseTransform):
+    name = "log"
+    def __init__(self): 
+        pass
 
-logtransform = transform("log", log, exp, idfn)
+    def backward(self, x):
+        return exp(x)
 
+    def forward(self, x):
+        return t.log(x)
+
+log = Log()
 
 logistic = t.nnet.sigmoid
-def logistic_jacobian(x):
-    ex = exp(-x)
-    return log(ex/(ex +1)**2)
 
-def logit(x): 
-    return log(x/(1-x))
-logoddstransform = transform("logodds", logit, logistic, logistic_jacobian)
+def logit(x):
+    return t.log(x/(1-x))
+
+class LogOdds(ElemwiseTransform):
+    name = "logodds"
+    
+    def __init__(self): 
+        pass
+
+    def backward(self, x): 
+        return logistic(x)
+
+    def forward(self, x):
+        return logit(x)
+
+logodds = LogOdds()
 
 
-def interval_transform(a, b):
-    def interval_real(x):
-        r= log((x-a)/(b-x))
+class Interval(ElemwiseTransform):
+    """Transform from real line interval [a,b] to whole real line."""
+
+    name = "interval"
+
+    def __init__(self, a,b):
+        self.a = a
+        self.b=b
+
+    def backward(self, x):
+        a, b = self.a, self.b
+        r =  (b - a) * t.exp(x) / (1 + t.exp(x)) + a
         return r
 
-    def real_interval(x):
-        r =  (b-a)*exp(x)/(1+exp(x)) + a
+    def forward(self, x):
+        a, b = self.a, self.b
+        r = t.log((x - a) / (b - x))
         return r
 
-    def real_interval_jacobian(x):
-        ex = exp(-x)
-        jac = log(ex*(b-a)/(ex + 1)**2)
-        return jac
+def interval(a, b):
+    return Interval(a, b)
 
-    return transform("interval", interval_real, real_interval, real_interval_jacobian)
+class SumTo1(Transform): 
+    """Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of values in [0,1]
+    """
+    name = "sumto1"
 
+    def __init__(self): 
+        pass
 
+    def backward(self, y):
+        return concatenate([y, 1-sum(y, keepdims=True)])
 
-simplextransform = transform("simplex",
-                             lambda p: p[:-1],
-                             lambda p: concatenate(
-                             [p, 1 - sum(p, keepdims=True)]),
-                             lambda p: constant([0]))
+    def forward(self, x):  
+        return x[:-1]
+
+    def jacobian_det(self, x):
+        return 0
+
+sum_to_1 = SumTo1()
+
+class StickBreaking(Transform): 
+    """Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of real values.
+    
+    Primarily borrowed from the STAN implementation.
+    """
+
+    name = "stickbreaking"
+
+    def __init__(self):
+        pass
+
+    def forward(self, x):
+        #reverse cumsum
+        x0 = x[:-1]
+        s = t.extra_ops.cumsum(x0[::-1])[::-1] + x[-1]
+        z = x0/s
+        Km1 = x.shape[0] - 1
+        k = arange(Km1)
+        eq_share = - t.log(Km1 - k) # logit(1./(Km1 + 1 - k)) 
+        y =  logit(z) - eq_share
+        return y
+
+    def backward(self, y):
+        Km1 = y.shape[0]
+        k = arange(Km1)
+        eq_share = - t.log(Km1 - k) # logit(1./(Km1 + 1 - k)) 
+        z = logistic(y + eq_share)
+        yl = concatenate([z, [1]])
+        yu = concatenate([[1], 1-z])
+        S = t.extra_ops.cumprod(yu)
+        x = S * yl
+        return x
+
+    def jacobian_det(self, y): 
+        Km1 = y.shape[0]
+        k = arange(Km1)
+        eq_share =  -t.log(Km1 - k) #logit(1./(Km1 + 1 - k)) 
+        yl = y + eq_share
+        yu = concatenate([[1], 1-logistic(yl)])
+        S = t.extra_ops.cumprod(yu)
+        return sum(t.log(S[:-1]) - t.log(1+exp(yl)) - t.log(1+exp(-yl)))
+
+stick_breaking = StickBreaking()

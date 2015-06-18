@@ -2,8 +2,9 @@ from .vartypes import typefilter, continuous_types
 from theano import theano, scalar,  tensor as t
 from theano.gof.graph import inputs
 from .memoize import memoize
+from .blocking import ArrayOrdering
 
-__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars', 'cont_inputs']
+__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars', 'cont_inputs', 'jacobian', 'CallableTensor', 'join_nonshared_inputs', 'make_shared_replacements']
 
 def inputvars(a):
     """
@@ -134,6 +135,79 @@ class IdentityOp(scalar.UnaryScalarOp):
 
     def __hash__(self):
         return hash(type(self))
+
+def make_shared_replacements(vars, model):
+    """
+    Makes shared replacements for all *other* variables than the ones passed.
+
+    This way functions can be called many times without setting unchanging variables. Allows us 
+    to use func.trust_input by removing the need for DictToArrayBijection and kwargs.
+
+    Parameters
+    ----------
+    vars : list of variables not to make shared
+    model : model 
+
+    Returns
+    -------
+    Dict of variable -> new shared variable
+    """
+    othervars = set(model.vars) - set(vars)
+    return {var : theano.shared(var.tag.test_value, var.name + '_shared') for var in othervars }
+
+def join_nonshared_inputs(xs, vars, shared):
+    """
+    Takes a list of theano Variables and joins their non shared inputs into a single input.
+    
+    Parameters
+    ----------
+    xs : list of theano tensors
+    vars : list of variables to join
+
+    Returns
+    -------
+    tensors, inarray
+    tensors : list of same tensors but with inarray as input
+    inarray : vector of inputs
+    """
+    joined = theano.tensor.concatenate([var.ravel() for var in vars])
+
+    tensor_type = joined.type
+    inarray = tensor_type('inarray')
+    ordering = ArrayOrdering(vars)
+    inarray.tag.test_value = joined.tag.test_value
+    
+    get_var = { var.name : var for var in vars} 
+    replace = {
+        get_var[var] : reshape_t(inarray[slc], shp).astype(dtyp)
+        for var, slc, shp, dtyp in ordering.vmap }
+
+    replace.update(shared)
+
+    xs_special = [theano.clone(x, replace, strict=False) for x in xs]
+    return xs_special, inarray
+
+def reshape_t(x, shape):
+    """Work around fact that x.reshape(()) doesn't work"""
+    if shape != ():   return x.reshape(shape)
+    else:             return x[0]
+
+class CallableTensor(object):
+    """Turns a symbolic variable with one input into a function that returns symbolic arguments with the one variable replaced with the input.
+    
+    """
+    def __init__(self, tensor): 
+        self.tensor = tensor
+
+    def __call__(self, input):
+        """ Replaces the single input of symbolic variable to be the passed argument.
+
+        Parameters
+        ----------
+        input : TensorVariable  
+        """
+        oldinput, = inputvars(self.tensor)
+        return theano.clone(self.tensor, { oldinput : input }, strict=False)
 
 scalar_identity = IdentityOp(scalar.upgrade_to_float, name='scalar_identity')
 identity = t.Elemwise(scalar_identity, name='identity')

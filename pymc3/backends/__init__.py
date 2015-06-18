@@ -16,10 +16,11 @@ Selecting a backend
 By default, a NumPy array is used as the backend. To specify a different
 backend, pass a backend instance to `sample`.
 
-For example, the following would save traces to the file 'test.db'.
+For example, the following would save the sampling values to CSV files
+in the directory 'test'.
 
     >>> import pymc3 as pm
-    >>> db = pm.backends.SQLite('test.db')
+    >>> db = pm.backends.Text('test')
     >>> trace = pm.sample(..., trace=db)
 
 Selecting values from a backend
@@ -31,31 +32,35 @@ backend object with a variable or variable name.
 
     >>> trace['x']  # or trace.x or trace[x]
 
-The call will return a list containing the sampling values of `x` for
-all chains. (For a single call to `sample`, the number of chains will
-correspond to the `njobs` argument.)
+The call will return the sampling values of `x`, with the values for
+all chains concatenated. (For a single call to `sample`, the number of
+chains will correspond to the `njobs` argument.)
 
-For more control of which values are returned, the `get_values` method
-can be used. The call below will return values from all chains, burning
-the first 1000 iterations from each chain.
+To discard the first N values of each chain, slicing syntax can be
+used.
 
-    >>> trace.get_values('x', burn=1000)
+    >>> trace['x', 1000:]
 
-Setting the `combine` flag will concatenate the results from all the
-chains.
+The `get_values` method offers more control over which values are
+returned. The call below will discard the first 1000 iterations
+from each chain and keep the values for each chain as separate arrays.
 
-    >>> trace.get_values('x', burn=1000, combine=True)
+    >>> trace.get_values('x', burn=1000, combine=False)
 
 The `chains` parameter of `get_values` can be used to limit the chains
 that are retrieved.
 
-    >>> trace.get_values('x', burn=1000, combine=True, chains=[0, 2])
+    >>> trace.get_values('x', burn=1000, chains=[0, 2])
 
-Some backends also suppport slicing the MultiTrace object. For example,
-the following call would return a new trace object without the first
-1000 sampling iterations for all traces and variables.
+MultiTrace objects also support slicing. For example, the following
+call would return a new trace object without the first 1000 sampling
+iterations for all traces and variables.
 
     >>> sliced_trace = trace[1000:]
+
+The backend for the new trace is always NDArray, regardless of the
+type of original trace.  Only the NDArray backend supports a stop
+value in the slice.
 
 Loading a saved backend
 -----------------------
@@ -63,7 +68,7 @@ Loading a saved backend
 Saved backends can be loaded using `load` function in the module for the
 specific backend.
 
-    >>> trace = pm.backends.sqlite.load('test.db')
+    >>> trace = pm.backends.text.load('test')
 
 Writing custom backends
 -----------------------
@@ -99,8 +104,7 @@ Several selection methods must also be defined:
 - point: Returns values for each variable at a single iteration. This is
   called if the backend is indexed with a single integer.
 
-- __len__: This should return the number of draws (for the highest chain
-  number).
+- __len__: This should return the number of draws.
 
 When `pymc3.sample` finishes, it wraps all trace objects in a MultiTrace
 object that provides a consistent selection interface for all backends.

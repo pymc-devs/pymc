@@ -14,7 +14,7 @@ class ModelBackendSetupTestCase(unittest.TestCase):
     Provides the attributes
     - test_point
     - model
-    - trace
+    - strace
     - draws
 
     Children must define
@@ -25,9 +25,9 @@ class ModelBackendSetupTestCase(unittest.TestCase):
     def setUp(self):
         self.test_point, self.model, _ = models.beta_bernoulli(self.shape)
         with self.model:
-            self.trace = self.backend(self.name)
+            self.strace = self.backend(self.name)
         self.draws, self.chain = 3, 0
-        self.trace.setup(self.draws, self.chain)
+        self.strace.setup(self.draws, self.chain)
 
     def tearDown(self):
         if self.name is not None:
@@ -54,12 +54,12 @@ class ModelBackendSampledTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.test_point, cls.model, _ = models.beta_bernoulli(cls.shape)
         with cls.model:
-            trace0 = cls.backend(cls.name)
-            trace1 = cls.backend(cls.name)
+            strace0 = cls.backend(cls.name)
+            strace1 = cls.backend(cls.name)
 
         cls.draws = 5
-        trace0.setup(cls.draws, chain=0)
-        trace1.setup(cls.draws, chain=1)
+        strace0.setup(cls.draws, chain=0)
+        strace1.setup(cls.draws, chain=1)
 
         varnames = list(cls.test_point.keys())
         shapes = {varname: value.shape
@@ -80,11 +80,11 @@ class ModelBackendSampledTestCase(unittest.TestCase):
                       for varname in varnames}
             point1 = {varname: cls.expected[1][varname][idx, ...]
                       for varname in varnames}
-            trace0.record(point=point0)
-            trace1.record(point=point1)
-        trace0.close()
-        trace1.close()
-        cls.mtrace = base.MultiTrace([trace0, trace1])
+            strace0.record(point=point0)
+            strace1.record(point=point1)
+        strace0.close()
+        strace1.close()
+        cls.mtrace = base.MultiTrace([strace0, strace1])
 
     @classmethod
     def tearDownClass(cls):
@@ -111,21 +111,21 @@ class SamplingTestCase(ModelBackendSetupTestCase):
         for idx in range(self.draws):
             point = {varname: np.tile(idx, value.shape)
                      for varname, value in self.test_point.items()}
-            self.trace.record(point=point)
-        self.trace.close()
+            self.strace.record(point=point)
+        self.strace.close()
 
         for varname in self.test_point.keys():
-            npt.assert_equal(self.trace[varname][0, ...],
-                             np.zeros(self.trace.var_shapes[varname]))
+            npt.assert_equal(self.strace.get_values(varname)[0, ...],
+                             np.zeros(self.strace.var_shapes[varname]))
             last_idx = self.draws - 1
-            npt.assert_equal(self.trace[varname][last_idx, ...],
-                             np.tile(last_idx, self.trace.var_shapes[varname]))
+            npt.assert_equal(self.strace.get_values(varname)[last_idx, ...],
+                             np.tile(last_idx, self.strace.var_shapes[varname]))
 
     def test_clean_interrupt(self):
-        self.trace.record(point=self.test_point)
-        self.trace.close()
+        self.strace.record(point=self.test_point)
+        self.strace.close()
         for varname in self.test_point.keys():
-            self.assertEqual(self.trace[varname].shape[0], 1)
+            self.assertEqual(self.strace.get_values(varname).shape[0], 1)
 
 
 class SelectionTestCase(ModelBackendSampledTestCase):
@@ -138,16 +138,17 @@ class SelectionTestCase(ModelBackendSampledTestCase):
     """
     def test_get_values_default(self):
         for varname in self.test_point.keys():
-            expected = [self.expected[0][varname], self.expected[1][varname]]
+            expected = np.concatenate([self.expected[chain][varname]
+                                       for chain in [0, 1]])
             result = self.mtrace.get_values(varname)
             npt.assert_equal(result, expected)
 
-    def test_get_values_burn_keyword(self):
+    def test_get_values_nocombine_burn_keyword(self):
         burn = 2
         for varname in self.test_point.keys():
             expected = [self.expected[0][varname][burn:],
                         self.expected[1][varname][burn:]]
-            result = self.mtrace.get_values(varname, burn=burn)
+            result = self.mtrace.get_values(varname, burn=burn, combine=False)
             npt.assert_equal(result, expected)
 
     def test_len(self):
@@ -158,12 +159,12 @@ class SelectionTestCase(ModelBackendSampledTestCase):
             self.assertEqual(self.expected[0][varname].dtype,
                              self.mtrace.get_values(varname, chains=0).dtype)
 
-    def test_get_values_thin_keyword(self):
+    def test_get_values_nocombine_thin_keyword(self):
         thin = 2
         for varname in self.test_point.keys():
             expected = [self.expected[0][varname][::thin],
                         self.expected[1][varname][::thin]]
-            result = self.mtrace.get_values(varname, thin=thin)
+            result = self.mtrace.get_values(varname, thin=thin, combine=False)
             npt.assert_equal(result, expected)
 
     def test_get_point(self):
@@ -176,9 +177,9 @@ class SelectionTestCase(ModelBackendSampledTestCase):
     def test_get_slice(self):
         expected = []
         for chain in [0, 1]:
-            expected.append({varname: self.expected[chain][varname][:2]
+            expected.append({varname: self.expected[chain][varname][2:]
                              for varname in self.mtrace.varnames})
-        result = self.mtrace[:2]
+        result = self.mtrace[2:]
         for chain in [0, 1]:
             for varname in self.test_point.keys():
                 npt.assert_equal(result.get_values(varname, chains=[chain]),
@@ -190,10 +191,11 @@ class SelectionTestCase(ModelBackendSampledTestCase):
             result = self.mtrace.get_values(varname, chains=[0])
             npt.assert_equal(result, expected)
 
-    def test_get_values_chains_reversed(self):
+    def test_get_values_nocombine_chains_reversed(self):
         for varname in self.test_point.keys():
             expected = [self.expected[1][varname], self.expected[0][varname]]
-            result = self.mtrace.get_values(varname, chains=[1, 0])
+            result = self.mtrace.get_values(varname, chains=[1, 0],
+                                            combine=False)
             npt.assert_equal(result, expected)
 
     def test_nchains(self):
@@ -227,6 +229,18 @@ class SelectionTestCase(ModelBackendSampledTestCase):
             result = self.mtrace.get_values(varname, combine=True, thin=thin)
             npt.assert_equal(result, expected)
 
+    def test_getitem_equivalence(self):
+        mtrace = self.mtrace
+        for varname in self.test_point.keys():
+            npt.assert_equal(mtrace[varname],
+                             mtrace.get_values(varname, combine=True))
+            npt.assert_equal(mtrace[varname, 2:],
+                             mtrace.get_values(varname, burn=2,
+                                               combine=True))
+            npt.assert_equal(mtrace[varname, 2::2],
+                             mtrace.get_values(varname, burn=2, thin=2,
+                                               combine=True))
+
     def test_selection_method_equivalence(self):
         varname = self.mtrace.varnames[0]
         mtrace = self.mtrace
@@ -234,11 +248,6 @@ class SelectionTestCase(ModelBackendSampledTestCase):
                          mtrace[varname])
         npt.assert_equal(mtrace[varname],
                          mtrace.__getattr__(varname))
-
-
-class SelectionNoSliceTestCase(SelectionTestCase):
-    def test_get_slice(self):
-        pass
 
 
 class DumpLoadTestCase(ModelBackendSampledTestCase):
@@ -322,8 +331,10 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
 
     def test_number_of_draws(self):
         for varname in self.test_point.keys():
-            values0 = self.mtrace0.get_values(varname, squeeze=False)
-            values1 = self.mtrace1.get_values(varname, squeeze=False)
+            values0 = self.mtrace0.get_values(varname, combine=False,
+                                              squeeze=False)
+            values1 = self.mtrace1.get_values(varname, combine=False,
+                                              squeeze=False)
             assert values0[0].shape[0] == self.draws
             assert values1[0].shape[0] == self.draws
 

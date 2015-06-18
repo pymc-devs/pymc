@@ -19,9 +19,8 @@ from glob import glob
 import numpy as np
 import os
 import pandas as pd
-import warnings
 
-from ..backends import base
+from ..backends import base, ndarray
 
 
 class Text(base.BaseTrace):
@@ -128,7 +127,9 @@ class Text(base.BaseTrace):
         return vals[burn::thin]
 
     def _slice(self, idx):
-        warnings.warn('Slice for Text backend has no effect.')
+        if idx.stop is not None:
+            raise ValueError('Stop value in slice not supported.')
+        return ndarray._slice_as_ndarray(self, idx)
 
     def point(self, idx):
         """Return dictionary of point values at `idx` for current chain
@@ -186,14 +187,14 @@ def load(name, model=None):
     """
     files = glob(os.path.join(name, 'chain-*.csv'))
 
-    traces = []
+    straces = []
     for f in files:
         chain = int(os.path.splitext(f)[0].rsplit('-', 1)[1])
-        trace = Text(name, model=model)
-        trace.chain = chain
-        trace.filename = f
-        traces.append(trace)
-    return base.MultiTrace(traces)
+        strace = Text(name, model=model)
+        strace.chain = chain
+        strace.filename = f
+        straces.append(strace)
+    return base.MultiTrace(straces)
 
 
 def dump(name, trace, chains=None):
@@ -213,36 +214,36 @@ def dump(name, trace, chains=None):
     if chains is None:
         chains = trace.chains
 
-    var_shapes = trace._traces[chains[0]].var_shapes
+    var_shapes = trace._straces[chains[0]].var_shapes
     flat_names = {v: _create_flat_names(v, shape)
                   for v, shape in var_shapes.items()}
 
     for chain in chains:
         filename = os.path.join(name, 'chain-{}.csv'.format(chain))
-        df = _trace_to_df(trace._traces[chain], flat_names)
+        df = _strace_to_df(trace._straces[chain], flat_names)
         df.to_csv(filename, index=False)
 
 
-def _trace_to_df(trace, flat_names=None):
+def _strace_to_df(strace, flat_names=None):
     """Convert single-chain trace to Pandas DataFrame.
 
     Parameters
     ----------
-    trace : NDarray trace
+    strace : NDarray trace
     flat_names : dict or None
-        A dictionary that maps each variable name in `trace` to a list
+        A dictionary that maps each variable name in `strace` to a list
         of flat variable names (e.g., ['x__0', 'x__1', ...])
     """
     if flat_names is None:
         flat_names = {v: _create_flat_names(v, shape)
-                      for v, shape in trace.var_shapes.items()}
+                      for v, shape in strace.var_shapes.items()}
 
     var_dfs = []
-    for varname, shape in trace.var_shapes.items():
-        vals = trace[varname]
+    for varname, shape in strace.var_shapes.items():
+        vals = strace.get_values(varname)
         if len(shape) == 1:
             flat_vals = vals
         else:
-            flat_vals = vals.reshape(len(trace), np.prod(shape))
+            flat_vals = vals.reshape(len(strace), np.prod(shape))
         var_dfs.append(pd.DataFrame(flat_vals, columns=flat_names[varname]))
     return pd.concat(var_dfs, axis=1)
