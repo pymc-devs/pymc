@@ -14,7 +14,7 @@ URL = "http://github.com/pymc-devs/pymc"
 LICENSE = "Apache License, Version 2.0"
 VERSION = "3.0"
 
-classifiers = ['Development Status :: 3 - Alpha',
+classifiers = ['Development Status :: 4 - Beta',
                'Programming Language :: Python',
                'Programming Language :: Python :: 2',
                'Programming Language :: Python :: 3',

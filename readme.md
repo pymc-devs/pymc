@@ -1,52 +1,53 @@
-# PyMC 3
+# PyMC3
 [![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/pymc-devs/pymc?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 [![Build Status](https://travis-ci.org/pymc-devs/pymc3.png?branch=master)](https://travis-ci.org/pymc-devs/pymc3)
 
-PyMC is a python module for Bayesian statistical modeling and model fitting which focuses on advanced Markov chain Monte Carlo fitting algorithms. Its flexibility and extensibility make it applicable to a large suite of problems.
+PyMC3 is a python module for Bayesian statistical modeling and model fitting which focuses on advanced Markov chain Monte Carlo fitting algorithms. Its flexibility and extensibility make it applicable to a large suite of problems.
 
 Check out the [Tutorial](http://pymc-devs.github.io/pymc3/getting_started/)!
 
-***PyMC 3 is alpha software*** and is not ready for use in production. We encourage most new users to use the current release version in the [PyMC 2 repository](https://github.com/pymc-devs/pymc).
+PyMC3 is Beta software. Users should consider using [PyMC 2 repository](https://github.com/pymc-devs/pymc).
 
 ## Features
 
  * Intuitive model specification syntax, for example, `x ~ N(0,1)` translates to `x = Normal(0,1)`
- * Powerful sampling algorithms such as [Hamiltonian Monte Carlo](http://en.wikipedia.org/wiki/Hybrid_Monte_Carlo)
- * Easy optimization for finding the *maximum a posteriori* point
+ * Powerful sampling algorithms such as the [No U-Turn Sampler] allow complex models with thousands of parameters with little specialized knowledge of fitting algorithms.
+ * Easy optimization for finding the *maximum a posteriori*(MAP) point
  * [Theano](http://deeplearning.net/software/theano/) features
   * Numpy broadcasting and advanced indexing
   * Linear algebra operators
   * Computation optimization and dynamic C compilation
  * Simple extensibility
+ * Transparent support for missing value imputation
 
 ## Getting started
- * [PyMC 3 Tutorial](http://pymc-devs.github.io/pymc3/getting_started/)
+ * [PyMC3 Tutorial](http://pymc-devs.github.io/pymc3/getting_started/)
  * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py)
  * [Global Health Metrics & Evaluation model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/GHME%202013.ipynb) case study for GHME 2013
  * [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/stochastic_volatility.ipynb)
  * [Several blog posts on linear regression](http://twiecki.github.io/tag/bayesian-statistics.html)
  * [Talk at PyData NYC 2013 on PyMC3](http://twiecki.github.io/blog/2013/12/12/bayesian-data-analysis-pymc3/)
  * [PyMC3 port of the models presented in the book "Doing Bayesian Data Analysis" by John Kruschke](https://github.com/aloctavodia/Doing_bayesian_data_analysis)
- * [The PyMC examples folder](https://github.com/pymc-devs/pymc3/tree/master/pymc3/examples)
+ * [The PyMC3 examples folder](https://github.com/pymc-devs/pymc3/tree/master/pymc3/examples)
 
 ## Installation
 
-The latest version of PyMC 3 can be installed from the master branch using pip:
+The latest version of PyMC3 can be installed from the master branch using pip:
 
 ```
 pip install --process-dependency-links git+https://github.com/pymc-devs/pymc3
 ```
 
-The `--process-dependency-links` flag ensures that the developmental branch of Theano, which PyMC requires, is installed. If a recent developmental version of Theano has been installed with another method, this flag can be dropped.
+The `--process-dependency-links` flag ensures that the developmental branch of Theano, which PyMC3 requires, is installed. If a recent developmental version of Theano has been installed with another method, this flag can be dropped.
 
-Another option is to clone the repository and install PyMC using `python setup.py install` or `python setup.py develop`.
+Another option is to clone the repository and install PyMC3 using `python setup.py install` or `python setup.py develop`.
 
-**Note:** Running `pip install pymc` will install PyMC 2.3, not PyMC 3, from PyPI.
+**Note:** Running `pip install pymc` will install PyMC 2.3, not PyMC3, from PyPI.
 
 ## Dependencies
 
-PyMC is tested on Python 2.7 and 3.3 and depends on Theano, NumPy,
+PyMC3 is tested on Python 2.7 and 3.3 and depends on Theano, NumPy,
 SciPy, Pandas, and Matplotlib (see setup.py for version information).
 
 ### Optional
