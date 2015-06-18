@@ -915,5 +915,4 @@ class ShiftedInverseGaussian(InverseGaussian):
     
     def logp(self, value):        
         return InverseGaussian.logp(self, value - self.alpha)     
-       
-       
+
