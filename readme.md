@@ -12,7 +12,7 @@ PyMC3 is Beta software. Users should consider using [PyMC 2 repository](https://
 ## Features
 
  * Intuitive model specification syntax, for example, `x ~ N(0,1)` translates to `x = Normal(0,1)`
- * Powerful sampling algorithms such as the [No U-Turn Sampler](http://arxiv.org/abs/1111.4246) allow complex models with thousands of parameters with little specialized knowledge of fitting algorithms.
+ * Powerful sampling algorithms, such as the [No U-Turn Sampler](http://arxiv.org/abs/1111.4246), allow complex models with thousands of parameters with little specialized knowledge of fitting algorithms.
  * Easy optimization for finding the *maximum a posteriori*(MAP) point
  * [Theano](http://deeplearning.net/software/theano/) features
   * Numpy broadcasting and advanced indexing
