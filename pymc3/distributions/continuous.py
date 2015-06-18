@@ -797,80 +797,79 @@ class ExGaussian(Continuous):
  
  
 class InverseGaussian(PositiveContinuous):    
-   """
-   Inverse Gaussian random variable with support :math:`x \in (0, \infty)`.
-     
-   .. math::    
-       f(x \mid \mu, \lambda) = \left(\frac{\lambda}{2\pi)}\right)^{1/2}x^{-3/2}
-       \exp\left\{ -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2\right\}
+    """
+    Inverse Gaussian random variable with support :math:`x \in (0, \infty)`.
       
-   Parameters
-   ----------
-   `mu` : float
-       Mean of the distribution (`mu` > 0).
-   `lam` : float
-       Relative precision (`lam` > 0). 
-   `phi` : float
-       Shape. Alternative parametrisation where `phi` = `lam` / `mu`.
+    .. math::    
+        f(x \mid \mu, \lambda) = \left(\frac{\lambda}{2\pi)}\right)^{1/2}x^{-3/2}
+        \exp\left\{ -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2\right\}
+       
+    Parameters
+    ----------
+    `mu` : float
+        Mean of the distribution (`mu` > 0).
+    `lam` : float
+        Relative precision (`lam` > 0). 
+    `phi` : float
+        Shape. Alternative parametrisation where `phi` = `lam` / `mu`.
+          
+    .. note::    
+        - :math:`E(X) = \mu`
+        - :math:`Var(X) = \frac{\mu^3}{\lambda}`
+      
+    References
+    ----------
+    .. [Tweedie1957]
+       Tweedie, M. C. K. (1957). 
+       Statistical Properties of Inverse Gaussian Distributions I. 
+       The Annals of Mathematical Statistics, Vol. 28, No. 2, pp. 362-377
          
-   .. note::    
-       - :math:`E(X) = \mu`
-       - :math:`Var(X) = \frac{\mu^3}{\lambda}`
-     
-   References
-   ----------
-   .. [Tweedie1957]
-      Tweedie, M. C. K. (1957). 
-      Statistical Properties of Inverse Gaussian Distributions I. 
-      The Annals of Mathematical Statistics, Vol. 28, No. 2, pp. 362-377
-        
-   .. [Michael1976]
-       Michael, J. R., Schucany, W. R. and Hass, R. W. (1976). 
-       Generating Random Variates Using Transformations with Multiple Roots. 
-       The American Statistician, Vol. 30, No. 2, pp. 88-90
-   """
-   def __init__(self, mu=1., lam=None, phi=None, *args, **kwargs):
-       super(InverseGaussian, self).__init__(*args, **kwargs)
-       self.mu = mu     
-       if lam == None:
-           if phi == None:
-               lam = phi = 1.
-           else:
-               lam = mu * phi
-       else:
-           if phi is not None:
-               raise ValueError("Cannot pass both lam and phi to inverse gaussian family")
-           else:
-               phi = lam / mu    
-       self.lam = lam
-       self.phi = phi
-       self.mean = mu
-       self.mode = mu * ( sqrt(1. + (1.5 * mu / lam) ** 2) - 1.5 * mu / lam )
-       self.variance = (mu ** 3) / lam           
+    .. [Michael1976]
+        Michael, J. R., Schucany, W. R. and Hass, R. W. (1976). 
+        Generating Random Variates Using Transformations with Multiple Roots. 
+        The American Statistician, Vol. 30, No. 2, pp. 88-90
+    """
+    def __init__(self, mu=None, lam=None, phi=None, *args, **kwargs):
+        super(InverseGaussian, self).__init__(*args, **kwargs)
+        if mu is None:
+            self.mu = lam / phi
+            self.lam = lam
+            self.phi = phi
+        else:
+            if lam is None:
+                self.mu = mu
+                self.lam = mu * phi
+                self.phi = phi
+            else:
+                self.mu = mu
+                self.lam = lam
+                self.phi = lam / mu
+        self.mode = mu * ( sqrt(1. + (1.5 * mu / lam) ** 2) - 1.5 * mu / lam )
+        self.variance = (mu ** 3) / lam           
  
-   def random(self, size=None):
-       if size is None:
-           size = 1
-       mu = self.mu
-       lam = self.lam
-       v = rnormal(loc=0., scale=1., size=size) ** 2
-       x = mu + (mu ** 2) * v / (2. * lam) - mu/(2. * lam) * sqrt(4. * mu * lam * v + (mu * v) ** 2)
-       z = runiform(low=0., high=1., size=size)
-       # i = z > mu / (mu + x)
-       # x[i] = (mu**2) / x[i]
-       i = floor(z - mu / (mu + x)) * 2 + 1
-       x = (x ** -i) * (mu ** (i+1))
-       return x 
-     
-   def logp(self, value):        
-       mu = self.mu
-       lam = self.lam
-       # value *must* be iid. Otherwise this is wrong.        
-       return bound(logpow(lam / (2. * pi), 0.5) - logpow(value, 1.5) 
-                   - 0.5 * lam / value * ((value - mu) / mu) ** 2,
-                mu > 0.,
-                lam > 0.,
-                value > 0.)
+    def random(self, size=None):
+        if size is None:
+            size = 1
+        mu = self.mu
+        lam = self.lam
+        v = rnormal(loc=0., scale=1., size=size) ** 2
+        x = mu + (mu ** 2) * v / (2. * lam) - mu/(2. * lam) * sqrt(4. * mu * lam * v + (mu * v) ** 2)
+        z = runiform(low=0., high=1., size=size)
+        # i = z > mu / (mu + x)
+        # x[i] = (mu**2) / x[i]
+        i = floor(z - mu / (mu + x)) * 2 + 1
+        x = (x ** -i) * (mu ** (i + 1))
+        return x 
+      
+    def logp(self, value):        
+        mu = self.mu
+        lam = self.lam
+        # value *must* be iid. Otherwise this is wrong.        
+        return bound(logpow(lam / (2. * pi), 0.5) - logpow(value, 1.5) 
+                    - 0.5 * lam / value * ((value - mu) / mu) ** 2,
+                 mu > 0.,
+                 lam > 0.,
+                 value > 0.)
        
 class ShiftedInverseGaussian(InverseGaussian):    
     """
@@ -904,7 +903,7 @@ class ShiftedInverseGaussian(InverseGaussian):
         Bayesian estimation of the 3-parameter inverse gaussian distribution.
         Trabajos de Estadistica, Vol. 6, No. 1, pp 45-62
     """
-    def __init__(self, mu=0., lam=None, alpha=0., phi=None, *args, **kwargs):
+    def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
         super(ShiftedInverseGaussian, self).__init__(mu=mu, lam=lam, phi=phi, *args, **kwargs)
         self.alpha = alpha
         self.mean = mu + alpha
