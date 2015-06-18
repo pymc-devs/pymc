@@ -36,14 +36,14 @@ The call will return the sampling values of `x`, with the values for
 all chains concatenated. (For a single call to `sample`, the number of
 chains will correspond to the `njobs` argument.)
 
-For more control of which values are returned, the `get_values` method
-can be used. The call below will return values from all chains, burning
-the first 1000 iterations from each chain.
+To discard the first N values of each chain, slicing syntax can be
+used.
 
-    >>> trace.get_values('x', burn=1000)
+    >>> trace['x', 1000:]
 
-Setting the `combine` flag to False will return a list of arrays,
-keeping the results from all the chains separate.
+The `get_values` method offers more control over which values are
+returned. The call below will discard the first 1000 iterations
+from each chain and keep the values for each chain as separate arrays.
 
     >>> trace.get_values('x', burn=1000, combine=False)
 

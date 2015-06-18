@@ -229,6 +229,18 @@ class SelectionTestCase(ModelBackendSampledTestCase):
             result = self.mtrace.get_values(varname, combine=True, thin=thin)
             npt.assert_equal(result, expected)
 
+    def test_getitem_equivalence(self):
+        mtrace = self.mtrace
+        for varname in self.test_point.keys():
+            npt.assert_equal(mtrace[varname],
+                             mtrace.get_values(varname, combine=True))
+            npt.assert_equal(mtrace[varname, 2:],
+                             mtrace.get_values(varname, burn=2,
+                                               combine=True))
+            npt.assert_equal(mtrace[varname, 2::2],
+                             mtrace.get_values(varname, burn=2, thin=2,
+                                               combine=True))
+
     def test_selection_method_equivalence(self):
         varname = self.mtrace.varnames[0]
         mtrace = self.mtrace
