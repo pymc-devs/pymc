@@ -571,3 +571,10 @@ def checkd(distfam, valuedomain, vardomains,
 
         for check in checks:
             check(m, m.named_vars['value'], valuedomain, vardomains)
+
+def test_std_cdf():
+    test_cases = R.vals
+    assert_almost_equal(std_cdf(test_cases).tag.test_value, 
+                        sp.norm.cdf(test_cases), 6)
+    
+    
