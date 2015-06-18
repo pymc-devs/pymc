@@ -16,10 +16,11 @@ Selecting a backend
 By default, a NumPy array is used as the backend. To specify a different
 backend, pass a backend instance to `sample`.
 
-For example, the following would save traces to the file 'test.db'.
+For example, the following would save the sampling values to CSV files
+in the directory 'test'.
 
     >>> import pymc3 as pm
-    >>> db = pm.backends.SQLite('test.db')
+    >>> db = pm.backends.Text('test')
     >>> trace = pm.sample(..., trace=db)
 
 Selecting values from a backend
@@ -63,7 +64,7 @@ Loading a saved backend
 Saved backends can be loaded using `load` function in the module for the
 specific backend.
 
-    >>> trace = pm.backends.sqlite.load('test.db')
+    >>> trace = pm.backends.text.load('test')
 
 Writing custom backends
 -----------------------
