@@ -840,6 +840,7 @@ class InverseGaussian(PositiveContinuous):
        else:
            if phi is not None:
                raise ValueError("Cannot pass both lam and phi to inverse gaussian family")
+           else:
                phi = lam / mu    
        self.lam = lam
        self.phi = phi
