@@ -187,7 +187,8 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
 
     for i, v in enumerate(vars):
         for j in range(chains):
-            d = np.squeeze(trace.get_values(v, chains=[j], burn=burn))
+            d = np.squeeze(trace.get_values(v, chains=[j], burn=burn,
+                                            combine=False))
 
             ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
 

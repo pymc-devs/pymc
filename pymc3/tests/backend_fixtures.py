@@ -138,16 +138,17 @@ class SelectionTestCase(ModelBackendSampledTestCase):
     """
     def test_get_values_default(self):
         for varname in self.test_point.keys():
-            expected = [self.expected[0][varname], self.expected[1][varname]]
+            expected = np.concatenate([self.expected[chain][varname]
+                                       for chain in [0, 1]])
             result = self.mtrace.get_values(varname)
             npt.assert_equal(result, expected)
 
-    def test_get_values_burn_keyword(self):
+    def test_get_values_nocombine_burn_keyword(self):
         burn = 2
         for varname in self.test_point.keys():
             expected = [self.expected[0][varname][burn:],
                         self.expected[1][varname][burn:]]
-            result = self.mtrace.get_values(varname, burn=burn)
+            result = self.mtrace.get_values(varname, burn=burn, combine=False)
             npt.assert_equal(result, expected)
 
     def test_len(self):
@@ -158,12 +159,12 @@ class SelectionTestCase(ModelBackendSampledTestCase):
             self.assertEqual(self.expected[0][varname].dtype,
                              self.mtrace.get_values(varname, chains=0).dtype)
 
-    def test_get_values_thin_keyword(self):
+    def test_get_values_nocombine_thin_keyword(self):
         thin = 2
         for varname in self.test_point.keys():
             expected = [self.expected[0][varname][::thin],
                         self.expected[1][varname][::thin]]
-            result = self.mtrace.get_values(varname, thin=thin)
+            result = self.mtrace.get_values(varname, thin=thin, combine=False)
             npt.assert_equal(result, expected)
 
     def test_get_point(self):
@@ -190,10 +191,11 @@ class SelectionTestCase(ModelBackendSampledTestCase):
             result = self.mtrace.get_values(varname, chains=[0])
             npt.assert_equal(result, expected)
 
-    def test_get_values_chains_reversed(self):
+    def test_get_values_nocombine_chains_reversed(self):
         for varname in self.test_point.keys():
             expected = [self.expected[1][varname], self.expected[0][varname]]
-            result = self.mtrace.get_values(varname, chains=[1, 0])
+            result = self.mtrace.get_values(varname, chains=[1, 0],
+                                            combine=False)
             npt.assert_equal(result, expected)
 
     def test_nchains(self):
@@ -322,8 +324,10 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
 
     def test_number_of_draws(self):
         for varname in self.test_point.keys():
-            values0 = self.mtrace0.get_values(varname, squeeze=False)
-            values1 = self.mtrace1.get_values(varname, squeeze=False)
+            values0 = self.mtrace0.get_values(varname, combine=False,
+                                              squeeze=False)
+            values1 = self.mtrace1.get_values(varname, combine=False,
+                                              squeeze=False)
             assert values0[0].shape[0] == self.draws
             assert values1[0].shape[0] == self.draws
 

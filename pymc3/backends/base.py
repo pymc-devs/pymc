@@ -199,7 +199,7 @@ class MultiTrace(object):
         chain = self.chains[-1]
         return self._traces[chain].varnames
 
-    def get_values(self, varname, burn=0, thin=1, combine=False, chains=None,
+    def get_values(self, varname, burn=0, thin=1, combine=True, chains=None,
                    squeeze=True):
         """Get values from traces.
 

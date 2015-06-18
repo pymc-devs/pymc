@@ -159,7 +159,7 @@ def gelman_rubin(mtrace):
     for var in mtrace.varnames:
 
         # Get all traces for var
-        x = np.array(mtrace.get_values(var))
+        x = np.array(mtrace.get_values(var, combine=False))
 
         try:
             Rhat[var] = calc_rhat(x)
@@ -256,7 +256,7 @@ def effective_n(mtrace):
     for var in mtrace.varnames:
 
         # Get all traces for var
-        x = np.array(mtrace.get_values(var))
+        x = np.array(mtrace.get_values(var, combine=False))
 
         try:
             n_eff[var] = calc_n_eff(x)
