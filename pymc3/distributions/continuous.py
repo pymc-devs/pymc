@@ -14,7 +14,8 @@ from . import transforms
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
            'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
-           'Pareto', 'InverseGamma', 'ExGaussian', 'InverseGaussian']
+           'Pareto', 'InverseGamma', 'ExGaussian', 
+           'InverseGaussian', 'ShiftedInverseGaussian']
 
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
@@ -869,5 +870,49 @@ class InverseGaussian(PositiveContinuous):
                 mu > 0.,
                 lam > 0.,
                 value > 0.)
+       
+class ShiftedInverseGaussian(InverseGaussian):    
+    """
+    Three parameter 'shifted' inverse gaussian random variable 
+    with support :math:`x \in (\alpha, \infty)` where :math:`\alpha \ge 0`.
+     
+    .. math::
+        f(x \mid \mu, \lambda, \alpha) = \left(\frac{\lambda}{2\pi)}\right)^{1/2}(x-\alpha)^{-3/2}
+        \exp\left\{ -\frac{\lambda}{2(x-\alpha)}\left(\frac{x-\alpha-\mu}{\mu}\right)^2\right\}
+     
+    Parameters
+    ----------
+    `mu` : float
+        Mean (`mu` > 0).
+    `lam` : float
+        Relative precision (`lam` > 0).
+    `phi` : float
+        Shape. Alternative parametrisation where `phi` = `lam` / `mu`.
+        This may provide quicker convergence when estimating parameters.
+    `alpha` : float
+        Location (`alpha` >=0, `x` - `alpha` > 0).
+         
+    .. note::
+        - :math:`E(X) = \mu + \alpha`
+        - :math:`Var(X) = \frac{\mu^3}{\lambda}`
+         
+    References
+    ----------
+    .. [Mahmoud1991}
+        Mahmoud, M. (1991).
+        Bayesian estimation of the 3-parameter inverse gaussian distribution.
+        Trabajos de Estadistica, Vol. 6, No. 1, pp 45-62
+    """
+    def __init__(self, mu=0., lam=None, alpha=0., phi=None, *args, **kwargs):
+        super(ShiftedInverseGaussian, self).__init__(mu=mu, lam=lam, phi=phi, *args, **kwargs)
+        self.alpha = alpha
+        self.mean = mu + alpha
+        self.mode = self.mode + alpha          
+ 
+    def random(self, size=None):
+        return InverseGaussian.random(self, size) + self.alpha
+    
+    def logp(self, value):        
+        return InverseGaussian.logp(self, value - self.alpha)     
        
        

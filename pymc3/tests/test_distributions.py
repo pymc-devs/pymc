@@ -15,6 +15,7 @@ import scipy.stats
 from .knownfailure import *
 
 
+
 class Domain(object):
     def __init__(self, vals, dtype=None, edges=None, shape=None):
         avals = array(vals)
@@ -572,11 +573,7 @@ def checkd(distfam, valuedomain, vardomains,
         for check in checks:
             check(m, m.named_vars['value'], valuedomain, vardomains)
 
-def test_std_cdf():
-    test_cases = R.vals
-    assert_almost_equal(std_cdf(test_cases).tag.test_value, 
-                        sp.norm.cdf(test_cases), 6)
-    
+
     
 def test_ex_gaussian():
     # Log probabilities calculated using the dexGAUS function from the R package gamlss.
@@ -624,3 +621,27 @@ def check_inverse_gaussian(value, mu, lam, logp):
     pt = {'ig': value}
     assert_almost_equal(model.fastlogp(pt),
                     logp, decimal=6, err_msg=str(pt))  
+    
+
+def test_shifted_inverse_gaussian():
+    # Log probabilities calculated using the dIG function from the R package gamlss.
+    # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/.
+    test_cases = [
+        (0.5, 0.001, 0.500, 0.000, -124500.7257914),
+        (1.0, 0.500, 0.001, 0.500, -3.3330954),
+        (2.0, 1.000, 1.000, 1.000, -0.9189385),
+        (5.0, 2.000, 2.500, 2.000, -2.2128783),
+        (7.5, 5.000, 5.000, 2.500, -2.5283764),
+        (15.0, 10.000, 7.500, 5.000, -3.3653647),
+        (50.0, 15.000, 10.000, 10.000, -5.6481874)
+        ]
+    for value, mu, lam, alpha, logp in test_cases:
+        yield check_shifted_inverse_gaussian, value, mu, lam, alpha, logp
+             
+def check_shifted_inverse_gaussian(value, mu, lam, alpha, logp):
+    with Model() as model:
+        ig = ShiftedInverseGaussian('ig', mu=mu, lam=lam, alpha=alpha, transform=None)
+    pt = {'ig': value}
+    assert_almost_equal(model.fastlogp(pt),
+                logp, decimal=6, err_msg=str(pt)) 
+

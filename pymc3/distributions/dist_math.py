@@ -63,6 +63,7 @@ def factln(n):
 def idfn(x):
     return x
 
+
 def std_cdf(x):
     """
     Calculates the standard normal cumulative distribution function.
