@@ -30,4 +30,4 @@ env:
   - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples1"
   - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples2"
 script:
-  - nosetests $TESTMD
+  - nosetests $TESTCMD
