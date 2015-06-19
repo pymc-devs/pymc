@@ -109,7 +109,7 @@ class BaseTrace(object):
         """Slice trace object."""
         raise NotImplementedError
 
-    def point(self, idx, chain=None):
+    def point(self, idx):
         """Return dictionary of point values at `idx` for current chain
         with variables names as keys.
         """
