@@ -239,7 +239,7 @@ def _trace_to_df(trace, flat_names=None):
 
     var_dfs = []
     for varname, shape in trace.var_shapes.items():
-        vals = trace[varname]
+        vals = trace.get_values(varname)
         if len(shape) == 1:
             flat_vals = vals
         else:

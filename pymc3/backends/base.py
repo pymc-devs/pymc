@@ -83,12 +83,9 @@ class BaseTrace(object):
             return self._slice(idx)
 
         try:
-            return self.point(idx)
-        except ValueError:
-            pass
-        except TypeError:
-            pass
-        return self.get_values(idx)
+            return self.point(int(idx))
+        except (ValueError, TypeError):  # Passed variable or variable name.
+            raise ValueError('Can only index with slice or integer')
 
     def __len__(self):
         raise NotImplementedError
@@ -170,12 +167,21 @@ class MultiTrace(object):
             return self._slice(idx)
 
         try:
-            return self.point(idx)
-        except ValueError:
+            return self.point(int(idx))
+        except (ValueError, TypeError):  # Passed variable or variable name.
             pass
-        except TypeError:
-            pass
-        return self.get_values(idx)
+
+        if isinstance(idx, tuple):
+            var, vslice = idx
+            burn, thin = vslice.start, vslice.step
+            if burn is None:
+                burn = 0
+            if thin is None:
+                thin = 1
+        else:
+            var = idx
+            burn, thin = 0, 1
+        return self.get_values(var, burn=burn, thin=thin)
 
     _attrs = set(['_traces', 'varnames', 'chains'])
 
@@ -199,7 +205,7 @@ class MultiTrace(object):
         chain = self.chains[-1]
         return self._traces[chain].varnames
 
-    def get_values(self, varname, burn=0, thin=1, combine=False, chains=None,
+    def get_values(self, varname, burn=0, thin=1, combine=True, chains=None,
                    squeeze=True):
         """Get values from traces.
 
