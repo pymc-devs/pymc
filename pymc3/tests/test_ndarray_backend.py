@@ -48,18 +48,18 @@ class TestMultiTrace(bf.ModelBackendSetupTestCase):
 
     def setUp(self):
         super(TestMultiTrace, self).setUp()
-        self.trace0 = self.trace
+        self.strace0 = self.strace
 
         super(TestMultiTrace, self).setUp()
-        self.trace1 = self.trace
+        self.strace1 = self.strace
 
     def test_multitrace_nonunique(self):
         self.assertRaises(ValueError,
-                          base.MultiTrace, [self.trace0, self.trace1])
+                          base.MultiTrace, [self.strace0, self.strace1])
 
     def test_merge_traces_nonunique(self):
-        mtrace0 = base.MultiTrace([self.trace0])
-        mtrace1 = base.MultiTrace([self.trace1])
+        mtrace0 = base.MultiTrace([self.strace0])
+        mtrace1 = base.MultiTrace([self.strace1])
 
         self.assertRaises(ValueError,
                           base.merge_traces, [mtrace0, mtrace1])

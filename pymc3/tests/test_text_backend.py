@@ -65,9 +65,9 @@ class TestTraceToDf(bf.ModelBackendSampledTestCase):
     name = 'text-db'
     shape = (2, 3)
 
-    def test_trace_to_df(self):
+    def test_strace_to_df(self):
         mtrace = self.mtrace
-        df = text._trace_to_df(mtrace._traces[0])
+        df = text._strace_to_df(mtrace._straces[0])
         self.assertEqual(len(mtrace), df.shape[0])
 
         checked = False

@@ -14,7 +14,7 @@ class ModelBackendSetupTestCase(unittest.TestCase):
     Provides the attributes
     - test_point
     - model
-    - trace
+    - strace
     - draws
 
     Children must define
@@ -25,9 +25,9 @@ class ModelBackendSetupTestCase(unittest.TestCase):
     def setUp(self):
         self.test_point, self.model, _ = models.beta_bernoulli(self.shape)
         with self.model:
-            self.trace = self.backend(self.name)
+            self.strace = self.backend(self.name)
         self.draws, self.chain = 3, 0
-        self.trace.setup(self.draws, self.chain)
+        self.strace.setup(self.draws, self.chain)
 
     def tearDown(self):
         if self.name is not None:
@@ -54,12 +54,12 @@ class ModelBackendSampledTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.test_point, cls.model, _ = models.beta_bernoulli(cls.shape)
         with cls.model:
-            trace0 = cls.backend(cls.name)
-            trace1 = cls.backend(cls.name)
+            strace0 = cls.backend(cls.name)
+            strace1 = cls.backend(cls.name)
 
         cls.draws = 5
-        trace0.setup(cls.draws, chain=0)
-        trace1.setup(cls.draws, chain=1)
+        strace0.setup(cls.draws, chain=0)
+        strace1.setup(cls.draws, chain=1)
 
         varnames = list(cls.test_point.keys())
         shapes = {varname: value.shape
@@ -80,11 +80,11 @@ class ModelBackendSampledTestCase(unittest.TestCase):
                       for varname in varnames}
             point1 = {varname: cls.expected[1][varname][idx, ...]
                       for varname in varnames}
-            trace0.record(point=point0)
-            trace1.record(point=point1)
-        trace0.close()
-        trace1.close()
-        cls.mtrace = base.MultiTrace([trace0, trace1])
+            strace0.record(point=point0)
+            strace1.record(point=point1)
+        strace0.close()
+        strace1.close()
+        cls.mtrace = base.MultiTrace([strace0, strace1])
 
     @classmethod
     def tearDownClass(cls):
@@ -111,21 +111,21 @@ class SamplingTestCase(ModelBackendSetupTestCase):
         for idx in range(self.draws):
             point = {varname: np.tile(idx, value.shape)
                      for varname, value in self.test_point.items()}
-            self.trace.record(point=point)
-        self.trace.close()
+            self.strace.record(point=point)
+        self.strace.close()
 
         for varname in self.test_point.keys():
-            npt.assert_equal(self.trace.get_values(varname)[0, ...],
-                             np.zeros(self.trace.var_shapes[varname]))
+            npt.assert_equal(self.strace.get_values(varname)[0, ...],
+                             np.zeros(self.strace.var_shapes[varname]))
             last_idx = self.draws - 1
-            npt.assert_equal(self.trace.get_values(varname)[last_idx, ...],
-                             np.tile(last_idx, self.trace.var_shapes[varname]))
+            npt.assert_equal(self.strace.get_values(varname)[last_idx, ...],
+                             np.tile(last_idx, self.strace.var_shapes[varname]))
 
     def test_clean_interrupt(self):
-        self.trace.record(point=self.test_point)
-        self.trace.close()
+        self.strace.record(point=self.test_point)
+        self.strace.close()
         for varname in self.test_point.keys():
-            self.assertEqual(self.trace.get_values(varname).shape[0], 1)
+            self.assertEqual(self.strace.get_values(varname).shape[0], 1)
 
 
 class SelectionTestCase(ModelBackendSampledTestCase):

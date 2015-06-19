@@ -43,9 +43,9 @@ class NDArray(base.BaseTrace):
             self.draws = old_draws + draws
             self.draws_idx = old_draws
             for varname, shape in self.var_shapes.items():
-                old_trace = self.samples[varname]
-                new_trace = np.zeros((draws, ) + shape, self.var_dtypes[varname])
-                self.samples[varname] = np.concatenate((old_trace, new_trace),
+                old_vtrace = self.samples[varname]
+                new_vtrace = np.zeros((draws, ) + shape, self.var_dtypes[varname])
+                self.samples[varname] = np.concatenate((old_vtrace, new_vtrace),
                                                        axis=0)
         else:  # Otherwise, make array of zeros for each variable.
             self.draws = draws
@@ -70,8 +70,8 @@ class NDArray(base.BaseTrace):
             return
         ## Remove trailing zeros if interrupted before completed all
         ## draws.
-        self.samples = {var: trace[:self.draw_idx]
-                        for var, trace in self.samples.items()}
+        self.samples = {var: vtrace[:self.draw_idx]
+                        for var, vtrace in self.samples.items()}
 
     ## Selection methods
 
