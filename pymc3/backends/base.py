@@ -124,23 +124,30 @@ class MultiTrace(object):
     three ways:
 
     1. Indexing with a variable or variable name (str) returns all
-       values for that variable. For convenience during interactive
-       use, values can also be accessed using the variable an
-       attribute.
+       values for that variable, combining values for all chains.
+
+       >>> trace[varname]
+
+       Slicing after the variable name can be used to burn and thin
+       the samples.
+
+       >>> trace[varname, 1000:]
+
+       For convenience during interactive use, values can also be
+       accessed using the variable an attribute.
+
+       >>> trace.varname
+
     2. Indexing with an integer returns a dictionary with values for
        each variable at the given index (corresponding to a single
        sampling iteration).
+
     3. Slicing with a range returns a new trace with the number of draws
        corresponding to the range.
 
     For any methods that require a single trace (e.g., taking the length
     of the MultiTrace instance, which returns the number of draws), the
     trace with the highest chain number is always used.
-
-    Parameters
-    ----------
-    traces : list of traces
-        Each object must have a unique `chain` attribute.
     """
     def __init__(self, traces):
         self._traces = {}
