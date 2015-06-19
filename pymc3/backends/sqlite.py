@@ -322,15 +322,15 @@ def load(name, model=None):
     varnames = _get_table_list(db.cursor)
     chains = _get_chain_list(db.cursor, varnames[0])
 
-    traces = []
+    straces = []
     for chain in chains:
-        trace = SQLite(name, model=model)
-        trace.varnames = varnames
-        trace.chain = chain
-        trace._is_setup = True
-        trace.db = db  # Share the db with all traces.
-        traces.append(trace)
-    return base.MultiTrace(traces)
+        strace = SQLite(name, model=model)
+        strace.varnames = varnames
+        strace.chain = chain
+        strace._is_setup = True
+        strace.db = db  # Share the db with all traces.
+        straces.append(strace)
+    return base.MultiTrace(straces)
 
 
 def _get_table_list(cursor):
