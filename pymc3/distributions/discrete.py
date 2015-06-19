@@ -1,5 +1,6 @@
 from .dist_math import *
 from theano.tensor import as_tensor_variable
+import theano
 
 __all__ = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson', 'NegativeBinomial',
 'ConstantDist', 'ZeroInflatedPoisson', 'DiscreteUniform', 'Geometric',
@@ -287,10 +288,13 @@ class Categorical(Discrete):
         p = self.p
         k = self.k
 
+        sumto1 = theano.gradient.zero_grad(
+            le(abs(sum(p) - 1), 1e-5)
+            )
         return bound(log(p[value]),
             value >= 0,
             value <= (k - 1),
-            le(abs(sum(p) - 1), 1e-5))
+            sumto1)
 
 
 class ConstantDist(Discrete):
