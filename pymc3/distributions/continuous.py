@@ -844,6 +844,7 @@ class InverseGaussian(PositiveContinuous):
                 self.mu = mu
                 self.lam = lam
                 self.phi = lam / mu
+        self.mean = mu
         self.mode = mu * ( sqrt(1. + (1.5 * mu / lam) ** 2) - 1.5 * mu / lam )
         self.variance = (mu ** 3) / lam           
  
