@@ -1,6 +1,6 @@
 """Base backend for traces
 
-See the docstring for pymc3.backends for more information (includng
+See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
 import numpy as np
