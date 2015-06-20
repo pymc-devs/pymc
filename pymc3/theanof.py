@@ -155,7 +155,7 @@ def make_shared_replacements(vars, model):
     othervars = set(model.vars) - set(vars)
     return {var : theano.shared(var.tag.test_value, var.name + '_shared') for var in othervars }
 
-def join_nonshared_inputs(xs, vars, shared):
+def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     """
     Takes a list of theano Variables and joins their non shared inputs into a single input.
     
@@ -172,8 +172,12 @@ def join_nonshared_inputs(xs, vars, shared):
     """
     joined = theano.tensor.concatenate([var.ravel() for var in vars])
 
-    tensor_type = joined.type
-    inarray = tensor_type('inarray')
+    if not make_shared:
+        tensor_type = joined.type
+        inarray = tensor_type('inarray')
+    else:
+        inarray = theano.shared(joined.tag.test_value, 'inarray')
+
     ordering = ArrayOrdering(vars)
     inarray.tag.test_value = joined.tag.test_value
     
