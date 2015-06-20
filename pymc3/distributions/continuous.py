@@ -773,23 +773,19 @@ class ExGaussian(Continuous):
         self.mean = mu + nu
         self.variance = (sigma ** 2) + (nu ** 2)    
             
-    def random(self, size=None):
-        if size is None:
-            size = 1
+    def random(self, size=1.):
         u = runiform(low=0., high=1., size=size)
-        n = rnormal(mu, sigma, size=size)    
-        return n - nu * log(u)
+        n = rnormal(self.mu, self.sigma, size=size)    
+        return n - self.nu * log(u)
      
     def logp(self, value):        
         mu = self.mu
         sigma = self.sigma
-        nu = self.nu
-         
-        if gt(nu,  0.05 * sigma):# This condition suggested by exGAUS.R from gamlss 
-            lp = -log(nu) + (mu - value) / nu + 0.5 * (sigma / nu) ** 2 + \
-                     logpow(std_cdf((value - mu) / sigma - sigma / nu), 1.)
-        else:
-            lp = - log(sigma * sqrt(2. * pi)) - 0.5 * ((value - mu) / sigma) ** 2
+        nu = self.nu         
+        lp = switch(gt(nu,  0.05 * sigma),# This condition suggested by exGAUS.R from gamlss 
+                    -log(nu) + (mu - value) / nu + 0.5 * (sigma / nu) ** 2 + \
+                        logpow(std_cdf((value - mu) / sigma - sigma / nu), 1.),
+                    -log(sigma * sqrt(2. * pi)) - 0.5 * ((value - mu) / sigma) ** 2)
          
         return bound(lp,
                  sigma > 0.,
