@@ -281,16 +281,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
 
     """
     import matplotlib.pyplot as plt
-    try:
-        import matplotlib.gridspec as gridspec
-    except ImportError:
-        gridspec = None
-
-    if not gridspec:
-        print_('\nYour installation of matplotlib is not recent enough to ' +
-               'support summary_plot; this function is disabled until ' +
-               'matplotlib is updated.')
-        return
+    from matplotlib import gridspec
 
     # Quantiles to be calculated
     qlist = [100 * alpha / 2, 50, 100 * (1 - alpha / 2)]
