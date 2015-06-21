@@ -5,7 +5,7 @@ import numpy as np
 from numpy.random import uniform
 from numpy import log, isfinite
 
-__all__ = ['ArrayStep', 'FastArrayStep', 'metrop_select', 'SamplerHist']
+__all__ = ['ArrayStep', 'ArrayStepShared', 'metrop_select', 'SamplerHist']
 
 # TODO Add docstrings to ArrayStep
 
@@ -64,8 +64,11 @@ class ArrayStep(BlockedStep):
         apoint = self.astep(bij.map(point), *inputs)
         return bij.rmap(apoint)
 
-class FastArrayStep(BlockedStep):
+class ArrayStepShared(BlockedStep):
     """Faster version of ArrayStep that requires the substep method that does not wrap the functions the step method uses.
+
+    Works by setting shared variables before using the step. This eliminates the mapping and unmapping overhead as well 
+    as moving fewer variables around.
     """
     def __init__(self, vars, shared, blocked=True):
         """

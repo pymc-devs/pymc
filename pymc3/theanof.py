@@ -140,6 +140,9 @@ def make_shared_replacements(vars, model):
     """
     Makes shared replacements for all *other* variables than the ones passed.
 
+    This way functions can be called many times without setting unchanging variables. Allows us 
+    to use func.trust_input by removing the need for DictToArrayBijection and kwargs.
+
     Parameters
     ----------
     vars : list of variables not to make shared
@@ -186,8 +189,8 @@ def join_nonshared_inputs(xs, vars, shared):
 
 def reshape_t(x, shape):
     """Work around fact that x.reshape(()) doesn't work"""
-    if shape:   return x.reshape(shape)
-    else:       return x[0]
+    if shape != ():   return x.reshape(shape)
+    else:             return x[0]
 
 class CallableTensor(object):
     """Turns a symbolic variable with one input into a function that returns symbolic arguments with the one variable replaced with the input.

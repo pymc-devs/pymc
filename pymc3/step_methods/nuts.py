@@ -11,7 +11,7 @@ import theano.tensor
 
 __all__ = ['NUTS']
 
-class NUTS(FastArrayStep):
+class NUTS(ArrayStepShared):
     """
     Automatically tunes step size and adjust number of steps for good performance.
 
@@ -51,6 +51,8 @@ class NUTS(FastArrayStep):
             t0 : int, default 10
                 slows inital adapatation
             model : Model
+            profile : bool or ProfileStats
+                sets the functions to be profiled
         """
         model = modelcontext(model)
 

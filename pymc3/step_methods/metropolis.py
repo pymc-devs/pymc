@@ -47,7 +47,7 @@ class MultivariateNormalProposal(Proposal):
         return np.random.multivariate_normal(mean=np.zeros(self.s.shape[0]), cov=self.s)
 
 
-class Metropolis(FastArrayStep):
+class Metropolis(ArrayStepShared):
     """
     Metropolis-Hastings sampling step
 
