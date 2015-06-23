@@ -269,9 +269,9 @@ class Wald(PositiveContinuous):
         mu = self.mu 
         lam = self.lam 
         alpha = self.alpha 
-        # x *must* be iid. Otherwise this is wrong.        
-        return bound(logpow(lam / (2. * pi), 0.5) - logpow(x, 1.5) 
-                    - 0.5 * lam / x * ((x - mu) / (mu)) ** 2,
+        # alpha *must* be iid. Otherwise this is wrong.        
+        return bound(logpow(lam / (2. * pi), 0.5) - logpow(value - alpha, 1.5) 
+                    - 0.5 * lam / (value - alpha) * ((value - alpha - mu) / (mu)) ** 2,
                  mu > 0.,
                  lam > 0.,
                  value > 0.,
