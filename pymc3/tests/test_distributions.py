@@ -172,11 +172,43 @@ def test_chi_squared():
             lambda value, nu: sp.chi2.logpdf(value, df=nu)
             )
 
-def test_wald():
+
+
+def test_wald_scipy():
     pymc3_matches_scipy(
             Wald, Rplus, {'mu': Rplus},
             lambda value, mu: sp.invgauss.logpdf(value, mu)
             )
+
+def test_wald():
+    # Log probabilities calculated using the dIG function from the R package gamlss.
+    # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/.
+    test_cases = [# 
+        (.5, .001, .5, None, 0., -124500.7257914),
+        (1., .5, .001, None, 0., -4.3733162),
+        (2., 1., None, None, 0., -2.2086593),
+        (5., 2., 2.5, None, 0., -3.4374500),
+        (7.5, 5., None, 1., 0., -3.2199074),
+        (15., 10., None, .75, 0., -4.0360623),
+        (50., 15., None, .66666 , 0., -6.1801249),
+        (.5, .001, 0.5, None, 0., -124500.7257914),
+        (1., .5, .001, None, .5, -3.3330954),
+        (2., 1., None, None, 1., -0.9189385),
+        (5., 2., 2.5, None, 2., -2.2128783),
+        (7.5, 5., None, 1., 2.5, -2.5283764),
+        (15., 10., None, .75, 5., -3.3653647),
+        (50., 15., None, .666666, 10., -5.6481874)
+        ]
+    for value, mu, lam, phi, alpha, logp in test_cases:
+        yield check_wald, value, mu, lam, phi, alpha, logp
+             
+def check_wald(value, mu, lam, phi, alpha, logp):   
+    with Model() as model:
+        wald = Wald('wald', mu=mu, lam=lam, phi=phi, alpha=alpha, transform=None)
+    pt = {'wald': value}
+    assert_almost_equal(model.fastlogp(pt),
+                    logp, decimal=6, err_msg=str(pt))  
+    
 
 def test_beta():
     pymc3_matches_scipy(
@@ -599,49 +631,5 @@ def check_ex_gaussian(value, mu, sigma, nu, logp):
                 logp, decimal=6, err_msg=str(pt)) 
     
 
-def test_inverse_gaussian():
-    # Log probabilities calculated using the dIG function from the R package gamlss.
-    # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/.
-    #
-    # NB. Cannot use Scipy invgauss as that fixes the precision (tau) at 1.
-    test_cases = [# 
-        (0.5, 0.0010, 0.500, -124500.7257914),
-        (1.0, 0.5000, 0.001, -4.3733162),
-        (2.0, 1.0000, 1.000, -2.2086593),
-        (5.0, 2.0000, 2.500, -3.4374500),
-        (7.5, 5.0000, 5.000, -3.2199074),
-        (15.0, 10.0000, 7.500, -4.0360623),
-        (50.0, 15.0000, 10.000, -6.1801249)]
-    for value, mu, lam, logp in test_cases:
-        yield check_inverse_gaussian, value, mu, lam, logp
-             
-def check_inverse_gaussian(value, mu, lam, logp):   
-    with Model() as model:
-        ig = InverseGaussian('ig', mu=mu, lam=lam, transform=None)
-    pt = {'ig': value}
-    assert_almost_equal(model.fastlogp(pt),
-                    logp, decimal=6, err_msg=str(pt))  
-    
-
-def test_shifted_inverse_gaussian():
-    # Log probabilities calculated using the dIG function from the R package gamlss.
-    # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/.
-    test_cases = [
-        (0.5, 0.001, 0.500, 0.000, -124500.7257914),
-        (1.0, 0.500, 0.001, 0.500, -3.3330954),
-        (2.0, 1.000, 1.000, 1.000, -0.9189385),
-        (5.0, 2.000, 2.500, 2.000, -2.2128783),
-        (7.5, 5.000, 5.000, 2.500, -2.5283764),
-        (15.0, 10.000, 7.500, 5.000, -3.3653647),
-        (50.0, 15.000, 10.000, 10.000, -5.6481874)
-        ]
-    for value, mu, lam, alpha, logp in test_cases:
-        yield check_shifted_inverse_gaussian, value, mu, lam, alpha, logp
-             
-def check_shifted_inverse_gaussian(value, mu, lam, alpha, logp):
-    with Model() as model:
-        ig = ShiftedInverseGaussian('ig', mu=mu, lam=lam, alpha=alpha, transform=None)
-    pt = {'ig': value}
-    assert_almost_equal(model.fastlogp(pt),
-                logp, decimal=6, err_msg=str(pt)) 
+ 
 

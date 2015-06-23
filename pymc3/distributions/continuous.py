@@ -14,8 +14,7 @@ from . import transforms
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
            'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
-           'Pareto', 'InverseGamma', 'ExGaussian', 
-           'InverseGaussian', 'ShiftedInverseGaussian']
+           'Pareto', 'InverseGamma', 'ExGaussian']
 
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
@@ -190,35 +189,94 @@ class HalfNormal(PositiveContinuous):
         )
 
 
-class Wald(Continuous):
+class Wald(PositiveContinuous):    
     """
-    Wald (inverse Gaussian) log likelihood.
-
-    .. math::
-        f(x \mid \mu) = \sqrt{\frac{1}{2\pi x^3}} \exp\left\{ \frac{-(x-\mu)^2}{2 \mu^2 x} \right\}
-
+    Wald random variable with support :math:`x \in (0, \infty)`.
+      
+    .. math::    
+        f(x \mid \mu, \lambda) = \left(\frac{\lambda}{2\pi)}\right)^{1/2}x^{-3/2}
+        \exp\left\{ -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2\right\}
+       
     Parameters
     ----------
-    mu : float
-        Mean of the distribution.
-
-    .. note::
-    - :math:`E(X) = \mu`
-    - :math:`Var(X) = \mu^3`
+    mu : float, optional 
+        Mean of the distribution (mu > 0).
+    lam : float, optional
+        Relative precision (lam > 0). 
+    phi : float, optional
+        Shape. Alternative parametrisation where phi = lam / mu (phi > 0).
+    alpha : float, optional
+        Shift/location (alpha >= 0).
+        
+    The Wald can be instantiated by specifying mu only (so lam=1),
+    mu and lam, mu and phi, or lam and phi.    
+    
+    .. note::    
+        - :math:`E(X) = \mu`
+        - :math:`Var(X) = \frac{\mu^3}{\lambda}`
+      
+    References
+    ----------
+    .. [Tweedie1957]
+       Tweedie, M. C. K. (1957). 
+       Statistical Properties of Inverse Gaussian Distributions I. 
+       The Annals of Mathematical Statistics, Vol. 28, No. 2, pp. 362-377
+         
+    .. [Michael1976]
+        Michael, J. R., Schucany, W. R. and Hass, R. W. (1976). 
+        Generating Random Variates Using Transformations with Multiple Roots. 
+        The American Statistician, Vol. 30, No. 2, pp. 88-90
     """
-    def __init__(self, mu, *args, **kwargs):
+    def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
         super(Wald, self).__init__(*args, **kwargs)
-        self.mu = mu
-        self.mean = mu
-        self.variance = mu**3
-
-    def logp(self, value):
-        mu = self.mu
-
-        return bound(
-            ((- (value - mu) ** 2) /
-                (2. * value * (mu ** 2))) + logpow(2. * pi * value **3, -0.5),
-            mu > 0)
+        self.mu, self.lam, self.phi = self.get_mu_lam_phi(mu, lam, phi)    
+        self.alpha = alpha        
+        self.mean = self.mu + alpha
+        self.mode = self.mu * ( sqrt(1. + (1.5 * self.mu / self.lam) ** 2) - 1.5 * self.mu / self.lam ) + alpha
+        self.variance = (self.mu ** 3) / self.lam           
+    
+    def get_mu_lam_phi(self, mu, lam, phi):
+        if mu is None:
+            if lam is not None and phi is not None:
+                return lam / phi, lam, phi
+        else:
+            if lam is None:
+                if phi is None:
+                    return mu, 1., 1. / mu
+                else:
+                    return mu, mu * phi, phi
+            else:
+                if phi is None:
+                   return mu, lam, lam / mu
+        raise ValueError('Wald distribution must specify either mu only, mu and lam, mu and phi, or lam and phi.')
+    
+    def random(self, size=None):
+        if size is None:
+            size = 1
+        mu = self.mu 
+        lam = self.lam 
+        alpha = self.alpha        
+        v = rnormal(loc=0., scale=1., size=size) ** 2
+        x = mu + (mu ** 2) * v / (2. * lam) - mu/(2. * lam) * sqrt(4. * mu * lam * v + (mu * v) ** 2)
+        z = runiform(low=0., high=1., size=size)
+        # i = z > mu / (mu + x)
+        # x[i] = (mu**2) / x[i]
+        i = floor(z - mu / (mu + x)) * 2 + 1
+        x = (x ** -i) * (mu ** (i + 1))
+        return x + alpha
+      
+    def logp(self, value):        
+        mu = self.mu 
+        lam = self.lam 
+        alpha = self.alpha
+        x = maximum(value - self.alpha, 1e-8)# Seems necessary in practice. 
+        # x *must* be iid. Otherwise this is wrong.        
+        return bound(logpow(lam / (2. * pi), 0.5) - logpow(x, 1.5) 
+                    - 0.5 * lam / x * ((x - mu) / (mu)) ** 2,
+                 mu > 0.,
+                 lam > 0.,
+                 value > 0.,
+                 alpha >=0.)
 
 
 
@@ -743,17 +801,18 @@ class ExGaussian(Continuous):
      
     Parameters
     ----------
-    `mu` : float
-        Mean of the normal distribution (`-inf` < `mu` < `inf`).
-    `sigma` : float
-        Standard deviation of the normal distribution (`sigma` > 0).     
-    `nu` : float
-        Mean of the exponential distribution (`nu` > 0).
+    mu : float
+        Mean of the normal distribution (-inf < mu < inf).
+    sigma : float
+        Standard deviation of the normal distribution (sigma > 0).     
+    nu : float
+        Mean of the exponential distribution (nu > 0).
          
     .. note::    
         - :math:`E(X) = \mu + \nu`
         - :math:`Var(X) = \sigma^2 + \nu^2`
-     
+    
+   
     References
     ----------
     .. [Rigby2005]
@@ -773,7 +832,9 @@ class ExGaussian(Continuous):
         self.mean = mu + nu
         self.variance = (sigma ** 2) + (nu ** 2)    
             
-    def random(self, size=1.):
+    def random(self, size=None):
+        if size is None:
+            size = 1
         u = runiform(low=0., high=1., size=size)
         n = rnormal(self.mu, self.sigma, size=size)    
         return n - self.nu * log(u)
@@ -792,123 +853,7 @@ class ExGaussian(Continuous):
                  nu > 0.)
  
  
-class InverseGaussian(PositiveContinuous):    
-    """
-    Inverse Gaussian random variable with support :math:`x \in (0, \infty)`.
-      
-    .. math::    
-        f(x \mid \mu, \lambda) = \left(\frac{\lambda}{2\pi)}\right)^{1/2}x^{-3/2}
-        \exp\left\{ -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2\right\}
+
        
-    Parameters
-    ----------
-    `mu` : float
-        Mean of the distribution (`mu` > 0).
-    `lam` : float
-        Relative precision (`lam` > 0). 
-    `phi` : float
-        Shape. Alternative parametrisation where `phi` = `lam` / `mu`.
-          
-    .. note::    
-        - :math:`E(X) = \mu`
-        - :math:`Var(X) = \frac{\mu^3}{\lambda}`
-      
-    References
-    ----------
-    .. [Tweedie1957]
-       Tweedie, M. C. K. (1957). 
-       Statistical Properties of Inverse Gaussian Distributions I. 
-       The Annals of Mathematical Statistics, Vol. 28, No. 2, pp. 362-377
-         
-    .. [Michael1976]
-        Michael, J. R., Schucany, W. R. and Hass, R. W. (1976). 
-        Generating Random Variates Using Transformations with Multiple Roots. 
-        The American Statistician, Vol. 30, No. 2, pp. 88-90
-    """
-    def __init__(self, mu=None, lam=None, phi=None, *args, **kwargs):
-        super(InverseGaussian, self).__init__(*args, **kwargs)
-        if mu is None:
-            self.mu = lam / phi
-            self.lam = lam
-            self.phi = phi
-        else:
-            if lam is None:
-                self.mu = mu
-                self.lam = mu * phi
-                self.phi = phi
-            else:
-                self.mu = mu
-                self.lam = lam
-                self.phi = lam / mu
-        self.mean = mu
-        self.mode = mu * ( sqrt(1. + (1.5 * mu / lam) ** 2) - 1.5 * mu / lam )
-        self.variance = (mu ** 3) / lam           
- 
-    def random(self, size=None):
-        if size is None:
-            size = 1
-        mu = self.mu
-        lam = self.lam
-        v = rnormal(loc=0., scale=1., size=size) ** 2
-        x = mu + (mu ** 2) * v / (2. * lam) - mu/(2. * lam) * sqrt(4. * mu * lam * v + (mu * v) ** 2)
-        z = runiform(low=0., high=1., size=size)
-        # i = z > mu / (mu + x)
-        # x[i] = (mu**2) / x[i]
-        i = floor(z - mu / (mu + x)) * 2 + 1
-        x = (x ** -i) * (mu ** (i + 1))
-        return x 
-      
-    def logp(self, value):        
-        mu = self.mu
-        lam = self.lam
-        # value *must* be iid. Otherwise this is wrong.        
-        return bound(logpow(lam / (2. * pi), 0.5) - logpow(value, 1.5) 
-                    - 0.5 * lam / value * ((value - mu) / mu) ** 2,
-                 mu > 0.,
-                 lam > 0.,
-                 value > 0.)
-       
-class ShiftedInverseGaussian(InverseGaussian):    
-    """
-    Three parameter 'shifted' inverse gaussian random variable 
-    with support :math:`x \in (\alpha, \infty)` where :math:`\alpha \ge 0`.
-     
-    .. math::
-        f(x \mid \mu, \lambda, \alpha) = \left(\frac{\lambda}{2\pi)}\right)^{1/2}(x-\alpha)^{-3/2}
-        \exp\left\{ -\frac{\lambda}{2(x-\alpha)}\left(\frac{x-\alpha-\mu}{\mu}\right)^2\right\}
-     
-    Parameters
-    ----------
-    `mu` : float
-        Mean (`mu` > 0).
-    `lam` : float
-        Relative precision (`lam` > 0).
-    `phi` : float
-        Shape. Alternative parametrisation where `phi` = `lam` / `mu`.
-        This may provide quicker convergence when estimating parameters.
-    `alpha` : float
-        Location (`alpha` >=0, `x` - `alpha` > 0).
-         
-    .. note::
-        - :math:`E(X) = \mu + \alpha`
-        - :math:`Var(X) = \frac{\mu^3}{\lambda}`
-         
-    References
-    ----------
-    .. [Mahmoud1991}
-        Mahmoud, M. (1991).
-        Bayesian estimation of the 3-parameter inverse gaussian distribution.
-        Trabajos de Estadistica, Vol. 6, No. 1, pp 45-62
-    """
-    def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
-        super(ShiftedInverseGaussian, self).__init__(mu=mu, lam=lam, phi=phi, *args, **kwargs)
-        self.alpha = alpha
-        self.mean = mu + alpha
-        self.mode = self.mode + alpha          
- 
-    def random(self, size=None):
-        return InverseGaussian.random(self, size) + self.alpha
-    
-    def logp(self, value):        
-        return InverseGaussian.logp(self, value - self.alpha)     
+  
 
