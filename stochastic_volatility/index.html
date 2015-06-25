@@ -189,6 +189,9 @@ from scipy import optimize
 %pylab inline
 
 Populating the interactive namespace from numpy and matplotlib
+
+
+:0: FutureWarning: IPython widgets are experimental and may change in the future.
 </code></pre>
 <p>Asset prices have time-varying volatility (variance of day over day <code>returns</code>). In some periods, returns are highly variable, while in others very stable. Stochastic volatility models model this with a latent volatility variable, modeled as a stochastic process. The following model is similar to the one described in the No-U-Turn Sampler paper, Hoffman (2011) p21.</p>
 <p><mathjax>$$ \sigma \sim Exponential(50) $$</mathjax></p>
@@ -215,16 +218,13 @@ plt.plot(returns)
 
 
 
-[&lt;matplotlib.lines.Line2D at 0xff9cdec&gt;]
+[&lt;matplotlib.lines.Line2D at 0xaeaec1cc&gt;]
 </code></pre>
 <p><img alt="png" src="../stochastic_volatility_files/stochastic_volatility_6_1.png" /></p>
 <p>Specifying the model in pymc3 mirrors its statistical specification. </p>
-<p>However, it is easier to sample the scale of the log volatility process innovations, <mathjax>$\sigma$</mathjax>, on a log scale, so we create it using <code>TransformedVar</code> and use <code>logtransform</code>. <code>TransformedVar</code> creates one variable in the transformed space and one in the normal space. The one in the transformed space (here <mathjax>$\text{log}(\sigma) $</mathjax>) is the one over which sampling will occur, and the one in the normal space is the one to use throughout the rest of the model.</p>
-<p>It takes a variable name, a distribution and a transformation to use.</p>
 <pre><code>model = pm.Model()
 with model:
-    sigma, log_sigma = model.TransformedVar('sigma', pm.Exponential.dist(1./.02, testval=.1),
-                                            pm.logtransform)
+    sigma = pm.Exponential('sigma', 1./.02, testval=.1)
 
     nu = pm.Exponential('nu', 1./10)
     s = GaussianRandomWalk('s', sigma**-2, shape=n)
@@ -239,12 +239,18 @@ with model:
 </code></pre>
 <p>We do a short initial run to get near the right area, then start again using a new Hessian at the new starting point to get faster sampling due to better scaling. We do a short run since this is an interactive example.</p>
 <pre><code>with model:
-    step = pm.NUTS(scaling=start)
-    start2 = pm.sample(500, step, progressbar=False)[-1]
+    step = pm.NUTS(vars=[s, nu,sigma],scaling=start, gamma=.25)
+    start2 = pm.sample(100, step, start=start)[-1]
 
     # Start next run at the last sampled position.
-    step = pm.NUTS(scaling=start2)
-    trace = pm.sample(2000, step, start=start2, progressbar=False)
+    step = pm.NUTS(vars=[s, nu,sigma],scaling=start2, gamma=.55)
+    trace = pm.sample(2000, step, start=start2)
+
+ [-----------------100%-----------------] 2001 of 2000 complete in 368.9 sec
+
+/usr/lib/python3.4/importlib/_bootstrap.py:321: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
+  return f(*args, **kwds)
+
 
 
 figsize(12,6)
@@ -260,7 +266,7 @@ ylabel('log volatility')
 
 
 
-&lt;matplotlib.text.Text at 0x11f6078c&gt;
+&lt;matplotlib.text.Text at 0xac04168c&gt;
 </code></pre>
 <p><img alt="png" src="../stochastic_volatility_files/stochastic_volatility_15_1.png" /></p>
 <p>Looking at the returns over time and overlaying the estimated standard deviation we can see how the model tracks the volatility over time.</p>
@@ -274,7 +280,7 @@ ylabel('returns')
 
 
 
-&lt;matplotlib.text.Text at 0x1166824c&gt;
+&lt;matplotlib.text.Text at 0xaab3854c&gt;
 </code></pre>
 <p><img alt="png" src="../stochastic_volatility_files/stochastic_volatility_17_1.png" /></p>
 <h2 id="references">References</h2>

@@ -4,7 +4,7 @@
     
     <url>
      <loc>None/</loc>
-     <lastmod>2015-06-03</lastmod>
+     <lastmod>2015-06-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
     
@@ -13,7 +13,7 @@
         
     <url>
      <loc>None/getting_started/</loc>
-     <lastmod>2015-06-03</lastmod>
+     <lastmod>2015-06-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
@@ -23,43 +23,43 @@
         
     <url>
      <loc>None/BEST/</loc>
-     <lastmod>2015-06-03</lastmod>
+     <lastmod>2015-06-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/stochastic_volatility/</loc>
-     <lastmod>2015-06-03</lastmod>
+     <lastmod>2015-06-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/hierarchical/</loc>
-     <lastmod>2015-06-03</lastmod>
+     <lastmod>2015-06-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/GLM-linear/</loc>
-     <lastmod>2015-06-03</lastmod>
+     <lastmod>2015-06-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/GLM-robust/</loc>
-     <lastmod>2015-06-03</lastmod>
+     <lastmod>2015-06-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/GLM-hierarchical/</loc>
-     <lastmod>2015-06-03</lastmod>
+     <lastmod>2015-06-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/pmf-pymc/</loc>
-     <lastmod>2015-06-03</lastmod>
+     <lastmod>2015-06-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
