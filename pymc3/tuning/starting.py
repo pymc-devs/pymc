@@ -125,8 +125,8 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
                          "density. 2) your distribution logp's are " +
                          "properly specified. Specific issues: \n" + 
                          specific_errors)
-    mx = {v.name: np.floor(mx[v.name]) if v.dtype in discrete_types else
-          mx[v.name] for v in model.vars}
+    mx = {v.name: mx[v.name].astype(v.dtype) for v in model.vars}
+
     if return_raw:
         return mx, r
     else:

@@ -86,7 +86,7 @@ class ElemWiseQuadPotential(object):
         return normal(size=self.s.shape) * self.inv_s
 
     def energy(self, x):
-        return .5 * dot(x, self.v * x)
+        return .5 * x.dot(self.v * x)
 
 
 class QuadPotential_Inv(object):
@@ -111,14 +111,14 @@ class QuadPotential(object):
         self.L = cholesky(A, lower=True)
 
     def velocity(self, x):
-        return dot(self.A, x)
+        return x.T.dot(self.A.T)
 
     def random(self):
         n = normal(size=self.L.shape[0])
         return solve(self.L.T, n)
 
     def energy(self, x):
-        return .5 * dot(x, dot(self.A, x))
+        return .5 * x.dot(self.A).dot(x)
 
     __call__ = random
 

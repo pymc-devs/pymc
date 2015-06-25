@@ -6,6 +6,9 @@ from .quadpotential import quad_potential
 from .arraystep import *
 from numpy.random import normal, standard_cauchy, standard_exponential, poisson, random
 from numpy import round, exp, copy, where
+import theano
+
+from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor
 
 
 __all__ = ['Metropolis', 'BinaryMetropolis', 'NormalProposal', 'CauchyProposal', 'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal']
@@ -44,7 +47,7 @@ class MultivariateNormalProposal(Proposal):
         return np.random.multivariate_normal(mean=np.zeros(self.s.shape[0]), cov=self.s)
 
 
-class Metropolis(ArrayStep):
+class Metropolis(ArrayStepShared):
     """
     Metropolis-Hastings sampling step
 
@@ -90,9 +93,11 @@ class Metropolis(ArrayStep):
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
 
-        super(Metropolis, self).__init__(vars, [model.fastlogp], **kwargs)
+        shared = make_shared_replacements(vars, model)
+        self.delta_logp = delta_logp(model.logpt, vars, shared)
+        super(Metropolis, self).__init__(vars, shared)
 
-    def astep(self, q0, logp):
+    def astep(self, q0):
 
         if not self.steps_until_tune and self.tune:
             # Tune scaling parameter
@@ -106,12 +111,16 @@ class Metropolis(ArrayStep):
         if self.any_discrete:
             if self.all_discrete:
                 delta = round(delta, 0).astype(int)
+                q0 = q0.astype(int)
+                q = (q0 + delta).astype(int)
             else:
                 delta[self.discrete] = round(delta[self.discrete], 0).astype(int)
+                q = q0 + delta
+        else:
+            q = q0 + delta
 
-        q = q0 + delta
 
-        q_new = metrop_select(logp(q) - logp(q0), q, q0)
+        q_new = metrop_select(self.delta_logp(q,q0), q, q0)
 
         if q_new is q:
             self.accepted += 1
@@ -192,3 +201,15 @@ class BinaryMetropolis(ArrayStep):
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
         return q_new
+
+def delta_logp(logp, vars, shared):
+    [logp0], inarray0 = join_nonshared_inputs([logp], vars, shared)
+
+    tensor_type = inarray0.type
+    inarray1 = tensor_type('inarray1')
+
+    logp1 = CallableTensor(logp0)(inarray1)
+
+    f = theano.function([inarray1, inarray0], logp1 - logp0)
+    f.trust_input = True
+    return f

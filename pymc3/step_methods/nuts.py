@@ -5,10 +5,13 @@ from numpy import exp, log
 from numpy.random import uniform
 from .hmc import leapfrog, Hamiltonian, bern, energy
 from ..tuning import guess_scaling
+import theano
+from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor
+import theano.tensor
 
 __all__ = ['NUTS']
 
-class NUTS(ArrayStep):
+class NUTS(ArrayStepShared):
     """
     Automatically tunes step size and adjust number of steps for good performance.
 
@@ -24,7 +27,8 @@ class NUTS(ArrayStep):
                  gamma=0.05,
                  k=0.75,
                  t0=10,
-                 model=None, **kwargs):
+                 model=None,
+                 profile=False,**kwargs):
         """
         Parameters
         ----------
@@ -47,6 +51,8 @@ class NUTS(ArrayStep):
             t0 : int, default 10
                 slows inital adapatation
             model : Model
+            profile : bool or ProfileStats
+                sets the functions to be profiled
         """
         model = modelcontext(model)
 
@@ -85,14 +91,18 @@ class NUTS(ArrayStep):
 
 
 
-        super(NUTS, self).__init__(vars, [model.fastlogp, model.fastdlogp(vars)], **kwargs)
+        shared = make_shared_replacements(vars, model)
+        self.leapfrog1_dE = leapfrog1_dE(model.logpt, vars, shared, self.potential, profile=profile)
+        
 
-    def astep(self, q0, logp, dlogp):
-        H = Hamiltonian(logp, dlogp, self.potential)
+        super(NUTS, self).__init__(vars, shared, **kwargs)
+
+    def astep(self, q0):
+        H = self.leapfrog1_dE #Hamiltonian(self.logp, self.dlogp, self.potential)
         Emax = self.Emax
         e = self.step_size
 
-        p0 = H.pot.random()
+        p0 = self.potential.random()
         u = uniform()
         q = qn = qp = q0
         p = pn = pp = p0
@@ -129,11 +139,8 @@ class NUTS(ArrayStep):
 
 def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):
     if j == 0:
-        q1, p1 = leapfrog(H, q, p, 1, v*e)
-        E = energy(H, q1, p1)
-        E0 = energy(H, q0, p0)
-
-        dE = E - E0
+        leapfrog1_dE = H
+        q1, p1, dE = leapfrog1_dE(q, p, np.array(v*e))
 
         n1 = int(log(u) + dE <= 0)
         s1 = int(log(u) + dE < Emax)
@@ -157,3 +164,40 @@ def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):
             n1 = n1 + n11
         return qn, pn, qp, pp, q1, n1, s1, a1, na1
     return
+
+def leapfrog1_dE(logp, vars, shared, pot, profile):
+    """Computes a theano function that computes one leapfrog step and the energy difference between the beginning and end of the trajectory.
+    Parameters
+    ----------
+    logp : TensorVariable 
+    vars : list of tensor variables
+    shared : list of shared variables not to compute leapfrog over
+    pot : quadpotential
+    porifle : Boolean
+
+    Returns
+    -------
+    theano function which returns
+    q_new, p_new, delta_E
+    """
+    dlogp = gradient(logp, vars)
+    (logp, dlogp), q0 = join_nonshared_inputs([logp, dlogp], vars, shared)
+    logp = CallableTensor(logp)
+    dlogp = CallableTensor(dlogp)
+
+    H = Hamiltonian(logp, dlogp, pot)
+
+    p0 = theano.tensor.dvector('p0')
+    p0.tag.test_value = q0.tag.test_value
+    e = theano.tensor.dscalar('e')
+    e.tag.test_value = 1
+
+    q1, p1 = leapfrog(H, q0, p0, 1, e)
+    E = energy(H, q1, p1)
+    E0 = energy(H, q0, p0)
+    dE = E - E0
+
+    f = theano.function([q0, p0, e], [q1, p1, dE], profile=profile)
+    f.trust_input = True
+    return f
+
