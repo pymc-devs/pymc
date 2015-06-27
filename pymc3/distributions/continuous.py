@@ -786,7 +786,7 @@ Tpos = Bound(T, 0)
 
 class ExGaussian(Continuous):    
     """
-    Expoentially modified Gaussian random variable with 
+    Exponentially modified Gaussian random variable with 
     support :math:`x \in [-\infty, \infty]`.This results from
     the convolution of a normal distribution with an exponential
     distribution.
@@ -851,9 +851,3 @@ class ExGaussian(Continuous):
         return bound(lp,
                  sigma > 0.,
                  nu > 0.)
- 
- 
-
-       
-  
-

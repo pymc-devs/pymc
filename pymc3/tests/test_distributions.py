@@ -628,8 +628,4 @@ def check_ex_gaussian(value, mu, sigma, nu, logp):
         ig = ExGaussian('eg', mu=mu, sigma=sigma, nu=nu)
     pt = {'eg': value}
     assert_almost_equal(model.fastlogp(pt),
-                logp, decimal=6, err_msg=str(pt)) 
-    
-
- 
-
+                logp, decimal=6, err_msg=str(pt))
