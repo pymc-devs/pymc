@@ -511,6 +511,11 @@ class TransformedRV(TensorVariable):
             theano.Apply(theano.compile.view_op, inputs=[normalRV], outputs=[self])
             self.tag.test_value = normalRV.tag.test_value
 
+            try:
+                self.random = distribution.random
+            except AttributeError:
+                self.random = None
+
 
 
 def as_iterargs(data):
