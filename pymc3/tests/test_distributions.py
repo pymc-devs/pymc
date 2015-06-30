@@ -137,6 +137,12 @@ def test_uniform():
             lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower)
             )
 
+def test_random_uniform():
+    lo, hi = 0, 10
+    with Model() as m:
+        u = Uniform('u', lo, hi, shape=10000)
+    r = u.random()
+    assert_almost_equal(r.mean(), (hi-lo)/2., decimal=1)
 
 def test_discrete_unif():
     pymc3_matches_scipy(
@@ -177,6 +183,13 @@ def test_wald():
             lambda value, mu: sp.invgauss.logpdf(value, mu)
             )
 
+def test_random_normal():
+    mu, tau = 0, 1
+    with Model() as m:
+        n = Normal('n', mu, tau, shape=10000)
+    r = n.random()
+    assert_almost_equal(r.mean(), mu, decimal=1)
+
 def test_beta():
     pymc3_matches_scipy(
             Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
@@ -187,12 +200,28 @@ def test_beta():
             lambda value, mu, sd: sp.beta.logpdf(value, mu * sd, (1 - mu) * sd)
             )
 
+def test_random_beta():
+    alpha, beta = 1., 3.
+    with Model() as m:
+        b = Beta('b', alpha, beta, shape=10000)
+    r = b.random()
+    assert_almost_equal(r.mean(), alpha/(alpha+beta), decimal=1)
+    assert_almost_equal(r.var(),
+        alpha*beta/((alpha+beta+1)*(alpha+beta)**2), decimal=1)
 
 def test_exponential():
     pymc3_matches_scipy(
             Exponential, Rplus, {'lam': Rplus},
             lambda value, lam: sp.expon.logpdf(value, 0, 1/lam)
             )
+
+def test_random_exponential():
+    beta = 3.
+    with Model() as m:
+        x = Exponential('x', beta, shape=10000)
+    r = x.random()
+    assert_almost_equal(r.mean(), 1./beta, decimal=1)
+    assert_almost_equal(r.var(), 1./(beta**2), decimal=1)
 
 def test_geometric():
     pymc3_matches_scipy(
@@ -220,6 +249,13 @@ def test_lognormal():
             Lognormal, Rplus, {'mu': R, 'tau': Rplusbig},
             lambda value, mu, tau: sp.lognorm.logpdf(value, tau**-.5, 0, np.exp(mu))
             )
+
+def test_random_lognormal():
+    mu, tau = 0, 2
+    with Model() as m:
+        ln = Lognormal('ln', mu, tau)
+    r = ln.random(size=10000)
+    assert_almost_equal(r.mean(), np.exp(mu + 1/(2*tau)), decimal=1)
 
 def test_t():
     pymc3_matches_scipy(

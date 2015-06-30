@@ -66,6 +66,20 @@ def get_tau_sd(tau=None, sd=None):
 
     return (tau, sd)
 
+def draw_values(params, point=None):
+    """
+    Draws value from parameter if it is another variable, otherwise returns value. Optional point
+    argument allows caller to fix parameters at values specified in point. Action is chosen according to:
+
+    1. If parameter does not have a `random` attribute, assume it is a scalar parameter value
+    2. If there is no `point` passed, draw random value with no point
+    3. If there is a value in the `point` dict, use that value
+    4. Draw a random value using `point`
+    """
+
+    return np.squeeze([item if not hasattr(item, 'random')
+                       else (item.random(None) if point is None else (point.get(item.name) or item.random(point)))
+                       for item in np.atleast_1d(params)])
 
 class Uniform(Continuous):
     """
@@ -83,7 +97,7 @@ class Uniform(Continuous):
     """
     def __init__(self, lower=0, upper=1, transform='interval', *args, **kwargs):
         super(Uniform, self).__init__(*args, **kwargs)
-        
+
         self.lower = lower
         self.upper = upper
         self.mean = (upper + lower) / 2.
@@ -421,8 +435,12 @@ class T(Continuous):
             nu > 0,
             sd > 0)
 
-StudentT = T
+    def random(self, point=None):
+        mu, nu, tau = draw_values([self.mu, self.nu, self.tau], point)
+        return (rnormal(mu, 1./np.sqrt(tau), size) /
+             np.sqrt(rchi2(nu, self.shape)/nu))
 
+StudentT = T
 
 class Pareto(PositiveContinuous):
     """

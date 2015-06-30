@@ -356,6 +356,10 @@ class FreeRV(Factor, TensorVariable):
                 distribution.shape, distribution.dtype) * distribution.default()
             self.logp_elemwiset = distribution.logp(self)
             self.model = model
+            try:
+                self.random = distribution.random
+            except AttributeError:
+                self.random = None
 
 def pandas_to_array(data):
     if hasattr(data, 'values'): #pandas
@@ -506,6 +510,11 @@ class TransformedRV(TensorVariable):
 
             theano.Apply(theano.compile.view_op, inputs=[normalRV], outputs=[self])
             self.tag.test_value = normalRV.tag.test_value
+
+            try:
+                self.random = distribution.random
+            except AttributeError:
+                self.random = None
 
 
 
