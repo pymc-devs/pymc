@@ -251,8 +251,6 @@ class Wald(PositiveContinuous):
         raise ValueError('Wald distribution must specify either mu only, mu and lam, mu and phi, or lam and phi.')
     
     def random(self, size=None):
-        if size is None:
-            size = 1
         mu = self.mu 
         lam = self.lam 
         alpha = self.alpha        
@@ -269,7 +267,7 @@ class Wald(PositiveContinuous):
         mu = self.mu 
         lam = self.lam 
         alpha = self.alpha 
-        # alpha *must* be iid. Otherwise this is wrong.        
+        # value *must* be iid. Otherwise this is wrong.        
         return bound(logpow(lam / (2. * pi), 0.5) - logpow(value - alpha, 1.5) 
                     - 0.5 * lam / (value - alpha) * ((value - alpha - mu) / (mu)) ** 2,
                  mu > 0.,
@@ -833,8 +831,6 @@ class ExGaussian(Continuous):
         self.variance = (sigma ** 2) + (nu ** 2)    
             
     def random(self, size=None):
-        if size is None:
-            size = 1
         u = runiform(low=0., high=1., size=size)
         n = rnormal(self.mu, self.sigma, size=size)    
         return n - self.nu * log(u)
