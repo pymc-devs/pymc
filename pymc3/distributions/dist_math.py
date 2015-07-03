@@ -11,7 +11,8 @@ from theano.tensor import (
     cast, round, arange, max, min,
     maximum, minimum, floor, ceil,
     zeros_like, ones, ones_like,
-    concatenate, constant, argmax)
+    concatenate, constant, argmax,
+    erf)
 
 from theano.tensor import as_tensor_variable
 
@@ -61,3 +62,11 @@ def factln(n):
 
 def idfn(x):
     return x
+
+
+def std_cdf(x):
+    """
+    Calculates the standard normal cumulative distribution function.
+    """
+    return 0.5 + 0.5*erf(x / sqrt(2.))
+

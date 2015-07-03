@@ -14,7 +14,7 @@ from . import transforms
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
            'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
-           'Pareto', 'InverseGamma']
+           'Pareto', 'InverseGamma', 'ExGaussian']
 
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
@@ -189,35 +189,92 @@ class HalfNormal(PositiveContinuous):
         )
 
 
-class Wald(Continuous):
+class Wald(PositiveContinuous):    
     """
-    Wald (inverse Gaussian) log likelihood.
-
-    .. math::
-        f(x \mid \mu) = \sqrt{\frac{1}{2\pi x^3}} \exp\left\{ \frac{-(x-\mu)^2}{2 \mu^2 x} \right\}
-
+    Wald random variable with support :math:`x \in (0, \infty)`.
+      
+    .. math::    
+        f(x \mid \mu, \lambda) = \left(\frac{\lambda}{2\pi)}\right)^{1/2}x^{-3/2}
+        \exp\left\{ -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2\right\}
+       
     Parameters
     ----------
-    mu : float
-        Mean of the distribution.
-
-    .. note::
-    - :math:`E(X) = \mu`
-    - :math:`Var(X) = \mu^3`
+    mu : float, optional 
+        Mean of the distribution (mu > 0).
+    lam : float, optional
+        Relative precision (lam > 0). 
+    phi : float, optional
+        Shape. Alternative parametrisation where phi = lam / mu (phi > 0).
+    alpha : float, optional
+        Shift/location (alpha >= 0).
+        
+    The Wald can be instantiated by specifying mu only (so lam=1),
+    mu and lam, mu and phi, or lam and phi.    
+    
+    .. note::    
+        - :math:`E(X) = \mu`
+        - :math:`Var(X) = \frac{\mu^3}{\lambda}`
+      
+    References
+    ----------
+    .. [Tweedie1957]
+       Tweedie, M. C. K. (1957). 
+       Statistical Properties of Inverse Gaussian Distributions I. 
+       The Annals of Mathematical Statistics, Vol. 28, No. 2, pp. 362-377
+         
+    .. [Michael1976]
+        Michael, J. R., Schucany, W. R. and Hass, R. W. (1976). 
+        Generating Random Variates Using Transformations with Multiple Roots. 
+        The American Statistician, Vol. 30, No. 2, pp. 88-90
     """
-    def __init__(self, mu, *args, **kwargs):
+    def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
         super(Wald, self).__init__(*args, **kwargs)
-        self.mu = mu
-        self.mean = mu
-        self.variance = mu**3
-
-    def logp(self, value):
-        mu = self.mu
-
-        return bound(
-            ((- (value - mu) ** 2) /
-                (2. * value * (mu ** 2))) + logpow(2. * pi * value **3, -0.5),
-            mu > 0)
+        self.mu, self.lam, self.phi = self.get_mu_lam_phi(mu, lam, phi)    
+        self.alpha = alpha        
+        self.mean = self.mu + alpha
+        self.mode = self.mu * ( sqrt(1. + (1.5 * self.mu / self.lam) ** 2) - 1.5 * self.mu / self.lam ) + alpha
+        self.variance = (self.mu ** 3) / self.lam           
+    
+    def get_mu_lam_phi(self, mu, lam, phi):
+        if mu is None:
+            if lam is not None and phi is not None:
+                return lam / phi, lam, phi
+        else:
+            if lam is None:
+                if phi is None:
+                    return mu, 1., 1. / mu
+                else:
+                    return mu, mu * phi, phi
+            else:
+                if phi is None:
+                   return mu, lam, lam / mu
+        raise ValueError('Wald distribution must specify either mu only, mu and lam, mu and phi, or lam and phi.')
+    
+    def random(self, size=None):
+        mu = self.mu 
+        lam = self.lam 
+        alpha = self.alpha        
+        v = rnormal(loc=0., scale=1., size=size) ** 2
+        x = mu + (mu ** 2) * v / (2. * lam) - mu/(2. * lam) * sqrt(4. * mu * lam * v + (mu * v) ** 2)
+        z = runiform(low=0., high=1., size=size)
+        # i = z > mu / (mu + x)
+        # x[i] = (mu**2) / x[i]
+        i = floor(z - mu / (mu + x)) * 2 + 1
+        x = (x ** -i) * (mu ** (i + 1))
+        return x + alpha
+      
+    def logp(self, value):        
+        mu = self.mu 
+        lam = self.lam 
+        alpha = self.alpha 
+        # value *must* be iid. Otherwise this is wrong.        
+        return bound(logpow(lam / (2. * pi), 0.5) - logpow(value - alpha, 1.5) 
+                    - 0.5 * lam / (value - alpha) * ((value - alpha - mu) / (mu)) ** 2,
+                 mu > 0.,
+                 lam > 0.,
+                 value > 0.,
+                 alpha >=0.,
+                 value - alpha > 0)
 
 
 
@@ -724,3 +781,69 @@ class Bound(object):
 
 
 Tpos = Bound(T, 0)
+
+class ExGaussian(Continuous):    
+    """
+    Exponentially modified Gaussian random variable with 
+    support :math:`x \in [-\infty, \infty]`.This results from
+    the convolution of a normal distribution with an exponential
+    distribution.
+     
+    .. math::
+       f(x \mid \mu, \sigma, \tau) = \frac{1}{\nu}\;
+       \exp\left\{\frac{\mu-x}{\nu}+\frac{\sigma^2}{2\nu^2}\right\}
+       \Phi\left(\frac{x-\mu}{\sigma}-\frac{\sigma}{\nu}\right)
+    
+    where :math:`\Phi` is the cumulative distribution function of the
+    standard normal distribution.
+     
+    Parameters
+    ----------
+    mu : float
+        Mean of the normal distribution (-inf < mu < inf).
+    sigma : float
+        Standard deviation of the normal distribution (sigma > 0).     
+    nu : float
+        Mean of the exponential distribution (nu > 0).
+         
+    .. note::    
+        - :math:`E(X) = \mu + \nu`
+        - :math:`Var(X) = \sigma^2 + \nu^2`
+    
+   
+    References
+    ----------
+    .. [Rigby2005]
+        Rigby R.A. and Stasinopoulos D.M. (2005).
+        "Generalized additive models for location, scale and shape"
+        Applied Statististics., 54, part 3, pp 507-554.
+    .. [Lacouture2008]
+        Lacouture, Y. and Couseanou, D. (2008). 
+        "How to use MATLAB to fit the ex-Gaussian and other probability functions to a distribution of response times".
+        Tutorials in Quantitative Methods for Psychology, Vol. 4, No. 1, pp 35-45.
+    """
+    def __init__(self, mu, sigma, nu, *args, **kwargs):
+        super(ExGaussian, self).__init__(*args, **kwargs)
+        self.mu = mu     
+        self.sigma = sigma
+        self.nu = nu
+        self.mean = mu + nu
+        self.variance = (sigma ** 2) + (nu ** 2)    
+            
+    def random(self, size=None):
+        u = runiform(low=0., high=1., size=size)
+        n = rnormal(self.mu, self.sigma, size=size)    
+        return n - self.nu * log(u)
+     
+    def logp(self, value):        
+        mu = self.mu
+        sigma = self.sigma
+        nu = self.nu         
+        lp = switch(gt(nu,  0.05 * sigma),# This condition suggested by exGAUS.R from gamlss 
+                    -log(nu) + (mu - value) / nu + 0.5 * (sigma / nu) ** 2 + \
+                        logpow(std_cdf((value - mu) / sigma - sigma / nu), 1.),
+                    -log(sigma * sqrt(2. * pi)) - 0.5 * ((value - mu) / sigma) ** 2)
+         
+        return bound(lp,
+                 sigma > 0.,
+                 nu > 0.)
