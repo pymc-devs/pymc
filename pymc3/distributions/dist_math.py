@@ -12,17 +12,19 @@ from theano.tensor import (
     maximum, minimum, floor, ceil,
     zeros_like, ones, ones_like,
     concatenate, constant, argmax,
-    erf)
+    erf, gamma)
 
 from theano.tensor import as_tensor_variable
 
 
 from numpy import pi, inf, nan
+import numpy as np
 from .special import gammaln, multigammaln
 
 from theano.printing import Print
 from .distribution import *
 
+EULER = 0.5772156649015328606
 
 def bound(logp, *conditions):
     """
@@ -40,6 +42,22 @@ def bound(logp, *conditions):
     """
 
     return switch(alltrue(conditions), logp, -inf)
+
+def support(x, *conditions):
+    """
+    Bounds values density with several conditions
+
+    Parameters
+    ----------
+    x : float
+    *conditionss : booleans
+
+    Returns
+    -------
+    x if all conditions are true
+    0 if some are false
+    """
+    return np.where(alltrue(conditions), x, 0)
 
 
 def alltrue(vals):
