@@ -13,6 +13,60 @@ from .memoize import memoize
 __all__ = ['Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext', 'Point', 'Deterministic', 'Potential']
 
 
+class InstanceMethod(object):
+    """Class for hiding references to instance methods so they can be pickled.
+    
+    >>> self.method = InstanceMethod(some_object, 'method_name')
+    
+    """
+    def __init__(self, obj, method_name):
+        self.obj = obj
+        self.method_name = method_name
+    
+    def __call__(self, *args, **kwargs):
+        return getattr(self.obj, self.method_name)(*args, **kwargs)
+        
+def incorporate_methods(source=None, 
+                        destination=None, 
+                        methods=[], 
+                        default=None, 
+                        wrapper=None,
+                        override=False):
+    """
+    Add attributes to a destination object which point to
+    methods from from a source object.
+    
+    Parameters
+    ----------
+    source - object
+        The source object containing the methods.
+    destination - object
+        The destination object for the methods. 
+    methods - list of str
+        Names of methods to incorporate.
+    default -
+        The value used if the source does not have one of the listed methods.
+    wrapper - function
+        An optional function to allow the source method to be
+        wrapped. Should take the form my_wrapper(source, method_name)
+        and return a single value.
+    override - bool
+        If the destination object already has a method/attribute 
+        an AttributeError will be raised if override is False (the default).            
+    """
+    for method in methods:
+        if hasattr(destination, method) and not override:
+            raise AttributeError("Cannot add method '{0}' to destination object as "
+                                 "it already exists. To prevent this error set "
+                                 "'override=True'.".format(method))
+        if hasattr(source, method):
+            if wrapper == None:
+                setattr(destination, method, getattr(source, method))
+            else:
+                setattr(destination, method, wrapper(source, method))
+        else:
+            setattr(destination, method, None)
+            
 class Context(object):
     """Functionality for objects that put themselves in a context using the `with` statement."""
     def __enter__(self):
@@ -356,6 +410,11 @@ class FreeRV(Factor, TensorVariable):
                 distribution.shape, distribution.dtype) * distribution.default()
             self.logp_elemwiset = distribution.logp(self)
             self.model = model
+            
+            incorporate_methods(source=distribution, destination=self, 
+                                methods=['pdf', 'cdf', 'random'],
+                                wrapper=InstanceMethod)
+            
 
 def pandas_to_array(data):
     if hasattr(data, 'values'): #pandas
@@ -507,7 +566,9 @@ class TransformedRV(TensorVariable):
             theano.Apply(theano.compile.view_op, inputs=[normalRV], outputs=[self])
             self.tag.test_value = normalRV.tag.test_value
 
-
+            incorporate_methods(source=distribution, destination=self, 
+                                methods=['pdf', 'cdf', 'random'],
+                                wrapper=InstanceMethod)
 
 def as_iterargs(data):
     if isinstance(data, tuple):
