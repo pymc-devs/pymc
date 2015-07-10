@@ -37,10 +37,22 @@ class UnitContinuous(Continuous):
         super(UnitContinuous, self).__init__(transform=transform, *args, **kwargs)
 
 
-
 def get_named_nodes(graph):
-    """
-    Return the named nodes in a theano graph as a dictionary of name:node pairs.
+    """Get the named nodes in a theano graph 
+    (i.e., nodes whose name attribute is not None).::
+    
+        >>> a = as_tensor_variable(4., 'a')   
+        >>> b = as_tensor_variable(5., 'b') 
+        >>> c = a ** (b-1) / (0.5 * b)
+        >>> print(get_named_nodes(c))
+        {'a': TensorConstant{4.0}, 'b': TensorConstant{5.0}}
+        
+    Parameters
+    ----------
+    graph - a theano node
+    
+    Returns:
+    A dictionary of name:node pairs.
     """
     return _get_named_nodes(graph, {})
 
@@ -54,24 +66,20 @@ def _get_named_nodes(graph, nodes):
     return nodes
 
 
-"""
-draw_values 
-
-    fixing named variables (i.e., in the model context)
-        
-        a) by value
-        b) by random sampling
-        
+def draw_values(items, point=None):
+    """Fixing named variables (i.e., in the model context)
+            
+            a) by value
+            b) by random sampling
+            
         >>> with Model():
-        ...    m = Normal('m', mu=0., tau=1e-3)
-        ...    s = Gamma('s', alpha=1e3, beta=1e3)
-        ...    n = Normal('n', mu=m, sd=s)
+        ...    mu = Normal('m', mu=0., tau=1e-3)
+        ...    sd = Gamma('s', alpha=1e3, beta=1e3)
+        ...    n = Normal('n', mu=mu, sd=sd)
         ...    # m is fixed by value, s will be sampled.
         ...    y = n.random(point={'m':10}, size=1000)
-        ...
-    
-"""
-def draw_values(items, point=None):
+        ...        
+    """
     # Distribution parameters may be nodes which have named node-inputs
     # specified in the point. Need to find the node-inputs to replace them.
     givens = {}
@@ -80,13 +88,12 @@ def draw_values(items, point=None):
             named_nodes = get_named_nodes(item)
             if item.name in named_nodes:
                 named_nodes.pop(item.name)
-            for name, node in named_nodes.iteritems():
+            for name, node in named_nodes.items():
                 if point is not None and name in point:
                     if not name in givens:
                         # How to ensure point[name] becomes a theano float?
                         givens[name] = (node, as_tensor_variable(point[name]))
-    givens = [value for value in givens.itervalues()] 
-    
+    givens = [value for value in givens.items()] 
     values = [None for _ in items] 
     for i, item in enumerate(items):
         if hasattr(item, 'name'):
@@ -110,8 +117,7 @@ def draw_values(items, point=None):
     else:
         return values
 
-        
-        
+
 def get_tau_sd(tau=None, sd=None):
     """
     Find precision and standard deviation
@@ -175,7 +181,7 @@ class Uniform(Continuous):
 
         if transform is 'interval':
             self.transform = transforms.interval(lower, upper)    
-    
+
     def pdf(self, x, point=None):
         """
         The probability density function (pdf) of the Uniform distribution.
@@ -192,7 +198,7 @@ class Uniform(Continuous):
         i = np.logical_and(x >= lower, x <= upper)
         p[i] = 1. / (upper - lower)
         return p    
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Uniform distribution.
@@ -211,7 +217,7 @@ class Uniform(Continuous):
         i = np.logical_and(x >= lower,  x < upper)
         p[i] = (x - lower) / (upper - lower)
         return p    
-    
+
     def random(self, size=None, point=None, **kwargs):
         """
         Generate samples from the Uniform distribution.
@@ -225,7 +231,7 @@ class Uniform(Continuous):
         """
         lower, upper = draw_values([self.lower, self.upper], point=point)
         return nr.uniform(self.upper, self.lower, size)
-    
+
     def logp(self, x):
         """
         Return the log-likelihood of x given the current
@@ -255,7 +261,7 @@ class Flat(Continuous):
     def __init__(self, *args, **kwargs):
         super(Flat, self).__init__(*args, **kwargs)
         self.median = 0   
-    
+
     def logp(self, x):
         return zeros_like(x)
 
@@ -297,7 +303,7 @@ class Normal(Continuous):
             if check:
                 raise err
         return mu, tau
-    
+
     def pdf(self, x, point=None):
         """
         The probability density function (pdf) of the Normal distribution.
@@ -311,8 +317,7 @@ class Normal(Continuous):
         """
         mu, tau = draw_values([self.mu, self.tau], point=point)                                     
         return np.sqrt(0.5 * tau / pi) * np.exp(-0.5 * tau * (x - mu) ** 2) 
-    
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Normal distribution.
@@ -326,8 +331,7 @@ class Normal(Continuous):
         """
         mu, tau = draw_values([self.mu, self.tau], point=point)   
         return 0.5 * (1. + sp.erf(np.sqrt(0.5 * tau) * (x - mu)))
-    
-    
+
     def random(self, size=None, point=None):
         """
         Generate samples from the Normal distribution.
@@ -341,7 +345,7 @@ class Normal(Continuous):
         """
         mu, tau = draw_values([self.mu, self.tau], point=point)   
         return nr.normal(loc=mu, scale=1./tau, size=size)
-    
+
     def logp(self, x):
         """
         Return the log-likelihood of x given the current
@@ -386,11 +390,11 @@ class HalfNormal(PositiveContinuous):
         self.tau = self.parametrize(tau=tau, sd=sd)
         self.mean = sqrt(2 / (pi * self.tau))
         self.variance = (1. - 2. / pi) / self.tau        
-    
+
     def parametrize(self, tau=None, sd=None):
         tau, sd = get_tau_sd(tau, sd)
         return tau
-    
+
     def pdf(self, x, point=None):
         """
         The probability density function (pdf) of the Half-normal distribution.
@@ -406,7 +410,7 @@ class HalfNormal(PositiveContinuous):
         p = np.sqrt(2. * tau / np.pi) * np.exp(-0.5 * tau * (x ** 2))
         p[x < 0.] = 0.
         return  p    
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Half-normal distribution.
@@ -420,7 +424,7 @@ class HalfNormal(PositiveContinuous):
         """
         tau = draw_values([self.tau], point=point)
         return np.erf(sqrt(0.5 * tau) * x)    
-    
+
     def random(self, size=None, point=None):
         """
         Generate samples from the Half-normal distribution.
@@ -434,7 +438,7 @@ class HalfNormal(PositiveContinuous):
         """
         tau = draw_values([self.tau], point=point)
         return np.abs(nr.normal(loc=0., scale=tau ** -0.5, size=size))
-       
+
     def logp(self, x):
         """
         Return the log-likelihood of x given the current
@@ -452,10 +456,9 @@ class HalfNormal(PositiveContinuous):
         return bound(
             -0.5 * tau * (x ** 2) + 0.5 * log(tau * 2. / pi),
             tau > 0.,
-            x >= 0.
-        )
+            x >= 0.)
 
-    
+
 class Wald(PositiveContinuous):    
     """
     Wald random variable with support :math:`x \in (0, \infty)`.
@@ -500,9 +503,8 @@ class Wald(PositiveContinuous):
         self.mean = self.mu + alpha
         self.mode = self.mu * ( sqrt(1. + (1.5 * self.mu / self.lam) ** 2) - 1.5 * self.mu / self.lam ) + alpha
         self.variance = (self.mu ** 3) / self.lam           
-    
+
     def parametrize(self, mu, lam, phi, alpha):
-        print 'param', mu, lam, phi, alpha
         if mu is None:
             if lam is not None and phi is not None:
                 return lam / phi, lam, alpha
@@ -534,7 +536,7 @@ class Wald(PositiveContinuous):
             np.exp(-0.5 * lam / (x - alpha) * ((x - alpha - mu) / mu) ** 2),
             x - alpha > 0
             )
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Wald distribution.
@@ -551,7 +553,7 @@ class Wald(PositiveContinuous):
         l = np.sqrt(lam / (x - alpha))
         m = (x - mu) / mu
         return std_cdf(l * (m - 1)) + np.exp(2. * lam / mu) + std_cdf(l * (m - 1))
-    
+
     def random(self, point=None, size=None):
         """
         Generate samples from the Wald distribution.
@@ -573,7 +575,7 @@ class Wald(PositiveContinuous):
         i = np.floor(z - mu / (mu + x)) * 2 + 1
         x = (x ** -i) * (mu ** (i + 1))
         return x + alpha
-      
+
     def logp(self, x):
         """
         Return the log-likelihood of x given the current
@@ -639,7 +641,7 @@ class Beta(UnitContinuous):
         self.mean = alpha / (alpha + beta)
         self.variance = alpha * beta / (
             (alpha + beta) ** 2 * (alpha + beta + 1))        
-    
+
     def parametrize(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
             pass
@@ -666,7 +668,7 @@ class Beta(UnitContinuous):
         """
         alpha, beta = draw_values([self.alpha, self.beta], point=point)
         return st.beta(a=alpha, b=beta).pdf(x)    
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Beta distribution.
@@ -697,7 +699,7 @@ class Beta(UnitContinuous):
         """
         alpha, beta = draw_values([self.alpha, self.beta], point=point)  
         return nr.beta(alpha, beta, size)
-    
+
     def logp(self, x):
         """
         Return the log-likelihood of x given the current
@@ -755,7 +757,7 @@ class Exponential(PositiveContinuous):
         return support(st.expon.pdf(x, scale=1./lam), 
                        x >= 0., 
                        lam > 0.)
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Exponential distribution.
@@ -771,7 +773,7 @@ class Exponential(PositiveContinuous):
         return support(1. - np.exp(-lam * x),
                        x >= 0,
                        lam > 0)
-    
+
     def random(self, point=None, size=None):
         """
         Generate samples from the Exponential distribution.
@@ -785,7 +787,7 @@ class Exponential(PositiveContinuous):
         """
         lam = draw_values([self.lam], point=point)
         return nr.exponential(lam, size)
-    
+
     def logp(self, x):
         """
         Return the log-likelihood of x given the current
@@ -825,7 +827,7 @@ class Laplace(Continuous):
         self.mean = self.median = self.mode = self.mu = mu
 
         self.variance = 2 * b ** 2
-    
+
     def pdf(self, x, point=None):
         """
         Probability density function (pdf) of the Laplace distribution.
@@ -840,7 +842,7 @@ class Laplace(Continuous):
         mu, b = draw_values([self.mu, self.b], point=point)            
         return support(0.5 / b * np.exp(-np.abs(x - mu) / b), 
                        b > 0.)    
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Laplace distribution.
@@ -870,7 +872,7 @@ class Laplace(Continuous):
         """
         mu, b = draw_values([self.mu, self.b], point=point)      
         return nr.laplace(mu, b, size)
-    
+
     def logp(self, x):
         """
         Return the log-likelihood of x given the current
@@ -972,7 +974,7 @@ class Lognormal(PositiveContinuous):
         """
         mu, tau = draw_values([self.mu, self.tau], point=point)  
         return np.exp(mu + 1. / np.sqrt(tau) * nr.normal(loc=0., scale=1., size=size))
-    
+
     def logp(self, x):
         """
         Return the log-likelihood of x given the current
@@ -1023,11 +1025,11 @@ class T(Continuous):
         self.mean = self.median = self.mode = self.mu
 
         self.variance = switch((self.nu > 2) * 1, (self.nu / (self.nu - 2.)) , inf)
-    
+
     def parametrize(self, mu, lam, sd):
         lam, sd = get_tau_sd(tau=lam, sd=sd)
         return mu, lam, sd
-    
+
     def pdf(self, x, point=None):
         """
         Probability density function (pdf) of the T distribution.
@@ -1043,7 +1045,7 @@ class T(Continuous):
         return support(st.t.pdf(x, nu, mu, lam ** -0.5),
                        lam > 0.,
                        nu > 0.)
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the T distribution.
@@ -1058,7 +1060,7 @@ class T(Continuous):
         nu, mu, lam = draw_values([self.nu, self.mu, self.lam], point=point) 
         return support(st.t.cdf(x, nu, loc=mu, scale=sd),
                        nu > 0.)    
-    
+
     def random(self, point=None, size=None):
         """
         Generate samples from the T distribution.
@@ -1072,7 +1074,7 @@ class T(Continuous):
         """
         nu, mu, lam = draw_values([self.nu, self.mu, self.lam], point=point) 
         return st.t.rvs(nu, loc=mu, scale=sd, size=size)
-    
+
     def logp(self, x):
         """
         Return the log-likelihood of x given the current
@@ -1151,7 +1153,7 @@ class Pareto(PositiveContinuous):
                 alpha > 0,
                 m > 0,
                 x >= m)
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Pareto distribution.
@@ -1166,7 +1168,7 @@ class Pareto(PositiveContinuous):
         alpha, m = draw_values([self.slpha, self.m], point=point)        
         return support(1. - (m / x) ** alpha,
                        nu > 0.)
-    
+
     def random(self, point=None, size=None):
         """
         Generate samples from the Pareto distribution.
@@ -1181,7 +1183,7 @@ class Pareto(PositiveContinuous):
         alpha, m = draw_values([self.alpha, self.m], point=point)    
         u = nr.uniform(size=size)
         return m * (1. - u) ** (-1. / alpha)
-    
+
     def logp(self, x):
         """
         Return the log-likelihood of x given the current
@@ -1226,7 +1228,7 @@ class Cauchy(Continuous):
         super(Cauchy, self).__init__(*args, **kwargs)
         self.median = self.mode = self.alpha = alpha
         self.beta = beta
-        
+
     def pdf(self, x, point=None):
         """
         Probability density function (pdf) of the Cauchy distribution.
@@ -1241,7 +1243,7 @@ class Cauchy(Continuous):
         alpha, beta = draw_values([self.alpha, self.beta], point=point)       
         return support(st.cauchy.pdf(x, alpha, beta),
                 beta > 0.)
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Cauchy distribution.
@@ -1256,7 +1258,7 @@ class Cauchy(Continuous):
         alpha, beta = draw_values([self.alpha, self.beta], point=point)       
         return support(1. / pi * np.arctan((x - alpha) / beta) + 0.5,
                 beta > 0.)
-    
+
     def random(self, point=None, size=None):
         """
         Generate samples from the Cauchy distribution.
@@ -1272,7 +1274,7 @@ class Cauchy(Continuous):
         u = nr.uniform(size=size)   
         return support(alpha + beta * np.tan(np.pi*(u - 0.5)),
                 beta > 0.)
-    
+
     def logp(self, x):
         """
         Return the log-likelihood of x given the current
@@ -1328,7 +1330,7 @@ class HalfCauchy(PositiveContinuous):
         return support(2. / (pi * beta * (1. + (x / beta) ** 2)),
                 beta > 0.,
                 x >= 0.)
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Half-Cauchy distribution.
@@ -1345,7 +1347,7 @@ class HalfCauchy(PositiveContinuous):
         return support(2. / pi * np.arctan(x / beta),
                 beta > 0.,
                 x >= 0.)
-    
+
     def random(self, point=None, size=None):
         """
         Generate samples from the Half-Cauchy distribution.
@@ -1455,7 +1457,7 @@ class Gamma(PositiveContinuous):
                 alpha > 0.,
                 beta > 0.,
                 x >= 0.)
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Gamma distribution.
@@ -1473,7 +1475,7 @@ class Gamma(PositiveContinuous):
                 alpha > 0.,
                 beta > 0.,
                 x >= 0.)
-    
+
     def random(self, point=None, size=None):
         """
         Generate samples from the Gamma distribution.
@@ -1566,7 +1568,7 @@ class InverseGamma(PositiveContinuous):
                 alpha > 0.,
                 beta > 0.,
                 x >= 0.)
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Gamma distribution.
@@ -1583,7 +1585,7 @@ class InverseGamma(PositiveContinuous):
                 alpha > 0.,
                 beta > 0.,
                 x >= 0.)
-    
+
     def random(self, point=None, size=None):
         """
         Generate samples from the Gamma distribution.
@@ -1691,7 +1693,7 @@ class Weibull(PositiveContinuous):
                 alpha > 0.,
                 beta > 0.,
                 x >= 0.)
-    
+
     def cdf(self, x, point=None):
         """
         The cumulative distribution function (cdf) of the Weibull distribution.
@@ -1709,7 +1711,7 @@ class Weibull(PositiveContinuous):
                 alpha > 0.,
                 beta > 0.,
                 x >= 0.)
-    
+
     def random(self, point=None, size=None):
         """
         Generate samples from the Weibull distribution.
@@ -1730,7 +1732,7 @@ class Weibull(PositiveContinuous):
         return support(beta * (-log(u)) ** alpha,
                 alpha > 0.,
                 beta > 0.)        
-        
+
     def logp(self, x):
         """
         Return the log-likelihood of a value given the current
@@ -1792,7 +1794,7 @@ Tpos = Bound(T, 0)
 
 class ExGaussian(Continuous):    
     """
-    Expoentially modified Gaussian random variable with 
+    Exponentially modified Gaussian random variable with 
     support :math:`x \in [-\infty, \infty]`.This results from
     the convolution of a normal distribution with an exponential
     distribution.
@@ -1836,7 +1838,7 @@ class ExGaussian(Continuous):
         self.nu = nu
         self.mean = mu + nu
         self.variance = (sigma ** 2) + (nu ** 2)    
-    
+
     def pdf(self, x, point=None):
         """
         Proability density function (pdf) for the ExGaussian distribution.
@@ -1879,7 +1881,7 @@ class ExGaussian(Continuous):
         return support(_cdf(u, 0., v) - np.exp(-u + (v ** 2) / 2 + \
                                               np.log(_cdf(u, v ** 2, v))),
                        beta > 0)
-    
+
     def random(self, point=None, size=None):
         """
         Generate samples from the Gumbel random variable.
@@ -1896,7 +1898,7 @@ class ExGaussian(Continuous):
         u = nr.uniform(low=0., high=1., size=size)
         n = nr.normal(mu, sigma, size=size)    
         return n - nu * log(u)
-     
+
     def logp(self, x):        
         mu = self.mu
         sigma = self.sigma
@@ -1965,7 +1967,7 @@ class Gumbel(Continuous):
         self.mean = alpha + EULER * beta
         self.mode = alpha
         self.variance = (beta * pi) ** 2
-        
+
     def pdf(self, x, point=None):
         """
         Proability density function (pdf) for the Type I Gumbel distribution.
@@ -1984,7 +1986,7 @@ class Gumbel(Continuous):
                        x > -inf,
                        x < -inf,
                        beta > 0)
-    
+
     def cdf(self, x, point=None):
         """
         Cumulative distribution function (cdf) for the Gumbel disribution.
@@ -2003,7 +2005,7 @@ class Gumbel(Continuous):
                        x > -inf,
                        x < -inf,
                        beta > 0)
-    
+
     def random(self, point=None, size=None):
         """
         Generate samples from the Gumbel random variable.
@@ -2017,7 +2019,7 @@ class Gumbel(Continuous):
         """
         alpha, beta = draw_values([self.alpha, self.beta], point=point)
         return alpha - beta * log(-log(nr.uniform(size=size)))
-    
+
     def logp(self, x):
         alpha = self.alpha
         beta = self.beta       
@@ -2057,7 +2059,7 @@ class Frechet(Continuous):
         
         self.mean = switch(ge(mu, 1), sigma * gamma(1. - 1. / alpha) , inf)
         self.mode = mu + sigma * (alpha / (1 + alpha)) ** (1. / alpha)
-    
+
     def pdf(self, x, point=None):
         """
         Probability density function (pdf) for the Frechet disribution.
@@ -2076,7 +2078,7 @@ class Frechet(Continuous):
         return support((alpha / sigma) * z ** (-1 - alpha) * exp(-(z**(-alpha))), 
                        sigma > 0, 
                        x - mu > 0)
-        
+
     def cdf(self, x, point=None):
         """
         Cumulative distribution function (cdf) for the Frechet disribution.
@@ -2094,7 +2096,7 @@ class Frechet(Continuous):
         return support(exp(-((x - mu) / sigma) ** (-alpha)),
                        sigma > 0, 
                        x - mu > 0)
-                
+
     def random(self, point=None, size=None):
         """
         Generate samples from the Frechet random variable.
@@ -2109,7 +2111,7 @@ class Frechet(Continuous):
         alpha, mu, sigma = draw_values([self.alpha, self.mu, self.sigma], point=point)
         u = nr.uniform(size=size)
         return (-np.log(u)) ** (-1. / alpha) * sigma + mu
-        
+
     def logp(self, x):
         alpha = self.alpha
         mu = self.mu
@@ -2204,7 +2206,7 @@ class GeneralizedExtremeValue(Continuous):
                 (1. + xi * z) ** (-1. - (1. / xi)) / sigma
             x_in_support = np.logical_and(1. + z * xi > 0., np.logical_not(np.isnan(p)))
         return support(p, x_in_support)
-    
+
     def cdf(self, x, point=None):
         """
         Cumulative distribution function (cdf) for the GEV disribution.
@@ -2222,7 +2224,7 @@ class GeneralizedExtremeValue(Continuous):
             return np.exp(np.exp(-z))
         else:
             return np.exp((1. + xi * z) ** (-1. / xi))    
-    
+
     def random(self, point=None, size=None):
         """
         Generate samples from the GEV random variable.
@@ -2239,7 +2241,7 @@ class GeneralizedExtremeValue(Continuous):
             return mu - sigma * np.log(nr.exponential(scale=1., size=size))
         else:
             return mu + sigma * (nr.exponential(scale=1., size=size) ** (-sigma) - 1) / sigma
-            
+
     def logp(self, x):
         mu = self.mu
         sigma = self.sigma
