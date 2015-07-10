@@ -45,12 +45,12 @@ def bound(logp, *conditions):
 
 def support(x, *conditions):
     """
-    Bounds values density with several conditions
-
+    Bounds density with several conditions.
+    Numpy compatible version of the bound function.
     Parameters
     ----------
     x : float
-    *conditionss : booleans
+    *conditions : booleans
 
     Returns
     -------

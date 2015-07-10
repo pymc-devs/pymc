@@ -22,18 +22,18 @@ class InstanceMethod(object):
     def __init__(self, obj, method_name):
         self.obj = obj
         self.method_name = method_name
-    
+
     def __call__(self, *args, **kwargs):
         return getattr(self.obj, self.method_name)(*args, **kwargs)
-        
-def incorporate_methods(source=None, 
-                        destination=None, 
-                        methods=[], 
-                        default=None, 
+
+def incorporate_methods(source=None,
+                        destination=None,
+                        methods=[],
+                        default=None,
                         wrapper=None,
                         override=False):
     """
-    Add attributes to a destination object which point to
+    Add attributes to a destination object which points to
     methods from from a source object.
     
     Parameters
@@ -66,7 +66,7 @@ def incorporate_methods(source=None,
                 setattr(destination, method, wrapper(source, method))
         else:
             setattr(destination, method, None)
-            
+
 class Context(object):
     """Functionality for objects that put themselves in a context using the `with` statement."""
     def __enter__(self):
