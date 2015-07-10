@@ -93,7 +93,7 @@ def draw_values(items, point=None):
                     if not name in givens:
                         # How to ensure point[name] becomes a theano float?
                         givens[name] = (node, as_tensor_variable(point[name]))
-    givens = [value for value in givens.items()] 
+    givens = [value for _, value in givens.items()] 
     values = [None for _ in items] 
     for i, item in enumerate(items):
         if hasattr(item, 'name'):
@@ -407,9 +407,8 @@ class HalfNormal(PositiveContinuous):
                 Parameter values to fix.                
         """
         tau = draw_values([self.tau], point=point)
-        p = np.sqrt(2. * tau / np.pi) * np.exp(-0.5 * tau * (x ** 2))
-        p[x < 0.] = 0.
-        return  p    
+        return support(st.halfnorm.pdf(x, scale=1. / np.sqrt(tau)),
+                       tau > 0.)
 
     def cdf(self, x, point=None):
         """
