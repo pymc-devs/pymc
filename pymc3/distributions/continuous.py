@@ -36,7 +36,6 @@ class UnitContinuous(Continuous):
     def __init__(self, transform=transforms.logodds, *args, **kwargs):
         super(UnitContinuous, self).__init__(transform=transform, *args, **kwargs)
 
-
 def get_named_nodes(graph):
     """Get the named nodes in a theano graph 
     (i.e., nodes whose name attribute is not None).::
@@ -116,8 +115,7 @@ def draw_values(items, point=None):
         return values[0]
     else:
         return values
-
-
+    
 def get_tau_sd(tau=None, sd=None):
     """
     Find precision and standard deviation
@@ -181,42 +179,6 @@ class Uniform(Continuous):
 
         if transform is 'interval':
             self.transform = transforms.interval(lower, upper)    
-
-    def pdf(self, x, point=None):
-        """
-        The probability density function (pdf) of the Uniform distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the pdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        lower, upper = draw_values([self.lower, self.upper], point=point)
-        p = np.zeros_like(x)
-        i = np.logical_and(x >= lower, x <= upper)
-        p[i] = 1. / (upper - lower)
-        return p    
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Uniform distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        lower, upper = draw_values([self.lower, self.upper], point=point)
-        p = np.zeros_like(x)
-        i = x >= upper
-        p[i] = 1
-        i = np.logical_and(x >= lower,  x < upper)
-        p[i] = (x - lower) / (upper - lower)
-        return p    
 
     def random(self, size=None, point=None, **kwargs):
         """
@@ -303,35 +265,7 @@ class Normal(Continuous):
             if check:
                 raise err
         return mu, tau
-
-    def pdf(self, x, point=None):
-        """
-        The probability density function (pdf) of the Normal distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the pdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        mu, tau = draw_values([self.mu, self.tau], point=point)                                     
-        return np.sqrt(0.5 * tau / pi) * np.exp(-0.5 * tau * (x - mu) ** 2) 
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Normal distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        mu, tau = draw_values([self.mu, self.tau], point=point)   
-        return 0.5 * (1. + sp.erf(np.sqrt(0.5 * tau) * (x - mu)))
-
+    
     def random(self, size=None, point=None):
         """
         Generate samples from the Normal distribution.
@@ -394,35 +328,6 @@ class HalfNormal(PositiveContinuous):
     def parametrize(self, tau=None, sd=None):
         tau, sd = get_tau_sd(tau, sd)
         return tau
-
-    def pdf(self, x, point=None):
-        """
-        The probability density function (pdf) of the Half-normal distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the pdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        tau = draw_values([self.tau], point=point)
-        return support(st.halfnorm.pdf(x, scale=1. / np.sqrt(tau)),
-                       tau > 0.)
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Half-normal distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        tau = draw_values([self.tau], point=point)
-        return np.erf(sqrt(0.5 * tau) * x)    
 
     def random(self, size=None, point=None):
         """
@@ -518,40 +423,6 @@ class Wald(PositiveContinuous):
                    return mu, lam, alpha
                
         raise ValueError('Wald distribution must specify either mu only, mu and lam, mu and phi, or lam and phi.')
-
-    def pdf(self, x, point=None):
-        """
-        The probability density function (pdf) of the Wald distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the pdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha], point=point)
-        return support(np.sqrt(lam / (2. * np.pi)) * ((x - alpha) ** -1.5) * \
-            np.exp(-0.5 * lam / (x - alpha) * ((x - alpha - mu) / mu) ** 2),
-            x - alpha > 0
-            )
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Wald distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        mu, lam = draw_values([self.mu, self.lam], point=point)      
-        std_cdf = lambda x: 0.5 + 0.5 * sp.erf(x / np.sqrt(2))
-        l = np.sqrt(lam / (x - alpha))
-        m = (x - mu) / mu
-        return std_cdf(l * (m - 1)) + np.exp(2. * lam / mu) + std_cdf(l * (m - 1))
 
     def random(self, point=None, size=None):
         """
@@ -654,37 +525,6 @@ class Beta(UnitContinuous):
     
         return alpha, beta
 
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) of the Beta distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at for which the pdf is to be evaluated.
-        point : dict
-            Model parameters and xs to be fixed.
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)
-        return st.beta(a=alpha, b=beta).pdf(x)    
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Beta distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)  
-        i = np.logical_and(x >=0., x <= 1.)    
-        c = np.zeros_like(x)
-        c[i] = sp.btdtr(alpha, beta, x[i])
-        return support(c, i)
-
     def random(self, point=None, size=None, **kwargs):
         """
         Generate samples from the Beta distribution.
@@ -741,38 +581,6 @@ class Exponential(PositiveContinuous):
 
         self.variance = lam ** -2
 
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) of the Exponential distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at for which the pdf is to be evaluated.
-        point : dict
-            Model parameters and xs to be fixed.
-        """
-        lam = draw_values([self.lam], point=point)       
-        return support(st.expon.pdf(x, scale=1./lam), 
-                       x >= 0., 
-                       lam > 0.)
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Exponential distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        lam = draw_values([self.lam], point=point)          
-        return support(1. - np.exp(-lam * x),
-                       x >= 0,
-                       lam > 0)
-
     def random(self, point=None, size=None):
         """
         Generate samples from the Exponential distribution.
@@ -826,37 +634,6 @@ class Laplace(Continuous):
         self.mean = self.median = self.mode = self.mu = mu
 
         self.variance = 2 * b ** 2
-
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) of the Laplace distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at for which the pdf is to be evaluated.
-        point : dict
-            Model parameters to be fixed.
-        """
-        mu, b = draw_values([self.mu, self.b], point=point)            
-        return support(0.5 / b * np.exp(-np.abs(x - mu) / b), 
-                       b > 0.)    
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Laplace distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        mu, b = draw_values([self.mu, self.b], point=point)     
-        i = np.sign(x - mu)
-        c = np.ceil((i + 1.) / 2) - i * 0.5 * np.exp(-np.abs((x - mu) / b))
-        return c
 
     def random(self, point=None, size=None):
         """
@@ -926,40 +703,6 @@ class Lognormal(PositiveContinuous):
 
         self.variance = (exp(1./tau) - 1) * exp(2*mu + 1./tau)
 
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) of the Lognormal distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at for which the pdf is to be evaluated.
-        point : dict
-            Model parameters and xs to be fixed.
-        """
-        mu, tau = draw_values([self.mu, self.tau], point=point)       
-       
-        return support(np.sqrt(0.5 * tau / np.pi) * (x ** -1) * \
-                              np.exp(-0.5 * tau * (np.log(x) - mu) ** 2),
-                       tau > 0., 
-                       x > 0.)
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Lognormal distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        mu, tau = draw_values([self.mu, self.tau], point=point)            
-        return support(0.5 + 0.5 * sp.erf(np.sqrt(0.5 * tau) * (np.log(x) - mu)),
-                       tau > 0., 
-                       x >= 0.)
-
     def random(self, point=None, size=None):
         """
         Generate samples from the Exponential distribution.
@@ -1028,37 +771,6 @@ class T(Continuous):
     def parametrize(self, mu, lam, sd):
         lam, sd = get_tau_sd(tau=lam, sd=sd)
         return mu, lam, sd
-
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) of the T distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at for which the pdf is to be evaluated.
-        point : dict
-            Parameter values to be fixed.
-        """
-        nu, mu, lam = draw_values([self.nu, self.mu, self.lam], point=point)     
-        return support(st.t.pdf(x, nu, mu, lam ** -0.5),
-                       lam > 0.,
-                       nu > 0.)
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the T distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        nu, mu, lam = draw_values([self.nu, self.mu, self.lam], point=point) 
-        return support(st.t.cdf(x, nu, loc=mu, scale=sd),
-                       nu > 0.)    
 
     def random(self, point=None, size=None):
         """
@@ -1136,38 +848,6 @@ class Pareto(PositiveContinuous):
         self.median = m * 2.** (1. / alpha)
         self.variance = switch(gt(alpha, 2), (alpha * m**2) / ((alpha - 2.) * (alpha - 1.) ** 2), inf)
 
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) of the Pareto distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at for which the pdf is to be evaluated.
-        point : dict
-            Model parameters and xs to be fixed.
-        """
-        alpha, m = draw_values([self.alpha, self.m], point=point)       
-        return support(alpha * (m ** alpha) / (x ** (alpha + 1)),
-                alpha > 0,
-                m > 0,
-                x >= m)
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Pareto distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """        
-        alpha, m = draw_values([self.slpha, self.m], point=point)        
-        return support(1. - (m / x) ** alpha,
-                       nu > 0.)
-
     def random(self, point=None, size=None):
         """
         Generate samples from the Pareto distribution.
@@ -1228,36 +908,6 @@ class Cauchy(Continuous):
         self.median = self.mode = self.alpha = alpha
         self.beta = beta
 
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) of the Cauchy distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at for which the pdf is to be evaluated.
-        point : dict
-            Model parameters and xs to be fixed.
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)       
-        return support(st.cauchy.pdf(x, alpha, beta),
-                beta > 0.)
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Cauchy distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)       
-        return support(1. / pi * np.arctan((x - alpha) / beta) + 0.5,
-                beta > 0.)
-
     def random(self, point=None, size=None):
         """
         Generate samples from the Cauchy distribution.
@@ -1313,39 +963,6 @@ class HalfCauchy(PositiveContinuous):
         self.mode = 0
         self.median = beta
         self.beta = beta
-
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) of the Half-Cauchy distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at for which the pdf is to be evaluated.
-        point : dict
-            Model parameters and xs to be fixed.
-        """
-        beta = draw_values([self.beta], point=point)       
-        return support(2. / (pi * beta * (1. + (x / beta) ** 2)),
-                beta > 0.,
-                x >= 0.)
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Half-Cauchy distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        beta = draw_values([self.beta], point=point) 
-        # This may be wrong.      
-        return support(2. / pi * np.arctan(x / beta),
-                beta > 0.,
-                x >= 0.)
 
     def random(self, point=None, size=None):
         """
@@ -1438,43 +1055,6 @@ class Gamma(PositiveContinuous):
 
         return alpha, beta
 
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) of the Gamma distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at for which the pdf is to be evaluated.
-        point : dict
-            Model parameters and xs to be fixed.
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)
-        if not alpha > 0 or not beta > 0:
-            return np.zeros_like(x) + np.NaN
-        return support(st.gamma.pdf(x, a=alpha , scale=1./beta),
-                alpha > 0.,
-                beta > 0.,
-                x >= 0.)
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Gamma distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        # This may be wrong.      
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)       
-        return support(sp.gammainc(alpha , beta * x) / sp.gamma(alpha),
-                alpha > 0.,
-                beta > 0.,
-                x >= 0.)
-
     def random(self, point=None, size=None):
         """
         Generate samples from the Gamma distribution.
@@ -1549,41 +1129,6 @@ class InverseGamma(PositiveContinuous):
         self.mean = (alpha > 1) * beta / (alpha - 1.) or inf
         self.mode = beta / (alpha + 1.)
         self.variance = switch(gt(alpha, 2), (beta ** 2) / (alpha * (alpha - 1.)**2), inf)
-
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) of the Inverse Gamma distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at for which the pdf is to be evaluated.
-        point : dict
-            Model parameters and xs to be fixed.
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)       
-        return support((beta ** alpha) / sp.gamma(alpha) * (x ** (-alpha - 1)) * \
-                       np.exp(-beta / x),
-                alpha > 0.,
-                beta > 0.,
-                x >= 0.)
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Gamma distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)       
-        return support(sp.gammainc(alpha , beta / x) / sp.gamma(alpha),
-                alpha > 0.,
-                beta > 0.,
-                x >= 0.)
 
     def random(self, point=None, size=None):
         """
@@ -1673,43 +1218,6 @@ class Weibull(PositiveContinuous):
         self.mean = beta * exp(gammaln(1 + 1./alpha))
         self.median = beta * exp(gammaln(log(2)))**(1./alpha)
         self.variance = (beta**2) * exp(gammaln(1 + 2./alpha - self.mean**2))
-
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) of the Weibull distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at for which the pdf is to be evaluated.
-        point : dict
-            Model parameters and xs to be fixed.
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)
-        
-        return support(alpha * (x ** (alpha - 1)) * (beta ** -alpha) * \
-                       np.exp(-(x / beta) ** alpha),
-                alpha > 0.,
-                beta > 0.,
-                x >= 0.)
-
-    def cdf(self, x, point=None):
-        """
-        The cumulative distribution function (cdf) of the Weibull distribution.
-        
-        Parameters
-        ----------
-            x : float
-                The value at which to evaluate the cdf.
-            point : dict
-                Parameter values to fix.                
-        """
-        # This may be wrong.      
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)       
-        return support(1. - exp(-(x / beta) ** alpha),
-                alpha > 0.,
-                beta > 0.,
-                x >= 0.)
 
     def random(self, point=None, size=None):
         """
@@ -1838,49 +1346,6 @@ class ExGaussian(Continuous):
         self.mean = mu + nu
         self.variance = (sigma ** 2) + (nu ** 2)    
 
-    def pdf(self, x, point=None):
-        """
-        Proability density function (pdf) for the ExGaussian distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at which to evaluate the pdf.
-        point : Point
-            Fixed Parameter values.
-        """
-        mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu], point=point)
-        
-        if nu >  0.05 * sigma:
-            p = 1. / nu * np.exp((mu - x) / nu + 0.5 * (sigma / nu) ** 2) * \
-                            st.norm.cdf((x - mu) / sigma - sigma / nu)
-        else:
-            p = 1. / (sigma * np.sqrt(2. * pi)) * np.exp(-0.5 * ((x - mu) / sigma) ** 2) 
-            
-        return support(p,
-                       sigma > 0.,
-                       nu > 0.)
-
-    def cdf(self, x, point=None):
-        """
-        Cumulative distribution function (cdf) for the ExGaussian disribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at which to evaluate the cdf.
-        point : Point
-            Fixed Parameter values.
-        """
-        mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu], point=point)
-    
-        u = (mu - x) / nu
-        v = sigma / nu
-        _cdf = lambda x, m, s: st.normal.cdf(x, loc=m, scale=s)
-        return support(_cdf(u, 0., v) - np.exp(-u + (v ** 2) / 2 + \
-                                              np.log(_cdf(u, v ** 2, v))),
-                       beta > 0)
-
     def random(self, point=None, size=None):
         """
         Generate samples from the Gumbel random variable.
@@ -1967,44 +1432,6 @@ class Gumbel(Continuous):
         self.mode = alpha
         self.variance = (beta * pi) ** 2
 
-    def pdf(self, x, point=None):
-        """
-        Proability density function (pdf) for the Type I Gumbel distribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at which to evaluate the pdf.
-        point : Point
-            Fixed Parameter values.
-        """
-        alpha, beta = draw_values(self.alpha, self.beta, Point=Point)
-        z = (x - alpha) / beta
-        exp = np.exp
-        return support(1. / beta * exp(-z - exp(z)),
-                       x > -inf,
-                       x < -inf,
-                       beta > 0)
-
-    def cdf(self, x, point=None):
-        """
-        Cumulative distribution function (cdf) for the Gumbel disribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at which to evaluate the cdf.
-        point : Point
-            Fixed Parameter values.
-        """
-        alpha, beta = draw_values(self.alpha, self.beta, Point=Point)
-        z = (x - alpha) / beta
-        exp = np.exp
-        return support(1. - exp(-exp(z)),
-                       x > -inf,
-                       x < -inf,
-                       beta > 0)
-
     def random(self, point=None, size=None):
         """
         Generate samples from the Gumbel random variable.
@@ -2058,43 +1485,6 @@ class Frechet(Continuous):
         
         self.mean = switch(ge(mu, 1), sigma * gamma(1. - 1. / alpha) , inf)
         self.mode = mu + sigma * (alpha / (1 + alpha)) ** (1. / alpha)
-
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) for the Frechet disribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at which to evaluate the pdf.
-        point : Point
-            Fixed Parameter values.
-        """
-        alpha, mu, sigma = draw_values([self.alpha, self.mu, self.sigma], point=point)
-        exp = np.exp
-        
-        z = (x - mu) / sigma    
-        return support((alpha / sigma) * z ** (-1 - alpha) * exp(-(z**(-alpha))), 
-                       sigma > 0, 
-                       x - mu > 0)
-
-    def cdf(self, x, point=None):
-        """
-        Cumulative distribution function (cdf) for the Frechet disribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at which to evaluate the cdf.
-        point : Point
-            Fixed Parameter values.
-        """
-        alpha, mu, sigma = draw_values([self.alpha, self.mu, self.sigma], point=point)
-        exp = np.exp
-          
-        return support(exp(-((x - mu) / sigma) ** (-alpha)),
-                       sigma > 0, 
-                       x - mu > 0)
 
     def random(self, point=None, size=None):
         """
@@ -2181,48 +1571,6 @@ class GeneralizedExtremeValue(Continuous):
         self.variance = switch(ge(xi, -eps) & le(xi, eps), ((sigma * pi) ** 2) / 6.,
                       switch(le(xi, 0.5), (sigma ** 2) * (gamma(1. - xi) - gamma(1. - 2. * xi) ** 2) / (xi ** 2),
                              inf))
-
-    def pdf(self, x, point=None):
-        """
-        Probability density function (pdf) for the GEV disribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at which to evaluate the pdf.
-        point : Point
-            Fixed Parameter values.
-        """
-        mu, sigma, xi, eps = draw_values([self.mu, self.sigma, self.xi, self.eps], point=point)        
-        z = (x - mu) / sigma
-        if np.abs(xi) < eps:
-            xi = 0.        
-        if xi == 0:
-            p = np.exp(-np.exp(-z) - z) / sigma
-            x_in_support = np.logical_not(np.isnan(p))
-        else:
-            p = np.exp(-(1. + xi * z) ** -(1. / xi)) * \
-                (1. + xi * z) ** (-1. - (1. / xi)) / sigma
-            x_in_support = np.logical_and(1. + z * xi > 0., np.logical_not(np.isnan(p)))
-        return support(p, x_in_support)
-
-    def cdf(self, x, point=None):
-        """
-        Cumulative distribution function (cdf) for the GEV disribution.
-        
-        Parameters
-        ----------
-        x : float
-            The value at which to evaluate the cdf.
-        point : Point
-            Fixed Parameter values.
-        """
-        mu, sigma, xi, eps = draw_values([self.mu, self,sigma, self.xi, self.eps], point=point)        
-        z = (x - mu) / sigma
-        if xi > -eps and xi < eps:
-            return np.exp(np.exp(-z))
-        else:
-            return np.exp((1. + xi * z) ** (-1. / xi))    
 
     def random(self, point=None, size=None):
         """

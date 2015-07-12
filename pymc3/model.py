@@ -417,9 +417,9 @@ class FreeRV(Factor, TensorVariable):
             self.model = model
             
             incorporate_methods(source=distribution, destination=self, 
-                                methods=['pdf', 'cdf', 'random'],
-                                wrapper=InstanceMethod)
-            
+                                methods=['random'],
+                                wrapper=InstanceMethod)    
+       
 
 def pandas_to_array(data):
     if hasattr(data, 'values'): #pandas
@@ -572,7 +572,7 @@ class TransformedRV(TensorVariable):
             self.tag.test_value = normalRV.tag.test_value
 
             incorporate_methods(source=distribution, destination=self, 
-                                methods=['pdf', 'cdf', 'random'],
+                                methods=['random'],
                                 wrapper=InstanceMethod)
 
 def as_iterargs(data):
