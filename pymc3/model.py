@@ -123,6 +123,11 @@ class Model(Context, Factor):
                      model=self)
 
     @property
+    def disc_vars(self):
+        """All the discrete variables in the model"""
+        return list(typefilter(self.vars, discrete_types))
+        
+    @property
     def cont_vars(self):
         """All the continuous variables in the model"""
         return list(typefilter(self.vars, continuous_types))
