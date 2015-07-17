@@ -24,8 +24,6 @@ from .special import gammaln, multigammaln
 from theano.printing import Print
 from .distribution import *
 
-EULER = 0.5772156649015328606
-
 def bound(logp, *conditions):
     """
     Bounds a log probability density with several conditions
@@ -42,22 +40,6 @@ def bound(logp, *conditions):
     """
 
     return switch(alltrue(conditions), logp, -inf)
-
-def support(x, *conditions):
-    """
-    Bounds density with several conditions.
-    Numpy compatible version of the bound function.
-    Parameters
-    ----------
-    x : float
-    *conditions : booleans
-
-    Returns
-    -------
-    x if all conditions are true
-    0 if some are false
-    """
-    return np.where(alltrue(conditions), x, 0)
 
 
 def alltrue(vals):

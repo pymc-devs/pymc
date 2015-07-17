@@ -8,23 +8,17 @@ nodes in PyMC.
 from __future__ import division
 
 from .dist_math import *
-
-from . import transforms 
-
 import numpy as np
 import numpy.random as nr
-import scipy.special as sp
 import scipy.stats as st
+from theano import function
 
-from theano.tensor.basic import as_tensor_variable
-import theano
-from theano import get_scalar_constant_value
+from . import transforms
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'T', 'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull','Bound',
-           'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald', 'InverseGaussian',
-           'Pareto', 'InverseGamma', 'ExGaussian', 
-           'Erlang', 'Gumbel', 'GeneralizedExtremeValue', 'Frechet']
+           'Tpos', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
+           'Pareto', 'InverseGamma', 'ExGaussian']
 
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
@@ -37,19 +31,19 @@ class UnitContinuous(Continuous):
         super(UnitContinuous, self).__init__(transform=transform, *args, **kwargs)
 
 def get_named_nodes(graph):
-    """Get the named nodes in a theano graph 
+    """Get the named nodes in a theano graph
     (i.e., nodes whose name attribute is not None).::
-    
-        >>> a = as_tensor_variable(4., 'a')   
-        >>> b = as_tensor_variable(5., 'b') 
+
+        >>> a = as_tensor_variable(4., 'a')
+        >>> b = as_tensor_variable(5., 'b')
         >>> c = a ** (b-1) / (0.5 * b)
         >>> print(get_named_nodes(c))
         {'a': TensorConstant{4.0}, 'b': TensorConstant{5.0}}
-        
+
     Parameters
     ----------
     graph - a theano node
-    
+
     Returns:
     A dictionary of name:node pairs.
     """
@@ -64,58 +58,58 @@ def _get_named_nodes(graph, nodes):
             nodes.update(_get_named_nodes(i, nodes))
     return nodes
 
+def draw_values(params, point=None):
+    """
+    Draw (fix) parameter values.
 
-def draw_values(items, point=None):
-    """Fixing named variables (i.e., in the model context)
-            
-            a) by value
-            b) by random sampling
-            
-        >>> with Model():
-        ...    mu = Normal('m', mu=0., tau=1e-3)
-        ...    sd = Gamma('s', alpha=1e3, beta=1e3)
-        ...    n = Normal('n', mu=mu, sd=sd)
-        ...    # m is fixed by value, s will be sampled.
-        ...    y = n.random(point={'m':10}, size=1000)
-        ...        
+    There are a number of cases:
+
+        1) The parameter is a scalar
+        2) The parameter is an *RV
+
+            a) parameter can be fixed to the value in the point
+            b) parameter can be fixed by sampling from the *RV
+            c) parameter can be fixed using tag.test_value
+
+        3) The parameter is a tensor variable/constant. Can be evaluated using
+        theano.function, but a variable may contain nodes which
+
+            a) are named parameters in the point
+            b) are *RVs with a random method
+
     """
     # Distribution parameters may be nodes which have named node-inputs
     # specified in the point. Need to find the node-inputs to replace them.
     givens = {}
-    for item in items:
-        if hasattr(item, 'name'):            
-            named_nodes = get_named_nodes(item)
-            if item.name in named_nodes:
-                named_nodes.pop(item.name)
+    for param in params:
+        if hasattr(param, 'name'):
+            named_nodes = get_named_nodes(param)
+            if param.name in named_nodes:
+                named_nodes.pop(param.name)
             for name, node in named_nodes.items():
-                if point is not None and name in point:
-                    if not name in givens:
-                        # How to ensure point[name] becomes a theano float?
-                        givens[name] = (node, as_tensor_variable(point[name]))
-    givens = [value for _, value in givens.items()] 
-    values = [None for _ in items] 
-    for i, item in enumerate(items):
-        if hasattr(item, 'name'):
-            if point is not None and item.name in point:
-                values[i] = point[item.name]
-            elif hasattr(item, 'random'):
-                values[i] = item.random(point=point, size=None)
-            else:
-                try:#
-                    values[i] = theano.function([], item, givens=givens)()
-                except TypeError:
-                    try:
-                        values[i] = item.tag.test_value
-                    except AttributeError:
-                        # So what happens if this fails? Eh?
-                        values[i] = get_scalar_constant_value(item)
-        else:# So this is guaranteed to be just a number?
-            values[i] = item
+                givens[name] = (node, draw_value(node, point=point))
+    values = [None for _ in params]
+    for i, param in enumerate(params):
+        values[i] = draw_value(param, point=point, givens=givens.values())
     if len(values) == 1:
         return values[0]
     else:
         return values
-    
+
+def draw_value(param, point=None, givens={}):
+    if hasattr(param, 'name'):
+        if hasattr(param, 'model'):
+            if point is not None and param.name in point:
+                return point[param.name]
+            elif hasattr(param, 'random'):
+                return param.random(point=None, size=None)
+            else:
+                return param.tag.test_value
+        else:
+            return function([], param, givens=givens)()
+    else:
+        return param
+
 def get_tau_sd(tau=None, sd=None):
     """
     Find precision and standard deviation
@@ -142,6 +136,7 @@ def get_tau_sd(tau=None, sd=None):
             tau = 1.
         else:
             tau = sd ** -2.
+
     else:
         if sd is not None:
             raise ValueError("Can't pass both tau and sd")
@@ -150,8 +145,8 @@ def get_tau_sd(tau=None, sd=None):
 
     # cast tau and sd to float in a way that works for both np.arrays
     # and pure python
-    tau = 1. * tau
-    sd = 1. * sd
+    tau = 1.*tau
+    sd = 1.*sd
 
     return (tau, sd)
 
@@ -171,19 +166,20 @@ class Uniform(Continuous):
         Upper limit (defaults to 1)
     """
     def __init__(self, lower=0, upper=1, transform='interval', *args, **kwargs):
-        super(Uniform, self).__init__(*args, **kwargs)        
+        super(Uniform, self).__init__(*args, **kwargs)
+
         self.lower = lower
         self.upper = upper
         self.mean = (upper + lower) / 2.
         self.median = self.mean
 
         if transform is 'interval':
-            self.transform = transforms.interval(lower, upper)    
+            self.transform = transforms.interval(lower, upper)
 
-    def random(self, size=None, point=None, **kwargs):
+    def random(self, size=None, point=None):
         """
         Generate samples from the Uniform distribution.
-        
+
         Parameters
         ----------
         size : integer
@@ -192,42 +188,28 @@ class Uniform(Continuous):
             Model parameters which are to be fixed.
         """
         lower, upper = draw_values([self.lower, self.upper], point=point)
-        return nr.uniform(self.upper, self.lower, size)
+        return st.uniform.rvs(loc=lower, scale=upper - lower, size=size)
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """
+    def logp(self, value):
         lower = self.lower
         upper = self.upper
 
         return bound(
             -log(upper - lower),
-            lower <= x, x <= upper)
-   
+            lower <= value, value <= upper)
 
 
 class Flat(Continuous):
     """
     Uninformative log-likelihood that returns 0 regardless of
-    the passed x.
+    the passed value.
     """
     def __init__(self, *args, **kwargs):
         super(Flat, self).__init__(*args, **kwargs)
-        self.median = 0   
+        self.median = 0
 
-    def logp(self, x):
-        return zeros_like(x)
-
-
+    def logp(self, value):
+        return zeros_like(value)
 
 
 class Normal(Continuous):
@@ -254,22 +236,14 @@ class Normal(Continuous):
     """
     def __init__(self, mu=0.0, tau=None, sd=None, *args, **kwargs):
         super(Normal, self).__init__(*args, **kwargs)
-        self.mu, self.tau = self.parametrize(mu, tau, sd)
-        self.mean = self.median = self.mode = self.mu
+        self.mean = self.median = self.mode = self.mu = mu
+        self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.variance = 1. / self.tau
 
-    def parametrize(self, mu=None, tau=None, sd=None):
-        try:
-            tau, sd = get_tau_sd(tau, sd)
-        except ValueError as err:
-            if check:
-                raise err
-        return mu, tau
-    
     def random(self, size=None, point=None):
         """
         Generate samples from the Normal distribution.
-        
+
         Parameters
         ----------
         size : integer
@@ -277,30 +251,19 @@ class Normal(Continuous):
         point : dict
             Model parameters which are to be fixed.
         """
-        mu, tau = draw_values([self.mu, self.tau], point=point)   
-        return nr.normal(loc=mu, scale=1./tau, size=size)
+        mu, tau, sd = draw_values([self.mu, self.tau, self.sd], point=point)
+        return st.norm.rvs(loc=mu, scale=np.sqrt(1./tau), size=size)
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-        x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """
+    def logp(self, value):
         tau = self.tau
+        sd = self.sd
         mu = self.mu
 
         return bound(
-            (-tau * (x - mu) ** 2 + log(tau / pi / 2.)) / 2.,
-            tau > 0
+            (-tau * (value - mu) ** 2 + log(tau / pi / 2.)) / 2.,
+            tau > 0,
+            sd > 0
         )
-
-
 
 
 class HalfNormal(PositiveContinuous):
@@ -311,28 +274,22 @@ class HalfNormal(PositiveContinuous):
     .. math::
         f(x \mid \tau) = \sqrt{\frac{2\tau}{\pi}}\exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
 
-    Parameters
-    ----------
-    tau : float
-        precision (tau > 0)
-    sd : float
-        Alternative parameterization (sd > 0).
+    :Parameters:
+      - `x` : :math:`x \ge 0`
+      - `tau` : tau > 0
+      - `sd` : sd > 0 (alternative parameterization)
 
     """
     def __init__(self, tau=None, sd=None, *args, **kwargs):
         super(HalfNormal, self).__init__(*args, **kwargs)
-        self.tau = self.parametrize(tau=tau, sd=sd)
+        self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.mean = sqrt(2 / (pi * self.tau))
-        self.variance = (1. - 2. / pi) / self.tau        
-
-    def parametrize(self, tau=None, sd=None):
-        tau, sd = get_tau_sd(tau, sd)
-        return tau
+        self.variance = (1. - 2/pi) / self.tau
 
     def random(self, size=None, point=None):
         """
         Generate samples from the Half-normal distribution.
-        
+
         Parameters
         ----------
         size : integer
@@ -341,93 +298,84 @@ class HalfNormal(PositiveContinuous):
             Model parameters which are to be fixed.
         """
         tau = draw_values([self.tau], point=point)
-        return np.abs(nr.normal(loc=0., scale=tau ** -0.5, size=size))
+        return st.halfnorm.rvs(loc=0., scale=tau ** -0.5, size=size)
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """
+    def logp(self, value):
         tau = self.tau
-
+        sd = self.sd
         return bound(
-            -0.5 * tau * (x ** 2) + 0.5 * log(tau * 2. / pi),
-            tau > 0.,
-            x >= 0.)
+            -0.5 * tau * value**2 + 0.5 * log(tau * 2. / pi),
+            tau > 0,
+            sd > 0,
+            value >= 0
+        )
 
 
-class Wald(PositiveContinuous):    
+class Wald(PositiveContinuous):
     """
     Wald random variable with support :math:`x \in (0, \infty)`.
-      
-    .. math::    
+
+    .. math::
         f(x \mid \mu, \lambda) = \left(\frac{\lambda}{2\pi)}\right)^{1/2}x^{-3/2}
         \exp\left\{ -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2\right\}
-       
+
     Parameters
     ----------
-    mu : float, optional 
+    mu : float, optional
         Mean of the distribution (mu > 0).
     lam : float, optional
-        Relative precision (lam > 0). 
+        Relative precision (lam > 0).
     phi : float, optional
         Shape. Alternative parametrisation where phi = lam / mu (phi > 0).
     alpha : float, optional
         Shift/location (alpha >= 0).
-        
+
     The Wald can be instantiated by specifying mu only (so lam=1),
-    mu and lam, mu and phi, or lam and phi.    
-    
-    .. note::    
+    mu and lam, mu and phi, or lam and phi.
+
+    .. note::
         - :math:`E(X) = \mu`
         - :math:`Var(X) = \frac{\mu^3}{\lambda}`
-      
+
     References
     ----------
     .. [Tweedie1957]
-       Tweedie, M. C. K. (1957). 
-       Statistical Properties of Inverse Gaussian Distributions I. 
+       Tweedie, M. C. K. (1957).
+       Statistical Properties of Inverse Gaussian Distributions I.
        The Annals of Mathematical Statistics, Vol. 28, No. 2, pp. 362-377
-         
+
     .. [Michael1976]
-        Michael, J. R., Schucany, W. R. and Hass, R. W. (1976). 
-        Generating Random Variates Using Transformations with Multiple Roots. 
+        Michael, J. R., Schucany, W. R. and Hass, R. W. (1976).
+        Generating Random Variates Using Transformations with Multiple Roots.
         The American Statistician, Vol. 30, No. 2, pp. 88-90
     """
     def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
         super(Wald, self).__init__(*args, **kwargs)
-        self.mu, self.lam, self.alpha = self.parametrize(mu, lam, phi, alpha)           
+        self.mu, self.lam, self.phi = self.get_mu_lam_phi(mu, lam, phi)
+        self.alpha = alpha
         self.mean = self.mu + alpha
         self.mode = self.mu * ( sqrt(1. + (1.5 * self.mu / self.lam) ** 2) - 1.5 * self.mu / self.lam ) + alpha
-        self.variance = (self.mu ** 3) / self.lam           
+        self.variance = (self.mu ** 3) / self.lam
 
-    def parametrize(self, mu, lam, phi, alpha):
+    def get_mu_lam_phi(self, mu, lam, phi):
         if mu is None:
             if lam is not None and phi is not None:
-                return lam / phi, lam, alpha
+                return lam / phi, lam, phi
         else:
             if lam is None:
                 if phi is None:
-                    return mu, 1., alpha
+                    return mu, 1., 1. / mu
                 else:
-                    return mu, mu * phi, alpha
+                    return mu, mu * phi, phi
             else:
                 if phi is None:
-                   return mu, lam, alpha
-               
+                   return mu, lam, lam / mu
         raise ValueError('Wald distribution must specify either mu only, mu and lam, mu and phi, or lam and phi.')
 
     def random(self, point=None, size=None):
         """
         Generate samples from the Wald distribution.
-        
+
         Parameters
         ----------
         size : integer
@@ -435,42 +383,29 @@ class Wald(PositiveContinuous):
         point : dict
               Model parameters which are to be fixed.
         """
-        mu, lam = draw_values([self.mu, self.lam], point=point)
+        mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha], point=point)
         v = nr.normal(loc=0., scale=1., size=size) ** 2
-        x = mu + (mu ** 2) * v / (2. * lam) - mu/(2. * lam) * \
+        value = mu + (mu ** 2) * v / (2. * lam) - mu/(2. * lam) * \
             np.sqrt(4. * mu * lam * v + (mu * v) ** 2)
         z = nr.uniform(low=0., high=1., size=size)
-        # i = z > mu / (mu + x)
+        # i = z > mu / (mu + value)
         # x[i] = (mu**2) / x[i]
-        i = np.floor(z - mu / (mu + x)) * 2 + 1
-        x = (x ** -i) * (mu ** (i + 1))
-        return x + alpha
+        i = np.floor(z - mu / (mu + value)) * 2 + 1
+        value = (value ** -i) * (mu ** (i + 1))
+        return value + alpha
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """        
-        mu = self.mu 
-        lam = self.lam 
-        alpha = self.alpha 
-        # alpha *must* be iid. Otherwise this is wrong.        
-        return bound(logpow(lam / (2. * pi), 0.5) - logpow(x - alpha, 1.5) 
-                    - 0.5 * lam / (x - alpha) * ((x - alpha - mu) / (mu)) ** 2,
+    def logp(self, value):
+        mu = self.mu
+        lam = self.lam
+        alpha = self.alpha
+        # value *must* be iid. Otherwise this is wrong.
+        return bound(logpow(lam / (2. * pi), 0.5) - logpow(value - alpha, 1.5)
+                    - 0.5 * lam / (value - alpha) * ((value - alpha - mu) / (mu)) ** 2,
                  mu > 0.,
                  lam > 0.,
-                 x > 0.,
+                 value > 0.,
                  alpha >=0.,
-                 x - alpha > 0)
-
-InverseGaussian = Wald
+                 value - alpha > 0)
 
 
 class Beta(UnitContinuous):
@@ -479,8 +414,7 @@ class Beta(UnitContinuous):
     :math:`p` of the binomial distribution.
 
     .. math::
-        f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} 
-            x^{\alpha - 1} (1 - x)^{\beta - 1}
+        f(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha) \Gamma(\beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}
 
     Parameters
     ----------
@@ -505,30 +439,28 @@ class Beta(UnitContinuous):
     """
     def __init__(self, alpha=None, beta=None, mu=None, sd=None, *args, **kwargs):
         super(Beta, self).__init__(*args, **kwargs)
-        alpha, beta = self.parametrize(alpha, beta, mu, sd)
+        alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
         self.beta = beta
         self.mean = alpha / (alpha + beta)
         self.variance = alpha * beta / (
-            (alpha + beta) ** 2 * (alpha + beta + 1))        
+            (alpha + beta) ** 2 * (alpha + beta + 1))
 
-    def parametrize(self, alpha=None, beta=None, mu=None, sd=None):
+    def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
             pass
-            #mu = alpha / (alpha + beta)
-            #sd = (alpha * beta / (alpha + beta) ** 2 / (alpha + beta + 1)) ** 0.5
         elif (mu is not None) and (sd is not None):
-            alpha = (1 - mu) * (mu ** 2) / (sd ** 2) - mu
-            beta = (1 - mu) * ((1 - mu) * mu / (sd ** 2) - 1.)
+            alpha = mu * sd
+            beta = (1 - mu) * sd
         else:
             raise ValueError('Incompatible parameterization. Either use alpha and beta, or mu and sd to specify distribution. ')
-    
+
         return alpha, beta
 
     def random(self, point=None, size=None, **kwargs):
         """
         Generate samples from the Beta distribution.
-         
+
         Parameters
         ----------
         size : integer
@@ -536,30 +468,20 @@ class Beta(UnitContinuous):
         point : dict
             Model parameters which are to be fixed.
         """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)  
+        alpha, beta = draw_values([self.alpha, self.beta], point=point)
         return nr.beta(alpha, beta, size)
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """        
+    def logp(self, value):
         alpha = self.alpha
         beta = self.beta
 
         return bound(
             gammaln(alpha + beta) - gammaln(alpha) - gammaln(beta) +
-            logpow(x, alpha - 1) + logpow(1 - x, beta - 1),
-            0. <= x, x <= 1.,
-            alpha > 0.,
-            beta > 0.)
+            logpow(
+                value, alpha - 1) + logpow(1 - value, beta - 1),
+            0 <= value, value <= 1,
+            alpha > 0,
+            beta > 0)
 
 
 class Exponential(PositiveContinuous):
@@ -584,7 +506,7 @@ class Exponential(PositiveContinuous):
     def random(self, point=None, size=None):
         """
         Generate samples from the Exponential distribution.
-        
+
         Parameters
         ----------
         size : integer
@@ -593,32 +515,18 @@ class Exponential(PositiveContinuous):
             Model parameters which are to be fixed.
         """
         lam = draw_values([self.lam], point=point)
-        return nr.exponential(lam, size)
+        return nr.exponential(scale=1./lam, size=size)
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """        
+    def logp(self, value):
         lam = self.lam
-        return bound(log(lam) - lam * x,
-                     x > 0.,
+        return bound(log(lam) - lam * value,
+                     value > 0,
                      lam > 0)
+
 
 class Laplace(Continuous):
     """
-    Laplace distribution.
-    
-    .. math::
-    
-        f(x \mid \mu, b) = \frac{1}{2b}\exp\left{\frac{\lvert x-mu\rvert}{b}\right}
+    Laplace distribution
 
     Parameters
     ----------
@@ -638,7 +546,7 @@ class Laplace(Continuous):
     def random(self, point=None, size=None):
         """
         Generate samples from the Exponential distribution.
-        
+
         Parameters
         ----------
         size : integer
@@ -646,25 +554,14 @@ class Laplace(Continuous):
         point : dict
             Model parameters which are to be fixed.
         """
-        mu, b = draw_values([self.mu, self.b], point=point)      
+        mu, b = draw_values([self.mu, self.b], point=point)
         return nr.laplace(mu, b, size)
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """        
+    def logp(self, value):
         mu = self.mu
         b = self.b
 
-        return -log(2 * b) - abs(x - mu) / b
+        return -log(2 * b) - abs(value - mu) / b
 
 
 class Lognormal(PositiveContinuous):
@@ -677,15 +574,13 @@ class Lognormal(PositiveContinuous):
     independent factors.
 
     .. math::
-        f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}x^{-1}\frac{
-        \exp\left\{-\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
+        f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
+        \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
 
-    Parameters
-    ----------
-    mu - float
-        Location parameter. 
-    tau - float
-        Shape parameter (tau > 0).
+    :Parameters:
+      - `x` : x > 0
+      - `mu` : Location parameter.
+      - `tau` : Scale parameter (tau > 0).
 
     .. note::
 
@@ -706,7 +601,7 @@ class Lognormal(PositiveContinuous):
     def random(self, point=None, size=None):
         """
         Generate samples from the Exponential distribution.
-        
+
         Parameters
         ----------
         size : integer
@@ -714,68 +609,53 @@ class Lognormal(PositiveContinuous):
         point : dict
             Model parameters which are to be fixed.
         """
-        mu, tau = draw_values([self.mu, self.tau], point=point)  
-        return np.exp(mu + 1. / np.sqrt(tau) * nr.normal(loc=0., scale=1., size=size))
+        mu, tau = draw_values([self.mu, self.tau], point=point)
+        return np.exp(mu + (tau ** -0.5)  * st.norm.rvs(loc=0., scale=1., size=size))
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """        
+    def logp(self, value):
         mu = self.mu
         tau = self.tau
 
         return bound(
-            -0.5*tau*(log(x) - mu)**2 + 0.5*log(tau/(2.*pi)) - log(x),
+            -0.5*tau*(log(value) - mu)**2 + 0.5*log(tau/(2.*pi)) - log(value),
             tau > 0)
+
 
 class T(Continuous):
     """
-    Student's T log-likelihood.
-    
-    Describes a location-scale family for the standard (central)
-    T distribution. 
-    
+    Non-central Student's T log-likelihood.
+
+    Describes a normal variable whose precision is gamma distributed. If
+    only nu parameter is passed, this specifies a standard (central)
+    Student's T.
+
     .. math::
         f(x|\mu,\lambda,\nu) = \frac{\Gamma(\frac{\nu +
         1}{2})}{\Gamma(\frac{\nu}{2})}
         \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}}
         \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}
-        
+
     Parameters
     ----------
     nu : int
-        Degrees of freedom (nu > 0).
+        Degrees of freedom
     mu : float
-        Location parameter.
-    sd : float
-        scale parameter (sd > 0)
+        Location parameter (defaults to 0)
     lam : float
-        Precision parameter (lam > 0), where lam = 1 / sd^2. 
+        Scale parameter (defaults to 1)
     """
-    def __init__(self, nu, mu=0., lam=None, sd=None, *args, **kwargs):
+    def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
         super(T, self).__init__(*args, **kwargs)
-        self.nu = as_tensor_variable(nu)
-        self.mu, self.lam, self.sd = self.parametrize(mu, lam, sd)
-        self.mean = self.median = self.mode = self.mu
+        self.nu = nu = as_tensor_variable(nu)
+        self.lam, self.sd = get_tau_sd(tau=lam, sd=sd)
+        self.mean = self.median = self.mode = self.mu = mu
 
-        self.variance = switch((self.nu > 2) * 1, (self.nu / (self.nu - 2.)) , inf)
-
-    def parametrize(self, mu, lam, sd):
-        lam, sd = get_tau_sd(tau=lam, sd=sd)
-        return mu, lam, sd
+        self.variance = switch((nu > 2) * 1, (1 / self.lam) * (nu / (nu - 2)) , inf)
 
     def random(self, point=None, size=None):
         """
         Generate samples from the T distribution.
-        
+
         Parameters
         ----------
         size : integer
@@ -783,33 +663,20 @@ class T(Continuous):
         point : dict
             Model parameters which are to be fixed.
         """
-        nu, mu, lam = draw_values([self.nu, self.mu, self.lam], point=point) 
-        return st.t.rvs(nu, loc=mu, scale=sd, size=size)
+        nu, mu, lam = draw_values([self.nu, self.mu, self.lam], point=point)
+        return st.t.rvs(nu, loc=mu, scale=lam ** -0.5, size=size)
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """        
+    def logp(self, value):
         nu = self.nu
         mu = self.mu
         lam = self.lam
         sd = self.sd
-        
-        return bound(
-            gammaln((nu + 1.0) / 2.0) + .5 * log(lam / (nu * pi)) - \
-                gammaln(nu / 2.0) - (nu + 1.0) / 2.0 * log(1.0 + lam * (x - mu) ** 2 / nu),
-            lam > 0.,
-            nu > 0.,
-            sd > 0.)
 
+        return bound(
+            gammaln((nu + 1.0) / 2.0) + .5 * log(lam / (nu * pi)) - gammaln(nu / 2.0) - (nu + 1.0) / 2.0 * log(1.0 + lam * (value - mu) ** 2 / nu),
+            lam > 0,
+            nu > 0,
+            sd > 0)
 
 StudentT = T
 
@@ -827,9 +694,9 @@ class Pareto(PositiveContinuous):
     Parameters
     ----------
     alpha : float
-        Shape parameter (alpha > 0)
+        Shape parameter (alpha>0)
     m : float
-        Location parameter (m > 0)
+        Scale parameter (m>0)
 
     .. note::
        - :math:`E(x)=\frac{\alpha m}{\alpha-1} if \alpha > 1`
@@ -838,20 +705,16 @@ class Pareto(PositiveContinuous):
     """
     def __init__(self, alpha, m, *args, **kwargs):
         super(Pareto, self).__init__(*args, **kwargs)
-        self.alpha = as_tensor_variable(alpha)
-        self.m = as_tensor_variable(m)
-        
-        alpha = self.alpha
-        m = self.m
-        
-        self.mean = switch(gt(alpha, 1.), alpha * m / (alpha - 1.), inf)
-        self.median = m * 2.** (1. / alpha)
-        self.variance = switch(gt(alpha, 2), (alpha * m**2) / ((alpha - 2.) * (alpha - 1.) ** 2), inf)
+        self.alpha = alpha
+        self.m = m
+        self.mean = switch(gt(alpha,1), alpha * m / (alpha - 1.), inf)
+        self.median = m * 2.**(1./alpha)
+        self.variance = switch(gt(alpha,2), (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2), inf)
 
     def random(self, point=None, size=None):
         """
         Generate samples from the Pareto distribution.
-        
+
         Parameters
         ----------
         size : integer
@@ -859,29 +722,19 @@ class Pareto(PositiveContinuous):
         point : dict
             Model parameters which are to be fixed.
         """
-        alpha, m = draw_values([self.alpha, self.m], point=point)    
+        alpha, m = draw_values([self.alpha, self.m], point=point)
         u = nr.uniform(size=size)
         return m * (1. - u) ** (-1. / alpha)
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """        
+    def logp(self, value):
         alpha = self.alpha
         m = self.m
         return bound(
-            log(alpha) + logpow(m, alpha) - logpow(x, alpha+1),
+            log(alpha) + logpow(m, alpha) - logpow(value, alpha+1),
+
             alpha > 0,
             m > 0,
-            x >= m)
+            value >= m)
 
 
 class Cauchy(Continuous):
@@ -898,6 +751,7 @@ class Cauchy(Continuous):
         Location parameter
     beta : float
         Scale parameter > 0
+
     .. note::
     Mode and median are at alpha.
 
@@ -911,7 +765,7 @@ class Cauchy(Continuous):
     def random(self, point=None, size=None):
         """
         Generate samples from the Cauchy distribution.
-        
+
         Parameters
         ----------
         size : integer
@@ -919,45 +773,32 @@ class Cauchy(Continuous):
         point : dict
             Model parameters which are to be fixed.
         """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)    
-        u = nr.uniform(size=size)   
-        return support(alpha + beta * np.tan(np.pi*(u - 0.5)),
-                beta > 0.)
+        alpha, beta = draw_values([self.alpha, self.beta], point=point)
+        u = nr.uniform(size=size)
+        return alpha + beta * np.tan(np.pi*(u - 0.5))
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """        
+    def logp(self, value):
         alpha = self.alpha
         beta = self.beta
         return bound(
-            -log(pi) - log(beta) - log(1 + ((x - alpha) / beta) ** 2),
+            -log(pi) - log(beta) - log(1 + ((
+                                            value - alpha) / beta) ** 2),
             beta > 0)
-
 
 class HalfCauchy(PositiveContinuous):
     """
-    Half-Cauchy log-likelihood. Simply the absolute x of Cauchy.
+    Half-Cauchy log-likelihood. Simply the absolute value of Cauchy.
 
     .. math::
         f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}
 
-    Parameters
-    ----------
-    beta - float
-        Scale parameter (beta > 0).
+    :Parameters:
+      - `beta` : Scale parameter (beta > 0).
 
     .. note::
       - x must be non-negative.
     """
+
     def __init__(self, beta, *args, **kwargs):
         super(HalfCauchy, self).__init__(*args, **kwargs)
         self.mode = 0
@@ -967,40 +808,29 @@ class HalfCauchy(PositiveContinuous):
     def random(self, point=None, size=None):
         """
         Generate samples from the Half-Cauchy distribution.
-        
+
         Parameters
         ----------
         size : integer
             The number (or array shape) of samples to generate. If not specified, returns one sample.
         point : dict
             Model parameters which are to be fixed.
-            
+
         Returns
         -------
-        An array of samples of the same shape  
+        An array of samples of the same shape
         """
-        beta = draw_values([self.beta], point=point) 
-        u = nr.uniform(size=size)      
-        return support(beta * np.abs(np.tan(np.pi*(u + 0.5))),
-                beta > 0)
+        beta = draw_values([self.beta], point=point)
+        u = nr.uniform(size=size)
+        return beta * np.abs(np.tan(np.pi*(u + 0.5)))
 
     def logp(self, value):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the Half-Cauchy distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """        
         beta = self.beta
         return bound(
             log(2) - log(pi) - log(beta) - log(1 + (value / beta) ** 2),
             beta > 0,
             value >= 0)
+
 
 class Gamma(PositiveContinuous):
     """
@@ -1037,19 +867,19 @@ class Gamma(PositiveContinuous):
     """
     def __init__(self, alpha=None, beta=None, mu=None, sd=None, *args, **kwargs):
         super(Gamma, self).__init__(*args, **kwargs)
-        alpha, beta = self.parametrize(alpha, beta, mu, sd)
+        alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
         self.beta = beta
         self.mean = alpha / beta
         self.mode = maximum((alpha - 1) / beta, 0)
         self.variance = alpha / beta ** 2
 
-    def parametrize(self, alpha=None, beta=None, mu=None, sd=None):
+    def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sd is not None):
-            alpha = (mu / sd) ** 2
-            beta = mu / (sd ** 2)
+            alpha = mu ** 2 / sd ** 2
+            beta = mu / sd ** 2
         else:
             raise ValueError('Incompatible parameterization. Either use alpha and beta, or mu and sd to specify distribution. ')
 
@@ -1058,42 +888,29 @@ class Gamma(PositiveContinuous):
     def random(self, point=None, size=None):
         """
         Generate samples from the Gamma distribution.
-        
+
         Parameters
         ----------
         size : integer
             The number (or array shape) of samples to generate. If not specified, returns one sample.
         point : dict
             Model parameters which are to be fixed.
-            
+
         Returns
         -------
-        An array of samples of the same shape  
+        An array of samples of the same shape
         """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)         
-        return support(st.gamma.rvs(alpha, scale=1. / beta, size=size),
-                alpha > 0.,
-                beta > 0.)
+        alpha, beta = draw_values([self.alpha, self.beta], point=point)
+        return st.gamma.rvs(alpha, scale=1. / beta, size=size)
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the Half-Cauchy distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """        
+    def logp(self, value):
         alpha = self.alpha
         beta = self.beta
         return bound(
             -gammaln(alpha) + logpow(
-                beta, alpha) - beta * x + logpow(x, alpha - 1),
+                beta, alpha) - beta * value + logpow(value, alpha - 1),
 
-            x >= 0,
+            value >= 0,
             alpha > 0,
             beta > 0)
 
@@ -1120,12 +937,8 @@ class InverseGamma(PositiveContinuous):
     """
     def __init__(self, alpha, beta=1, *args, **kwargs):
         super(InverseGamma, self).__init__(*args, **kwargs)
-        self.alpha = as_tensor_variable(alpha)
-        self.beta = as_tensor_variable(beta)
-        
-        alpha = self.alpha
-        beta = self.beta
-        
+        self.alpha = alpha
+        self.beta = beta
         self.mean = (alpha > 1) * beta / (alpha - 1.) or inf
         self.mode = beta / (alpha + 1.)
         self.variance = switch(gt(alpha, 2), (beta ** 2) / (alpha * (alpha - 1.)**2), inf)
@@ -1133,41 +946,28 @@ class InverseGamma(PositiveContinuous):
     def random(self, point=None, size=None):
         """
         Generate samples from the Gamma distribution.
-        
+
         Parameters
         ----------
         size : integer
             The number (or array shape) of samples to generate. If not specified, returns one sample.
         point : dict
             Model parameters which are to be fixed.
-            
+
         Returns
         -------
-        An array of samples of the same shape  
+        An array of samples of the same shape
         """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)         
-        return support(st.invgamma.rvs(alpha, scale=1. / beta, size=size),
-                alpha > 0.,
-                beta > 0.)
+        alpha, beta = draw_values([self.alpha, self.beta], point=point)
+        return st.invgamma.rvs(a=alpha, scale=beta, size=size)
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of x given the current
-        parameters of the Half-Cauchy distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """        
+    def logp(self, value):
         alpha = self.alpha
         beta = self.beta
         return bound(
-            logpow(beta, alpha) - gammaln(alpha) - beta / x + logpow(x, -alpha-1),
+            logpow(beta, alpha) - gammaln(alpha) - beta / value + logpow(value, -alpha-1),
 
-            x > 0,
+            value > 0,
             alpha > 0,
             beta > 0)
 
@@ -1222,42 +1022,29 @@ class Weibull(PositiveContinuous):
     def random(self, point=None, size=None):
         """
         Generate samples from the Weibull distribution.
-        
+
         Parameters
         ----------
         size : integer
             The number (or array shape) of samples to generate. If not specified, returns one sample.
         point : dict
             Model parameters which are to be fixed.
-            
+
         Returns
         -------
-        An array of samples of the same shape  
+        An array of samples of the same shape
         """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point) 
+        alpha, beta = draw_values([self.alpha, self.beta], point=point)
         u = nr.uniform(size=size)
-        return support(beta * (-log(u)) ** alpha,
-                alpha > 0.,
-                beta > 0.)        
+        return beta * (-np.log(u)) ** alpha
 
-    def logp(self, x):
-        """
-        Return the log-likelihood of a value given the current
-        parameters of the Half-Cauchy distribution. 
-        
-        This function is optimised by theano.        
-        
-        Parameters
-        ----------
-            x : float
-            The iid x(s) to evaluate the log-likelihood. 
-        """            
+    def logp(self, value):
         alpha = self.alpha
         beta = self.beta
         return bound(
-            (log(alpha) - log(beta) + (alpha - 1)*log(x/beta)
-            - (x/beta)**alpha),
-            x >= 0,
+            (log(alpha) - log(beta) + (alpha - 1)*log(value/beta)
+            - (value/beta)**alpha),
+            value >= 0,
             alpha > 0,
             beta > 0)
 
@@ -1273,12 +1060,13 @@ class Bounded(Continuous):
         if hasattr(self.dist, 'mode'):
             self.mode = self.dist.mode
 
-    def logp(self, x):
+    def logp(self, value):
         return bound(
-            self.dist.logp(x),
+            self.dist.logp(value),
 
-            self.lower <= x, x <= self.upper)
-        
+            self.lower <= value, value <= self.upper)
+
+
 
 class Bound(object):
     """Creates a new bounded distribution"""
@@ -1298,34 +1086,34 @@ class Bound(object):
 
 Tpos = Bound(T, 0)
 
-
-class ExGaussian(Continuous):    
+class ExGaussian(Continuous):
     """
-    Exponentially modified Gaussian random variable with 
+    Exponentially modified Gaussian random variable with
     support :math:`x \in [-\infty, \infty]`.This results from
     the convolution of a normal distribution with an exponential
     distribution.
-     
+
     .. math::
        f(x \mid \mu, \sigma, \tau) = \frac{1}{\nu}\;
        \exp\left\{\frac{\mu-x}{\nu}+\frac{\sigma^2}{2\nu^2}\right\}
        \Phi\left(\frac{x-\mu}{\sigma}-\frac{\sigma}{\nu}\right)
-    
+
     where :math:`\Phi` is the cumulative distribution function of the
     standard normal distribution.
-     
+
     Parameters
     ----------
     mu : float
         Mean of the normal distribution (-inf < mu < inf).
     sigma : float
-        Standard deviation of the normal distribution (sigma > 0).     
+        Standard deviation of the normal distribution (sigma > 0).
     nu : float
         Mean of the exponential distribution (nu > 0).
-         
-    .. note::    
+
+    .. note::
         - :math:`E(X) = \mu + \nu`
         - :math:`Var(X) = \sigma^2 + \nu^2`
+
 
     References
     ----------
@@ -1334,22 +1122,22 @@ class ExGaussian(Continuous):
         "Generalized additive models for location, scale and shape"
         Applied Statististics., 54, part 3, pp 507-554.
     .. [Lacouture2008]
-        Lacouture, Y. and Couseanou, D. (2008). 
+        Lacouture, Y. and Couseanou, D. (2008).
         "How to use MATLAB to fit the ex-Gaussian and other probability functions to a distribution of response times".
         Tutorials in Quantitative Methods for Psychology, Vol. 4, No. 1, pp 35-45.
     """
     def __init__(self, mu, sigma, nu, *args, **kwargs):
         super(ExGaussian, self).__init__(*args, **kwargs)
-        self.mu = mu     
+        self.mu = mu
         self.sigma = sigma
         self.nu = nu
         self.mean = mu + nu
-        self.variance = (sigma ** 2) + (nu ** 2)    
+        self.variance = (sigma ** 2) + (nu ** 2)
 
-    def random(self, point=None, size=None):
+    def random(self, size=None):
         """
-        Generate samples from the Gumbel random variable.
-        
+        Generate samples from the Ex-Gaussian random variable.
+
         Parameters
         ----------
         point : Point
@@ -1357,251 +1145,19 @@ class ExGaussian(Continuous):
         size : int
             The number (or array shape) of samples to generate.
         """
-        mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu], point=point)
+        u = runiform(low=0., high=1., size=size)
+        n = rnormal(self.mu, self.sigma, size=size)
+        return n - self.nu * log(u)
 
-        u = nr.uniform(low=0., high=1., size=size)
-        n = nr.normal(mu, sigma, size=size)    
-        return n - nu * log(u)
-
-    def logp(self, x):        
+    def logp(self, value):
         mu = self.mu
         sigma = self.sigma
-        nu = self.nu         
-        lp = switch(gt(nu,  0.05 * sigma),# This condition suggested by exGAUS.R from gamlss 
-                    -log(nu) + (mu - x) / nu + 0.5 * (sigma / nu) ** 2 + \
-                        logpow(std_cdf((x - mu) / sigma - sigma / nu), 1.),
-                    -log(sigma * sqrt(2. * pi)) - 0.5 * ((x - mu) / sigma) ** 2) 
-         
+        nu = self.nu
+        lp = switch(gt(nu,  0.05 * sigma),# This condition suggested by exGAUS.R from gamlss
+                    -log(nu) + (mu - value) / nu + 0.5 * (sigma / nu) ** 2 + \
+                        logpow(std_cdf((value - mu) / sigma - sigma / nu), 1.),
+                    -log(sigma * sqrt(2. * pi)) - 0.5 * ((value - mu) / sigma) ** 2)
+
         return bound(lp,
                  sigma > 0.,
                  nu > 0.)
- 
-
-class Erlang(Gamma):
-    """
-    Erlang log-likelihood.
-
-    .. math::
-        f(x \mid b, c) = \frac{(x/b)^(c-1)e^{-x/b}}{b\gamma(c)}
-
-    Parameters
-    ----------
-    x : float
-        x >= 0
-    b : float
-        Scale parameter (b > 0).
-    c : integer
-        Shape parameter (c > 0).
-
-    .. note::
-        This is a gamma variate with :math:`\beta = 1/b` and :math:`\alpha = c` 
-    - :math:`E(X) = bc`
-    - :math:`Var(X) = b^2c`
-
-    """
-    def __init__(self, b, c, *args, **kwargs):
-        super(Erlang, self).__init__(alpha=c, beta=1/b, *args, **kwargs)
-        
-       
-class Gumbel(Continuous):
-    """
-    Gumbel distribution:
-    
-    .. math::
-    
-        f(x \mid \alpha, \beta) = frac{1}{\beta}\exp\left\{-\frac{x-\alpha}{\beta}-
-            \exp\left\{-\frac{x-\alpha}{\beta}\right\}\right\}
-            
-    Parameters
-    ----------
-    alpha : float
-        Location
-    beta : float
-        Scale (beta > 0)
-        
-    .. note:: 
-    - :math:`E(X) = \alpha - \gamma\beta` where :math:`\gamma` is the Euler constant
-    - :math:`Var(X) = (\beta^2pi^2) \div 6`
-    """
-    def __init__(self, alpha, beta, *args, **kwargs):
-        super(Gumbel, self).__init__(*args, **kwargs)
-        self.alpha = alpha
-        self.beta = beta
-        
-        self.mean = alpha + EULER * beta
-        self.mode = alpha
-        self.variance = (beta * pi) ** 2
-
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Gumbel random variable.
-        
-        Parameters
-        ----------
-        point : Point
-            Parameters to fix.
-        size : int
-            The number (or array shape) of samples to generate.
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)
-        return alpha - beta * log(-log(nr.uniform(size=size)))
-
-    def logp(self, x):
-        alpha = self.alpha
-        beta = self.beta       
-        
-        return bound(-log(beta) - (x - alpha) / beta + exp(-(x - alpha) / beta),
-                     beta > 0.)
-
-
-class Frechet(Continuous):
-    """
-    Frechet distribution:
-    
-    .. math::
-    
-        f(x \mid \alpha, \mu, \sigma) = frac{\alpha}{\sigma}\left(\frac{x-\mu}{\sigma}\right)^{-1-\lpha}
-            \exp\left\{-left(\frac{x-\mu}{\sigma}\right)^{-\alpha}\right}
-            
-    Parameters
-    ----------
-    alpha : float
-        Shape (alpha > 0)
-    mu : float
-        Location
-    sigma : float
-        Scale (sigma > 0)
-        
-    .. note:: 
-    - :math:`\begin{cases}E(X) = \mu + \sigma\Gamma\left(1-\frac{1}{\alpha}\right)&\text{when }\alpha>1\\\infty&\text{otherwise}\end{cases}`
-    - :math:`\begin{cases}Var(X) = \sigma^2\left(\Gamma(1-\frac{2}{\alpha})+\left(\Gamma(1-\frac{1}{\alpha})\right)^2\right)&\text{when }\alpha>2\\\infty&\text{otherwise}\end{cases}`
-    
-    """
-    def __init__(self, alpha, mu=0., sigma=1., *args, **kwargs):
-        super(Frechet, self).__init__(*args, **kwargs)
-        self.alpha = alpha
-        self.mu = mu
-        self.sigma = sigma        
-        
-        self.mean = switch(ge(mu, 1), sigma * gamma(1. - 1. / alpha) , inf)
-        self.mode = mu + sigma * (alpha / (1 + alpha)) ** (1. / alpha)
-
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Frechet random variable.
-        
-        Parameters
-        ----------
-        point : Point
-            Parameters to fix.
-        size : int
-            The number of samples to generate
-        """
-        alpha, mu, sigma = draw_values([self.alpha, self.mu, self.sigma], point=point)
-        u = nr.uniform(size=size)
-        return (-np.log(u)) ** (-1. / alpha) * sigma + mu
-
-    def logp(self, x):
-        alpha = self.alpha
-        mu = self.mu
-        sigma = self.sigma  
-        
-        z = (x - mu) / sigma
-        return bound(log(alpha/sigma) - (1. + alpha) * z - (z ** - alpha),
-                     sigma > 0.,
-                     x > mu)
-        
-    
-class GeneralizedExtremeValue(Continuous):
-    r"""
-    Generalized extreme value (GEV) distibution.
-    
-    .. math::    
-        f(x \mid \mu, \sigma, \xi) =
-        \begin{cases}
-        \\
-        \frac{1}{\sigma}\,\exp\left\{-\left(1+\xi\, z\right)^{1/\xi}\,\right\}
-            \left(1-\xi\,z\right)^{-1 + 1/\xi} & \text{if } \xi = 0 \\
-        \frac{1}{\sigma}\,\exp\left\{-z - \exp\left\{-z\right\}\right\}& \text{otherwise}
-        \\
-        \end{cases}
-                
-        \text{where } z = \frac{x-\mu}{\sigma}
-        
-    Parameters
-    ----------
-    mu : float
-        Location
-    sigma : float
-        Scale
-    xi : float 
-        Shape. When xi = 0, this is equivalent to the Gumbel distribution,
-        when xi > 0, the Freshet distribution, and when xi < 0,
-        the reverse Weibull distribution.
-    eps : float
-        The region around 0 (i.e., +/- eps) for which xi is considered equivalent to 0.
-
-    .. note::
-    - :math:`E(X)=\begin{cases}\mu+\gamma\sigma & \xi = 0\\
-        \mu+\sigma*(\Gamma(1-\xi)-1)/\xi & \xi \leq 1 \\
-        \inf & \text{otherwise}\end{cases}`
-    - :math:`Var(X)=\begin{cases}
-        \frac{(\sigma\pi)^2}{6} & \xi = 0 \\
-        \sigma^2\Gamma(1-\xi) - \frac{\Gamma(1-2\xi)^2}{\xi^2} & \xi \leq \frac{1}{2} \\
-        \inf & \text{otherwise}
-        \end{cases}
-    """
-    def __init__(self, mu, sigma, xi, eps=1e-9, *args, **kwargs):
-        super(GeneralizedExtremeValue, self).__init__(*args, **kwargs)
-        self.mu = as_tensor_variable(mu)
-        self.sigma = as_tensor_variable(sigma)
-        self.xi = as_tensor_variable(xi)
-        self.eps = eps
-        
-        mu = self.mu
-        sigma = self.sigma
-        xi = self.xi
-        
-        self.mean = switch(ge(xi, -eps) & le(xi, eps), mu + EULER * sigma,
-                      switch(eq(xi, 1), mu + sigma * (gamma(1. - xi) - 1.) / xi, inf))
-        self.mode = switch(ge(xi, -eps) & le(xi, eps), mu, mu + sigma * ((1. + xi) ** (-xi) - 1.) / xi)
-        self.median = switch(ge(xi, -eps) & le(xi, eps), mu - sigma * log(log(2.)), 
-                        mu + sigma * ((log(2) ** -xi) - 1) / xi)
-                      
-        self.variance = switch(ge(xi, -eps) & le(xi, eps), ((sigma * pi) ** 2) / 6.,
-                      switch(le(xi, 0.5), (sigma ** 2) * (gamma(1. - xi) - gamma(1. - 2. * xi) ** 2) / (xi ** 2),
-                             inf))
-
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the GEV random variable.
-        
-        Parameters
-        ----------
-        point : Point
-            Parameters to fix.
-        size : int
-            The number of samples to generate
-        """
-        mu, sigma, xi, eps = draw_values([self.mu, self.sigma, self.xi, self.eps], point=point)        
-        if xi > -eps and xi < eps:
-            return mu - sigma * np.log(nr.exponential(scale=1., size=size))
-        else:
-            return mu + sigma * (nr.exponential(scale=1., size=size) ** (-sigma) - 1) / sigma
-
-    def logp(self, x):
-        mu = self.mu
-        sigma = self.sigma
-        xi = self.xi        
-        eps = self.eps
-        
-        z = (x - mu) / sigma
-        lp = switch(ge(xi, -eps) & le(xi, eps),
-               -log(sigma) - z - exp(-z),
-               -log(sigma) - (1. + xi * z) ** (1. / xi) + log(1. + xi * z) ** (-1. - 1. / xi)
-               )
-        return bound(lp,
-                     sigma > 0.,
-                     # Maybe unecessary:
-                     x >= switch(ge(xi, 0.), mu - sigma / xi, -inf),
-                     x <= switch(le(xi, 0.), mu - sigma / xi, inf))
