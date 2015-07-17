@@ -67,6 +67,28 @@ def incorporate_methods(source=None,
         else:
             setattr(destination, method, None)
 
+def get_named_nodes(graph):
+    """Get the named nodes in a theano graph
+    (i.e., nodes whose name attribute is not None).
+
+    Parameters
+    ----------
+    graph - a theano node
+
+    Returns:
+    A dictionary of name:node pairs.
+    """
+    return _get_named_nodes(graph, {})
+
+def _get_named_nodes(graph, nodes):
+    if graph.owner == None:
+        if graph.name is not None:
+            nodes.update({graph.name:graph})
+    else:
+        for i in graph.owner.inputs:
+            nodes.update(_get_named_nodes(i, nodes))
+    return nodes
+
 class Context(object):
     """Functionality for objects that put themselves in a context using the `with` statement."""
     def __enter__(self):
