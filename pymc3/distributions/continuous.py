@@ -40,7 +40,7 @@ def draw_values(params, point=None):
 
             a) parameter can be fixed to the value in the point
             b) parameter can be fixed by sampling from the *RV
-            c) parameter can be fixed using tag.test_value
+            c) parameter can be fixed using tag.test_value (last resort)
 
         3) The parameter is a tensor variable/constant. Can be evaluated using
         theano.function, but a variable may contain nodes which
@@ -61,7 +61,8 @@ def draw_values(params, point=None):
                 givens[name] = (node, draw_value(node, point=point))
     values = [None for _ in params]
     for i, param in enumerate(params):
-        values[i] = draw_value(param, point=point, givens=givens.values())
+        # "Homogonise" output
+        values[i] = np.atleast_1d(draw_value(param, point=point, givens=givens.values()))
     if len(values) == 1:
         return values[0]
     else:
@@ -72,7 +73,7 @@ def draw_value(param, point=None, givens={}):
         if hasattr(param, 'model'):
             if point is not None and param.name in point:
                 return point[param.name]
-            elif hasattr(param, 'random'):
+            elif hasattr(param, 'random') and param.random is not None:
                 return param.random(point=None, size=None)
             else:
                 return param.tag.test_value
@@ -80,7 +81,7 @@ def draw_value(param, point=None, givens={}):
             return function([], param,
                             givens=givens,
                             rebuild_strict=False,
-                            allow_input_downcast True)()
+                            allow_input_downcast=True)()
     else:
         return param
 
@@ -226,7 +227,7 @@ class Normal(Continuous):
             Model parameters which are to be fixed.
         """
         mu, tau, sd = draw_values([self.mu, self.tau, self.sd], point=point)
-        return st.norm.rvs(loc=mu, scale=np.sqrt(1./tau), size=size)
+        return st.norm.rvs(loc=mu, scale=tau ** -0.5, size=size)
 
     def logp(self, value):
         tau = self.tau
@@ -1108,7 +1109,7 @@ class ExGaussian(Continuous):
         self.mean = mu + nu
         self.variance = (sigma ** 2) + (nu ** 2)
 
-    def random(self, size=None):
+    def random(self, point=None, size=None):
         """
         Generate samples from the Ex-Gaussian random variable.
 
@@ -1119,9 +1120,8 @@ class ExGaussian(Continuous):
         size : int
             The number (or array shape) of samples to generate.
         """
-        u = runiform(low=0., high=1., size=size)
-        n = rnormal(self.mu, self.sigma, size=size)
-        return n - self.nu * log(u)
+        mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu], point)
+        return nr.normal(mu, sigma, size=size) + nr.exponential(scale=nu, size=size)
 
     def logp(self, value):
         mu = self.mu
