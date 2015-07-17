@@ -49,11 +49,10 @@ def product(domains):
     for val in itertools.product(*[d.vals for d in domains]):
         yield zip(names, val)
 
-R = Domain([-inf, -2.1, -1, -.01, .0, .01, 1., 2.1, inf])
-Rplus = Domain([0., .01, .1, .9, .99, 1., 1.5, 2., 100., inf])
-RNZplus = Domain([.01, .1, .9, .99, 1., 1.5, 2., 100., inf])
-Rplusbig = Domain([0., .5, .9, .99, 1., 1.5, 2., 20., inf])
-Unit = Domain([0., .001, .1, .5, .75, .99, 1.])
+R = Domain([-inf, -2.1, -1, -.01, .0, .01, 1, 2.1, inf])
+Rplus = Domain([0, .01, .1, .9, .99, 1, 1.5, 2, 100, inf])
+Rplusbig = Domain([0, .5, .9, .99, 1, 1.5, 2, 20, inf])
+Unit = Domain([0, .001, .1, .5, .75, .99, 1])
 
 Runif = Domain([-1, -.4, 0, .4, 1])
 Rdunif = Domain([-10, 0, 10.])
@@ -210,19 +209,15 @@ def check_wald(value, mu, lam, phi, alpha, logp):
     assert_almost_equal(model.fastlogp(pt),
                     logp, decimal=6, err_msg=str(pt))  
     
-def nan_to_neginf(x):
-    return np.where(np.isnan(x), -inf, x)
-    
+
 def test_beta():
     pymc3_matches_scipy(
             Beta, Unit, {'alpha': Rplus, 'beta': Rplus},
             lambda value, alpha, beta: sp.beta.logpdf(value, alpha, beta)
             )
     pymc3_matches_scipy(
-            Beta, Unit, {'mu': Unit, 'sd': RNZplus},
-            lambda value, mu, sd: nan_to_neginf(sp.beta.logpdf(value, 
-                                                 a=(1 - mu) * (mu ** 2) / (sd ** 2) - mu, 
-                                                 b=(1 - mu) * ((1 - mu) * mu / (sd ** 2) - 1.)))
+            Beta, Unit, {'mu': Unit, 'sd': Rplus},
+            lambda value, mu, sd: sp.beta.logpdf(value, mu * sd, (1 - mu) * sd)
             )
 
 
