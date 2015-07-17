@@ -12,6 +12,7 @@ import numpy as np
 import numpy.random as nr
 import scipy.stats as st
 from theano import function
+from ..model import get_named_nodes
 
 from . import transforms
 
@@ -30,39 +31,9 @@ class UnitContinuous(Continuous):
     def __init__(self, transform=transforms.logodds, *args, **kwargs):
         super(UnitContinuous, self).__init__(transform=transform, *args, **kwargs)
 
-def get_named_nodes(graph):
-    """Get the named nodes in a theano graph
-    (i.e., nodes whose name attribute is not None).::
-
-        >>> a = as_tensor_variable(4., 'a')
-        >>> b = as_tensor_variable(5., 'b')
-        >>> c = a ** (b-1) / (0.5 * b)
-        >>> print(get_named_nodes(c))
-        {'a': TensorConstant{4.0}, 'b': TensorConstant{5.0}}
-
-    Parameters
-    ----------
-    graph - a theano node
-
-    Returns:
-    A dictionary of name:node pairs.
-    """
-    return _get_named_nodes(graph, {})
-
-def _get_named_nodes(graph, nodes):
-    if graph.owner == None:
-        if graph.name is not None:
-            nodes.update({graph.name:graph})
-    else:
-        for i in graph.owner.inputs:
-            nodes.update(_get_named_nodes(i, nodes))
-    return nodes
-
 def draw_values(params, point=None):
     """
-    Draw (fix) parameter values.
-
-    There are a number of cases:
+    Draw (fix) parameter values. Handles a number of cases:
 
         1) The parameter is a scalar
         2) The parameter is an *RV
@@ -106,7 +77,10 @@ def draw_value(param, point=None, givens={}):
             else:
                 return param.tag.test_value
         else:
-            return function([], param, givens=givens)()
+            return function([], param,
+                            givens=givens,
+                            rebuild_strict=False,
+                            allow_input_downcast True)()
     else:
         return param
 
