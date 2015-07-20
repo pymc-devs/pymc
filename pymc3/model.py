@@ -10,7 +10,7 @@ from inspect import getargspec
 
 from .memoize import memoize
 
-__all__ = ['Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext', 'Point', 'Deterministic', 'Potential']
+__all__ = ['Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext', 'Point', 'Deterministic', 'Potential', 'deterministic']
 
 
 class Context(object):
@@ -523,3 +523,6 @@ def as_iterargs(data):
 # theano stuff
 theano.config.warn.sum_div_dimshuffle_bug = False
 theano.config.compute_test_value = 'raise'
+
+# create alias for as_op decorator
+deterministic = theano.compile.ops.as_op
