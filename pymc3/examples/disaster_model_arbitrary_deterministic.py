@@ -24,7 +24,7 @@ disasters_data = array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 years = len(disasters_data)
 
 #here is the trick
-@theano.compile.ops.as_op(itypes=[t.lscalar, t.dscalar, t.dscalar],otypes=[t.dvector])
+@deterministic(itypes=[t.lscalar, t.dscalar, t.dscalar],otypes=[t.dvector])
 def rateFunc(switchpoint,early_mean, late_mean):
     ''' Concatenate Poisson means '''
     out = empty(years)
