@@ -17,9 +17,8 @@ from collections import OrderedDict
 __all__ = ['advi']
 
 def advi(vars=None, start=None, model=None, n=5000):
-
     model = modelcontext(model)
-    if start is None: 
+    if start is None:
         start = model.test_point
 
     if vars is None:
@@ -39,7 +38,7 @@ def advi(vars=None, start=None, model=None, n=5000):
 
     result = run_adagrad(uw, grad, inarray, n)
 
-    l = result.size/2
+    l = result.size / 2
 
     u = bij.rmap(result[:l])
     w = bij.rmap(result[l:])
@@ -52,7 +51,7 @@ def run_adagrad(uw, grad, inarray, n):
     updates = adagrad(grad, shared_inarray, learning_rate=-.1, epsilon=.1, n=50)
 
     f = theano.function([], [shared_inarray, grad], updates=updates)
-    
+
     for i in range(n):
         uw_i, g = f()
     return uw_i
@@ -61,20 +60,20 @@ def variational_gradient_estimate(vars, model):
     theano.config.compute_test_value = 'ignore'
     shared = make_shared_replacements(vars, model)
     [logp], inarray = join_nonshared_inputs([model.logpt], vars, shared)
-    logp = CallableTensor(logp) 
+    logp = CallableTensor(logp)
 
     uw = dvector('uw')
-    uw.tag.test_value = np.concatenate([inarray.tag.test_value, inarray.tag.test_value])
-    
+    uw.tag.test_value = np.concatenate([inarray.tag.test_value,
+                                        inarray.tag.test_value])
+
     r = MRG_RandomStreams(seed=1)
-    l = uw.size/2
     n = r.normal(size=(1,))
     gradient_estimate = inner_gradients(logp, n, uw)
-    
+
     return gradient_estimate, inarray, shared
 
 def inner_gradients(logp, n, uw):
-    l = uw.size/2
+    l = (uw.size/2).astype('int64')
     u = uw[:l]
     w = uw[l:]
 
@@ -87,7 +86,7 @@ def inner_gradients(logp, n, uw):
 tprint = theano.printing.Print()
 
 def adagrad(grad, param, learning_rate, epsilon, n):
-    i = theano.shared(np.array(0),'i')
+    i = theano.shared(np.array(0), 'i')
     value = param.get_value(borrow=True)
     accu = theano.shared(np.zeros(value.shape+(n,), dtype=value.dtype))
 
