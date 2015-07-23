@@ -249,10 +249,7 @@ class MultiTrace(object):
     def _slice(self, idx):
         """Return a new MultiTrace object sliced according to `idx`."""
         new_traces = [trace._slice(idx) for trace in self._straces.values()]
-        # Some backends cannot slice, and warn instead.
-        new_traces = [tr for tr in new_traces if tr is not None]
-        if new_traces:
-            return MultiTrace(new_traces)
+        return MultiTrace(new_traces)
 
     def point(self, idx, chain=None):
         """Return a dictionary of point values at `idx`.

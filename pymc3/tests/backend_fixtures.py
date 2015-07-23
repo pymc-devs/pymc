@@ -177,9 +177,9 @@ class SelectionTestCase(ModelBackendSampledTestCase):
     def test_get_slice(self):
         expected = []
         for chain in [0, 1]:
-            expected.append({varname: self.expected[chain][varname][:2]
+            expected.append({varname: self.expected[chain][varname][2:]
                              for varname in self.mtrace.varnames})
-        result = self.mtrace[:2]
+        result = self.mtrace[2:]
         for chain in [0, 1]:
             for varname in self.test_point.keys():
                 npt.assert_equal(result.get_values(varname, chains=[chain]),
@@ -248,11 +248,6 @@ class SelectionTestCase(ModelBackendSampledTestCase):
                          mtrace[varname])
         npt.assert_equal(mtrace[varname],
                          mtrace.__getattr__(varname))
-
-
-class SelectionNoSliceTestCase(SelectionTestCase):
-    def test_get_slice(self):
-        pass
 
 
 class DumpLoadTestCase(ModelBackendSampledTestCase):
