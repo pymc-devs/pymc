@@ -74,7 +74,7 @@ def draw_value(param, point=None, givens={}):
             if point is not None and param.name in point:
                 return point[param.name]
             elif hasattr(param, 'random') and param.random is not None:
-                return param.random(point=None, size=None)
+                return param.random(point=point, size=None)
             else:
                 return param.tag.test_value
         else:
