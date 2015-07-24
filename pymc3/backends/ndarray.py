@@ -99,6 +99,9 @@ class NDArray(base.BaseTrace):
         return self.samples[varname][burn::thin]
 
     def _slice(self, idx):
+        # Slicing directly instead of using _slice_as_ndarray to
+        # support stop value in slice (which is needed by
+        # iter_sample).
         sliced = NDArray(model=self.model, vars=self.vars)
         sliced.chain = self.chain
         sliced.samples = {varname: values[idx]
@@ -112,3 +115,20 @@ class NDArray(base.BaseTrace):
         idx = int(idx)
         return {varname: values[idx]
                 for varname, values in self.samples.items()}
+
+
+def _slice_as_ndarray(strace, idx):
+    if idx.start is None:
+        burn = 0
+    else:
+        burn = idx.start
+    if idx.step is None:
+        thin = 1
+    else:
+        thin = idx.step
+
+    sliced = NDArray(model=strace.model, vars=strace.vars)
+    sliced.chain = strace.chain
+    sliced.samples = {v: strace.get_values(v, burn=burn, thin=thin)
+                      for v in strace.varnames}
+    return sliced

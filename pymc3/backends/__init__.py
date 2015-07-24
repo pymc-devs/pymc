@@ -52,11 +52,15 @@ that are retrieved.
 
     >>> trace.get_values('x', burn=1000, chains=[0, 2])
 
-Some backends also suppport slicing the MultiTrace object. For example,
-the following call would return a new trace object without the first
-1000 sampling iterations for all traces and variables.
+MultiTrace objects also support slicing. For example, the following
+call would return a new trace object without the first 1000 sampling
+iterations for all traces and variables.
 
     >>> sliced_trace = trace[1000:]
+
+The backend for the new trace is always NDArray, regardless of the
+type of original trace.  Only the NDArray backend supports a stop
+value in the slice.
 
 Loading a saved backend
 -----------------------

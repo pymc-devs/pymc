@@ -21,19 +21,19 @@ class TestText2dSampling(bf.SamplingTestCase):
     shape = (2, 3)
 
 
-class TestText0dSelection(bf.SelectionNoSliceTestCase):
+class TestText0dSelection(bf.SelectionTestCase):
     backend = text.Text
     name = 'text-db'
     shape = ()
 
 
-class TestText1dSelection(bf.SelectionNoSliceTestCase):
+class TestText1dSelection(bf.SelectionTestCase):
     backend = text.Text
     name = 'text-db'
     shape = 2
 
 
-class TestText2dSelection(bf.SelectionNoSliceTestCase):
+class TestText2dSelection(bf.SelectionTestCase):
     backend = text.Text
     name = 'text-db'
     shape = (2, 3)

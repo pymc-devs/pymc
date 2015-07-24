@@ -18,9 +18,8 @@ The chain column denotes the chain index and starts at 0.
 """
 import numpy as np
 import sqlite3
-import warnings
 
-from ..backends import base
+from ..backends import base, ndarray
 
 TEMPLATES = {
     'table':            ('CREATE TABLE IF NOT EXISTS [{table}] '
@@ -228,7 +227,9 @@ class SQLite(base.BaseTrace):
         return values.reshape(shape)
 
     def _slice(self, idx):
-        warnings.warn('Slice for SQLite backend has no effect.')
+        if idx.stop is not None:
+            raise ValueError('Stop value in slice not supported.')
+        return ndarray._slice_as_ndarray(self, idx)
 
     def point(self, idx):
         """Return dictionary of point values at `idx` for current chain

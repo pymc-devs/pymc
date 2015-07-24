@@ -19,9 +19,8 @@ from glob import glob
 import numpy as np
 import os
 import pandas as pd
-import warnings
 
-from ..backends import base
+from ..backends import base, ndarray
 
 
 class Text(base.BaseTrace):
@@ -128,7 +127,9 @@ class Text(base.BaseTrace):
         return vals[burn::thin]
 
     def _slice(self, idx):
-        warnings.warn('Slice for Text backend has no effect.')
+        if idx.stop is not None:
+            raise ValueError('Stop value in slice not supported.')
+        return ndarray._slice_as_ndarray(self, idx)
 
     def point(self, idx):
         """Return dictionary of point values at `idx` for current chain
