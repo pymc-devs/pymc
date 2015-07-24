@@ -42,6 +42,9 @@ def advi(vars=None, start=None, model=None, n=5000):
 
     u = bij.rmap(result[:l])
     w = bij.rmap(result[l:])
+    # w is in log space
+    for var in w.keys():
+        w[var] = np.exp(w[var])
     return u, w
 
 def run_adagrad(uw, grad, inarray, n):
