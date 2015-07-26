@@ -8,11 +8,11 @@ nodes in PyMC.
 from __future__ import division
 
 from .dist_math import *
+from .distribution import draw_values
 import numpy as np
 import numpy.random as nr
 import scipy.stats as st
 from theano import function
-from ..model import get_named_nodes
 
 from . import transforms
 
@@ -31,59 +31,6 @@ class UnitContinuous(Continuous):
     def __init__(self, transform=transforms.logodds, *args, **kwargs):
         super(UnitContinuous, self).__init__(transform=transform, *args, **kwargs)
 
-def draw_values(params, point=None):
-    """
-    Draw (fix) parameter values. Handles a number of cases:
-
-        1) The parameter is a scalar
-        2) The parameter is an *RV
-
-            a) parameter can be fixed to the value in the point
-            b) parameter can be fixed by sampling from the *RV
-            c) parameter can be fixed using tag.test_value (last resort)
-
-        3) The parameter is a tensor variable/constant. Can be evaluated using
-        theano.function, but a variable may contain nodes which
-
-            a) are named parameters in the point
-            b) are *RVs with a random method
-
-    """
-    # Distribution parameters may be nodes which have named node-inputs
-    # specified in the point. Need to find the node-inputs to replace them.
-    givens = {}
-    for param in params:
-        if hasattr(param, 'name'):
-            named_nodes = get_named_nodes(param)
-            if param.name in named_nodes:
-                named_nodes.pop(param.name)
-            for name, node in named_nodes.items():
-                givens[name] = (node, draw_value(node, point=point))
-    values = [None for _ in params]
-    for i, param in enumerate(params):
-        # "Homogonise" output
-        values[i] = np.atleast_1d(draw_value(param, point=point, givens=givens.values()))
-    if len(values) == 1:
-        return values[0]
-    else:
-        return values
-
-def draw_value(param, point=None, givens={}):
-    if hasattr(param, 'name'):
-        if hasattr(param, 'model'):
-            if point is not None and param.name in point:
-                return point[param.name]
-            elif hasattr(param, 'random') and param.random is not None:
-                return param.random(point=point, size=None)
-            else:
-                return param.tag.test_value
-        else:
-            return function([], param,
-                            givens=givens,
-                            rebuild_strict=False,
-                            allow_input_downcast=True)()
-    else:
-        return param
 
 def get_tau_sd(tau=None, sd=None):
     """
@@ -182,6 +129,9 @@ class Flat(Continuous):
     def __init__(self, *args, **kwargs):
         super(Flat, self).__init__(*args, **kwargs)
         self.median = 0
+
+    def random(self, point=None, size=None):
+        return np.zeros(size)
 
     def logp(self, value):
         return zeros_like(value)
@@ -1034,6 +984,20 @@ class Bounded(Continuous):
 
         if hasattr(self.dist, 'mode'):
             self.mode = self.dist.mode
+
+    def random(self, point=None, size=None):
+        lower, upper = draw_values([self.lower, self.upper], point=point)
+        if size is None:
+            size = 1
+        samples = np.zeros(size).flatten()
+        i, n = 0, len(samples)
+        while i < len(samples):
+            sample = self.dist.random(point=point, size=n)
+            select = sample[np.logical_and(sample > lower, sample <= upper)]
+            samples[i:(i+len(select))] = select[:]
+            i += len(select)
+            n -= len(select)
+        return np.reshape(samples, size)
 
     def logp(self, value):
         return bound(

@@ -142,3 +142,15 @@ def test_ex_gaussian_random():
             lambda size, mu=None, sigma=None, nu=None: nr.normal(mu, sigma, size=size) + \
                 nr.exponential(scale=nu, size=size)
             )
+
+def test_flat_random():
+    with Model():
+        f = Flat('f')
+        assert np.all(f.random(10000) == np.zeros(10000)), \
+            'Random samples from Flat distribution incorrect'
+
+def test_bounded_random():
+    # A bit crude...
+    BoundedNormal = Bound(Normal, upper=0)
+    pymc3_random(BoundedNormal, {'tau':Rplus},
+                 ref_rand=lambda size, tau=None: -st.halfnorm.rvs(size=size,loc=0, scale=tau ** -0.5))
