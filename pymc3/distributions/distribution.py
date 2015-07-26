@@ -150,6 +150,7 @@ def draw_value(param, point=None, givens={}):
             return function([], param,
                             givens=givens,
                             rebuild_strict=False,
+                            on_unused_input='ignore',
                             allow_input_downcast=True)()
     else:
         return param

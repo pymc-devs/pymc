@@ -12,7 +12,6 @@ from .distribution import draw_values
 import numpy as np
 import numpy.random as nr
 import scipy.stats as st
-from theano import function
 
 from . import transforms
 

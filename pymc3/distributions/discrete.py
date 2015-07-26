@@ -1,6 +1,10 @@
 from .dist_math import *
 from theano.tensor import as_tensor_variable
+from .distribution import draw_values
 import theano
+import scipy.stats as st
+import numpy as np
+import numpy.random as nr
 
 __all__ = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson', 'NegativeBinomial',
 'ConstantDist', 'ZeroInflatedPoisson', 'DiscreteUniform', 'Geometric',
@@ -33,6 +37,10 @@ class Binomial(Discrete):
         self.n = n
         self.p = p
         self.mode = cast(round(n * p), self.dtype)
+
+    def random(self, point=None, size=None):
+        n, p = draw_values([self.n, self.p], point=point)
+        return st.binom.rvs(n=n, p=p, size=size)
 
     def logp(self, value):
         n = self.n
@@ -78,6 +86,11 @@ class BetaBin(Discrete):
         self.n = n
         self.mode = cast(round(alpha / (alpha + beta)), 'int8')
 
+    def random(self, point=None, size=None):
+        alpha, beta, n = \
+            draw_values([self.alpha, self.beta, self.n], point=point)
+        return st.binom.rvs(n, st.beta.rvs(a=alpha, b=beta, size=size))
+
     def logp(self, value):
         alpha = self.alpha
         beta = self.beta
@@ -115,6 +128,10 @@ class Bernoulli(Discrete):
         self.p = p
         self.mode = cast(round(p), 'int8')
 
+    def random(self, point=None, size=None):
+        p = draw_values([self.p], point=point)
+        return st.bernoulli.rvs(p, size=size)
+
     def logp(self, value):
         p = self.p
         return bound(
@@ -150,6 +167,10 @@ class Poisson(Discrete):
         super(Poisson, self).__init__(*args, **kwargs)
         self.mu = mu
         self.mode = floor(mu).astype('int32')
+
+    def random(self, point=None, size=None):
+        mu = draw_values([self.mu], point=point)
+        return st.poisson.rvs(mu, size=size)
 
     def logp(self, value):
         mu = self.mu
@@ -187,6 +208,15 @@ class NegativeBinomial(Discrete):
         self.mu = mu
         self.alpha = alpha
         self.mode = floor(mu).astype('int32')
+
+    def random(self, point=None, size=None):
+        mu, alpha = draw_values([self.mu, self.alpha], point=point)
+        if alpha > 1e10:
+            return st.poisson.rvs(mu, size=size)
+        else:
+            g = st.gamma.rvs(alpha, scale=alpha / mu, size=size)
+            g[g==0] = np.finfo(float).eps
+            return st.poisson.rvs(g)
 
     def logp(self, value):
         mu = self.mu
@@ -228,6 +258,10 @@ class Geometric(Discrete):
         self.p = p
         self.mode = 1
 
+    def random(self, point=None, size=None):
+        p = draw_values([self.p], point=point)
+        return nr.geometric(p, size=size)
+
     def logp(self, value):
         p = self.p
         return bound(log(p) + logpow(1 - p, value - 1),
@@ -253,6 +287,10 @@ class DiscreteUniform(Discrete):
         super(DiscreteUniform, self).__init__(*args, **kwargs)
         self.lower, self.upper = floor(lower).astype('int32'), floor(upper).astype('int32')
         self.mode = floor((upper - lower) / 2.).astype('int32')
+
+    def random(self, point=None, size=None):
+        lower, upper = draw_values([self.lower, self.upper], point=point)
+        return nr.random_integers(lower, upper, size=size)
 
     def logp(self, value):
         upper = self.upper
@@ -284,6 +322,10 @@ class Categorical(Discrete):
         self.p = as_tensor_variable(p)
         self.mode = argmax(p)
 
+    def random(self, point=None, size=None):
+        p = draw_values([self.p], point=point)
+        return nr.multinomial(1, p, size=size)
+
     def logp(self, value):
         p = self.p
         k = self.k
@@ -311,6 +353,10 @@ class ConstantDist(Discrete):
         super(ConstantDist, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c
 
+    def random(self, point=None, size=None):
+        c = draw_values([self.c], point)
+        return np.ones(size).astype(int) * c
+
     def logp(self, value):
         c = self.c
         return bound(0, eq(value, c))
@@ -324,6 +370,12 @@ class ZeroInflatedPoisson(Discrete):
         self.pois = Poisson.dist(theta)
         self.const = ConstantDist.dist(0)
         self.mode = self.pois.mode
+
+    def random(self, point=None, size=None):
+        theta, z = draw_values([self.theta, self.z], point=point)
+        #u = nr.uniform(size=size)
+        # To do: Finish me
+        return None
 
     def logp(self, value):
         z = self.z
