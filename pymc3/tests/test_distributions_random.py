@@ -170,12 +170,6 @@ def test_ex_gaussian_random():
                 nr.exponential(scale=nu, size=size)
             )
 
-def test_flat_random():
-    with Model():
-        f = Flat('f')
-        assert np.all(f.random(10000) == np.zeros(10000)), \
-            'Random samples from Flat distribution incorrect'
-
 def test_bounded_random():
     # A bit crude...
     BoundedNormal = Bound(Normal, upper=0)
@@ -185,8 +179,11 @@ def test_bounded_random():
 def test_flat_random():
     with Model():
         f = Flat('f')
-        assert np.all(f.random(10000) == np.zeros(10000)), \
-            'Random samples from Flat distribution incorrect'
+        try:
+            f.random(1)
+            assert False, 'Flat distribution returned samples'
+        except ValueError:
+            pass
 
 def test_bounded_random():
     # A bit crude...

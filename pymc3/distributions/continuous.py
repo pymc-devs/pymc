@@ -130,7 +130,7 @@ class Flat(Continuous):
         self.median = 0
 
     def random(self, point=None, size=None):
-        return np.zeros(size)
+        raise ValueError('Cannot sample from Flat distribution')
 
     def logp(self, value):
         return zeros_like(value)
