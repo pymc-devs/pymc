@@ -8,7 +8,7 @@ nodes in PyMC.
 from __future__ import division
 
 from .dist_math import *
-from .distribution import draw_values
+from .distribution import draw_values, get_sample_shape
 import numpy as np
 import numpy.random as nr
 import scipy.stats as st
@@ -97,19 +97,11 @@ class Uniform(Continuous):
         if transform is 'interval':
             self.transform = transforms.interval(lower, upper)
 
-    def random(self, size=None, point=None):
-        """
-        Generate samples from the Uniform distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-        """
-        lower, upper = draw_values([self.lower, self.upper], point=point)
-        return st.uniform.rvs(loc=lower, scale=upper - lower, size=size)
+    def random(self, *args, **kwargs):
+        lower, upper = draw_values([self.lower, self.upper], 
+                                   point=kwargs.pop('point', None))
+        return st.uniform.rvs(loc=lower, scale=upper - lower, 
+                              size=get_sample_shape(self.shape, *args, **kwargs))
 
     def logp(self, value):
         lower = self.lower
@@ -129,7 +121,7 @@ class Flat(Continuous):
         super(Flat, self).__init__(*args, **kwargs)
         self.median = 0
 
-    def random(self, point=None, size=None):
+    def random(self, *args, **kwargs):
         raise ValueError('Cannot sample from Flat distribution')
 
     def logp(self, value):
@@ -164,19 +156,11 @@ class Normal(Continuous):
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.variance = 1. / self.tau
 
-    def random(self, size=None, point=None):
-        """
-        Generate samples from the Normal distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-        """
-        mu, tau, sd = draw_values([self.mu, self.tau, self.sd], point=point)
-        return st.norm.rvs(loc=mu, scale=tau ** -0.5, size=size)
+    def random(self, *args, **kwargs):
+        mu, tau, sd = draw_values([self.mu, self.tau, self.sd], 
+                                  point=kwargs.pop('point', None))
+        return st.norm.rvs(loc=mu, scale=tau ** -0.5, 
+                           size=get_sample_shape(self.shape, *args, **kwargs))
 
     def logp(self, value):
         tau = self.tau
@@ -210,19 +194,10 @@ class HalfNormal(PositiveContinuous):
         self.mean = sqrt(2 / (pi * self.tau))
         self.variance = (1. - 2/pi) / self.tau
 
-    def random(self, size=None, point=None):
-        """
-        Generate samples from the Half-normal distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-        """
-        tau = draw_values([self.tau], point=point)
-        return st.halfnorm.rvs(loc=0., scale=tau ** -0.5, size=size)
+    def random(self, *args, **kwargs):
+        tau = draw_values([self.tau], point=kwargs.pop('point', None))
+        return st.halfnorm.rvs(loc=0., scale=tau ** -0.5,
+                               size=get_sample_shape(self.shape, *args, **kwargs))
 
     def logp(self, value):
         tau = self.tau
@@ -296,22 +271,14 @@ class Wald(PositiveContinuous):
                    return mu, lam, lam / mu
         raise ValueError('Wald distribution must specify either mu only, mu and lam, mu and phi, or lam and phi.')
 
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Wald distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-              Model parameters which are to be fixed.
-        """
-        mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha], point=point)
-        v = nr.normal(loc=0., scale=1., size=size) ** 2
+    def random(self, *args, **kwargs):
+        mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha],
+                                     point=kwargs.pop('point', None))
+        shape = get_sample_shape(self.shape, *args, **kwargs)
+        v = nr.normal(loc=0., scale=1., size=shape) ** 2
         value = mu + (mu ** 2) * v / (2. * lam) - mu/(2. * lam) * \
             np.sqrt(4. * mu * lam * v + (mu * v) ** 2)
-        z = nr.uniform(low=0., high=1., size=size)
+        z = nr.uniform(low=0., high=1., size=shape)
         # i = z > mu / (mu + value)
         # x[i] = (mu**2) / x[i]
         i = np.floor(z - mu / (mu + value)) * 2 + 1
@@ -381,19 +348,10 @@ class Beta(UnitContinuous):
 
         return alpha, beta
 
-    def random(self, point=None, size=None, **kwargs):
-        """
-        Generate samples from the Beta distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)
-        return nr.beta(alpha, beta, size)
+    def random(self, *args, **kwargs):
+        alpha, beta = draw_values([self.alpha, self.beta],
+                                  point=kwargs.pop('point', None))
+        return nr.beta(alpha, beta, size=get_sample_shape(self.shape, *args, **kwargs))
 
     def logp(self, value):
         alpha = self.alpha
@@ -427,19 +385,10 @@ class Exponential(PositiveContinuous):
 
         self.variance = lam ** -2
 
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Exponential distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-        """
-        lam = draw_values([self.lam], point=point)
-        return nr.exponential(scale=1./lam, size=size)
+    def random(self, *args, **kwargs):
+        lam = draw_values([self.lam], point=kwargs.pop('point', None))
+        return nr.exponential(scale=1./lam, 
+                              size=get_sample_shape(self.shape, *args, **kwargs))
 
     def logp(self, value):
         lam = self.lam
@@ -467,19 +416,10 @@ class Laplace(Continuous):
 
         self.variance = 2 * b ** 2
 
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Exponential distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-        """
-        mu, b = draw_values([self.mu, self.b], point=point)
-        return nr.laplace(mu, b, size)
+    def random(self, *args, **kwargs):
+        mu, b = draw_values([self.mu, self.b], point=kwargs.pop('point', None))
+        return nr.laplace(mu, b, 
+                          size=get_sample_shape(self.shape, *args, **kwargs))
 
     def logp(self, value):
         mu = self.mu
@@ -522,19 +462,10 @@ class Lognormal(PositiveContinuous):
 
         self.variance = (exp(1./tau) - 1) * exp(2*mu + 1./tau)
 
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Exponential distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-        """
-        mu, tau = draw_values([self.mu, self.tau], point=point)
-        return np.exp(mu + (tau ** -0.5)  * st.norm.rvs(loc=0., scale=1., size=size))
+    def random(self, *args, **kwargs):
+        mu, tau = draw_values([self.mu, self.tau], point=kwargs.pop('point', None))
+        return np.exp(mu + (tau ** -0.5)  * \
+                      st.norm.rvs(loc=0., scale=1., size=get_sample_shape(self.shape, *args, **kwargs)))
 
     def logp(self, value):
         mu = self.mu
@@ -576,19 +507,11 @@ class T(Continuous):
 
         self.variance = switch((nu > 2) * 1, (1 / self.lam) * (nu / (nu - 2)) , inf)
 
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the T distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-        """
-        nu, mu, lam = draw_values([self.nu, self.mu, self.lam], point=point)
-        return st.t.rvs(nu, loc=mu, scale=lam ** -0.5, size=size)
+    def random(self, *args, **kwargs):
+        nu, mu, lam = draw_values([self.nu, self.mu, self.lam],
+                                  point=kwargs.pop('point', None))
+        return st.t.rvs(nu, loc=mu, scale=lam ** -0.5, 
+                        size=get_sample_shape(self.shape, *args, **kwargs))
 
     def logp(self, value):
         nu = self.nu
@@ -635,19 +558,10 @@ class Pareto(PositiveContinuous):
         self.median = m * 2.**(1./alpha)
         self.variance = switch(gt(alpha,2), (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2), inf)
 
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Pareto distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-        """
-        alpha, m = draw_values([self.alpha, self.m], point=point)
-        u = nr.uniform(size=size)
+    def random(self, *args, **kwargs):
+        alpha, m = draw_values([self.alpha, self.m],
+                               point=kwargs.pop('point', None))
+        u = nr.uniform(size=get_sample_shape(self.shape, *args, **kwargs))
         return m * (1. - u) ** (-1. / alpha)
 
     def logp(self, value):
@@ -655,7 +569,6 @@ class Pareto(PositiveContinuous):
         m = self.m
         return bound(
             log(alpha) + logpow(m, alpha) - logpow(value, alpha+1),
-
             alpha > 0,
             m > 0,
             value >= m)
@@ -686,19 +599,10 @@ class Cauchy(Continuous):
         self.median = self.mode = self.alpha = alpha
         self.beta = beta
 
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Cauchy distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)
-        u = nr.uniform(size=size)
+    def random(self, *args, **kwargs):
+        alpha, beta = draw_values([self.alpha, self.beta],
+                                  point=kwargs.pop('point', None))
+        u = nr.uniform(size=get_sample_shape(self.shape, *args, **kwargs))
         return alpha + beta * np.tan(np.pi*(u - 0.5))
 
     def logp(self, value):
@@ -729,23 +633,9 @@ class HalfCauchy(PositiveContinuous):
         self.median = beta
         self.beta = beta
 
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Half-Cauchy distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-
-        Returns
-        -------
-        An array of samples of the same shape
-        """
-        beta = draw_values([self.beta], point=point)
-        u = nr.uniform(size=size)
+    def random(self, *args, **kwargs):
+        beta = draw_values([self.beta], point=kwargs.pop('point', None))
+        u = nr.uniform(size=get_sample_shape(self.shape, *args, **kwargs))
         return beta * np.abs(np.tan(np.pi*(u + 0.5)))
 
     def logp(self, value):
@@ -809,23 +699,11 @@ class Gamma(PositiveContinuous):
 
         return alpha, beta
 
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Gamma distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-
-        Returns
-        -------
-        An array of samples of the same shape
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)
-        return st.gamma.rvs(alpha, scale=1. / beta, size=size)
+    def random(self, *args, **kwargs):
+        alpha, beta = draw_values([self.alpha, self.beta],
+                                  point=kwargs.pop('point', None))
+        return st.gamma.rvs(alpha, scale=1. / beta, 
+                            size=get_sample_shape(self.shape, *args, **kwargs))
 
     def logp(self, value):
         alpha = self.alpha
@@ -867,23 +745,11 @@ class InverseGamma(PositiveContinuous):
         self.mode = beta / (alpha + 1.)
         self.variance = switch(gt(alpha, 2), (beta ** 2) / (alpha * (alpha - 1.)**2), inf)
 
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Gamma distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-
-        Returns
-        -------
-        An array of samples of the same shape
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)
-        return st.invgamma.rvs(a=alpha, scale=beta, size=size)
+    def random(self, *args, **kwargs):
+        alpha, beta = draw_values([self.alpha, self.beta],
+                                  point=kwargs.pop('point', None))
+        return st.invgamma.rvs(a=alpha, scale=beta,
+                               size=get_sample_shape(self.shape, *args, **kwargs))
 
     def logp(self, value):
         alpha = self.alpha
@@ -943,23 +809,10 @@ class Weibull(PositiveContinuous):
         self.median = beta * exp(gammaln(log(2)))**(1./alpha)
         self.variance = (beta**2) * exp(gammaln(1 + 2./alpha - self.mean**2))
 
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Weibull distribution.
-
-        Parameters
-        ----------
-        size : integer
-            The number (or array shape) of samples to generate. If not specified, returns one sample.
-        point : dict
-            Model parameters which are to be fixed.
-
-        Returns
-        -------
-        An array of samples of the same shape
-        """
-        alpha, beta = draw_values([self.alpha, self.beta], point=point)
-        u = nr.uniform(size=size)
+    def random(self, *args, **kwargs):
+        alpha, beta = draw_values([self.alpha, self.beta],
+                                  point=kwargs.pop('point', None))
+        u = nr.uniform(size=get_sample_shape(self.shape, *args, **kwargs))
         return beta * (-np.log(u)) ** alpha
 
     def logp(self, value):
@@ -984,11 +837,11 @@ class Bounded(Continuous):
         if hasattr(self.dist, 'mode'):
             self.mode = self.dist.mode
 
-    def random(self, point=None, size=None):
+    def random(self, *args, **kwargs):
+        point = kwargs.pop('point', None)
         lower, upper = draw_values([self.lower, self.upper], point=point)
-        if size is None:
-            size = 1
-        samples = np.zeros(size).flatten()
+        shape = get_sample_shape(self.shape, *args, **kwargs)
+        samples = np.zeros(shape).flatten()
         i, n = 0, len(samples)
         while i < len(samples):
             sample = self.dist.random(point=point, size=n)
@@ -996,7 +849,7 @@ class Bounded(Continuous):
             samples[i:(i+len(select))] = select[:]
             i += len(select)
             n -= len(select)
-        return np.reshape(samples, size)
+        return np.reshape(samples, shape)
 
     def logp(self, value):
         return bound(
@@ -1072,19 +925,12 @@ class ExGaussian(Continuous):
         self.mean = mu + nu
         self.variance = (sigma ** 2) + (nu ** 2)
 
-    def random(self, point=None, size=None):
-        """
-        Generate samples from the Ex-Gaussian random variable.
-
-        Parameters
-        ----------
-        point : Point
-            Parameters to fix.
-        size : int
-            The number (or array shape) of samples to generate.
-        """
-        mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu], point)
-        return nr.normal(mu, sigma, size=size) + nr.exponential(scale=nu, size=size)
+    def random(self, *args, **kwargs):
+        mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu],
+                                    point=kwargs.pop('point', None))
+        shape = get_sample_shape(self.shape, *args, **kwargs)
+        return nr.normal(mu, sigma, size=shape) + \
+            nr.exponential(scale=nu, size=shape)
 
     def logp(self, value):
         mu = self.mu
