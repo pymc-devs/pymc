@@ -12,7 +12,7 @@ from pymc3.tests.test_distributions import (build_model,
 
 from pymc3.distributions.continuous import *
 from pymc3.distributions.discrete import *
-from pymc3.distributions.distribution import draw_values
+from pymc3.distributions.distribution import draw_values, get_sample_shape
 from pymc3 import Model, Point
 
 import numpy as np
@@ -76,6 +76,32 @@ def test_draw_values():
         mu3, tau3 = draw_values([y2.distribution.mu, y2.distribution.tau])
         assert isinstance(mu3, np.ndarray) and isinstance(tau3, np.ndarray), \
             "Draw values did not return np.ndarray with random sampling"
+
+def test_get_sample_shape():
+    shapes = [(), 1, 2, 50, 100, 1000, (1,2), (3,4,5)]
+    
+    for shape in shapes:
+        check_get_sample_shape(np.atleast_1d(shape), shape)
+
+    for shape in shapes:
+        for size in [1, 2, 50, 1000, 10000, (5, 10)]:
+            check_get_sample_shape(np.atleast_1d(size), shape, size)
+
+    for shape in shapes:
+        for size in [1, 2, 50, 1000, 10000, (5, 10)]:
+            check_get_sample_shape(np.atleast_1d(size), shape, size=size)
+
+    for shape in shapes:
+        for repeat in [1, 2, 50, 1000, 10000]:
+            expected = np.append(np.atleast_1d(repeat), np.atleast_1d(shape))
+            check_get_sample_shape(expected, shape, repeat=repeat)
+
+def check_get_sample_shape(expected, shape, *args, **kwargs):
+    samples = get_sample_shape(shape, *args, **kwargs)
+    actual = np.atleast_1d(samples)
+    assert np.all(actual == expected), \
+        "get_sample_shape(shape={0}, **{1}) returned {2}, expected {3}" \
+            .format(shape, '{0}'.format(kwargs), actual, expected)
 
 def test_uniform_random():
     pymc3_random(Uniform, {'lower':-Rplus, 'upper':Rplus},

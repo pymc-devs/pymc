@@ -53,7 +53,7 @@ class Distribution(object):
                     return self.getattr_value(v)
         else:
             return self.getattr_value(val)
-                        
+
         if val is None:
             raise AttributeError(str(self) + " has no finite default value to use, checked: " +
                          str(defaults) + " pass testval argument or adjust so value is finite.")
@@ -154,3 +154,37 @@ def draw_value(param, point=None, givens={}):
                             allow_input_downcast=True)()
     else:
         return param
+
+def get_sample_shape(shape, *args, **kwargs):
+    """Calculate the shape of random samples from a random variable.
+
+    Parameters
+    ----------
+    shape : int or tuple of int or numpy.ndarray of int
+        The dimensions of the random variable.
+    size : int or tuple of int or numpy.ndarray of int or None
+        The number of samples to draw
+    repeat : int or tuple of int or numpy.ndarray of int or None
+
+    Returns
+    -------
+    An array describing the shape of the random samples.
+
+    - If :size: is not None, then then `size` is returned.
+    - If `repeat` is not None, an array representing the dimensions of 
+     `repeat` *followed* by `shape` is returned. So if `repeat` is (1, 2) 
+      and `shape` is (3,4) then the numpy array [1, 2, 3, 4] is returned.
+    - If `size` and `repeat` are None, then an `shape` is returned.
+    """
+    try:
+        size = args[0]
+    except IndexError:
+        size = kwargs.pop('size', None)
+    repeat = kwargs.pop('repeat', None)
+    if size is not None:
+        return np.atleast_1d(size)
+    elif repeat is not None:
+        return np.append(np.atleast_1d(repeat), np.atleast_1d(shape))
+    else:
+        z = max(np.atleast_1d(shape).shape) == 0 
+        return np.atleast_1d(1 if z else shape)
