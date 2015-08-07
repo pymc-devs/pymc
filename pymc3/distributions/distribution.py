@@ -141,50 +141,99 @@ def draw_value(param, point=None, givens={}):
     if hasattr(param, 'name'):
         if hasattr(param, 'model'):
             if point is not None and param.name in point:
-                return point[param.name]
+                value = point[param.name]
             elif hasattr(param, 'random') and param.random is not None:
-                return param.random(point=point, size=None)
+                value = param.random(point=point, size=None)
             else:
-                return param.tag.test_value
+                value = param.tag.test_value
         else:
-            return function([], param,
-                            givens=givens,
-                            rebuild_strict=False,
-                            on_unused_input='ignore',
-                            allow_input_downcast=True)()
+            value = function([], param,
+                             givens=givens,
+                             rebuild_strict=True,
+                             on_unused_input='ignore',
+                             allow_input_downcast=True)()
     else:
-        return param
+        value = param
+    # Sanitising values may be necessary.
+    if hasattr(param, 'dtype'):
+        value = np.atleast_1d(value).astype(param.dtype)
+    if hasattr(param, 'shape'):
+        try:
+            shape = param.shape.tag.test_value
+        except:
+           shape = param.shape
+        if len(shape) == 0 and len(value) == 1:
+            value = value[0]
+    return value
 
-def get_sample_shape(shape, *args, **kwargs):
-    """Calculate the shape of random samples from a random variable.
+
+def generate_samples(generator, *args, **kwargs):
+    """Generate samples from the distribution of a random variable.
 
     Parameters
     ----------
-    shape : int or tuple of int or numpy.ndarray of int
-        The dimensions of the random variable.
-    size : int or tuple of int or numpy.ndarray of int or None
-        The number of samples to draw
-    repeat : int or tuple of int or numpy.ndarray of int or None
+    generator : function
+        Function to generate the random samples. The function is
+        expected to follow the same behaviour as the scipy.stats
+        rvs methods and the numpy.random functions. The *args
+        and **kwargs (stripped of the keywords below.
+    
+    keyword aguments
+    ~~~~~~~~~~~~~~~~
 
-    Returns
-    -------
-    An array describing the shape of the random samples.
+    dist_shape : int or tuple of int
+        The shape of the random variable (i.e., the distribution.shape
+        attribute)
+    size : int or tuple of int
+        The required shape of the samples. This key will be ignored
+        if the parameters of the random variable are not *all* of
+        shape 1.
+    repeat : int or tuple of int
+        While the size argument can return an arbitrary number of samples,
+        this argument returns samples whose shape is multiples of the distribution
+        shape, namely `np.append(repeat, dist_shape)`.
+    shape_only : boolean
+        Return only the shape of the samples. For debugging only.
 
-    - If :size: is not None, then then `size` is returned.
-    - If `repeat` is not None, an array representing the dimensions of 
-     `repeat` *followed* by `shape` is returned. So if `repeat` is (1, 2) 
-      and `shape` is (3,4) then the numpy array [1, 2, 3, 4] is returned.
-    - If `size` and `repeat` are None, then an `shape` is returned.
+    Any remaining *args and **kwargs are passed on to the generator function.
     """
-    try:
-        size = args[0]
-    except IndexError:
-        size = kwargs.pop('size', None)
+    dist_shape = kwargs.pop('dist_shape', ())
+    size = kwargs.pop('size', None)
     repeat = kwargs.pop('repeat', None)
-    if size is not None:
-        return np.atleast_1d(size)
-    elif repeat is not None:
-        return np.append(np.atleast_1d(repeat), np.atleast_1d(shape))
+    shape_only = kwargs.pop('shape_only', False)
+    if len(dist_shape) == 0:
+        dist_shape = 1
+    dist_shape = np.atleast_1d(dist_shape)
+    params = args + tuple(value for value in kwargs.values())
+    param_lens = np.atleast_1d([len(np.atleast_1d(param)) for param in params])
+    if len(params) == 0 or np.all(param_lens == 1):
+        if size is not None:
+            sample_shape = size
+        elif repeat is not None:
+            sample_shape = np.append(np.atleast_1d(repeat), dist_shape)
+        else:
+            sample_shape = dist_shape
+        samples = generator(size=sample_shape, *args, **kwargs)
     else:
-        z = max(np.atleast_1d(shape).shape) == 0 
-        return np.atleast_1d(1 if z else shape)
+        # Have to do this due to differences between scipy
+        # rvs methods with or without loc and scale parameters,
+        # particularly when parameters are not all of shape (1,).
+        try:
+            samples = generator(size=dist_shape, *args, **kwargs)
+            generator_size = dist_shape
+        
+        except ValueError:
+            samples = generator(size=None, *args, **kwargs)
+            generator_size = None
+        generator_shape = samples.shape
+        if repeat is not None:
+            samples = np.reshape(np.array([generator(size=generator_size, *args, **kwargs) \
+                                           for _ in range(int(np.prod(repeat)))]),
+                          np.append(np.atleast_1d(repeat), generator_shape))
+        elif generator_size is None:
+            samples = generator(size=generator_size, *args, **kwargs)
+
+    if shape_only:
+        return samples.shape
+    else:
+        return samples
