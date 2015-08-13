@@ -3,6 +3,7 @@
 
 # # A Hierarchical model for Rugby prediction
 
+# # Based on http://danielweitzenfeld.github.io/passtheroc/blog/2014/10/28/bayes-premier-league/
 
 
 import numpy as np
@@ -82,6 +83,7 @@ g = df.groupby('i_home')
 def_starting_points = -np.log(g.away_score.mean())
 
 
+#This model recreates a paper http://www.statistica.it/gianluca/Research/BaioBlangiardo.pdf
 
 
 model = pm3.Model()
@@ -101,7 +103,8 @@ with pm3.Model() as model:
                            mu   =0,
                            tau  =tau_def,  
                            shape=num_teams) 
- 
+    
+    # These parameters are needed to be in accordance with the paper
     atts        = pm3.Deterministic('atts', atts_star - tt.mean(atts_star))
     defs        = pm3.Deterministic('defs', defs_star - tt.mean(defs_star))
     home_theta  = tt.exp(intercept + home + atts[away_team] + defs[home_team])
