@@ -40,11 +40,10 @@ class Binomial(Discrete):
 
     def random(self, point=None, size=None, repeat=None):
         n, p = draw_values([self.n, self.p], point=point)
-        return generate_samples(st.binom.rvs,
-                                       dist_shape=self.shape,
-                                       size=size,
-                                       repeat=repeat,
-                                       n=n, p=p)
+        return generate_samples(st.binom.rvs, n=n, p=p,
+                                dist_shape=self.shape,
+                                size=size,
+                                repeat=repeat)
 
     def logp(self, value):
         n = self.n
@@ -101,8 +100,7 @@ class BetaBin(Discrete):
     def random(self, point=None, size=None, repeat=None):
         alpha, beta, n = \
             draw_values([self.alpha, self.beta, self.n], point=point)
-        return generate_samples(self._rvs,
-                                alpha=alpha, beta=beta, n=n,
+        return generate_samples(self._rvs, alpha=alpha, beta=beta, n=n,
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)
@@ -358,7 +356,7 @@ class Categorical(Discrete):
 
     def random(self, point=None, size=None, repeat=None):
         p = draw_values([self.p], point=point)
-        return generate_samples(nr.multinomial, 1, p, 
+        return generate_samples(lambda size=None: nr.choice(np.arange(p.shape[0]), p=p, size=size),
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)
@@ -392,10 +390,12 @@ class ConstantDist(Discrete):
 
     def random(self, point=None, size=None, repeat=None):
         c = draw_values([self.c], point=point)
-        return generate_samples(lambda size=None: np.ones(shape=size) * c,
+        dtype = np.array(c).dtype
+        return generate_samples(lambda c=None, dtype=dtype, size=None: np.ones(shape=size, dtype=dtype) * c, 
+                                c=c,
                                 dist_shape=self.shape,
                                 size=size,
-                                repeat=repeat)
+                                repeat=repeat).astype(dtype)
 
     def logp(self, value):
         c = self.c

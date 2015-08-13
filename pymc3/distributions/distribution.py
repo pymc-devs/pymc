@@ -167,73 +167,96 @@ def draw_value(param, point=None, givens={}):
     return value
 
 
+def replicate_sample(generator, *args, **kwargs):
+    repeats = kwargs.pop('repeats', None)
+    shape = kwargs.pop('shape', None)
+    reshape = kwargs.pop('reshape', None)
+    samples = np.array([generator(size=shape, *args, **kwargs) \
+                                for _ in range(int(np.prod(repeats)))])
+    if reshape is not None:
+        samples = np.reshape(samples, reshape)
+    return samples
+
+
 def generate_samples(generator, *args, **kwargs):
     """Generate samples from the distribution of a random variable.
-
+ 
     Parameters
     ----------
     generator : function
         Function to generate the random samples. The function is
-        expected to follow the same behaviour as the scipy.stats
-        rvs methods and the numpy.random functions. The *args
-        and **kwargs (stripped of the keywords below.
-    
+        expected take parameters for generating samples and
+        a keyword argument `size` which determines the shape
+        of the samples. 
+        The *args and **kwargs (stripped of the keywords below) will be 
+        passed to the generator function. 
+     
     keyword aguments
     ~~~~~~~~~~~~~~~~
-
+ 
     dist_shape : int or tuple of int
-        The shape of the random variable (i.e., the distribution.shape
-        attribute)
+        The shape of the random variable (i.e., the shape attribute).
     size : int or tuple of int
         The required shape of the samples. This key will be ignored
-        if the parameters of the random variable are not *all* of
-        shape 1.
+        if any parameters of the random variable have a shape > 1.
     repeat : int or tuple of int
         While the size argument can return an arbitrary number of samples,
         this argument returns samples whose shape is multiples of the distribution
         shape, namely `np.append(repeat, dist_shape)`.
-    shape_only : boolean
-        Return only the shape of the samples. For debugging only.
-
+ 
     Any remaining *args and **kwargs are passed on to the generator function.
     """
-    dist_shape = kwargs.pop('dist_shape', ())
+    dist_shape = np.atleast_1d(kwargs.pop('dist_shape', ()))
     size = kwargs.pop('size', None)
     repeat = kwargs.pop('repeat', None)
-    shape_only = kwargs.pop('shape_only', False)
-    if len(dist_shape) == 0:
-        dist_shape = 1
-    dist_shape = np.atleast_1d(dist_shape)
     params = args + tuple(value for value in kwargs.values())
-    param_lens = np.atleast_1d([len(np.atleast_1d(param)) for param in params])
-    if len(params) == 0 or np.all(param_lens == 1):
+    # Have to do all of this this to get round differences in 
+    # scipy.stats rvs methods as well as numpy.random stuff particularly
+    # when parameters are arrays with length != 1,
+    if len(params) == 0:
+        if len(dist_shape) == 0:
+            dist_shape = 1
         if size is not None:
-            sample_shape = size
+            samples = generator(size=size)
         elif repeat is not None:
-            sample_shape = np.append(np.atleast_1d(repeat), dist_shape)
+            samples = replicate_sample(generator, repeats=repeat, shape=dist_shape, 
+                                       reshape=np.append(np.atleast_1d(repeat), dist_shape))
         else:
-            sample_shape = dist_shape
-        samples = generator(size=sample_shape, *args, **kwargs)
+            samples = generator(size=dist_shape)
     else:
-        # Have to do this due to differences between scipy
-        # rvs methods with or without loc and scale parameters,
-        # particularly when parameters are not all of shape (1,).
-        try:
-            samples = generator(size=dist_shape, *args, **kwargs)
-            generator_size = dist_shape
-        
-        except ValueError:
-            samples = generator(size=None, *args, **kwargs)
-            generator_size = None
-        generator_shape = samples.shape
-        if repeat is not None:
-            samples = np.reshape(np.array([generator(size=generator_size, *args, **kwargs) \
-                                           for _ in range(int(np.prod(repeat)))]),
-                          np.append(np.atleast_1d(repeat), generator_shape))
-        elif generator_size is None:
-            samples = generator(size=generator_size, *args, **kwargs)
-
-    if shape_only:
-        return samples.shape
-    else:
-        return samples
+        param_shape = np.array(np.atleast_1d(params[np.argmax([np.prod(np.atleast_1d(param).shape) \
+                                                      for param in params])]).shape)
+        if len(dist_shape) == 0:
+            dist_shape = param_shape
+        if np.all(param_shape == 1):
+            if size is not None:
+                samples = generator(size=size, *args, **kwargs)
+            elif repeat is not None:
+                samples = replicate_sample(generator, repeats=repeat, shape=dist_shape, 
+                                           reshape=np.append(np.atleast_1d(repeat), dist_shape), 
+                                           *args, **kwargs)
+            else:
+                samples = generator(size=dist_shape, *args, **kwargs)
+        else:
+            try:
+                samples = generator(size=dist_shape, *args, **kwargs)
+                if repeat is not None:
+                    samples = replicate_sample(generator, 
+                                               repeats=repeat, shape=dist_shape, 
+                                               reshape=np.append(np.atleast_1d(repeat), dist_shape),
+                                               *args, **kwargs)
+            except ValueError:
+                if np.all(dist_shape[-len(param_shape):] == param_shape):
+                    prefix_shape = dist_shape[:-len(param_shape)]
+                    if repeat is not None:
+                        samples = replicate_sample(generator, 
+                                                   repeats=np.append(repeat, prefix_shape), shape=param_shape, 
+                                                   reshape=np.append(np.atleast_1d(repeat), dist_shape),
+                                                   *args, **kwargs)
+                    else:
+                        samples = replicate_sample(generator,
+                                                   repeats=prefix_shape, shape=param_shape, reshape=dist_shape,
+                                                   *args, **kwargs)
+                else:
+                    samples = generator(size=None, *args, **kwargs)
+    return samples

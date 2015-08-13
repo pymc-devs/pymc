@@ -7,7 +7,7 @@ from .checks import *
 from .knownfailure import *
 
 from pymc3.tests.test_distributions import (build_model,
-    Domain, product, R, Rplus, Rplusbig, Unit, Nat, NatSmall, 
+    Domain, product, R, Rplus, Rplusbig, Unit, Nat, NatSmall,
     I, Simplex)
 
 from pymc3.distributions.continuous import *
@@ -76,6 +76,82 @@ def test_draw_values():
         mu3, tau3 = draw_values([y2.distribution.mu, y2.distribution.tau])
         assert isinstance(mu3, np.ndarray) and isinstance(tau3, np.ndarray), \
             "Draw values did not return np.ndarray with random sampling"
+
+def test_shape_random():
+    dist_cases = [(Normal, {'mu':0., 'tau':1.}),
+                  (Binomial, {'n':10, 'p':0.5}),
+                  (Uniform, {'lower':0., 'upper':1}),
+                  (HalfNormal, {'tau':1.}),
+                  (Wald, {'mu':1., 'lam':1., 'alpha':0.}),
+                  (Beta, {'alpha':1., 'beta':1.}),
+                  (Exponential, {'lam':1.}),
+                  (Laplace, {'mu':1., 'b':1}),
+                  (Lognormal, {'mu':1., 'tau':1.}),
+                  (T, {'nu':5, 'mu':0., 'lam':1.}),
+                  (Pareto, {'alpha':0.5, 'm':1.}),
+                  (Cauchy, {'alpha':1., 'beta':1.}),
+                  (HalfCauchy, {'beta':1.}),
+                  (Gamma, {'alpha':1., 'beta':1.}),
+                  (InverseGamma, {'alpha':0.5, 'beta':0.5}),
+                  (ChiSquared, {'nu':2}),
+                  (Weibull, {'alpha':1., 'beta':1.}),
+                  (ExGaussian, {'mu':0., 'sigma':1., 'nu':1.})]
+    test_cases = [(None, None, (1,)), (5, None, (5,)), ((4, 5), None, (4, 5)),
+                  (None, 5, (5, 1)),(None, (4, 5), (4, 5, 1))]
+    for dist, dist_kwargs in dist_cases:
+        print(dist)
+        with Model():
+            rv = dist('rv', **dist_kwargs)
+        for size, repeat, expected in test_cases:
+            check_shape(rv, size=size, repeat=repeat, expected=expected)
+
+def check_shape(rv, size=None, repeat=None, expected=None):
+    try:
+        sample = rv.random(size=size, repeat=repeat)
+    except AttributeError:
+        sample = rv.distribution.random(size=size, repeat=repeat)
+    actual = np.atleast_1d(sample.shape)
+    expected = np.atleast_1d(expected)
+    assert np.all(actual == expected), \
+        'Expected shape `{0}` but got `{1}` using `(size={2}, repeat={3})`' \
+        ' with `{4}` rv'.format(expected, actual, size, repeat, rv.distribution.__class__.__name__)
+
+
+def test_1d_shape_random():
+    n = 10
+    dist_cases = [(Normal, {'mu':0, 'tau':1., 'shape':n}),
+                  (Binomial, {'n':1, 'p':0.5, 'shape':n})]
+    test_cases = [(None, None, (n,)), (5, None, (5,)), ((4, 5), None, (4, 5)),
+                  (None, 5, (5, n)),(None, (4, 5), (4, 5, n))]
+    for dist, dist_kwargs in dist_cases:
+        with Model():
+            rv = dist(dist.__name__, **dist_kwargs)
+            for size, repeat, expected in test_cases:
+                check_shape(rv, size=size, repeat=repeat, expected=expected)
+
+def test_1d_paramaters_shape_random():
+    n = 15
+    dist_cases = [(Normal, {'mu':np.zeros(n), 'tau':np.ones(n), 'shape':n}),
+                  (Binomial, {'n':np.ones(n, dtype=int), 'p':np.ones(n)/2, 'shape':n})]
+    test_cases = [(None, None, (n,)), (5, None, (n,)), ((4, 5), None, (n,)),
+                  (None, 5, (5, n)),(None, (4, 5), (4, 5, n))]
+    for dist, dist_kwargs in dist_cases:
+        with Model():
+            rv = dist(dist.__name__, **dist_kwargs)
+            for size, repeat, expected in test_cases:
+                check_shape(rv, size=size, repeat=repeat, expected=expected)
+
+def test_observed_shape_random():
+    n = 15
+    dist_cases = [(Normal, {'mu':np.zeros(n), 'tau':np.ones(n), 'observed':np.ones(n)}),
+                  (Binomial, {'n':np.ones(n, dtype=int), 'p':np.ones(n)/2, 'observed':np.ones(n)})]
+    test_cases = [(None, None, (n,)), (5, None, (n,)), ((4, 5), None, (n,)),
+                  (None, 5, (5, n)),(None, (4, 5), (4, 5, n))]
+    for dist, dist_kwargs in dist_cases:
+        with Model():
+            rv = dist(dist.__name__, **dist_kwargs)
+            for size, repeat, expected in test_cases:
+                check_shape(rv, size=size, repeat=repeat, expected=expected)
 
 def test_uniform_random():
     pymc3_random(Uniform, {'lower':-Rplus, 'upper':Rplus},
@@ -236,8 +312,7 @@ def test_categorical_random():
 
 def check_categorical_random(s):
     pymc3_random_discrete(Categorical, {'p':Simplex(s)},
-                          size=1,
-                          ref_rand=lambda size, p=None: nr.multinomial(1, p, size=size))
+                          ref_rand=lambda size=None, p=None: nr.choice(np.arange(p.shape[0]), p=p, size=size))
 
 def test_constant_dist_random():
     pymc3_random_discrete(ConstantDist, {'c':I},
