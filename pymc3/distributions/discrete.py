@@ -89,18 +89,22 @@ class BetaBin(Discrete):
         self.n = n
         self.mode = cast(round(alpha / (alpha + beta)), 'int8')
 
-    def _rvs(self, alpha, beta, n, size=None):
-        p = np.atleast_1d(st.beta.rvs(a=alpha, b=beta, size=size))
+    def _random(self, alpha, beta, n, size=None):
+        size = size or 1
+        p = np.atleast_1d(st.beta.rvs(a=alpha, b=beta, size=np.prod(size)))
         # Sometimes scipy.beta returns nan. Ugh.
         while np.any(np.isnan(p)):
             i = np.isnan(p)
             p[i] = st.beta.rvs(a=alpha, b=beta, size=np.sum(i))
-        return st.binom.rvs(n=n, p=p, size=size)
+        # Sigh...
+        _n, _p, _size = np.atleast_1d(n).flatten(), p.flatten(), np.prod(size) 
+        samples = np.reshape(st.binom.rvs(n=_n, p=_p, size=_size), size)
+        return samples
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta, n = \
             draw_values([self.alpha, self.beta, self.n], point=point)
-        return generate_samples(self._rvs, alpha=alpha, beta=beta, n=n,
+        return generate_samples(self._random, alpha=alpha, beta=beta, n=n,
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)

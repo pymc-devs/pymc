@@ -95,11 +95,21 @@ def test_shape_random():
                   (InverseGamma, {'alpha':0.5, 'beta':0.5}),
                   (ChiSquared, {'nu':2}),
                   (Weibull, {'alpha':1., 'beta':1.}),
-                  (ExGaussian, {'mu':0., 'sigma':1., 'nu':1.})]
+                  (ExGaussian, {'mu':0., 'sigma':1., 'nu':1.}),
+                  (Binomial,  {'n':5., 'p':0.5}),
+                  (BetaBin, {'alpha':1., 'beta':1., 'n':1}),
+                  (Bernoulli, {'p':0.5}),
+                  (Poisson, {'mu':1.}), 
+                  (NegativeBinomial, {'mu':1., 'alpha':1.}),
+                  (ConstantDist, {'c':3}),
+                  #ZeroInflatedPoisson {'mu':0., 'sigma':1., 'nu':1.}),
+                  (DiscreteUniform, {'lower':0., 'upper':10}),
+                  (Geometric, {'p':0.5}),
+                  (Categorical, {'p':np.array([0.2, 0.5, 0.3])})]
+
     test_cases = [(None, None, (1,)), (5, None, (5,)), ((4, 5), None, (4, 5)),
                   (None, 5, (5, 1)),(None, (4, 5), (4, 5, 1))]
     for dist, dist_kwargs in dist_cases:
-        print(dist)
         with Model():
             rv = dist('rv', **dist_kwargs)
         for size, repeat, expected in test_cases:
@@ -110,7 +120,7 @@ def check_shape(rv, size=None, repeat=None, expected=None):
         sample = rv.random(size=size, repeat=repeat)
     except AttributeError:
         sample = rv.distribution.random(size=size, repeat=repeat)
-    actual = np.atleast_1d(sample.shape)
+    actual = np.atleast_1d(sample).shape
     expected = np.atleast_1d(expected)
     assert np.all(actual == expected), \
         'Expected shape `{0}` but got `{1}` using `(size={2}, repeat={3})`' \
