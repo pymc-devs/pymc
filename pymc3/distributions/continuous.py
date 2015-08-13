@@ -452,7 +452,8 @@ class Lognormal(PositiveContinuous):
     Distribution of any random variable whose logarithm is normally
     distributed. A variable might be modeled as log-normal if it can
     be thought of as the multiplicative product of many small
-    independent factors.
+    independent factors.,
+                                       
 
     .. math::
         f(x \mid \mu, \tau) = \sqrt{\frac{\tau}{2\pi}}\frac{
@@ -646,8 +647,7 @@ class Cauchy(Continuous):
         alpha = self.alpha
         beta = self.beta
         return bound(
-            -log(pi) - log(beta) - log(1 + ((
-                                            value - alpha) / beta) ** 2),
+            -log(pi) - log(beta) - log(1 + ((value - alpha) / beta) ** 2),
             beta > 0)
 
 class HalfCauchy(PositiveContinuous):
