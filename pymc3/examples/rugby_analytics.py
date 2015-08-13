@@ -12,7 +12,6 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
-get_ipython().magic('matplotlib inline')
 import pymc3 as pm3, theano.tensor as tt
 
 
