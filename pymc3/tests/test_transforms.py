@@ -48,7 +48,7 @@ def test_sum_to_1():
 def test_sum_to_1_jacobian_det():
     check_jacobian_det(tr.sum_to_1, Vector(Unit, 2), t.dvector, np.array([0,0]), lambda x: x[:-1])
 
-def check_jacobian_det(transform, domain, constructor=t.dscalar, test=0, make_comparable=None):
+def check_jacobian_det(transform, domain, constructor=t.dscalar, test=0, make_comparable=None, elemwise=False):
     y = constructor('y')
     y.tag.test_value = test
 
@@ -56,29 +56,34 @@ def check_jacobian_det(transform, domain, constructor=t.dscalar, test=0, make_co
     if make_comparable:
         x = make_comparable(x)
 
-    jac = t.log(t.nlinalg.det(jacobian(x, [y])))
+    if not elemwise: 
+        jac = t.log(t.nlinalg.det(jacobian(x, [y])))
+    else:
+        jac = t.log(t.diag(jacobian(x, [y])))
+
     #ljd = log jacobian det 
     actual_ljd = theano.function([y], jac)
 
     computed_ljd = theano.function([y], t.as_tensor_variable(transform.jacobian_det(y)), on_unused_input='ignore')
 
     for yval in domain.vals:
+        print actual_ljd(yval), computed_ljd(yval) 
         close_to(
             actual_ljd(yval), 
             computed_ljd(yval), tol)
 
 def test_log():
     check_transform_identity(tr.log, Rplusbig)
-    check_jacobian_det(tr.log, Rplusbig) 
-    check_jacobian_det(tr.log, Vector(Rplusbig,2), t.dvector, [0,0]) 
+    check_jacobian_det(tr.log, Rplusbig, elemwise=True) 
+    check_jacobian_det(tr.log, Vector(Rplusbig,2), t.dvector, [0,0], elemwise=True) 
 
     vals = get_values(tr.log) 
     close_to(vals > 0, True, tol)
 
 def test_logodds():
     check_transform_identity(tr.logodds, Unit)
-    check_jacobian_det(tr.logodds, Unit)
-    check_jacobian_det(tr.logodds, Vector(Unit,2), t.dvector, [0,0]) 
+    check_jacobian_det(tr.logodds, Unit, elemwise=True)
+    check_jacobian_det(tr.logodds, Vector(Unit,2), t.dvector, [.5,.5], elemwise=True) 
 
     vals = get_values(tr.logodds) 
     close_to(vals > 0, True, tol)
@@ -89,7 +94,7 @@ def test_interval():
         domain = Unit * np.float64(b-a) + np.float64(a)
         trans = tr.interval(a,b)
         check_transform_identity(trans, domain)
-        check_jacobian_det(trans, domain)
+        check_jacobian_det(trans, domain, elemwise=True)
     
         vals = get_values(trans) 
         close_to(vals > a, True, tol)
