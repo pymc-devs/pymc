@@ -73,22 +73,25 @@ class Metropolis(ArrayStepShared):
     default_blocked = False
     
     def __init__(self, vars=None, S=None, proposal_dist=NormalProposal, scaling=1.,
-                 tune=True, tune_interval=100, model=None, **kwargs):
+                 tune=True, tune_interval=100, model=None, gibbs=None, **kwargs):
 
         model = modelcontext(model)
 
         if vars is None:
             vars = model.vars
         vars = inputvars(vars)
+        self.dim = sum(v.dsize for v in vars)
 
         if S is None:
-            S = np.ones(sum(v.dsize for v in vars))
+            S = np.ones(self.dim)
         self.proposal_dist = proposal_dist(S)
         self.scaling = np.atleast_1d(scaling)
         self.tune = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.accepted = 0
+        self.gibbs = gibbs
+        self.index = 0
 
         # Determine type of variables
         self.discrete = np.array([v.dtype in discrete_types for v in vars])
@@ -109,7 +112,15 @@ class Metropolis(ArrayStepShared):
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
 
-        delta = self.proposal_dist() * self.scaling
+        if self.gibbs == 'sequential':
+            self.index = (self.index + 1) % self.dim
+        elif self.gibbs == 'random':
+            self.index = np.random.randint(0, self.dim)
+        else:
+            self.index = slice(None) # select all
+
+        delta = (self.proposal_dist() * self.scaling)[self.index]
+
         if self.any_discrete:
             if self.all_discrete:
                 delta = round(delta, 0).astype(int)
@@ -121,8 +132,7 @@ class Metropolis(ArrayStepShared):
         else:
             q = q0 + delta
 
-
-        q_new = metrop_select(self.delta_logp(q,q0), q, q0)
+        q_new = metrop_select(self.delta_logp(q, q0), q, q0)
 
         if q_new is q:
             self.accepted += 1
