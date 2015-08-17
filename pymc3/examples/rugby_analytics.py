@@ -3,7 +3,14 @@
 
 # # A Hierarchical model for Rugby prediction
 
+<<<<<<< HEAD
 # # Based on http://danielweitzenfeld.github.io/passtheroc/blog/2014/10/28/bayes-premier-league/
+=======
+<<<<<<< HEAD
+# # Based on http://danielweitzenfeld.github.io/passtheroc/blog/2014/10/28/bayes-premier-league/
+=======
+>>>>>>> caea43d... Rugby Analytics commit
+>>>>>>> c50f932... ENH Add example of a Gaussian Mixture Model.
 
 
 import numpy as np
@@ -12,6 +19,13 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+get_ipython().magic('matplotlib inline')
+>>>>>>> caea43d... Rugby Analytics commit
+>>>>>>> c50f932... ENH Add example of a Gaussian Mixture Model.
 import pymc3 as pm3, theano.tensor as tt
 
 
@@ -82,7 +96,14 @@ g = df.groupby('i_home')
 def_starting_points = -np.log(g.away_score.mean())
 
 
+<<<<<<< HEAD
 #This model recreates a paper http://www.statistica.it/gianluca/Research/BaioBlangiardo.pdf
+=======
+<<<<<<< HEAD
+#This model recreates a paper http://www.statistica.it/gianluca/Research/BaioBlangiardo.pdf
+=======
+>>>>>>> caea43d... Rugby Analytics commit
+>>>>>>> c50f932... ENH Add example of a Gaussian Mixture Model.
 
 
 model = pm3.Model()
@@ -102,8 +123,17 @@ with pm3.Model() as model:
                            mu   =0,
                            tau  =tau_def,  
                            shape=num_teams) 
+<<<<<<< HEAD
     
     # These parameters are needed to be in accordance with the paper
+=======
+<<<<<<< HEAD
+    
+    # These parameters are needed to be in accordance with the paper
+=======
+ 
+>>>>>>> caea43d... Rugby Analytics commit
+>>>>>>> c50f932... ENH Add example of a Gaussian Mixture Model.
     atts        = pm3.Deterministic('atts', atts_star - tt.mean(atts_star))
     defs        = pm3.Deterministic('defs', defs_star - tt.mean(defs_star))
     home_theta  = tt.exp(intercept + home + atts[away_team] + defs[home_team])
