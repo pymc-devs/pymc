@@ -31,7 +31,7 @@ class ElemwiseTransform(Transform):
     def jacobian_det(self, x):
         grad = gradient(t.sum(self.backward(x)), [x])
 
-        j =  t.sum(t.log(t.abs_(grad)))
+        j = t.log(t.abs_(grad))
         return j
 
 class TransformedDistribution(Distribution):
