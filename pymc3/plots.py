@@ -151,13 +151,13 @@ def kde2plot(x, y, grid=200, ax=None):
 
 def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
     """Bar plot of the autocorrelation function for a trace
-
     Parameters
     ----------
-
     trace : result of MCMC run
     vars : list of variable names
-        Variables to be plotted, if None all variable are plotted
+        Variables to be plotted, if None all variable are plotted.
+        The the plotting tool will automatically handle up to 10 dimensions
+        in a single variable.
     max_lag : int
         Maximum lag to calculate autocorrelation. Defaults to 100.
     burn : int
@@ -168,28 +168,42 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
         
     Returns
     -------
-
     ax : matplotlib axes
-
     """
     
     import matplotlib.pyplot as plt
-
+        
+    def _handle_array_varnames(val):
+        if trace[0][val].__class__ is np.ndarray:
+            k = trace[val].shape[1]
+            for i in xrange(k):
+                yield val + '_{0}'.format(i)
+        else:
+            yield val
+            
     if vars is None:
-        vars = trace.varnames
+        vars = [item  for sub in [[i for i in _handle_array_varnames(var)]
+                    for var in trace.varnames] for item in sub]
     else:
-        vars = [str(var) for var in vars]
+        vars = [item  for sub in [[i for i in _handle_array_varnames(var)]
+                    for var in vars] for item in sub]
 
     chains = trace.nchains
 
-    fig, ax = plt.subplots(len(vars), chains, squeeze=False)
+    fig, ax = plt.subplots(len(vars), chains, squeeze=False,
+                    sharex=True, sharey=True)
 
     max_lag = min(len(trace) - 1, max_lag)
 
     for i, v in enumerate(vars):
         for j in range(chains):
-            d = np.squeeze(trace.get_values(v, chains=[j], burn=burn,
+            try:
+                d = np.squeeze(trace.get_values(v, chains=[j], burn=burn,
                                             combine=False))
+            except KeyError:
+                k = int(v.split('_')[-1])
+                d = np.squeeze(trace.get_values(v[:-2], chains=[j], burn=burn,
+                                            combine=False)[:, k])
 
             ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
 
