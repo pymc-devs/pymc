@@ -148,7 +148,7 @@ def kde2plot(x, y, grid=200, ax=None):
     kde2plot_op(ax, x, y, grid)
     return ax
 
-
+'''
 def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
     """Bar plot of the autocorrelation function for a trace
     Parameters
@@ -214,6 +214,57 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
             #if i == len(vars) - 1:
                 #ax[i, j].set_xlabel("lag")
 
+            ax[i, j].set_xlabel("lag")
+
+            if chains > 1:
+                ax[i, j].set_title("chain {0}".format(j+1))
+    
+    return (fig, ax)
+'''
+
+
+def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
+    """Bar plot of the autocorrelation function for a trace
+    Parameters
+    ----------
+    trace : result of MCMC run
+    vars : list of variable names
+        Variables to be plotted, if None all variable are plotted
+    max_lag : int
+        Maximum lag to calculate autocorrelation. Defaults to 100.
+    burn : int
+        Number of samples to discard from the beginning of the trace. 
+        Defaults to 0.
+    ax : axes
+        Matplotlib axes. Defaults to None.
+        
+    Returns
+    -------
+    ax : matplotlib axes
+    """
+    
+    import matplotlib.pyplot as plt
+
+    if vars is None:
+        vars = trace.varnames
+    else:
+        vars = [str(var) for var in vars]
+
+    chains = trace.nchains
+
+    fig, ax = plt.subplots(len(vars), chains, squeeze=False)
+
+    max_lag = min(len(trace) - 1, max_lag)
+
+    for i, v in enumerate(vars):
+        for j in range(chains):
+            d = np.squeeze(trace.get_values(v, chains=[j], burn=burn,
+                                            combine=False))
+
+            ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
+
+            if not j:
+                ax[i, j].set_ylabel("correlation")
             ax[i, j].set_xlabel("lag")
 
             if chains > 1:
