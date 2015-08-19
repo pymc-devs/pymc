@@ -173,7 +173,7 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
     import matplotlib.pyplot as plt
         
     def _handle_array_varnames(val):
-        #val = str(val)
+        val = str(val)
         if trace[0][val].__class__ is np.ndarray:
             k = trace[val].shape[1]
             for i in xrange(k):
@@ -210,10 +210,11 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
 
             if not j:
                 ax[i, j].set_ylabel("correlation")
-            ax[i, j].set_title(v)
-            
+            #ax[i, j].set_title(v)
             #if i == len(vars) - 1:
                 #ax[i, j].set_xlabel("lag")
+
+            ax[i, j].set_xlabel("lag")
 
             if chains > 1:
                 ax[i, j].set_title("chain {0}".format(j+1))
