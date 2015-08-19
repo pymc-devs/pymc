@@ -156,8 +156,7 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
     trace : result of MCMC run
     vars : list of variable names
         Variables to be plotted, if None all variable are plotted.
-        The the plotting tool will automatically handle up to 10 dimensions
-        in a single variable.
+        Vector-value stochastics are handled automatically.
     max_lag : int
         Maximum lag to calculate autocorrelation. Defaults to 100.
     burn : int
@@ -174,7 +173,7 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
     import matplotlib.pyplot as plt
         
     def _handle_array_varnames(val):
-        val = str(val)
+        #val = str(val)
         if trace[0][val].__class__ is np.ndarray:
             k = trace[val].shape[1]
             for i in xrange(k):
