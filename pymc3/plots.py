@@ -173,7 +173,7 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
     import matplotlib.pyplot as plt
         
     def _handle_array_varnames(val):
-        val = str(val)
+        #val = str(val)
         if trace[0][val].__class__ is np.ndarray:
             k = trace[val].shape[1]
             for i in xrange(k):
