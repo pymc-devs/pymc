@@ -174,7 +174,7 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
     import matplotlib.pyplot as plt
         
     def _handle_array_varnames(val):
-        val = unicode(val)
+        val = str(val)
         if trace[0][val].__class__ is np.ndarray:
             k = trace[val].shape[1]
             for i in xrange(k):
@@ -203,7 +203,8 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
                                             combine=False))
             except KeyError:
                 k = int(v.split('_')[-1])
-                d = np.squeeze(trace.get_values(v[:-2], chains=[j], burn=burn,
+                v_use = '_'.join(v.split('_')[:-1])
+                d = np.squeeze(trace.get_values(v_use, chains=[j], burn=burn,
                                             combine=False)[:, k])
 
             ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
