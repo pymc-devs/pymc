@@ -5,7 +5,7 @@ import unittest
 import itertools
 from .checks import *
 from .knownfailure import *
-
+from nose import SkipTest
 from pymc3.tests.test_distributions import (build_model,
     Domain, product, R, Rplus, Rplusbig, Unit, Nat, NatSmall,
     I, Simplex)
@@ -77,7 +77,10 @@ def test_draw_values():
         assert isinstance(mu3, np.ndarray) and isinstance(tau3, np.ndarray), \
             "Draw values did not return np.ndarray with random sampling"
 
-def test_shape_random():
+
+def test_scalar_parameters_random():
+    # testing size/repeat behaviour with scalar parameters
+    # and no specified shape
     dist_cases = [(Normal, {'mu':0., 'tau':1.}),
                   (Binomial, {'n':10, 'p':0.5}),
                   (Uniform, {'lower':0., 'upper':1}),
@@ -99,21 +102,34 @@ def test_shape_random():
                   (Binomial,  {'n':5., 'p':0.5}),
                   (BetaBin, {'alpha':1., 'beta':1., 'n':1}),
                   (Bernoulli, {'p':0.5}),
-                  (Poisson, {'mu':1.}), 
+                  (Poisson, {'mu':1.}),
                   (NegativeBinomial, {'mu':1., 'alpha':1.}),
                   (ConstantDist, {'c':3}),
-                  #ZeroInflatedPoisson {'mu':0., 'sigma':1., 'nu':1.}),
+                  # Current parametrization of ZIP doesn't support random number generation
+                  (ZeroInflatedPoisson, {}, SkipTest),
                   (DiscreteUniform, {'lower':0., 'upper':10}),
                   (Geometric, {'p':0.5}),
-                  (Categorical, {'p':np.array([0.2, 0.5, 0.3])})]
+                  (Categorical, {'p':np.array([0.2, 0.3, 0.5])})]
 
     test_cases = [(None, None, (1,)), (5, None, (5,)), ((4, 5), None, (4, 5)),
                   (None, 5, (5, 1)),(None, (4, 5), (4, 5, 1))]
-    for dist, dist_kwargs in dist_cases:
+    for dist_case in dist_cases:
+        check_dist.description = '{0}: scalar_parameters: {1}'.format(__name__,
+                                                                      dist_case[0].__name__)
+        yield check_dist, dist_case, test_cases
+
+def check_dist(dist_case, test_cases, shape=None):
+    if dist_case[-1] == SkipTest:
+        raise SkipTest()
+    else:
+        dist, dist_kwargs = dist_case[:2]
         with Model():
-            rv = dist('rv', **dist_kwargs)
-        for size, repeat, expected in test_cases:
-            check_shape(rv, size=size, repeat=repeat, expected=expected)
+            if shape is None:
+                rv = dist(dist.__name__, **dist_kwargs)
+            else:
+                rv = dist(dist.__name__, shape=shape, **dist_kwargs)
+            for size, repeat, expected in test_cases:
+                check_shape(rv, size=size, repeat=repeat, expected=expected)
 
 def check_shape(rv, size=None, repeat=None, expected=None):
     try:
@@ -127,41 +143,132 @@ def check_shape(rv, size=None, repeat=None, expected=None):
         ' with `{4}` rv'.format(expected, actual, size, repeat, rv.distribution.__class__.__name__)
 
 
-def test_1d_shape_random():
+def test_scalar_shape_random():
+    # testing size/repeat behaviour with scalar parameters
+    # and 1d shape
     n = 10
-    dist_cases = [(Normal, {'mu':0, 'tau':1., 'shape':n}),
-                  (Binomial, {'n':1, 'p':0.5, 'shape':n})]
+    dist_cases = [(Normal, {'mu':0., 'tau':1.}),
+                  (Binomial, {'n':10, 'p':0.5}),
+                  (Uniform, {'lower':0., 'upper':1}),
+                  (HalfNormal, {'tau':1.}),
+                  (Wald, {'mu':1., 'lam':1., 'alpha':0.}),
+                  (Beta, {'alpha':1., 'beta':1.}),
+                  (Exponential, {'lam':1.}),
+                  (Laplace, {'mu':1., 'b':1}),
+                  (Lognormal, {'mu':1., 'tau':1.}),
+                  (T, {'nu':5, 'mu':0., 'lam':1.}),
+                  (Pareto, {'alpha':0.5, 'm':1.}),
+                  (Cauchy, {'alpha':1., 'beta':1.}),
+                  (HalfCauchy, {'beta':1.}),
+                  (Gamma, {'alpha':1., 'beta':1.}),
+                  (InverseGamma, {'alpha':0.5, 'beta':0.5}),
+                  (ChiSquared, {'nu':2}),
+                  (Weibull, {'alpha':1., 'beta':1.}),
+                  (ExGaussian, {'mu':0., 'sigma':1., 'nu':1.}),
+                  (Binomial,  {'n':5., 'p':0.5}),
+                  (BetaBin, {'alpha':1., 'beta':1., 'n':1}),
+                  (Bernoulli, {'p':0.5}),
+                  (Poisson, {'mu':1.}),
+                  (NegativeBinomial, {'mu':1., 'alpha':1.}),
+                  (ConstantDist, {'c':3}),
+                  # Current parametrization of ZIP doesn't support random number generation
+                  (ZeroInflatedPoisson, {}, SkipTest),
+                  (DiscreteUniform, {'lower':0., 'upper':10}),
+                  (Geometric, {'p':0.5}),
+                  (Categorical, {'p':np.array([0.2, 0.5, 0.3])})]
     test_cases = [(None, None, (n,)), (5, None, (5,)), ((4, 5), None, (4, 5)),
                   (None, 5, (5, n)),(None, (4, 5), (4, 5, n))]
-    for dist, dist_kwargs in dist_cases:
-        with Model():
-            rv = dist(dist.__name__, **dist_kwargs)
-            for size, repeat, expected in test_cases:
-                check_shape(rv, size=size, repeat=repeat, expected=expected)
+    for dist_case in dist_cases:
+        check_dist.description = '{0}: scalar_shape: {1}'.format(__name__,
+                                                                 dist_case[0].__name__)
+        yield check_dist, dist_case, test_cases, n
 
-def test_1d_paramaters_shape_random():
-    n = 15
-    dist_cases = [(Normal, {'mu':np.zeros(n), 'tau':np.ones(n), 'shape':n}),
-                  (Binomial, {'n':np.ones(n, dtype=int), 'p':np.ones(n)/2, 'shape':n})]
+def test_1d_parameters_random():
+    n = 5
+    zeros = np.zeros(n)
+    ones = np.ones(n)
+    dist_cases = [(Normal, {'mu':zeros, 'tau':ones}),
+                  (Binomial, {'n':ones.astype(int), 'p':ones / 2}),
+                  (Uniform, {'lower':zeros, 'upper':ones}),
+                  (HalfNormal, {'tau':ones}),
+                  (Wald, {'mu':ones, 'lam':ones, 'alpha':zeros}),
+                  (Beta, {'alpha':ones, 'beta':ones}),
+                  (Exponential, {'lam':ones}),
+                  (Laplace, {'mu':ones, 'b':ones}),
+                  (Lognormal, {'mu':ones, 'tau':ones}),
+                  (T, {'nu':ones.astype(int), 'mu':zeros, 'lam':ones}),
+                  (Pareto, {'alpha':ones / 2, 'm':ones}),
+                  (Cauchy, {'alpha':ones, 'beta':ones}),
+                  (HalfCauchy, {'beta':ones}),
+                  (Gamma, {'alpha':ones, 'beta':ones}),
+                  # InverseGamma fails due to calculation of self.mean in __init__
+                  (InverseGamma, {'alpha':ones / 2, 'beta':ones / 2}, SkipTest),
+                  (ChiSquared, {'nu':(ones * 2).astype(int)}),
+                  (Weibull, {'alpha':ones, 'beta':ones}),
+                  (ExGaussian, {'mu':zeros, 'sigma':ones, 'nu':ones}),
+                  (Binomial,  {'n':(ones * 5).astype(int), 'p':ones / 5}),
+                  (BetaBin, {'alpha':ones, 'beta':ones, 'n':ones.astype(int)}),
+                  (Bernoulli, {'p':ones / 2}),
+                  (Poisson, {'mu':ones}),
+                  (NegativeBinomial, {'mu':ones, 'alpha':ones}),
+                  (ConstantDist, {'c':(ones * 3).astype(int)}),
+                  # Current parametrization of ZIP doesn't support random number generation
+                  (ZeroInflatedPoisson, {}, SkipTest),
+                  (DiscreteUniform, {'lower':zeros.astype(int), 'upper':(ones * 10).astype(int)}),
+                  (Geometric, {'p':ones / 2}),
+                  # Categorical cannot be initialised with >1D probabilities
+                  (Categorical, {'p':ones / n}, SkipTest)]
     test_cases = [(None, None, (n,)), (5, None, (n,)), ((4, 5), None, (n,)),
                   (None, 5, (5, n)),(None, (4, 5), (4, 5, n))]
-    for dist, dist_kwargs in dist_cases:
-        with Model():
-            rv = dist(dist.__name__, **dist_kwargs)
-            for size, repeat, expected in test_cases:
-                check_shape(rv, size=size, repeat=repeat, expected=expected)
+    for dist_case in dist_cases:
+        check_dist.description = '{0}: 1d_parameters: {1}'.format(__name__,
+                                                                  dist_case[0].__name__)
+        yield check_dist, dist_case, test_cases, n
 
-def test_observed_shape_random():
-    n = 15
-    dist_cases = [(Normal, {'mu':np.zeros(n), 'tau':np.ones(n), 'observed':np.ones(n)}),
-                  (Binomial, {'n':np.ones(n, dtype=int), 'p':np.ones(n)/2, 'observed':np.ones(n)})]
-    test_cases = [(None, None, (n,)), (5, None, (n,)), ((4, 5), None, (n,)),
-                  (None, 5, (5, n)),(None, (4, 5), (4, 5, n))]
-    for dist, dist_kwargs in dist_cases:
-        with Model():
-            rv = dist(dist.__name__, **dist_kwargs)
-            for size, repeat, expected in test_cases:
-                check_shape(rv, size=size, repeat=repeat, expected=expected)
+
+def test_broadcast_shape_random():
+    n = 6
+    zeros = np.zeros(n)
+    ones = np.ones(n)
+    dist_cases = [(Normal, {'mu':zeros, 'tau':ones}),
+                  (Binomial, {'n':ones.astype(int), 'p':ones / 2}),
+                  (Uniform, {'lower':zeros, 'upper':ones}),
+                  (HalfNormal, {'tau':ones}),
+                  (Wald, {'mu':ones, 'lam':ones, 'alpha':zeros}),
+                  (Beta, {'alpha':ones, 'beta':ones}),
+                  (Exponential, {'lam':ones}),
+                  (Laplace, {'mu':ones, 'b':ones}),
+                  (Lognormal, {'mu':ones, 'tau':ones}),
+                  (T, {'nu':ones.astype(int), 'mu':zeros, 'lam':ones}),
+                  (Pareto, {'alpha':ones / 2, 'm':ones}),
+                  (Cauchy, {'alpha':ones, 'beta':ones}),
+                  (HalfCauchy, {'beta':ones}),
+                  (Gamma, {'alpha':ones, 'beta':ones}),
+                  # InverseGamma fails due to calculation of self.mean in __init__
+                  (InverseGamma, {'alpha':ones / 2, 'beta':ones / 2}, SkipTest),
+                  (ChiSquared, {'nu':(ones * 2).astype(int)}),
+                  (Weibull, {'alpha':ones, 'beta':ones}),
+                  (ExGaussian, {'mu':zeros, 'sigma':ones, 'nu':ones}),
+                  (Binomial,  {'n':(ones * 5).astype(int), 'p':ones / 5}),
+                  (BetaBin, {'alpha':ones, 'beta':ones, 'n':ones.astype(int)}),
+                  (Bernoulli, {'p':ones / 2}),
+                  (Poisson, {'mu':ones}),
+                  (NegativeBinomial, {'mu':ones, 'alpha':ones}),
+                  (ConstantDist, {'c':(ones * 3).astype(int)}),
+                  #Current parametrization of ZIP doesn't support random number generation.
+                  (ZeroInflatedPoisson, {}, SkipTest),
+                  (DiscreteUniform, {'lower':zeros.astype(int), 'upper':(ones * 10).astype(int)}),
+                  (Geometric, {'p':ones / 2}),
+                  # Categorical cannot be initialised with >1D probabilities
+                  (Categorical, {'p':ones / n}, SkipTest)]
+    shape = (2*n, n)
+    test_cases = [(None, None, shape), (5, None, shape), ((4, 5), None, shape),
+                  (None, 5, (5,) + shape),(None, (4, 5), (4, 5) + shape)]
+    for dist_case in dist_cases:
+        check_dist.description = '{0}: broadcast_parameters: {1}'.format(__name__,
+                                                                         dist_case[0].__name__)
+        yield check_dist, dist_case, test_cases, shape
+
 
 def test_uniform_random():
     pymc3_random(Uniform, {'lower':-Rplus, 'upper':Rplus},
@@ -313,7 +420,7 @@ def test_geometric_random():
 
 def test_discrete_uniform_random():
     pymc3_random_discrete(DiscreteUniform, {'lower':-NatSmall, 'upper':NatSmall}, \
-                 ref_rand=lambda size, lower=None, upper=None: nr.random_integers(lower, upper, size=size))
+                 ref_rand=lambda size, lower=None, upper=None: st.randint.rvs(lower, upper, size=size))
 
 def test_categorical_random():
     # Don't make simplex too big. You have been warned.

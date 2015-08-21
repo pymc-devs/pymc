@@ -148,7 +148,7 @@ class Bernoulli(Discrete):
 
     def random(self, point=None, size=None, repeat=None):
         p = draw_values([self.p], point=point)
-        return generate_samples(st.bernoulli.rvs, p, 
+        return generate_samples(st.bernoulli.rvs, p,
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)
@@ -198,10 +198,8 @@ class Poisson(Discrete):
 
     def logp(self, value):
         mu = self.mu
-
         return bound(
             logpow(mu, value) - factln(value) - mu,
-
             mu >= 0, value >= 0)
 
 
@@ -235,18 +233,12 @@ class NegativeBinomial(Discrete):
 
     def random(self, point=None, size=None, repeat=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point)
-        if alpha > 1e10:
-            return generate_samples(st.poisson.rvs, mu, 
-                                    dist_shape=self.shape,
-                                    size=size,
-                                    repeat=repeat)
-        else:
-            g = generate_samples(st.gamma.rvs, alpha, scale=alpha / mu,
-                                 dist_shape=self.shape,
-                                 size=size,
-                                 repeat=repeat)
-            g[g==0] = np.finfo(float).eps
-            return st.poisson.rvs(g)
+        g = generate_samples(st.gamma.rvs, alpha, scale=alpha / mu,
+                             dist_shape=self.shape,
+                             size=size,
+                             repeat=repeat)
+        g[g == 0] = np.finfo(float).eps# Just in case
+        return st.poisson.rvs(g)
 
     def logp(self, value):
         mu = self.mu
@@ -321,9 +313,15 @@ class DiscreteUniform(Discrete):
         self.lower, self.upper = floor(lower).astype('int32'), floor(upper).astype('int32')
         self.mode = floor((upper - lower) / 2.).astype('int32')
 
+    def _random(self, lower, upper, size=None):
+        # This way seems to be the only to deal with lower and upper as array-like.
+        samples = st.uniform.rvs(lower, upper - lower - np.finfo(float).eps, size=size)
+        return np.floor(samples).astype('int32')
+
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper], point=point)
-        return generate_samples(nr.random_integers, lower, upper, 
+        return generate_samples(self._random,
+                                lower, upper,
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)
@@ -354,13 +352,16 @@ class Categorical(Discrete):
     """
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
-        self.k = p.shape[0]
+        self.k = p.shape[-1]
         self.p = as_tensor_variable(p)
         self.mode = argmax(p)
 
     def random(self, point=None, size=None, repeat=None):
-        p = draw_values([self.p], point=point)
-        return generate_samples(lambda size=None: nr.choice(np.arange(p.shape[0]), p=p, size=size),
+        p, k = draw_values([self.p, self.k], point=point)
+        return generate_samples(lambda p, size=None: nr.choice(np.arange(k), p=p.view(), size=size),
+                                # Tie p up as a structured array so it isn't used
+                                # in broadcasting
+                                p=np.core.records.fromrecords(np.atleast_2d(p)),
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)

@@ -277,7 +277,7 @@ class Wald(PositiveContinuous):
                    return mu, lam, lam / mu
         raise ValueError('Wald distribution must specify either mu only, mu and lam, mu and phi, or lam and phi.')
 
-    def _rvs(self, mu, lam, alpha, size=None):
+    def _random(self, mu, lam, alpha, size=None):
         v = st.norm.rvs(loc=0., scale=1., size=size) ** 2
         value = mu + (mu ** 2) * v / (2. * lam) - mu/(2. * lam) * \
             np.sqrt(4. * mu * lam * v + (mu * v) ** 2)
@@ -289,7 +289,7 @@ class Wald(PositiveContinuous):
     def random(self, point=None, size=None, repeat=None):
         mu, lam, alpha = draw_values([self.mu, self.lam, self.alpha],
                                      point=point)
-        return generate_samples(self._rvs,
+        return generate_samples(self._random,
                                 mu, lam, alpha,
                                 dist_shape=self.shape,
                                 size=size,
@@ -480,13 +480,13 @@ class Lognormal(PositiveContinuous):
 
         self.variance = (exp(1./tau) - 1) * exp(2*mu + 1./tau)
 
-    def _rvs(self, mu, tau, size=None):
+    def _random(self, mu, tau, size=None):
         samples = st.norm.rvs(loc=0., scale=1., size=size)
         return np.exp(mu + (tau ** -0.5)  * samples)
 
     def random(self, point=None, size=None, repeat=None):
         mu, tau = draw_values([self.mu, self.tau], point=point)
-        return generate_samples(self._rvs, mu, tau,
+        return generate_samples(self._random, mu, tau,
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)
@@ -584,14 +584,14 @@ class Pareto(PositiveContinuous):
         self.median = m * 2.**(1./alpha)
         self.variance = switch(gt(alpha,2), (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2), inf)
 
-    def _rvs(self, alpha, m, size=None):
+    def _random(self, alpha, m, size=None):
         u = nr.uniform(size=size)
         return m * (1. - u) ** (-1. / alpha)
 
     def random(self, point=None, size=None, repeat=None):
         alpha, m = draw_values([self.alpha, self.m],
                                point=point)
-        return generate_samples(self._rvs, alpha, m,
+        return generate_samples(self._random, alpha, m,
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)
@@ -631,14 +631,14 @@ class Cauchy(Continuous):
         self.median = self.mode = self.alpha = alpha
         self.beta = beta
 
-    def _rvs(self, alpha, beta, size=None):
+    def _random(self, alpha, beta, size=None):
         u = nr.uniform(size=size)
         return alpha + beta * np.tan(np.pi*(u - 0.5))
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point)
-        return  generate_samples(self._rvs, alpha, beta,
+        return  generate_samples(self._random, alpha, beta,
                                  dist_shape=self.shape,
                                  size=size,
                                  repeat=repeat)
@@ -670,13 +670,13 @@ class HalfCauchy(PositiveContinuous):
         self.median = beta
         self.beta = beta
 
-    def _rvs(self, beta, size=None):
+    def _random(self, beta, size=None):
         u = nr.uniform(size=size)
         return  beta * np.abs(np.tan(np.pi*(u - 0.5)))
 
     def random(self, point=None, size=None, repeat=None):
         beta = draw_values([self.beta], point=point)
-        return generate_samples(self._rvs, beta,
+        return generate_samples(self._random, beta,
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)
@@ -856,14 +856,11 @@ class Weibull(PositiveContinuous):
         self.median = beta * exp(gammaln(log(2)))**(1./alpha)
         self.variance = (beta**2) * exp(gammaln(1 + 2./alpha - self.mean**2))
 
-    def _rvs(self, alpha, beta, size=None):
-        u = nr.uniform(size=size)
-        return beta * (-np.log(u)) ** alpha
-
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point)
-        return generate_samples(self._rvs, alpha, beta,
+        return generate_samples(lambda a, b, size=None: b * (-np.log(nr.uniform(size=size))) ** a, 
+                                alpha, beta,
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)
@@ -890,7 +887,7 @@ class Bounded(Continuous):
         if hasattr(self.dist, 'mode'):
             self.mode = self.dist.mode
 
-    def _rvs(self, lower, upper, point=None, size=None):
+    def _random(self, lower, upper, point=None, size=None):
         samples = np.zeros(size).flatten()
         i, n = 0, len(samples)
         while i < len(samples):
@@ -906,7 +903,7 @@ class Bounded(Continuous):
 
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper], point=point)
-        return generate_samples(self._rvs, lower, upper, point,
+        return generate_samples(self._random, lower, upper, point,
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)
@@ -985,14 +982,12 @@ class ExGaussian(Continuous):
         self.mean = mu + nu
         self.variance = (sigma ** 2) + (nu ** 2)
 
-    def _rvs(self, mu, sigma, nu, size=None):
-        return nr.normal(mu, sigma, size=size) + \
-            nr.exponential(scale=nu, size=size)
-
     def random(self, point=None, size=None, repeat=None):
         mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu],
                                     point=point)
-        return generate_samples(self._rvs, mu, sigma, nu,
+        return generate_samples(lambda mu, sigma, nu, size=None: nr.normal(mu, sigma, size=size) +
+                                    nr.exponential(scale=nu, size=size),
+                                mu, sigma, nu,
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)
