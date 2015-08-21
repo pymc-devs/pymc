@@ -9,9 +9,9 @@ test_scores = pd.read_csv(get_data_file('pymc3.examples', 'data/test_scores.csv'
 # Extract variables: test score, gender, number of siblings, previous disability, age, 
 # mother with HS education or better, hearing loss identified by 3 months of age
 (score, male, siblings, disability, 
-    age, mother_hs, early_ident) = test_scores[['score', 'male', 'sib', 
-                                                'synd_or_disab', 'age_test',
-                                                'mother_hs', 'ident_by_3']].astype(float).values.T
+    age, mother_hs, early_ident) = test_scores[['score', 'male', 'siblings', 
+                                                'prev_disab', 'age_test',
+                                                'mother_hs', 'early_ident']].astype(float).values.T
 
 with Model() as model:
 
