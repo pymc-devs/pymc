@@ -1,9 +1,9 @@
 try:
     __IPYTHON__
     import IPython
-    from IPython.html import widgets
+    import ipywidgets as widgets
     from IPython.core import display
-    from IPython.utils.traitlets import Unicode, Integer, Float
+    from traitlets import Unicode, Integer, Float
     import json
     from numpy.random import seed
     import time
