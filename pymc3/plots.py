@@ -149,15 +149,15 @@ def kde2plot(x, y, grid=200, ax=None):
     return ax
 
 
-def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
+def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None,
+                 symmetric_plot=False):
     """Bar plot of the autocorrelation function for a trace
-
     Parameters
     ----------
-
     trace : result of MCMC run
     vars : list of variable names
-        Variables to be plotted, if None all variable are plotted
+        Variables to be plotted, if None all variable are plotted.
+        Vector-value stochastics are handled automatically.
     max_lag : int
         Maximum lag to calculate autocorrelation. Defaults to 100.
     burn : int
@@ -165,38 +165,62 @@ def autocorrplot(trace, vars=None, max_lag=100, burn=0, ax=None):
         Defaults to 0.
     ax : axes
         Matplotlib axes. Defaults to None.
+    symmetric_plot : boolean
+        Plot from either [0, +lag] or [-lag, lag]. Defaults to False, [-, +lag].
         
     Returns
     -------
-
     ax : matplotlib axes
-
     """
     
     import matplotlib.pyplot as plt
-
+        
+    def _handle_array_varnames(val):
+        if trace[0][val].__class__ is np.ndarray:
+            k = trace[val].shape[1]
+            for i in xrange(k):
+                yield val + '_{0}'.format(i)
+        else:
+            yield val
+            
     if vars is None:
-        vars = trace.varnames
+        vars = [item  for sub in [[i for i in _handle_array_varnames(var)]
+                    for var in trace.varnames] for item in sub]
     else:
         vars = [str(var) for var in vars]
+        vars = [item  for sub in [[i for i in _handle_array_varnames(var)]
+                    for var in vars] for item in sub]
 
     chains = trace.nchains
 
-    fig, ax = plt.subplots(len(vars), chains, squeeze=False)
+    fig, ax = plt.subplots(len(vars), chains, squeeze=False,
+                    sharex=True, sharey=True)
 
     max_lag = min(len(trace) - 1, max_lag)
 
     for i, v in enumerate(vars):
         for j in range(chains):
-            d = np.squeeze(trace.get_values(v, chains=[j], burn=burn,
+            try:
+                d = np.squeeze(trace.get_values(v, chains=[j], burn=burn,
                                             combine=False))
+            except KeyError:
+                k = int(v.split('_')[-1])
+                v_use = '_'.join(v.split('_')[:-1])
+                d = np.squeeze(trace.get_values(v_use, chains=[j], burn=burn,
+                                            combine=False)[:, k])
 
             ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
 
             if not j:
                 ax[i, j].set_ylabel("correlation")
-            ax[i, j].set_xlabel("lag")
-
+            if i == len(vars) - 1:
+                ax[i, j].set_xlabel("lag")
+            
+            ax[i, j].set_title(v)
+            
+            if not symmetric_plot:
+                ax[i, j].set_xlim(0, max_lag)
+                
             if chains > 1:
                 ax[i, j].set_title("chain {0}".format(j+1))
     
