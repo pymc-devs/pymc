@@ -97,7 +97,7 @@ class BetaBin(Discrete):
             i = np.isnan(p)
             p[i] = st.beta.rvs(a=alpha, b=beta, size=np.sum(i))
         # Sigh...
-        _n, _p, _size = np.atleast_1d(n).flatten(), p.flatten(), np.prod(size) 
+        _n, _p, _size = np.atleast_1d(n).flatten(), p.flatten(), np.prod(size)
         samples = np.reshape(st.binom.rvs(n=_n, p=_p, size=_size), size)
         return samples
 
@@ -358,10 +358,9 @@ class Categorical(Discrete):
 
     def random(self, point=None, size=None, repeat=None):
         p, k = draw_values([self.p, self.k], point=point)
-        return generate_samples(lambda p, size=None: nr.choice(np.arange(k), p=p.view(), size=size),
-                                # Tie p up as a structured array so it isn't used
-                                # in broadcasting
-                                p=np.core.records.fromrecords(np.atleast_2d(p)),
+        return generate_samples(lambda p, size=None: nr.choice(np.arange(k), p=p, size=size),
+                                p=p,
+                                broadcast_shape=p.shape[:-1] or (1,),
                                 dist_shape=self.shape,
                                 size=size,
                                 repeat=repeat)

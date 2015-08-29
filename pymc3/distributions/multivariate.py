@@ -8,6 +8,8 @@ from . import transforms
 from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
 from theano.tensor import dot, cast, eye, diag, eq, le, ge, gt, all
 from theano.printing import Print
+from pymc3.distributions.distribution import draw_values, generate_samples
+import scipy.stats as st
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart', 'LKJCorr']
 
@@ -29,6 +31,15 @@ class MvNormal(Continuous):
         super(MvNormal, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
         self.tau = tau
+
+    def random(self, point=None, size=None, repeat=None):
+        mu, tau = draw_values([self.mu, self.tau], point=point)
+        samples = generate_samples(st.multivariate_normal.rvs,
+                                   mean=mu, cov=tau,
+                                   dist_shape=self.shape,
+                                   size=size,
+                                   repeat=repeat)
+        return samples
 
     def logp(self, value):
         mu = self.mu
@@ -76,6 +87,15 @@ class Dirichlet(Continuous):
                            (a - 1) / sum(a - 1),
                            nan)
 
+    def random(self, point=None, size=None, repeat=None):
+        a = draw_values([self.a], point=point)
+        samples = generate_samples(st.dirichlet.rvs,
+                                   a,
+                                   dist_shape=self.shape,
+                                   size=size,
+                                   repeat=repeat)
+        return samples
+    
     def logp(self, value):
         k = self.k
         a = self.a
