@@ -10,6 +10,7 @@ from theano.tensor import dot, cast, eye, diag, eq, le, ge, gt, all
 from theano.printing import Print
 from pymc3.distributions.distribution import draw_values, generate_samples
 import scipy.stats as st
+import numpy.random as nr
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart', 'LKJCorr']
 
@@ -34,9 +35,11 @@ class MvNormal(Continuous):
 
     def random(self, point=None, size=None, repeat=None):
         mu, tau = draw_values([self.mu, self.tau], point=point)
-        samples = generate_samples(st.multivariate_normal.rvs,
+        samples = generate_samples(lambda mean, cov, size=None: \
+                                    st.multivariate_normal.rvs(mean, cov, None if size == mean.shape else size),
                                    mean=mu, cov=tau,
                                    dist_shape=self.shape,
+                                   broadcast_shape=mu.shape,
                                    size=size,
                                    repeat=repeat)
         return samples
@@ -89,7 +92,8 @@ class Dirichlet(Continuous):
 
     def random(self, point=None, size=None, repeat=None):
         a = draw_values([self.a], point=point)
-        samples = generate_samples(st.dirichlet.rvs,
+        samples = generate_samples(lambda a, size=None: \
+                                    st.dirichlet.rvs(a, None if size == a.shape else size),
                                    a,
                                    dist_shape=self.shape,
                                    size=size,
@@ -143,6 +147,19 @@ class Multinomial(Discrete):
         self.p = p
         self.mean = n * p
         self.mode = cast(round(n * p), 'int32')
+
+    def _random(self, n, p, size=None):
+        if size == p.shape:
+            size = None
+        return nr.multinomial(n, p, size=size)
+    
+    def random(self, point=None, size=None, repeat=None):
+        n, p = draw_values([self.n, self.p], point=point)
+        samples = generate_samples(self._random, n, p,
+                                   dist_shape=self.shape,
+                                   size=size,
+                                   repeat=repeat)
+        return samples
 
     def logp(self, x):
         n = self.n
