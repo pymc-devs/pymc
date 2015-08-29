@@ -15,15 +15,16 @@ from pymc3.tests.test_distributions import (build_model,
 from pymc3.distributions.continuous import *
 from pymc3.distributions.discrete import *
 from pymc3.distributions.multivariate import *
-from pymc3.distributions.distribution import draw_values#, get_sample_shape
+from pymc3.distributions.distribution import draw_values
 from pymc3 import Model, Point
 
 import numpy as np
 import scipy.stats as st
 import numpy.random as nr
 
-def pymc3_random(dist, paramdomains, valuedomain=Domain([0]),
-                 ref_rand=None, size=10000, alpha=0.05, fails=10):
+def pymc3_random(dist, paramdomains, 
+                 ref_rand=None, valuedomain=Domain([0]), 
+                 size=10000, alpha=0.05, fails=10):
     model = build_model(dist, valuedomain, paramdomains)
     domains = paramdomains.copy()
     for pt in product(domains):
@@ -40,8 +41,10 @@ def pymc3_random(dist, paramdomains, valuedomain=Domain([0]),
         assert p > alpha, str(pt)
 
 
-def pymc3_random_discrete(dist, paramdomains, ref_rand=None, size=100000, alpha=0.05, fails=20):
-    model = build_model(dist, Domain([0]), paramdomains)
+def pymc3_random_discrete(dist, paramdomains, 
+                          valuedomain=Domain([0]), ref_rand=None, 
+                          size=100000, alpha=0.05, fails=20):
+    model = build_model(dist, valuedomain, paramdomains)
     domains = paramdomains.copy()
     for pt in product(domains):
         pt = Point(pt, model=model)
@@ -52,6 +55,8 @@ def pymc3_random_discrete(dist, paramdomains, ref_rand=None, size=100000, alpha=
         while p <= alpha and f > 0:
             o = model.named_vars['value'].random(size=size, point=pt)
             e = ref_rand(size=size, **pt)
+            o = np.atleast_1d(o).flatten()
+            e = np.atleast_1d(e).flatten()
             observed = dict(zip(*np.unique(o, return_counts=True)))
             expected = dict(zip(*np.unique(e, return_counts=True)))
             for e in expected.keys():
@@ -85,17 +90,14 @@ def test_draw_values():
 
 
 def check_dist(dist_case, test_cases, shape=None):
-    if dist_case[-1] == SkipTest:
-        raise SkipTest()
-    else:
-        dist, dist_kwargs = dist_case[:2]
-        with Model():
-            if shape is None:
-                rv = dist(dist.__name__, transform=None, **dist_kwargs)
-            else:
-                rv = dist(dist.__name__, shape=shape, transform=None, **dist_kwargs)
-            for size, repeat, expected in test_cases:
-                check_shape(rv, size=size, repeat=repeat, expected=expected)
+    dist, dist_kwargs = dist_case
+    with Model():
+        if shape is None:
+            rv = dist(dist.__name__, transform=None, **dist_kwargs)
+        else:
+            rv = dist(dist.__name__, shape=shape, transform=None, **dist_kwargs)
+        for size, repeat, expected in test_cases:
+            check_shape(rv, size=size, repeat=repeat, expected=expected)
 
 
 def check_shape(rv, size=None, repeat=None, expected=None):
@@ -190,10 +192,10 @@ class ScalarParameterShape(unittest.TestCase):
     def test_constant_dist(self):
         self.check(ConstantDist, c=3)
 
-    @SkipTest
     def test_zero_inflated_poisson(self):
         # To do: implement ZIP random
-        self.check(ZeroInflatedPoisson)
+        #self.check(ZeroInflatedPoisson)
+        raise SkipTest('ZeroInflatedPoisson random sampling not yet implemented.')
 
     def test_discrete_uniform(self):
         self.check(DiscreteUniform, lower=0., upper=10)
@@ -204,12 +206,13 @@ class ScalarParameterShape(unittest.TestCase):
     def test_categorical(self):
         self.check(Categorical, p=np.array([0.2, 0.3, 0.5]))
 
+
 @attr('scalar_shape')
 class ScalarShape(unittest.TestCase):
 
     def check(self, dist, **kwargs):
         n = 10
-        test_cases = [(None, None, (n,)), (5, None, (n,)), ((4, 5), None, (n,)),
+        test_cases = [(None, None, (n,)), (5, None, (5, n,)), ((4, 5), None, (4, 5, n,)),
                   (None, 5, (5, n)),(None, (4, 5), (4, 5, n))]
         check_dist((dist, kwargs), test_cases, n)
 
@@ -287,8 +290,7 @@ class ScalarShape(unittest.TestCase):
 
     def test_zero_inflated_poisson(self):
         # To do: implement ZIP random
-        raise SkipTest
-        self.check(ZeroInflatedPoisson)
+        raise SkipTest('ZeroInflatedPoisson random sampling not yet implemented.')
 
     def test_discrete_uniform(self):
         self.check(DiscreteUniform, lower=0., upper=10)
@@ -310,7 +312,7 @@ class Parameters1dShape(unittest.TestCase):
 
     def check(self, dist, **kwargs):
         n = self.n
-        test_cases = [(None, None, (n,)), (5, None, (n,)), ((4, 5), None, (n,)),
+        test_cases = [(None, None, (n,)), (5, None, (5, n,)), ((4, 5), None, (4, 5, n,)),
                   (None, 5, (5, n)),(None, (4, 5), (4, 5, n))]
         check_dist((dist, kwargs), test_cases, n)
 
@@ -359,7 +361,7 @@ class Parameters1dShape(unittest.TestCase):
 
     def test_inverse_gamma(self):
         # InverseGamma fails due to calculation of self.mean in __init__
-        raise SkipTest
+        raise SkipTest('InverseGamma fails due to calculation of self.mean in __init__')
         self.check(InverseGamma, alpha=self.ones / 2, beta=self.ones / 2)
 
     def test_chi_squared(self):
@@ -391,7 +393,7 @@ class Parameters1dShape(unittest.TestCase):
 
     def test_zero_inflated_poisson(self):
         # To do: implement ZIP random
-        raise SkipTest
+        raise SkipTest('ZeroInflatedPoisson random sampling not yet implemented.')
         self.check(ZeroInflatedPoisson, {}, SkipTest)
 
     def test_discrete_uniform(self):
@@ -404,7 +406,7 @@ class Parameters1dShape(unittest.TestCase):
 
     def test_categorical(self):
         # Categorical cannot be initialised with >1D probabilities
-        raise SkipTest
+        raise SkipTest('Categorical cannot be initialised with >1D probabilities')
         self.check(Categorical, p=self.ones / n)
 
 @attr('broadcast_shape')
@@ -418,7 +420,7 @@ class BroadcastShape(unittest.TestCase):
     def check(self, dist, **kwargs):
         n = self.n
         shape = (2*n, n)
-        test_cases = [(None, None, shape), (5, None, shape), ((4, 5), None, shape),
+        test_cases = [(None, None, shape), (5, None, (5,) + shape), ((4, 5), None, (4, 5) + shape),
                       (None, 5, (5,) + shape),(None, (4, 5), (4, 5) + shape)]
         check_dist((dist, kwargs), test_cases, shape)
 
@@ -466,7 +468,7 @@ class BroadcastShape(unittest.TestCase):
 
     def test_inverse_gamma(self):
         # InverseGamma fails due to calculation of self.mean in __init__
-        raise SkipTest
+        raise SkipTest('InverseGamma fails due to calculation of self.mean in __init__')
         self.check(InverseGamma, alpha=self.ones / 2, beta=self.ones / 2)
 
     def test_chi_squared(self):
@@ -498,7 +500,7 @@ class BroadcastShape(unittest.TestCase):
 
     def test_zero_inflated_poisson(self):
         # To do: implement ZIP random
-        raise SkipTest
+        raise SkipTest('ZeroInflatedPoisson random sampling not yet implemented.')
         self.check(ZeroInflatedPoisson, {})
 
     def test_discrete_uniform(self):
@@ -509,7 +511,7 @@ class BroadcastShape(unittest.TestCase):
 
     def test_categorical(self):
         # Categorical cannot be initialised with >1D probabilities
-        raise SkipTest
+        raise SkipTest('Categorical cannot be initialised with >1D probabilities')
         self.check(Categorical, p=self.ones / n)
 
 
@@ -537,76 +539,85 @@ class ScalarParameterSamples(unittest.TestCase):
     def test_beta(self):
         pymc3_random(
                 Beta, {'alpha': Rplus, 'beta': Rplus},
-                lambda size, alpha=None, beta=None: st.beta.rvs(a=alpha, b=beta, size=size)
+                ref_rand=lambda size, alpha=None, beta=None: \
+                    st.beta.rvs(a=alpha, b=beta, size=size)
                 )
         pymc3_random(
                 Beta, {'mu': Unit, 'sd': Rplus},
-                lambda size, mu=None, sd=None: st.beta.rvs(a=mu*sd, b=(1-mu)*sd, size=size)
+                ref_rand=lambda size, mu=None, sd=None: \
+                    st.beta.rvs(a=mu*sd, b=(1-mu)*sd, size=size)
                 )
 
     def test_exponential(self):
         pymc3_random(
                 Exponential, {'lam': Rplus},
-                lambda size, lam=None: nr.exponential(scale=1./lam, size=size)
+                ref_rand=lambda size, lam=None: nr.exponential(scale=1./lam, size=size)
                 )
 
     def test_laplace(self):
         pymc3_random(
                 Laplace, {'mu': R, 'b': Rplus},
-                lambda size, mu=None, b=None: st.laplace.rvs(mu, b, size=size)
+                ref_rand=lambda size, mu=None, b=None: \
+                    st.laplace.rvs(mu, b, size=size)
                 )
 
     def test_lognormal(self):
         pymc3_random(
                 Lognormal, {'mu': R, 'tau': Rplusbig},
-                lambda size, mu, tau: np.exp(mu + (tau ** -0.5) * st.norm.rvs(loc=0., scale=1., size=size))
+                ref_rand=lambda size, mu, tau: \
+                    np.exp(mu + (tau ** -0.5) * st.norm.rvs(loc=0., scale=1., size=size))
                 )
 
     def test_t(self):
         pymc3_random(
                 T, {'nu': Rplus, 'mu': R, 'lam': Rplus},
-                lambda size, nu=None, mu=None, lam=None: st.t.rvs(nu, mu, lam**-.5, size=size)
+                ref_rand=lambda size, nu=None, mu=None, lam=None: \
+                    st.t.rvs(nu, mu, lam**-.5, size=size)
                 )
 
     def test_cauchy(self):
         pymc3_random(
                 Cauchy, {'alpha': R, 'beta': Rplusbig},
-                lambda size, alpha, beta: st.cauchy.rvs(alpha, beta, size=size)
+                ref_rand=lambda size, alpha, beta: st.cauchy.rvs(alpha, beta, size=size)
                 )
 
     def test_half_cauchy(self):
         pymc3_random(
                 HalfCauchy, {'beta': Rplusbig},
-                lambda size, beta=None: st.halfcauchy.rvs(scale=beta, size=size)
+                ref_rand=lambda size, beta=None: st.halfcauchy.rvs(scale=beta, size=size)
                 )
 
     def test_gamma(self):
         pymc3_random(
                 Gamma, {'alpha': Rplusbig, 'beta': Rplusbig},
-                lambda size, alpha=None, beta=None: st.gamma.rvs(alpha, scale=1.0/beta, size=size)
+                ref_rand=lambda size, alpha=None, beta=None: \
+                    st.gamma.rvs(alpha, scale=1.0/beta, size=size)
                 )
         pymc3_random(
                 Gamma, {'mu': Rplusbig, 'sd': Rplusbig},
-                lambda size, mu=None, sd=None: st.gamma.rvs(mu**2 / sd**2, scale=1.0/(mu / sd**2), size=size)
+                ref_rand=lambda size, mu=None, sd=None: \
+                    st.gamma.rvs(mu**2 / sd**2, scale=1.0/(mu / sd**2), size=size)
                 )
 
     def test_inverse_gamma(self):
         pymc3_random(
                 InverseGamma, {'alpha': Rplus, 'beta': Rplus},
-                lambda size, alpha=None, beta=None: st.invgamma.rvs(a=alpha, scale=beta, size=size)
+                ref_rand=lambda size, alpha=None, beta=None: \
+                    st.invgamma.rvs(a=alpha, scale=beta, size=size)
                 )
 
     def test_pareto(self):
         pymc3_random(
                 Pareto, {'alpha': Rplusbig, 'm': Rplusbig},
-                lambda size, alpha=None, m=None: st.pareto.rvs(alpha, scale=m, size=size)
+                ref_rand=lambda size, alpha=None, m=None: \
+                    st.pareto.rvs(alpha, scale=m, size=size)
                 )
 
     def test_ex_gaussian(self):
         pymc3_random(
                 ExGaussian, {'mu':R, 'sigma':Rplus, 'nu':Rplus},
-                lambda size, mu=None, sigma=None, nu=None: nr.normal(mu, sigma, size=size) + \
-                    nr.exponential(scale=nu, size=size)
+                ref_rand=lambda size, mu=None, sigma=None, nu=None: \
+                    nr.normal(mu, sigma, size=size) + nr.exponential(scale=nu, size=size)
                 )
 
     def test_bounded(self):
@@ -665,11 +676,12 @@ class ScalarParameterSamples(unittest.TestCase):
     #   pymc3_random_discrete(NegativeBinomial, {'mu':Rplusbig, 'alpha':Rplusbig},
     #                          size=1000,
     #                          ref_rand=lambda size, mu=None, alpha=None: poisson_gamma_random(alpha, mu, size))
-        raise SkipTest
+        raise SkipTest('NegativeBinomial test always fails for unknown reason.')
 
     def test_geometric(self):
         pymc3_random_discrete(Geometric, {'p':Unit},
                               size=500,# Test always fails with larger sample sizes.
+                              fails=50,# Be a bit more generous.
                               ref_rand=lambda size, p=None: nr.geometric(p, size=size))
 
     def test_discrete_uniform(self):
@@ -702,3 +714,24 @@ class ScalarParameterSamples(unittest.TestCase):
                         valuedomain=Simplex(n), size=100,
                         ref_rand=lambda a=None, size=None: st.dirichlet.rvs(a, size=size))
 
+    def test_multinomial(self):
+       for n in [2, 3]:
+           pymc3_random_discrete(Multinomial, {'p': Simplex(n), 'n' : Nat},
+                        valuedomain=Vector(Nat, n), size=100,
+                        ref_rand=lambda n=None, p=None, size=None: \
+                            nr.multinomial(n, p, size=size))
+
+    def test_wishart(self):
+        # Wishart non current recommended for use:
+        # https://github.com/pymc-devs/pymc3/issues/538
+        raise SkipTest('Wishart random sampling not implemented.\n'
+                       'See https://github.com/pymc-devs/pymc3/issues/538')
+#         for n in [2, 3]:
+#             pymc3_random_discrete(Wisvaluedomainhart, {'n': Domain([2, 3, 4, 2000]) , 'V': PdMatrix(n) },
+#                                   valuedomain=PdMatrix(n),
+#                                   ref_rand=lambda n=None, V=None, size=None: \
+#                                   st.wishart(V, df=n, size=size))
+
+    def test_lkj(self):
+        # To do: generate random numbers.
+        raise SkipTest('LJK random sampling not implemented yet.')
