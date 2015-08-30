@@ -96,28 +96,27 @@ def check_dist(dist_case, test_cases, shape=None):
             rv = dist(dist.__name__, transform=None, **dist_kwargs)
         else:
             rv = dist(dist.__name__, shape=shape, transform=None, **dist_kwargs)
-        for size, repeat, expected in test_cases:
-            check_shape(rv, size=size, repeat=repeat, expected=expected)
+        for size, expected in test_cases:
+            check_shape(rv, size=size, expected=expected)
 
 
-def check_shape(rv, size=None, repeat=None, expected=None):
+def check_shape(rv, size=None, expected=None):
     try:
-        sample = rv.random(size=size, repeat=repeat)
+        sample = rv.random(size=size)
     except AttributeError:
-        sample = rv.distribution.random(size=size, repeat=repeat)
+        sample = rv.distribution.random(size=size)
     actual = np.atleast_1d(sample).shape
     expected = np.atleast_1d(expected)
     assert np.all(actual == expected), \
-        'Expected shape `{0}` but got `{1}` using `(size={2}, repeat={3})`' \
-        ' with `{4}` rv'.format(expected, actual, size, repeat, rv.distribution.__class__.__name__)
+        'Expected shape `{0}` but got `{1}` using `(size={2})`' \
+        ' with `{3}` rv'.format(expected, actual, size, rv.distribution.__class__.__name__)
 
 
 @attr('scalar_parameter_shape')
 class ScalarParameterShape(unittest.TestCase):
 
     def check(self, dist, **kwargs):
-        test_cases = [(None, None, (1,)), (5, None, (5,)), ((4, 5), None, (4, 5)),
-                      (None, 5, (5, 1)),(None, (4, 5), (4, 5, 1))]
+        test_cases = [(None, (1,)), (5, (5,)), ((4, 5), (4, 5))]
         check_dist((dist, kwargs), test_cases)
 
     def test_normal(self):
@@ -212,8 +211,7 @@ class ScalarShape(unittest.TestCase):
 
     def check(self, dist, **kwargs):
         n = 10
-        test_cases = [(None, None, (n,)), (5, None, (5, n,)), ((4, 5), None, (4, 5, n,)),
-                  (None, 5, (5, n)),(None, (4, 5), (4, 5, n))]
+        test_cases = [(None, (n,)), (5, (5, n,)), ((4, 5), (4, 5, n,))]
         check_dist((dist, kwargs), test_cases, n)
 
     def test_normal(self):
@@ -312,8 +310,7 @@ class Parameters1dShape(unittest.TestCase):
 
     def check(self, dist, **kwargs):
         n = self.n
-        test_cases = [(None, None, (n,)), (5, None, (5, n,)), ((4, 5), None, (4, 5, n,)),
-                  (None, 5, (5, n)),(None, (4, 5), (4, 5, n))]
+        test_cases = [(None, (n,)), (5, (5, n,)), ((4, 5), (4, 5, n,))]
         check_dist((dist, kwargs), test_cases, n)
 
     def test_normal(self):
@@ -420,8 +417,7 @@ class BroadcastShape(unittest.TestCase):
     def check(self, dist, **kwargs):
         n = self.n
         shape = (2*n, n)
-        test_cases = [(None, None, shape), (5, None, (5,) + shape), ((4, 5), None, (4, 5) + shape),
-                      (None, 5, (5,) + shape),(None, (4, 5), (4, 5) + shape)]
+        test_cases = [(None, shape), (5, (5,) + shape), ((4, 5), (4, 5) + shape)]
         check_dist((dist, kwargs), test_cases, shape)
 
     def test_normal(self):

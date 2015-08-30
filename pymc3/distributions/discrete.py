@@ -42,8 +42,7 @@ class Binomial(Discrete):
         n, p = draw_values([self.n, self.p], point=point)
         return generate_samples(st.binom.rvs, n=n, p=p,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         n = self.n
@@ -106,8 +105,7 @@ class BetaBin(Discrete):
             draw_values([self.alpha, self.beta, self.n], point=point)
         return generate_samples(self._random, alpha=alpha, beta=beta, n=n,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         alpha = self.alpha
@@ -150,8 +148,7 @@ class Bernoulli(Discrete):
         p = draw_values([self.p], point=point)
         return generate_samples(st.bernoulli.rvs, p,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         p = self.p
@@ -193,8 +190,7 @@ class Poisson(Discrete):
         mu = draw_values([self.mu], point=point)
         return generate_samples(st.poisson.rvs, mu, 
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         mu = self.mu
@@ -235,8 +231,7 @@ class NegativeBinomial(Discrete):
         mu, alpha = draw_values([self.mu, self.alpha], point=point)
         g = generate_samples(st.gamma.rvs, alpha, scale=alpha / mu,
                              dist_shape=self.shape,
-                             size=size,
-                             repeat=repeat)
+                             size=size)
         g[g == 0] = np.finfo(float).eps# Just in case
         return st.poisson.rvs(g)
 
@@ -284,8 +279,7 @@ class Geometric(Discrete):
         p = draw_values([self.p], point=point)
         return generate_samples(nr.geometric, p,
                                 dist_shape=self.shape, 
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         p = self.p
@@ -323,8 +317,7 @@ class DiscreteUniform(Discrete):
         return generate_samples(self._random,
                                 lower, upper,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         upper = self.upper
@@ -362,8 +355,7 @@ class Categorical(Discrete):
                                 p=p,
                                 broadcast_shape=p.shape[:-1] or (1,),
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         p = self.p
@@ -398,8 +390,7 @@ class ConstantDist(Discrete):
         return generate_samples(lambda c=None, dtype=dtype, size=None: np.ones(shape=size, dtype=dtype) * c, 
                                 c=c,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat).astype(dtype)
+                                size=size).astype(dtype)
 
     def logp(self, value):
         c = self.c

@@ -33,15 +33,14 @@ class MvNormal(Continuous):
         self.mean = self.median = self.mode = self.mu = mu
         self.tau = tau
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         mu, tau = draw_values([self.mu, self.tau], point=point)
         samples = generate_samples(lambda mean, cov, size=None: \
                                     st.multivariate_normal.rvs(mean, cov, None if size == mean.shape else size),
                                    mean=mu, cov=tau,
                                    dist_shape=self.shape,
                                    broadcast_shape=mu.shape,
-                                   size=size,
-                                   repeat=repeat)
+                                   size=size)
         return samples
 
     def logp(self, value):
@@ -90,14 +89,13 @@ class Dirichlet(Continuous):
                            (a - 1) / sum(a - 1),
                            nan)
 
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         a = draw_values([self.a], point=point)
         samples = generate_samples(lambda a, size=None: \
                                     st.dirichlet.rvs(a, None if size == a.shape else size),
                                    a,
                                    dist_shape=self.shape,
-                                   size=size,
-                                   repeat=repeat)
+                                   size=size)
         return samples
     
     def logp(self, value):
@@ -153,12 +151,11 @@ class Multinomial(Discrete):
             size = None
         return nr.multinomial(n, p, size=size)
     
-    def random(self, point=None, size=None, repeat=None):
+    def random(self, point=None, size=None):
         n, p = draw_values([self.n, self.p], point=point)
         samples = generate_samples(self._random, n, p,
                                    dist_shape=self.shape,
-                                   size=size,
-                                   repeat=repeat)
+                                   size=size)
         return samples
 
     def logp(self, x):
