@@ -102,8 +102,7 @@ class Uniform(Continuous):
                                    point=point)
         return generate_samples(st.uniform.rvs, loc=lower, scale=upper - lower,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         lower = self.lower
@@ -163,8 +162,7 @@ class Normal(Continuous):
                                   point=point)
         return generate_samples(st.norm.rvs, loc=mu, scale=tau ** -0.5,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         tau = self.tau
@@ -202,8 +200,7 @@ class HalfNormal(PositiveContinuous):
         tau = draw_values([self.tau], point=point)
         return generate_samples(st.halfnorm.rvs, loc=0., scale=tau ** -0.5,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         tau = self.tau
@@ -292,8 +289,7 @@ class Wald(PositiveContinuous):
         return generate_samples(self._random,
                                 mu, lam, alpha,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         mu = self.mu
@@ -363,8 +359,7 @@ class Beta(UnitContinuous):
                                   point=point)
         return generate_samples(st.beta.rvs, alpha, beta,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         alpha = self.alpha
@@ -402,8 +397,7 @@ class Exponential(PositiveContinuous):
         lam = draw_values([self.lam], point=point)
         return generate_samples(nr.exponential, scale=1./lam,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         lam = self.lam
@@ -435,8 +429,7 @@ class Laplace(Continuous):
         mu, b = draw_values([self.mu, self.b], point=point)
         return generate_samples(nr.laplace, mu, b,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         mu = self.mu
@@ -488,8 +481,7 @@ class Lognormal(PositiveContinuous):
         mu, tau = draw_values([self.mu, self.tau], point=point)
         return generate_samples(self._random, mu, tau,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         mu = self.mu
@@ -536,8 +528,7 @@ class T(Continuous):
                                   point=point)
         return generate_samples(st.t.rvs, nu, loc=mu, scale=lam ** -0.5,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         nu = self.nu
@@ -593,8 +584,7 @@ class Pareto(PositiveContinuous):
                                point=point)
         return generate_samples(self._random, alpha, m,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         alpha = self.alpha
@@ -640,8 +630,7 @@ class Cauchy(Continuous):
                                   point=point)
         return  generate_samples(self._random, alpha, beta,
                                  dist_shape=self.shape,
-                                 size=size,
-                                 repeat=repeat)
+                                 size=size)
 
     def logp(self, value):
         alpha = self.alpha
@@ -678,8 +667,7 @@ class HalfCauchy(PositiveContinuous):
         beta = draw_values([self.beta], point=point)
         return generate_samples(self._random, beta,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         beta = self.beta
@@ -747,8 +735,7 @@ class Gamma(PositiveContinuous):
                                   point=point)
         return generate_samples(st.gamma.rvs, alpha, scale=1. / beta,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         alpha = self.alpha
@@ -795,8 +782,7 @@ class InverseGamma(PositiveContinuous):
                                   point=point)
         return generate_samples(st.invgamma.rvs, a=alpha, scale=beta,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         alpha = self.alpha
@@ -862,8 +848,7 @@ class Weibull(PositiveContinuous):
         return generate_samples(lambda a, b, size=None: b * (-np.log(nr.uniform(size=size))) ** a, 
                                 alpha, beta,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         alpha = self.alpha
@@ -905,8 +890,7 @@ class Bounded(Continuous):
         lower, upper = draw_values([self.lower, self.upper], point=point)
         return generate_samples(self._random, lower, upper, point,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         return bound(
@@ -989,8 +973,7 @@ class ExGaussian(Continuous):
                                     nr.exponential(scale=nu, size=size),
                                 mu, sigma, nu,
                                 dist_shape=self.shape,
-                                size=size,
-                                repeat=repeat)
+                                size=size)
 
     def logp(self, value):
         mu = self.mu

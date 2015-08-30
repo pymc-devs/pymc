@@ -224,12 +224,6 @@ def generate_samples(generator, *args, **kwargs):
         The shape of the random variable (i.e., the shape attribute).
     size : int or tuple of int
         The required shape of the samples.
-        If the broadcast shape of the parameters is not (1,)
-        this is the same as the repeat key.
-    repeat : int or tuple of int
-        While the size argument can return an arbitrary number of samples,
-        this argument returns samples whose shape is multiples of the distribution
-        shape, namely `np.append(repeat, dist_shape)`.
     broadcast_shape: tuple of int or None
         The shape resulting from the broadcasting of the parameters.
         If not specified it will be inferred from the shape of the
@@ -241,7 +235,6 @@ def generate_samples(generator, *args, **kwargs):
 """
     dist_shape = kwargs.pop('dist_shape', ())
     size = kwargs.pop('size', None)
-    repeat = kwargs.pop('repeat', None)
     broadcast_shape = kwargs.pop('broadcast_shape', None)
     params = args + tuple(kwargs.values())
 
@@ -262,22 +255,17 @@ def generate_samples(generator, *args, **kwargs):
         prefix_shape = tuple(dist_shape)
 
     try:
-        repeat_shape = tuple(repeat or size or ())
-    except TypeError:# If repeat is an int
-        repeat_shape = tuple((repeat or size,))
+        repeat_shape = tuple(size or ())
+    except TypeError:# If size is an int
+        repeat_shape = tuple((size,))
 
     if broadcast_shape == (1,) and prefix_shape == ():
         if size is not None:
             samples = generator(size=size, *args, **kwargs)
-        elif repeat is not None:
-            samples = replicate_samples(generator,
-                                        broadcast_shape,
-                                        repeat_shape,
-                                        *args, **kwargs)
         else:
             samples = generator(size=1, *args, **kwargs)
     else:
-        if repeat is not None or size is not None:
+        if size is not None:
             samples = replicate_samples(generator,
                                   broadcast_shape,
                                   repeat_shape + prefix_shape,
