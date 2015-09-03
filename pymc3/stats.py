@@ -327,7 +327,7 @@ class _StatSummary(_Summary):
     def __init__(self, roundto, batches, alpha):
         super(_StatSummary, self).__init__(roundto)
         spaces = 17
-        hpd_name = '{}% HPD interval'.format(int(100 * (1 - alpha)))
+        hpd_name = '{0:g}% HPD interval'.format(100 * (1 - alpha))
         value_line = '{mean:<{pad}}{sd:<{pad}}{mce:<{pad}}{hpd:<{pad}}'
         header = value_line.format(mean='Mean', sd='SD', mce='MC Error',
                                   hpd=hpd_name, pad=spaces).strip()
