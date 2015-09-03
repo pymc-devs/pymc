@@ -196,6 +196,20 @@ def test_stats_output_lines_2d_variable():
     assert result == expected
 
 
+def test_stats_output_HPD_interval_format():
+    roundto = 1
+    x = np.arange(5)
+    summ = pm.stats._StatSummary(roundto, 5, 0.05)
+    expected = '  Mean             SD               MC Error         95% HPD interval'
+    result = list(summ._get_lines(x))
+    assert result[0] == expected
+
+    summ = pm.stats._StatSummary(roundto, 5, 0.001)
+    expected = '  Mean             SD               MC Error         99.9% HPD interval'
+    result = list(summ._get_lines(x))
+    assert result[0] == expected
+
+
 def test_posterior_quantiles_output_lines_0d_variable():
     roundto = 1
     x = np.arange(5)
