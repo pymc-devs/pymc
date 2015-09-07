@@ -21,6 +21,7 @@ import os
 import pandas as pd
 
 from ..backends import base, ndarray
+from . import tracetab as ttab
 
 
 class Text(base.BaseTrace):
@@ -41,7 +42,7 @@ class Text(base.BaseTrace):
             os.mkdir(name)
         super(Text, self).__init__(name, model, vars)
 
-        self.flat_names = {v: _create_flat_names(v, shape)
+        self.flat_names = {v: ttab.create_flat_names(v, shape)
                            for v, shape in self.var_shapes.items()}
 
         self.filename = None
@@ -144,33 +145,6 @@ class Text(base.BaseTrace):
         return pt
 
 
-def _create_flat_names(varname, shape):
-    """Return flat variable names for `varname` of `shape`.
-
-    Examples
-    --------
-    >>> _create_flat_names('x', (5,))
-    ['x__0', 'x__1', 'x__2', 'x__3', 'x__4']
-
-    >>> _create_flat_names('x', (2, 2))
-    ['x__0_0', 'x__0_1', 'x__1_0', 'x__1_1']
-    """
-    if not shape:
-        return [varname]
-    labels = (np.ravel(xs).tolist() for xs in np.indices(shape))
-    labels = (map(str, xs) for xs in labels)
-    return ['{}__{}'.format(varname, '_'.join(idxs)) for idxs in zip(*labels)]
-
-
-def _create_shape(flat_names):
-    "Determine shape from `_create_flat_names` output."
-    try:
-        _, shape_str = flat_names[-1].rsplit('__', 1)
-    except ValueError:
-        return ()
-    return tuple(int(i) + 1 for i in shape_str.split('_'))
-
-
 def load(name, model=None):
     """Load Text database.
 
@@ -215,35 +189,10 @@ def dump(name, trace, chains=None):
         chains = trace.chains
 
     var_shapes = trace._straces[chains[0]].var_shapes
-    flat_names = {v: _create_flat_names(v, shape)
+    flat_names = {v: ttab.create_flat_names(v, shape)
                   for v, shape in var_shapes.items()}
 
     for chain in chains:
         filename = os.path.join(name, 'chain-{}.csv'.format(chain))
-        df = _strace_to_df(trace._straces[chain], flat_names)
+        df = ttab.trace_to_dataframe(trace, chains=chain, flat_names=flat_names)
         df.to_csv(filename, index=False)
-
-
-def _strace_to_df(strace, flat_names=None):
-    """Convert single-chain trace to Pandas DataFrame.
-
-    Parameters
-    ----------
-    strace : NDarray trace
-    flat_names : dict or None
-        A dictionary that maps each variable name in `strace` to a list
-        of flat variable names (e.g., ['x__0', 'x__1', ...])
-    """
-    if flat_names is None:
-        flat_names = {v: _create_flat_names(v, shape)
-                      for v, shape in strace.var_shapes.items()}
-
-    var_dfs = []
-    for varname, shape in strace.var_shapes.items():
-        vals = strace.get_values(varname)
-        if len(shape) == 1:
-            flat_vals = vals
-        else:
-            flat_vals = vals.reshape(len(strace), np.prod(shape))
-        var_dfs.append(pd.DataFrame(flat_vals, columns=flat_names[varname]))
-    return pd.concat(var_dfs, axis=1)
