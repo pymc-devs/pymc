@@ -1,10 +1,15 @@
 """Utility functions for PyMC"""
 
 import numpy as np
+import pandas as pd
 import itertools
 import sys
 
-__all__ = ['autocorr', 'autocov', 'hpd', 'quantiles', 'mc_error', 'summary']
+
+from .backends import tracetab as ttab
+
+__all__ = ['autocorr', 'autocov', 'hpd', 'quantiles', 'mc_error', 'summary',
+           'df_summary']
 
 def statfunc(f):
     """
@@ -231,6 +236,109 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
 
     except IndexError:
         print("Too few elements for quantile calculation")
+
+
+def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
+               alpha=0.05, batches=100):
+    """Create a data frame with summary statistics.
+
+    Parameters
+    ----------
+    trace : MultiTrace instance
+    varnames : list
+        Names of variables to include in summary
+    stat_funcs : None or list
+        A list of functions used to calculate statistics. By default,
+        the mean, standard deviation, simulation standard error, and
+        highest posterior density intervals are included.
+
+        The functions will be given one argument, the samples for a
+        variable as a 2 dimensional array, where the first axis
+        corresponds to sampling iterations and the second axis
+        represents the flattened variable (e.g., x__0, x__1,...). Each
+        function should return either
+        1) A `pandas.Series` instance containing the result of
+           calculating the statistic along the first axis. The name
+           attribute will be taken as the name of the statistic.
+        2) A `pandas.DataFrame` where each column contains the
+           result of calculating the statistic along the first axis.
+           The column names will be taken as the names of the
+           statistics.
+    extend : boolean
+        If True, use the statistics returned by `stat_funcs` in
+        addition to, rather than in place of, the default statistics.
+        This is only meaningful when `stat_funcs` is not None.
+    alpha : float
+        The alpha level for generating posterior intervals. Defaults
+        to 0.05. This is only meaningful when `stat_funcs` is None.
+    batches : int
+        Batch size for calculating standard deviation for
+        non-independent samples. Defaults to 100. This is only
+        meaningful when `stat_funcs` is None.
+
+
+    See also
+    --------
+    summary : Generate a pretty-printed summary of a trace.
+
+
+    Returns
+    -------
+    `pandas.DataFrame` with summary statistics for each variable
+
+
+    Examples
+    --------
+
+    >>> import pymc3 as pm
+    >>> trace.mu.shape
+    (1000, 2)
+    >>> pm.df_summary(trace, ['mu'])
+               mean        sd  mc_error     hpd_5    hpd_95
+    mu__0  0.106897  0.066473  0.001818 -0.020612  0.231626
+    mu__1 -0.046597  0.067513  0.002048 -0.174753  0.081924
+
+    Other statistics can be calculated by passing a list of functions.
+
+    >>> import pandas as pd
+    >>> def trace_sd(x):
+    ...     return pd.Series(np.std(x, 0), name='sd')
+    ...
+    >>> def trace_quantiles(x):
+    ...     return pd.DataFrame(pm.quantiles(x, [5, 50, 95]))
+    ...
+    >>> pm.df_summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
+                 sd         5        50        95
+    mu__0  0.066473  0.000312  0.105039  0.214242
+    mu__1  0.067513 -0.159097 -0.045637  0.062912
+    """
+    if varnames is None:
+        varnames = trace.varnames
+
+    funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
+             lambda x: pd.Series(np.std(x, 0), name='sd'),
+             lambda x: pd.Series(mc_error(x, batches), name='mc_error'),
+             lambda x: _hpd_df(x, alpha)]
+
+    if stat_funcs is not None and extend:
+        stat_funcs = funcs + stat_funcs
+    elif stat_funcs is None:
+        stat_funcs = funcs
+
+    var_dfs = []
+    for var in varnames:
+        vals = trace.get_values(var, combine=True)
+        flat_vals = vals.reshape(vals.shape[0], -1)
+        var_df = pd.concat([f(flat_vals) for f in stat_funcs], axis=1)
+        var_df.index = ttab.create_flat_names(var, vals.shape[1:])
+        var_dfs.append(var_df)
+    return pd.concat(var_dfs, axis=0)
+
+
+def _hpd_df(x, alpha):
+    cnames = ['hpd_{0:g}'.format(100 * alpha),
+              'hpd_{0:g}'.format(100 * (1 - alpha))]
+    return pd.DataFrame(hpd(x, alpha), columns=cnames)
 
 
 def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3,
