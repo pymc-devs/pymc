@@ -2,6 +2,7 @@
 
 import numpy as np
 import itertools
+import sys
 
 __all__ = ['autocorr', 'autocov', 'hpd', 'quantiles', 'mc_error', 'summary']
 
@@ -232,7 +233,8 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
         print("Too few elements for quantile calculation")
 
 
-def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
+def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3,
+            to_file=None):
     """
     Generate a pretty-printed summary of the node.
 
@@ -259,6 +261,9 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
     roundto : int
       The number of digits to round posterior statistics.
 
+    tofile : None or string
+      File to write results to. If not given, print to stdout.
+
     """
     if vars is None:
         vars = trace.varnames
@@ -266,16 +271,22 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
     stat_summ = _StatSummary(roundto, batches, alpha)
     pq_summ = _PosteriorQuantileSummary(roundto, alpha)
 
+    if to_file is None:
+        fh = sys.stdout
+    else:
+        fh = open(to_file, mode='w')
+
     for var in vars:
         # Extract sampled values
         sample = trace.get_values(var, burn=start, combine=True)
 
-        print('\n%s:' % var)
-        print(' ')
+        fh.write('\n%s:\n\n' % var)
 
-        stat_summ.print_output(sample)
-        pq_summ.print_output(sample)
+        fh.write(stat_summ.output(sample))
+        fh.write(pq_summ.output(sample))
 
+    if fh is not sys.stdout:
+        fh.close()
 
 class _Summary(object):
     """Base class for summary output"""
@@ -286,8 +297,8 @@ class _Summary(object):
         self.spaces = None
         self.width = None
 
-    def print_output(self, sample):
-        print('\n'.join(list(self._get_lines(sample))) + '\n')
+    def output(self, sample):
+        return '\n'.join(list(self._get_lines(sample))) + '\n\n'
 
     def _get_lines(self, sample):
         for line in self.header_lines:
