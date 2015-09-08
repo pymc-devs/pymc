@@ -73,3 +73,7 @@ pip install git+https://github.com/njsmith/scikits-sparse.git
 
 ## License
 [Apache License, Version 2.0](https://github.com/pymc-devs/pymc3/blob/master/LICENSE)
+
+## Contributors
+
+See the [GitHub contributor page](https://github.com/pymc-devs/pymc3/graphs/contributors)
