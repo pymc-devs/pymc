@@ -2,6 +2,9 @@ import theano.tensor as t
 import numpy as np
 from ..model import Model
 
+from theano import function
+from ..model import get_named_nodes
+
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete', 'NoDistribution', 'TensorType']
 
 
@@ -50,7 +53,7 @@ class Distribution(object):
                     return self.getattr_value(v)
         else:
             return self.getattr_value(val)
-                        
+
         if val is None:
             raise AttributeError(str(self) + " has no finite default value to use, checked: " +
                          str(defaults) + " pass testval argument or adjust so value is finite.")
@@ -96,3 +99,185 @@ class MultivariateContinuous(Continuous):
 class MultivariateDiscrete(Discrete):
 
     pass
+
+def draw_values(params, point=None):
+    """
+    Draw (fix) parameter values. Handles a number of cases:
+
+        1) The parameter is a scalar
+        2) The parameter is an *RV
+
+            a) parameter can be fixed to the value in the point
+            b) parameter can be fixed by sampling from the *RV
+            c) parameter can be fixed using tag.test_value (last resort)
+
+        3) The parameter is a tensor variable/constant. Can be evaluated using
+        theano.function, but a variable may contain nodes which
+
+            a) are named parameters in the point
+            b) are *RVs with a random method
+
+    """
+    # Distribution parameters may be nodes which have named node-inputs
+    # specified in the point. Need to find the node-inputs to replace them.
+    givens = {}
+    for param in params:
+        if hasattr(param, 'name'):
+            named_nodes = get_named_nodes(param)
+            if param.name in named_nodes:
+                named_nodes.pop(param.name)
+            for name, node in named_nodes.items():
+                givens[name] = (node, draw_value(node, point=point))
+    values = [None for _ in params]
+    for i, param in enumerate(params):
+        # "Homogonise" output
+        values[i] = np.atleast_1d(draw_value(param, point=point, givens=givens.values()))
+    if len(values) == 1:
+        return values[0]
+    else:
+        return values
+
+def draw_value(param, point=None, givens={}):
+    if hasattr(param, 'name'):
+        if hasattr(param, 'model'):
+            if point is not None and param.name in point:
+                value = point[param.name]
+            elif hasattr(param, 'random') and param.random is not None:
+                value = param.random(point=point, size=None)
+            else:
+                value = param.tag.test_value
+        else:
+            value = function([], param,
+                             givens=givens,
+                             rebuild_strict=True,
+                             on_unused_input='ignore',
+                             allow_input_downcast=True)()
+    else:
+        value = param
+    # Sanitising values may be necessary.
+    if hasattr(param, 'dtype'):
+        value = np.atleast_1d(value).astype(param.dtype)
+    if hasattr(param, 'shape'):
+        try:
+            shape = param.shape.tag.test_value
+        except:
+           shape = param.shape
+        if len(shape) == 0 and len(value) == 1:
+            value = value[0]
+    return value
+
+
+def broadcast_shapes(*args):
+    """Return the shape resulting from broadcasting multiple shapes.
+    Represents numpy's broadcasting rules.
+
+    Parameters
+    ----------
+    *args : array-like of int
+        Tuples or arrays or lists representing the shapes of arrays to be broadcast.
+
+    Returns
+    -------
+    Resulting shape or None if broadcasting is not possible.
+    """
+    x = list(np.atleast_1d(args[0])) if args else ()
+    for arg in args[1:]:
+        y = list(np.atleast_1d(arg))
+        if len(x) < len(y):
+            x, y = y, x
+        x[-len(y):] = [j if i == 1 else i if j == 1 else i if i == j else 0 \
+                       for i, j in  zip(x[-len(y):], y)]
+        if not all(x):
+            return None
+    return tuple(x)
+
+
+def replicate_samples(generator, size, repeats, *args, **kwargs):
+    n = int(np.prod(repeats))
+    if n == 1:
+        samples = generator(size=size, *args, **kwargs)
+    else:
+        samples = np.array([generator(size=size, *args, **kwargs) \
+                            for _ in range(n)])
+        samples = np.reshape(samples, tuple(repeats) + tuple(size))
+    return samples
+
+
+
+def generate_samples(generator, *args, **kwargs):
+    """Generate samples from the distribution of a random variable.
+ 
+    Parameters
+    ----------
+    generator : function
+        Function to generate the random samples. The function is
+        expected take parameters for generating samples and
+        a keyword argument `size` which determines the shape
+        of the samples.
+        The *args and **kwargs (stripped of the keywords below) will be
+        passed to the generator function.
+ 
+    keyword arguments
+    ~~~~~~~~~~~~~~~~
+ 
+    dist_shape : int or tuple of int
+        The shape of the random variable (i.e., the shape attribute).
+    size : int or tuple of int
+        The required shape of the samples.
+    broadcast_shape: tuple of int or None
+        The shape resulting from the broadcasting of the parameters.
+        If not specified it will be inferred from the shape of the
+        parameters. This may be required when the parameter shape
+        does not determine the shape of a single sample, for example,
+        the shape of the probabilities in the Categorical distribution.
+ 
+    Any remaining *args and **kwargs are passed on to the generator function.
+"""
+    dist_shape = kwargs.pop('dist_shape', ())
+    size = kwargs.pop('size', None)
+    broadcast_shape = kwargs.pop('broadcast_shape', None)
+    params = args + tuple(kwargs.values())
+
+    if broadcast_shape is None:
+        broadcast_shape = broadcast_shapes(*[np.atleast_1d(p).shape for p in params \
+                                      if not isinstance(p, tuple)])
+    if broadcast_shape == ():
+        broadcast_shape = (1,)
+
+    args = tuple(p[0] if isinstance(p, tuple) else p for p in args)
+    for key in kwargs:
+        p = kwargs[key]
+        kwargs[key] = p[0] if isinstance(p, tuple) else p
+
+    if np.all(dist_shape[-len(broadcast_shape):] == broadcast_shape):
+        prefix_shape = tuple(dist_shape[:-len(broadcast_shape)])
+    else:
+        prefix_shape = tuple(dist_shape)
+
+    try:
+        repeat_shape = tuple(size or ())
+    except TypeError:# If size is an int
+        repeat_shape = tuple((size,))
+
+    if broadcast_shape == (1,) and prefix_shape == ():
+        if size is not None:
+            samples = generator(size=size, *args, **kwargs)
+        else:
+            samples = generator(size=1, *args, **kwargs)
+    else:
+        if size is not None:
+            samples = replicate_samples(generator,
+                                  broadcast_shape,
+                                  repeat_shape + prefix_shape,
+                                  *args, **kwargs)
+            if broadcast_shape == (1,) and not prefix_shape == ():
+                samples = np.reshape(samples, repeat_shape + prefix_shape)
+        else:
+            samples = replicate_samples(generator,
+                                  broadcast_shape,
+                                  prefix_shape,
+                                  *args, **kwargs)
+            if broadcast_shape == (1,):
+                samples = np.reshape(samples, prefix_shape)
+    return samples
+
