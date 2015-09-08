@@ -17,3 +17,4 @@ pages:
   - 'Hierarchical linear regression': 'GLM-hierarchical.md'
   - 'Probabilistic Matrix Factorization': 'pmf-pymc.md'
   - 'Rugby Analytics example': 'rugby_analytics.md'
+  - 'Posterior Predictive checks and prediction': 'posterior_predictive.md'
