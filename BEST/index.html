@@ -120,6 +120,18 @@
 </li>
 
                         
+                            
+<li >
+    <a href="../rugby_analytics/">Rugby Analytics example</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../posterior_predictive/">Posterior Predictive checks and prediction</a>
+</li>
+
+                        
                         </ul>
                     </li>
                 
@@ -169,7 +181,7 @@
 </div></div>
                 <div class="col-md-9" role="main">
 
-<pre><code>"""Bayesian Estimation Supersedes the T-Test
+<pre><code>&quot;&quot;&quot;Bayesian Estimation Supersedes the T-Test
 
 This model replicates the example used in:
 Kruschke, John. (2012) Bayesian estimation supersedes the t test. Journal of Experimental Psychology: General.
@@ -177,7 +189,7 @@ Kruschke, John. (2012) Bayesian estimation supersedes the t test. Journal of Exp
 The original pymc2 implementation was written by Andrew Straw and can be found here: https://github.com/strawlab/best
 
 Ported to PyMC3 by Thomas Wiecki (c) 2015.
-"""
+&quot;&quot;&quot;
 
 import numpy as np
 import pymc3 as pm
@@ -218,20 +230,21 @@ with pm.Model() as model:
 
     step = pm.NUTS()
     trace = pm.sample(5000, step)
-
- [-----------------100%-----------------] 5000 of 5000 complete in 29.0 sec
-
-
-%matplotlib inline
-
-
-pm.traceplot(trace[1000:]);
 </code></pre>
+
+<pre><code> [-----------------100%-----------------] 5000 of 5000 complete in 29.0 sec
+</code></pre>
+<pre><code>%matplotlib inline
+</code></pre>
+
+<pre><code>pm.traceplot(trace[1000:]);
+</code></pre>
+
 <p><img alt="png" src="../BEST_files/BEST_2_0.png" /></p>
 <pre><code>pm.plots.summary(trace[1000:])
+</code></pre>
 
-
-group1_mean:
+<pre><code>group1_mean:
 
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------

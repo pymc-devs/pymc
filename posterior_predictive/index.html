@@ -9,7 +9,7 @@
         
         <link rel="shortcut icon" href="../img/favicon.ico">
 
-	<title>Stochastic Volatility - PyMC3</title>
+	<title>Posterior Predictive checks and prediction - PyMC3</title>
 
         <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
         <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
@@ -85,8 +85,8 @@
 
                         
                             
-<li class="active">
-    <a href="./">Stochastic Volatility</a>
+<li >
+    <a href="../stochastic_volatility/">Stochastic Volatility</a>
 </li>
 
                         
@@ -127,8 +127,8 @@
 
                         
                             
-<li >
-    <a href="../posterior_predictive/">Posterior Predictive checks and prediction</a>
+<li class="active">
+    <a href="./">Posterior Predictive checks and prediction</a>
 </li>
 
                         
@@ -147,12 +147,12 @@
                 </li>
                 
                     <li >
-                        <a rel="next" href="../BEST/">
+                        <a rel="next" href="../rugby_analytics/">
                             <i class="fa fa-arrow-left"></i> Previous
                         </a>
                     </li>
-                    <li >
-                        <a rel="prev" href="../hierarchical/">
+                    <li class="disabled">
+                        <a rel="prev" >
                             Next <i class="fa fa-arrow-right"></i>
                         </a>
                     </li>
@@ -177,120 +177,152 @@
                 <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
     <ul class="nav bs-sidenav">
     
-        <li class="main active"><a href="#stochastic-volatility-model">Stochastic Volatility model</a></li>
+        <li class="main active"><a href="#posterior-predictive-checks-in-pymc3">Posterior Predictive Checks in PyMC3</a></li>
         
-            <li><a href="#build-model">Build Model</a></li>
+    
+        <li class="main "><a href="#prediction">Prediction</a></li>
         
-            <li><a href="#fit-model">Fit Model</a></li>
-        
-            <li><a href="#references">References</a></li>
+            <li><a href="#mean-predicted-values-plus-error-bars-to-give-sense-of-uncertainty-in-prediction">Mean predicted values plus error bars to give sense of uncertainty in prediction</a></li>
         
     
     </ul>
 </div></div>
                 <div class="col-md-9" role="main">
 
-<h1 id="stochastic-volatility-model">Stochastic Volatility model</h1>
-<pre><code class="python">import numpy as np
+<h1 id="posterior-predictive-checks-in-pymc3">Posterior Predictive Checks in PyMC3</h1>
+<p>PPCs are a great way to validate a model. The idea is to generate data sets from the model using parameter settings from draws from the posterior.</p>
+<p><code>PyMC3</code> has random number support thanks to <a href="https://github.com/mwibrow">Mark Wibrow</a> as implemented in <a href="https://github.com/pymc-devs/pymc3/pull/784">PR784</a>.</p>
+<p>Here we will implement a general routine to draw samples from the observed nodes of a model.</p>
+<pre><code class="python">%matplotlib inline
+import numpy as np
 import pymc3 as pm
-from pymc3.distributions.timeseries import GaussianRandomWalk
-
-from scipy.sparse import csc_matrix
-from scipy import optimize
-
-%pylab inline
+import seaborn as sns
+import matplotlib.pyplot as plt
+from collections import defaultdict
 </code></pre>
 
-<pre><code>Populating the interactive namespace from numpy and matplotlib
-
-
-:0: FutureWarning: IPython widgets are experimental and may change in the future.
+<pre><code>ERROR (theano.sandbox.cuda): nvcc compiler not found on $PATH. Check your nvcc installation and try again.
+ERROR:theano.sandbox.cuda:nvcc compiler not found on $PATH. Check your nvcc installation and try again.
 </code></pre>
-<p>Asset prices have time-varying volatility (variance of day over day <code>returns</code>). In some periods, returns are highly variable, while in others very stable. Stochastic volatility models model this with a latent volatility variable, modeled as a stochastic process. The following model is similar to the one described in the No-U-Turn Sampler paper, Hoffman (2011) p21.</p>
-<p><mathjax>$$ \sigma \sim Exponential(50) $$</mathjax></p>
-<p><mathjax>$$ \nu \sim Exponential(.1) $$</mathjax></p>
-<p><mathjax>$$ s_i \sim Normal(s_{i-1}, \sigma^{-2}) $$</mathjax></p>
-<p><mathjax>$$ log(\frac{y_i}{y_{i-1}}) \sim t(\nu, 0, exp(-2 s_i)) $$</mathjax></p>
-<p>Here, <mathjax>$y$</mathjax> is the daily return series and <mathjax>$s$</mathjax> is the latent log volatility process.</p>
-<h2 id="build-model">Build Model</h2>
-<p>First we load some daily returns of the S&amp;P 500.</p>
-<pre><code class="python">n = 400
-returns = np.genfromtxt(&quot;data/SP500.csv&quot;)[-n:]
-returns[:5]
+<p>Lets generate a very simple model:</p>
+<pre><code class="python">data = np.random.randn(100)
+
+with pm.Model() as model: 
+    mu = pm.Normal('mu', mu=0, sd=1, testval=0)
+    sd = pm.HalfNormal('sd', sd=1)
+    n = pm.Normal('n', mu=mu, sd=sd, observed=data)
+
+    step = pm.NUTS()
+    trace = pm.sample(5000, step)
 </code></pre>
 
-<pre><code>array([-0.00637 , -0.004045, -0.02547 ,  0.005102, -0.047733])
-</code></pre>
-<pre><code class="python">plt.plot(returns)
-</code></pre>
+<pre><code> [-----------------100%-----------------] 5000 of 5000 complete in 2.4 sec
 
-<pre><code>[&lt;matplotlib.lines.Line2D at 0xaeaec1cc&gt;]
-</code></pre>
-<p><img alt="png" src="../stochastic_volatility_files/stochastic_volatility_6_1.png" /></p>
-<p>Specifying the model in pymc3 mirrors its statistical specification. </p>
-<pre><code class="python">model = pm.Model()
-with model:
-    sigma = pm.Exponential('sigma', 1./.02, testval=.1)
-
-    nu = pm.Exponential('nu', 1./10)
-    s = GaussianRandomWalk('s', sigma**-2, shape=n)
-
-    r = pm.T('r', nu, lam=pm.exp(-2*s), observed=returns)
-</code></pre>
-
-<h2 id="fit-model">Fit Model</h2>
-<p>For this model, the full maximum a posteriori (MAP) point is degenerate and has infinite density. However, if we fix <code>log_sigma</code> and <code>nu</code> it is no longer degenerate, so we find the MAP with respect to the volatility process, 's', keeping <code>log_sigma</code> and <code>nu</code> constant at their default values. </p>
-<p>We use L-BFGS because it is more efficient for high dimensional functions (<code>s</code> has n elements).</p>
-<pre><code class="python">with model:
-    start = pm.find_MAP(vars=[s], fmin=optimize.fmin_l_bfgs_b)
-</code></pre>
-
-<p>We do a short initial run to get near the right area, then start again using a new Hessian at the new starting point to get faster sampling due to better scaling. We do a short run since this is an interactive example.</p>
-<pre><code class="python">with model:
-    step = pm.NUTS(vars=[s, nu,sigma],scaling=start, gamma=.25)
-    start2 = pm.sample(100, step, start=start)[-1]
-
-    # Start next run at the last sampled position.
-    step = pm.NUTS(vars=[s, nu,sigma],scaling=start2, gamma=.55)
-    trace = pm.sample(2000, step, start=start2)
-</code></pre>
-
-<pre><code> [-----------------100%-----------------] 2001 of 2000 complete in 368.9 sec
-
-/usr/lib/python3.4/importlib/_bootstrap.py:321: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
+/home/wiecki/miniconda3/lib/python3.4/importlib/_bootstrap.py:321: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
   return f(*args, **kwds)
 </code></pre>
-<pre><code class="python">figsize(12,6)
-pm.traceplot(trace, model.vars[:-1]);
+<pre><code class="python">pm.traceplot(trace);
 </code></pre>
 
-<p><img alt="png" src="../stochastic_volatility_files/stochastic_volatility_14_0.png" /></p>
-<pre><code class="python">figsize(12,6)
-title(str(s))
-plot(trace[s][::10].T,'b', alpha=.03);
-xlabel('time')
-ylabel('log volatility')
+<p><img alt="png" src="../posterior_predictive_files/posterior_predictive_4_0.png" /></p>
+<p>This function will make it into <code>PyMC3</code> eventually, for now this should work on all models:</p>
+<pre><code class="python">def run_ppc(trace, samples=100, model=None):
+    &quot;&quot;&quot;Generate Posterior Predictive samples from a model given a trace.
+    &quot;&quot;&quot;
+    if model is None:
+         model = pm.modelcontext(model)
+
+    ppc = defaultdict(list)
+    for idx in np.random.randint(0, len(trace), samples):
+        param = trace[idx]
+        for obs in model.observed_RVs:
+            ppc[obs.name].append(obs.distribution.random(point=param))
+
+    return ppc
 </code></pre>
 
-<pre><code>&lt;matplotlib.text.Text at 0xac04168c&gt;
-</code></pre>
-<p><img alt="png" src="../stochastic_volatility_files/stochastic_volatility_15_1.png" /></p>
-<p>Looking at the returns over time and overlaying the estimated standard deviation we can see how the model tracks the volatility over time.</p>
-<pre><code class="python">plot(returns)
-plot(np.exp(trace[s][::10].T), 'r', alpha=.03);
-sd = np.exp(trace[s].T)
-plot(-np.exp(trace[s][::10].T), 'r', alpha=.03);
-xlabel('time')
-ylabel('returns')
+<pre><code class="python">ppc = run_ppc(trace, samples=500, model=model)
 </code></pre>
 
-<pre><code>&lt;matplotlib.text.Text at 0xaab3854c&gt;
+<p><code>ppc</code> contains 500 generated data sets (containing 50 samples each), each using a different parameter setting from the posterior:</p>
+<pre><code class="python">np.asarray(ppc['o']).shape
 </code></pre>
-<p><img alt="png" src="../stochastic_volatility_files/stochastic_volatility_17_1.png" /></p>
-<h2 id="references">References</h2>
-<ol>
-<li>Hoffman &amp; Gelman. (2011). <a href="http://arxiv.org/abs/1111.4246">The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo</a>. </li>
-</ol></div>
+
+<pre><code>(500, 50)
+</code></pre>
+<p>One common way to visualize is to look if the model can reproduce the patterns observed in the real data. For example, how close are the inferred means to the actual sample mean:</p>
+<pre><code class="python">ax = plt.subplot()
+sns.distplot([n.mean() for n in ppc['n']], kde=False, ax=ax)
+ax.axvline(data.mean())
+ax.set(title='Posterior predictive of the mean', xlabel='mean(x)', ylabel='Frequency');
+</code></pre>
+
+<p><img alt="png" src="../posterior_predictive_files/posterior_predictive_11_0.png" /></p>
+<h1 id="prediction">Prediction</h1>
+<p>The same pattern can be used for prediction. Here we're building a logistic regression model. Note that since we're dealing the full posterior, we're also getting uncertainty in our predictions for free.</p>
+<pre><code class="python"># Use a theano shared variable to be able to exchange the data the model runs on
+from theano import shared
+</code></pre>
+
+<pre><code class="python">def invlogit(x):
+    return np.exp(x) / (1 + np.exp(x))
+
+n = 4000
+n_oos = 50
+coeff = 1.
+
+predictors = np.random.normal(size=n)
+# Turn predictor into a shared var so that we can change it later
+predictors_shared = shared(predictors)
+
+outcomes = np.random.binomial(1, invlogit(coeff * predictors))
+</code></pre>
+
+<pre><code class="python">outcomes
+</code></pre>
+
+<pre><code>array([1, 1, 0, ..., 1, 0, 0])
+</code></pre>
+<pre><code class="python">predictors_oos = np.random.normal(size=50)
+outcomes_oos = np.random.binomial(1, invlogit(coeff * predictors_oos))
+</code></pre>
+
+<pre><code class="python">def tinvlogit(x):
+    import theano.tensor as t
+    return t.exp(x) / (1 + t.exp(x))
+
+with pm.Model() as model:
+    coeff = pm.Normal('coeff', mu=0, sd=1)
+    p = tinvlogit(coeff * predictors_shared)
+
+    o = pm.Bernoulli('o', p, observed=outcomes)
+
+    start = pm.find_MAP()
+    step = pm.NUTS(scaling=start)
+    trace = pm.sample(500, step)
+</code></pre>
+
+<pre><code> [-----------------100%-----------------] 500 of 500 complete in 2.6 sec
+</code></pre>
+<pre><code class="python"># Changing values here will also change values in the model
+predictors_shared.set_value(predictors_oos)
+</code></pre>
+
+<pre><code class="python"># Simply running PPC will use the updated values and do prediction
+ppc = run_ppc(trace, model=model, samples=500)
+</code></pre>
+
+<h2 id="mean-predicted-values-plus-error-bars-to-give-sense-of-uncertainty-in-prediction">Mean predicted values plus error bars to give sense of uncertainty in prediction</h2>
+<pre><code class="python">plt.errorbar(x=predictors_oos, y=np.asarray(ppc['o']).mean(axis=0), yerr=np.asarray(ppc['o']).std(axis=0), linestyle='', marker='o')
+plt.plot(predictors_oos, outcomes_oos, 'o')
+plt.ylim(-.05, 1.05)
+plt.xlabel('predictor')
+plt.ylabel('outcome')
+</code></pre>
+
+<pre><code>&lt;matplotlib.text.Text at 0x7f1e23214f98&gt;
+</code></pre>
+<p><img alt="png" src="../posterior_predictive_files/posterior_predictive_21_1.png" /></p></div>
             
         </div>
 

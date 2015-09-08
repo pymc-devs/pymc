@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="PyMC devs">
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+
+	<title>Rugby Analytics example - PyMC3</title>
+
+        <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="../css/highlight.css">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="..">PyMC3</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            
+                <!-- Main navigation -->
+                <ul class="nav navbar-nav">
+                
+                
+                    <li >
+                        <a href="..">Overview</a>
+                    </li>
+                
+                
+                
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../getting_started/">Getting started</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                
+                    <li class="dropdown active">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Examples <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../BEST/">BEST</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../stochastic_volatility/">Stochastic Volatility</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../hierarchical/">Hierarchical model</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-linear/">Linear Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-robust/">Robust Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-hierarchical/">Hierarchical linear regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../pmf-pymc/">Probabilistic Matrix Factorization</a>
+</li>
+
+                        
+                            
+<li class="active">
+    <a href="./">Rugby Analytics example</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../posterior_predictive/">Posterior Predictive checks and prediction</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                </ul>
+            
+
+            <ul class="nav navbar-nav navbar-right">
+                <li>
+                    <a href="#" data-toggle="modal" data-target="#mkdocs_search_modal">
+                        <i class="fa fa-search"></i> Search
+                    </a>
+                </li>
+                
+                    <li >
+                        <a rel="next" href="../pmf-pymc/">
+                            <i class="fa fa-arrow-left"></i> Previous
+                        </a>
+                    </li>
+                    <li >
+                        <a rel="prev" href="../posterior_predictive/">
+                            Next <i class="fa fa-arrow-right"></i>
+                        </a>
+                    </li>
+                
+                
+                    <li>
+                        <a href="https://github.com/pymc-devs/pymc3">
+                            
+                                <i class="fa fa-github"></i>
+                            
+                            GitHub
+                        </a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            
+                <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#a-hierarchical-model-for-rugby-prediction">A Hierarchical model for Rugby prediction</a></li>
+        
+    
+        <li class="main "><a href="#motivation">Motivation</a></li>
+        
+    
+        <li class="main "><a href="#what-do-we-want-to-infer">What do we want to infer?</a></li>
+        
+    
+        <li class="main "><a href="#what-do-we-want">What do we want?</a></li>
+        
+    
+        <li class="main "><a href="#what-assumptions-do-we-know-for-our-generative-story">What assumptions do we know for our 'generative story'?</a></li>
+        
+    
+        <li class="main "><a href="#the-model">The model.</a></li>
+        
+    
+    </ul>
+</div></div>
+                <div class="col-md-9" role="main">
+
+<h1 id="a-hierarchical-model-for-rugby-prediction">A Hierarchical model for Rugby prediction</h1>
+<p>Bayesian Rugby
+I came across the following blog post on http://danielweitzenfeld.github.io/passtheroc/blog/2014/10/28/bayes-premier-league/
+* Based on the work of <a href="../www.statistica.it/gianluca/Research/BaioBlangiardo.pdf">Baio and Blangiardo</a>
+In this example, we're going to reproduce the first model described in the paper using PyMC3.</p>
+<p>Since I am a rugby fan I decide to apply the results of the paper Bayesian Football to the Six Nations.
+Rugby is a physical sport popular worldwide.
+<em> Six Nations consists of Italy, Ireland, Scotland, England, France and Wales
+</em> Game consists of scoring tries (similar to touch downs) or kicking the goal.
+<em> Average player is something like 100kg and 1.82m tall.
+</em> Paul O'Connell the Irish captain is Height: 6' 6" (1.98 m) Weight: 243 lbs (110 kg)</p>
+<p>We will use a data set only consisting of the Six Nations 2014 data, and use this to build a generative and explainable model about the Six Nations 2015.</p>
+<h1 id="motivation">Motivation</h1>
+<p>Your estimate of the strength of a team depends on your estimates of the other strengths</p>
+<p>Ireland are a stronger team than Italy for example - but by how much?</p>
+<p>Source for Results 2014 are Wikipedia.
+I handcrafted these results
+Small data
+<em> We want to infer a latent parameter - that is the 'strength' of a team based only on their <strong>scoring intensity</strong>, and all we have are their scores and results, we can't accurately measure the 'strength' of a team. 
+</em> Probabilistic Programming is a brilliant paradigm for modeling these <strong>latent</strong> parameters</p>
+<pre><code class="python">!date
+
+import numpy as np
+import pandas as pd
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+%matplotlib inline
+import pymc3 as pm, theano.tensor as tt
+</code></pre>
+
+<pre><code>ERROR! Session/line number was not unique in database. History logging moved to new session 99
+Sun 23 Aug 2015 18:36:33 CEST
+</code></pre>
+<p>This is a Rugby prediction exercise. So we'll input some data</p>
+<pre><code class="python">data_csv = StringIO(&quot;&quot;&quot;home_team,away_team,home_score,away_score
+Wales,Italy,23,15
+France,England,26,24
+Ireland,Scotland,28,6
+Ireland,Wales,26,3
+Scotland,England,0,20
+France,Italy,30,10
+Wales,France,27,6
+Italy,Scotland,20,21
+England,Ireland,13,10
+Ireland,Italy,46,7
+Scotland,France,17,19
+England,Wales,29,18
+Italy,England,11,52
+Wales,Scotland,51,3
+France,Ireland,20,22&quot;&quot;&quot;)
+</code></pre>
+
+<pre><code class="python">
+</code></pre>
+
+<h1 id="what-do-we-want-to-infer">What do we want to infer?</h1>
+<ul>
+<li>We want to infer the latent paremeters (every team's strength) that are generating the data we observe (the scorelines).</li>
+<li>
+<p>Moreover, we know that the scorelines are a noisy measurement of team strength, so ideally, we want a model that makes it easy to quantify our uncertainty about the underlying strengths.</p>
+</li>
+<li>
+<p>Often we don't know what the Bayesian Model is explicitly, so we have to 'estimate' the Bayesian Model'</p>
+</li>
+<li>
+<p>If we can't solve something, approximate it.</p>
+</li>
+<li>
+<p>Markov-Chain Monte Carlo (MCMC) instead draws samples from the posterior.</p>
+</li>
+<li>Fortunately, this algorithm can be applied to almost any model.</li>
+</ul>
+<h1 id="what-do-we-want">What do we want?</h1>
+<p>We want to quantify our uncertainty
+We want to also use this to generate a model
+We want the answers as distributions not point estimates</p>
+<h1 id="what-assumptions-do-we-know-for-our-generative-story">What assumptions do we know for our 'generative story'?</h1>
+<ul>
+<li>We know that the Six Nations in Rugby only has 6 teams - they each play each other once</li>
+<li>We have data from last year!</li>
+<li>We also know that in sports scoring is modelled as a Poisson distribution</li>
+<li>We consider home advantage to be a strong effect in sports</li>
+</ul>
+<h1 id="the-model">The model.</h1>
+<p>The league is made up by a total of T= 6 teams, playing each other once 
+in a season. We indicate the number of points scored by the home and the away team in the g-th game of the season (15 games) as $y_{g1}$ and $y_{g2}$ respectively. </p>
+
+<p>The vector of observed counts $\mathbb{y} = (y_{g1}, y_{g2})$ is modelled as independent Poisson:
+$y_{gi}| \theta_{gj} \tilde\;\;  Poisson(\theta_{gj})$
+where the theta parameters represent the scoring intensity in the g-th game for the team playing at home (j=1) and away (j=2), respectively.</p>
+
+<p>We model these parameters according to a formulation that has been used widely in the statistical literature, assuming a log-linear random effect model:
+$$log \theta_{g1} = home + att_{h(g)} + def_{a(g)} $$
+$$log \theta_{g2} = att_{a(g)} + def_{h(g)}$$
+
+* The parameter home represents the advantage for the team hosting the game and we assume that this effect is constant for all the teams and throughout the season
+* The scoring intensity is determined jointly by the attack and defense ability of the two teams involved, represented by the parameters att and def, respectively
+
+* Conversely, for each t = 1, ..., T, the team-specific effects are modelled as exchangeable from a common distribution:
+
+* $att_{t}$ ~ $Normal(μ_att,τ_att)$ and $def_{t}$ ~Normal$(μ_{def},τ_{def})$
+
+Note that they're breaking out team strength into attacking and defending strength. A negative defense parameter will sap the mojo from the opposing team's attacking parameter.
+I made two tweaks to the model. It didn't make sense to me to have a μatt when we're enforcing the sum-to-zero constraint by subtracting the mean anyway. So I eliminated μatt and μdef
+Also because of the sum-to-zero constraint, it seemed to me that we needed an intercept term in the log-linear model, capturing the average goals scored per game by the away team. This we model with the following hyperprior.
+intercept~Normal(0,0.001)
+
+The hyper-priors on the attack and defense parameters are also flat
+* μatt~Normal(0,0.001)
+* μdef~Normal(0,0.001)
+* τatt~Γ(0.1,0.1)
+* τdef~Γ(0.1,0.1)
+
+
+
+
+
+wzxhzdk:3
+
+
+* We did some munging above and adjustments of the data to make it **tidier** for our model. 
+* The log function to away scores and home scores is a standard trick in the sports analytics literature
+# Building of the model 
+* We now build the model in PyMC3, specifying the global parameters, and the team-specific parameters and the likelihood function 
+
+
+
+
+wzxhzdk:4
+
+
+* We specified the model and the likelihood function
+
+* All this runs on a Theano graph under the hood
+* Now we need to fit our model using the Maximum A Posteriori algorithm to decide where to start out No U Turn Sampler
+
+
+
+wzxhzdk:5
+
+
+     [-----------------100%-----------------] 2000 of 2000 complete in 4.3 sec
+
+
+![png](rugby_analytics_files/rugby_analytics_15_1.png)
+
+
+# Results
+From the above we can start to understand the different distributions of attacking strength and defensive strength.
+These are probabilistic estimates and help us better understand the uncertainty in sports analytics
+
+
+
+wzxhzdk:6</div>
+            
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            
+            <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+
+        <script src="../js/jquery-1.10.2.min.js"></script>
+        <script src="../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../js/highlight.pack.js"></script>
+        <script>var base_url = '..';</script>
+        <script data-main="../mkdocs/js/search.js" src="../mkdocs/js/require.js"></script>
+        <script src="../js/base.js"></script>
+        <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+        <script src="../js/mathjaxhelper.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="exampleModalLabel">Search</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>
+                            From here you can search these documents. Enter
+                            your search terms below.
+                        </p>
+                        <form role="form">
+                            <div class="form-group">
+                                <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query">
+                            </div>
+                        </form>
+                        <div id="mkdocs-search-results"></div>
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </body>
+</html>
