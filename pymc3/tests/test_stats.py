@@ -1,7 +1,11 @@
 from ..stats import *
 from .models import Model, Normal, Metropolis
 import numpy as np
+import numpy.testing as npt
+import pandas as pd
 import pymc3 as pm
+from pymc3.tests import backend_fixtures as bf
+from pymc3.backends import ndarray
 from numpy.random import random, normal, seed
 from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
 
@@ -294,3 +298,50 @@ def test_groupby_leading_idxs_3d_variable():
     assert len(keys) == len(expected_keys)
     for key in keys:
         assert result[key] == [key + (0,), key + (1,)]
+
+
+class TestDfSummary(bf.ModelBackendSampledTestCase):
+    backend = ndarray.NDArray
+    name = 'text-db'
+    shape = (2, 3)
+
+    def test_column_names(self):
+        ds = df_summary(self.mtrace, batches=3)
+        npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
+                                   'hpd_5', 'hpd_95']),
+                         ds.columns)
+
+    def test_column_names_decimal_hpd(self):
+        ds = df_summary(self.mtrace, batches=3, alpha=0.001)
+        npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
+                                   'hpd_0.1', 'hpd_99.9']),
+                         ds.columns)
+
+    def test_column_names_custom_function(self):
+        def customf(x):
+            return pd.Series(np.mean(x, 0), name='my_mean')
+
+        ds = df_summary(self.mtrace, batches=3, stat_funcs=[customf])
+        npt.assert_equal(np.array(['my_mean']), ds.columns)
+
+    def test_column_names_custom_function_extend(self):
+        def customf(x):
+            return pd.Series(np.mean(x, 0), name='my_mean')
+
+        ds = df_summary(self.mtrace, batches=3,
+                        stat_funcs=[customf], extend=True)
+        npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
+                                   'hpd_5', 'hpd_95', 'my_mean']),
+                         ds.columns)
+
+    def test_value_alignment(self):
+        mtrace = self.mtrace
+        ds = df_summary(mtrace, batches=3)
+        for var in mtrace.varnames:
+            result = mtrace[var].mean(0)
+            for idx, val in np.ndenumerate(result):
+                if idx:
+                    vidx = var + '__' + '_'.join([str(i) for i in idx])
+                else:
+                    vidx = var
+                npt.assert_equal(val, ds.loc[vidx, 'mean'])

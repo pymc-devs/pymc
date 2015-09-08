@@ -4,7 +4,7 @@ from .core import *
 from .distributions import *
 from .math import *
 
-from .stats import summary
+from .stats import *
 from .sampling import *
 from .interactive_sampling import *
 from .step_methods import *
@@ -13,6 +13,7 @@ from .tuning import *
 from .debug import *
 
 from .diagnostics import *
+from .backends.tracetab import *
 
 from .plots import *
 

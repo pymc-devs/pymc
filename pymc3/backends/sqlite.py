@@ -6,12 +6,12 @@ Database format
 ---------------
 For each variable, a table is created with the following format:
 
- recid (INT), draw (INT), chain (INT),  v1 (FLOAT), v2 (FLOAT), v3 (FLOAT) ...
+ recid (INT), draw (INT), chain (INT),  v0 (FLOAT), v1 (FLOAT), v2 (FLOAT) ...
 
 The variable column names are extended to reflect additional dimensions.
 For example, a variable with the shape (2, 2) would be stored as
 
- key (INT), draw (INT), chain (INT),  v1_1 (FLOAT), v1_2 (FLOAT), v2_1 (FLOAT) ...
+ key (INT), draw (INT), chain (INT),  v0_0 (FLOAT), v0_1 (FLOAT), v1_0 (FLOAT) ...
 
 The key is autoincremented each time a new row is added to the table.
 The chain column denotes the chain index and starts at 0.
@@ -20,6 +20,7 @@ import numpy as np
 import sqlite3
 
 from ..backends import base, ndarray
+from . import tracetab as ttab
 
 TEMPLATES = {
     'table':            ('CREATE TABLE IF NOT EXISTS [{table}] '
@@ -104,7 +105,7 @@ class SQLite(base.BaseTrace):
             self.draw_idx = self._get_max_draw(chain) + 1
             self._len = None
         else:  # Table has not been created.
-            self._var_cols = {varname: _create_colnames(shape)
+            self._var_cols = {varname: ttab.create_flat_names('v', shape)
                               for varname, shape in self.var_shapes.items()}
             self._create_table()
             self._is_setup = True
@@ -271,37 +272,6 @@ class _SQLiteDB(object):
         self.cursor.close()
         self.con.close()
         self.connected = False
-
-
-# TODO Consider merging `_create_colnames` and `_create_shape` with
-# very similar functions in the csv backend.
-def _create_colnames(shape):
-    """Return column names based on `shape`.
-
-    Examples
-    --------
-    >>> create_colnames((5,))
-    ['v1', 'v2', 'v3', 'v4', 'v5']
-
-    >>> create_colnames((2,2))
-    ['v1_1', 'v1_2', 'v2_1', 'v2_2']
-    """
-    if not shape:
-        return ['v1']
-
-    size = np.prod(shape)
-    indices = (np.indices(shape) + 1).reshape(-1, size)
-    return ['v' + '_'.join(map(str, i)) for i in zip(*indices)]
-
-
-def _create_shape(colnames):
-    """Reverse `_create_colnames`.
-    """
-    if len(colnames) == 1:
-        return ()
-    last_col = colnames[-1]
-    shape = tuple(int(i) for i in last_col[1:].split('_'))
-    return shape
 
 
 def load(name, model=None):
