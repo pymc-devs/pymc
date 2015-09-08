@@ -12,17 +12,17 @@ from theano.tensor import (
     maximum, minimum, floor, ceil,
     zeros_like, ones, ones_like,
     concatenate, constant, argmax,
-    erf)
+    erf, gamma)
 
 from theano.tensor import as_tensor_variable
 
 
 from numpy import pi, inf, nan
+import numpy as np
 from .special import gammaln, multigammaln
 
 from theano.printing import Print
 from .distribution import *
-
 
 def bound(logp, *conditions):
     """
