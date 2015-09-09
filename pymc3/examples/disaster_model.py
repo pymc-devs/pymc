@@ -58,6 +58,8 @@ def run(n=1000):
         step2 = Metropolis([switchpoint])
 
         tr = sample(n, tune=500, start=start, step=[step1, step2])
+        
+        traceplot(tr, vars=[early_mean, late_mean], priors=[Exponential.dist(1)]*2)
 
 if __name__ == '__main__':
     run()
