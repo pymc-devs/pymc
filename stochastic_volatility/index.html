@@ -191,7 +191,7 @@
                 <div class="col-md-9" role="main">
 
 <h1 id="stochastic-volatility-model">Stochastic Volatility model</h1>
-<pre><code class="python">import numpy as np
+<pre><code>import numpy as np
 import pymc3 as pm
 from pymc3.distributions.timeseries import GaussianRandomWalk
 
@@ -199,9 +199,8 @@ from scipy.sparse import csc_matrix
 from scipy import optimize
 
 %pylab inline
-</code></pre>
 
-<pre><code>Populating the interactive namespace from numpy and matplotlib
+Populating the interactive namespace from numpy and matplotlib
 
 
 :0: FutureWarning: IPython widgets are experimental and may change in the future.
@@ -214,21 +213,28 @@ from scipy import optimize
 <p>Here, <mathjax>$y$</mathjax> is the daily return series and <mathjax>$s$</mathjax> is the latent log volatility process.</p>
 <h2 id="build-model">Build Model</h2>
 <p>First we load some daily returns of the S&amp;P 500.</p>
-<pre><code class="python">n = 400
-returns = np.genfromtxt(&quot;data/SP500.csv&quot;)[-n:]
+<pre><code>n = 400
+returns = np.genfromtxt("data/SP500.csv")[-n:]
 returns[:5]
-</code></pre>
 
-<pre><code>array([-0.00637 , -0.004045, -0.02547 ,  0.005102, -0.047733])
-</code></pre>
-<pre><code class="python">plt.plot(returns)
-</code></pre>
 
-<pre><code>[&lt;matplotlib.lines.Line2D at 0xaeaec1cc&gt;]
+
+
+array([-0.00637 , -0.004045, -0.02547 ,  0.005102, -0.047733])
+
+
+
+
+plt.plot(returns)
+
+
+
+
+[&lt;matplotlib.lines.Line2D at 0xaeaec1cc&gt;]
 </code></pre>
 <p><img alt="png" src="../stochastic_volatility_files/stochastic_volatility_6_1.png" /></p>
 <p>Specifying the model in pymc3 mirrors its statistical specification. </p>
-<pre><code class="python">model = pm.Model()
+<pre><code>model = pm.Model()
 with model:
     sigma = pm.Exponential('sigma', 1./.02, testval=.1)
 
@@ -237,54 +243,56 @@ with model:
 
     r = pm.T('r', nu, lam=pm.exp(-2*s), observed=returns)
 </code></pre>
-
 <h2 id="fit-model">Fit Model</h2>
 <p>For this model, the full maximum a posteriori (MAP) point is degenerate and has infinite density. However, if we fix <code>log_sigma</code> and <code>nu</code> it is no longer degenerate, so we find the MAP with respect to the volatility process, 's', keeping <code>log_sigma</code> and <code>nu</code> constant at their default values. </p>
 <p>We use L-BFGS because it is more efficient for high dimensional functions (<code>s</code> has n elements).</p>
-<pre><code class="python">with model:
+<pre><code>with model:
     start = pm.find_MAP(vars=[s], fmin=optimize.fmin_l_bfgs_b)
 </code></pre>
-
 <p>We do a short initial run to get near the right area, then start again using a new Hessian at the new starting point to get faster sampling due to better scaling. We do a short run since this is an interactive example.</p>
-<pre><code class="python">with model:
+<pre><code>with model:
     step = pm.NUTS(vars=[s, nu,sigma],scaling=start, gamma=.25)
     start2 = pm.sample(100, step, start=start)[-1]
 
     # Start next run at the last sampled position.
     step = pm.NUTS(vars=[s, nu,sigma],scaling=start2, gamma=.55)
     trace = pm.sample(2000, step, start=start2)
-</code></pre>
 
-<pre><code> [-----------------100%-----------------] 2001 of 2000 complete in 368.9 sec
+ [-----------------100%-----------------] 2001 of 2000 complete in 368.9 sec
 
 /usr/lib/python3.4/importlib/_bootstrap.py:321: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
   return f(*args, **kwds)
-</code></pre>
-<pre><code class="python">figsize(12,6)
+
+
+
+figsize(12,6)
 pm.traceplot(trace, model.vars[:-1]);
 </code></pre>
-
 <p><img alt="png" src="../stochastic_volatility_files/stochastic_volatility_14_0.png" /></p>
-<pre><code class="python">figsize(12,6)
+<pre><code>figsize(12,6)
 title(str(s))
 plot(trace[s][::10].T,'b', alpha=.03);
 xlabel('time')
 ylabel('log volatility')
-</code></pre>
 
-<pre><code>&lt;matplotlib.text.Text at 0xac04168c&gt;
+
+
+
+&lt;matplotlib.text.Text at 0xac04168c&gt;
 </code></pre>
 <p><img alt="png" src="../stochastic_volatility_files/stochastic_volatility_15_1.png" /></p>
 <p>Looking at the returns over time and overlaying the estimated standard deviation we can see how the model tracks the volatility over time.</p>
-<pre><code class="python">plot(returns)
+<pre><code>plot(returns)
 plot(np.exp(trace[s][::10].T), 'r', alpha=.03);
 sd = np.exp(trace[s].T)
 plot(-np.exp(trace[s][::10].T), 'r', alpha=.03);
 xlabel('time')
 ylabel('returns')
-</code></pre>
 
-<pre><code>&lt;matplotlib.text.Text at 0xaab3854c&gt;
+
+
+
+&lt;matplotlib.text.Text at 0xaab3854c&gt;
 </code></pre>
 <p><img alt="png" src="../stochastic_volatility_files/stochastic_volatility_17_1.png" /></p>
 <h2 id="references">References</h2>

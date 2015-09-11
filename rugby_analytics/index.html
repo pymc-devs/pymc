@@ -219,7 +219,7 @@ I handcrafted these results
 Small data
 <em> We want to infer a latent parameter - that is the 'strength' of a team based only on their <strong>scoring intensity</strong>, and all we have are their scores and results, we can't accurately measure the 'strength' of a team. 
 </em> Probabilistic Programming is a brilliant paradigm for modeling these <strong>latent</strong> parameters</p>
-<pre><code class="python">!date
+<pre><code>!date
 
 import numpy as np
 import pandas as pd
@@ -229,13 +229,12 @@ except ImportError:
     from io import StringIO
 %matplotlib inline
 import pymc3 as pm, theano.tensor as tt
-</code></pre>
 
-<pre><code>ERROR! Session/line number was not unique in database. History logging moved to new session 99
+ERROR! Session/line number was not unique in database. History logging moved to new session 99
 Sun 23 Aug 2015 18:36:33 CEST
 </code></pre>
 <p>This is a Rugby prediction exercise. So we'll input some data</p>
-<pre><code class="python">data_csv = StringIO(&quot;&quot;&quot;home_team,away_team,home_score,away_score
+<pre><code>data_csv = StringIO("""home_team,away_team,home_score,away_score
 Wales,Italy,23,15
 France,England,26,24
 Ireland,Scotland,28,6
@@ -250,12 +249,8 @@ Scotland,France,17,19
 England,Wales,29,18
 Italy,England,11,52
 Wales,Scotland,51,3
-France,Ireland,20,22&quot;&quot;&quot;)
+France,Ireland,20,22""")
 </code></pre>
-
-<pre><code class="python">
-</code></pre>
-
 <h1 id="what-do-we-want-to-infer">What do we want to infer?</h1>
 <ul>
 <li>We want to infer the latent paremeters (every team's strength) that are generating the data we observe (the scorelines).</li>
@@ -317,9 +312,30 @@ The hyper-priors on the attack and defense parameters are also flat
 
 
 
+    df = pd.read_csv(data_csv)
 
-wzxhzdk:3
+    teams = df.home_team.unique()
+    teams = pd.DataFrame(teams, columns=['team'])
+    teams['i'] = teams.index
 
+    df = pd.merge(df, teams, left_on='home_team', right_on='team', how='left')
+    df = df.rename(columns = {'i': 'i_home'}).drop('team', 1)
+    df = pd.merge(df, teams, left_on='away_team', right_on='team', how='left')
+    df = df.rename(columns = {'i': 'i_away'}).drop('team', 1)
+
+    observed_home_goals = df.home_score.values
+    observed_away_goals = df.away_score.values
+
+    home_team = df.i_home.values
+    away_team = df.i_away.values
+
+    num_teams = len(df.i_home.drop_duplicates())
+    num_games = len(home_team)
+
+    g = df.groupby('i_away')
+    att_starting_points = np.log(g.away_score.mean())
+    g = df.groupby('i_home')
+    def_starting_points = -np.log(g.away_score.mean())
 
 * We did some munging above and adjustments of the data to make it **tidier** for our model. 
 * The log function to away scores and home scores is a standard trick in the sports analytics literature
@@ -328,9 +344,32 @@ The hyper-priors on the attack and defense parameters are also flat
 
 
 
+    model = pm.Model()
+    with pm.Model() as model:
+        # global model parameters
+        home        = pm.Normal('home',      0, .0001)
+        tau_att     = pm.Gamma('tau_att',   .1, .1)
+        tau_def     = pm.Gamma('tau_def',   .1, .1)
+        intercept   = pm.Normal('intercept', 0, .0001)
 
-wzxhzdk:4
+        # team-specific model parameters
+        atts_star   = pm.Normal("atts_star", 
+                               mu   =0,
+                               tau  =tau_att, 
+                               shape=num_teams)
+        defs_star   = pm.Normal("defs_star", 
+                               mu   =0,
+                               tau  =tau_def,  
+                               shape=num_teams) 
 
+        atts        = pm.Deterministic('atts', atts_star - tt.mean(atts_star))
+        defs        = pm.Deterministic('defs', defs_star - tt.mean(defs_star))
+        home_theta  = tt.exp(intercept + home + atts[away_team] + defs[home_team])
+        away_theta  = tt.exp(intercept + atts[away_team] + defs[home_team])
+
+        # likelihood of observed data
+        home_points = pm.Poisson('home_points', mu=home_theta, observed=observed_home_goals)
+        away_points = pm.Poisson('away_points', mu=away_theta, observed=observed_away_goals)
 
 * We specified the model and the likelihood function
 
@@ -338,9 +377,13 @@ The hyper-priors on the attack and defense parameters are also flat
 * Now we need to fit our model using the Maximum A Posteriori algorithm to decide where to start out No U Turn Sampler
 
 
+    with model:
 
-wzxhzdk:5
+        start = pm.find_MAP()
+        step = pm.NUTS(state=start)
+        trace = pm.sample(2000, step, start=start, progressbar=True)
 
+        pm.traceplot(trace)
 
      [-----------------100%-----------------] 2000 of 2000 complete in 4.3 sec
 
@@ -350,11 +393,7 @@ The hyper-priors on the attack and defense parameters are also flat
 
 # Results
 From the above we can start to understand the different distributions of attacking strength and defensive strength.
-These are probabilistic estimates and help us better understand the uncertainty in sports analytics
-
-
-
-wzxhzdk:6</div>
+These are probabilistic estimates and help us better understand the uncertainty in sports analytics</div>
             
         </div>
 

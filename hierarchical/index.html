@@ -181,7 +181,7 @@
 </div></div>
                 <div class="col-md-9" role="main">
 
-<pre><code class="python">%pylab --no-import-all inline
+<pre><code>%pylab --no-import-all inline
 
 from pymc3 import *
 import theano.tensor as T
@@ -213,19 +213,19 @@ with model:
 
     # m_g ~ N(0, .1)
     group_effects = Normal(
-        &quot;group_effects&quot;, 0, .1, shape=(1, n_group_predictors, n_predictors))
+        "group_effects", 0, .1, shape=(1, n_group_predictors, n_predictors))
 
     # sg ~ Uniform(.05, 10)
-    sg = Uniform(&quot;sg&quot;, .0, 10, testval=2.)
+    sg = Uniform("sg", .0, 10, testval=2.)
 
 
     # m ~ N(mg * pg, sg)
-    effects = Normal(&quot;effects&quot;,
+    effects = Normal("effects",
                      sum(group_predictors[:, :, newaxis] *
                      group_effects, 1), sg ** -2,
                      shape=(n_groups, n_predictors))
 
-    s = Uniform(&quot;s&quot;, .01, 10, shape=n_groups)
+    s = Uniform("s", .01, 10, shape=n_groups)
 
     g = T.constant(group)
 
@@ -239,51 +239,72 @@ with model:
     #step = Metropolis()
     #step = Slice()
     step = NUTS()
-</code></pre>
 
-<pre><code>Populating the interactive namespace from numpy and matplotlib
+Populating the interactive namespace from numpy and matplotlib
 
 
 /usr/local/Cellar/python3/3.4.2_1/Frameworks/Python.framework/Versions/3.4/lib/python3.4/importlib/_bootstrap.py:321: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
   return f(*args, **kwds)
-</code></pre>
-<pre><code class="python">n_predictors
-</code></pre>
 
-<pre><code>3
-</code></pre>
-<pre><code class="python">group
-</code></pre>
 
-<pre><code>array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+n_predictors
+
+
+
+
+3
+
+
+
+
+group
+
+
+
+
+array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
        0, 0, 0, 0, 0, 0, 0])
-</code></pre>
-<pre><code class="python">n_groups
-</code></pre>
 
-<pre><code>1
-</code></pre>
-<pre><code class="python">import pymc3 as pm
+
+
+
+n_groups
+
+
+
+
+1
+
+
+
+
+import pymc3 as pm
 pm.debug.eval_univariate?
-</code></pre>
 
-<pre><code class="python">model.free_RVs
-</code></pre>
 
-<pre><code>[group_effects, sg_interval, effects, s_interval]
-</code></pre>
-<pre><code class="python">lp = lambda x, y: model.logp({'group_effects': [[[0, 0, 0]]], 'sg': x, 'effects':[[y, y, y]], 's': [.05]})
+model.free_RVs
+
+
+
+
+[group_effects, sg_interval, effects, s_interval]
+
+
+
+
+lp = lambda x, y: model.logp({'group_effects': [[[0, 0, 0]]], 'sg': x, 'effects':[[y, y, y]], 's': [.05]})
 lp = np.vectorize(lp)
-</code></pre>
 
-<pre><code class="python">import seaborn as sns
-</code></pre>
 
-<pre><code class="python">x, y = np.mgrid[0.001:0.1:.001, -.05:.05:.001]
+import seaborn as sns
+
+
+x, y = np.mgrid[0.001:0.1:.001, -.05:.05:.001]
 plt.contourf(x, y, lp(x, y))
-</code></pre>
 
-<pre><code>---------------------------------------------------------------------------
+
+---------------------------------------------------------------------------
 
 TypeError                                 Traceback (most recent call last)
 
@@ -340,40 +361,48 @@ TypeError                                 Traceback (most recent call last)
 TypeError: Missing required input: sg_interval
 </code></pre>
 <p>best of 3: 6.94 s per loop</p>
-<pre><code class="python">tr = sample(3e3, step, model=model)
-</code></pre>
+<pre><code>tr = sample(3e3, step, model=model)
 
-<pre><code> [-----------------100%-----------------] 3000 of 3000 complete in 33.2 sec
-</code></pre>
-<pre><code class="python">tr.varnames
-</code></pre>
+ [-----------------100%-----------------] 3000 of 3000 complete in 33.2 sec
 
-<pre><code>['group_effects', 'sg_interval', 'effects', 's_interval', 'sg', 's']
-</code></pre>
-<pre><code class="python">traceplot(tr, vars=['s_interval', 's'])
-</code></pre>
 
-<pre><code>array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x1157a6b00&gt;,
+tr.varnames
+
+
+
+
+['group_effects', 'sg_interval', 'effects', 's_interval', 'sg', 's']
+
+
+
+
+traceplot(tr, vars=['s_interval', 's'])
+
+
+
+
+array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x1157a6b00&gt;,
         &lt;matplotlib.axes._subplots.AxesSubplot object at 0x115814240&gt;],
        [&lt;matplotlib.axes._subplots.AxesSubplot object at 0x1158556a0&gt;,
         &lt;matplotlib.axes._subplots.AxesSubplot object at 0x1158a1940&gt;]], dtype=object)
 </code></pre>
 <p><img alt="png" src="../hierarchical_files/hierarchical_12_1.png" /></p>
-<pre><code class="python">%prun -q -D sample_nuts.prof sample(3e3, step, model=model)
-</code></pre>
+<pre><code>%prun -q -D sample_nuts.prof sample(3e3, step, model=model)
 
-<pre><code> [-----------------100%-----------------] 3000 of 3000 complete in 74.1 sec 
+ [-----------------100%-----------------] 3000 of 3000 complete in 74.1 sec 
 *** Profile stats marshalled to file u'sample_nuts.prof'.
-</code></pre>
-<pre><code class="python">%prun -q -D sample.prof sample(3e3, step, start, model=model)
-</code></pre>
 
-<pre><code> [-----------------100%-----------------] 3000 of 3000 complete in 80.0 sec 
+
+
+%prun -q -D sample.prof sample(3e3, step, start, model=model)
+
+ [-----------------100%-----------------] 3000 of 3000 complete in 80.0 sec 
 *** Profile stats marshalled to file u'sample.prof'.
-</code></pre>
-<pre><code class="python">traceplot(trace);
-</code></pre>
 
+
+
+traceplot(trace);
+</code></pre>
 <p><img alt="png" src="../hierarchical_files/hierarchical_15_0.png" /></p></div>
             
         </div>

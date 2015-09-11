@@ -248,7 +248,6 @@ import numpy as np
 data = pd.read_csv('data/jester-dataset-v1-dense-first-1000.csv')
 data.head()
 </code></pre>
-
 <div style="max-height:1000px;max-width:1500px;overflow:auto;">
 <table border="1" class="dataframe">
   <thead>
@@ -418,12 +417,13 @@ ratings.plot(kind='hist', ax=ax2, bins=20, grid=False)
 ax2.set_xlim(-11, 11)
 plt.show()
 </code></pre>
-
 <p><img alt="png" src="../pmf-pymc_files/pmf-pymc_4_0.png" /></p>
 <pre><code>ratings.describe()
-</code></pre>
 
-<pre><code>count    100000.000000
+
+
+
+count    100000.000000
 mean          0.996219
 std           5.265215
 min          -9.950000
@@ -436,10 +436,12 @@ dtype: float64
 <p>This must be a decent batch of jokes. From our exploration above, we know most ratings are in the range -1 to 10, and positive ratings are more likely than negative ratings. Let's look at the means for each joke to see if we have any particularly good (or bad) humor here.</p>
 <pre><code>joke_means = data.mean(axis=0)
 joke_means.plot(kind='bar', grid=False, figsize=(16, 6),
-                title=&quot;Mean Ratings for All 100 Jokes&quot;)
-</code></pre>
+                title="Mean Ratings for All 100 Jokes")
 
-<pre><code>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7fc46a3c5fd0&gt;
+
+
+
+&lt;matplotlib.axes._subplots.AxesSubplot at 0x7fc46a3c5fd0&gt;
 </code></pre>
 <p><img alt="png" src="../pmf-pymc_files/pmf-pymc_7_1.png" /></p>
 <p>While the majority of the jokes generally get positive feedback from users, there are definitely a few that stand out as poor humor. Let's take a look at the worst and best joke, just for fun.</p>
@@ -463,9 +465,8 @@ def read_joke(joke_id):
 
 print 'The worst joke:\n---------------\n%s\n' % read_joke(worst_joke_id)
 print 'The best joke:\n--------------\n%s' % read_joke(best_joke_id)
-</code></pre>
 
-<pre><code>The worst joke:
+The worst joke:
 ---------------
 A Joke 
 How many teddybears does it take to change a lightbulb?
@@ -487,11 +488,10 @@ Canadians: This is a lighthouse. Your call.
 <pre><code>user_means = data.mean(axis=1)
 fig, ax = plt.subplots(figsize=(16, 6))
 user_means.plot(kind='bar', grid=False, ax=ax,
-                title=&quot;Mean Ratings for All 1000 Users&quot;)
+                title="Mean Ratings for All 1000 Users")
 ax.set_xticklabels('')  # 1000 labels is nonsensical
 fig.show()
 </code></pre>
-
 <p><img alt="png" src="../pmf-pymc_files/pmf-pymc_11_0.png" /></p>
 <p>We see even more significant trends here. Some users rate nearly everything highly, and some (though not as many) rate nearly everything negatively. These observations will come in handy when considering models to use for predicting user preferences on unseen jokes.</p>
 <h1 id="methods">Methods</h1>
@@ -516,7 +516,7 @@ fig.show()
 # Create a base class with scaffolding for our 3 baselines.
 
 def split_title(title):
-    &quot;&quot;&quot;Change &quot;BaselineMethod&quot; to &quot;Baseline Method&quot;.&quot;&quot;&quot;
+    """Change "BaselineMethod" to "Baseline Method"."""
     words = []
     tmp = [title[0]]
     for c in title[1:]:
@@ -530,11 +530,11 @@ def split_title(title):
 
 
 class Baseline(object):
-    &quot;&quot;&quot;Calculate baseline predictions.&quot;&quot;&quot;
+    """Calculate baseline predictions."""
 
     def __init__(self, train_data):
-        &quot;&quot;&quot;Simple heuristic-based transductive learning to fill in missing
-        values in data matrix.&quot;&quot;&quot;
+        """Simple heuristic-based transductive learning to fill in missing
+        values in data matrix."""
         self.predict(train_data.copy())
 
     def predict(self, train_data):
@@ -542,7 +542,7 @@ class Baseline(object):
             'baseline prediction not implemented for base class')
 
     def rmse(self, test_data):
-        &quot;&quot;&quot;Calculate root mean squared error for predictions on test data.&quot;&quot;&quot;
+        """Calculate root mean squared error for predictions on test data."""
         return rmse(test_data, self.predicted)
 
     def __str__(self):
@@ -553,7 +553,7 @@ class Baseline(object):
 # Implement the 3 baselines.
 
 class UniformRandomBaseline(Baseline):
-    &quot;&quot;&quot;Fill missing values with uniform random values.&quot;&quot;&quot;
+    """Fill missing values with uniform random values."""
 
     def predict(self, train_data):
         nan_mask = np.isnan(train_data)
@@ -565,7 +565,7 @@ class UniformRandomBaseline(Baseline):
 
 
 class GlobalMeanBaseline(Baseline):
-    &quot;&quot;&quot;Fill in missing values using the global mean.&quot;&quot;&quot;
+    """Fill in missing values using the global mean."""
 
     def predict(self, train_data):
         nan_mask = np.isnan(train_data)
@@ -574,7 +574,7 @@ class GlobalMeanBaseline(Baseline):
 
 
 class MeanOfMeansBaseline(Baseline):
-    &quot;&quot;&quot;Fill in missing values using mean of user/item/global means.&quot;&quot;&quot;
+    """Fill in missing values using mean of user/item/global means."""
 
     def predict(self, train_data):
         nan_mask = np.isnan(train_data)
@@ -599,7 +599,6 @@ baseline_methods['ur'] = UniformRandomBaseline
 baseline_methods['gm'] = GlobalMeanBaseline
 baseline_methods['mom'] = MeanOfMeansBaseline
 </code></pre>
-
 <h2 id="probabilistic-matrix-factorization">Probabilistic Matrix Factorization</h2>
 <p><a href="http://papers.nips.cc/paper/3208-probabilistic-matrix-factorization.pdf">Probabilistic Matrix Factorization (PMF)</a> [3] is a probabilistic approach to the collaborative filtering problem that takes a Bayesian perspective. The ratings <mathjax>$R$</mathjax> are modeled as draws from a Gaussian distribution.  The mean for <mathjax>$R_{ij}$</mathjax> is <mathjax>$U_i V_j^T$</mathjax>. The precision <mathjax>$\alpha$</mathjax> is a fixed parameter that reflects the uncertainty of the estimations; the normal distribution is commonly reparameterized in terms of precision, which is the inverse of the variance. Complexity is controlled by placing zero-mean spherical Gaussian priors on <mathjax>$U$</mathjax> and <mathjax>$V$</mathjax>. In other words, each row of <mathjax>$U$</mathjax> is drawn from a multivariate Gaussian with mean <mathjax>$\mu = 0$</mathjax> and precision which is some multiple of the identity matrix <mathjax>$I$</mathjax>. Those multiples are <mathjax>$\alpha_U$</mathjax> for <mathjax>$U$</mathjax> and <mathjax>$\alpha_V$</mathjax> for <mathjax>$V$</mathjax>. So our model is defined by:</p>
 <p><mathjax>$\newcommand\given[1][]{\:#1\vert\:}$</mathjax></p>
@@ -634,10 +633,10 @@ logger.setLevel(logging.INFO)
 
 
 class PMF(object):
-    &quot;&quot;&quot;Probabilistic Matrix Factorization model using pymc3.&quot;&quot;&quot;
+    """Probabilistic Matrix Factorization model using pymc3."""
 
     def __init__(self, train, dim, alpha=2, std=0.01, bounds=(-10, 10)):
-        &quot;&quot;&quot;Build the Probabilistic Matrix Factorization model using pymc3.
+        """Build the Probabilistic Matrix Factorization model using pymc3.
 
         :param np.ndarray train: The training data to use for learning the model.
         :param int dim: Dimensionality of the model; number of latent factors.
@@ -646,7 +645,7 @@ class PMF(object):
         :param (tuple of int) bounds: (lower, upper) bound of ratings.
             These bounds will simply be used to cap the estimates produced for R.
 
-        &quot;&quot;&quot;
+        """
         self.dim = dim
         self.alpha = alpha
         self.std = np.sqrt(1.0 / alpha)
@@ -681,9 +680,7 @@ class PMF(object):
 
     def __str__(self):
         return self.name
-
 </code></pre>
-
 <p>We'll also need functions for calculating the MAP and performing sampling on our PMF model. When the observation noise variance <mathjax>$\alpha$</mathjax> and the prior variances <mathjax>$\alpha_U$</mathjax> and <mathjax>$\alpha_V$</mathjax> are all kept fixed, maximizing the log posterior is equivalent to minimizing the sum-of-squared-errors objective function with quadratic regularization terms.</p>
 <p><mathjax>$$
 E = \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^M I_{ij} (R_{ij} - U_i V_j^T)^2 +
@@ -702,9 +699,9 @@ except ImportError:
 # We adapt these from `pymc3`'s `backends` module, where the original
 # code is used to save the traces from MCMC samples.
 def save_np_vars(vars, savedir):
-    &quot;&quot;&quot;Save a dictionary of numpy variables to `savedir`. We assume
+    """Save a dictionary of numpy variables to `savedir`. We assume
     the directory does not exist; an OSError will be raised if it does.
-    &quot;&quot;&quot;
+    """
     logging.info('writing numpy vars to directory: %s' % savedir)
     os.mkdir(savedir)
     shapes = {}
@@ -721,7 +718,7 @@ def save_np_vars(vars, savedir):
 
 
 def load_np_vars(savedir):
-    &quot;&quot;&quot;Load numpy variables saved with `save_np_vars`.&quot;&quot;&quot;
+    """Load numpy variables saved with `save_np_vars`."""
     shape_file = os.path.join(savedir, 'shapes.json')
     with open(shape_file, 'r') as sfh:
         shapes = json.load(sfh)
@@ -740,7 +737,7 @@ def _map_dir(self):
     return os.path.join('data', basename)
 
 def _find_map(self):
-    &quot;&quot;&quot;Find mode of posterior using Powell optimization.&quot;&quot;&quot;
+    """Find mode of posterior using Powell optimization."""
     tstart = time.time()
     with self.model:
         logging.info('finding PMF MAP using Powell optimization...')
@@ -772,7 +769,6 @@ PMF.load_map = _load_map
 PMF.map_dir = property(_map_dir)
 PMF.map = property(_map)
 </code></pre>
-
 <p>So now our PMF class has a <code>map</code> <code>property</code> which will either be found using Powell optimization or loaded from a previous optimization. Once we have the MAP, we can use it as a starting point for our MCMC sampler. We'll need a sampling function in order to draw MCMC samples to approximate the posterior distribution of the PMF model.</p>
 <pre><code># Draw MCMC samples.
 def _trace_dir(self):
@@ -802,7 +798,6 @@ PMF.trace_dir = property(_trace_dir)
 PMF.draw_samples = _draw_samples
 PMF.load_trace = _load_trace
 </code></pre>
-
 <p>We could define some kind of default trace property like we did for the MAP, but that would mean using possibly nonsensical values for <code>nsamples</code> and <code>njobs</code>. Better to leave it as a non-optional call to <code>draw_samples</code>. Finally, we'll need a function to make predictions using our inferred values for <mathjax>$U$</mathjax> and <mathjax>$V$</mathjax>. For user <mathjax>$i$</mathjax> and joke <mathjax>$j$</mathjax>, a prediction is generated by drawing from <mathjax>$\mathcal{N}(U_i V_j^T, \alpha)$</mathjax>. To generate predictions from the sampler, we generate an <mathjax>$R$</mathjax> matrix for each <mathjax>$U$</mathjax> and <mathjax>$V$</mathjax> sampled, then we combine these by averaging over the <mathjax>$K$</mathjax> samples.</p>
 <p>\begin{equation}
 P(R_{ij}^* \given R, \alpha, \alpha_U, \alpha_V) \approx
@@ -810,7 +805,7 @@ P(R_{ij}^* \given R, \alpha, \alpha_U, \alpha_V) \approx
 \end{equation}</p>
 <p>We'll want to inspect the individual <mathjax>$R$</mathjax> matrices before averaging them for diagnostic purposes. So we'll write code for the averaging piece during evaluation. The function below simply draws an <mathjax>$R$</mathjax> matrix given a <mathjax>$U$</mathjax> and <mathjax>$V$</mathjax> and the fixed <mathjax>$\alpha$</mathjax> stored in the PMF object.</p>
 <pre><code>def _predict(self, U, V):
-    &quot;&quot;&quot;Estimate R from the given values of U and V.&quot;&quot;&quot;
+    """Estimate R from the given values of U and V."""
     R = np.dot(U, V.T)
     n, m = R.shape
     sample_R = np.array([
@@ -827,7 +822,6 @@ P(R_{ij}^* \given R, \alpha, \alpha_U, \alpha_V) \approx
 
 PMF.predict = _predict
 </code></pre>
-
 <p>One final thing to note: the dot products in this model are often constrained using a logistic function <mathjax>$g(x) = 1/(1 + exp(-x))$</mathjax>, that bounds the predictions to the range [0, 1]. To facilitate this bounding, the ratings are also mapped to the range [0, 1] using <mathjax>$t(x) = (x + min) / range$</mathjax>. The authors of PMF also introduced a constrained version which performs better on users with less ratings [3]. Both models are generally improvements upon the basic model presented here. However, in the interest of time and space, these will not be implemented here.</p>
 <h1 id="evaluation">Evaluation</h1>
 <h2 id="metrics">Metrics</h2>
@@ -839,16 +833,15 @@ RMSE = \sqrt{ \frac{ \sum_{i=1}^N \sum_{j=1}^M I_{ij} (R_{ij} - R_{ij}^*)^2 }
 <p>In this case, the RMSE can be thought of as the standard deviation of our predictions from the actual user preferences.</p>
 <pre><code># Define our evaluation function.
 def rmse(test_data, predicted):
-    &quot;&quot;&quot;Calculate root mean squared error.
+    """Calculate root mean squared error.
     Ignoring missing values in the test data.
-    &quot;&quot;&quot;
+    """
     I = ~np.isnan(test_data)   # indicator for missing values
     N = I.sum()                # number of non-missing values
     sqerror = abs(test_data - predicted) ** 2  # squared error array
     mse = sqerror[I].sum() / N                 # mean squared error
     return np.sqrt(mse)                        # RMSE
 </code></pre>
-
 <h2 id="training-data-vs-test-data">Training Data vs. Test Data</h2>
 <p>The next thing we need to do is split our data into a training set and a test set. Matrix factorization techniques use <a href="http://en.wikipedia.org/wiki/Transduction_%28machine_learning%29">transductive learning</a> rather than inductive learning. So we produce a test set by taking a random sample of the cells in the full <mathjax>$N \times M$</mathjax> data matrix. The values selected as test samples are replaced with <code>nan</code> values in a copy of the original data matrix to produce the training set. Since we'll be producing random splits, let's also write out the train/test sets generated. This will allow us to replicate our results. We'd like to be able to idenfity which split is which, so we'll take a hash of the indices selected for testing and use that to save the data.</p>
 <pre><code>import hashlib
@@ -856,9 +849,9 @@ def rmse(test_data, predicted):
 
 # Define a function for splitting train/test data.
 def split_train_test(data, percent_test=10):
-    &quot;&quot;&quot;Split the data into train/test sets.
+    """Split the data into train/test sets.
     :param int percent_test: Percentage of data to use for testing. Default 10.
-    &quot;&quot;&quot;
+    """
     n, m = data.shape             # # users, # jokes
     N = n * m                     # # cells in matrix
     test_size = N / percent_test  # use 10% of data as test set
@@ -895,18 +888,16 @@ def split_train_test(data, percent_test=10):
 
 
 def load_train_test(name):
-    &quot;&quot;&quot;Load the train/test sets.&quot;&quot;&quot;
+    """Load the train/test sets."""
     savedir = os.path.join('data', name)
     vars = load_np_vars(savedir)
     return vars['train'], vars['test']
 
 # train, test, name = split_train_test(data)
 </code></pre>
-
 <p>In order to facilitate reproducibility, I've produced a train/test split using the code above which we'll now use for all the evaluations below.</p>
 <pre><code>train, test = load_train_test('6bb8d06c69c0666e6da14c094d4320d115f1ffc8')
 </code></pre>
-
 <h1 id="results">Results</h1>
 <pre><code># Let's see the results:
 baselines = {}
@@ -916,9 +907,8 @@ for name in baseline_methods:
     baselines[name] = method.rmse(test)
     print '%s RMSE:\t%.5f' % (method, baselines[name])
 
-</code></pre>
 
-<pre><code>Uniform Random Baseline RMSE:   7.77062
+Uniform Random Baseline RMSE:   7.77062
 Global Mean Baseline RMSE:  5.25004
 Mean Of Means Baseline RMSE:    4.79832
 </code></pre>
@@ -940,18 +930,16 @@ DIM = 5
 
 
 pmf = PMF(train, DIM, ALPHA, std=0.05)
-</code></pre>
 
-<pre><code>INFO:root:building the PMF model
+INFO:root:building the PMF model
 INFO:root:done building the PMF model
 </code></pre>
 <h2 id="predictions-using-map">Predictions Using MAP</h2>
 <pre><code># Find MAP for PMF.
 pmf.find_map()
 # pmf.load_map()
-</code></pre>
 
-<pre><code>INFO:root:finding MAP using Powell optimization...
+INFO:root:finding MAP using Powell optimization...
 INFO:root:found MAP in 2575 seconds
 
 
@@ -981,15 +969,14 @@ Optimization terminated successfully.
 
 # Add eval function to PMF class.
 PMF.eval_map = eval_map
-</code></pre>
 
-<pre><code># Evaluate PMF MAP estimates.
+
+# Evaluate PMF MAP estimates.
 pmf_map_rmse = pmf.eval_map(train, test)
 pmf_improvement = baselines['mom'] - pmf_map_rmse
 print 'PMF MAP Improvement:   %.5f' % pmf_improvement
-</code></pre>
 
-<pre><code>PMF MAP training RMSE: 4.00824
+PMF MAP training RMSE: 4.00824
 PMF MAP testing RMSE:  4.02974
 Train/test difference: 0.02150
 PMF MAP Improvement:   0.76858
@@ -1001,9 +988,8 @@ pmf.draw_samples(5000, njobs=3)
 
 # uncomment to load previous trace rather than drawing new samples.
 # pmf.load_trace()
-</code></pre>
 
-<pre><code>INFO:root:drawing 5000 samples using 3 jobs
+INFO:root:drawing 5000 samples using 3 jobs
 /home/mack/anaconda/lib/python2.7/site-packages/theano/scan_module/scan_perform_ext.py:133: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
   from scan_perform.scan_perform import *
 INFO:root:backing up trace to directory: data/pmf-mcmc-d5
@@ -1018,10 +1004,10 @@ INFO:root:backing up trace to directory: data/pmf-mcmc-d5
 \|V\|_{Fro}^2 = \sqrt{\sum_{j=1}^M \sum_{d=1}^D |V_{jd}|^2}
 $$</mathjax></p>
 <pre><code>def _norms(pmf_model, monitor=('U', 'V'), ord='fro'):
-    &quot;&quot;&quot;Return norms of latent variables at each step in the
+    """Return norms of latent variables at each step in the
     sample trace. These can be used to monitor convergence
     of the sampler.
-    &quot;&quot;&quot;
+    """
     monitor = ('U', 'V')
     norms = {var: [] for var in monitor}
     for sample in pmf_model.trace:
@@ -1031,31 +1017,30 @@ $$</mathjax></p>
 
 
 def _traceplot(pmf_model):
-    &quot;&quot;&quot;Plot Frobenius norms of U and V as a function of sample #.&quot;&quot;&quot;
+    """Plot Frobenius norms of U and V as a function of sample #."""
     trace_norms = pmf_model.norms()
     u_series = pd.Series(trace_norms['U'])
     v_series = pd.Series(trace_norms['V'])
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 7))
     u_series.plot(kind='line', ax=ax1, grid=False,
-                  title=&quot;$\|U\|_{Fro}^2$ at Each Sample&quot;)
+                  title="$\|U\|_{Fro}^2$ at Each Sample")
     v_series.plot(kind='line', ax=ax2, grid=False,
-                  title=&quot;$\|V\|_{Fro}^2$ at Each Sample&quot;)
-    ax1.set_xlabel(&quot;Sample Number&quot;)
-    ax2.set_xlabel(&quot;Sample Number&quot;)
+                  title="$\|V\|_{Fro}^2$ at Each Sample")
+    ax1.set_xlabel("Sample Number")
+    ax2.set_xlabel("Sample Number")
 
 
 PMF.norms = _norms
 PMF.traceplot = _traceplot
-</code></pre>
 
-<pre><code>pmf.traceplot()
-</code></pre>
 
+pmf.traceplot()
+</code></pre>
 <p><img alt="png" src="../pmf-pymc_files/pmf-pymc_44_0.png" /></p>
 <p>It appears we get convergence of <mathjax>$U$</mathjax> and <mathjax>$V$</mathjax> after about 200 samples. When testing for convergence, we also want to see convergence of the particular statistics we are looking for, since different characteristics of the posterior may converge at different rates. Let's also do a traceplot of the RSME. We'll compute RMSE for both the train and the test set, even though the convergence is indicated by RMSE on the training set alone. In addition, let's compute a running RMSE on the train/test sets to see how aggregate performance improves or decreases as we continue to sample.</p>
 <pre><code>def _running_rmse(pmf_model, test_data, train_data, burn_in=0, plot=True):
-    &quot;&quot;&quot;Calculate RMSE for each step of the trace to monitor convergence.
-    &quot;&quot;&quot;
+    """Calculate RMSE for each step of the trace to monitor convergence.
+    """
     burn_in = burn_in if len(pmf_model.trace) &gt;= burn_in else 0
     results = {'per-step-train': [], 'running-train': [],
                'per-step-test': [], 'running-test': []}
@@ -1081,11 +1066,10 @@ PMF.traceplot = _traceplot
 
 
 PMF.running_rmse = _running_rmse
-</code></pre>
 
-<pre><code>predicted, results = pmf.running_rmse(test, train, burn_in=200)
-</code></pre>
 
+predicted, results = pmf.running_rmse(test, train, burn_in=200)
+</code></pre>
 <p><img alt="png" src="../pmf-pymc_files/pmf-pymc_47_0.png" /></p>
 <pre><code># And our final RMSE?
 final_test_rmse = results['running-test'].values[-1]
@@ -1095,9 +1079,8 @@ print 'Posterior predictive test RMSE:  %.5f' % final_test_rmse
 print 'Train/test difference:           %.5f' % (final_test_rmse - final_train_rmse)
 print 'Improvement from MAP:            %.5f' % (pmf_map_rmse - final_test_rmse)
 print 'Improvement from Mean of Means:  %.5f' % (baselines['mom'] - final_test_rmse)
-</code></pre>
 
-<pre><code>Posterior predictive train RMSE: 3.92230
+Posterior predictive train RMSE: 3.92230
 Posterior predictive test RMSE:  4.18027
 Train/test difference:           0.25797
 Improvement from MAP:            -0.15052
@@ -1117,11 +1100,13 @@ all_results = pd.DataFrame({
 fig, ax = plt.subplots(figsize=(10, 5))
 all_results.plot(kind='line', grid=False, ax=ax,
                  title='RMSE for all methods')
-ax.set_xlabel(&quot;Number of Samples&quot;)
-ax.set_ylabel(&quot;RMSE&quot;)
-</code></pre>
+ax.set_xlabel("Number of Samples")
+ax.set_ylabel("RMSE")
 
-<pre><code>&lt;matplotlib.text.Text at 0x7f5327451a10&gt;
+
+
+
+&lt;matplotlib.text.Text at 0x7f5327451a10&gt;
 </code></pre>
 <p><img alt="png" src="../pmf-pymc_files/pmf-pymc_51_1.png" /></p>
 <h1 id="summary">Summary</h1>
