@@ -81,7 +81,7 @@ class Dirichlet(Continuous):
     """
     def __init__(self, a, transform=transforms.stick_breaking, *args, **kwargs):
         self.k = shape = a.shape[0]
-        if shape not in kwargs.keys():
+        if "shape" not in kwargs.keys():
             kwargs.update({"shape": shape})
         super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
         self.a = a
