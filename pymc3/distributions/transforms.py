@@ -75,7 +75,7 @@ class Log(ElemwiseTransform):
 
 log = Log()
 
-logistic = t.nnet.sigmoid
+inverse_logit = t.nnet.sigmoid
 
 def logit(x):
     return t.log(x/(1-x))
@@ -87,7 +87,7 @@ class LogOdds(ElemwiseTransform):
         pass
 
     def backward(self, x): 
-        return logistic(x)
+        return inverse_logit(x)
 
     def forward(self, x):
         return logit(x)
@@ -162,7 +162,7 @@ class StickBreaking(Transform):
         Km1 = y.shape[0]
         k = arange(Km1)
         eq_share = - t.log(Km1 - k) # logit(1./(Km1 + 1 - k)) 
-        z = logistic(y + eq_share)
+        z = inverse_logit(y + eq_share)
         yl = concatenate([z, [1]])
         yu = concatenate([[1], 1-z])
         S = t.extra_ops.cumprod(yu)
@@ -174,7 +174,7 @@ class StickBreaking(Transform):
         k = arange(Km1)
         eq_share =  -t.log(Km1 - k) #logit(1./(Km1 + 1 - k)) 
         yl = y + eq_share
-        yu = concatenate([[1], 1-logistic(yl)])
+        yu = concatenate([[1], 1-inverse_logit(yl)])
         S = t.extra_ops.cumprod(yu)
         return sum(t.log(S[:-1]) - t.log(1+exp(yl)) - t.log(1+exp(-yl)))
 
