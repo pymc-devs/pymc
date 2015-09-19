@@ -6,3 +6,4 @@ dist/*
 .ipynb_checkpoints
 tmtags
 tags
+.DS_Store
