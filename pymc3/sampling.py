@@ -16,7 +16,11 @@ def assign_step_methods(model, step):
     assigned_vars = set()
     if step is not None:
         steps = np.append(steps, step).tolist()
-        assigned_vars = assigned_vars | set(step.vars)
+        try:
+            assigned_vars = assigned_vars | set(step.vars)
+        except AttributeError:
+            for s in step.methods:
+                assigned_vars = assigned_vars | set(s.vars)
     
     # Use competence classmethods to select step methods for remaining variables
     selected_steps = {s:[] for s in step_methods.step_method_registry}
@@ -32,7 +36,7 @@ def assign_step_methods(model, step):
             selected_steps[selected] = var
         
     # Instantiate all selected step methods
-    steps.append([s(vars=selected_steps[s]) for s in selected_steps if selected_steps[s]])
+    steps += [s(vars=selected_steps[s]) for s in selected_steps if selected_steps[s]]
     
     if len(steps)==1:
         steps = steps[0]    
