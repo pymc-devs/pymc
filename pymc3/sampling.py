@@ -41,7 +41,7 @@ def assign_step_methods(model, step):
     if len(steps)==1:
         steps = steps[0]    
                 
-    return model, steps
+    return steps
 
 def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None,
            progressbar=True, model=None, random_seed=None):
@@ -91,7 +91,7 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     """
     model = modelcontext(model)
     
-    model, step = assign_step_methods(model, step)
+    step = assign_step_methods(model, step)
 
     if njobs is None:
         njobs = max(mp.cpu_count() - 2, 1)
