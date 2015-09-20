@@ -32,7 +32,8 @@ def assign_step_methods(model, step):
             selected_steps[selected] = var
         
     # Instantiate all selected step methods
-            
+    steps.append([s(vars=selected_steps[s]) for s in selected_steps if selected_steps[s]])
+    
     if len(steps)==1:
         steps = steps[0]    
                 
@@ -87,7 +88,7 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     model = modelcontext(model)
     
     model, step = assign_step_methods(model, step)
-    
+
     if njobs is None:
         njobs = max(mp.cpu_count() - 2, 1)
     if njobs > 1:
