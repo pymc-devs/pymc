@@ -1,5 +1,6 @@
 from ..core import *
 from .compound import CompoundStep
+from ..vartypes import *
 
 import numpy as np
 from numpy.random import uniform
@@ -46,9 +47,19 @@ class BlockedStep(object):
             return CompoundStep(steps)
         else:
             return super(BlockedStep, cls).__new__(cls)
+            
+    @staticmethod
+    def competence(var):
+        return 0
+        
+    @classmethod
+    def _competence(cls, vars):
+        return [cls.competence(var) for var in np.atleast_1d(vars)]
+        
 
 class ArrayStep(BlockedStep):
     def __init__(self, vars, fs, allvars=False, blocked=True):
+        self.vars = vars
         self.ordering = ArrayOrdering(vars)
         self.fs = fs
         self.allvars = allvars
@@ -63,6 +74,7 @@ class ArrayStep(BlockedStep):
 
         apoint = self.astep(bij.map(point), *inputs)
         return bij.rmap(apoint)
+
 
 class ArrayStepShared(BlockedStep):
     """Faster version of ArrayStep that requires the substep method that does not wrap the functions the step method uses.

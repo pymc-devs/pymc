@@ -8,6 +8,7 @@ from .quadpotential import *
 from .arraystep import *
 from ..core import *
 from ..tuning import guess_scaling
+from ..distributions import *
 
 import numpy as np
 from scipy.sparse import issparse
@@ -92,7 +93,12 @@ class HamiltonianMC(ArrayStep):
         return metrop_select(mr, q, q0)
 
 
-    
+    @staticmethod
+    def competence(var):
+        if var in discrete_types:
+            return 0
+        return 1
+            
 
 
 def bern(p):

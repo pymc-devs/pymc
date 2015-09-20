@@ -10,8 +10,35 @@ from numpy.random import seed
 
 __all__ = ['sample', 'iter_sample']
 
+def assign_step_methods(model, step):
+    
+    steps = []
+    assigned_vars = set()
+    if step is not None:
+        steps = np.append(steps, step).tolist()
+        assigned_vars = assigned_vars | set(step.vars)
+    
+    # Use competence classmethods to select step methods for remaining variables
+    selected_steps = {s:[] for s in step_methods.step_method_registry}
+    for var in model.free_RVs:
+        if not var in assigned_vars:
+               
+            competences = {s:s._competence(var) for s in
+                             step_methods.step_method_registry}
+            
+            selected = max(competences.keys(), key=(lambda k: competences[k]))
+        
+            print('Assigned {0} to {1}'.format(selected, var))
+            selected_steps[selected] = var
+        
+    # Instantiate all selected step methods
+            
+    if len(steps)==1:
+        steps = steps[0]    
+                
+    return model, steps
 
-def sample(draws, step, start=None, trace=None, chain=0, njobs=1, tune=None,
+def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None,
            progressbar=True, model=None, random_seed=None):
     """
     Draw a number of samples using the given step method.
@@ -23,8 +50,10 @@ def sample(draws, step, start=None, trace=None, chain=0, njobs=1, tune=None,
 
     draws : int
         The number of samples to draw
-    step : function
-        A step function
+    step : function or iterable of functions
+        A step function or collection of functions. If no step methods are 
+        specified, or are partially specified, they will be assigned 
+        automatically (defaults to None).
     start : dict
         Starting point in parameter space (or partial point)
         Defaults to trace.point(-1)) if there is a trace provided and
@@ -55,6 +84,10 @@ def sample(draws, step, start=None, trace=None, chain=0, njobs=1, tune=None,
     -------
     MultiTrace object with access to sampling values
     """
+    model = modelcontext(model)
+    
+    model, step = assign_step_methods(model, step)
+    
     if njobs is None:
         njobs = max(mp.cpu_count() - 2, 1)
     if njobs > 1:
@@ -88,7 +121,7 @@ def sample(draws, step, start=None, trace=None, chain=0, njobs=1, tune=None,
     return sample_func(*sample_args)
 
 
-def _sample(draws, step, start=None, trace=None, chain=0, tune=None,
+def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
             progressbar=True, model=None, random_seed=None):
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
@@ -115,8 +148,8 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
     draws : int
         The number of samples to draw
-    step : function
-        A step function
+    step : function 
+        Step function
     start : dict
         Starting point in parameter space (or partial point)
         Defaults to trace.point(-1)) if there is a trace provided and

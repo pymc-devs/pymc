@@ -3,6 +3,8 @@ from numpy.linalg import cholesky
 from ..core import *
 from .quadpotential import quad_potential
 
+from ..distributions import *
+
 from .arraystep import *
 from numpy.random import normal, standard_cauchy, standard_exponential, poisson, random
 from numpy import round, exp, copy, where
@@ -128,6 +130,12 @@ class Metropolis(ArrayStepShared):
         self.steps_until_tune -= 1
 
         return q_new
+        
+    @staticmethod
+    def competence(var):
+        if var.dtype in discrete_types:
+            return 2
+        return 1
 
 
 def tune(scale, acc_rate):
@@ -201,6 +209,19 @@ class BinaryMetropolis(ArrayStep):
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
         return q_new
+        
+    @staticmethod
+    def competence(var):
+        '''
+        BinaryMetropolis is only suitable for binary (bool) 
+        and Categorical variables with k=1.
+        '''
+        if var.dtype in bool_types:
+            return 3
+        if isinstance(var, Categorical):
+            if var.k==1:
+                return 3
+        return 0
 
 def delta_logp(logp, vars, shared):
     [logp0], inarray0 = join_nonshared_inputs([logp], vars, shared)

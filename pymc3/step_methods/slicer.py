@@ -2,6 +2,7 @@
 
 from ..core import *
 from .arraystep import *
+from ..distributions import *
 from numpy import floor, abs, atleast_1d, empty, isfinite, sum
 from numpy.random import standard_exponential, random, uniform
 
@@ -72,3 +73,11 @@ class Slice(ArrayStep):
             self.w = 2 * sum(self.w_tune, 0) / len(self.w_tune)
 
         return q
+
+    @staticmethod
+    def competence(var):
+        if var.dtype in continuous_types:
+            if not var.shape:
+                return 2
+            return 1
+        return 0
