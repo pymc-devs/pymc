@@ -218,8 +218,8 @@ class BinaryMetropolis(ArrayStep):
         '''
         if var.dtype in bool_types:
             return 3
-        if isinstance(var, Categorical):
-            if var.k==1:
+        if isinstance(var.distribution, Categorical):
+            if var.distribution.k==2:
                 return 3
         return 0
 

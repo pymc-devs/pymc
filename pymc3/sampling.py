@@ -33,8 +33,8 @@ def assign_step_methods(model, step):
             selected = max(competences.keys(), key=(lambda k: competences[k]))
         
             print('Assigned {0} to {1}'.format(selected, var))
-            selected_steps[selected] = var
-        
+            selected_steps[selected].append(var)
+    
     # Instantiate all selected step methods
     steps += [s(vars=selected_steps[s]) for s in selected_steps if selected_steps[s]]
     
