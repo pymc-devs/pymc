@@ -55,12 +55,10 @@ def run(n=1000):
         # Initial values for stochastic nodes
         start = {'early_mean': 2., 'late_mean': 3.}
 
-        # Use slice sampler for means
+        # Use slice sampler for means (other varibles auto-selected)
         step1 = Slice([early_mean, late_mean])
-        # Use Metropolis for switchpoint, since it accomodates discrete variables
-        step2 = Metropolis([switchpoint, disasters.missing_values ])
 
-        tr = sample(n, tune=500, start=start, step=[step1, step2])
+        tr = sample(n, tune=500, start=start, step=step1)
         
         summary(tr, vars=['disasters_missing'])
 
