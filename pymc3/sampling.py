@@ -13,16 +13,17 @@ __all__ = ['sample', 'iter_sample']
 def assign_step_methods(model, step,
         methods=(NUTS, HamiltonianMC, Metropolis, BinaryMetropolis, 
         Slice, ElemwiseCategoricalStep)):
-    
+        
     steps = []
     assigned_vars = set()
     if step is not None:
         steps = np.append(steps, step).tolist()
-        try:
-            assigned_vars = assigned_vars | set(step.vars)
-        except AttributeError:
-            for s in step.methods:
+        for s in steps:
+            try:
                 assigned_vars = assigned_vars | set(s.vars)
+            except AttributeError:
+                for m in s.methods:
+                    assigned_vars = assigned_vars | set(m.vars)
     
     # Use competence classmethods to select step methods for remaining variables
     selected_steps = {s:[] for s in methods}
