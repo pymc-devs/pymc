@@ -140,9 +140,7 @@ class NUTS(ArrayStepShared):
     @staticmethod
     def competence(var):
         if var.dtype in continuous_types:
-            if sum(var.shape) > 5:
-                return 3
-            return 2
+            return 3
         return 0
             
 
