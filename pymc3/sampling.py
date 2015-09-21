@@ -19,18 +19,17 @@ def assign_step_methods(model, step,
     if step is not None:
         steps = np.append(steps, step).tolist()
         try:
+            assigned_vars = assigned_vars | set(step.vars)
+        except AttributeError:
             for s in step.methods:
                 assigned_vars = assigned_vars | set(s.vars)
-        except AttributeError:
-            assigned_vars = assigned_vars | set(step.vars)
     
     # Use competence classmethods to select step methods for remaining variables
     selected_steps = {s:[] for s in methods}
     for var in model.free_RVs:
         if not var in assigned_vars:
                
-            competences = {s:s._competence(var) for s in
-                             step_methods.step_method_registry}
+            competences = {s:s._competence(var) for s in methods}
             
             selected = max(competences.keys(), key=(lambda k: competences[k]))
         
@@ -206,7 +205,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         _soft_update(start, model.test_point)
 
     try:
-        step = step_methods.CompoundStep(step)
+        step = CompoundStep(step)
     except TypeError:
         pass
 
