@@ -90,6 +90,7 @@ class ArrayStepShared(BlockedStep):
         shared : dict of theano variable -> shared variable
         blocked : Boolean (default True)
         """
+        self.vars = vars
         self.ordering = ArrayOrdering(vars)
         self.shared = { str(var) : shared for var, shared in shared.items() }
         self.blocked = blocked
