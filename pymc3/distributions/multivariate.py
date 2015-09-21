@@ -80,9 +80,11 @@ class Dirichlet(Continuous):
         as a parent of Multinomial and Categorical nevertheless.
     """
     def __init__(self, a, transform=transforms.stick_breaking, *args, **kwargs):
+        self.k = shape = a.shape[0]
+        if "shape" not in kwargs.keys():
+            kwargs.update({"shape": shape})
         super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
         self.a = a
-        self.k = a.shape[0]
         self.mean = a / sum(a)
 
         self.mode = switch(all(a > 1),
