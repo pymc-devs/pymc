@@ -4,26 +4,28 @@ from .backends.ndarray import NDArray
 import multiprocessing as mp
 from time import time
 from .core import *
-from . import step_methods
+from .step_methods import *
 from .progressbar import progress_bar
 from numpy.random import seed
 
 __all__ = ['sample', 'iter_sample']
 
-def assign_step_methods(model, step):
+def assign_step_methods(model, step,
+        methods=(NUTS, HamiltonianMC, Metropolis, BinaryMetropolis, 
+        Slice, ElemwiseCategoricalStep)):
     
     steps = []
     assigned_vars = set()
     if step is not None:
         steps = np.append(steps, step).tolist()
         try:
-            assigned_vars = assigned_vars | set(step.vars)
-        except AttributeError:
             for s in step.methods:
                 assigned_vars = assigned_vars | set(s.vars)
+        except AttributeError:
+            assigned_vars = assigned_vars | set(step.vars)
     
     # Use competence classmethods to select step methods for remaining variables
-    selected_steps = {s:[] for s in step_methods.step_method_registry}
+    selected_steps = {s:[] for s in methods}
     for var in model.free_RVs:
         if not var in assigned_vars:
                
