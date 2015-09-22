@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import itertools
 import sys
+import warnings
 
 
 from .backends import tracetab as ttab
@@ -71,6 +72,23 @@ def autocov(x, lag=1):
     if lag < 0:
         raise ValueError("Autocovariance lag must be a positive integer")
     return np.cov(x[:-lag], x[lag:], bias=1)
+
+def dic(model, trace):
+    """
+    Calculate the deviance information criterion of the samples in trace from model
+    """
+    if any(hasattr(rv.distribution, 'transform_used') for rv in model.free_RVs):
+        warnings.warn("""
+            DIC estimates are biased for models that include transformed random variables.
+            See https://github.com/pymc-devs/pymc3/issues/789
+        """)
+
+    mean_deviance = -2 * np.mean([model.logp(pt) for pt in trace])
+
+    free_rv_means = {rv.name: trace[rv.name].mean(axis=0) for rv in model.free_RVs}
+    deviance_at_mean = -2 * model.logp(free_rv_means)
+
+    return 2 * mean_deviance - deviance_at_mean
 
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
