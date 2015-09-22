@@ -25,7 +25,7 @@ years = len(disasters_data)
 
 # Old decorator: theano.compile.ops.as_op(itypes=[t.lscalar, t.dscalar, t.dscalar], 
 # otypes=[t.dvector])
-@deterministic(itypes=[t.lscalar, t.dscalar, t.dscalar])
+@deterministic
 def rateFunc(switchpoint, early_mean, late_mean):
     ''' Concatenate Poisson means '''
     out = empty(years)

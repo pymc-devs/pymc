@@ -608,18 +608,19 @@ theano.config.warn.sum_div_dimshuffle_bug = False
 theano.config.compute_test_value = 'raise'
 
 # Replace theano as_op decorator with something friendly
-def deterministic(**kwds):
+def deterministic(f=None, **kwds):
     
     itypes = kwds.get('itypes')
     otypes = kwds.get('otypes') or [t.dvector]
         
     # Wrapper infers types of inputs
-    def wrapper(f, *inputs, **kwinputs):
+    @wraps(f)
+    def wrapper(*inputs, **kwinputs):
         
         nonlocal itypes, otypes
         
-        if itypes is None:
-            itypes = [arg.dtype for arg in inputs]
+        if not itypes:
+            itypes = [arg.type for arg in inputs]
         
         @theano.compile.ops.as_op(itypes=itypes, otypes=otypes)
         def wrapped_f(*inputs, **kwinputs):
