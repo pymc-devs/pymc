@@ -9,8 +9,8 @@ import warnings
 
 from .backends import tracetab as ttab
 
-__all__ = ['autocorr', 'autocov', 'hpd', 'quantiles', 'mc_error', 'summary',
-           'df_summary']
+__all__ = ['autocorr', 'autocov', 'dic', 'hpd', 'quantiles', 'mc_error',
+           'summary', 'df_summary']
 
 def statfunc(f):
     """
