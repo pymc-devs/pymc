@@ -8,6 +8,7 @@ from pymc3.tests import backend_fixtures as bf
 from pymc3.backends import ndarray
 from numpy.random import random, normal, seed
 from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
+from scipy import stats as st
 
 seed(111)
 normal_sample = normal(0, 1, 1000000)
@@ -19,6 +20,26 @@ def test_autocorr():
 
     y = [(normal_sample[i-1] + normal_sample[i])/2 for i in range(1, len(normal_sample))]
     assert_almost_equal(autocorr(y), 0.5, 2)
+
+def test_dic():
+    """Test deviance information criterion calculation"""
+    x_obs = np.arange(6)
+
+    with pm.Model() as model:
+        p = pm.Beta('p', 1., 1., transform=None)
+        x = pm.Binomial('x', 5, p, observed=x_obs)
+
+        step = pm.Metropolis()
+        trace = pm.sample(100, step)
+
+    calculated = dic(model, trace)
+
+    mean_deviance = -2 * st.binom.logpmf(np.repeat(np.atleast_2d(x_obs), 100, axis=0), 5,
+                                         np.repeat(np.atleast_2d(trace['p']), 6, axis=0).T).sum(axis=1).mean()
+    deviance_at_mean = -2 * st.binom.logpmf(x_obs, 5, trace['p'].mean()).sum()
+    actual = 2 * mean_deviance - deviance_at_mean
+
+    assert_almost_equal(calculated, actual, decimal=2)
 
 def test_hpd():
     """Test HPD calculation"""
