@@ -9,6 +9,7 @@ from pymc3.backends import ndarray
 from numpy.random import random, normal, seed
 from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
 from scipy import stats as st
+import warnings
 
 seed(111)
 normal_sample = normal(0, 1, 1000000)
@@ -40,6 +41,25 @@ def test_dic():
     actual = 2 * mean_deviance - deviance_at_mean
 
     assert_almost_equal(calculated, actual, decimal=2)
+
+def test_dic_warns_on_transformed_rv():
+    """
+    Test that deviance information criterion calculation warns when an RV is transformed
+    See https://github.com/pymc-devs/pymc3/issues/789
+    """
+    x_obs = np.arange(6)
+
+    with pm.Model() as model:
+        p = pm.Beta('p', 1., 1.)
+        x = pm.Binomial('x', 5, p, observed=x_obs)
+
+        step = pm.Metropolis()
+        trace = pm.sample(100, step)
+
+    with warnings.catch_warnings(record=True) as w:
+        calculated = dic(model, trace)
+
+        assert(len(w) == 1)
 
 def test_hpd():
     """Test HPD calculation"""
