@@ -2,7 +2,8 @@ from .checks import *
 from .models import simple_model, mv_simple, mv_simple_discrete, simple_2model
 from theano.tensor import constant
 from scipy.stats.mstats import moment
-
+from pymc3.sampling import assign_step_methods
+from pymc3.step_methods import NUTS, BinaryMetropolis
 
 def check_stat(name, trace, var, stat, value, bound):
     s = stat(trace[var][2000:], axis=0)
@@ -90,3 +91,12 @@ def test_step_discrete():
 
         for (var, stat, val, bound) in check:
             yield check_stat, repr(st), h, var, stat, val, bound
+
+def test_assign_step_methods():
+    
+    _, m1 = simple_2model()
+    with m1:
+        steps = assign_step_methods(m1, [])
+        
+    assert all((isinstance(steps[0], NUTS), isinstance(steps[1], BinaryMetropolis)))
+    

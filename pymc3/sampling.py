@@ -33,7 +33,7 @@ def assign_step_methods(model, step,
             competences = {s:s._competence(var) for s in methods}
             
             selected = max(competences.keys(), key=(lambda k: competences[k]))
-        
+            
             print('Assigned {0} to {1}'.format(selected, var))
             selected_steps[selected].append(var)
     

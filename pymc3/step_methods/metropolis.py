@@ -216,7 +216,7 @@ class BinaryMetropolis(ArrayStep):
         BinaryMetropolis is only suitable for binary (bool) 
         and Categorical variables with k=1.
         '''
-        if var.dtype in bool_types:
+        if isinstance(var.distribution, Bernoulli) or (var.dtype in bool_types):
             return 3
         if isinstance(var.distribution, Categorical):
             if var.distribution.k==2:
