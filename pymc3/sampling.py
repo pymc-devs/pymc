@@ -7,6 +7,7 @@ from .core import *
 from .step_methods import *
 from .progressbar import progress_bar
 from numpy.random import seed
+from collections import defaultdict
 
 __all__ = ['sample', 'iter_sample']
 
@@ -26,7 +27,7 @@ def assign_step_methods(model, step,
                     assigned_vars = assigned_vars | set(m.vars)
     
     # Use competence classmethods to select step methods for remaining variables
-    selected_steps = {s:[] for s in methods}
+    selected_steps = defaultdict(list)
     for var in model.free_RVs:
         if not var in assigned_vars:
                

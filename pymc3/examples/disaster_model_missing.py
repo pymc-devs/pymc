@@ -56,9 +56,9 @@ def run(n=1000):
         start = {'early_mean': 2., 'late_mean': 3.}
 
         # Use slice sampler for means (other varibles auto-selected)
-        step1 = Slice([early_mean, late_mean])
+        step = Slice([early_mean, late_mean])
 
-        tr = sample(n, tune=500, start=start, step=step1)
+        tr = sample(n, tune=500, start=start, step=step)
         
         summary(tr, vars=['disasters_missing'])
 
