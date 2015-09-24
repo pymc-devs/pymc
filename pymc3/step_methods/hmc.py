@@ -95,9 +95,9 @@ class HamiltonianMC(ArrayStep):
 
     @staticmethod
     def competence(var):
-        if var in discrete_types:
-            return 0
-        return 1
+        if var.dtype in discrete_types:
+            return Competence.incompatible
+        return Competence.compatible
             
 
 

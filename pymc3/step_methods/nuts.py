@@ -140,8 +140,8 @@ class NUTS(ArrayStepShared):
     @staticmethod
     def competence(var):
         if var.dtype in continuous_types:
-            return 3
-        return 0
+            return Competence.ideal
+        return Competence.incompatible
             
 
 def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):

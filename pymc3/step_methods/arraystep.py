@@ -5,11 +5,25 @@ from ..vartypes import *
 import numpy as np
 from numpy.random import uniform
 from numpy import log, isfinite
+from enum import IntEnum, unique
 
-__all__ = ['ArrayStep', 'ArrayStepShared', 'metrop_select', 'SamplerHist']
+__all__ = ['ArrayStep', 'ArrayStepShared', 'metrop_select', 'SamplerHist',
+             'Competence']
 
 # TODO Add docstrings to ArrayStep
-
+@unique
+class Competence(IntEnum):
+    """Enum for charaterizing competence classes of step methods.
+    Values include:
+    0: incompatible
+    1: compatible
+    2: preferred
+    3: ideal
+    """
+    incompatible = 0
+    compatible   = 1
+    preferred    = 2
+    ideal        = 3
 
 class BlockedStep(object):
     def __new__(cls, *args, **kwargs):
@@ -50,7 +64,7 @@ class BlockedStep(object):
             
     @staticmethod
     def competence(var):
-        return 0
+        return Competence.incompatible
         
     @classmethod
     def _competence(cls, vars):

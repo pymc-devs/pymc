@@ -134,8 +134,8 @@ class Metropolis(ArrayStepShared):
     @staticmethod
     def competence(var):
         if var.dtype in discrete_types:
-            return 2
-        return 1
+            return Competence.compatible
+        return Competence.incompatible
 
 
 def tune(scale, acc_rate):
@@ -217,11 +217,11 @@ class BinaryMetropolis(ArrayStep):
         and Categorical variables with k=1.
         '''
         if isinstance(var.distribution, Bernoulli) or (var.dtype in bool_types):
-            return 3
+            return Competence.ideal
         if isinstance(var.distribution, Categorical):
             if var.distribution.k==2:
-                return 3
-        return 0
+                return Competence.ideal
+        return Competence.incompatible
 
 def delta_logp(logp, vars, shared):
     [logp0], inarray0 = join_nonshared_inputs([logp], vars, shared)
