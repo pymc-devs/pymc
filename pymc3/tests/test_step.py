@@ -3,7 +3,9 @@ from .models import simple_model, mv_simple, mv_simple_discrete, simple_2model
 from theano.tensor import constant
 from scipy.stats.mstats import moment
 from pymc3.sampling import assign_step_methods
-from pymc3.step_methods import NUTS, BinaryMetropolis
+from pymc3.model import Model
+from pymc3.step_methods import NUTS, BinaryMetropolis, Metropolis
+from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
 
 def check_stat(name, trace, var, stat, value, bound):
     s = stat(trace[var][2000:], axis=0)
@@ -94,9 +96,32 @@ def test_step_discrete():
 
 def test_assign_step_methods():
     
-    _, m1 = simple_2model()
-    with m1:
-        steps = assign_step_methods(m1, [])
+    with Model() as model:
+        x = Bernoulli('x', 0.5)
+        steps = assign_step_methods(model, [])
         
-    assert all((isinstance(steps[0], NUTS), isinstance(steps[1], BinaryMetropolis)))
+        assert isinstance(steps, BinaryMetropolis)
     
+    with Model() as model:
+        x = Normal('x', 0, 1)
+        steps = assign_step_methods(model, [])
+    
+        assert isinstance(steps, NUTS)
+        
+    with Model() as model:
+        x = Categorical('x', np.array([0.25, 0.75]))
+        steps = assign_step_methods(model, [])
+    
+        assert isinstance(steps, BinaryMetropolis)
+        
+    with Model() as model:
+        x = Categorical('x', np.array([0.25, 0.70, 0.05]))
+        steps = assign_step_methods(model, [])
+    
+        assert isinstance(steps, Metropolis)
+        
+    with Model() as model:
+        x = Binomial('x', 10, 0.5)
+        steps = assign_step_methods(model, [])
+    
+        assert isinstance(steps, Metropolis)
