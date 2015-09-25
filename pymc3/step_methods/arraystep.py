@@ -8,7 +8,7 @@ from numpy import log, isfinite
 from enum import IntEnum, unique
 
 __all__ = ['ArrayStep', 'ArrayStepShared', 'metrop_select', 'SamplerHist',
-             'Competence']
+             'Competence', 'Constant']
 
 # TODO Add docstrings to ArrayStep
 @unique
@@ -136,3 +136,28 @@ class SamplerHist(object):
 
     def acceptr(self):
         return np.minimum(np.exp(self.metrops), 1)
+
+class Constant(ArrayStep):
+    """
+    Dummy sampler that returns the current value at every iteration. Useful for
+    fixing parameters at a particular value.
+    
+    Parameters
+    ----------
+    vars : list
+        List of variables for sampler.
+    model : PyMC Model
+        Optional model for sampling step. Defaults to None (taken from context).
+    """
+
+    def __init__(self, vars, model=None, **kwargs):
+
+        model = modelcontext(model)
+
+        self.model = model
+
+        super(Constant, self).__init__(vars, [model.fastlogp], **kwargs)
+
+    def astep(self, q0, logp):
+        
+        return q0
