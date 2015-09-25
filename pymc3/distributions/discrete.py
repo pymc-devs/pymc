@@ -345,7 +345,7 @@ class Categorical(Discrete):
     """
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
-        self.k = p.shape[-1]
+        self.k = np.shape(p)[-1]
         self.p = as_tensor_variable(p)
         self.mode = argmax(p)
 
