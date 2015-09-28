@@ -11,9 +11,35 @@ from collections import defaultdict
 
 __all__ = ['sample', 'iter_sample']
 
-def assign_step_methods(model, step,
+def assign_step_methods(model, step=None,
         methods=(NUTS, HamiltonianMC, Metropolis, BinaryMetropolis, 
         Slice, ElemwiseCategoricalStep)):
+    '''
+    Assign model variables to appropriate step methods. Passing a specified 
+    model will auto-assign its constituent stochastic variables to step methods
+    based on the characteristics of the variables. This function is intended to
+    be called automatically from `sample()`, but may be called manually. Each
+    step method passed should have a `competence()` method that returns an
+    ordinal competence value corresponding to the variable passed to it. This
+    value quantifies the appropriateness of the step method for sampling the 
+    variable. 
+    
+    Parameters
+    ----------
+    
+    model : Model object
+        A fully-specified model object
+    step : step function or vector of step functions
+        One or more step functions that have been assigned to some subset of
+        the model's parameters. Defaults to None (no assigned variables).
+    methods : vector of step method classes
+        The set of step methods from which the function may choose. Defaults
+        to the main step methods provided by PyMC3.
+        
+    Returns
+    -------
+    List of step methods associated with the model's variables.
+    '''
         
     steps = []
     assigned_vars = set()
