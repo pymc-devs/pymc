@@ -87,7 +87,7 @@ class NUTS(ArrayStepShared):
 
         self.Hbar = 0
         self.u = log(self.step_size*10)
-        self.m = 0
+        self.m = 1
 
 
 
