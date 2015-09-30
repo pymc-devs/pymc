@@ -176,6 +176,6 @@ class StickBreaking(Transform):
         yl = y + eq_share
         yu = concatenate([ones(y[:1].shape), 1-inverse_logit(yl)])
         S = t.extra_ops.cumprod(yu, 0)
-        return t.log(S[:-1]) - t.log(1+exp(yl)) - t.log(1+exp(-yl))
+        return sum(t.log(S[:-1]) - t.log(1+exp(yl)) - t.log(1+exp(-yl)), 0)
 
 stick_breaking = StickBreaking()
