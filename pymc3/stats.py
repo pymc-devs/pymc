@@ -77,11 +77,14 @@ def dic(model, trace):
     """
     Calculate the deviance information criterion of the samples in trace from model
     """
-    if any(hasattr(rv.distribution, 'transform_used') for rv in model.free_RVs):
+    transformed_rvs = [rv for rv in model.free_RVs if hasattr(rv.distribution, 'transform_used')]
+    if transformed_rvs:
         warnings.warn("""
             DIC estimates are biased for models that include transformed random variables.
-            See https://github.com/pymc-devs/pymc3/issues/789
-        """)
+            See https://github.com/pymc-devs/pymc3/issues/789.
+            The following random variables are the result of transformations:
+            {}
+        """.format(', '.join(rv.name for rv in transformed_rvs)))
 
     mean_deviance = -2 * np.mean([model.logp(pt) for pt in trace])
 
