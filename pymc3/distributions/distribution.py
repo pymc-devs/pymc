@@ -36,7 +36,7 @@ class Distribution(object):
 
     def __init__(self, shape, dtype, testval=None, defaults=[], transform=None):
         self.shape = np.atleast_1d(shape)
-        if len(self.shape) > 0 and np.array(list(self.shape)).dtype != "int32":
+        if not np.issubdtype(self.shape.dtype, np.integer):
             raise TypeError("Expected int elements in shape")
         self.dtype = dtype
         self.type = TensorType(self.dtype, self.shape)
