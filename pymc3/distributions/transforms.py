@@ -150,32 +150,32 @@ class StickBreaking(Transform):
     def forward(self, x):
         #reverse cumsum
         x0 = x[:-1]
-        s = t.extra_ops.cumsum(x0[::-1])[::-1] + x[-1]
+        s = t.extra_ops.cumsum(x0[::-1], 0)[::-1] + x[-1]
         z = x0/s
         Km1 = x.shape[0] - 1
-        k = arange(Km1)
+        k = arange(Km1)[(slice(None), ) + (None, ) * (x.ndim - 1)]
         eq_share = - t.log(Km1 - k) # logit(1./(Km1 + 1 - k)) 
         y =  logit(z) - eq_share
         return y
 
     def backward(self, y):
         Km1 = y.shape[0]
-        k = arange(Km1)
+        k = arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
         eq_share = - t.log(Km1 - k) # logit(1./(Km1 + 1 - k)) 
         z = inverse_logit(y + eq_share)
-        yl = concatenate([z, [1]])
-        yu = concatenate([[1], 1-z])
-        S = t.extra_ops.cumprod(yu)
+        yl = concatenate([z, ones(y[:1].shape)])
+        yu = concatenate([ones(y[:1].shape), 1-z])
+        S = t.extra_ops.cumprod(yu, 0)
         x = S * yl
         return x
 
     def jacobian_det(self, y): 
         Km1 = y.shape[0]
-        k = arange(Km1)
+        k = arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
         eq_share =  -t.log(Km1 - k) #logit(1./(Km1 + 1 - k)) 
         yl = y + eq_share
-        yu = concatenate([[1], 1-inverse_logit(yl)])
-        S = t.extra_ops.cumprod(yu)
-        return sum(t.log(S[:-1]) - t.log(1+exp(yl)) - t.log(1+exp(-yl)))
+        yu = concatenate([ones(y[:1].shape), 1-inverse_logit(yl)])
+        S = t.extra_ops.cumprod(yu, 0)
+        return t.log(S[:-1]) - t.log(1+exp(yl)) - t.log(1+exp(-yl))
 
 stick_breaking = StickBreaking()
