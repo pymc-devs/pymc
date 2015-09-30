@@ -29,7 +29,7 @@ class Transform(object):
 
 class ElemwiseTransform(Transform):
     def jacobian_det(self, x):
-        grad = gradient(t.sum(self.backward(x)), [x])
+        grad = t.reshape(gradient(t.sum(self.backward(x)), [x]),x.shape)
 
         j = t.log(t.abs_(grad))
         return j
