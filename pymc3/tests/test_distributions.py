@@ -629,3 +629,8 @@ def check_ex_gaussian(value, mu, sigma, nu, logp):
     pt = {'eg': value}
     assert_almost_equal(model.fastlogp(pt),
                 logp, decimal=6, err_msg=str(pt))
+
+
+def test_multidimensional_beta_construction():
+    with Model() as m:
+        testMultiBeta = Beta('beta', alpha = 1., beta = 1., shape=(10,20))
