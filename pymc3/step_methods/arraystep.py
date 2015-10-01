@@ -1,14 +1,29 @@
 from ..core import *
 from .compound import CompoundStep
+from ..vartypes import *
 
 import numpy as np
 from numpy.random import uniform
 from numpy import log, isfinite
+from enum import IntEnum, unique
 
-__all__ = ['ArrayStep', 'ArrayStepShared', 'metrop_select', 'SamplerHist']
+__all__ = ['ArrayStep', 'ArrayStepShared', 'metrop_select', 'SamplerHist',
+             'Competence', 'Constant']
 
 # TODO Add docstrings to ArrayStep
-
+@unique
+class Competence(IntEnum):
+    """Enum for charaterizing competence classes of step methods.
+    Values include:
+    0: incompatible
+    1: compatible
+    2: preferred
+    3: ideal
+    """
+    incompatible = 0
+    compatible   = 1
+    preferred    = 2
+    ideal        = 3
 
 class BlockedStep(object):
     def __new__(cls, *args, **kwargs):
@@ -46,9 +61,19 @@ class BlockedStep(object):
             return CompoundStep(steps)
         else:
             return super(BlockedStep, cls).__new__(cls)
+            
+    @staticmethod
+    def competence(var):
+        return Competence.incompatible
+        
+    @classmethod
+    def _competence(cls, vars):
+        return [cls.competence(var) for var in np.atleast_1d(vars)]
+        
 
 class ArrayStep(BlockedStep):
     def __init__(self, vars, fs, allvars=False, blocked=True):
+        self.vars = vars
         self.ordering = ArrayOrdering(vars)
         self.fs = fs
         self.allvars = allvars
@@ -64,6 +89,7 @@ class ArrayStep(BlockedStep):
         apoint = self.astep(bij.map(point), *inputs)
         return bij.rmap(apoint)
 
+
 class ArrayStepShared(BlockedStep):
     """Faster version of ArrayStep that requires the substep method that does not wrap the functions the step method uses.
 
@@ -78,6 +104,7 @@ class ArrayStepShared(BlockedStep):
         shared : dict of theano variable -> shared variable
         blocked : Boolean (default True)
         """
+        self.vars = vars
         self.ordering = ArrayOrdering(vars)
         self.shared = { str(var) : shared for var, shared in shared.items() }
         self.blocked = blocked
@@ -109,3 +136,28 @@ class SamplerHist(object):
 
     def acceptr(self):
         return np.minimum(np.exp(self.metrops), 1)
+
+class Constant(ArrayStep):
+    """
+    Dummy sampler that returns the current value at every iteration. Useful for
+    fixing parameters at a particular value.
+    
+    Parameters
+    ----------
+    vars : list
+        List of variables for sampler.
+    model : PyMC Model
+        Optional model for sampling step. Defaults to None (taken from context).
+    """
+
+    def __init__(self, vars, model=None, **kwargs):
+
+        model = modelcontext(model)
+
+        self.model = model
+
+        super(Constant, self).__init__(vars, [model.fastlogp], **kwargs)
+
+    def astep(self, q0, logp):
+        
+        return q0
