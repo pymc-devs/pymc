@@ -28,6 +28,8 @@ classifiers = ['Development Status :: 4 - Beta',
 
 install_reqs = ['numpy>=1.7.1', 'scipy>=0.12.0', 'matplotlib>=1.2.1',
                 'Theano<=0.7.1dev', 'pandas>=0.15.0']
+if sys.version_info < (3, 4):
+    install_reqs.append('enum34')
 
 test_reqs = ['nose']
 if sys.version_info[0] == 2:  # py3 has mock in stdlib
