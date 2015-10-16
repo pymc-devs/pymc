@@ -25,7 +25,7 @@ class Transform(object):
         return TransformedDistribution.dist(dist, self)
 
     def __str__(self):
-        return name + " transform"
+        return self.name + " transform"
 
 class ElemwiseTransform(Transform):
     def jacobian_det(self, x):
