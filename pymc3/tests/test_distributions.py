@@ -101,6 +101,15 @@ class Simplex(object):
         self.dtype = Unit.dtype
         return
 
+class MultiSimplex(object):
+    def __init__(self, n_dependent, n_independent):
+        transposed_vals = list(itertools.product(list(simplex_values(n_dependent)), repeat=n_independent))
+        self.vals = list(np.transpose(transposed_vals, (0, 2, 1)))
+
+        self.shape = (n_dependent, n_independent)
+        self.dtype = Unit.dtype
+        return
+
 def PdMatrix(n):
     if n == 1:
         return PdMatrix1 
@@ -403,21 +412,28 @@ def check_lkj(x, n, p, lp):
                         lp, decimal=6, err_msg=str(pt))
 
 def betafn(a):
-    return scipy.special.gammaln(a).sum() - scipy.special.gammaln(a.sum())
+    return scipy.special.gammaln(a).sum(0) - scipy.special.gammaln(a.sum(0))
 
 def logpow(v, p):
     return np.choose(v==0, [p * np.log(v), 0])
 
 def dirichlet_logpdf(value, a):
-    return -betafn(a) + logpow(value, a-1).sum()
+    return (-betafn(a) + logpow(value, a-1).sum(0)).sum()
 
 def test_dirichlet():
     for n in [2,3]:
         yield check_dirichlet, n
+    yield check_dirichlet2D, 2, 2
 
 def check_dirichlet(n):
         pymc3_matches_scipy(
                 Dirichlet, Simplex(n), {'a': Vector(Rplus, n) },
+                dirichlet_logpdf
+                )
+
+def check_dirichlet2D(ndep, nind):
+        pymc3_matches_scipy(
+                Dirichlet, MultiSimplex(ndep, nind), {'a': Vector(Vector(Rplus, nind), ndep) },
                 dirichlet_logpdf
                 )
 
