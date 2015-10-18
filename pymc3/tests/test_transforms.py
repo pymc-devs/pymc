@@ -2,7 +2,7 @@ import pymc3 as pm
 import pymc3.distributions.transforms as tr
 import theano
 import theano.tensor as t 
-from .test_distributions import Simplex, Rplusbig, Unit, R, Vector
+from .test_distributions import Simplex, Rplusbig, Unit, R, Vector, MultiSimplex
 
 from .checks import *
 from ..theanof import jacobian
@@ -30,6 +30,7 @@ def get_values(transform, domain=R, constructor=t.dscalar, test=0):
 def test_simplex():
     check_vector_transform_identity(tr.stick_breaking, Simplex(2))
     check_vector_transform_identity(tr.stick_breaking, Simplex(4))
+    check_transform_identity(tr.stick_breaking, MultiSimplex(3, 2), constructor=t.dmatrix, test=np.zeros((2, 2)))
     
 def test_simplex_bounds():
     vals = get_values(tr.stick_breaking, Vector(R, 2), t.dvector, np.array([0,0]))

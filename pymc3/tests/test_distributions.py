@@ -101,6 +101,15 @@ class Simplex(object):
         self.dtype = Unit.dtype
         return
 
+class MultiSimplex(object):
+    def __init__(self, n_dependent, n_independent):
+        transposed_vals = list(itertools.product(list(simplex_values(n_dependent)), repeat=n_independent))
+        self.vals = list(np.transpose(transposed_vals, (0, 2, 1)))
+
+        self.shape = (n_dependent, n_independent)
+        self.dtype = Unit.dtype
+        return
+
 def PdMatrix(n):
     if n == 1:
         return PdMatrix1 
