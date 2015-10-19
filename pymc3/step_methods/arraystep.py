@@ -156,6 +156,8 @@ class Constant(ArrayStep):
 
         self.model = model
 
+        vars = inputvars(vars)
+
         super(Constant, self).__init__(vars, [model.fastlogp], **kwargs)
 
     def astep(self, q0, logp):
