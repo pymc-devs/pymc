@@ -132,6 +132,12 @@
 </li>
 
                         
+                            
+<li >
+    <a href="../survival_analysis/">Survival Analysis</a>
+</li>
+
+                        
                         </ul>
                     </li>
                 
@@ -243,10 +249,6 @@ with model:
 Populating the interactive namespace from numpy and matplotlib
 
 
-/usr/local/Cellar/python3/3.4.2_1/Frameworks/Python.framework/Versions/3.4/lib/python3.4/importlib/_bootstrap.py:321: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
-  return f(*args, **kwds)
-
-
 
 n_predictors
 
@@ -288,7 +290,7 @@ model.free_RVs
 
 
 
-[group_effects, sg_interval, effects, s_interval]
+[group_effects, sg, effects, s]
 
 
 
@@ -304,89 +306,12 @@ x, y = np.mgrid[0.001:0.1:.001, -.05:.05:.001]
 plt.contourf(x, y, lp(x, y))
 
 
----------------------------------------------------------------------------
-
-TypeError                                 Traceback (most recent call last)
-
-&lt;ipython-input-9-12de12a989b6&gt; in &lt;module&gt;()
-      1 x, y = np.mgrid[0.001:0.1:.001, -.05:.05:.001]
-----&gt; 2 plt.contourf(x, y, lp(x, y))
 
 
-/usr/local/lib/python3.4/site-packages/numpy/lib/function_base.py in __call__(self, *args, **kwargs)
-   1698             vargs.extend([kwargs[_n] for _n in names])
-   1699 
--&gt; 1700         return self._vectorize_call(func=func, args=vargs)
-   1701 
-   1702     def _get_ufunc_and_otypes(self, func, args):
-
-
-/usr/local/lib/python3.4/site-packages/numpy/lib/function_base.py in _vectorize_call(self, func, args)
-   1761             _res = func()
-   1762         else:
--&gt; 1763             ufunc, otypes = self._get_ufunc_and_otypes(func=func, args=args)
-   1764 
-   1765             # Convert args to object arrays first
-
-
-/usr/local/lib/python3.4/site-packages/numpy/lib/function_base.py in _get_ufunc_and_otypes(self, func, args)
-   1723             # arrays (the input values are not checked to ensure this)
-   1724             inputs = [asarray(_a).flat[0] for _a in args]
--&gt; 1725             outputs = func(*inputs)
-   1726 
-   1727             # Performance note: profiling indicates that -- for simple
-
-
-&lt;ipython-input-7-d3b3653500d1&gt; in &lt;lambda&gt;(x, y)
-----&gt; 1 lp = lambda x, y: model.logp({'group_effects': [[[0, 0, 0]]], 'sg': x, 'effects':[[y, y, y]], 's': [.05]})
-      2 lp = np.vectorize(lp)
-
-
-/Users/fonnescj/GitHub/pymc3/pymc3/model.py in __call__(self, *args, **kwargs)
-    323     def __call__(self, *args, **kwargs):
-    324         point = Point(model=self.model, *args, **kwargs)
---&gt; 325         return self.f(**point)
-    326 
-    327 compilef = fastfn
-
-
-/usr/local/lib/python3.4/site-packages/theano/compile/function_module.py in __call__(self, *args, **kwargs)
-    579                     raise TypeError("Missing required input: %s" %
-    580                                     getattr(self.inv_finder[c], 'variable',
---&gt; 581                                             self.inv_finder[c]))
-    582                 if c.provided &gt; 1:
-    583                     raise TypeError("Multiple values for input: %s" %
-
-
-TypeError: Missing required input: sg_interval
+&lt;matplotlib.contour.QuadContourSet instance at 0x7ffe77d0ccf8&gt;
 </code></pre>
+<p><img alt="png" src="../hierarchical_files/hierarchical_8_1.png" /></p>
 <p>best of 3: 6.94 s per loop</p>
-<pre><code>tr = sample(3e3, step, model=model)
-
- [-----------------100%-----------------] 3000 of 3000 complete in 33.2 sec
-
-
-tr.varnames
-
-
-
-
-['group_effects', 'sg_interval', 'effects', 's_interval', 'sg', 's']
-
-
-
-
-traceplot(tr, vars=['s_interval', 's'])
-
-
-
-
-array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x1157a6b00&gt;,
-        &lt;matplotlib.axes._subplots.AxesSubplot object at 0x115814240&gt;],
-       [&lt;matplotlib.axes._subplots.AxesSubplot object at 0x1158556a0&gt;,
-        &lt;matplotlib.axes._subplots.AxesSubplot object at 0x1158a1940&gt;]], dtype=object)
-</code></pre>
-<p><img alt="png" src="../hierarchical_files/hierarchical_12_1.png" /></p>
 <pre><code>%prun -q -D sample_nuts.prof sample(3e3, step, model=model)
 
  [-----------------100%-----------------] 3000 of 3000 complete in 74.1 sec 
@@ -403,7 +328,7 @@ array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x1157a6b00&gt;,
 
 traceplot(trace);
 </code></pre>
-<p><img alt="png" src="../hierarchical_files/hierarchical_15_0.png" /></p></div>
+<p><img alt="png" src="../hierarchical_files/hierarchical_12_0.png" /></p></div>
             
         </div>
 
