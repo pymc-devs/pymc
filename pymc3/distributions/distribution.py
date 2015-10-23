@@ -131,7 +131,6 @@ def draw_values(params, point=None):
             if param.name in named_nodes:
                 named_nodes.pop(param.name)
             for name, node in named_nodes.items():
-                # print name
                 givens[name] = (node, draw_value(node, point=point))
     values = [None for _ in params]
     for i, param in enumerate(params):
