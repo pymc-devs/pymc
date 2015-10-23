@@ -912,7 +912,7 @@ class Bound(object):
 
         return Bounded(first, self.distribution, self.lower, self.upper, *args, **kwargs)
 
-    def dist(*args, **kwargs):
+    def dist(self, *args, **kwargs):
         return Bounded.dist(self.distribution, self.lower, self.upper, *args, **kwargs)
 
 
