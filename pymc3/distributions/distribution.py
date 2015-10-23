@@ -3,7 +3,9 @@ import numpy as np
 from ..model import Model
 
 from theano import function
+from ..memoize import memoize
 from ..model import get_named_nodes
+
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete', 'NoDistribution', 'TensorType']
 
@@ -127,6 +129,7 @@ def draw_values(params, point=None):
             if param.name in named_nodes:
                 named_nodes.pop(param.name)
             for name, node in named_nodes.items():
+                # print name
                 givens[name] = (node, draw_value(node, point=point))
     values = [None for _ in params]
     for i, param in enumerate(params):
@@ -137,7 +140,27 @@ def draw_values(params, point=None):
     else:
         return values
 
-def draw_value(param, point=None, givens={}):
+
+@memoize
+def _compile_theano_function(param, vars):
+    """Compile theano function for a given parameter and input variables.
+
+    This function is memoized to avoid repeating costly theano compilations
+    when repeatedly drawing values, which is done when generating posterior
+    predictive samples.
+
+    :param param: Model variable from which to draw value
+    :param vars: Children variables of `param`
+    :return: A compiled theano function that takes the values of `vars` as
+        input positional args
+    """
+    return function(vars, param,
+                    rebuild_strict=True,
+                    on_unused_input='ignore',
+                    allow_input_downcast=True)
+
+
+def draw_value(param, point=None, givens=None):
     if hasattr(param, 'name'):
         if hasattr(param, 'model'):
             if point is not None and param.name in point:
@@ -147,11 +170,9 @@ def draw_value(param, point=None, givens={}):
             else:
                 value = param.tag.test_value
         else:
-            value = function([], param,
-                             givens=givens,
-                             rebuild_strict=True,
-                             on_unused_input='ignore',
-                             allow_input_downcast=True)()
+            input_args = [g[0] for g in givens]
+            input_vals = [g[1] for g in givens]
+            value = _compile_theano_function(param, input_args)(*input_vals)
     else:
         value = param
     # Sanitising values may be necessary.

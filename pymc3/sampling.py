@@ -6,10 +6,10 @@ from time import time
 from .core import *
 from .step_methods import *
 from .progressbar import progress_bar
-from numpy.random import seed
+from numpy.random import randint, seed
 from collections import defaultdict
 
-__all__ = ['sample', 'iter_sample']
+__all__ = ['sample', 'iter_sample', 'sample_ppc']
 
 def assign_step_methods(model, step=None,
         methods=(NUTS, HamiltonianMC, Metropolis, BinaryMetropolis, 
@@ -299,3 +299,29 @@ def _soft_update(a, b):
     """As opposed to dict.update, don't overwrite keys if present.
     """
     a.update({k: v for k, v in b.items() if k not in a})
+
+
+def sample_ppc(trace, samples=100, model=None, vars=None):
+    """Generate posterior predictive samples from a model given a trace.
+
+    :param trace: Trace generated from MCMC sampling
+    :param samples: Number of posterior predictive samples to generate
+    :param model: Model used to generate `trace`
+    :param vars: Variables for which to compute the posterior predictive
+        samples. Defaults to `model.observed_RVs`.
+    :return: Dictionary keyed by `vars`, where the values are the corresponding
+        posterior predictive samples.
+    """
+    if model is None:
+        model = modelcontext(model)
+
+    if vars is None:
+        vars = model.observed_RVs
+
+    ppc = defaultdict(list)
+    for idx in randint(0, len(trace), samples):
+        param = trace[idx]
+        for var in vars:
+            ppc[var.name].append(var.distribution.random(point=param))
+
+    return ppc
