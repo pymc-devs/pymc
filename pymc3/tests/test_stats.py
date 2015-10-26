@@ -1,9 +1,15 @@
 from ..stats import *
 from .models import Model, Normal, Metropolis
 import numpy as np
+import numpy.testing as npt
+import pandas as pd
 import pymc3 as pm
+from pymc3.tests import backend_fixtures as bf
+from pymc3.backends import ndarray
 from numpy.random import random, normal, seed
 from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
+from scipy import stats as st
+import warnings
 
 seed(111)
 normal_sample = normal(0, 1, 1000000)
@@ -15,6 +21,45 @@ def test_autocorr():
 
     y = [(normal_sample[i-1] + normal_sample[i])/2 for i in range(1, len(normal_sample))]
     assert_almost_equal(autocorr(y), 0.5, 2)
+
+def test_dic():
+    """Test deviance information criterion calculation"""
+    x_obs = np.arange(6)
+
+    with pm.Model() as model:
+        p = pm.Beta('p', 1., 1., transform=None)
+        x = pm.Binomial('x', 5, p, observed=x_obs)
+
+        step = pm.Metropolis()
+        trace = pm.sample(100, step)
+
+    calculated = dic(model, trace)
+
+    mean_deviance = -2 * st.binom.logpmf(np.repeat(np.atleast_2d(x_obs), 100, axis=0), 5,
+                                         np.repeat(np.atleast_2d(trace['p']), 6, axis=0).T).sum(axis=1).mean()
+    deviance_at_mean = -2 * st.binom.logpmf(x_obs, 5, trace['p'].mean()).sum()
+    actual = 2 * mean_deviance - deviance_at_mean
+
+    assert_almost_equal(calculated, actual, decimal=2)
+
+def test_dic_warns_on_transformed_rv():
+    """
+    Test that deviance information criterion calculation warns when an RV is transformed
+    See https://github.com/pymc-devs/pymc3/issues/789
+    """
+    x_obs = np.arange(6)
+
+    with pm.Model() as model:
+        p = pm.Beta('p', 1., 1.)
+        x = pm.Binomial('x', 5, p, observed=x_obs)
+
+        step = pm.Metropolis()
+        trace = pm.sample(100, step)
+
+    with warnings.catch_warnings(record=True) as w:
+        calculated = dic(model, trace)
+
+        assert(len(w) == 1)
 
 def test_hpd():
     """Test HPD calculation"""
@@ -196,6 +241,20 @@ def test_stats_output_lines_2d_variable():
     assert result == expected
 
 
+def test_stats_output_HPD_interval_format():
+    roundto = 1
+    x = np.arange(5)
+    summ = pm.stats._StatSummary(roundto, 5, 0.05)
+    expected = '  Mean             SD               MC Error         95% HPD interval'
+    result = list(summ._get_lines(x))
+    assert result[0] == expected
+
+    summ = pm.stats._StatSummary(roundto, 5, 0.001)
+    expected = '  Mean             SD               MC Error         99.9% HPD interval'
+    result = list(summ._get_lines(x))
+    assert result[0] == expected
+
+
 def test_posterior_quantiles_output_lines_0d_variable():
     roundto = 1
     x = np.arange(5)
@@ -280,3 +339,50 @@ def test_groupby_leading_idxs_3d_variable():
     assert len(keys) == len(expected_keys)
     for key in keys:
         assert result[key] == [key + (0,), key + (1,)]
+
+
+class TestDfSummary(bf.ModelBackendSampledTestCase):
+    backend = ndarray.NDArray
+    name = 'text-db'
+    shape = (2, 3)
+
+    def test_column_names(self):
+        ds = df_summary(self.mtrace, batches=3)
+        npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
+                                   'hpd_5', 'hpd_95']),
+                         ds.columns)
+
+    def test_column_names_decimal_hpd(self):
+        ds = df_summary(self.mtrace, batches=3, alpha=0.001)
+        npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
+                                   'hpd_0.1', 'hpd_99.9']),
+                         ds.columns)
+
+    def test_column_names_custom_function(self):
+        def customf(x):
+            return pd.Series(np.mean(x, 0), name='my_mean')
+
+        ds = df_summary(self.mtrace, batches=3, stat_funcs=[customf])
+        npt.assert_equal(np.array(['my_mean']), ds.columns)
+
+    def test_column_names_custom_function_extend(self):
+        def customf(x):
+            return pd.Series(np.mean(x, 0), name='my_mean')
+
+        ds = df_summary(self.mtrace, batches=3,
+                        stat_funcs=[customf], extend=True)
+        npt.assert_equal(np.array(['mean', 'sd', 'mc_error',
+                                   'hpd_5', 'hpd_95', 'my_mean']),
+                         ds.columns)
+
+    def test_value_alignment(self):
+        mtrace = self.mtrace
+        ds = df_summary(mtrace, batches=3)
+        for var in mtrace.varnames:
+            result = mtrace[var].mean(0)
+            for idx, val in np.ndenumerate(result):
+                if idx:
+                    vidx = var + '__' + '_'.join([str(i) for i in idx])
+                else:
+                    vidx = var
+                npt.assert_equal(val, ds.loc[vidx, 'mean'])

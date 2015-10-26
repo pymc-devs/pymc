@@ -2,6 +2,7 @@
 
 from ..core import *
 from .arraystep import *
+from ..distributions import *
 from numpy import floor, abs, atleast_1d, empty, isfinite, sum
 from numpy.random import standard_exponential, random, uniform
 
@@ -9,7 +10,21 @@ __all__ = ['Slice']
 
 
 class Slice(ArrayStep):
-    """Slice sampler"""
+    """
+    Univariate slice sampler step method
+    
+    Parameters
+    ----------
+    vars : list
+        List of variables for sampler.
+    w : float
+        Initial width of slice (Defaults to 1).
+    tune : bool
+        Flag for tuning (Defaults to True).
+    model : PyMC Model
+        Optional model for sampling step. Defaults to None (taken from context).
+    
+    """
     default_blocked = False
     def __init__(self, vars=None, w=1, tune=True, model=None, **kwargs):
 
@@ -72,3 +87,11 @@ class Slice(ArrayStep):
             self.w = 2 * sum(self.w_tune, 0) / len(self.w_tune)
 
         return q
+
+    @staticmethod
+    def competence(var):
+        if var.dtype in continuous_types:
+            if not var.shape:
+                return Competence.preferred
+            return Competence.compatible
+        return Competence.incompatible

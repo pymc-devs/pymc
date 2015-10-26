@@ -1,6 +1,10 @@
 from .dist_math import *
 from theano.tensor import as_tensor_variable
+from .distribution import draw_values, generate_samples
 import theano
+import scipy.stats as st
+import numpy as np
+import numpy.random as nr
 
 __all__ = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson', 'NegativeBinomial',
 'ConstantDist', 'ZeroInflatedPoisson', 'DiscreteUniform', 'Geometric',
@@ -33,6 +37,12 @@ class Binomial(Discrete):
         self.n = n
         self.p = p
         self.mode = cast(round(n * p), self.dtype)
+
+    def random(self, point=None, size=None, repeat=None):
+        n, p = draw_values([self.n, self.p], point=point)
+        return generate_samples(st.binom.rvs, n=n, p=p,
+                                dist_shape=self.shape,
+                                size=size)
 
     def logp(self, value):
         n = self.n
@@ -78,6 +88,25 @@ class BetaBin(Discrete):
         self.n = n
         self.mode = cast(round(alpha / (alpha + beta)), 'int8')
 
+    def _random(self, alpha, beta, n, size=None):
+        size = size or 1
+        p = np.atleast_1d(st.beta.rvs(a=alpha, b=beta, size=np.prod(size)))
+        # Sometimes scipy.beta returns nan. Ugh.
+        while np.any(np.isnan(p)):
+            i = np.isnan(p)
+            p[i] = st.beta.rvs(a=alpha, b=beta, size=np.sum(i))
+        # Sigh...
+        _n, _p, _size = np.atleast_1d(n).flatten(), p.flatten(), np.prod(size)
+        samples = np.reshape(st.binom.rvs(n=_n, p=_p, size=_size), size)
+        return samples
+
+    def random(self, point=None, size=None, repeat=None):
+        alpha, beta, n = \
+            draw_values([self.alpha, self.beta, self.n], point=point)
+        return generate_samples(self._random, alpha=alpha, beta=beta, n=n,
+                                dist_shape=self.shape,
+                                size=size)
+
     def logp(self, value):
         alpha = self.alpha
         beta = self.beta
@@ -115,6 +144,12 @@ class Bernoulli(Discrete):
         self.p = p
         self.mode = cast(round(p), 'int8')
 
+    def random(self, point=None, size=None, repeat=None):
+        p = draw_values([self.p], point=point)
+        return generate_samples(st.bernoulli.rvs, p,
+                                dist_shape=self.shape,
+                                size=size)
+
     def logp(self, value):
         p = self.p
         return bound(
@@ -151,12 +186,16 @@ class Poisson(Discrete):
         self.mu = mu
         self.mode = floor(mu).astype('int32')
 
+    def random(self, point=None, size=None, repeat=None):
+        mu = draw_values([self.mu], point=point)
+        return generate_samples(st.poisson.rvs, mu, 
+                                dist_shape=self.shape,
+                                size=size)
+
     def logp(self, value):
         mu = self.mu
-
         return bound(
             logpow(mu, value) - factln(value) - mu,
-
             mu >= 0, value >= 0)
 
 
@@ -187,6 +226,14 @@ class NegativeBinomial(Discrete):
         self.mu = mu
         self.alpha = alpha
         self.mode = floor(mu).astype('int32')
+
+    def random(self, point=None, size=None, repeat=None):
+        mu, alpha = draw_values([self.mu, self.alpha], point=point)
+        g = generate_samples(st.gamma.rvs, alpha, scale=alpha / mu,
+                             dist_shape=self.shape,
+                             size=size)
+        g[g == 0] = np.finfo(float).eps# Just in case
+        return st.poisson.rvs(g)
 
     def logp(self, value):
         mu = self.mu
@@ -228,6 +275,12 @@ class Geometric(Discrete):
         self.p = p
         self.mode = 1
 
+    def random(self, point=None, size=None, repeat=None):
+        p = draw_values([self.p], point=point)
+        return generate_samples(nr.geometric, p,
+                                dist_shape=self.shape, 
+                                size=size)
+
     def logp(self, value):
         p = self.p
         return bound(log(p) + logpow(1 - p, value - 1),
@@ -253,6 +306,18 @@ class DiscreteUniform(Discrete):
         super(DiscreteUniform, self).__init__(*args, **kwargs)
         self.lower, self.upper = floor(lower).astype('int32'), floor(upper).astype('int32')
         self.mode = floor((upper - lower) / 2.).astype('int32')
+
+    def _random(self, lower, upper, size=None):
+        # This way seems to be the only to deal with lower and upper as array-like.
+        samples = st.uniform.rvs(lower, upper - lower - np.finfo(float).eps, size=size)
+        return np.floor(samples).astype('int32')
+
+    def random(self, point=None, size=None, repeat=None):
+        lower, upper = draw_values([self.lower, self.upper], point=point)
+        return generate_samples(self._random,
+                                lower, upper,
+                                dist_shape=self.shape,
+                                size=size)
 
     def logp(self, value):
         upper = self.upper
@@ -280,9 +345,17 @@ class Categorical(Discrete):
     """
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
-        self.k = p.shape[0]
+        self.k = np.shape(p)[-1]
         self.p = as_tensor_variable(p)
         self.mode = argmax(p)
+
+    def random(self, point=None, size=None, repeat=None):
+        p, k = draw_values([self.p, self.k], point=point)
+        return generate_samples(lambda p, size=None: nr.choice(np.arange(k), p=p, size=size),
+                                p=p,
+                                broadcast_shape=p.shape[:-1] or (1,),
+                                dist_shape=self.shape,
+                                size=size)
 
     def logp(self, value):
         p = self.p
@@ -311,6 +384,14 @@ class ConstantDist(Discrete):
         super(ConstantDist, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c
 
+    def random(self, point=None, size=None, repeat=None):
+        c = draw_values([self.c], point=point)
+        dtype = np.array(c).dtype
+        return generate_samples(lambda c=None, dtype=dtype, size=None: np.ones(shape=size, dtype=dtype) * c, 
+                                c=c,
+                                dist_shape=self.shape,
+                                size=size).astype(dtype)
+
     def logp(self, value):
         c = self.c
         return bound(0, eq(value, c))
@@ -324,6 +405,11 @@ class ZeroInflatedPoisson(Discrete):
         self.pois = Poisson.dist(theta)
         self.const = ConstantDist.dist(0)
         self.mode = self.pois.mode
+
+    def random(self, point=None, size=None, repeat=None):
+        theta = draw_values([self.theta], point=point)
+        # To do: Finish me
+        return None
 
     def logp(self, value):
         z = self.z

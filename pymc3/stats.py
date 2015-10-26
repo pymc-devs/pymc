@@ -1,9 +1,16 @@
 """Utility functions for PyMC"""
 
 import numpy as np
+import pandas as pd
 import itertools
+import sys
+import warnings
 
-__all__ = ['autocorr', 'autocov', 'hpd', 'quantiles', 'mc_error', 'summary']
+
+from .backends import tracetab as ttab
+
+__all__ = ['autocorr', 'autocov', 'dic', 'hpd', 'quantiles', 'mc_error',
+           'summary', 'df_summary']
 
 def statfunc(f):
     """
@@ -65,6 +72,26 @@ def autocov(x, lag=1):
     if lag < 0:
         raise ValueError("Autocovariance lag must be a positive integer")
     return np.cov(x[:-lag], x[lag:], bias=1)
+
+def dic(model, trace):
+    """
+    Calculate the deviance information criterion of the samples in trace from model
+    """
+    transformed_rvs = [rv for rv in model.free_RVs if hasattr(rv.distribution, 'transform_used')]
+    if transformed_rvs:
+        warnings.warn("""
+            DIC estimates are biased for models that include transformed random variables.
+            See https://github.com/pymc-devs/pymc3/issues/789.
+            The following random variables are the result of transformations:
+            {}
+        """.format(', '.join(rv.name for rv in transformed_rvs)))
+
+    mean_deviance = -2 * np.mean([model.logp(pt) for pt in trace])
+
+    free_rv_means = {rv.name: trace[rv.name].mean(axis=0) for rv in model.free_RVs}
+    deviance_at_mean = -2 * model.logp(free_rv_means)
+
+    return 2 * mean_deviance - deviance_at_mean
 
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
@@ -232,7 +259,111 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
         print("Too few elements for quantile calculation")
 
 
-def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
+def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
+               alpha=0.05, batches=100):
+    """Create a data frame with summary statistics.
+
+    Parameters
+    ----------
+    trace : MultiTrace instance
+    varnames : list
+        Names of variables to include in summary
+    stat_funcs : None or list
+        A list of functions used to calculate statistics. By default,
+        the mean, standard deviation, simulation standard error, and
+        highest posterior density intervals are included.
+
+        The functions will be given one argument, the samples for a
+        variable as a 2 dimensional array, where the first axis
+        corresponds to sampling iterations and the second axis
+        represents the flattened variable (e.g., x__0, x__1,...). Each
+        function should return either
+        1) A `pandas.Series` instance containing the result of
+           calculating the statistic along the first axis. The name
+           attribute will be taken as the name of the statistic.
+        2) A `pandas.DataFrame` where each column contains the
+           result of calculating the statistic along the first axis.
+           The column names will be taken as the names of the
+           statistics.
+    extend : boolean
+        If True, use the statistics returned by `stat_funcs` in
+        addition to, rather than in place of, the default statistics.
+        This is only meaningful when `stat_funcs` is not None.
+    alpha : float
+        The alpha level for generating posterior intervals. Defaults
+        to 0.05. This is only meaningful when `stat_funcs` is None.
+    batches : int
+        Batch size for calculating standard deviation for
+        non-independent samples. Defaults to 100. This is only
+        meaningful when `stat_funcs` is None.
+
+
+    See also
+    --------
+    summary : Generate a pretty-printed summary of a trace.
+
+
+    Returns
+    -------
+    `pandas.DataFrame` with summary statistics for each variable
+
+
+    Examples
+    --------
+
+    >>> import pymc3 as pm
+    >>> trace.mu.shape
+    (1000, 2)
+    >>> pm.df_summary(trace, ['mu'])
+               mean        sd  mc_error     hpd_5    hpd_95
+    mu__0  0.106897  0.066473  0.001818 -0.020612  0.231626
+    mu__1 -0.046597  0.067513  0.002048 -0.174753  0.081924
+
+    Other statistics can be calculated by passing a list of functions.
+
+    >>> import pandas as pd
+    >>> def trace_sd(x):
+    ...     return pd.Series(np.std(x, 0), name='sd')
+    ...
+    >>> def trace_quantiles(x):
+    ...     return pd.DataFrame(pm.quantiles(x, [5, 50, 95]))
+    ...
+    >>> pm.df_summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
+                 sd         5        50        95
+    mu__0  0.066473  0.000312  0.105039  0.214242
+    mu__1  0.067513 -0.159097 -0.045637  0.062912
+    """
+    if varnames is None:
+        varnames = trace.varnames
+
+    funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
+             lambda x: pd.Series(np.std(x, 0), name='sd'),
+             lambda x: pd.Series(mc_error(x, batches), name='mc_error'),
+             lambda x: _hpd_df(x, alpha)]
+
+    if stat_funcs is not None and extend:
+        stat_funcs = funcs + stat_funcs
+    elif stat_funcs is None:
+        stat_funcs = funcs
+
+    var_dfs = []
+    for var in varnames:
+        vals = trace.get_values(var, combine=True)
+        flat_vals = vals.reshape(vals.shape[0], -1)
+        var_df = pd.concat([f(flat_vals) for f in stat_funcs], axis=1)
+        var_df.index = ttab.create_flat_names(var, vals.shape[1:])
+        var_dfs.append(var_df)
+    return pd.concat(var_dfs, axis=0)
+
+
+def _hpd_df(x, alpha):
+    cnames = ['hpd_{0:g}'.format(100 * alpha),
+              'hpd_{0:g}'.format(100 * (1 - alpha))]
+    return pd.DataFrame(hpd(x, alpha), columns=cnames)
+
+
+def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3,
+            to_file=None):
     """
     Generate a pretty-printed summary of the node.
 
@@ -259,6 +390,9 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
     roundto : int
       The number of digits to round posterior statistics.
 
+    tofile : None or string
+      File to write results to. If not given, print to stdout.
+
     """
     if vars is None:
         vars = trace.varnames
@@ -266,16 +400,22 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3):
     stat_summ = _StatSummary(roundto, batches, alpha)
     pq_summ = _PosteriorQuantileSummary(roundto, alpha)
 
+    if to_file is None:
+        fh = sys.stdout
+    else:
+        fh = open(to_file, mode='w')
+
     for var in vars:
         # Extract sampled values
         sample = trace.get_values(var, burn=start, combine=True)
 
-        print('\n%s:' % var)
-        print(' ')
+        fh.write('\n%s:\n\n' % var)
 
-        stat_summ.print_output(sample)
-        pq_summ.print_output(sample)
+        fh.write(stat_summ.output(sample))
+        fh.write(pq_summ.output(sample))
 
+    if fh is not sys.stdout:
+        fh.close()
 
 class _Summary(object):
     """Base class for summary output"""
@@ -286,8 +426,8 @@ class _Summary(object):
         self.spaces = None
         self.width = None
 
-    def print_output(self, sample):
-        print('\n'.join(list(self._get_lines(sample))) + '\n')
+    def output(self, sample):
+        return '\n'.join(list(self._get_lines(sample))) + '\n\n'
 
     def _get_lines(self, sample):
         for line in self.header_lines:
@@ -327,7 +467,7 @@ class _StatSummary(_Summary):
     def __init__(self, roundto, batches, alpha):
         super(_StatSummary, self).__init__(roundto)
         spaces = 17
-        hpd_name = '{}% HPD interval'.format(int(100 * (1 - alpha)))
+        hpd_name = '{0:g}% HPD interval'.format(100 * (1 - alpha))
         value_line = '{mean:<{pad}}{sd:<{pad}}{mce:<{pad}}{hpd:<{pad}}'
         header = value_line.format(mean='Mean', sd='SD', mce='MC Error',
                                   hpd=hpd_name, pad=spaces).strip()

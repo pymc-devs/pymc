@@ -8,6 +8,9 @@ from . import transforms
 from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
 from theano.tensor import dot, cast, eye, diag, eq, le, ge, gt, all
 from theano.printing import Print
+from pymc3.distributions.distribution import draw_values, generate_samples
+import scipy.stats as st
+import numpy.random as nr
 
 __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart', 'LKJCorr']
 
@@ -29,6 +32,16 @@ class MvNormal(Continuous):
         super(MvNormal, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
         self.tau = tau
+
+    def random(self, point=None, size=None):
+        mu, tau = draw_values([self.mu, self.tau], point=point)
+        samples = generate_samples(lambda mean, cov, size=None: \
+                                    st.multivariate_normal.rvs(mean, cov, None if size == mean.shape else size),
+                                   mean=mu, cov=tau,
+                                   dist_shape=self.shape,
+                                   broadcast_shape=mu.shape,
+                                   size=size)
+        return samples
 
     def logp(self, value):
         mu = self.mu
@@ -67,22 +80,33 @@ class Dirichlet(Continuous):
         as a parent of Multinomial and Categorical nevertheless.
     """
     def __init__(self, a, transform=transforms.stick_breaking, *args, **kwargs):
+        self.k = shape = a.shape[0]
+        if "shape" not in kwargs.keys():
+            kwargs.update({"shape": shape})
         super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
         self.a = a
-        self.k = a.shape[0]
         self.mean = a / sum(a)
 
         self.mode = switch(all(a > 1),
                            (a - 1) / sum(a - 1),
                            nan)
 
+    def random(self, point=None, size=None):
+        a = draw_values([self.a], point=point)
+        samples = generate_samples(lambda a, size=None: \
+                                    st.dirichlet.rvs(a, None if size == a.shape else size),
+                                   a,
+                                   dist_shape=self.shape,
+                                   size=size)
+        return samples
+    
     def logp(self, value):
         k = self.k
         a = self.a
 
         # only defined for sum(value) == 1
         return bound(
-            sum(logpow(value, a - 1) - gammaln(a), axis=0) + gammaln(sum(a)),
+            sum(logpow(value, a - 1) - gammaln(a), axis=0) + gammaln(sum(a, axis=0)),
             k > 1,
             all(a > 0),
             all(value >= 0),
@@ -123,6 +147,18 @@ class Multinomial(Discrete):
         self.p = p
         self.mean = n * p
         self.mode = cast(round(n * p), 'int32')
+
+    def _random(self, n, p, size=None):
+        if size == p.shape:
+            size = None
+        return nr.multinomial(n, p, size=size)
+    
+    def random(self, point=None, size=None):
+        n, p = draw_values([self.n, self.p], point=point)
+        samples = generate_samples(self._random, n, p,
+                                   dist_shape=self.shape,
+                                   size=size)
+        return samples
 
     def logp(self, x):
         n = self.n

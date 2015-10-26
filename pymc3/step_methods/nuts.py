@@ -4,6 +4,7 @@ from ..core import *
 from numpy import exp, log
 from numpy.random import uniform
 from .hmc import leapfrog, Hamiltonian, bern, energy
+from ..distributions import *
 from ..tuning import guess_scaling
 import theano
 from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor
@@ -87,7 +88,7 @@ class NUTS(ArrayStepShared):
 
         self.Hbar = 0
         self.u = log(self.step_size*10)
-        self.m = 0
+        self.m = 1
 
 
 
@@ -136,6 +137,12 @@ class NUTS(ArrayStepShared):
 
         return q
 
+    @staticmethod
+    def competence(var):
+        if var.dtype in continuous_types:
+            return Competence.ideal
+        return Competence.incompatible
+            
 
 def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):
     if j == 0:
