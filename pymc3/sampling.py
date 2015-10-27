@@ -301,16 +301,28 @@ def _soft_update(a, b):
     a.update({k: v for k, v in b.items() if k not in a})
 
 
-def sample_ppc(trace, samples=100, model=None, vars=None):
+def sample_ppc(trace, samples=100, model=None, vars=None, size=None):
     """Generate posterior predictive samples from a model given a trace.
 
-    :param trace: Trace generated from MCMC sampling
-    :param samples: Number of posterior predictive samples to generate
-    :param model: Model used to generate `trace`
-    :param vars: Variables for which to compute the posterior predictive
-        samples. Defaults to `model.observed_RVs`.
-    :return: Dictionary keyed by `vars`, where the values are the corresponding
-        posterior predictive samples.
+    Parameters
+    ----------
+    trace : backend, list, or MultiTrace
+        Trace generated from MCMC sampling
+    samples : int
+        Number of posterior predictive samples to generate
+    model : Model (optional if in `with` context)
+        Model used to generate `trace`
+    vars : iterable
+        Variables for which to compute the posterior predictive samples.
+        Defaults to `model.observed_RVs`.
+    size : int
+        The number of random draws from the distribution specified by the
+        parameters in each sample of the trace.
+
+    Returns
+    -------
+    Dictionary keyed by `vars`, where the values are the corresponding
+    posterior predictive samples.
     """
     if model is None:
         model = modelcontext(model)
@@ -322,6 +334,7 @@ def sample_ppc(trace, samples=100, model=None, vars=None):
     for idx in randint(0, len(trace), samples):
         param = trace[idx]
         for var in vars:
-            ppc[var.name].append(var.distribution.random(point=param))
+            ppc[var.name].append(var.distribution.random(point=param,
+                                                         size=size))
 
     return ppc

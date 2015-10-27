@@ -150,10 +150,15 @@ def _compile_theano_function(param, vars):
     when repeatedly drawing values, which is done when generating posterior
     predictive samples.
 
-    :param param: Model variable from which to draw value
-    :param vars: Children variables of `param`
-    :return: A compiled theano function that takes the values of `vars` as
-        input positional args
+    Parameters
+    ----------
+    param : Model variable from which to draw value
+    vars : Children variables of `param`
+
+    Returns
+    -------
+    A compiled theano function that takes the values of `vars` as input
+        positional args
     """
     return function(vars, param,
                     rebuild_strict=True,
@@ -223,7 +228,6 @@ def replicate_samples(generator, size, repeats, *args, **kwargs):
                             for _ in range(n)])
         samples = np.reshape(samples, tuple(repeats) + tuple(size))
     return samples
-
 
 
 def generate_samples(generator, *args, **kwargs):
