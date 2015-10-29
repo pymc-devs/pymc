@@ -32,8 +32,7 @@ def test_dic():
 
         step = pm.Metropolis()
         trace = pm.sample(100, step)
-
-    calculated = dic(model, trace)
+        calculated = pm.dic(trace)
 
     mean_deviance = -2 * st.binom.logpmf(np.repeat(np.atleast_2d(x_obs), 100, axis=0), 5,
                                          np.repeat(np.atleast_2d(trace['p']), 6, axis=0).T).sum(axis=1).mean()
@@ -57,9 +56,29 @@ def test_dic_warns_on_transformed_rv():
         trace = pm.sample(100, step)
 
     with warnings.catch_warnings(record=True) as w:
-        calculated = dic(model, trace)
+        calculated = pm.dic(trace, model)
 
         assert(len(w) == 1)
+
+def test_waic():
+    """Test widely available information criterion calculation"""
+    x_obs = np.arange(6)
+
+    with pm.Model() as model:
+        p = pm.Beta('p', 1., 1., transform=None)
+        x = pm.Binomial('x', 5, p, observed=x_obs)
+
+        step = pm.Metropolis()
+        trace = pm.sample(100, step)
+        calculated = pm.waic(trace)
+
+    log_py = st.binom.logpmf(np.atleast_2d(x_obs).T, 5, trace['p']).T
+    
+    lppd =  np.sum(np.log(np.mean(np.exp(log_py), axis=0)))
+    p_waic = np.sum(np.var(log_py, axis=0))
+    actual = -2 * lppd + 2 * p_waic
+    
+    assert_almost_equal(calculated, actual, decimal=2)
 
 def test_hpd():
     """Test HPD calculation"""

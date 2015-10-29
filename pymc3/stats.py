@@ -5,11 +5,12 @@ import pandas as pd
 import itertools
 import sys
 import warnings
+from .model import modelcontext
 
 
 from .backends import tracetab as ttab
 
-__all__ = ['autocorr', 'autocov', 'dic', 'hpd', 'quantiles', 'mc_error',
+__all__ = ['autocorr', 'autocov', 'dic', 'waic', 'hpd', 'quantiles', 'mc_error',
            'summary', 'df_summary']
 
 def statfunc(f):
@@ -73,10 +74,12 @@ def autocov(x, lag=1):
         raise ValueError("Autocovariance lag must be a positive integer")
     return np.cov(x[:-lag], x[lag:], bias=1)
 
-def dic(model, trace):
+def dic(trace, model=None):
     """
     Calculate the deviance information criterion of the samples in trace from model
     """
+    model = modelcontext(model)
+
     transformed_rvs = [rv for rv in model.free_RVs if hasattr(rv.distribution, 'transform_used')]
     if transformed_rvs:
         warnings.warn("""
@@ -92,6 +95,32 @@ def dic(model, trace):
     deviance_at_mean = -2 * model.logp(free_rv_means)
 
     return 2 * mean_deviance - deviance_at_mean
+
+def waic(trace, model=None):
+    """
+    Calculate the widely available information criterion of the samples in trace from model.
+    """
+    model = modelcontext(model)
+    
+    transformed_rvs = [rv for rv in model.free_RVs if hasattr(rv.distribution, 'transform_used')]
+    if transformed_rvs:
+        warnings.warn("""
+            WAIC estimates are biased for models that include transformed random variables.
+            See https://github.com/pymc-devs/pymc3/issues/789.
+            The following random variables are the result of transformations:
+            {}
+        """.format(', '.join(rv.name for rv in transformed_rvs)))
+    
+    log_py = []
+    for obs in model.observed_RVs:
+        log_py.append([obs.logp_elemwise(pt) for pt in trace ])
+    log_py = np.hstack(log_py)
+   
+    lppd =  np.sum(np.log(np.mean(np.exp(log_py), axis=0)))
+        
+    p_waic = np.sum(np.var(log_py, axis=0))
+    
+    return -2 * lppd + 2 * p_waic
 
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
@@ -259,14 +288,14 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
         print("Too few elements for quantile calculation")
 
 
-def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
+def df_summary(trace, vars=None, stat_funcs=None, extend=False,
                alpha=0.05, batches=100):
     """Create a data frame with summary statistics.
 
     Parameters
     ----------
     trace : MultiTrace instance
-    varnames : list
+    vars : list
         Names of variables to include in summary
     stat_funcs : None or list
         A list of functions used to calculate statistics. By default,
@@ -333,8 +362,8 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
     mu__0  0.066473  0.000312  0.105039  0.214242
     mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
-    if varnames is None:
-        varnames = trace.varnames
+    if vars is None:
+        vars = trace.varnames
 
     funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
              lambda x: pd.Series(np.std(x, 0), name='sd'),
@@ -347,7 +376,7 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
         stat_funcs = funcs
 
     var_dfs = []
-    for var in varnames:
+    for var in vars:
         vals = trace.get_values(var, combine=True)
         flat_vals = vals.reshape(vals.shape[0], -1)
         var_df = pd.concat([f(flat_vals) for f in stat_funcs], axis=1)

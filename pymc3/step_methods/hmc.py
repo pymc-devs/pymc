@@ -28,7 +28,6 @@ def unif(step_size, elow=.85, ehigh=1.15):
 
 class HamiltonianMC(ArrayStep):
     default_blocked = True
-
     def __init__(self, vars=None, scaling=None, step_scale=.25, path_length=2., is_cov=False, step_rand=unif, state=None, model=None, **kwargs):
         """
         Parameters

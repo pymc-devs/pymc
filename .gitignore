@@ -7,3 +7,7 @@ dist/*
 tmtags
 tags
 .DS_Store
+
+# IntelliJ IDE
+.idea
+*.iml
