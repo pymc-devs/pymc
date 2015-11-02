@@ -53,7 +53,8 @@ def logpow(x, m):
     """
     Calculates log(x**m) since m*log(x) will fail when m, x = 0.
     """
-    return switch(eq(x, 0) & eq(m, 0), 0, m * log(x))
+    # return m * log(x)
+    return switch(eq(m, 0), 0, m * log(x))
 
 
 def factln(n):
