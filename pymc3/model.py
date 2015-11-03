@@ -30,6 +30,7 @@ class InstanceMethod(object):
     def __call__(self, *args, **kwargs):
         return getattr(self.obj, self.method_name)(*args, **kwargs)
 
+
 def incorporate_methods(source, destination, methods, default=None,
                         wrapper=None, override=False):
     """
@@ -90,6 +91,7 @@ def _get_named_nodes(graph, nodes):
         for i in graph.owner.inputs:
             nodes.update(_get_named_nodes(i, nodes))
     return nodes
+
 
 class Context(object):
     """Functionality for objects that put themselves in a context using
@@ -165,6 +167,7 @@ class Factor(object):
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         return T.sum(self.logp_elemwiset)
+
 
 class Model(Context, Factor):
     """Encapsulates the variables and likelihood factors of a model.
@@ -429,6 +432,7 @@ def Point(*args, **kwargs):
                 for (k, v) in d.items()
                 if str(k) in map(str, model.vars))
 
+
 class FastPointFunc(object):
     """Wraps so a function so it takes a dict of arguments instead of arguments."""
     def __init__(self, f):
@@ -436,6 +440,7 @@ class FastPointFunc(object):
 
     def __call__(self, state):
         return self.f(**state)
+
 
 class LoosePointFunc(object):
     """Wraps so a function so it takes a dict of arguments instead of arguments
@@ -558,7 +563,7 @@ class ObservedRV(Factor, TensorVariable):
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
 
     @property
-    def init_value(self):
+    def value(self):
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
         
@@ -587,6 +592,7 @@ class MultiObservedRV(Factor):
         self.logp_elemwiset = distribution.logp(**self.data)
         self.model = model
         self.distribution = distribution
+
 
 def Deterministic(name, var, model=None):
     """Create a named deterministic variable
@@ -654,7 +660,7 @@ class TransformedRV(TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
     @property
-    def init_value(self):
+    def value(self):
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
         
