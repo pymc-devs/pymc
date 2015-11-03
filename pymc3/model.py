@@ -558,7 +558,11 @@ class ObservedRV(Factor, TensorVariable):
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
 
     @property
+<<<<<<< 59ec9f6be95474e5e724268a5172d6ccf2ec1e2f
     def init_value(self):
+=======
+    def value(self):
+>>>>>>> Added value attribute to TensorVariable subclasses
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
         
@@ -654,7 +658,11 @@ class TransformedRV(TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
     @property
+<<<<<<< 59ec9f6be95474e5e724268a5172d6ccf2ec1e2f
     def init_value(self):
+=======
+    def value(self):
+>>>>>>> Added value attribute to TensorVariable subclasses
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
         
