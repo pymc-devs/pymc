@@ -1,3 +1,8 @@
+from .vartypes import *
+
+from theano import theano, tensor as t, function
+from theano.tensor.var import TensorVariable
+
 import numpy as np
 import theano
 import theano.tensor as T
@@ -86,7 +91,6 @@ def _get_named_nodes(graph, nodes):
         for i in graph.owner.inputs:
             nodes.update(_get_named_nodes(i, nodes))
     return nodes
-
 
 class Context(object):
     """Functionality for objects that put themselves in a context using
@@ -420,10 +424,12 @@ def Point(*args, **kwargs):
     except Exception as e:
         raise TypeError(
             "can't turn {} and {} into a dict. {}".format(args, kwargs, e))
+            " into a dict. " + str(e))
 
+    varnames = list(map(str, model.vars))
     return dict((str(k), np.array(v)) for k, v in d.items()
+                for (k, v) in d.items()
                 if str(k) in map(str, model.vars))
-
 
 class FastPointFunc(object):
     """Wraps so a function so it takes a dict of arguments instead of arguments."""
@@ -555,7 +561,7 @@ class ObservedRV(Factor, TensorVariable):
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
 
     @property
-    def init_value(self):
+    def value(self):
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
         
@@ -584,7 +590,6 @@ class MultiObservedRV(Factor):
         self.logp_elemwiset = distribution.logp(**self.data)
         self.model = model
         self.distribution = distribution
-
 
 def Deterministic(name, var, model=None):
     """Create a named deterministic variable
@@ -652,7 +657,7 @@ class TransformedRV(TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
     @property
-    def init_value(self):
+    def value(self):
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
         
