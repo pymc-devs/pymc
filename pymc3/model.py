@@ -30,7 +30,6 @@ class InstanceMethod(object):
     def __call__(self, *args, **kwargs):
         return getattr(self.obj, self.method_name)(*args, **kwargs)
 
-
 def incorporate_methods(source, destination, methods, default=None,
                         wrapper=None, override=False):
     """
@@ -166,7 +165,6 @@ class Factor(object):
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         return T.sum(self.logp_elemwiset)
-
 
 class Model(Context, Factor):
     """Encapsulates the variables and likelihood factors of a model.
@@ -439,7 +437,6 @@ class FastPointFunc(object):
     def __call__(self, state):
         return self.f(**state)
 
-
 class LoosePointFunc(object):
     """Wraps so a function so it takes a dict of arguments instead of arguments
     but can still take arguments."""
@@ -561,7 +558,7 @@ class ObservedRV(Factor, TensorVariable):
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
 
     @property
-    def init_value(self):
+    def value(self):
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
         
@@ -657,7 +654,7 @@ class TransformedRV(TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
     @property
-    def init_value(self):
+    def value(self):
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
         
