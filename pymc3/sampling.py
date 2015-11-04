@@ -301,7 +301,7 @@ def _soft_update(a, b):
     a.update({k: v for k, v in b.items() if k not in a})
 
 
-def sample_ppc(trace, samples=100, model=None, vars=None, size=None):
+def sample_ppc(trace, samples=None, model=None, vars=None, size=None):
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -309,7 +309,8 @@ def sample_ppc(trace, samples=100, model=None, vars=None, size=None):
     trace : backend, list, or MultiTrace
         Trace generated from MCMC sampling
     samples : int
-        Number of posterior predictive samples to generate
+        Number of posterior predictive samples to generate. Defaults to the
+        length of `trace`
     model : Model (optional if in `with` context)
         Model used to generate `trace`
     vars : iterable
@@ -324,6 +325,9 @@ def sample_ppc(trace, samples=100, model=None, vars=None, size=None):
     Dictionary keyed by `vars`, where the values are the corresponding
     posterior predictive samples.
     """
+    if samples is None:
+        samples = len(trace)
+
     if model is None:
         model = modelcontext(model)
 
@@ -337,4 +341,4 @@ def sample_ppc(trace, samples=100, model=None, vars=None, size=None):
             ppc[var.name].append(var.distribution.random(point=param,
                                                          size=size))
 
-    return ppc
+    return {k: np.asarray(v) for k, v in ppc.items()}

@@ -29,7 +29,7 @@ class AR1(Continuous):
 
         x_im1 = x[:-1]
         x_i = x[1:]
-        boundary = Normal.dist(0, tau).logp
+        boundary = Normal.dist(0, tau_e).logp
 
         innov_like = Normal.dist(k * x_im1, tau_e).logp(x_i)
         return boundary(x[0]) + sum(innov_like) + boundary(x[-1])
