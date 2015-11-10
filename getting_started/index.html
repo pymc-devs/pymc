@@ -259,8 +259,8 @@ beta = [1, 2.5]
 size = 100
 
 # Predictor variable
-X1 = np.linspace(0, 1, size)
-X2 = np.linspace(0,.2, size)
+X1 = np.random.randn(size)
+X2 = np.random.randn(size) * 0.2
 
 # Simulate outcome variable
 Y = alpha + beta[0]*X1 + beta[1]*X2 + np.random.randn(size)*sigma
@@ -412,7 +412,7 @@ map_estimate = find_MAP(model=basic_model)
 print(map_estimate)
 </code></pre>
 
-<pre><code>{'alpha': array(1.0136638069892536), 'sigma_log': array(0.1192877001001707), 'beta': array([ 1.46791629,  0.29358326])}
+<pre><code>{'alpha': array(0.9065985757590524), 'sigma_log': array(-0.03278147323479127), 'beta': array([ 0.94848596,  2.60705517])}
 </code></pre>
 <p>By default, <code>find_MAP</code> uses the Broyden–Fletcher–Goldfarb–Shanno (BFGS) optimization algorithm to find the maximum of the log-posterior but also allows selection of other optimization algorithms from the <code>scipy.optimize</code> module. For example, below we use Powell's method to find the MAP.</p>
 <pre><code class="python">from scipy import optimize
@@ -422,7 +422,7 @@ map_estimate = find_MAP(model=basic_model, fmin=optimize.fmin_powell)
 print(map_estimate)
 </code></pre>
 
-<pre><code>{'alpha': array(1.0175522109423465), 'sigma_log': array(0.11815106849951475), 'beta': array([ 1.51426782,  0.03520891])}
+<pre><code>{'alpha': array(0.9090521896381477), 'sigma_log': array(-0.030009775415224028), 'beta': array([ 0.95140146,  2.61437458])}
 </code></pre>
 <p>It is important to note that the MAP estimate is not always reasonable, especially if the mode is at an extreme. This can be a subtle issue; with high dimensional posteriors, one can have areas of extremely high density but low total probability because the volume is very small. This will often occur in hierarchical models with the variance parameter for the random effect. If the individual group means are all the same, the posterior will have near infinite density if the scale parameter for the group means is almost zero, even though the probability of such a small scale parameter will be small since the group means must be extremely close together. </p>
 <p>Most techniques for finding the MAP estimate also only find a <em>local</em> optimium (which is often good enough), but can fail badly for multimodal posteriors if the different modes are meaningfully different.</p>
@@ -454,13 +454,13 @@ with basic_model:
 <pre><code>Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to alpha
 Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to beta
 Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to sigma_log
- [-----------------100%-----------------] 2000 of 2000 complete in 6.6 sec
+ [-----------------100%-----------------] 2000 of 2000 complete in 1.4 sec
 </code></pre>
 <p>The <code>sample</code> function runs the step method(s) assigned (or passed) to it for the given number of iterations and returns a <code>Trace</code> object containing the samples collected, in the order they were collected. The <code>trace</code> object can be queried in a similar way to a <code>dict</code> containing a map from variable names to <code>numpy.array</code>s. The first dimension of the array is the sampling index and the later dimensions match the shape of the variable. We can see the last 5 values for the <code>alpha</code> variable as follows:</p>
 <pre><code class="python">trace['alpha'][-5:]
 </code></pre>
 
-<pre><code>array([ 1.27276213,  0.65512572,  0.84469541,  0.76942179,  1.11243309])
+<pre><code>array([ 0.80387719,  0.88728378,  1.06832995,  0.71061793,  0.84123803])
 </code></pre>
 <p>If we wanted to use the slice sampling algorithm to <code>sigma</code> instead of NUTS (which was assigned automatically), we could have specified this as the <code>step</code> argument for <code>sample</code>.</p>
 <pre><code class="python">from pymc3 import Slice
@@ -480,7 +480,7 @@ with basic_model:
 
 <pre><code>Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to alpha
 Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to beta
- [-----------------100%-----------------] 5000 of 5000 complete in 29.7 sec
+ [-----------------100%-----------------] 5000 of 5000 complete in 13.3 sec
 </code></pre>
 <h3 id="posterior-analysis">Posterior analysis</h3>
 <p><code>PyMC3</code> provides plotting and summarization functions for inspecting the sampling output. A simple posterior plot can be created using <code>traceplot</code>.</p>
@@ -502,13 +502,13 @@ summary(trace)
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  1.014            0.229            0.007            [0.558, 1.432]
+  0.907            0.099            0.001            [0.718, 1.099]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.576          0.857          1.011          1.175          1.458
+  0.720          0.839          0.904          0.975          1.103
 
 
 beta:
@@ -516,15 +516,15 @@ beta:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  1.428            1.908            0.102            [-2.069, 5.281]
-  0.479            9.351            0.500            [-18.073, 17.467]
+  0.949            0.091            0.001            [0.777, 1.127]
+  2.598            0.510            0.006            [1.647, 3.635]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  -2.296         0.096          1.354          2.756          5.119
-  -17.911        -5.776         0.738          7.432          18.528
+  0.774          0.887          0.948          1.010          1.126
+  1.585          2.257          2.602          2.946          3.584
 
 
 sigma_log:
@@ -532,13 +532,13 @@ sigma_log:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.140            0.075            0.002            [-0.007, 0.284]
+  -0.012           0.070            0.001            [-0.149, 0.124]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  -0.002         0.090          0.139          0.190          0.291
+  -0.147         -0.059         -0.013         0.034          0.127
 
 
 sigma:
@@ -546,13 +546,13 @@ sigma:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  1.154            0.087            0.002            [0.990, 1.326]
+  0.991            0.069            0.001            [0.852, 1.121]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.998          1.094          1.149          1.209          1.338
+  0.863          0.943          0.987          1.034          1.136
 </code></pre>
 <h2 id="case-study-1-stochastic-volatility">Case study 1: Stochastic volatility</h2>
 <p>We present a case study of stochastic volatility, time varying stock market volatility, to illustrate PyMC3's use in addressing a more realistic problem. The distribution of market returns is highly non-normal, which makes sampling the volatlities significantly more difficult. This example has 400+ parameters so using common sampling algorithms like Metropolis-Hastings would get bogged down, generating highly autocorrelated samples. Instead, we use NUTS, which is dramatically more efficient.</p>
@@ -785,36 +785,19 @@ df = pandas.DataFrame({'x1': X1, 'x2': X2, 'y': Y})
 </code></pre>
 
 <p>The model can then be very concisely specified in one line of code.</p>
-<pre><code class="python">X2
-</code></pre>
-
-<pre><code>array([ 0.        ,  0.0020202 ,  0.0040404 ,  0.00606061,  0.00808081,
-        0.01010101,  0.01212121,  0.01414141,  0.01616162,  0.01818182,
-        0.02020202,  0.02222222,  0.02424242,  0.02626263,  0.02828283,
-        0.03030303,  0.03232323,  0.03434343,  0.03636364,  0.03838384,
-        0.04040404,  0.04242424,  0.04444444,  0.04646465,  0.04848485,
-        0.05050505,  0.05252525,  0.05454545,  0.05656566,  0.05858586,
-        0.06060606,  0.06262626,  0.06464646,  0.06666667,  0.06868687,
-        0.07070707,  0.07272727,  0.07474747,  0.07676768,  0.07878788,
-        0.08080808,  0.08282828,  0.08484848,  0.08686869,  0.08888889,
-        0.09090909,  0.09292929,  0.09494949,  0.0969697 ,  0.0989899 ,
-        0.1010101 ,  0.1030303 ,  0.10505051,  0.10707071,  0.10909091,
-        0.11111111,  0.11313131,  0.11515152,  0.11717172,  0.11919192,
-        0.12121212,  0.12323232,  0.12525253,  0.12727273,  0.12929293,
-        0.13131313,  0.13333333,  0.13535354,  0.13737374,  0.13939394,
-        0.14141414,  0.14343434,  0.14545455,  0.14747475,  0.14949495,
-        0.15151515,  0.15353535,  0.15555556,  0.15757576,  0.15959596,
-        0.16161616,  0.16363636,  0.16565657,  0.16767677,  0.16969697,
-        0.17171717,  0.17373737,  0.17575758,  0.17777778,  0.17979798,
-        0.18181818,  0.18383838,  0.18585859,  0.18787879,  0.18989899,
-        0.19191919,  0.19393939,  0.1959596 ,  0.1979798 ,  0.2       ])
-</code></pre>
 <pre><code class="python">from pymc3.glm import glm
 
 with Model() as model_glm:
     glm('y ~ x1 + x2', df)
+    trace = sample(5000)
 </code></pre>
 
+<pre><code>Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to Intercept
+Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to x1
+Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to x2
+Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to sd_log
+ [-----------------100%-----------------] 5000 of 5000 complete in 4.3 sec
+</code></pre>
 <p>The error distribution, if not specified via the <code>family</code> argument, is assumed to be normal. In the case of logistic regression, this can be modified by passing in a <code>Binomial</code> family object.</p>
 <pre><code class="python">from pymc3.glm.families import Binomial
 
@@ -838,7 +821,7 @@ with Model() as model_glm_logistic:
     trace = sample(5000, step=step, start=start, trace=backend)
 </code></pre>
 
-<pre><code> [-----------------100%-----------------] 5000 of 5000 complete in 6.2 sec
+<pre><code> [-----------------100%-----------------] 5000 of 5000 complete in 4.5 sec
 </code></pre>
 <pre><code class="python">summary(trace, vars=['x1'])
 </code></pre>
@@ -848,18 +831,15 @@ with Model() as model_glm_logistic:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  -1.579           250.603          1.577            [-0.981, 1.001]
+  -1.128           211.811          1.126            [-0.917, 0.916]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  -0.981         -0.338         0.007          0.348          1.001
+  -0.908         -0.216         0.002          0.223          0.926
 </code></pre>
 <p>The stored trace can then later be loaded using the <code>load</code> command:</p>
-<pre><code class="python">from pymc3 import sample
-</code></pre>
-
 <pre><code class="python">from pymc3.backends.sqlite import load
 
 with basic_model:
