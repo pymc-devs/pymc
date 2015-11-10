@@ -192,29 +192,31 @@
 <p>Author: Austin Rochford</p>
 <p><a href="https://en.wikipedia.org/wiki/Survival_analysis">Survival analysis</a> studies the distribution of the time to an event.  Its applications span many fields across medicine, biology, engineering, and social science.  This tutorial shows how to fit and analyze a Bayesian survival model in Python using <a href="https://pymc-devs.github.io/pymc3/getting_started/"><code>pymc3</code></a>.</p>
 <p>We illustrate these concepts by analyzing a <a href="https://vincentarelbundock.github.io/Rdatasets/doc/HSAUR/mastectomy.html">mastectomy data set</a> from <code>R</code>'s <a href="https://cran.r-project.org/web/packages/HSAUR/index.html"><code>HSAUR</code></a> package.</p>
-<pre><code>%matplotlib inline
+<pre><code class="python">%matplotlib inline
+</code></pre>
 
-
-from matplotlib import pyplot as plt
+<pre><code class="python">from matplotlib import pyplot as plt
 import numpy as np
 import pymc3 as pm
 from pymc3.distributions.timeseries import GaussianRandomWalk
 import seaborn as sns
 from statsmodels import datasets
 from theano import tensor as T
+</code></pre>
 
-Couldn't import dot_parser, loading of dot files will not be possible.
+<pre><code>Couldn't import dot_parser, loading of dot files will not be possible.
 </code></pre>
 <p>Fortunately, <a href="http://statsmodels.sourceforge.net/0.6.0/datasets/index.html"><code>statsmodels.datasets</code></a> makes it quite easy to load a number of data sets from <code>R</code>.</p>
-<pre><code>df = datasets.get_rdataset('mastectomy', 'HSAUR', cache=True).data
+<pre><code class="python">df = datasets.get_rdataset('mastectomy', 'HSAUR', cache=True).data
 df.event = df.event.astype(np.int64)
 df.metastized = (df.metastized == 'yes').astype(np.int64)
 n_patients = df.shape[0]
 patients = np.arange(n_patients)
-
-
-df.head()
 </code></pre>
+
+<pre><code class="python">df.head()
+</code></pre>
+
 <div>
 <table border="1" class="dataframe">
   <thead>
@@ -260,12 +262,10 @@ df.head()
 </table>
 </div>
 
-<pre><code>n_patients
+<pre><code class="python">n_patients
+</code></pre>
 
-
-
-
-44
+<pre><code>44
 </code></pre>
 <p>Each row represents observations from a woman diagnosed with breast cancer that underwent a mastectomy.  The column <code>time</code> represents the time (in months) post-surgery that the woman was observed.  The column <code>event</code> indicates whether or not the woman died during the observation period.  The column <code>metastized</code> represents whether the cancer had <a href="https://en.wikipedia.org/wiki/Metastatic_breast_cancer">metastized</a> prior to surgery.</p>
 <p>This tutorial analyzes the relationship between survival time post-mastectomy and whether or not the cancer had metastized.</p>
@@ -286,15 +286,13 @@ df.head()
 <p><mathjax>$$\Lambda(t) = \int_0^t \lambda(s)\ ds$$</mathjax></p>
 <p>is an important quantity in survival analysis, since we may consicesly write <mathjax>$S(t) = \exp(-\Lambda(t)).$</mathjax></p>
 <p>An important, but subtle, point in survival analysis is <a href="https://en.wikipedia.org/wiki/Survival_analysis#Censoring">censoring</a>.  Even though the quantity we are interested in estimating is the time between surgery and death, we do not observe the death of every subject.  At the point in time that we perform our analysis, some of our subjects will thankfully still be alive. In the case of our mastectomy study, <code>df.event</code> is one if the subject's death was observed (the observation is not censored) and is zero if the death was not observed (the observation is censored).</p>
-<pre><code>df.event.mean()
+<pre><code class="python">df.event.mean()
+</code></pre>
 
-
-
-
-0.59090909090909094
+<pre><code>0.59090909090909094
 </code></pre>
 <p>Just over 40% of our observations are censored.  We visualize the observed durations and indicate which observations are censored below.</p>
-<pre><code>fig, ax = plt.subplots(figsize=(8, 6))
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
 
 blue, _, red = sns.color_palette()[:3]
 
@@ -314,6 +312,7 @@ ax.set_ylim(-0.25, n_patients + 0.25);
 
 ax.legend(loc='center right');
 </code></pre>
+
 <p><img alt="png" src="../survival_analysis_files/survival_analysis_11_0.png" /></p>
 <p>When an observation is censored (<code>df.event</code> is zero), <code>df.time</code> is not the subject's survival time.  All we can conclude from such a censored obsevation is that the subject's true survival time exceeds <code>df.time</code>.</p>
 <p>This is enough basic surival analysis theory for the purposes of this tutorial; for a more extensive introduction, consult Aalen et al.^[Aalen, Odd, Ornulf Borgan, and Hakon Gjessing. Survival and event history analysis: a process point of view. Springer Science &amp; Business Media, 2008.]</p>
@@ -326,13 +325,14 @@ ax.legend(loc='center right');
 <p>If <mathjax>$\tilde{\beta}_0 = \beta_0 + \delta$</mathjax> and <mathjax>$\tilde{\lambda}_0(t) = \lambda_0(t) \exp(-\delta)$</mathjax>, then <mathjax>$\lambda(t) = \tilde{\lambda}_0(t) \exp(\tilde{\beta}_0 + \mathbf{x} \beta)$</mathjax> as well, making the model with <mathjax>$\beta_0$</mathjax> unidentifiable.</p>
 <p>In order to perform Bayesian inference with the Cox model, we must specify priors on <mathjax>$\beta$</mathjax> and <mathjax>$\lambda_0(t)$</mathjax>.  We place a normal prior on <mathjax>$\beta$</mathjax>, <mathjax>$\beta \sim N(\mu_{\beta}, \sigma_{\beta}^2),$</mathjax> where <mathjax>$\mu_{\beta} \sim N(0, 10^2)$</mathjax> and <mathjax>$\sigma_{\beta} \sim U(0, 10)$</mathjax>.</p>
 <p>A suitable prior on <mathjax>$\lambda_0(t)$</mathjax> is less obvious.  We choose a semiparametric prior, where <mathjax>$\lambda_0(t)$</mathjax> is a piecewise constant function.  This prior requires us to partition the time range in question into intervals with endpoints <mathjax>$0 \leq s_1 &lt; s_2 &lt; \cdots &lt; s_N$</mathjax>.  With this partition, <mathjax>$\lambda_0 (t) = \lambda_j$</mathjax> if <mathjax>$s_j \leq t &lt; s_{j + 1}$</mathjax>.  With <mathjax>$\lambda_0(t)$</mathjax> constrained to have this form, all we need to do is choose priors for the <mathjax>$N - 1$</mathjax> values <mathjax>$\lambda_j$</mathjax>.  We use independent vague priors <mathjax>$\lambda_j \sim \operatorname{Gamma}(10^{-2}, 10^{-2}).$</mathjax>  For our mastectomy example, we make each interval three months long.</p>
-<pre><code>interval_length = 3
+<pre><code class="python">interval_length = 3
 interval_bounds = np.arange(0, df.time.max() + interval_length + 1, interval_length)
 n_intervals = interval_bounds.size - 1
 intervals = np.arange(n_intervals)
 </code></pre>
+
 <p>We see how deaths and censored observations are distributed in these intervals.</p>
-<pre><code>fig, ax = plt.subplots(figsize=(8, 6))
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
 
 ax.hist(df[df.event == 1].time.values, bins=interval_bounds,
         color=red, alpha=0.5, lw=0,
@@ -349,6 +349,7 @@ ax.set_ylabel('Number of observations');
 
 ax.legend();
 </code></pre>
+
 <p><img alt="png" src="../survival_analysis_files/survival_analysis_16_0.png" /></p>
 <p>With the prior distributions on <mathjax>$\beta$</mathjax> and <mathjax>$\lambda_0(t)$</mathjax> chosen, we now show how the model may be fit using MCMC simulation with <code>pymc3</code>.  The key observation is that the piecewise-constant proportional hazard model is <a href="http://data.princeton.edu/wws509/notes/c7s4.html">closely related</a> to a Poisson regression model.   (The models are not identical, but their likelihoods differ by a factor that depends only on the observed data and not the parameters <mathjax>$\beta$</mathjax> and <mathjax>$\lambda_j$</mathjax>.  For details, see Germán Rodríguez's WWS 509 <a href="http://data.princeton.edu/wws509/notes/c7s4.html">course notes</a>.)</p>
 <p>We define indicator variables based on whether or the <mathjax>$i$</mathjax>-th suject died in the <mathjax>$j$</mathjax>-th interval,</p>
@@ -356,21 +357,23 @@ ax.legend();
     1 &amp; \textrm{if subject } i \textrm{ died in interval } j \\
     0 &amp; \textrm{otherwise}
 \end{cases}.$$</mathjax></p>
-<pre><code>last_period = np.floor((df.time - 0.01) / interval_length)
+<pre><code class="python">last_period = np.floor((df.time - 0.01) / interval_length)
 
 death = np.zeros((n_patients, n_intervals))
 death[patients, last_period] = df.event
 </code></pre>
+
 <p>We also define <mathjax>$t_{i, j}$</mathjax> to be the amount of time the <mathjax>$i$</mathjax>-th subject was at risk in the <mathjax>$j$</mathjax>-th interval.</p>
-<pre><code>exposure = np.greater_equal.outer(df.time, interval_bounds[:-1]) * interval_length
+<pre><code class="python">exposure = np.greater_equal.outer(df.time, interval_bounds[:-1]) * interval_length
 exposure[patients, last_period] = df.time - interval_bounds[last_period]
 </code></pre>
+
 <p>Finally, denote the risk incurred by the <mathjax>$i$</mathjax>-th subject in the <mathjax>$j$</mathjax>-th interval as <mathjax>$\lambda_{i, j} = \lambda_j \exp(\mathbf{x}_i \beta)$</mathjax>.</p>
 <p>We may approximate <mathjax>$d_{i, j}$</mathjax> with a Possion random variable with mean <mathjax>$t_{i, j}\ \lambda_{i, j}$</mathjax>.  This approximation leads to the following <code>pymc3</code> model.</p>
-<pre><code>SEED = 5078864 # from random.org
+<pre><code class="python">SEED = 5078864 # from random.org
+</code></pre>
 
-
-with pm.Model() as model:
+<pre><code class="python">with pm.Model() as model:
     lambda0 = pm.Gamma('lambda0', 0.01, 0.01, shape=n_intervals)
 
     sigma = pm.Uniform('sigma', 0., 10.)
@@ -383,51 +386,50 @@ with pm.Model() as model:
 
     obs = pm.Poisson('obs', mu, observed=death)
 </code></pre>
+
 <p>We now sample from the model.</p>
-<pre><code>n_samples = 40000
+<pre><code class="python">n_samples = 40000
 burn = 20000
 thin = 20
+</code></pre>
 
-
-with model:
+<pre><code class="python">with model:
     step = pm.Metropolis()
     trace_ = pm.sample(n_samples, step, random_seed=SEED)
-
- [-----------------100%-----------------] 40000 of 40000 complete in 44.2 sec
-
-
-trace = trace_[burn::thin]
 </code></pre>
+
+<pre><code> [-----------------100%-----------------] 40000 of 40000 complete in 44.2 sec
+</code></pre>
+<pre><code class="python">trace = trace_[burn::thin]
+</code></pre>
+
 <p>We see that the hazard rate for subjects whose cancer has metastized is about one and a half times the rate of those whose cancer has not metastized.</p>
-<pre><code>np.exp(trace['beta'].mean())
-
-
-
-
-1.645592148084472
-
-
-
-
-pm.traceplot(trace, vars=['beta']);
+<pre><code class="python">np.exp(trace['beta'].mean())
 </code></pre>
+
+<pre><code>1.645592148084472
+</code></pre>
+<pre><code class="python">pm.traceplot(trace, vars=['beta']);
+</code></pre>
+
 <p><img alt="png" src="../survival_analysis_files/survival_analysis_30_0.png" /></p>
-<pre><code>pm.autocorrplot(trace, vars=['beta']);
+<pre><code class="python">pm.autocorrplot(trace, vars=['beta']);
 </code></pre>
+
 <p><img alt="png" src="../survival_analysis_files/survival_analysis_31_0.png" /></p>
 <p>We now examine the effect of metastization on both the cumulative hazard and on the survival function.</p>
-<pre><code>base_hazard = trace['lambda0']
+<pre><code class="python">base_hazard = trace['lambda0']
 met_hazard = trace['lambda0'] * np.exp(np.atleast_2d(trace['beta']).T)
+</code></pre>
 
-
-def cum_hazard(hazard):
+<pre><code class="python">def cum_hazard(hazard):
     return (interval_length * hazard).cumsum(axis=-1)
 
 def survival(hazard):
     return np.exp(-cum_hazard(hazard))
+</code></pre>
 
-
-def plot_with_hpd(x, hazard, f, ax, color=None, label=None, alpha=0.05):
+<pre><code class="python">def plot_with_hpd(x, hazard, f, ax, color=None, label=None, alpha=0.05):
     mean = f(hazard.mean(axis=0))
 
     percentiles = 100 * np.array([alpha / 2., 1. - alpha / 2.])
@@ -435,9 +437,9 @@ def plot_with_hpd(x, hazard, f, ax, color=None, label=None, alpha=0.05):
 
     ax.fill_between(x, hpd[0], hpd[1], color=color, alpha=0.25)
     ax.step(x, mean, color=color, label=label);
+</code></pre>
 
-
-fig, (hazard_ax, surv_ax) = plt.subplots(ncols=2, sharex=True, sharey=False, figsize=(16, 6))
+<pre><code class="python">fig, (hazard_ax, surv_ax) = plt.subplots(ncols=2, sharex=True, sharey=False, figsize=(16, 6))
 
 plot_with_hpd(interval_bounds[:-1], base_hazard, cum_hazard,
               hazard_ax, color=blue, label='Had not metastized')
@@ -463,13 +465,14 @@ surv_ax.set_ylabel('Survival function $S(t)$');
 
 fig.suptitle('Bayesian survival model');
 </code></pre>
+
 <p><img alt="png" src="../survival_analysis_files/survival_analysis_36_0.png" /></p>
 <p>We see that the cumulative hazard for metastized subjects increases more rapidly initially (through about seventy months), after which it increases roughly in parallel with the baseline cumulative hazard.</p>
 <p>These plots also show the pointwise 95% high posterior density interval for each function.  One of the distinct advantages of the Bayesian model fit with <code>pymc3</code> is the inherent quantification of uncertainty in our estimates.</p>
 <h5 id="time-varying-effects">Time varying effects</h5>
 <p>Another of the advantages of the model we have built is its flexibility.  From the plots above, we may reasonable believe that the additional hazard due to metastization varies over time; it seems plausible that cancer that has metastized increases the hazard rate immediately after the mastectomy, but that the risk due to metastization decreases over time.  We can accomodate this mechanism in our model by allowing the regression coefficients to vary over time.  In the time-varying coefficent model, if <mathjax>$s_j \leq t &lt; s_{j + 1}$</mathjax>, we let <mathjax>$\lambda(t) = \lambda_j \exp(\mathbf{x} \beta_j).$</mathjax>  The sequence of regression coefficients <mathjax>$\beta_1, \beta_2, \ldots, \beta_{N - 1}$</mathjax> form a normal random walk with <mathjax>$\beta_1 \sim N(0, 1)$</mathjax>, <mathjax>$\beta_j\ |\ \beta_{j - 1} \sim N(\beta_{j - 1}, 1)$</mathjax>.</p>
 <p>We implement this model in <code>pymc3</code> as follows.</p>
-<pre><code>with pm.Model() as time_varying_model:
+<pre><code class="python">with pm.Model() as time_varying_model:
     lambda0 = pm.Gamma('lambda0', 0.01, 0.01, shape=n_intervals)
 
     beta = GaussianRandomWalk('beta', tau=1., shape=n_intervals)
@@ -479,18 +482,20 @@ fig.suptitle('Bayesian survival model');
 
     obs = pm.Poisson('obs', mu, observed=death)
 </code></pre>
+
 <p>We proceed to sample from this model.</p>
-<pre><code>with time_varying_model:
+<pre><code class="python">with time_varying_model:
     step = pm.Metropolis()
     time_varying_trace_ = pm.sample(n_samples, step, random_seed=SEED)
-
- [-----------------100%-----------------] 40000 of 40000 complete in 49.3 sec
-
-
-time_varying_trace = time_varying_trace_[burn::thin]
 </code></pre>
+
+<pre><code> [-----------------100%-----------------] 40000 of 40000 complete in 49.3 sec
+</code></pre>
+<pre><code class="python">time_varying_trace = time_varying_trace_[burn::thin]
+</code></pre>
+
 <p>We see from the plot of <mathjax>$\beta_j$</mathjax> over time below that initially <mathjax>$\beta_j &gt; 0$</mathjax>, indicating an elevated hazard rate due to metastization, but that this risk declines as <mathjax>$\beta_j &lt; 0$</mathjax> eventually.</p>
-<pre><code>fig, ax = plt.subplots(figsize=(8, 6))
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
 
 beta_hpd = np.percentile(time_varying_trace['beta'], [2.5, 97.5], axis=0)
 beta_low = beta_hpd[0]
@@ -513,14 +518,15 @@ ax.set_ylabel(r'$\beta_j$');
 
 ax.legend();
 </code></pre>
+
 <p><img alt="png" src="../survival_analysis_files/survival_analysis_44_0.png" /></p>
 <p>The coefficients <mathjax>$\beta_j$</mathjax> begin declining rapidly around one hundred months post-mastectomy, which seems reasonable, given that only three of twelve subjects whose cancer had metastized lived past this point died during the study.</p>
 <p>The change in our estimate of the cumulative hazard and survival functions due to time-varying effects is also quite apparent in the following plots.</p>
-<pre><code>tv_base_hazard = time_varying_trace['lambda0']
+<pre><code class="python">tv_base_hazard = time_varying_trace['lambda0']
 tv_met_hazard = time_varying_trace['lambda0'] * np.exp(np.atleast_2d(time_varying_trace['beta']))
+</code></pre>
 
-
-fig, ax = plt.subplots(figsize=(8, 6))
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
 
 ax.step(interval_bounds[:-1], cum_hazard(base_hazard.mean(axis=0)),
         color=blue, label='Had not metastized');
@@ -540,8 +546,9 @@ ax.set_ylabel(r'Cumulative hazard $\Lambda(t)$');
 
 ax.legend(loc=2);
 </code></pre>
+
 <p><img alt="png" src="../survival_analysis_files/survival_analysis_47_0.png" /></p>
-<pre><code>fig, (hazard_ax, surv_ax) = plt.subplots(ncols=2, sharex=True, sharey=False, figsize=(16, 6))
+<pre><code class="python">fig, (hazard_ax, surv_ax) = plt.subplots(ncols=2, sharex=True, sharey=False, figsize=(16, 6))
 
 plot_with_hpd(interval_bounds[:-1], tv_base_hazard, cum_hazard,
               hazard_ax, color=blue, label='Had not metastized')
@@ -568,6 +575,7 @@ surv_ax.set_ylabel('Survival function $S(t)$');
 
 fig.suptitle('Bayesian survival model with time varying effects');
 </code></pre>
+
 <p><img alt="png" src="../survival_analysis_files/survival_analysis_48_0.png" /></p>
 <p>We have really only scratched the surface of both survival analysis and the Bayesian approach to survival analysis.  More information on Bayesian survival analysis is available in Ibrahim et al.^[Ibrahim, Joseph G., Ming‐Hui Chen, and Debajyoti Sinha. Bayesian survival analysis. John Wiley &amp; Sons, Ltd, 2005.]  (For example, we may want to account for individual frailty in either or original or time-varying models.)</p>
 <p>This tutorial is available as an <a href="http://ipython.org/">IPython</a> notebook <a href="https://gist.github.com/AustinRochford/4c6b07e51a2247d678d6">here</a>.  It is adapted from a blog post that first appeared <a href="http://austinrochford.com/posts/2015-10-05-bayes-survival.html">here</a>.</p></div>

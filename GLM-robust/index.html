@@ -207,7 +207,7 @@
 <p>This worked splendidly on simulated data. The problem with simulated data though is that it's, well, simulated. In the real world things tend to get more messy and assumptions like normality are easily violated by a few outliers. </p>
 <p>Lets see what happens if we add some outliers to our simulated data from the last post.</p>
 <p>Again, import our modules.</p>
-<pre><code>%matplotlib inline
+<pre><code class="python">%matplotlib inline
 
 import pymc3 as pm
 
@@ -216,8 +216,9 @@ import numpy as np
 
 import theano
 </code></pre>
+
 <p>Create some toy data but also add some outliers.</p>
-<pre><code>size = 100
+<pre><code class="python">size = 100
 true_intercept = 1
 true_slope = 2
 
@@ -233,27 +234,30 @@ y_out = np.append(y, [8, 6, 9])
 
 data = dict(x=x_out, y=y_out)
 </code></pre>
+
 <p>Plot the data together with the true regression line (the three points in the upper left corner are the outliers we added).</p>
-<pre><code>fig = plt.figure(figsize=(7, 7))
+<pre><code class="python">fig = plt.figure(figsize=(7, 7))
 ax = fig.add_subplot(111, xlabel='x', ylabel='y', title='Generated data and underlying model')
 ax.plot(x_out, y_out, 'x', label='sampled data')
 ax.plot(x, true_regression_line, label='true regression line', lw=2.)
 plt.legend(loc=0);
 </code></pre>
+
 <p><img alt="png" src="../GLM-robust_files/GLM-robust_6_0.png" /></p>
 <h1 id="robust-regression">Robust Regression</h1>
 <p>Lets see what happens if we estimate our Bayesian linear regression model using the <code>glm()</code> function as before. This function takes a <a href="http://patsy.readthedocs.org/en/latest/quickstart.html"><code>Patsy</code></a> string to describe the linear model and adds a Normal likelihood by default. </p>
-<pre><code>with pm.Model() as model:
+<pre><code class="python">with pm.Model() as model:
     pm.glm.glm('y ~ x', data)
     start = pm.find_MAP()
     step = pm.NUTS(scaling=start)
     trace = pm.sample(2000, step, progressbar=False)
+</code></pre>
 
-/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/scan_module/scan_perform_ext.py:133: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
+<pre><code>/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/scan_module/scan_perform_ext.py:133: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
   from scan_perform.scan_perform import *
 </code></pre>
 <p>To evaluate the fit, I am plotting the posterior predictive regression lines by taking regression parameters from the posterior distribution and plotting a regression line for each (this is all done inside of <code>plot_posterior_predictive()</code>).</p>
-<pre><code>plt.subplot(111, xlabel='x', ylabel='y', 
+<pre><code class="python">plt.subplot(111, xlabel='x', ylabel='y', 
             title='Posterior predictive regression lines')
 plt.plot(x_out, y_out, 'x', label='data')
 pm.glm.plot_posterior_predictive(trace, samples=100, 
@@ -263,12 +267,13 @@ plt.plot(x, true_regression_line,
 
 plt.legend(loc=0);
 </code></pre>
+
 <p><img alt="png" src="../GLM-robust_files/GLM-robust_10_0.png" /></p>
 <p>As you can see, the fit is quite skewed and we have a fair amount of uncertainty in our estimate as indicated by the wide range of different posterior predictive regression lines. Why is this? The reason is that the normal distribution does not have a lot of mass in the tails and consequently, an outlier will affect the fit strongly.</p>
 <p>A Frequentist would estimate a <a href="http://en.wikipedia.org/wiki/Robust_regression">Robust Regression</a> and use a non-quadratic distance measure to evaluate the fit.</p>
 <p>But what's a Bayesian to do? Since the problem is the light tails of the Normal distribution we can instead assume that our data is not normally distributed but instead distributed according to the <a href="http://en.wikipedia.org/wiki/Student%27s_t-distribution">Student T distribution</a> which has heavier tails as shown next (I read about this trick in <a href="http://www.indiana.edu/~kruschke/DoingBayesianDataAnalysis/">"The Kruschke"</a>, aka the puppy-book; but I think <a href="http://www.stat.columbia.edu/~gelman/book/">Gelman</a> was the first to formulate this).</p>
 <p>Lets look at those two distributions to get a feel for them.</p>
-<pre><code>normal_dist = pm.Normal.dist(mu=0, sd=1)
+<pre><code class="python">normal_dist = pm.Normal.dist(mu=0, sd=1)
 t_dist = pm.T.dist(mu=0, lam=1, nu=1)
 x_eval = np.linspace(-8, 8, 300)
 plt.plot(x_eval, theano.tensor.exp(normal_dist.logp(x_eval)).eval(), label='Normal', lw=2.)
@@ -277,10 +282,11 @@ plt.xlabel('x')
 plt.ylabel('Probability density')
 plt.legend();
 </code></pre>
+
 <p><img alt="png" src="../GLM-robust_files/GLM-robust_12_0.png" /></p>
 <p>As you can see, the probability of values far away from the mean (0 in this case) are much more likely under the <code>T</code> distribution than under the Normal distribution.</p>
 <p>To define the usage of a T distribution in <code>PyMC3</code> we can pass a family object -- <code>T</code> -- that specifies that our data is Student T-distributed (see <code>glm.families</code> for more choices). Note that this is the same syntax as <code>R</code> and <code>statsmodels</code> use.</p>
-<pre><code>with pm.Model() as model_robust:
+<pre><code class="python">with pm.Model() as model_robust:
     family = pm.glm.families.T()
     pm.glm.glm('y ~ x', data, family=family)
     start = pm.find_MAP()
@@ -295,6 +301,7 @@ plt.plot(x, true_regression_line,
          label='true regression line', lw=3., c='y')
 plt.legend();
 </code></pre>
+
 <p><img alt="png" src="../GLM-robust_files/GLM-robust_14_0.png" /></p>
 <p>There, much better! The outliers are barely influencing our estimation at all because our likelihood function assumes that outliers are much more probable than under the Normal distribution.</p>
 <h2 id="summary">Summary</h2>

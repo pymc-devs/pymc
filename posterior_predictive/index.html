@@ -193,18 +193,19 @@
 <p>PPCs are a great way to validate a model. The idea is to generate data sets from the model using parameter settings from draws from the posterior.</p>
 <p><code>PyMC3</code> has random number support thanks to <a href="https://github.com/mwibrow">Mark Wibrow</a> as implemented in <a href="https://github.com/pymc-devs/pymc3/pull/784">PR784</a>.</p>
 <p>Here we will implement a general routine to draw samples from the observed nodes of a model.</p>
-<pre><code>%matplotlib inline
+<pre><code class="python">%matplotlib inline
 import numpy as np
 import pymc3 as pm
 import seaborn as sns
 import matplotlib.pyplot as plt
 from collections import defaultdict
+</code></pre>
 
-ERROR (theano.sandbox.cuda): nvcc compiler not found on $PATH. Check your nvcc installation and try again.
+<pre><code>ERROR (theano.sandbox.cuda): nvcc compiler not found on $PATH. Check your nvcc installation and try again.
 ERROR:theano.sandbox.cuda:nvcc compiler not found on $PATH. Check your nvcc installation and try again.
 </code></pre>
 <p>Lets generate a very simple model:</p>
-<pre><code>data = np.random.randn(100)
+<pre><code class="python">data = np.random.randn(100)
 
 with pm.Model() as model: 
     mu = pm.Normal('mu', mu=0, sd=1, testval=0)
@@ -213,21 +214,21 @@ with pm.Model() as model:
 
     step = pm.NUTS()
     trace = pm.sample(5000, step)
+</code></pre>
 
- [-----------------100%-----------------] 5000 of 5000 complete in 2.4 sec
+<pre><code> [-----------------100%-----------------] 5000 of 5000 complete in 2.4 sec
 
 /home/wiecki/miniconda3/lib/python3.4/importlib/_bootstrap.py:321: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
   return f(*args, **kwds)
-
-
-
-pm.traceplot(trace);
 </code></pre>
+<pre><code class="python">pm.traceplot(trace);
+</code></pre>
+
 <p><img alt="png" src="../posterior_predictive_files/posterior_predictive_4_0.png" /></p>
 <p>This function will make it into <code>PyMC3</code> eventually, for now this should work on all models:</p>
-<pre><code>def run_ppc(trace, samples=100, model=None):
-    """Generate Posterior Predictive samples from a model given a trace.
-    """
+<pre><code class="python">def run_ppc(trace, samples=100, model=None):
+    &quot;&quot;&quot;Generate Posterior Predictive samples from a model given a trace.
+    &quot;&quot;&quot;
     if model is None:
          model = pm.modelcontext(model)
 
@@ -238,32 +239,32 @@ pm.traceplot(trace);
             ppc[obs.name].append(obs.distribution.random(point=param))
 
     return ppc
-
-
-ppc = run_ppc(trace, samples=500, model=model)
 </code></pre>
+
+<pre><code class="python">ppc = run_ppc(trace, samples=500, model=model)
+</code></pre>
+
 <p><code>ppc</code> contains 500 generated data sets (containing 50 samples each), each using a different parameter setting from the posterior:</p>
-<pre><code>np.asarray(ppc['o']).shape
+<pre><code class="python">np.asarray(ppc['o']).shape
+</code></pre>
 
-
-
-
-(500, 50)
+<pre><code>(500, 50)
 </code></pre>
 <p>One common way to visualize is to look if the model can reproduce the patterns observed in the real data. For example, how close are the inferred means to the actual sample mean:</p>
-<pre><code>ax = plt.subplot()
+<pre><code class="python">ax = plt.subplot()
 sns.distplot([n.mean() for n in ppc['n']], kde=False, ax=ax)
 ax.axvline(data.mean())
 ax.set(title='Posterior predictive of the mean', xlabel='mean(x)', ylabel='Frequency');
 </code></pre>
+
 <p><img alt="png" src="../posterior_predictive_files/posterior_predictive_11_0.png" /></p>
 <h1 id="prediction">Prediction</h1>
 <p>The same pattern can be used for prediction. Here we're building a logistic regression model. Note that since we're dealing the full posterior, we're also getting uncertainty in our predictions for free.</p>
-<pre><code># Use a theano shared variable to be able to exchange the data the model runs on
+<pre><code class="python"># Use a theano shared variable to be able to exchange the data the model runs on
 from theano import shared
+</code></pre>
 
-
-def invlogit(x):
+<pre><code class="python">def invlogit(x):
     return np.exp(x) / (1 + np.exp(x))
 
 n = 4000
@@ -275,23 +276,18 @@ predictors = np.random.normal(size=n)
 predictors_shared = shared(predictors)
 
 outcomes = np.random.binomial(1, invlogit(coeff * predictors))
+</code></pre>
 
+<pre><code class="python">outcomes
+</code></pre>
 
-outcomes
-
-
-
-
-array([1, 1, 0, ..., 1, 0, 0])
-
-
-
-
-predictors_oos = np.random.normal(size=50)
+<pre><code>array([1, 1, 0, ..., 1, 0, 0])
+</code></pre>
+<pre><code class="python">predictors_oos = np.random.normal(size=50)
 outcomes_oos = np.random.binomial(1, invlogit(coeff * predictors_oos))
+</code></pre>
 
-
-def tinvlogit(x):
+<pre><code class="python">def tinvlogit(x):
     import theano.tensor as t
     return t.exp(x) / (1 + t.exp(x))
 
@@ -304,28 +300,27 @@ with pm.Model() as model:
     start = pm.find_MAP()
     step = pm.NUTS(scaling=start)
     trace = pm.sample(500, step)
+</code></pre>
 
- [-----------------100%-----------------] 500 of 500 complete in 2.6 sec
-
-
-# Changing values here will also change values in the model
+<pre><code> [-----------------100%-----------------] 500 of 500 complete in 2.6 sec
+</code></pre>
+<pre><code class="python"># Changing values here will also change values in the model
 predictors_shared.set_value(predictors_oos)
+</code></pre>
 
-
-# Simply running PPC will use the updated values and do prediction
+<pre><code class="python"># Simply running PPC will use the updated values and do prediction
 ppc = run_ppc(trace, model=model, samples=500)
 </code></pre>
+
 <h2 id="mean-predicted-values-plus-error-bars-to-give-sense-of-uncertainty-in-prediction">Mean predicted values plus error bars to give sense of uncertainty in prediction</h2>
-<pre><code>plt.errorbar(x=predictors_oos, y=np.asarray(ppc['o']).mean(axis=0), yerr=np.asarray(ppc['o']).std(axis=0), linestyle='', marker='o')
+<pre><code class="python">plt.errorbar(x=predictors_oos, y=np.asarray(ppc['o']).mean(axis=0), yerr=np.asarray(ppc['o']).std(axis=0), linestyle='', marker='o')
 plt.plot(predictors_oos, outcomes_oos, 'o')
 plt.ylim(-.05, 1.05)
 plt.xlabel('predictor')
 plt.ylabel('outcome')
+</code></pre>
 
-
-
-
-&lt;matplotlib.text.Text at 0x7f1e23214f98&gt;
+<pre><code>&lt;matplotlib.text.Text at 0x7f1e23214f98&gt;
 </code></pre>
 <p><img alt="png" src="../posterior_predictive_files/posterior_predictive_21_1.png" /></p></div>
             

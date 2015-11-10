@@ -179,6 +179,8 @@
     
         <li class="main active"><a href="#probabilistic-programming-in-python-using-pymc">Probabilistic Programming in Python using PyMC</a></li>
         
+            <li><a href="#abstract">Abstract</a></li>
+        
             <li><a href="#introduction">Introduction</a></li>
         
             <li><a href="#installation">Installation</a></li>
@@ -198,6 +200,9 @@
         
             <li><a href="#backends">Backends</a></li>
         
+    
+        <li class="main "><a href="#discussion">Discussion</a></li>
+        
             <li><a href="#references">References</a></li>
         
     
@@ -207,6 +212,8 @@
 
 <h1 id="probabilistic-programming-in-python-using-pymc">Probabilistic Programming in Python using PyMC</h1>
 <p>Authors: John Salvatier, Thomas V. Wiecki, Christopher Fonnesbeck</p>
+<h2 id="abstract">Abstract</h2>
+<p>Probabilistic Programming allows for automatic Bayesian inference on user-defined probabilistic models. Recent advances in Markov chain Monte Carlo (MCMC) sampling allow inference on increasingly complex models. This class of MCMC, known as Hamliltonian Monte Carlo, requires gradient information which is often not readily available. PyMC3 is a new open source Probabilistic Programming framework written in Python that uses Theano to compute gradients via automatic differentiation as well as compile probabilistic programs on-the-fly to C for increased speed. Contrary to other Probabilistic Programming languages, PyMC3 allows model specification directly in Python code. The lack of a domain specific language allows for great flexibility and direct interaction with the model. This paper is a tutorial-style introduction to this software package.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Probabilistic programming (PP) allows flexible specification of Bayesian statistical models in code. PyMC3 is a new, open-source PP framework with an intutive and readable, yet powerful, syntax that is close to the natural syntax statisticians use to describe models. It features next-generation Markov chain Monte Carlo (MCMC) sampling algorithms such as the No-U-Turn Sampler (NUTS; Hoffman, 2014), a self-tuning variant of Hamiltonian Monte Carlo (HMC; Duane, 1987). This class of samplers works well on high dimensional and complex posterior distributions and allows many complex models to be fit without specialized knowledge about fitting algorithms. HMC and NUTS take advantage of gradient information from the likelihood to achieve much faster convergence than traditional sampling methods, especially for larger models. NUTS also has several self-tuning strategies for adaptively setting the tunable parameters of Hamiltonian Monte Carlo, whicstatisticalh means you usually don't need to have specialized knowledge about how the algorithms work. PyMC3, Stan (Stan Development Team, 2014), and the LaplacesDemon package for R are currently the only PP packages to offer HMC.</p>
 <p>Probabilistic programming in Python confers a number of advantages including multi-platform compatibility, an expressive yet clean and readable syntax, easy integration with other scientific libraries, and extensibility via C, C++, Fortran or Cython. These features make it relatively straightforward to write and use custom statistical distributions, samplers and transformation functions, as required by Bayesian analysis.</p>
@@ -238,7 +245,7 @@ Y  &amp;\sim \mathcal{N}(\mu, \sigma^2) \\
 \end{aligned}$$</mathjax></p>
 <h3 id="generating-data">Generating data</h3>
 <p>We can simulate some artificial data from this model using only NumPy's <code>random</code> module, and then use PyMC3 to try to recover the corresponding parameters. We are intentionally generating the data to closely correspond the PyMC3 model structure.</p>
-<pre><code>import numpy as np
+<pre><code class="python">import numpy as np
 import matplotlib.pyplot as plt
 
 # Intialize random number generator
@@ -258,28 +265,25 @@ X2 = np.linspace(0,.2, size)
 # Simulate outcome variable
 Y = alpha + beta[0]*X1 + beta[1]*X2 + np.random.randn(size)*sigma
 </code></pre>
-<p>Here is what the simulated data look like. We use the <code>pylab</code> module from the plotting library matplotlib. </p>
-<pre><code>%pylab inline
 
-fig, axes = subplots(1, 2, sharex=True, figsize=(10,4))
+<p>Here is what the simulated data look like. We use the <code>pylab</code> module from the plotting library matplotlib. </p>
+<pre><code class="python">%matplotlib inline 
+
+fig, axes = plt.subplots(1, 2, sharex=True, figsize=(10,4))
 axes[0].scatter(X1, Y)
 axes[1].scatter(X2, Y)
 axes[0].set_ylabel('Y'); axes[0].set_xlabel('X1'); axes[1].set_xlabel('X2');
-
-Populating the interactive namespace from numpy and matplotlib
-
-
-WARNING: pylab import has clobbered these variables: ['beta', 'size']
-`%matplotlib` prevents importing * from pylab and numpy
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_5_2.png" /></p>
+
+<p><img alt="png" src="../getting_started_files/getting_started_5_0.png" /></p>
 <h3 id="model-specification">Model Specification</h3>
 <p>Specifiying this model in PyMC3 is straightforward because the syntax is as close to the statistical notation. For the most part, each line of Python code corresponds to a line in the model notation above. </p>
 <p>First, we import the components we will need from PyMC.</p>
-<pre><code>from pymc3 import Model, Normal, HalfNormal
+<pre><code class="python">from pymc3 import Model, Normal, HalfNormal
 </code></pre>
+
 <p>Now we build our model, which we will present in full first, then explain each part line-by-line.</p>
-<pre><code>basic_model = Model()
+<pre><code class="python">basic_model = Model()
 
 with basic_model:
 
@@ -294,6 +298,7 @@ with basic_model:
     # Likelihood (sampling distribution) of observations
     Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 </code></pre>
+
 <p>The first line,</p>
 <pre><code class="python">basic_model = Model()
 </code></pre>
@@ -314,9 +319,10 @@ sigma = HalfNormal('sigma', sd=1)
 <p>We call the <code>Normal</code> constructor to create a random variable to use as a normal prior. The first argument is always the <em>name</em> of the random variable, which should almost always match the name of the Python variable being assigned to, since it sometimes used to retrieve the variable from the model for summarizing output. The remaining required arguments for a stochastic object are the parameters, in this case <code>mu</code>, the mean, and <code>sd</code>, the standard deviation, which we assign hyperparameter values for the model. In general, a distribution's parameters are values that determine the location, shape or scale of the random variable, depending on the parameterization of the distribution. Most commonly used distributions, such as <code>Beta</code>, <code>Exponential</code>, <code>Categorical</code>, <code>Gamma</code>, <code>Binomial</code> and many others, are available in PyMC3.</p>
 <p>The <code>beta</code> variable has an additional <code>shape</code> argument to denote it as a vector-valued parameter of size 2. The <code>shape</code> argument is available for all distributions and specifies the length or shape of the random variable, but is optional for scalar variables, since it defaults to a value of one. It can be an integer, to specify an array, or a tuple, to specify a multidimensional array (<em>e.g.</em> <code>shape=(5,7)</code> makes random variable that takes on 5 by 7 matrix values). </p>
 <p>Detailed notes about distributions, sampling methods and other PyMC3 functions are available via the <code>help</code> function.</p>
-<pre><code>help(Normal) #try help(Model), help(Uniform) or help(basic_model)
+<pre><code class="python">help(Normal) #try help(Model), help(Uniform) or help(basic_model)
+</code></pre>
 
-Help on class Normal in module pymc3.distributions.continuous:
+<pre><code>Help on class Normal in module pymc3.distributions.continuous:
 
 class Normal(pymc3.distributions.distribution.Continuous)
  |  Normal log-likelihood.
@@ -399,22 +405,24 @@ ight\}
 <h4 id="maximum-a-posteriori-methods">Maximum a posteriori methods</h4>
 <p>The <strong>maximum a posteriori (MAP)</strong> estimate for a model, is the mode of the posterior distribution and is generally found using numerical optimization methods. This is often fast and easy to do, but only gives a point estimate for the parameters and can be biased if the mode isn't representative of the distribution. PyMC3 provides this functionality with the <code>find_MAP</code> function.</p>
 <p>Below we find the MAP for our original model. The MAP is returned as a parameter <strong>point</strong>, which is always represented by a Python dictionary of variable names to NumPy arrays of parameter values. </p>
-<pre><code>from pymc3 import find_MAP
+<pre><code class="python">from pymc3 import find_MAP
 
 map_estimate = find_MAP(model=basic_model)
 
 print(map_estimate)
+</code></pre>
 
-{'sigma_log': array(0.119287649834956), 'beta': array([ 1.46791595,  0.29358319]), 'alpha': array(1.01366409951285)}
+<pre><code>{'alpha': array(1.0136638069892536), 'sigma_log': array(0.1192877001001707), 'beta': array([ 1.46791629,  0.29358326])}
 </code></pre>
 <p>By default, <code>find_MAP</code> uses the Broyden–Fletcher–Goldfarb–Shanno (BFGS) optimization algorithm to find the maximum of the log-posterior but also allows selection of other optimization algorithms from the <code>scipy.optimize</code> module. For example, below we use Powell's method to find the MAP.</p>
-<pre><code>from scipy import optimize
+<pre><code class="python">from scipy import optimize
 
 map_estimate = find_MAP(model=basic_model, fmin=optimize.fmin_powell)
 
 print(map_estimate)
+</code></pre>
 
-{'sigma_log': array(0.1181510683418693), 'beta': array([ 1.51426781,  0.03520891]), 'alpha': array(1.0175522115056725)}
+<pre><code>{'alpha': array(1.0175522109423465), 'sigma_log': array(0.11815106849951475), 'beta': array([ 1.51426782,  0.03520891])}
 </code></pre>
 <p>It is important to note that the MAP estimate is not always reasonable, especially if the mode is at an extreme. This can be a subtle issue; with high dimensional posteriors, one can have areas of extremely high density but low total probability because the volume is very small. This will often occur in hierarchical models with the variance parameter for the random effect. If the individual group means are all the same, the posterior will have near infinite density if the scale parameter for the group means is almost zero, even though the probability of such a small scale parameter will be small since the group means must be extremely close together. </p>
 <p>Most techniques for finding the MAP estimate also only find a <em>local</em> optimium (which is often good enough), but can fail badly for multimodal posteriors if the different modes are meaningfully different.</p>
@@ -432,7 +440,7 @@ print(map_estimate)
 <p>NUTS requires a scaling matrix parameter, which is analogous to the variance parameter for the jump proposal distribution in Metropolis-Hastings, althrough NUTS uses it somewhat differently. The matrix gives the rough shape of the distribution so that NUTS does not make jumps that are too large in some directions and too small in other directions. It is important to set this scaling parameter to a reasonable value to facilitate efficient sampling. This is especially true for models that have many unobserved stochastic random variables or models with highly non-normal posterior distributions. Poor scaling parameters will slow down NUTS significantly, sometimes almost stopping it completely. A reasonable starting point for sampling can also be important for efficient sampling, but not as often.</p>
 <p>Fortunately NUTS can often make good guesses for the scaling parameters. If you pass a point in parameter space (as a dictionary of variable names to parameter values, the same format as returned by <code>find_MAP</code>) to NUTS, it will look at the local curvature of the log posterior-density (the diagonal of the Hessian matrix) at that point to make a guess for a good scaling vector, which often results in a good value. The MAP estimate is often a good point to use to initiate sampling. It is also possible to supply your own vector or scaling matrix to NUTS, though this is a more advanced use. If you wish to modify a Hessian at a specific point to use as your scaling matrix or vector, you can use <code>find_hessian</code> or <code>find_hessian_diag</code>.</p>
 <p>For our basic linear regression example in <code>basic_model</code>, we will use NUTS to sample 2000 draws from the posterior using the MAP as the starting point and scaling point. This must also be performed inside the context of the model.</p>
-<pre><code>from pymc3 import NUTS, sample
+<pre><code class="python">from pymc3 import NUTS, sample
 
 with basic_model:
 
@@ -440,26 +448,22 @@ with basic_model:
     start = find_MAP(fmin=optimize.fmin_powell)
 
     # draw 2000 posterior samples
-    trace = sample(2000, start=start)
+    trace = sample(2000, start=start) 
+</code></pre>
 
-Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to alpha
+<pre><code>Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to alpha
 Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to beta
 Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to sigma_log
- [-----------------100%-----------------] 2000 of 2000 complete in 8.3 sec
-
-/Users/fonnescj/anaconda3/lib/python3.4/importlib/_bootstrap.py:321: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
-  return f(*args, **kwds)
+ [-----------------100%-----------------] 2000 of 2000 complete in 6.6 sec
 </code></pre>
 <p>The <code>sample</code> function runs the step method(s) assigned (or passed) to it for the given number of iterations and returns a <code>Trace</code> object containing the samples collected, in the order they were collected. The <code>trace</code> object can be queried in a similar way to a <code>dict</code> containing a map from variable names to <code>numpy.array</code>s. The first dimension of the array is the sampling index and the later dimensions match the shape of the variable. We can see the last 5 values for the <code>alpha</code> variable as follows:</p>
-<pre><code>trace['alpha'][-5:]
+<pre><code class="python">trace['alpha'][-5:]
+</code></pre>
 
-
-
-
-array([ 1.21912128,  1.21912128,  1.34578668,  1.01553719,  0.81090504])
+<pre><code>array([ 1.27276213,  0.65512572,  0.84469541,  0.76942179,  1.11243309])
 </code></pre>
 <p>If we wanted to use the slice sampling algorithm to <code>sigma</code> instead of NUTS (which was assigned automatically), we could have specified this as the <code>step</code> argument for <code>sample</code>.</p>
-<pre><code>from pymc3 import Slice
+<pre><code class="python">from pymc3 import Slice
 
 with basic_model:
 
@@ -467,42 +471,44 @@ with basic_model:
     start = find_MAP(fmin=optimize.fmin_powell)
 
     # instantiate sampler
-    step = Slice(vars=[sigma])
+    step = Slice(vars=[sigma]) 
 
     # draw 5000 posterior samples
-    trace = sample(5000, step=step, start=start)
+    trace = sample(5000, step=step, start=start)   
 
+</code></pre>
 
-Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to alpha
+<pre><code>Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to alpha
 Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to beta
  [-----------------100%-----------------] 5000 of 5000 complete in 29.7 sec
 </code></pre>
 <h3 id="posterior-analysis">Posterior analysis</h3>
 <p><code>PyMC3</code> provides plotting and summarization functions for inspecting the sampling output. A simple posterior plot can be created using <code>traceplot</code>.</p>
-<pre><code>from pymc3 import traceplot
+<pre><code class="python">from pymc3 import traceplot
 
-traceplot(trace[4000:]);
+traceplot(trace);
 </code></pre>
+
 <p><img alt="png" src="../getting_started_files/getting_started_26_0.png" /></p>
 <p>The left column consists of a smoothed histogram (using kernel density estimation) of the marginal posteriors of each stochastic random variable while the right column contains the samples of the Markov chain plotted in sequential order. The <code>beta</code> variable, being vector-valued, produces two histograms and two sample traces, corresponding to both predictor coefficients.</p>
 <p>In addition, the <code>summary</code> function provides a text-based output of common posterior statistics:</p>
-<pre><code>from pymc3 import summary
+<pre><code class="python">from pymc3 import summary
 
-summary(trace[4000:])
+summary(trace)
+</code></pre>
 
-
-alpha:
+<pre><code>alpha:
 
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  1.004            0.227            0.010            [0.537, 1.414]
+  1.014            0.229            0.007            [0.558, 1.432]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.545          0.860          1.006          1.154          1.443
+  0.576          0.857          1.011          1.175          1.458
 
 
 beta:
@@ -510,15 +516,15 @@ beta:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  1.069            2.189            0.160            [-3.372, 5.252]
-  2.355            10.738           0.778            [-19.156, 23.981]
+  1.428            1.908            0.102            [-2.069, 5.281]
+  0.479            9.351            0.500            [-18.073, 17.467]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  -3.944         -0.197         1.185          2.612          4.847
-  -16.727        -5.166         1.747          8.456          27.845
+  -2.296         0.096          1.354          2.756          5.119
+  -17.911        -5.776         0.738          7.432          18.528
 
 
 sigma_log:
@@ -526,13 +532,13 @@ sigma_log:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.129            0.070            0.003            [0.002, 0.267]
+  0.140            0.075            0.002            [-0.007, 0.284]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  -0.003         0.082          0.130          0.175          0.266
+  -0.002         0.090          0.139          0.190          0.291
 
 
 sigma:
@@ -540,13 +546,13 @@ sigma:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  1.141            0.080            0.003            [1.002, 1.307]
+  1.154            0.087            0.002            [0.990, 1.326]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.997          1.086          1.139          1.192          1.304
+  0.998          1.094          1.149          1.209          1.338
 </code></pre>
 <h2 id="case-study-1-stochastic-volatility">Case study 1: Stochastic volatility</h2>
 <p>We present a case study of stochastic volatility, time varying stock market volatility, to illustrate PyMC3's use in addressing a more realistic problem. The distribution of market returns is highly non-normal, which makes sampling the volatlities significantly more difficult. This example has 400+ parameters so using common sampling algorithms like Metropolis-Hastings would get bogged down, generating highly autocorrelated samples. Instead, we use NUTS, which is dramatically more efficient.</p>
@@ -561,24 +567,24 @@ sigma:
 <p>Here, <mathjax>$y$</mathjax> is the daily return series which is modeled with a Student-t distribution with an unknown degrees of freedom parameter, and a scale parameter determined by a latent process <mathjax>$s$</mathjax>. The individual <mathjax>$s_i$</mathjax> are the individual daily log volatilities in the latent log volatility process. </p>
 <h3 id="the-data">The Data</h3>
 <p>Our data consist of daily returns of the S&amp;P 500 during the 2008 financial crisis.</p>
-<pre><code>import pandas as pd
+<pre><code class="python">import pandas as pd
 returns = pd.read_csv('data/SP500.csv', index_col=0, parse_dates=True)
 print(len(returns))
+</code></pre>
 
-400
-
-
-
-returns.plot(figsize=(10, 6))
+<pre><code>400
+</code></pre>
+<pre><code class="python">returns.plot(figsize=(10, 6))
 plt.ylabel('daily returns in %');
 </code></pre>
+
 <p><img alt="png" src="../getting_started_files/getting_started_32_0.png" /></p>
 <h3 id="model-specification_1">Model Specification</h3>
 <p>As with the linear regession example, specifying the model in PyMC3 mirrors its statistical specification. This model employs several new distributions: the <code>Exponential</code> distribution for the <mathjax>$ \nu $</mathjax> and <mathjax>$\sigma$</mathjax> priors, the student-t (<code>T</code>) distribution for distribution of returns, and the <code>GaussianRandomWalk</code> for the prior for the latent volatilities.   </p>
 <p>In PyMC3, variables with purely positive priors like <code>Exponential</code> are transformed with a log transform. This makes sampling more robust. Behind the scenes, a variable in the unconstrained space (named "variableName_log") is added to the model for sampling. In this model this happens behind the scenes for both the degrees of freedom, <code>nu</code>, and the scale parameter for the volatility process, <code>sigma</code>, since they both have exponential priors. Variables with priors that constrain them on two sides, like <code>Beta</code> or <code>Uniform</code>, are also transformed to be unconstrained but with a log odds transform. </p>
 <p>Although, unlike model specifiation in PyMC2, we do not typically provide starting points for variables at the model specification stage, we can also provide an initial value for any distribution (called a "test value") using the <code>testval</code> argument. This overrides the default test value for the distribution (usually the mean, median or mode of the distribution), and is most often useful if some values are illegal and we want to ensure we select a legal one. The test values for the distributions are also used as a starting point for sampling and optimization by default, though this is easily overriden. </p>
 <p>The vector of latent volatilities <code>s</code> is given a prior distribution by <code>GaussianRandomWalk</code>. As its name suggests GaussianRandomWalk is a vector valued distribution where the values of the vector form a random normal walk of length n, as specified by the <code>shape</code> argument. The scale of the innovations of the random walk, <code>sigma</code>, is specified in terms of the precision of the normally distributed innovations and can be a scalar or vector. </p>
-<pre><code>from pymc3 import Exponential, T, exp, Deterministic
+<pre><code class="python">from pymc3 import Exponential, T, exp, Deterministic
 from pymc3.distributions.timeseries import GaussianRandomWalk
 
 with Model() as sp500_model:
@@ -593,12 +599,13 @@ with Model() as sp500_model:
 
     r = T('r', nu, lam=1/volatility_process, observed=returns['S&amp;P500'])
 </code></pre>
+
 <p>Notice that we transform the log volatility process <code>s</code> into the volatility process by <code>exp(-2*s)</code>. Here, <code>exp</code> is a Theano function, rather than the corresponding function in NumPy; Theano provides a large subset of the mathematical functions that NumPy does.</p>
 <p>Also note that we have declared the <code>Model</code> name <code>sp500_model</code> in the first occurrence of the context manager, rather than splitting it into two lines, as we did for the first example.</p>
 <h3 id="fitting">Fitting</h3>
 <p>Before we draw samples from the posterior, it is prudent to find a decent starting valuwa by finding a point of relatively high probability. For this model, the full <em>maximum a posteriori</em> (MAP) point over all variables is degenerate and has infinite density. But, if we fix <code>log_sigma</code> and <code>nu</code> it is no longer degenerate, so we find the MAP with respect only to the volatility process <code>s</code> keeping <code>log_sigma</code> and <code>nu</code> constant at their default values (remember that we set <code>testval=.1</code> for <code>sigma</code>). We use the Limited-memory BFGS (L-BFGS) optimizer, which is provided by the <code>scipy.optimize</code> package, as it is more efficient for high dimensional functions and we have 400 stochastic random variables (mostly from <code>s</code>).</p>
 <p>To do the sampling, we do a short initial run to put us in a volume of high probability, then start again at the new starting point. <code>trace[-1]</code> gives us the last point in the sampling trace. NUTS will recalculate the scaling parameters based on the new point, and in this case it leads to faster sampling due to better scaling.</p>
-<pre><code>import scipy
+<pre><code class="python">import scipy
 with sp500_model:
     start = find_MAP(vars=[s], fmin=scipy.optimize.fmin_l_bfgs_b)
 
@@ -609,28 +616,28 @@ with sp500_model:
     step = NUTS(scaling=trace[-1], gamma=.25)
     trace = sample(2000, step, start=trace[-1], progressbar=False, njobs=4)
 </code></pre>
+
 <p>We can check our samples by looking at the traceplot for <code>nu</code> and <code>sigma</code>.</p>
-<pre><code>traceplot(trace, [nu, sigma]);
+<pre><code class="python">traceplot(trace, [nu, sigma]);
 </code></pre>
+
 <p><img alt="png" src="../getting_started_files/getting_started_39_0.png" /></p>
 <p>Finally we plot the distribution of volatility paths by plotting many of our sampled volatility paths on the same graph. Each is rendered partially transparent (via the <code>alpha</code> argument in Matplotlib's <code>plot</code> function) so the regions where many paths overlap are shaded more darkly.</p>
-<pre><code>fig, ax = plt.subplots(figsize=(15, 8))
+<pre><code class="python">fig, ax = plt.subplots(figsize=(15, 8))
 returns.plot(ax=ax)
 ax.plot(returns.index, 1/np.exp(trace['s',::30].T), 'r', alpha=.03);
 ax.set(title='volatility_process', xlabel='time', ylabel='volatility');
 ax.legend(['S&amp;P500', 'stochastic volatility process'])
+</code></pre>
 
-
-
-
-&lt;matplotlib.legend.Legend at 0x115968470&gt;
+<pre><code>&lt;matplotlib.legend.Legend at 0x7f6055033b00&gt;
 </code></pre>
 <p><img alt="png" src="../getting_started_files/getting_started_41_1.png" /></p>
 <p>As you can see, the model correctly infers the increase in volatility during the 2008 financial crash. Moreover, note that this model is quite complex because of its high dimensionality and dependency-structure in the random walk distribution. NUTS as implemented in PyMC3, however, correctly infers the posterior distribution with ease.</p>
 <h2 id="case-study-2-coal-mining-disasters">Case study 2: Coal mining disasters</h2>
 <p>Consider the following time series of recorded coal mining disasters in the UK from 1851 to 1962 (Jarrett, 1979). The number of disasters is thought to have been affected by changes in safety regulations during this period. Unfortunately, we also have pair of years with missing data, identified as missing by a NumPy MaskedArray using -999 as the marker value. </p>
 <p>Next we will build a model for this series and attempt to estimate when the change occured. At the same time, we will see how to handle missing data, use multiple samplers and sample from discrete random variables. </p>
-<pre><code>disaster_data = np.ma.masked_values([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
+<pre><code class="python">disaster_data = np.ma.masked_values([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
                             3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
                             2, 2, 3, 4, 2, 1, 3, -999, 2, 1, 1, 1, 1, 3, 0, 0,
                             1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
@@ -640,13 +647,11 @@ ax.legend(['S&amp;P500', 'stochastic volatility process'])
 year = np.arange(1851, 1962)
 
 plot(year, disaster_data, 'o', markersize=8);
-ylabel("Disaster count")
-xlabel("Year")
+ylabel(&quot;Disaster count&quot;)
+xlabel(&quot;Year&quot;)
+</code></pre>
 
-
-
-
-&lt;matplotlib.text.Text at 0x118d76e48&gt;
+<pre><code>&lt;matplotlib.text.Text at 0x7f605096dcc0&gt;
 </code></pre>
 <p><img alt="png" src="../getting_started_files/getting_started_44_1.png" /></p>
 <p>Occurrences of disasters in the time series is thought to follow a Poisson process with a large rate parameter in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations.</p>
@@ -670,7 +675,7 @@ $$</mathjax>
    * <mathjax>$l$</mathjax>: The rate parameter after the switchpoint <mathjax>$s$</mathjax>.
    * <mathjax>$t_l$</mathjax>, <mathjax>$t_h$</mathjax>: The lower and upper boundaries of year <mathjax>$t$</mathjax>.</p>
 <p>This model is built much like our previous models. The major differences are the introduction of discrete variables with the Poisson and discrete-uniform priors and the novel form of the deterministic random variable <code>rate</code>.</p>
-<pre><code>from pymc3 import DiscreteUniform, Poisson, switch
+<pre><code class="python">from pymc3 import DiscreteUniform, Poisson, switch
 
 with Model() as disaster_model:
 
@@ -685,6 +690,7 @@ with Model() as disaster_model:
 
     disasters = Poisson('disasters', rate, observed=disaster_data)
 </code></pre>
+
 <p>The logic for the rate random variable,</p>
 <pre><code class="python">rate = switch(switchpoint &gt;= year, early_rate, late_rate)
 </code></pre>
@@ -693,7 +699,7 @@ with Model() as disaster_model:
 <p>Missing values are handled transparently by passing a <code>MaskedArray</code> or a <code>pandas.DataFrame</code> with NaN values to the <code>observed</code> argument when creating an observed stochastic random variable. Behind the scenes, another random variable, <code>disasters.missing_values</code> is created to model the missing values. All we need to do to handle the missing values is ensure we sample this random variable as well.</p>
 <p>Unfortunately because they are discrete variables and thus have no meaningful gradient, we cannot use NUTS for sampling <code>switchpoint</code> or the missing disaster observations. Instead, we will sample using a <code>Metroplis</code> step method, which implements adaptive Metropolis-Hastings, because it is designed to handle discrete values.</p>
 <p>We sample with both samplers at once by passing them to the <code>sample</code> function in a list. Each new sample is generated by first applying <code>step1</code> then <code>step2</code>.</p>
-<pre><code>from pymc3 import Metropolis
+<pre><code class="python">from pymc3 import Metropolis 
 
 with disaster_model:
     step1 = NUTS([early_rate, late_rate])
@@ -702,17 +708,19 @@ with disaster_model:
     step2 = Metropolis([switchpoint, disasters.missing_values[0]] )
 
     trace = sample(10000, step=[step1, step2])
+</code></pre>
 
- [-----------------100%-----------------] 10000 of 10000 complete in 9.4 sec
+<pre><code> [-----------------100%-----------------] 10000 of 10000 complete in 8.8 sec
 </code></pre>
 <p>In the trace plot below we can see that there's about a 10 year span that's plausible for a significant change in safety, but a 5 year span that contains most of the probability mass. The distribution is jagged because of the jumpy relationship beween the year switchpoint and the likelihood  and not due to sampling error.</p>
-<pre><code>traceplot(trace);
+<pre><code class="python">traceplot(trace);
 </code></pre>
+
 <p><img alt="png" src="../getting_started_files/getting_started_51_0.png" /></p>
 <h2 id="arbitrary-deterministics">Arbitrary deterministics</h2>
 <p>Due to its reliance on Theano, PyMC3 provides many mathematical functions and operators for transforming random variables into new random variables. However, the library of functions in Theano is not exhaustive, therefore Theano and PyMC3 provide functionality for creating arbitrary Theano functions in pure Python, and including these functions in PyMC models. This is supported with the <code>as_op</code> function decorator.</p>
 <p>Theano needs to know the types of the inputs and outputs of a function, which are specified for <code>as_op</code> by <code>itypes</code> for inputs and <code>otypes</code> for outputs. The Theano documentation includes <a href="http://deeplearning.net/software/theano/library/tensor/basic.html#all-fully-typed-constructors">an overview of the available types</a>.</p>
-<pre><code>import theano.tensor as T 
+<pre><code class="python">import theano.tensor as T 
 from theano.compile.ops import as_op
 
 @as_op(itypes=[T.lscalar], otypes=[T.lscalar])
@@ -726,6 +734,7 @@ with Model() as model_deterministic:
     a = Poisson('a', 1)
     b = crazy_modulo3(a)
 </code></pre>
+
 <p>An important drawback of this approach is that it is not possible for <code>theano</code> to inspect these functions in order to compute the gradient required for the Hamiltonian-based samplers. Therefore, it is not possible to use the HMC or NUTS samplers for a model that uses such an operator. However, it is possible to add a gradient if we inherit from <code>theano.Op</code> instead of using <code>as_op</code>. The PyMC example set includes <a href="https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model_arbitrary_deterministic.py">a more elaborate example of the usage of <code>as_op</code></a>.</p>
 <h2 id="arbitrary-distributions">Arbitrary distributions</h2>
 <p>Similarly, the library of statistical distributions in PyMC3 is not exhaustive, but PyMC allows for the creation of user-defined functions for an arbitrary probability distribution. For simple statistical distributions, the <code>DensityDist</code> function takes as an argument any function that calculates a log-probability <mathjax>$log(p(x))$</mathjax>. This function may employ other random variables in its calculation. Here is an example inspired by a blog post by Jake Vanderplas on which priors to use for a linear regression (Vanderplas, 2014). </p>
@@ -745,7 +754,7 @@ with Model() as model:
 
 <p>For more complex distributions, one can create a subclass of <code>Continuous</code> or <code>Discrete</code> and provide the custom <code>logp</code> function, as required. This is how the built-in distributions in PyMC are specified. As an example, fields like psychology and astrophysics have complex likelihood functions for a particular process that may require numerical approximation. In these cases, it is impossible to write the function in terms of predefined theano operators and we must use a custom theano operator using <code>as_op</code> or inheriting from <code>theano.Op</code>. </p>
 <p>Implementing the <code>beta</code> variable above as a <code>Continuous</code> subclass is shown below, along with a sub-function using the <code>as_op</code> decorator, though this is not strictly necessary.</p>
-<pre><code>from pymc3.distributions import Continuous
+<pre><code class="python">from pymc3.distributions import Continuous
 
 class Beta(Continuous):
     def __init__(self, mu, *args, **kwargs):
@@ -765,46 +774,103 @@ def beta_logp(value):
 with Model() as model:
     beta = Beta('slope', mu=0, testval=0)
 </code></pre>
+
 <h1 id="generalized-linear-models">Generalized Linear Models</h1>
 <p>Generalized Linear Models (GLMs) are a class of flexible models that are widely used to estimate regression relationships between a single outcome variable and one or multiple predictors. Because these models are so common, <code>PyMC3</code> offers a <code>glm</code> submodule that allows flexible creation of various GLMs with an intuitive <code>R</code>-like syntax that is implemented via the <code>patsy</code> module.</p>
 <p>The <code>glm</code> submodule requires data to be included as a <code>pandas</code> <code>DataFrame</code>. Hence, for our linear regression example:</p>
-<pre><code># Convert X and Y to a pandas DataFrame
+<pre><code class="python"># Convert X and Y to a pandas DataFrame
 import pandas 
+
 df = pandas.DataFrame({'x1': X1, 'x2': X2, 'y': Y})
 </code></pre>
+
 <p>The model can then be very concisely specified in one line of code.</p>
-<pre><code>from pymc3.glm import glm
+<pre><code class="python">X2
+</code></pre>
+
+<pre><code>array([ 0.        ,  0.0020202 ,  0.0040404 ,  0.00606061,  0.00808081,
+        0.01010101,  0.01212121,  0.01414141,  0.01616162,  0.01818182,
+        0.02020202,  0.02222222,  0.02424242,  0.02626263,  0.02828283,
+        0.03030303,  0.03232323,  0.03434343,  0.03636364,  0.03838384,
+        0.04040404,  0.04242424,  0.04444444,  0.04646465,  0.04848485,
+        0.05050505,  0.05252525,  0.05454545,  0.05656566,  0.05858586,
+        0.06060606,  0.06262626,  0.06464646,  0.06666667,  0.06868687,
+        0.07070707,  0.07272727,  0.07474747,  0.07676768,  0.07878788,
+        0.08080808,  0.08282828,  0.08484848,  0.08686869,  0.08888889,
+        0.09090909,  0.09292929,  0.09494949,  0.0969697 ,  0.0989899 ,
+        0.1010101 ,  0.1030303 ,  0.10505051,  0.10707071,  0.10909091,
+        0.11111111,  0.11313131,  0.11515152,  0.11717172,  0.11919192,
+        0.12121212,  0.12323232,  0.12525253,  0.12727273,  0.12929293,
+        0.13131313,  0.13333333,  0.13535354,  0.13737374,  0.13939394,
+        0.14141414,  0.14343434,  0.14545455,  0.14747475,  0.14949495,
+        0.15151515,  0.15353535,  0.15555556,  0.15757576,  0.15959596,
+        0.16161616,  0.16363636,  0.16565657,  0.16767677,  0.16969697,
+        0.17171717,  0.17373737,  0.17575758,  0.17777778,  0.17979798,
+        0.18181818,  0.18383838,  0.18585859,  0.18787879,  0.18989899,
+        0.19191919,  0.19393939,  0.1959596 ,  0.1979798 ,  0.2       ])
+</code></pre>
+<pre><code class="python">from pymc3.glm import glm
 
 with Model() as model_glm:
     glm('y ~ x1 + x2', df)
 </code></pre>
-<p>The error distribution, if not specified via the <code>family</code> argument, is assumed to be normal. In the case of logistic regression, this can be modified by passing in a <code>Binomial</code> family object.</p>
-<pre><code>from pymc3.glm.families import Binomial
 
-df_logistic = pandas.DataFrame({'x1': X1, 'x2': X2, 'y': Y &gt; 0})
+<p>The error distribution, if not specified via the <code>family</code> argument, is assumed to be normal. In the case of logistic regression, this can be modified by passing in a <code>Binomial</code> family object.</p>
+<pre><code class="python">from pymc3.glm.families import Binomial
+
+df_logistic = pandas.DataFrame({'x1': X1, 'y': Y &gt; np.median(Y)})
 
 with Model() as model_glm_logistic:
-    glm('y ~ x1 + x2', df_logistic, family=Binomial())
+    glm('y ~ x1', df_logistic, family=Binomial())
 </code></pre>
+
 <h2 id="backends">Backends</h2>
 <p><code>PyMC3</code> has support for different ways to store samples during and after sampling, called backends, including in-memory (default), text file, and SQLite. These can be found in <code>pymc.backends</code>:</p>
 <p>By default, an in-memory <code>ndarray</code> is used but if the samples would get too large to be held in memory we could use the <code>sqlite</code> backend:</p>
-<pre><code>from pymc3.backends import SQLite
+<pre><code class="python">from pymc3.backends import SQLite
 
-with model_glm_logistic:
+with Model() as model_glm_logistic:
+    glm('y ~ x1', df_logistic, family=Binomial())
+
     backend = SQLite('trace.sqlite')
-    trace = sample(5000, trace=backend)
+    start = find_MAP()
+    step = NUTS(scaling=start)
+    trace = sample(5000, step=step, start=start, trace=backend)
+</code></pre>
 
+<pre><code> [-----------------100%-----------------] 5000 of 5000 complete in 6.2 sec
+</code></pre>
+<pre><code class="python">summary(trace, vars=['x1'])
+</code></pre>
 
-summary(trace, vars=['x1', 'x2'])
+<pre><code>x1:
+
+  Mean             SD               MC Error         95% HPD interval
+  -------------------------------------------------------------------
+
+  -1.579           250.603          1.577            [-0.981, 1.001]
+
+  Posterior quantiles:
+  2.5            25             50             75             97.5
+  |--------------|==============|==============|--------------|
+
+  -0.981         -0.338         0.007          0.348          1.001
 </code></pre>
 <p>The stored trace can then later be loaded using the <code>load</code> command:</p>
-<pre><code>from pymc3.backends.sqlite import load
+<pre><code class="python">from pymc3 import sample
+</code></pre>
+
+<pre><code class="python">from pymc3.backends.sqlite import load
 
 with basic_model:
     trace_loaded = load('trace.sqlite')
 </code></pre>
+
 <p>More information about <code>backends</code> can be found in the docstring of <code>pymc.backends</code>.</p>
+<h1 id="discussion">Discussion</h1>
+<p>Probabilistic programming is an emerging paradigm in statistical learning, of which Bayesian modeling is an important sub-discipline. The signature characteristics of probabilistic programming--specifying variables as probability distributions and conditioning variables on other variables and on observations--makes it a powerful tool for building models in a variety of settings, and over a range of model complexity. Accompanying the rise of probabilistic programming has been a burst of innovation in fitting methods for Bayesian models that represent notable improvement over existing MCMC methods. Yet, despite this expansion, there are few software packages available that have kept pace with the methodological innovation, and still fewer that allow non-expert users to implement models.</p>
+<p>PyMC3 provides a probabilistic programming platform for quantitative researchers to implement statistical models flexibly and succinctly. A large library of statistical distributions and several pre-defined fitting algorithms allows users to focus on the scientific problem at hand, rather than the implementation details of Bayesian modeling. The choice of Python as a development language, rather than a domain-specific language, means that PyMC3 users are able to work interactively to build models, introspect model objects, and debug or profile their work, using a dynamic, high-level programming language that is easy to learn. The modular, object-oriented design of PyMC3 means that adding new fitting algorithms or other features is straightforward. In addition, PyMC3 comes with several features not found in most other packages, most notably Hamiltonian-based samplers as well as automatical transforms of constrained random variables which is only offered by STAN. Unlike STAN, however, PyMC3 supports discrete variables as well as non-gradient based sampling algorithms like Metropolis-Hastings and Slice sampling.</p>
+<p>Development of PyMC3 is an ongoing effort and several features are planned for future versions. Most notably, variational inference techniques are often more efficient than MCMC sampling, at the cost of generalizability. More recently, however, black-box variational inference algorithms have been developed, such as automatic differentiation variational inference (ADVI; Kucukelbir et al., in prep). This algorithm is slated for addition to PyMC3. As an open-source scientific computing toolkit, we encourage researchers developing new fitting algorithms for Bayesian models to provide reference implementations in PyMC3. Since samplers can be written in pure Python code, they can be implemented generally to make them work on arbitrary PyMC3 models, giving authors a larger audience to put their methods into use.</p>
 <h2 id="references">References</h2>
 <p>Patil, A., D. Huard and C.J. Fonnesbeck. (2010) PyMC: Bayesian Stochastic Modelling in Python. Journal of Statistical Software, 35(4), pp. 1-81</p>
 <p>Bastien, F., Lamblin, P., Pascanu, R., Bergstra, J., Goodfellow, I., Bergeron, A., Bouchard, N., Warde-Farley, D., and Bengio, Y. (2012) “Theano: new features and speed improvements”. NIPS 2012 deep learning workshop.</p>
@@ -816,6 +882,7 @@ with basic_model:
 <p>Stan Development Team. (2014). Stan: A C++ Library for Probability and Sampling, Version 2.5.0.   http://mc-stan.org. </p>
 <p>Gamerman, D. Markov Chain Monte Carlo: statistical simulation for Bayesian inference. Chapman and Hall, 1997.</p>
 <p>Hoffman, M. D., &amp; Gelman, A. (2014). The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo. The Journal of Machine Learning Research, 30.</p>
+<p>Kucukelbir A, Ranganath R, Gelman A, and Blei DM. Automatic Variational Inference in Stan http://arxiv.org/abs/1506.03431, in prep.</p>
 <p>Vanderplas, Jake. "Frequentism and Bayesianism IV: How to be a Bayesian in Python." Pythonic Perambulations. N.p., 14 Jun 2014. Web. 27 May. 2015. <a href="https://jakevdp.github.io/blog/2014/06/14/frequentism-and-bayesianism-4-bayesian-in-python/">https://jakevdp.github.io/blog/2014/06/14/frequentism-and-bayesianism-4-bayesian-in-python/</a>.</p>
 <p>R.G. Jarrett. A note on the intervals between coal mining disasters. Biometrika, 66:191–193, 1979.</p></div>
             

@@ -181,7 +181,7 @@
 </div></div>
                 <div class="col-md-9" role="main">
 
-<pre><code>%pylab --no-import-all inline
+<pre><code class="python">%pylab --no-import-all inline
 
 from pymc3 import *
 import theano.tensor as T
@@ -213,19 +213,19 @@ with model:
 
     # m_g ~ N(0, .1)
     group_effects = Normal(
-        "group_effects", 0, .1, shape=(1, n_group_predictors, n_predictors))
+        &quot;group_effects&quot;, 0, .1, shape=(1, n_group_predictors, n_predictors))
 
     # sg ~ Uniform(.05, 10)
-    sg = Uniform("sg", .0, 10, testval=2.)
+    sg = Uniform(&quot;sg&quot;, .0, 10, testval=2.)
 
 
     # m ~ N(mg * pg, sg)
-    effects = Normal("effects",
+    effects = Normal(&quot;effects&quot;,
                      sum(group_predictors[:, :, newaxis] *
                      group_effects, 1), sg ** -2,
                      shape=(n_groups, n_predictors))
 
-    s = Uniform("s", .01, 10, shape=n_groups)
+    s = Uniform(&quot;s&quot;, .01, 10, shape=n_groups)
 
     g = T.constant(group)
 
@@ -239,89 +239,65 @@ with model:
     #step = Metropolis()
     #step = Slice()
     step = NUTS()
+</code></pre>
 
-Populating the interactive namespace from numpy and matplotlib
+<pre><code>Populating the interactive namespace from numpy and matplotlib
+</code></pre>
+<pre><code class="python">n_predictors
+</code></pre>
 
+<pre><code>3
+</code></pre>
+<pre><code class="python">group
+</code></pre>
 
-
-n_predictors
-
-
-
-
-3
-
-
-
-
-group
-
-
-
-
-array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+<pre><code>array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
        0, 0, 0, 0, 0, 0, 0])
+</code></pre>
+<pre><code class="python">n_groups
+</code></pre>
 
-
-
-
-n_groups
-
-
-
-
-1
-
-
-
-
-import pymc3 as pm
+<pre><code>1
+</code></pre>
+<pre><code class="python">import pymc3 as pm
 pm.debug.eval_univariate?
+</code></pre>
 
+<pre><code class="python">model.free_RVs
+</code></pre>
 
-model.free_RVs
-
-
-
-
-[group_effects, sg, effects, s]
-
-
-
-
-lp = lambda x, y: model.logp({'group_effects': [[[0, 0, 0]]], 'sg': x, 'effects':[[y, y, y]], 's': [.05]})
+<pre><code>[group_effects, sg, effects, s]
+</code></pre>
+<pre><code class="python">lp = lambda x, y: model.logp({'group_effects': [[[0, 0, 0]]], 'sg': x, 'effects':[[y, y, y]], 's': [.05]})
 lp = np.vectorize(lp)
+</code></pre>
 
+<pre><code class="python">import seaborn as sns
+</code></pre>
 
-import seaborn as sns
-
-
-x, y = np.mgrid[0.001:0.1:.001, -.05:.05:.001]
+<pre><code class="python">x, y = np.mgrid[0.001:0.1:.001, -.05:.05:.001]
 plt.contourf(x, y, lp(x, y))
+</code></pre>
 
-
-
-
-&lt;matplotlib.contour.QuadContourSet instance at 0x7ffe77d0ccf8&gt;
+<pre><code>&lt;matplotlib.contour.QuadContourSet instance at 0x7ffe77d0ccf8&gt;
 </code></pre>
 <p><img alt="png" src="../hierarchical_files/hierarchical_8_1.png" /></p>
 <p>best of 3: 6.94 s per loop</p>
-<pre><code>%prun -q -D sample_nuts.prof sample(3e3, step, model=model)
-
- [-----------------100%-----------------] 3000 of 3000 complete in 74.1 sec 
-*** Profile stats marshalled to file u'sample_nuts.prof'.
-
-
-
-%prun -q -D sample.prof sample(3e3, step, start, model=model)
-
- [-----------------100%-----------------] 3000 of 3000 complete in 80.0 sec 
-*** Profile stats marshalled to file u'sample.prof'.
-
-
-
-traceplot(trace);
+<pre><code class="python">%prun -q -D sample_nuts.prof sample(3e3, step, model=model)
 </code></pre>
+
+<pre><code> [-----------------100%-----------------] 3000 of 3000 complete in 74.1 sec 
+*** Profile stats marshalled to file u'sample_nuts.prof'.
+</code></pre>
+<pre><code class="python">%prun -q -D sample.prof sample(3e3, step, start, model=model)
+</code></pre>
+
+<pre><code> [-----------------100%-----------------] 3000 of 3000 complete in 80.0 sec 
+*** Profile stats marshalled to file u'sample.prof'.
+</code></pre>
+<pre><code class="python">traceplot(trace);
+</code></pre>
+
 <p><img alt="png" src="../hierarchical_files/hierarchical_12_0.png" /></p></div>
             
         </div>
