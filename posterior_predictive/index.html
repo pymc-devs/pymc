@@ -193,6 +193,10 @@
 <p>PPCs are a great way to validate a model. The idea is to generate data sets from the model using parameter settings from draws from the posterior.</p>
 <p><code>PyMC3</code> has random number support thanks to <a href="https://github.com/mwibrow">Mark Wibrow</a> as implemented in <a href="https://github.com/pymc-devs/pymc3/pull/784">PR784</a>.</p>
 <p>Here we will implement a general routine to draw samples from the observed nodes of a model.</p>
+<pre><code class="python">%load_ext autoreload
+%autoreload 2
+</code></pre>
+
 <pre><code class="python">%matplotlib inline
 import numpy as np
 import pymc3 as pm
@@ -201,9 +205,6 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 </code></pre>
 
-<pre><code>ERROR (theano.sandbox.cuda): nvcc compiler not found on $PATH. Check your nvcc installation and try again.
-ERROR:theano.sandbox.cuda:nvcc compiler not found on $PATH. Check your nvcc installation and try again.
-</code></pre>
 <p>Lets generate a very simple model:</p>
 <pre><code class="python">data = np.random.randn(100)
 
@@ -216,39 +217,24 @@ with pm.Model() as model:
     trace = pm.sample(5000, step)
 </code></pre>
 
-<pre><code> [-----------------100%-----------------] 5000 of 5000 complete in 2.4 sec
+<pre><code> [-----------------100%-----------------] 5000 of 5000 complete in 2.5 sec
 
-/home/wiecki/miniconda3/lib/python3.4/importlib/_bootstrap.py:321: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
-  return f(*args, **kwds)
+/Users/santon/anaconda/envs/pymc3/lib/python2.7/site-packages/theano/scan_module/scan_perform_ext.py:135: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
+  from scan_perform.scan_perform import *
 </code></pre>
 <pre><code class="python">pm.traceplot(trace);
 </code></pre>
 
-<p><img alt="png" src="../posterior_predictive_files/posterior_predictive_4_0.png" /></p>
-<p>This function will make it into <code>PyMC3</code> eventually, for now this should work on all models:</p>
-<pre><code class="python">def run_ppc(trace, samples=100, model=None):
-    &quot;&quot;&quot;Generate Posterior Predictive samples from a model given a trace.
-    &quot;&quot;&quot;
-    if model is None:
-         model = pm.modelcontext(model)
-
-    ppc = defaultdict(list)
-    for idx in np.random.randint(0, len(trace), samples):
-        param = trace[idx]
-        for obs in model.observed_RVs:
-            ppc[obs.name].append(obs.distribution.random(point=param))
-
-    return ppc
+<p><img alt="png" src="../posterior_predictive_files/posterior_predictive_5_0.png" /></p>
+<p>This function will randomly draw 50 samples of parameters from the trace. Then, for each sample, it will draw 100 random numbers from a normal distribution specified by the values of <code>mu</code> and <code>std</code> in that sample.</p>
+<pre><code class="python">ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
 </code></pre>
 
-<pre><code class="python">ppc = run_ppc(trace, samples=500, model=model)
+<p>Now, <code>ppc</code> contains 500 generated data sets (containing 100 samples each), each using a different parameter setting from the posterior:</p>
+<pre><code class="python">np.asarray(ppc['n']).shape
 </code></pre>
 
-<p><code>ppc</code> contains 500 generated data sets (containing 50 samples each), each using a different parameter setting from the posterior:</p>
-<pre><code class="python">np.asarray(ppc['o']).shape
-</code></pre>
-
-<pre><code>(500, 50)
+<pre><code>(500, 100)
 </code></pre>
 <p>One common way to visualize is to look if the model can reproduce the patterns observed in the real data. For example, how close are the inferred means to the actual sample mean:</p>
 <pre><code class="python">ax = plt.subplot()
@@ -281,7 +267,7 @@ outcomes = np.random.binomial(1, invlogit(coeff * predictors))
 <pre><code class="python">outcomes
 </code></pre>
 
-<pre><code>array([1, 1, 0, ..., 1, 0, 0])
+<pre><code>array([1, 1, 0, ..., 0, 1, 1])
 </code></pre>
 <pre><code class="python">predictors_oos = np.random.normal(size=50)
 outcomes_oos = np.random.binomial(1, invlogit(coeff * predictors_oos))
@@ -302,14 +288,14 @@ with pm.Model() as model:
     trace = pm.sample(500, step)
 </code></pre>
 
-<pre><code> [-----------------100%-----------------] 500 of 500 complete in 2.6 sec
+<pre><code> [-----------------100%-----------------] 500 of 500 complete in 2.9 sec
 </code></pre>
 <pre><code class="python"># Changing values here will also change values in the model
 predictors_shared.set_value(predictors_oos)
 </code></pre>
 
 <pre><code class="python"># Simply running PPC will use the updated values and do prediction
-ppc = run_ppc(trace, model=model, samples=500)
+ppc = pm.sample_ppc(trace, model=model, samples=500)
 </code></pre>
 
 <h2 id="mean-predicted-values-plus-error-bars-to-give-sense-of-uncertainty-in-prediction">Mean predicted values plus error bars to give sense of uncertainty in prediction</h2>
@@ -320,9 +306,11 @@ plt.xlabel('predictor')
 plt.ylabel('outcome')
 </code></pre>
 
-<pre><code>&lt;matplotlib.text.Text at 0x7f1e23214f98&gt;
+<pre><code>&lt;matplotlib.text.Text at 0x129c81890&gt;
 </code></pre>
-<p><img alt="png" src="../posterior_predictive_files/posterior_predictive_21_1.png" /></p></div>
+<p><img alt="png" src="../posterior_predictive_files/posterior_predictive_21_1.png" /></p>
+<pre><code class="python">
+</code></pre></div>
             
         </div>
 
