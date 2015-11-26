@@ -259,14 +259,14 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
         print("Too few elements for quantile calculation")
 
 
-def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
+def df_summary(trace, vars=None, stat_funcs=None, extend=False,
                alpha=0.05, batches=100):
     """Create a data frame with summary statistics.
 
     Parameters
     ----------
     trace : MultiTrace instance
-    varnames : list
+    vars : list
         Names of variables to include in summary
     stat_funcs : None or list
         A list of functions used to calculate statistics. By default,
