@@ -333,8 +333,8 @@ def df_summary(trace, vars=None, stat_funcs=None, extend=False,
     mu__0  0.066473  0.000312  0.105039  0.214242
     mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
-    if varnames is None:
-        varnames = trace.varnames
+    if vars is None:
+        vars = trace.varnames
 
     funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
              lambda x: pd.Series(np.std(x, 0), name='sd'),
@@ -347,7 +347,7 @@ def df_summary(trace, vars=None, stat_funcs=None, extend=False,
         stat_funcs = funcs
 
     var_dfs = []
-    for var in varnames:
+    for var in vars:
         vals = trace.get_values(var, combine=True)
         flat_vals = vals.reshape(vals.shape[0], -1)
         var_df = pd.concat([f(flat_vals) for f in stat_funcs], axis=1)
