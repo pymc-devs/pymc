@@ -26,6 +26,7 @@ class Slice(ArrayStep):
     
     """
     default_blocked = False
+    stepname = 'Slice'
     def __init__(self, vars=None, w=1, tune=True, model=None, **kwargs):
 
         model = modelcontext(model)
