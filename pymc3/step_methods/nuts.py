@@ -22,6 +22,7 @@ class NUTS(ArrayStepShared):
     The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
     default_blocked = True
+    
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False, state=None,
                  Emax=1000,
                  target_accept=0.8,
@@ -94,7 +95,6 @@ class NUTS(ArrayStepShared):
 
         shared = make_shared_replacements(vars, model)
         self.leapfrog1_dE = leapfrog1_dE(model.logpt, vars, shared, self.potential, profile=profile)
-        
 
         super(NUTS, self).__init__(vars, shared, **kwargs)
 
