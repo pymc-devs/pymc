@@ -71,8 +71,7 @@ class Metropolis(ArrayStepShared):
 
     """
     default_blocked = False
-    stepname = 'Metropolis'
-
+    
     def __init__(self, vars=None, S=None, proposal_dist=NormalProposal, scaling=1.,
                  tune=True, tune_interval=100, model=None, **kwargs):
 
@@ -180,8 +179,6 @@ def tune(scale, acc_rate):
 
 class BinaryMetropolis(ArrayStep):
     """Metropolis-Hastings optimized for binary variables"""
-    
-    stepname = 'BinaryMetropolis'
     
     def __init__(self, vars, scaling=1., tune=True, tune_interval=100, model=None):
 

@@ -9,8 +9,6 @@ class CompoundStep(object):
     def __init__(self, methods):
         self.methods = list(methods)
         
-    stepname = 'CompoundStep'
-    
     def step(self, point):
         for method in self.methods:
             point = method.step(point)

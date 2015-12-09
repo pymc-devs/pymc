@@ -22,7 +22,7 @@ class NUTS(ArrayStepShared):
     The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
     default_blocked = True
-    stepname = 'NUTS'
+    
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False, state=None,
                  Emax=1000,
                  target_accept=0.8,
