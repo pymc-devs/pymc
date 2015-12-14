@@ -71,9 +71,8 @@ def test_waic():
 
         step = pm.Metropolis()
         trace = pm.sample(100, step)
-        calculated = waic(trace)
+        calculated = pm.waic(trace)
 
-    binom = st.binom(5, trace['p'])
     log_py = st.binom.logpmf(np.atleast_2d(x_obs).T, 5, trace['p']).T
     
     lppd =  np.sum(np.log(np.mean(np.exp(log_py), axis=0)))

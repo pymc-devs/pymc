@@ -5,6 +5,7 @@ import pandas as pd
 import itertools
 import sys
 import warnings
+from .model import modelcontext
 
 
 from .backends import tracetab as ttab
