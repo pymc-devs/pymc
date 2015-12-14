@@ -61,6 +61,27 @@ def test_dic_warns_on_transformed_rv():
 
         assert(len(w) == 1)
 
+def test_waic():
+    """Test widely available information criterion calculation"""
+    x_obs = np.arange(6)
+
+    with pm.Model() as model:
+        p = pm.Beta('p', 1., 1., transform=None)
+        x = pm.Binomial('x', 5, p, observed=x_obs)
+
+        step = pm.Metropolis()
+        trace = pm.sample(100, step)
+        calculated = waic(trace)
+
+    binom = st.binom(5, trace['p'])
+    log_py = st.binom.logpmf(np.atleast_2d(x_obs).T, 5, trace['p']).T
+    
+    lppd =  np.sum(np.log(np.mean(np.exp(log_py), axis=0)))
+    p_waic = np.sum(np.var(log_py, axis=0))
+    actual = -2 * lppd + 2 * p_waic
+    
+    assert_almost_equal(calculated, actual, decimal=2)
+
 def test_hpd():
     """Test HPD calculation"""
 
