@@ -5,8 +5,6 @@ python:
   - "3.4"
 
 before_install:
-  - sudo apt-get install liblapack-dev gfortran python-scipy libblas-dev libsuitesparse-dev swig
-  - sudo ln -Tsf /{run,dev}/shm
   - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh; else wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh; fi
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
@@ -30,4 +28,4 @@ env:
   - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples1"
   - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples2"
 script:
-  - nosetests $TESTCMD
+  - THEANO_FLAGS='gcc.cxxflags="-march=core2"' nosetests $TESTCMD
