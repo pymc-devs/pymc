@@ -32,8 +32,7 @@ def test_dic():
 
         step = pm.Metropolis()
         trace = pm.sample(100, step)
-
-    calculated = dic(model, trace)
+        calculated = pm.dic(trace)
 
     mean_deviance = -2 * st.binom.logpmf(np.repeat(np.atleast_2d(x_obs), 100, axis=0), 5,
                                          np.repeat(np.atleast_2d(trace['p']), 6, axis=0).T).sum(axis=1).mean()
@@ -57,7 +56,7 @@ def test_dic_warns_on_transformed_rv():
         trace = pm.sample(100, step)
 
     with warnings.catch_warnings(record=True) as w:
-        calculated = dic(model, trace)
+        calculated = pm.dic(trace, model)
 
         assert(len(w) == 1)
 
