@@ -146,6 +146,7 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
                      pbars,
                      [model] * njobs,
                      random_seeds)
+        argset = list(argset)
         sample_func = _mp_sample
         sample_args = [njobs, argset]
     else:
