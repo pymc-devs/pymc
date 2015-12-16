@@ -74,10 +74,12 @@ def autocov(x, lag=1):
         raise ValueError("Autocovariance lag must be a positive integer")
     return np.cov(x[:-lag], x[lag:], bias=1)
 
-def dic(model, trace):
+def dic(trace, model=None):
     """
     Calculate the deviance information criterion of the samples in trace from model
     """
+    model = modelcontext(model)
+
     transformed_rvs = [rv for rv in model.free_RVs if hasattr(rv.distribution, 'transform_used')]
     if transformed_rvs:
         warnings.warn("""
