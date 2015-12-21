@@ -41,19 +41,24 @@ class GaussianRandomWalk(Continuous):
 
     Parameters
     ----------
+    mu: tensor
+        innovation drift
     tau : tensor
         tau > 0, innovation precision
+    sd : tensor
+        sd > 0, innovation standard deviation (alternative to specifying tau)
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
-    def __init__(self, tau=None, init=Flat.dist(), sd=None, *args, **kwargs):
+    def __init__(self, mu=0., tau=None, init=Flat.dist(), sd=None, *args, **kwargs):
         super(GaussianRandomWalk, self).__init__(*args, **kwargs)
+        self.mu = mu
         self.tau = tau
         self.sd = sd
         self.init = init
-        self.mean = 0.
 
     def logp(self, x):
+        mu = self.mu
         tau = self.tau
         sd = self.sd
         init = self.init
@@ -61,5 +66,5 @@ class GaussianRandomWalk(Continuous):
         x_im1 = x[:-1]
         x_i = x[1:]
 
-        innov_like = Normal.dist(x_im1, tau, sd=sd).logp(x_i)
+        innov_like = Normal.dist(x_im1, mu=mu, tau=tau, sd=sd).logp(x_i)
         return init.logp(x[0]) + sum(innov_like)
