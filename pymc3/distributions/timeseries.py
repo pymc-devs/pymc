@@ -42,7 +42,7 @@ class GaussianRandomWalk(Continuous):
     Parameters
     ----------
     mu: tensor
-        innovation drift
+        innovation drift, defaults to 0.0
     tau : tensor
         tau > 0, innovation precision
     sd : tensor
@@ -56,6 +56,7 @@ class GaussianRandomWalk(Continuous):
         self.tau = tau
         self.sd = sd
         self.init = init
+        self.mean = 0.
 
     def logp(self, x):
         mu = self.mu
