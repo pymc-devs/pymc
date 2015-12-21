@@ -67,5 +67,5 @@ class GaussianRandomWalk(Continuous):
         x_im1 = x[:-1]
         x_i = x[1:]
 
-        innov_like = Normal.dist(x_im1, mu=mu, tau=tau, sd=sd).logp(x_i)
+        innov_like = Normal.dist(mu=x_im1 + mu, tau=tau, sd=sd).logp(x_i)
         return init.logp(x[0]) + sum(innov_like)
