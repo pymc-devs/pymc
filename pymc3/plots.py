@@ -7,15 +7,16 @@ __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
 
 def traceplot(trace, vars=None, figsize=None,
-              lines=None, combined=False, grid=True, 
-              alpha=0.35, ax=None):
+              lines=None, combined=False, grid=False, 
+              alpha=0.35, priors=None, prior_alpha=1, prior_style='--',
+              ax=None):
     """Plot samples histograms and values
 
     Parameters
     ----------
 
     trace : result of MCMC run
-    vars : list of variable names
+    vars : iterable of variable names
         Variables to be plotted, if None all variable are plotted
     figsize : figure size tuple
         If None, size is (12, num of variables * 2) inch
@@ -28,6 +29,13 @@ def traceplot(trace, vars=None, figsize=None,
         (default), chains will be plotted separately.
     grid : bool
         Flag for adding gridlines to histogram. Defaults to True.
+    priors : iterable of PyMC distributions
+        PyMC prior distribution(s) to be plotted alongside poterior. Defaults 
+        to None (no prior plots).
+    prior_alpha : float
+        Alpha value for prior plot. Defaults to 1.
+    prior_style : str
+        Line style for prior plot. Defaults to '--' (dashed line).
     ax : axes
         Matplotlib axes. Defaults to None.
 
@@ -53,13 +61,16 @@ def traceplot(trace, vars=None, figsize=None,
         return None
 
     for i, v in enumerate(vars):
+        prior = None
+        if priors is not None:
+            prior = priors[i]
         for d in trace.get_values(v, combine=combined, squeeze=False):
             d = np.squeeze(d)
             d = make_2d(d)
             if d.dtype.kind == 'i':
                 histplot_op(ax[i, 0], d, alpha=alpha)
             else:
-                kdeplot_op(ax[i, 0], d)
+                kdeplot_op(ax[i, 0], d, prior, prior_alpha, prior_style)
             ax[i, 0].set_title(str(v))
             ax[i, 0].grid(grid)
             ax[i, 1].set_title(str(v))
@@ -88,7 +99,7 @@ def histplot_op(ax, data, alpha=.35):
         ax.hist(d, bins=range(mind, maxd + 2, step), alpha=alpha, align='left')
         ax.set_xlim(mind - .5, maxd + .5)
 
-def kdeplot_op(ax, data):
+def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
     errored = []
     for i in range(data.shape[1]):
         d = data[:, i]
@@ -97,6 +108,10 @@ def kdeplot_op(ax, data):
             l = np.min(d)
             u = np.max(d)
             x = np.linspace(0, 1, 100) * (u - l) + l
+            
+            if prior is not None:
+                p = prior.logp(x).eval()
+                ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style)
 
             ax.plot(x, density(x))
 
@@ -106,6 +121,7 @@ def kdeplot_op(ax, data):
     if errored:
         ax.text(.27,.47, 'WARNING: KDE plot failed for: ' + str(errored), style='italic',
                         bbox={'facecolor':'red', 'alpha':0.5, 'pad':10})
+
 
 def make_2d(a):
     """Ravel the dimensions after the first.
