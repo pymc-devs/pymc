@@ -232,7 +232,7 @@ def replicate_samples(generator, size, repeats, *args, **kwargs):
 
 def generate_samples(generator, *args, **kwargs):
     """Generate samples from the distribution of a random variable.
-
+ 
     Parameters
     ----------
     generator : function
@@ -242,10 +242,10 @@ def generate_samples(generator, *args, **kwargs):
         of the samples.
         The *args and **kwargs (stripped of the keywords below) will be
         passed to the generator function.
-
+ 
     keyword arguments
     ~~~~~~~~~~~~~~~~
-
+ 
     dist_shape : int or tuple of int
         The shape of the random variable (i.e., the shape attribute).
     size : int or tuple of int
@@ -256,7 +256,7 @@ def generate_samples(generator, *args, **kwargs):
         parameters. This may be required when the parameter shape
         does not determine the shape of a single sample, for example,
         the shape of the probabilities in the Categorical distribution.
-
+ 
     Any remaining *args and **kwargs are passed on to the generator function.
 """
     dist_shape = kwargs.pop('dist_shape', ())
@@ -306,3 +306,4 @@ def generate_samples(generator, *args, **kwargs):
             if broadcast_shape == (1,):
                 samples = np.reshape(samples, prefix_shape)
     return samples
+

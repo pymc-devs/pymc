@@ -31,7 +31,7 @@ def bound(logp, *conditions):
     Parameters
     ----------
     logp : float
-    *conditions : booleans
+    *conditionss : booleans
 
     Returns
     -------
@@ -61,12 +61,8 @@ def factln(n):
     return gammaln(n + 1)
 
 
-def binomln(n, k):
-    return factln(n) - factln(k) - factln(n - k)
-
-
-def betaln(x, y):
-    return gammaln(x) + gammaln(y) - gammaln(x + y)
+def idfn(x):
+    return x
 
 
 def std_cdf(x):
@@ -74,3 +70,4 @@ def std_cdf(x):
     Calculates the standard normal cumulative distribution function.
     """
     return 0.5 + 0.5*erf(x / sqrt(2.))
+
