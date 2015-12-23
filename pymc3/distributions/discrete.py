@@ -241,11 +241,9 @@ class NegativeBinomial(Discrete):
                          + logpow(alpha / (mu + alpha), alpha),
                          value >= 0, mu > 0, alpha > 0)
 
-        # Return Poisson when alpha gets very large.  This only
-        # works because both Poisson and NegativeBinomial use the
-        # same attribute names.
+        # Return Poisson when alpha gets very large.
         return T.switch(1 * (alpha > 1e10),
-                        Poisson.logp(self, value),
+                        Poisson.dist(self.mu).logp(value),
                         negbinom)
 
 
