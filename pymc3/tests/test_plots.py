@@ -56,7 +56,7 @@ def test_multichain_plots():
 
     forestplot(ptrace, vars=['early_mean', 'late_mean'])
 
-    autocorrplot(ptrace, vars=['switchpoint'])
+    autocorrplot(ptrace, varnames=['switchpoint'])
 
 def test_make_2d():
 

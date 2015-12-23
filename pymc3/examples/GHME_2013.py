@@ -112,7 +112,7 @@ def run(n=3000):
 
     # <codecell>
 
-    autocorrplot(trace, vars = [coeff_sd,sd ])
+    autocorrplot(trace, varnames = [coeff_sd,sd ])
 
 if __name__ == '__main__':
     run()
