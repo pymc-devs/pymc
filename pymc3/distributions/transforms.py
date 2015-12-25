@@ -128,7 +128,7 @@ class SumTo1(Transform):
     name = "sumto1"
 
     def backward(self, y):
-        return T.concatenate([y, 1-sum(y, keepdims=True)])
+        return T.concatenate([y, 1 - T.sum(y, keepdims=True)])
 
     def forward(self, x):
         return x[:-1]
