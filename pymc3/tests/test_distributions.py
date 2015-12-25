@@ -324,6 +324,14 @@ def test_weibull():
             )
 
 
+def test_student_tpos():
+    #TODO: this actually shouldn't pass
+    pymc3_matches_scipy(
+           StudentTpos, Rplus, {'nu': Rplus, 'mu': R, 'lam': Rplus},
+           lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5)
+           )
+
+
 def test_binomial():
     pymc3_matches_scipy(
             Binomial, Nat, {'n': NatSmall, 'p': Unit},

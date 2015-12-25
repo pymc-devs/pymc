@@ -18,8 +18,8 @@ from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
-           'Bound', 'Lognormal', 'ChiSquared', 'HalfNormal', 'Wald',
-           'Pareto', 'InverseGamma', 'ExGaussian']
+           'Bound', 'StudentTpos', 'Lognormal', 'ChiSquared', 'HalfNormal',
+           'Wald', 'Pareto', 'InverseGamma', 'ExGaussian']
 
 
 class PositiveContinuous(Continuous):
@@ -941,6 +941,9 @@ class Bound(object):
     def dist(self, *args, **kwargs):
         return Bounded.dist(self.distribution, self.lower, self.upper,
                             *args, **kwargs)
+
+
+StudentTpos = Bound(StudentT, 0)
 
 
 class ExGaussian(Continuous):
