@@ -99,7 +99,7 @@ class Dirichlet(Continuous):
                                    dist_shape=self.shape,
                                    size=size)
         return samples
-    
+
     def logp(self, value):
         k = self.k
         a = self.a
@@ -152,7 +152,7 @@ class Multinomial(Discrete):
         if size == p.shape:
             size = None
         return nr.multinomial(n, p, size=size)
-    
+
     def random(self, point=None, size=None):
         n, p = draw_values([self.n, self.p], point=point)
         samples = generate_samples(self._random, n, p,

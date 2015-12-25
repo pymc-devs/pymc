@@ -2,7 +2,6 @@
 from __future__ import division
 import unittest
 
-import itertools
 from .checks import *
 from .knownfailure import *
 from nose import SkipTest
@@ -22,8 +21,9 @@ import numpy as np
 import scipy.stats as st
 import numpy.random as nr
 
-def pymc3_random(dist, paramdomains, 
-                 ref_rand=None, valuedomain=Domain([0]), 
+
+def pymc3_random(dist, paramdomains,
+                 ref_rand=None, valuedomain=Domain([0]),
                  size=10000, alpha=0.05, fails=10):
     model = build_model(dist, valuedomain, paramdomains)
     domains = paramdomains.copy()
@@ -36,13 +36,14 @@ def pymc3_random(dist, paramdomains,
         while p <= alpha and f > 0:
             s0 = model.named_vars['value'].random(size=size, point=pt)
             s1 = ref_rand(size=size, **pt)
-            _, p = st.ks_2samp(np.atleast_1d(s0).flatten(), np.atleast_1d(s1).flatten())
+            _, p = st.ks_2samp(np.atleast_1d(s0).flatten(),
+                               np.atleast_1d(s1).flatten())
             f -= 1
         assert p > alpha, str(pt)
 
 
-def pymc3_random_discrete(dist, paramdomains, 
-                          valuedomain=Domain([0]), ref_rand=None, 
+def pymc3_random_discrete(dist, paramdomains,
+                          valuedomain=Domain([0]), ref_rand=None,
                           size=100000, alpha=0.05, fails=20):
     model = build_model(dist, valuedomain, paramdomains)
     domains = paramdomains.copy()
@@ -81,7 +82,7 @@ def test_draw_values():
         assert mu1 == 0. and tau1 == 1, "Draw values failed with scalar parameters"
 
         mu2, tau2 = draw_values([y2.distribution.mu, y2.distribution.tau],
-                                  point={'mu':5., 'sigma':2.})
+                                point={'mu': 5., 'sigma': 2.})
         assert mu2 == 5. and tau2 == 0.25, "Draw values failed using point replacement"
 
         mu3, tau3 = draw_values([y2.distribution.mu, y2.distribution.tau])
@@ -95,7 +96,8 @@ def check_dist(dist_case, test_cases, shape=None):
         if shape is None:
             rv = dist(dist.__name__, transform=None, **dist_kwargs)
         else:
-            rv = dist(dist.__name__, shape=shape, transform=None, **dist_kwargs)
+            rv = dist(dist.__name__, shape=shape, transform=None,
+                      **dist_kwargs)
         for size, expected in test_cases:
             check_shape(rv, size=size, expected=expected)
 
@@ -111,6 +113,8 @@ def check_shape(rv, size=None, expected=None):
         'Expected shape `{0}` but got `{1}` using `(size={2})`' \
         ' with `{3}` rv'.format(expected, actual, size, rv.distribution.__class__.__name__)
 
+# TODO: factor out a base class to avoid copy/paste.
+
 
 @attr('scalar_parameter_shape')
 class ScalarParameterShape(unittest.TestCase):
@@ -121,9 +125,6 @@ class ScalarParameterShape(unittest.TestCase):
 
     def test_normal(self):
         self.check(Normal, mu=0., tau=1.)
-
-    def test_binomial(self):
-        self.check(Binomial, n=10, p=0.5)
 
     def test_uniform(self):
         self.check(Uniform, lower=0., upper=1.)
@@ -146,8 +147,8 @@ class ScalarParameterShape(unittest.TestCase):
     def test_lognormal(self):
         self.check(Lognormal, mu=1., tau=1.)
 
-    def test_t(self):
-        self.check(T, nu=5, mu=0., lam=1.)
+    def test_student_t(self):
+        self.check(StudentT, nu=5, mu=0., lam=1.)
 
     def test_pareto(self):
         self.check(Pareto, alpha=0.5, m=1.)
@@ -194,7 +195,8 @@ class ScalarParameterShape(unittest.TestCase):
     def test_zero_inflated_poisson(self):
         # To do: implement ZIP random
         #self.check(ZeroInflatedPoisson)
-        raise SkipTest('ZeroInflatedPoisson random sampling not yet implemented.')
+        raise SkipTest(
+            'ZeroInflatedPoisson random sampling not yet implemented.')
 
     def test_discrete_uniform(self):
         self.check(DiscreteUniform, lower=0., upper=10)
@@ -217,9 +219,6 @@ class ScalarShape(unittest.TestCase):
     def test_normal(self):
         self.check(Normal, mu=0., tau=1.)
 
-    def test_binomial(self):
-        self.check(Binomial, n=10, p=0.5)
-
     def test_uniform(self):
         self.check(Uniform, lower=0., upper=1.)
 
@@ -241,8 +240,8 @@ class ScalarShape(unittest.TestCase):
     def test_lognormal(self):
         self.check(Lognormal, mu=1., tau=1.)
 
-    def test_t(self):
-        self.check(T, nu=5, mu=0., lam=1.)
+    def test_student_t(self):
+        self.check(StudentT, nu=5, mu=0., lam=1.)
 
     def test_pareto(self):
         self.check(Pareto, alpha=0.5, m=1.)
@@ -288,7 +287,8 @@ class ScalarShape(unittest.TestCase):
 
     def test_zero_inflated_poisson(self):
         # To do: implement ZIP random
-        raise SkipTest('ZeroInflatedPoisson random sampling not yet implemented.')
+        raise SkipTest(
+            'ZeroInflatedPoisson random sampling not yet implemented.')
 
     def test_discrete_uniform(self):
         self.check(DiscreteUniform, lower=0., upper=10)
@@ -316,10 +316,6 @@ class Parameters1dShape(unittest.TestCase):
     def test_normal(self):
         self.check(Normal, mu=self.zeros, tau=self.ones)
 
-
-    def test_binomial(self):
-        self.check(Binomial, n=self.ones.astype(int), p=self.ones / 2)
-
     def test_uniform(self):
         self.check(Uniform, lower=self.zeros, upper=self.ones)
 
@@ -341,8 +337,9 @@ class Parameters1dShape(unittest.TestCase):
     def test_lognormal(self):
         self.check(Lognormal, mu=self.ones, tau=self.ones)
 
-    def test_t(self):
-        self.check(T, nu=self.ones.astype(int), mu=self.zeros, lam=self.ones)
+    def test_student_t(self):
+        self.check(StudentT, nu=self.ones.astype(int), mu=self.zeros,
+                   lam=self.ones)
 
     def test_pareto(self):
         self.check(Pareto, alpha=self.ones / 2, m=self.ones)
@@ -358,7 +355,8 @@ class Parameters1dShape(unittest.TestCase):
 
     def test_inverse_gamma(self):
         # InverseGamma fails due to calculation of self.mean in __init__
-        raise SkipTest('InverseGamma fails due to calculation of self.mean in __init__')
+        raise SkipTest(
+            'InverseGamma fails due to calculation of self.mean in __init__')
         self.check(InverseGamma, alpha=self.ones / 2, beta=self.ones / 2)
 
     def test_chi_squared(self):
@@ -374,7 +372,8 @@ class Parameters1dShape(unittest.TestCase):
         self.check(Binomial,  n=(self.ones * 5).astype(int), p=self.ones / 5)
 
     def test_beta_bin(self):
-        self.check(BetaBin, alpha=self.ones, beta=self.ones, n=self.ones.astype(int))
+        self.check(BetaBin, alpha=self.ones, beta=self.ones,
+                   n=self.ones.astype(int))
 
     def test_bernoulli(self):
         self.check(Bernoulli, p=self.ones / 2)
@@ -390,12 +389,13 @@ class Parameters1dShape(unittest.TestCase):
 
     def test_zero_inflated_poisson(self):
         # To do: implement ZIP random
-        raise SkipTest('ZeroInflatedPoisson random sampling not yet implemented.')
+        raise SkipTest(
+            'ZeroInflatedPoisson random sampling not yet implemented.')
         self.check(ZeroInflatedPoisson, {}, SkipTest)
 
     def test_discrete_uniform(self):
-        self.check(DiscreteUniform, 
-                   lower=self.zeros.astype(int), 
+        self.check(DiscreteUniform,
+                   lower=self.zeros.astype(int),
                    upper=(self.ones * 10).astype(int))
 
     def test_geometric(self):
@@ -403,8 +403,10 @@ class Parameters1dShape(unittest.TestCase):
 
     def test_categorical(self):
         # Categorical cannot be initialised with >1D probabilities
-        raise SkipTest('Categorical cannot be initialised with >1D probabilities')
+        raise SkipTest(
+            'Categorical cannot be initialised with >1D probabilities')
         self.check(Categorical, p=self.ones / n)
+
 
 @attr('broadcast_shape')
 class BroadcastShape(unittest.TestCase):
@@ -417,14 +419,12 @@ class BroadcastShape(unittest.TestCase):
     def check(self, dist, **kwargs):
         n = self.n
         shape = (2*n, n)
-        test_cases = [(None, shape), (5, (5,) + shape), ((4, 5), (4, 5) + shape)]
+        test_cases = [(None, shape), (5, (5,) + shape),
+                      ((4, 5), (4, 5) + shape)]
         check_dist((dist, kwargs), test_cases, shape)
 
     def test_normal(self):
         self.check(Normal, mu=self.zeros, tau=self.ones)
-
-    def test_binomial(self):
-        self.check(Binomial, n=self.ones.astype(int), p=self.ones / 2)
 
     def test_uniform(self):
         self.check(Uniform, lower=self.zeros, upper=self.ones)
@@ -447,8 +447,9 @@ class BroadcastShape(unittest.TestCase):
     def test_lognormal(self):
         self.check(Lognormal, mu=self.ones, tau=self.ones)
 
-    def test_t(self):
-        self.check(T, nu=self.ones.astype(int), mu=self.zeros, lam=self.ones)
+    def test_student_t(self):
+        self.check(StudentT, nu=self.ones.astype(int), mu=self.zeros,
+                   lam=self.ones)
 
     def test_pareto(self):
         self.check(Pareto, alpha=self.ones / 2, m=self.ones)
@@ -464,7 +465,8 @@ class BroadcastShape(unittest.TestCase):
 
     def test_inverse_gamma(self):
         # InverseGamma fails due to calculation of self.mean in __init__
-        raise SkipTest('InverseGamma fails due to calculation of self.mean in __init__')
+        raise SkipTest(
+            'InverseGamma fails due to calculation of self.mean in __init__')
         self.check(InverseGamma, alpha=self.ones / 2, beta=self.ones / 2)
 
     def test_chi_squared(self):
@@ -477,10 +479,11 @@ class BroadcastShape(unittest.TestCase):
         self.check(ExGaussian, mu=self.zeros, sigma=self.ones, nu=self.ones)
 
     def test_binomial(self):
-        self.check(Binomial,  n=(self.ones * 5).astype(int), p=self.ones / 5)
+        self.check(Binomial, n=(self.ones * 5).astype(int), p=self.ones / 5)
 
     def test_beta_bin(self):
-        self.check(BetaBin, alpha=self.ones, beta=self.ones, n=self.ones.astype(int))
+        self.check(BetaBin, alpha=self.ones, beta=self.ones,
+                   n=self.ones.astype(int))
 
     def test_bernoulli(self):
         self.check(Bernoulli, p=self.ones / 2)
@@ -496,18 +499,21 @@ class BroadcastShape(unittest.TestCase):
 
     def test_zero_inflated_poisson(self):
         # To do: implement ZIP random
-        raise SkipTest('ZeroInflatedPoisson random sampling not yet implemented.')
+        raise SkipTest(
+            'ZeroInflatedPoisson random sampling not yet implemented.')
         self.check(ZeroInflatedPoisson, {})
 
     def test_discrete_uniform(self):
-        self.check(DiscreteUniform, lower=self.zeros.astype(int), upper=(self.ones * 10).astype(int))
+        self.check(DiscreteUniform, lower=self.zeros.astype(int),
+                   upper=(self.ones * 10).astype(int))
 
     def test_geometric(self):
         self.check(Geometric, p=self.ones / 2)
 
     def test_categorical(self):
         # Categorical cannot be initialised with >1D probabilities
-        raise SkipTest('Categorical cannot be initialised with >1D probabilities')
+        raise SkipTest(
+            'Categorical cannot be initialised with >1D probabilities')
         self.check(Categorical, p=self.ones / n)
 
 
@@ -515,7 +521,7 @@ class BroadcastShape(unittest.TestCase):
 class ScalarParameterSamples(unittest.TestCase):
 
     def test_uniform(self):
-        pymc3_random(Uniform, {'lower':-Rplus, 'upper':Rplus},
+        pymc3_random(Uniform, {'lower': -Rplus, 'upper': Rplus},
                      ref_rand=lambda size, lower=None, upper=None: st.uniform.rvs(size=size,loc=lower, scale=upper-lower))
 
     def test_normal(self):
@@ -564,9 +570,9 @@ class ScalarParameterSamples(unittest.TestCase):
                     np.exp(mu + (tau ** -0.5) * st.norm.rvs(loc=0., scale=1., size=size))
                 )
 
-    def test_t(self):
+    def test_student_t(self):
         pymc3_random(
-                T, {'nu': Rplus, 'mu': R, 'lam': Rplus},
+                StudentT, {'nu': Rplus, 'mu': R, 'lam': Rplus},
                 ref_rand=lambda size, nu=None, mu=None, lam=None: \
                     st.t.rvs(nu, mu, lam**-.5, size=size)
                 )
@@ -700,7 +706,7 @@ class ScalarParameterSamples(unittest.TestCase):
     def test_mv_normal(self):
         for n in [2, 3]:
             pymc3_random(MvNormal, {'mu':Vector(R,n), 'tau': PdMatrix(n)}, size=100,
-                     valuedomain=Vector(R,n), 
+                     valuedomain=Vector(R,n),
                      ref_rand=lambda mu=None, tau=None, size=None: \
                         st.multivariate_normal.rvs(mean=mu, cov=tau, size=size))
 

@@ -59,7 +59,7 @@ with model:
 
     s = GaussianRandomWalk('s', sigma ** -2, shape=n)
 
-    r = T('r', nu, lam=exp(-2 * s), observed=returns)
+    r = StudentT('r', nu, lam=exp(-2 * s), observed=returns)
 
 # <markdowncell>
 

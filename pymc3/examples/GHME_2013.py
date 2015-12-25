@@ -60,13 +60,13 @@ def interpolate(x0,y0, x, group):
 
 
 with Model() as model:
-    coeff_sd = T('coeff_sd', 10, 1, 5**-2)
+    coeff_sd = StudentT('coeff_sd', 10, 1, 5**-2)
 
     y = GaussianRandomWalk('y', sd=coeff_sd, shape = (nknots, ncountries))
 
     p = interpolate(knots, y, age, group)
 
-    sd = T('sd', 10, 2, 5**-2)
+    sd = StudentT('sd', 10, 2, 5**-2)
 
     vals = Normal('vals', p, sd=sd, observed = rate)
 
@@ -116,4 +116,3 @@ def run(n=3000):
 
 if __name__ == '__main__':
     run()
-
