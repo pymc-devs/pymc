@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="PyMC devs">
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+
+	<title>Robust Regression with outlier detection - PyMC3</title>
+
+        <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="../css/highlight.css">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="..">PyMC3</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            
+                <!-- Main navigation -->
+                <ul class="nav navbar-nav">
+                
+                
+                    <li >
+                        <a href="..">Overview</a>
+                    </li>
+                
+                
+                
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../getting_started/">Getting started</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                
+                    <li class="dropdown active">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Examples <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../BEST/">BEST</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../stochastic_volatility/">Stochastic Volatility</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../hierarchical/">Hierarchical model</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-linear/">Linear Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-robust/">Robust Regression</a>
+</li>
+
+                        
+                            
+<li class="active">
+    <a href="./">Robust Regression with outlier detection</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-hierarchical/">Hierarchical linear regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../pmf-pymc/">Probabilistic Matrix Factorization</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../posterior_predictive/">Posterior Predictive checks and prediction</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../survival_analysis/">Survival Analysis</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                </ul>
+            
+
+            <ul class="nav navbar-nav navbar-right">
+                <li>
+                    <a href="#" data-toggle="modal" data-target="#mkdocs_search_modal">
+                        <i class="fa fa-search"></i> Search
+                    </a>
+                </li>
+                
+                    <li >
+                        <a rel="next" href="../GLM-robust/">
+                            <i class="fa fa-arrow-left"></i> Previous
+                        </a>
+                    </li>
+                    <li >
+                        <a rel="prev" href="../GLM-hierarchical/">
+                            Next <i class="fa fa-arrow-right"></i>
+                        </a>
+                    </li>
+                
+                
+                    <li>
+                        <a href="https://github.com/pymc-devs/pymc3">
+                            
+                                <i class="fa fa-github"></i>
+                            
+                            GitHub
+                        </a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            
+                <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#pymc3-examples">PyMC3 Examples</a></li>
+        
+    
+        <li class="main "><a href="#robust-regression-with-outlier-detection">Robust Regression with Outlier Detection</a></li>
+        
+    
+        <li class="main "><a href="#setup">Setup</a></li>
+        
+    
+        <li class="main "><a href="#load-and-prepare-data">Load and Prepare Data</a></li>
+        
+    
+        <li class="main "><a href="#create-and-run-conventional-ols-model">Create and Run Conventional OLS Model</a></li>
+        
+            <li><a href="#define-model">Define model</a></li>
+        
+            <li><a href="#sample">Sample</a></li>
+        
+            <li><a href="#view-traces">View Traces</a></li>
+        
+    
+        <li class="main "><a href="#create-and-run-robust-model">Create and Run Robust Model</a></li>
+        
+            <li><a href="#define-model_1">Define model</a></li>
+        
+            <li><a href="#sample_1">Sample</a></li>
+        
+            <li><a href="#view-traces_1">View Traces</a></li>
+        
+    
+        <li class="main "><a href="#declare-outliers-and-compare-plots">Declare Outliers and Compare Plots</a></li>
+        
+            <li><a href="#view-ranges-for-inliers-outlier-predictions">View ranges for inliers / outlier predictions</a></li>
+        
+            <li><a href="#declare-outliers">Declare outliers</a></li>
+        
+            <li><a href="#posterior-prediction-plots-for-ols-vs-robust">Posterior Prediction Plots for OLS vs Robust</a></li>
+        
+    
+    </ul>
+</div></div>
+                <div class="col-md-9" role="main">
+
+<h2 id="pymc3-examples">PyMC3 Examples</h2>
+<h1 id="robust-regression-with-outlier-detection">Robust Regression with Outlier Detection</h1>
+<p>@author: Jonathan Sedar<br />
+@email: jon@sedar.co<br />
+@date: Mon 21 Dec 2015  </p>
+<p><strong>A minimal reproducable example of Robust Regression with Outlier Detection using Hogg 2010 Signal vs Noise method.</strong></p>
+<ul>
+<li>This is a complementary approach to the Student-T robust regression as illustrated in Thomas Wiecki's notebook in the <a href="http://pymc-devs.github.io/pymc3/GLM-robust/">PyMC3 documentation</a></li>
+<li>This model returns a robust estimate of linear coefficients and an indication of which datapoints (if any) are outliers.</li>
+<li>The likelihood evaluation is essentially a copy of eqn 17 in "Data analysis recipes: Fitting a model to data" - <a href="http://arxiv.org/abs/1008.4686">Hogg 2010</a></li>
+<li>The model is adapted specifically from Jake Vanderplas' <a href="http://www.astroml.org/book_figures/chapter8/fig_outlier_rejection.html">implementation</a> (3rd model tested)</li>
+<li>The dataset is tiny and hardcoded into this Notebook. It contains errors in both the x and y, but we will deal here with only errors in y.</li>
+</ul>
+<p><strong>Note:</strong></p>
+<ul>
+<li>Python 3.3 project using latest available <a href="https://github.com/pymc-devs/pymc3">PyMC3</a></li>
+<li>Developed using <a href="https://www.continuum.io/downloads">ContinuumIO Anaconda</a> distribution on a Macbook Pro 3GHz i7, 16GB RAM, OSX 10.10.5.</li>
+<li>During development I've found that 3 data points are always indicated as outliers, but the remaining ordering of datapoints by decreasing outlier-hood is slightly unstable between runs: the posterior surface appears to have a small number of solutions with similar probability. </li>
+<li>Finally, if runs become unstable or Theano throws weird errors, try clearing the cache <code>$&gt; theano-cache clear</code> and rerunning the notebook.</li>
+</ul>
+<p><strong>Package Requirements (shown as a conda-env YAML):</strong></p>
+<pre><code>$&gt; less conda_env_pymc3_examples.yml
+
+name: pymc3_examples
+    channels:
+      - defaults
+    dependencies:
+      - python=3.3
+      - ipython
+      - ipython-notebook
+      - ipython-qtconsole
+      - numpy
+      - scipy
+      - matplotlib
+      - pandas
+      - seaborn
+      - pip
+
+$&gt; conda env create --file conda_env_pymc3_examples.yml
+
+$&gt; source activate pymc3_examples
+
+$&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/pymc3
+
+</code></pre>
+
+<h1 id="setup">Setup</h1>
+<pre><code class="python">%matplotlib inline
+%qtconsole --colors=linux
+</code></pre>
+
+<pre><code class="python">import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from scipy import optimize
+import pymc3 as pm
+import theano as thno
+import theano.tensor as T 
+
+# configure some basic options
+sns.set(style=&quot;darkgrid&quot;, palette=&quot;muted&quot;)
+pd.set_option('display.mpl_style', 'default')
+pd.set_option('display.notebook_repr_html', True)
+plt.rcParams['figure.figsize'] = 12, 8
+np.random.seed(0)
+</code></pre>
+
+<h1 id="load-and-prepare-data">Load and Prepare Data</h1>
+<p>We'll use the Hogg 2010 data available at  https://github.com/astroML/astroML/blob/master/astroML/datasets/hogg2010test.py</p>
+<p>It's a very small dataset so for convenience, it's hardcoded below</p>
+<pre><code class="python">## cut &amp; pasted directly from the fetch_hogg2010test() function
+## identical to the original dataset as hardcoded in the Hogg 2010 paper
+
+dfhogg = pd.DataFrame(np.array([[1, 201, 592, 61, 9, -0.84],
+                                 [2, 244, 401, 25, 4, 0.31],
+                                 [3, 47, 583, 38, 11, 0.64],
+                                 [4, 287, 402, 15, 7, -0.27],
+                                 [5, 203, 495, 21, 5, -0.33],
+                                 [6, 58, 173, 15, 9, 0.67],
+                                 [7, 210, 479, 27, 4, -0.02],
+                                 [8, 202, 504, 14, 4, -0.05],
+                                 [9, 198, 510, 30, 11, -0.84],
+                                 [10, 158, 416, 16, 7, -0.69],
+                                 [11, 165, 393, 14, 5, 0.30],
+                                 [12, 201, 442, 25, 5, -0.46],
+                                 [13, 157, 317, 52, 5, -0.03],
+                                 [14, 131, 311, 16, 6, 0.50],
+                                 [15, 166, 400, 34, 6, 0.73],
+                                 [16, 160, 337, 31, 5, -0.52],
+                                 [17, 186, 423, 42, 9, 0.90],
+                                 [18, 125, 334, 26, 8, 0.40],
+                                 [19, 218, 533, 16, 6, -0.78],
+                                 [20, 146, 344, 22, 5, -0.56]]),
+                   columns=['id','x','y','sigma_y','sigma_x','rho_xy'])
+
+
+## for convenience zero-base the 'id' and use as index
+dfhogg['id'] = dfhogg['id'] - 1
+dfhogg.set_index('id', inplace=True)
+
+## standardize (mean center and divide by 1 sd)
+dfhoggs = (dfhogg[['x','y']] - dfhogg[['x','y']].mean(0)) / dfhogg[['x','y']].std(0)
+dfhoggs['sigma_y'] = dfhogg['sigma_y'] / dfhogg['y'].std(0)
+dfhoggs['sigma_x'] = dfhogg['sigma_x'] / dfhogg['x'].std(0)
+
+## scatterplot the standardized data
+g = sns.FacetGrid(dfhoggs, size=8)
+_ = g.map(plt.errorbar, 'x', 'y', 'sigma_y', 'sigma_x', marker=&quot;o&quot;, ls='')
+_ = g.axes[0][0].set_ylim((-3,3))
+_ = g.axes[0][0].set_xlim((-3,3))
+
+plt.subplots_adjust(top=0.92)
+_ = g.fig.suptitle('Scatterplot of Hogg 2010 dataset after standardization', fontsize=16)
+</code></pre>
+
+<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_6_0.png" /></p>
+<p><strong>Observe</strong>:  </p>
+<ul>
+<li>Even judging just by eye, you can see these datapoints mostly fall on / around a straight line with positive gradient</li>
+<li>It looks like a few of the datapoints may be outliers from such a line</li>
+</ul>
+<hr />
+<hr />
+<h1 id="create-and-run-conventional-ols-model">Create and Run Conventional OLS Model</h1>
+<p>The <em>linear model</em> is really simple and conventional:</p>
+<p><mathjax>$$\bf{y} = \beta^{T} \bf{X} + \bf{\sigma}$$</mathjax></p>
+<p>where:  </p>
+<p><mathjax>$\beta$</mathjax> = coefs = <mathjax>$\{1, \beta_{j \in X_{j}}\}$</mathjax><br />
+<mathjax>$\sigma$</mathjax> = the measured error in <mathjax>$y$</mathjax> in the dataset <code>sigma_y</code></p>
+<h5 id="define-model">Define model</h5>
+<p><strong>NOTE:</strong>
++ We're using a simple linear OLS model with Normally distributed priors so that it behaves like a ridge regression</p>
+<pre><code class="python">with pm.Model() as mdl_ols:
+
+    ## Define weakly informative Normal priors to give Ridge regression
+    b0 = pm.Normal('b0_intercept', mu=0, sd=100)
+    b1 = pm.Normal('b1_slope', mu=0, sd=100)
+
+    ## Define linear model
+    yest = b0 + b1 * dfhoggs['x']
+
+    ## Use y error from dataset, convert into theano variable
+    sigma_y = thno.shared(np.asarray(dfhoggs['sigma_y'],
+                            dtype=thno.config.floatX), name='sigma_y')
+
+    ## Define Normal likelihood
+    likelihood = pm.Normal('likelihood', mu=yest, sd=sigma_y**2, observed=dfhoggs['y'])
+
+</code></pre>
+
+<h5 id="sample">Sample</h5>
+<pre><code class="python">with mdl_ols:
+
+    ## find MAP using Powell, seems to be more robust
+    start_MAP = pm.find_MAP(fmin=optimize.fmin_powell, disp=True)
+
+    ## take samples
+    traces_ols = pm.sample(2000, start=start_MAP, step=pm.NUTS(), progressbar=True)
+</code></pre>
+
+<pre><code>Optimization terminated successfully.
+         Current function value: 4555.263214
+         Iterations: 3
+         Function evaluations: 104
+ [-----------------100%-----------------] 2000 of 2000 complete in 0.7 sec
+</code></pre>
+<h5 id="view-traces">View Traces</h5>
+<p><strong>NOTE</strong>: I'll 'burn' the traces to only retain the final 1000 samples</p>
+<pre><code class="python">_ = pm.traceplot(traces_ols[-1000:], figsize=(12,len(traces_ols.varnames)*1.5),
+                lines={k: v['mean'] for k, v in pm.df_summary(traces_ols[-1000:]).iterrows()})
+</code></pre>
+
+<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_16_0.png" /></p>
+<p>We'll illustrate this OLS fit and compare to the datapoints in the final plot</p>
+<hr />
+<hr />
+<h1 id="create-and-run-robust-model">Create and Run Robust Model</h1>
+<p>Please read the paper (Hogg 2010) and Jake Vanderplas' code for more complete information about the modelling technique.</p>
+<p>The general idea is to create a 'mixture' model whereby datapoints can be described by either the linear model (inliers) or a modified linear model with different mean and larger variance (outliers).</p>
+<p>The likelihood is evaluated over a mixture of two likelihoods, one for 'inliers', one for 'outliers'. A Bernouilli distribution is used to randomly assign datapoints in N to either the inlier or outlier groups, and we sample the model as usual to infer robust model parameters and inlier / outlier flags:</p>
+<p><mathjax>$$
+\mathcal{logL} = \sum_{i}^{i=N} log \left[ \frac{(1 - B_{i})}{\sqrt{2 \pi \sigma_{in}^{2}}} exp \left( - \frac{(x_{i} - \mu_{in})^{2}}{2\sigma_{in}^{2}} \right) \right] + \sum_{i}^{i=N} log \left[ \frac{B_{i}}{\sqrt{2 \pi (\sigma_{in}^{2} + \sigma_{out}^{2})}} exp \left( - \frac{(x_{i}- \mu_{out})^{2}}{2(\sigma_{in}^{2} + \sigma_{out}^{2})} \right) \right]
+$$</mathjax></p>
+<p>where:<br />
+<mathjax>$\bf{B}$</mathjax> is Bernoulli-distibuted <mathjax>$B_{i} \in [0_{(inlier)},1_{(outlier)}]$</mathjax></p>
+<h5 id="define-model_1">Define model</h5>
+<pre><code class="python">def logp_signoise(yobs, is_outlier, yest_in, sigma_y_in, yest_out, sigma_y_out):
+    '''
+    Define custom loglikelihood for inliers vs outliers. 
+    Note: in this particular case we don't need to use theano's @as_op 
+    decorator because (as stated by Twiecki in conversation) that's only 
+    required if the likelihood cannot be expressed as a theano expression.
+    We also now get the gradient computation for free.
+    '''   
+
+    # likelihood for inliers
+    pdfs_in = T.exp(-(yobs - yest_in + 1e-6)**2 / (2 * sigma_y_in**2)) 
+    pdfs_in /= T.sqrt(2 * np.pi * sigma_y_in**2)
+    logL_in = T.sum(T.log(pdfs_in) * (1 - is_outlier))
+
+    # likelihood for outliers
+    pdfs_out = T.exp(-(yobs - yest_out + 1e-6)**2 / (2 * (sigma_y_in**2 + sigma_y_out**2))) 
+    pdfs_out /= T.sqrt(2 * np.pi * (sigma_y_in**2 + sigma_y_out**2))
+    logL_out = T.sum(T.log(pdfs_out) * is_outlier)
+
+    return logL_in + logL_out
+
+</code></pre>
+
+<pre><code class="python">with pm.Model() as mdl_signoise:
+
+    ## Define weakly informative Normal priors to give Ridge regression
+    b0 = pm.Normal('b0_intercept', mu=0, sd=100)
+    b1 = pm.Normal('b1_slope', mu=0, sd=100)
+
+    ## Define linear model
+    yest_in = b0 + b1 * dfhoggs['x']
+
+    ## Define weakly informative priors for the mean and variance of outliers
+    yest_out = pm.Normal('yest_out', mu=0, sd=100)
+    sigma_y_out = pm.HalfNormal('sigma_y_out', sd=100)
+
+    ## Define Bernoulli inlier / outlier flags according to a hyperprior 
+    ## fraction of outliers, itself constrained to [0,.5] for symmetry
+    frac_outliers = pm.Uniform('frac_outliers', lower=0., upper=.5)
+    is_outlier = pm.Bernoulli('is_outlier', p=frac_outliers, shape=dfhoggs.shape[0])  
+
+    ## Extract observed y and sigma_y from dataset, encode as theano objects
+    yobs = thno.shared(np.asarray(dfhoggs['y'], dtype=thno.config.floatX), name='yobs')
+    sigma_y_in = thno.shared(np.asarray(dfhoggs['sigma_y']
+                                , dtype=thno.config.floatX), name='sigma_y_in')
+
+    ## Use custom likelihood using DensityDist
+    likelihood = pm.DensityDist('likelihood', logp_signoise,
+                        observed={'yobs':yobs, 'is_outlier':is_outlier,
+                                  'yest_in':yest_in, 'sigma_y_in':sigma_y_in,
+                                  'yest_out':yest_out, 'sigma_y_out':sigma_y_out})
+
+</code></pre>
+
+<h5 id="sample_1">Sample</h5>
+<pre><code class="python">with mdl_signoise:
+
+    ## two-step sampling to create Bernoulli inlier/outlier flags
+    step1 = pm.NUTS([frac_outliers, yest_out, sigma_y_out, b0, b1])
+    step2 = pm.BinaryMetropolis([is_outlier])
+
+    ## find MAP using Powell, seems to be more robust
+    start_MAP = pm.find_MAP(fmin=optimize.fmin_powell, disp=True)
+
+    ## take samples
+    traces_signoise = pm.sample(1000, start=start_MAP, step=[step1,step2], progressbar=True)
+</code></pre>
+
+<pre><code>Optimization terminated successfully.
+         Current function value: 155.449990
+         Iterations: 3
+         Function evaluations: 226
+ [-----------------100%-----------------] 1000 of 1000 complete in 93.1 sec
+</code></pre>
+<h5 id="view-traces_1">View Traces</h5>
+<pre><code class="python">_ = pm.traceplot(traces_signoise[-1000:], figsize=(12,len(traces_signoise.varnames)*1.5),
+            lines={k: v['mean'] for k, v in pm.df_summary(traces_signoise[-1000:]).iterrows()})
+</code></pre>
+
+<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_27_0.png" /></p>
+<p><strong>NOTE:</strong>:</p>
+<ul>
+<li>During development I've found that 3 datapoints id=[1,2,3] are always indicated as outliers, but the remaining ordering of datapoints by decreasing outlier-hood is unstable between runs: the posterior surface appears to have a small number of solutions with very similar probability.</li>
+<li>The NUTS sampler seems to work okay, and indeed it's a nice opportunity to demonstrate a custom likelihood which is possible to express as a theano function (thus allowing a gradient-based sampler like NUTS). However, with a more complicated dataset, I would spend time understanding this instability and potentially prefer using more samples under Metropolis-Hastings.</li>
+</ul>
+<hr />
+<hr />
+<h1 id="declare-outliers-and-compare-plots">Declare Outliers and Compare Plots</h1>
+<h5 id="view-ranges-for-inliers-outlier-predictions">View ranges for inliers / outlier predictions</h5>
+<p>At each step of the traces, each datapoint may be either an inlier or outlier. We hope that the datapoints spend an unequal time being one state or the other, so let's take a look at the 95% credible region for each of the 20 datapoints.</p>
+<pre><code class="python">outlier_melt = pd.melt(pd.DataFrame(traces_signoise['is_outlier', -1000:],
+                                   columns=['[{}]'.format(int(d)) for d in dfhoggs.index]),
+                      var_name='datapoint_id', value_name='is_outlier')
+ax0 = sns.pointplot(y='datapoint_id', x='is_outlier', data=outlier_melt,
+                   kind='point', join=False, ci=None, size=4, aspect=2)
+
+_ = ax0.vlines([0,1], 0, 19, ['b','r'], '--')
+
+_ = ax0.set_xlim((-0.1,1.1))
+_ = ax0.set_xticks(np.arange(0, 1.1, 0.1))
+_ = ax0.set_xticklabels(['{:.0%}'.format(t) for t in np.arange(0,1.1,0.1)])
+
+_ = ax0.yaxis.grid(True, linestyle='-', which='major', color='w', alpha=0.4)
+_ = ax0.set_title('Prop. of the trace where datapoint is an outlier')
+_ = ax0.set_xlabel('Prop. of the trace where is_outlier == 1')
+</code></pre>
+
+<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_33_0.png" /></p>
+<p><strong>Observe</strong>:</p>
+<ul>
+<li>The plot above shows the number of samples in the traces in which each datapoint is marked as an outlier, expressed as a percentage.</li>
+<li>In particular, 3 points [1, 2, 3] spend &gt;=95% of their time as outliers</li>
+<li>Contrastingly, points at the other end of the plot close to 0% are our strongest inliers.</li>
+<li>For comparison, the mean posterior value of <code>frac_outliers</code> is ~0.35, corresponding to roughly 7 of the 20 datapoints. You can see these 7 datapoints in the plot above, all those with a value &gt;50% or thereabouts.</li>
+<li>However, only 3 of these points are outliers &gt;=95% of the time. </li>
+<li>See note above regarding instability between runs.</li>
+</ul>
+<p>The 95% cutoff we choose is subjective and arbitrary, but I prefer it for now, so let's declare these 3 to be outliers and see how it looks compared to Jake Vanderplas' outliers, which were declared in a slightly different way as points with means above 0.68.</p>
+<h5 id="declare-outliers">Declare outliers</h5>
+<p><strong>Note:</strong>
++ I will declare outliers to be datapoints that have value == 1 at the 5-percentile cutoff, i.e. in the percentiles from 5 up to 100, their values are 1. 
++ Try for yourself altering cutoff to larger values, which leads to an objective ranking of outlier-hood.</p>
+<pre><code class="python">cutoff = 5
+dfhoggs['outlier'] = np.percentile(traces_signoise[-1000:]['is_outlier'],cutoff, axis=0)
+dfhoggs['outlier'].value_counts()
+</code></pre>
+
+<pre><code>0    17
+1     3
+dtype: int64
+</code></pre>
+<h2 id="posterior-prediction-plots-for-ols-vs-robust">Posterior Prediction Plots for OLS vs Robust</h2>
+<pre><code class="python">g = sns.FacetGrid(dfhoggs, size=8, hue='outlier', hue_order=[True,False],
+                  palette='Set1', legend_out=False)
+
+lm = lambda x, samp: samp['b0_intercept'] + samp['b1_slope'] * x
+
+pm.glm.plot_posterior_predictive(traces_ols[-1000:],
+        eval=np.linspace(-3, 3, 10), lm=lm, samples=200, color='y', alpha=.1)
+
+pm.glm.plot_posterior_predictive(traces_signoise[-1000:],
+        eval=np.linspace(-3, 3, 10), lm=lm, samples=200, color='g', alpha=.2)
+
+_ = g.map(plt.errorbar, 'x', 'y', 'sigma_y', 'sigma_x', marker=&quot;o&quot;, ls='').add_legend()
+
+_ = g.axes[0][0].annotate('OLS Fit: Yellow\nRobust Fit: Green', size='x-large',
+                          xy=(1,0), xycoords='axes fraction',
+                          xytext=(-160,10), textcoords='offset points')
+_ = g.axes[0][0].set_ylim((-3,3))
+</code></pre>
+
+<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_38_0.png" /></p>
+<p><strong>Observe</strong>:
++ The posterior predictive fit for the <strong>OLS model</strong> is shown in <strong>Yellow</strong> and as expected, it doesn't appear to fit the majority of our datapoints very well.
++ The posterior predictive fit for the <strong>Robust model</strong> is shown in <strong>Green</strong> does appear to fit the 'main axis' of datapoints rather well
++ We also see that the <strong>Robust model</strong> has estimated 3 datapoints shown in <strong>Red</strong> to be outliers. From even this simple inspection, the classification seems fair, and happily also agrees with Jake Vanderplas' findings.</p>
+<hr /></div>
+            
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            
+            <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+
+        <script src="../js/jquery-1.10.2.min.js"></script>
+        <script src="../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../js/highlight.pack.js"></script>
+        <script>var base_url = '..';</script>
+        <script data-main="../mkdocs/js/search.js" src="../mkdocs/js/require.js"></script>
+        <script src="../js/base.js"></script>
+        <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+        <script src="../js/mathjaxhelper.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="exampleModalLabel">Search</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>
+                            From here you can search these documents. Enter
+                            your search terms below.
+                        </p>
+                        <form role="form">
+                            <div class="form-group">
+                                <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query">
+                            </div>
+                        </form>
+                        <div id="mkdocs-search-results"></div>
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </body>
+</html>
