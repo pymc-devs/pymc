@@ -14,6 +14,7 @@ pages:
   - 'Hierarchical model': 'hierarchical.md'
   - 'Linear Regression': 'GLM-linear.md'
   - 'Robust Regression': 'GLM-robust.md'
+  - 'Robust Regression with outlier detection': 'RobustRegression_OutlierDetection_Hogg.md'
   - 'Hierarchical linear regression': 'GLM-hierarchical.md'
   - 'Probabilistic Matrix Factorization': 'pmf-pymc.md'
 #  - 'Rugby Analytics example': 'rugby_analytics.md'
