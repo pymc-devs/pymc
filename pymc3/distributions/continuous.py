@@ -77,11 +77,12 @@ def get_tau_sd(tau=None, sd=None):
 
 
 class Uniform(Continuous):
-    """
+    r"""
     Continuous uniform log-likelihood.
 
     .. math::
-        f(x \mid lower, upper) = \frac{1}{upper-lower}
+
+       f(x \mid lower, upper) = \frac{1}{upper-lower}
 
     Parameters
     ----------
@@ -99,7 +100,7 @@ class Uniform(Continuous):
         self.mean = (upper + lower) / 2.
         self.median = self.mean
 
-        if transform is 'interval':
+        if transform == 'interval':
             self.transform = transforms.interval(lower, upper)
 
     def random(self, point=None, size=None, repeat=None):
@@ -113,9 +114,8 @@ class Uniform(Continuous):
     def logp(self, value):
         lower = self.lower
         upper = self.upper
-
         return bound(-T.log(upper - lower),
-                     lower <= value, value <= upper)
+                     value >= lower, value <= upper)
 
 
 class Flat(Continuous):
