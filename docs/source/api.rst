@@ -24,7 +24,6 @@ Continuous
    HalfCauchy
    Gamma
    Weibull
-   Bound
    StudentTpos
    Lognormal
    ChiSquared
@@ -44,7 +43,7 @@ Discrete
 .. autosummary::
 
    Binomial
-   BetaBin
+   BetaBinomial
    Bernoulli
    Poisson
    NegativeBinomial

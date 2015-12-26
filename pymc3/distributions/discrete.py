@@ -8,20 +8,20 @@ from scipy import stats
 from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples
 
-__all__ = ['Binomial',  'BetaBin',  'Bernoulli',  'Poisson',
+__all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
            'NegativeBinomial', 'ConstantDist', 'ZeroInflatedPoisson',
            'DiscreteUniform', 'Geometric', 'Categorical']
 
 
 class Binomial(Discrete):
-    """
+    r"""
     Binomial log-likelihood.  The discrete probability distribution
     of the number of successes in a sequence of n independent yes/no
     experiments, each of which yields success with probability p.
 
     .. math::
 
-       f(x \mid n, p) = \frac{n!}{x!(n-x)!} p^x (1-p)^{n-x}
+       f(x \mid n, p) = \binom{n}{x} p^x (1-p)^{n-x}
 
     Parameters
     ----------
@@ -30,7 +30,8 @@ class Binomial(Discrete):
     p : float
         Probability of success in each trial, :math:`p \in [0,1]`
 
-    .. note::
+    Notes
+    -----
     - :math:`E(X)=np`
     - :math:`Var(X)=np(1-p)`
     """
@@ -56,8 +57,8 @@ class Binomial(Discrete):
             0 <= p, p <= 1)
 
 
-class BetaBin(Discrete):
-    """
+class BetaBinomial(Discrete):
+    r"""
     Beta-binomial log-likelihood. Equivalent to binomial random
     variables with probabilities drawn from a
     :math:`\texttt{Beta}(\alpha,\beta)` distribution.
@@ -65,9 +66,8 @@ class BetaBin(Discrete):
     .. math::
 
        f(x \mid \alpha, \beta, n) =
-           \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha)}
-           \frac{\Gamma(n+1)}{\Gamma(x+1)\Gamma(n-x+1)}
-           \frac{\Gamma(\alpha + x)\Gamma(n+\beta-x)}{\Gamma(\alpha+\beta+n)}
+           \binom{n}{x}
+           \frac{B(x + \alpha, n - x + \beta)}{B(\alpha, \beta)}
 
     Parameters
     ----------
@@ -78,12 +78,13 @@ class BetaBin(Discrete):
     n : int
         n=x,x+1,...
 
-    .. note::
+    Notes
+    -----
     - :math:`E(X)=n\frac{\alpha}{\alpha+\beta}`
     - :math:`Var(X)=n\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
     """
     def __init__(self, alpha, beta, n, *args, **kwargs):
-        super(BetaBin, self).__init__(*args, **kwargs)
+        super(BetaBinomial, self).__init__(*args, **kwargs)
         self.alpha = alpha
         self.beta = beta
         self.n = n
@@ -119,19 +120,20 @@ class BetaBin(Discrete):
 
 
 class Bernoulli(Discrete):
-    """Bernoulli log-likelihood
+    r"""Bernoulli log-likelihood
 
     The Bernoulli distribution describes the probability of successes (x=1) and
     failures (x=0).
 
-    .. math::  f(x \mid p) = p^{x} (1-p)^{1-x}
+    .. math:: f(x \mid p) = p^{x} (1-p)^{1-x}
 
     Parameters
     ----------
     p : float
         Probability of success. :math:`0 < p < 1`.
 
-    .. note::
+    Notes
+    -----
     - :math:`E(x)= p`
     - :math:`Var(x)= p(1-p)`
     """
@@ -155,7 +157,7 @@ class Bernoulli(Discrete):
 
 
 class Poisson(Discrete):
-    """
+    r"""
     Poisson log-likelihood.
 
     The Poisson is a discrete probability
@@ -165,7 +167,8 @@ class Poisson(Discrete):
     a limiting case of the binomial distribution.
 
     .. math::
-        f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
+
+       f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
 
     Parameters
     ----------
@@ -173,9 +176,10 @@ class Poisson(Discrete):
         Expected number of occurrences during the given interval,
         :math:`\mu \geq 0`.
 
-    .. note::
-       - :math:`E(x)=\mu`
-       - :math:`Var(x)=\mu`
+    Notes
+    -----
+    - :math:`E(x)=\mu`
+    - :math:`Var(x)=\mu`
     """
     def __init__(self, mu, *args, **kwargs):
         super(Poisson, self).__init__(*args, **kwargs)
@@ -196,7 +200,7 @@ class Poisson(Discrete):
 
 
 class NegativeBinomial(Discrete):
-    """
+    r"""
     Negative binomial log-likelihood.
 
     The negative binomial distribution  describes a Poisson random variable
@@ -216,8 +220,9 @@ class NegativeBinomial(Discrete):
     alpha : float
         alpha > 0
 
-    .. note::
-      - :math:`E[x]=\mu`
+    Notes
+    -----
+    - :math:`E[x]=\mu`
     """
     def __init__(self, mu, alpha, *args, **kwargs):
         super(NegativeBinomial, self).__init__(*args, **kwargs)
@@ -248,7 +253,7 @@ class NegativeBinomial(Discrete):
 
 
 class Geometric(Discrete):
-    """
+    r"""
     Geometric log-likelihood. The probability that the first success in a
     sequence of Bernoulli trials occurs on the x'th trial.
 
@@ -261,9 +266,10 @@ class Geometric(Discrete):
     p : float
         Probability of success on an individual trial, :math:`p \in [0,1]`
 
-    .. note::
-      - :math:`E(X)=1/p`
-      - :math:`Var(X)=\frac{1-p}{p^2}`
+    Notes
+    -----
+    - :math:`E(X)=1/p`
+    - :math:`Var(X)=\frac{1-p}{p^2}`
     """
     def __init__(self, p, *args, **kwargs):
         super(Geometric, self).__init__(*args, **kwargs)
@@ -283,7 +289,7 @@ class Geometric(Discrete):
 
 
 class DiscreteUniform(Discrete):
-    """
+    r"""
     Discrete uniform distribution.
 
     .. math::
@@ -325,7 +331,7 @@ class DiscreteUniform(Discrete):
 
 
 class Categorical(Discrete):
-    """
+    r"""
     Categorical log-likelihood. The most general discrete distribution.
 
     .. math:: f(x=i \mid p) = p_i

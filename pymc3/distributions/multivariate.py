@@ -14,7 +14,7 @@ __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart', 'LKJCorr']
 
 
 class MvNormal(Continuous):
-    """
+    r"""
     Multivariate normal distribution.
 
     .. math::
@@ -23,12 +23,12 @@ class MvNormal(Continuous):
            \frac{|T|^{1/2}}{(2\pi)^{1/2}}
            \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
 
-    :Parameters:
-        mu : vector of means
-        tau : precision matrix
-
-    :Support:
-        2 array of floats
+    Parameters
+    ----------
+    mu : array
+        Vector of means.
+    tau : array
+        Precision matrix.
     """
     def __init__(self, mu, tau, *args, **kwargs):
         super(MvNormal, self).__init__(*args, **kwargs)
@@ -63,7 +63,7 @@ class MvNormal(Continuous):
 
 
 class Dirichlet(Continuous):
-    """
+    r"""
     Dirichlet distribution.
 
     This is a multivariate continuous distribution.
@@ -75,19 +75,22 @@ class Dirichlet(Continuous):
            \prod_{i=1}^{k-1} x_i^{\theta_i - 1}
            \left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k
 
-    :Parameters:
-        a : float tensor
-            a > 0
-            concentration parameters
-            last index is the k index
+    Parameters
+    ----------
+    a : float tensor
+        a > 0
+        concentration parameters
+        last index is the k index
 
-    :Support:
-        x : vector
-            sum(x) == 1 and x > 0
+    Support
+    -------
+    x : array
+        sum(x) == 1 and x > 0
 
-    .. note::
-        Only the first `k-1` elements of `x` are expected. Can be used
-        as a parent of Multinomial and Categorical nevertheless.
+    Note
+    ----
+    Only the first `k-1` elements of `x` are expected. Can be used
+    as a parent of Multinomial and Categorical nevertheless.
     """
     def __init__(self, a, transform=transforms.stick_breaking,
                  *args, **kwargs):
@@ -126,7 +129,7 @@ class Dirichlet(Continuous):
 
 
 class Multinomial(Discrete):
-    """
+    r"""
     Generalization of the binomial
     distribution, but instead of each trial resulting in "success" or
     "failure", each one results in exactly one of some fixed finite number k
@@ -134,24 +137,28 @@ class Multinomial(Discrete):
     of times outcome number i was observed over the n trials.
 
     .. math::
-        f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
 
-    :Parameters:
-        n : int
-            Number of trials.
-        p : (k,)
-            Probability of each one of the different outcomes.
-            :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
+       f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
 
-    :Support:
-        x : (ns, k) int
-            Random variable indicating the number of time outcome i is
-            observed. :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
+    Parameters
+    ----------
+    n : int
+        Number of trials.
+    p : (k,)
+        Probability of each one of the different outcomes.
+        :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
 
-    .. note::
-        - :math:`E(X_i)=n p_i`
-        - :math:`Var(X_i)=n p_i(1-p_i)`
-        - :math:`Cov(X_i,X_j) = -n p_i p_j`
+    Support
+    -------
+    x : (ns, k) int
+        Random variable indicating the number of time outcome i is
+        observed. :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
+
+    Note
+    ----
+    - :math:`E(X_i)=n p_i`
+    - :math:`Var(X_i)=n p_i(1-p_i)`
+    - :math:`Cov(X_i,X_j) = -n p_i p_j`
     """
     def __init__(self, n, p, *args, **kwargs):
         super(Multinomial, self).__init__(*args, **kwargs)
@@ -183,7 +190,7 @@ class Multinomial(Discrete):
 
 
 class Wishart(Continuous):
-    """
+    r"""
     The Wishart distribution is the probability
     distribution of the maximum-likelihood estimator (MLE) of the precision
     matrix of a multivariate normal distribution. If V=1, the distribution
@@ -200,15 +207,16 @@ class Wishart(Continuous):
 
     where :math:`k` is the rank of X.
 
-    :Parameters:
-      n : int
+    Parameters
+    ----------
+    n : int
         Degrees of freedom, > 0.
-      V : ndarray
+    V : array
         p x p positive definite matrix
 
-
-    :Support:
-      X : matrix
+    Support
+    -------
+    X : matrix
         Symmetric, positive definite.
     """
     def __init__(self, n, V, *args, **kwargs):
@@ -245,7 +253,7 @@ class Wishart(Continuous):
 
 
 class LKJCorr(Continuous):
-    """
+    r"""
     The LKJ (Lewandowski, Kurowicka and Joe) distribution.
 
     The LKJ distribution is a prior distribution for correlation matrices.
@@ -257,22 +265,24 @@ class LKJCorr(Continuous):
 
     This implementation only returns the values of the upper triangular matrix
     excluding the diagonal. Here is a schematic for p = 5, showing the indexes
-    of the elements:
+    of the elements::
+
         [[- 0 1 2 3]
          [- - 4 5 6]
          [- - - 7 8]
          [- - - - 9]
          [- - - - -]]
 
-    :Parameters:
-      n : float
+    Parameters
+    ----------
+    n : float
         Shape parameter, Uniform distribution at n=1, > 0
-      p : int
+    p : int
         Dimension of correlation matrix
 
-
-    :Support:
-      x : array of size p * (p - 1) / 2
+    Support
+    -------
+    x : array of size p * (p - 1) / 2
         Upper triangular matrix values [-1,1].
     """
     def __init__(self, n, p, *args, **kwargs):

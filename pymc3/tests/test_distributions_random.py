@@ -177,8 +177,8 @@ class ScalarParameterShape(unittest.TestCase):
     def test_binomial(self):
         self.check(Binomial,  n=5., p=0.5)
 
-    def test_beta_bin(self):
-        self.check(BetaBin, alpha=1., beta=1., n=1)
+    def test_beta_binomial(self):
+        self.check(BetaBinomial, alpha=1., beta=1., n=1)
 
     def test_bernoulli(self):
         self.check(Bernoulli, p=0.5)
@@ -270,8 +270,8 @@ class ScalarShape(unittest.TestCase):
     def test_binomial(self):
         self.check(Binomial,  n=5., p=0.5)
 
-    def test_beta_bin(self):
-        self.check(BetaBin, alpha=1., beta=1., n=1)
+    def test_beta_binomial(self):
+        self.check(BetaBinomial, alpha=1., beta=1., n=1)
 
     def test_bernoulli(self):
         self.check(Bernoulli, p=0.5)
@@ -371,8 +371,8 @@ class Parameters1dShape(unittest.TestCase):
     def test_binomial(self):
         self.check(Binomial,  n=(self.ones * 5).astype(int), p=self.ones / 5)
 
-    def test_beta_bin(self):
-        self.check(BetaBin, alpha=self.ones, beta=self.ones,
+    def test_beta_binomial(self):
+        self.check(BetaBinomial, alpha=self.ones, beta=self.ones,
                    n=self.ones.astype(int))
 
     def test_bernoulli(self):
@@ -481,8 +481,8 @@ class BroadcastShape(unittest.TestCase):
     def test_binomial(self):
         self.check(Binomial, n=(self.ones * 5).astype(int), p=self.ones / 5)
 
-    def test_beta_bin(self):
-        self.check(BetaBin, alpha=self.ones, beta=self.ones,
+    def test_beta_binomial(self):
+        self.check(BetaBinomial, alpha=self.ones, beta=self.ones,
                    n=self.ones.astype(int))
 
     def test_bernoulli(self):
@@ -647,8 +647,9 @@ class ScalarParameterSamples(unittest.TestCase):
         pymc3_random_discrete(Binomial, {'n':Nat, 'p':Unit},
                               ref_rand=lambda size, n=None, p=None:st.binom.rvs(n=n, p=p, size=size))
 
-    def test_beta_bin(self):
-        pymc3_random_discrete(BetaBin, {'n':Nat, 'alpha': Rplus, 'beta': Rplus},
+    def test_beta_binomial(self):
+        pymc3_random_discrete(BetaBinomial,
+                              {'n':Nat, 'alpha': Rplus, 'beta': Rplus},
                               ref_rand=self._beta_bin)
 
     def _beta_bin(self, n=None, alpha=None, beta=None, size=None):

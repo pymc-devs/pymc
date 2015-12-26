@@ -338,8 +338,8 @@ def test_binomial():
             lambda value, n, p: sp.binom.logpmf(value, n, p)
             )
 
-def test_betabin():
-    checkd(BetaBin, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': NatSmall})
+def test_beta_binomial():
+    checkd(BetaBinomial, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': NatSmall})
 
 
 def test_bernoulli():
