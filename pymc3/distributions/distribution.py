@@ -1,10 +1,9 @@
-import theano.tensor as t
 import numpy as np
-from ..model import Model
-
+import theano.tensor as T
 from theano import function
+
 from ..memoize import memoize
-from ..model import get_named_nodes
+from ..model import Model, get_named_nodes
 
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete', 'NoDistribution', 'TensorType']
@@ -16,14 +15,16 @@ class Distribution(object):
         try:
             model = Model.get_context()
         except TypeError:
-            raise TypeError("No model on context stack, which is needed to use the Normal('x', 0,1) syntax. Add a 'with model:' block")
+            raise TypeError("No model on context stack, which is needed to "
+                            "use the Normal('x', 0,1) syntax. "
+                            "Add a 'with model:' block")
 
         if isinstance(name, str):
             data = kwargs.pop('observed', None)
             dist = cls.dist(*args, **kwargs)
             return model.Var(name, dist, data)
         elif name is None:
-            return object.__new__(cls) #for pickle
+            return object.__new__(cls)  # for pickle
         else:
             raise TypeError("needed name or None but got: " + name)
 
@@ -67,14 +68,14 @@ class Distribution(object):
         if isinstance(val, str):
             val = getattr(self, val)
 
-        if isinstance(val, t.TensorVariable):
+        if isinstance(val, T.TensorVariable):
             return val.tag.test_value
 
         return val
 
 
 def TensorType(dtype, shape):
-    return t.TensorType(str(dtype), np.atleast_1d(shape) == 1)
+    return T.TensorType(str(dtype), np.atleast_1d(shape) == 1)
 
 class NoDistribution(Distribution):
     def logp(self, x):
