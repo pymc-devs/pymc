@@ -191,11 +191,10 @@
     
         <li class="main "><a href="#setup">Setup</a></li>
         
-    
-        <li class="main "><a href="#load-and-prepare-data">Load and Prepare Data</a></li>
+            <li><a href="#load-and-prepare-data">Load and Prepare Data</a></li>
         
     
-        <li class="main "><a href="#create-and-run-conventional-ols-model">Create and Run Conventional OLS Model</a></li>
+        <li class="main "><a href="#create-conventional-ols-model">Create Conventional OLS Model</a></li>
         
             <li><a href="#define-model">Define model</a></li>
         
@@ -204,13 +203,22 @@
             <li><a href="#view-traces">View Traces</a></li>
         
     
-        <li class="main "><a href="#create-and-run-robust-model">Create and Run Robust Model</a></li>
+        <li class="main "><a href="#create-robust-model-student-t-method">Create Robust Model: Student-T Method</a></li>
         
-            <li><a href="#define-model_1">Define model</a></li>
+            <li><a href="#define-model_1">Define Model</a></li>
         
             <li><a href="#sample_1">Sample</a></li>
         
             <li><a href="#view-traces_1">View Traces</a></li>
+        
+    
+        <li class="main "><a href="#create-robust-model-with-outliers-hogg-method">Create Robust Model with Outliers: Hogg Method</a></li>
+        
+            <li><a href="#define-model_2">Define model</a></li>
+        
+            <li><a href="#sample_2">Sample</a></li>
+        
+            <li><a href="#view-traces_2">View Traces</a></li>
         
     
         <li class="main "><a href="#declare-outliers-and-compare-plots">Declare Outliers and Compare Plots</a></li>
@@ -219,29 +227,29 @@
         
             <li><a href="#declare-outliers">Declare outliers</a></li>
         
-            <li><a href="#posterior-prediction-plots-for-ols-vs-robust">Posterior Prediction Plots for OLS vs Robust</a></li>
+            <li><a href="#posterior-prediction-plots-for-ols-vs-studentt-vs-signalnoise">Posterior Prediction Plots for OLS vs StudentT vs SignalNoise</a></li>
         
     
     </ul>
 </div></div>
                 <div class="col-md-9" role="main">
 
-<h2 id="pymc3-examples">PyMC3 Examples</h2>
+<h5 id="pymc3-examples">PyMC3 Examples</h5>
 <h1 id="robust-regression-with-outlier-detection">Robust Regression with Outlier Detection</h1>
 <p>@author: Jonathan Sedar<br />
 @email: jon@sedar.co<br />
 @date: Mon 21 Dec 2015  </p>
 <p><strong>A minimal reproducable example of Robust Regression with Outlier Detection using Hogg 2010 Signal vs Noise method.</strong></p>
 <ul>
-<li>This is a complementary approach to the Student-T robust regression as illustrated in Thomas Wiecki's notebook in the <a href="http://pymc-devs.github.io/pymc3/GLM-robust/">PyMC3 documentation</a></li>
+<li>This is a complementary approach to the Student-T robust regression as illustrated in Thomas Wiecki's notebook in the <a href="http://pymc-devs.github.io/pymc3/GLM-robust/">PyMC3 documentation</a>, that approach is also compared here.</li>
 <li>This model returns a robust estimate of linear coefficients and an indication of which datapoints (if any) are outliers.</li>
-<li>The likelihood evaluation is essentially a copy of eqn 17 in "Data analysis recipes: Fitting a model to data" - <a href="http://arxiv.org/abs/1008.4686">Hogg 2010</a></li>
-<li>The model is adapted specifically from Jake Vanderplas' <a href="http://www.astroml.org/book_figures/chapter8/fig_outlier_rejection.html">implementation</a> (3rd model tested)</li>
+<li>The likelihood evaluation is essentially a copy of eqn 17 in "Data analysis recipes: Fitting a model to data" - <a href="http://arxiv.org/abs/1008.4686">Hogg 2010</a>.</li>
+<li>The model is adapted specifically from Jake Vanderplas' <a href="http://www.astroml.org/book_figures/chapter8/fig_outlier_rejection.html">implementation</a> (3rd model tested).</li>
 <li>The dataset is tiny and hardcoded into this Notebook. It contains errors in both the x and y, but we will deal here with only errors in y.</li>
 </ul>
 <p><strong>Note:</strong></p>
 <ul>
-<li>Python 3.3 project using latest available <a href="https://github.com/pymc-devs/pymc3">PyMC3</a></li>
+<li>Python 3.4 project using latest available <a href="https://github.com/pymc-devs/pymc3">PyMC3</a></li>
 <li>Developed using <a href="https://www.continuum.io/downloads">ContinuumIO Anaconda</a> distribution on a Macbook Pro 3GHz i7, 16GB RAM, OSX 10.10.5.</li>
 <li>During development I've found that 3 data points are always indicated as outliers, but the remaining ordering of datapoints by decreasing outlier-hood is slightly unstable between runs: the posterior surface appears to have a small number of solutions with similar probability. </li>
 <li>Finally, if runs become unstable or Theano throws weird errors, try clearing the cache <code>$&gt; theano-cache clear</code> and rerunning the notebook.</li>
@@ -253,7 +261,7 @@ name: pymc3_examples
     channels:
       - defaults
     dependencies:
-      - python=3.3
+      - python=3.4
       - ipython
       - ipython-notebook
       - ipython-qtconsole
@@ -262,6 +270,7 @@ name: pymc3_examples
       - matplotlib
       - pandas
       - seaborn
+      - patsy  
       - pip
 
 $&gt; conda env create --file conda_env_pymc3_examples.yml
@@ -275,6 +284,9 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <h1 id="setup">Setup</h1>
 <pre><code class="python">%matplotlib inline
 %qtconsole --colors=linux
+
+import warnings
+warnings.filterwarnings('ignore')
 </code></pre>
 
 <pre><code class="python">import numpy as np
@@ -289,13 +301,12 @@ import theano.tensor as T
 
 # configure some basic options
 sns.set(style=&quot;darkgrid&quot;, palette=&quot;muted&quot;)
-pd.set_option('display.mpl_style', 'default')
 pd.set_option('display.notebook_repr_html', True)
 plt.rcParams['figure.figsize'] = 12, 8
 np.random.seed(0)
 </code></pre>
 
-<h1 id="load-and-prepare-data">Load and Prepare Data</h1>
+<h2 id="load-and-prepare-data">Load and Prepare Data</h2>
 <p>We'll use the Hogg 2010 data available at  https://github.com/astroML/astroML/blob/master/astroML/datasets/hogg2010test.py</p>
 <p>It's a very small dataset so for convenience, it's hardcoded below</p>
 <pre><code class="python">## cut &amp; pasted directly from the fetch_hogg2010test() function
@@ -351,7 +362,7 @@ _ = g.fig.suptitle('Scatterplot of Hogg 2010 dataset after standardization', fon
 </ul>
 <hr />
 <hr />
-<h1 id="create-and-run-conventional-ols-model">Create and Run Conventional OLS Model</h1>
+<h1 id="create-conventional-ols-model">Create Conventional OLS Model</h1>
 <p>The <em>linear model</em> is really simple and conventional:</p>
 <p><mathjax>$$\bf{y} = \beta^{T} \bf{X} + \bf{\sigma}$$</mathjax></p>
 <p>where:  </p>
@@ -391,8 +402,8 @@ _ = g.fig.suptitle('Scatterplot of Hogg 2010 dataset after standardization', fon
 <pre><code>Optimization terminated successfully.
          Current function value: 4555.263214
          Iterations: 3
-         Function evaluations: 104
- [-----------------100%-----------------] 2000 of 2000 complete in 0.7 sec
+         Function evaluations: 110
+ [-----------------100%-----------------] 2000 of 2000 complete in 0.6 sec
 </code></pre>
 <h5 id="view-traces">View Traces</h5>
 <p><strong>NOTE</strong>: I'll 'burn' the traces to only retain the final 1000 samples</p>
@@ -401,10 +412,73 @@ _ = g.fig.suptitle('Scatterplot of Hogg 2010 dataset after standardization', fon
 </code></pre>
 
 <p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_16_0.png" /></p>
-<p>We'll illustrate this OLS fit and compare to the datapoints in the final plot</p>
+<p><strong>NOTE:</strong> We'll illustrate this OLS fit and compare to the datapoints in the final plot</p>
 <hr />
 <hr />
-<h1 id="create-and-run-robust-model">Create and Run Robust Model</h1>
+<h1 id="create-robust-model-student-t-method">Create Robust Model: Student-T Method</h1>
+<p>I've added this brief section in order to directly compare the Student-T based method exampled in Thomas Wiecki's notebook in the <a href="http://pymc-devs.github.io/pymc3/GLM-robust/">PyMC3 documentation</a></p>
+<p>Instead of using a Normal distribution for the likelihood, we use a Student-T, which has fatter tails. In theory this allows outliers to have a smaller mean square error in the likelihood, and thus have less influence on the regression estimation. This method does not produce inlier / outlier flags but is simpler and faster to run than the Signal Vs Noise model below, so a comparison seems worthwhile.</p>
+<p><strong>Note:</strong> we'll constrain the Student-T 'degrees of freedom' parameter <code>nu</code> to be an integer, but otherwise leave it as just another stochastic to be inferred: no need for prior knowledge.</p>
+<h5 id="define-model_1">Define Model</h5>
+<pre><code class="python">with pm.Model() as mdl_studentt:
+
+    ## Define weakly informative Normal priors to give Ridge regression
+    b0 = pm.Normal('b0_intercept', mu=0, sd=100)
+    b1 = pm.Normal('b1_slope', mu=0, sd=100)
+
+    ## Define linear model
+    yest = b0 + b1 * dfhoggs['x']
+
+    ## Use y error from dataset, convert into theano variable
+    sigma_y = thno.shared(np.asarray(dfhoggs['sigma_y'],
+                            dtype=thno.config.floatX), name='sigma_y')
+
+    ## define prior for Student T degrees of freedom
+    nu = pm.DiscreteUniform('nu', lower=1, upper=100)
+
+    ## Define Student T likelihood
+    likelihood = pm.StudentT('likelihood', mu=yest, sd=sigma_y**2, nu=nu
+                           ,observed=dfhoggs['y'])
+
+</code></pre>
+
+<h5 id="sample_1">Sample</h5>
+<pre><code class="python">with mdl_studentt:
+
+    ## find MAP using Powell, seems to be more robust
+    start_MAP = pm.find_MAP(fmin=optimize.fmin_powell, disp=True)
+
+    ## two-step sampling to allow Metropolis for nu (which is discrete)
+    step1 = pm.NUTS([b0, b1])
+    step2 = pm.Metropolis([nu])
+
+    ## take samples
+    traces_studentt = pm.sample(2000, start=start_MAP, step=[step1, step2], progressbar=True)
+</code></pre>
+
+<pre><code>Optimization terminated successfully.
+         Current function value: 430.443483
+         Iterations: 3
+         Function evaluations: 86
+ [-----------------100%-----------------] 2000 of 2000 complete in 1.3 sec
+</code></pre>
+<h5 id="view-traces_1">View Traces</h5>
+<pre><code class="python">_ = pm.traceplot(traces_studentt[-1000:]
+            ,figsize=(12,len(traces_studentt.varnames)*1.5)
+            ,lines={k: v['mean'] for k, v in pm.df_summary(traces_studentt[-1000:]).iterrows()})
+</code></pre>
+
+<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_26_0.png" /></p>
+<p><strong>Observe:</strong></p>
+<ul>
+<li>Both parameters <code>b0</code> and <code>b1</code> show quite a skew to the right, possibly this is the action of a few samples regressing closer to the OLS estimate which is towards the left</li>
+<li>The <code>nu</code> parameter seems very happy to stick at <code>nu = 1</code>, indicating that a fat-tailed Student-T likelihood has a better fit than a thin-tailed (Normal-like) Student-T likelihood.</li>
+<li>The inference sampling also ran very quickly, almost as quickly as the conventional OLS</li>
+</ul>
+<p><strong>NOTE:</strong> We'll illustrate this Student-T fit and compare to the datapoints in the final plot</p>
+<hr />
+<hr />
+<h1 id="create-robust-model-with-outliers-hogg-method">Create Robust Model with Outliers: Hogg Method</h1>
 <p>Please read the paper (Hogg 2010) and Jake Vanderplas' code for more complete information about the modelling technique.</p>
 <p>The general idea is to create a 'mixture' model whereby datapoints can be described by either the linear model (inliers) or a modified linear model with different mean and larger variance (outliers).</p>
 <p>The likelihood is evaluated over a mixture of two likelihoods, one for 'inliers', one for 'outliers'. A Bernouilli distribution is used to randomly assign datapoints in N to either the inlier or outlier groups, and we sample the model as usual to infer robust model parameters and inlier / outlier flags:</p>
@@ -413,11 +487,11 @@ _ = g.fig.suptitle('Scatterplot of Hogg 2010 dataset after standardization', fon
 $$</mathjax></p>
 <p>where:<br />
 <mathjax>$\bf{B}$</mathjax> is Bernoulli-distibuted <mathjax>$B_{i} \in [0_{(inlier)},1_{(outlier)}]$</mathjax></p>
-<h5 id="define-model_1">Define model</h5>
+<h5 id="define-model_2">Define model</h5>
 <pre><code class="python">def logp_signoise(yobs, is_outlier, yest_in, sigma_y_in, yest_out, sigma_y_out):
     '''
     Define custom loglikelihood for inliers vs outliers. 
-    Note: in this particular case we don't need to use theano's @as_op 
+    NOTE: in this particular case we don't need to use theano's @as_op 
     decorator because (as stated by Twiecki in conversation) that's only 
     required if the likelihood cannot be expressed as a theano expression.
     We also now get the gradient computation for free.
@@ -468,7 +542,7 @@ $$</mathjax></p>
 
 </code></pre>
 
-<h5 id="sample_1">Sample</h5>
+<h5 id="sample_2">Sample</h5>
 <pre><code class="python">with mdl_signoise:
 
     ## two-step sampling to create Bernoulli inlier/outlier flags
@@ -479,21 +553,21 @@ $$</mathjax></p>
     start_MAP = pm.find_MAP(fmin=optimize.fmin_powell, disp=True)
 
     ## take samples
-    traces_signoise = pm.sample(1000, start=start_MAP, step=[step1,step2], progressbar=True)
+    traces_signoise = pm.sample(2000, start=start_MAP, step=[step1,step2], progressbar=True)
 </code></pre>
 
 <pre><code>Optimization terminated successfully.
          Current function value: 155.449990
          Iterations: 3
-         Function evaluations: 226
- [-----------------100%-----------------] 1000 of 1000 complete in 93.1 sec
+         Function evaluations: 202
+ [-----------------100%-----------------] 2000 of 2000 complete in 180.3 sec
 </code></pre>
-<h5 id="view-traces_1">View Traces</h5>
+<h5 id="view-traces_2">View Traces</h5>
 <pre><code class="python">_ = pm.traceplot(traces_signoise[-1000:], figsize=(12,len(traces_signoise.varnames)*1.5),
             lines={k: v['mean'] for k, v in pm.df_summary(traces_signoise[-1000:]).iterrows()})
 </code></pre>
 
-<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_27_0.png" /></p>
+<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_37_0.png" /></p>
 <p><strong>NOTE:</strong>:</p>
 <ul>
 <li>During development I've found that 3 datapoints id=[1,2,3] are always indicated as outliers, but the remaining ordering of datapoints by decreasing outlier-hood is unstable between runs: the posterior surface appears to have a small number of solutions with very similar probability.</li>
@@ -503,7 +577,7 @@ $$</mathjax></p>
 <hr />
 <h1 id="declare-outliers-and-compare-plots">Declare Outliers and Compare Plots</h1>
 <h5 id="view-ranges-for-inliers-outlier-predictions">View ranges for inliers / outlier predictions</h5>
-<p>At each step of the traces, each datapoint may be either an inlier or outlier. We hope that the datapoints spend an unequal time being one state or the other, so let's take a look at the 95% credible region for each of the 20 datapoints.</p>
+<p>At each step of the traces, each datapoint may be either an inlier or outlier. We hope that the datapoints spend an unequal time being one state or the other, so let's take a look at the simple count of states for each of the 20 datapoints.</p>
 <pre><code class="python">outlier_melt = pd.melt(pd.DataFrame(traces_signoise['is_outlier', -1000:],
                                    columns=['[{}]'.format(int(d)) for d in dfhoggs.index]),
                       var_name='datapoint_id', value_name='is_outlier')
@@ -521,7 +595,7 @@ _ = ax0.set_title('Prop. of the trace where datapoint is an outlier')
 _ = ax0.set_xlabel('Prop. of the trace where is_outlier == 1')
 </code></pre>
 
-<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_33_0.png" /></p>
+<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_43_0.png" /></p>
 <p><strong>Observe</strong>:</p>
 <ul>
 <li>The plot above shows the number of samples in the traces in which each datapoint is marked as an outlier, expressed as a percentage.</li>
@@ -543,33 +617,60 @@ dfhoggs['outlier'].value_counts()
 
 <pre><code>0    17
 1     3
-dtype: int64
+Name: outlier, dtype: int64
 </code></pre>
-<h2 id="posterior-prediction-plots-for-ols-vs-robust">Posterior Prediction Plots for OLS vs Robust</h2>
+<h2 id="posterior-prediction-plots-for-ols-vs-studentt-vs-signalnoise">Posterior Prediction Plots for OLS vs StudentT vs SignalNoise</h2>
 <pre><code class="python">g = sns.FacetGrid(dfhoggs, size=8, hue='outlier', hue_order=[True,False],
                   palette='Set1', legend_out=False)
 
 lm = lambda x, samp: samp['b0_intercept'] + samp['b1_slope'] * x
 
 pm.glm.plot_posterior_predictive(traces_ols[-1000:],
-        eval=np.linspace(-3, 3, 10), lm=lm, samples=200, color='y', alpha=.1)
+        eval=np.linspace(-3, 3, 10), lm=lm, samples=200, color='#00AA00', alpha=.1)
 
-pm.glm.plot_posterior_predictive(traces_signoise[-1000:],
-        eval=np.linspace(-3, 3, 10), lm=lm, samples=200, color='g', alpha=.2)
+pm.glm.plot_posterior_predictive(traces_studentt[-1000:], lm=lm,
+        eval=np.linspace(-3, 3, 10), samples=200, color='#FF9900', alpha=.3)
+
+pm.glm.plot_posterior_predictive(traces_signoise[-1000:], lm=lm,
+        eval=np.linspace(-3, 3, 10), samples=200,
+        color=sns.palettes.color_palette('Set1')[1], alpha=.3)
 
 _ = g.map(plt.errorbar, 'x', 'y', 'sigma_y', 'sigma_x', marker=&quot;o&quot;, ls='').add_legend()
 
-_ = g.axes[0][0].annotate('OLS Fit: Yellow\nRobust Fit: Green', size='x-large',
-                          xy=(1,0), xycoords='axes fraction',
+_ = g.axes[0][0].annotate('OLS Fit: Green\nStudent-T Fit: Orange\nSignal Vs Noise Fit: Blue',
+                          size='x-large', xy=(1,0), xycoords='axes fraction',
                           xytext=(-160,10), textcoords='offset points')
 _ = g.axes[0][0].set_ylim((-3,3))
 </code></pre>
 
-<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_38_0.png" /></p>
-<p><strong>Observe</strong>:
-+ The posterior predictive fit for the <strong>OLS model</strong> is shown in <strong>Yellow</strong> and as expected, it doesn't appear to fit the majority of our datapoints very well.
-+ The posterior predictive fit for the <strong>Robust model</strong> is shown in <strong>Green</strong> does appear to fit the 'main axis' of datapoints rather well
-+ We also see that the <strong>Robust model</strong> has estimated 3 datapoints shown in <strong>Red</strong> to be outliers. From even this simple inspection, the classification seems fair, and happily also agrees with Jake Vanderplas' findings.</p>
+<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_48_0.png" /></p>
+<p><strong>Observe</strong>:</p>
+<ul>
+<li>
+<p>The posterior preditive fit for:</p>
+<ul>
+<li>the <strong>OLS model</strong> is shown in <strong>Green</strong> and as expected, it doesn't appear to fit the majority of our datapoints very well, skewed by outliers</li>
+<li>the <strong>Robust Student-T model</strong> is shown in <strong>Orange</strong> and does appear to fit the 'main axis' of datapoints quite well, ignoring outliers</li>
+<li>the <strong>Robust Signal vs Noise model</strong> is shown in <strong>Blue</strong> and also appears to fit the 'main axis' of datapoints rather well, ignoring outliers.</li>
+</ul>
+</li>
+<li>
+<p>We see that the <strong>Robust Signal vs Noise model</strong> also yields specific estimates of <em>which</em> datapoints are outliers:</p>
+<ul>
+<li>17 'inlier' datapoints, in <strong>Blue</strong> and</li>
+<li>3 'outlier' datapoints shown in <strong>Red</strong>.</li>
+<li>From a simple visual inspection, the classification seems fair, and agrees with Jake Vanderplas' findings.</li>
+</ul>
+</li>
+<li>
+<p>Overall, it seems that:</p>
+<ul>
+<li>the <strong>Signal vs Noise model</strong> behaves as promised, yielding a robust regression estimate and explicit labelling of inliers / outliers, but</li>
+<li>the <strong>Signal vs Noise model</strong> is quite complex and whilst the regression seems robust and stable, the actual inlier / outlier labelling seems slightly unstable</li>
+<li>if you simply want a robust regression without inlier / outlier labelling, the <strong>Student-T model</strong> may be a good compromise, offering a simple model, quick sampling, and a very similar estimate.</li>
+</ul>
+</li>
+</ul>
 <hr /></div>
             
         </div>
