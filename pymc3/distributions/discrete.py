@@ -15,25 +15,26 @@ __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
 
 class Binomial(Discrete):
     r"""
-    Binomial log-likelihood.  The discrete probability distribution
-    of the number of successes in a sequence of n independent yes/no
-    experiments, each of which yields success with probability p.
+    Binomial log-likelihood.
 
-    .. math::
+    The discrete probability distribution of the number of successes
+    in a sequence of n independent yes/no experiments, each of which
+    yields success with probability p.
 
-       f(x \mid n, p) = \binom{n}{x} p^x (1-p)^{n-x}
+    .. math:: f(x \mid n, p) = \binom{n}{x} p^x (1-p)^{n-x}
+
+    ========  ==========================================
+    Support   :math:`x \in \{0, 1, \ldots, n\}`
+    Mean      :math:`n p`
+    Variance  :math:`n p (1 - p)`
+    ========  ==========================================
 
     Parameters
     ----------
     n : int
-        Number of Bernoulli trials, n > x
+        Number of Bernoulli trials (n >= 0).
     p : float
-        Probability of success in each trial, :math:`p \in [0,1]`
-
-    Notes
-    -----
-    - :math:`E(X)=np`
-    - :math:`Var(X)=np(1-p)`
+        Probability of success in each trial (0 < p < 1).
     """
     def __init__(self, n, p, *args, **kwargs):
         super(Binomial, self).__init__(*args, **kwargs)
@@ -59,9 +60,10 @@ class Binomial(Discrete):
 
 class BetaBinomial(Discrete):
     r"""
-    Beta-binomial log-likelihood. Equivalent to binomial random
-    variables with probabilities drawn from a
-    :math:`\texttt{Beta}(\alpha,\beta)` distribution.
+    Beta-binomial log-likelihood.
+
+    Equivalent to binomial random variable with success probability
+    drawn from a beta distribution.
 
     .. math::
 
@@ -69,19 +71,20 @@ class BetaBinomial(Discrete):
            \binom{n}{x}
            \frac{B(x + \alpha, n - x + \beta)}{B(\alpha, \beta)}
 
+    ========  =================================================================
+    Support   :math:`x \in \{0, 1, \ldots, n\}`
+    Mean      :math:`n \dfrac{\alpha}{\alpha + \beta}`
+    Variance  :math:`n \dfrac{\alpha \beta}{(\alpha+\beta)^2 (\alpha+\beta+1)}`
+    ========  =================================================================
+
     Parameters
     ----------
-    alpha : float
-        alpha > 0
-    beta : float
-        beta > 0
     n : int
-        n=x,x+1,...
-
-    Notes
-    -----
-    - :math:`E(X)=n\frac{\alpha}{\alpha+\beta}`
-    - :math:`Var(X)=n\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
+        Number of Bernoulli trials (n >= 0).
+    alpha : float
+        alpha > 0.
+    beta : float
+        beta > 0.
     """
     def __init__(self, alpha, beta, n, *args, **kwargs):
         super(BetaBinomial, self).__init__(*args, **kwargs)
@@ -122,20 +125,21 @@ class BetaBinomial(Discrete):
 class Bernoulli(Discrete):
     r"""Bernoulli log-likelihood
 
-    The Bernoulli distribution describes the probability of successes (x=1) and
-    failures (x=0).
+    The Bernoulli distribution describes the probability of successes
+    (x=1) and failures (x=0).
 
     .. math:: f(x \mid p) = p^{x} (1-p)^{1-x}
+
+    ========  ======================
+    Support   :math:`x \in \{0, 1\}`
+    Mean      :math:`p`
+    Variance  :math:`p (1 - p)`
+    ========  ======================
 
     Parameters
     ----------
     p : float
-        Probability of success. :math:`0 < p < 1`.
-
-    Notes
-    -----
-    - :math:`E(x)= p`
-    - :math:`Var(x)= p(1-p)`
+        Probability of success (0 < p < 1).
     """
     def __init__(self, p, *args, **kwargs):
         super(Bernoulli, self).__init__(*args, **kwargs)
@@ -160,26 +164,27 @@ class Poisson(Discrete):
     r"""
     Poisson log-likelihood.
 
-    The Poisson is a discrete probability
-    distribution.  It is often used to model the number of events
-    occurring in a fixed period of time when the times at which events
-    occur are independent. The Poisson distribution can be derived as
-    a limiting case of the binomial distribution.
+    Often used to model the number of events occurring in a fixed period
+    of time when the times at which events occur are independent.
 
-    .. math::
+    .. math:: f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
 
-       f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\mu`
+    Variance  :math:`\mu`
+    ========  ==========================
 
     Parameters
     ----------
     mu : float
-        Expected number of occurrences during the given interval,
-        :math:`\mu \geq 0`.
+        Expected number of occurrences during the given interval
+        (mu >= 0).
 
     Notes
     -----
-    - :math:`E(x)=\mu`
-    - :math:`Var(x)=\mu`
+    The Poisson distribution can be derived as a limiting case of the
+    binomial distribution.
     """
     def __init__(self, mu, *args, **kwargs):
         super(Poisson, self).__init__(*args, **kwargs)
@@ -203,9 +208,8 @@ class NegativeBinomial(Discrete):
     r"""
     Negative binomial log-likelihood.
 
-    The negative binomial distribution  describes a Poisson random variable
-    whose rate parameter is gamma distributed. PyMC's chosen parameterization
-    is based on this mixture interpretation.
+    The negative binomial distribution describes a Poisson random variable
+    whose rate parameter is gamma distributed.
 
     .. math::
 
@@ -213,16 +217,17 @@ class NegativeBinomial(Discrete):
            \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)}
            (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
 
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\mu`
+    ========  ==========================
+
     Parameters
     ----------
     mu : float
-        mu > 0
+        Poission distribution parameter (mu > 0).
     alpha : float
-        alpha > 0
-
-    Notes
-    -----
-    - :math:`E[x]=\mu`
+        Gamma distribution parameter (alpha > 0).
     """
     def __init__(self, mu, alpha, *args, **kwargs):
         super(NegativeBinomial, self).__init__(*args, **kwargs)
@@ -254,22 +259,23 @@ class NegativeBinomial(Discrete):
 
 class Geometric(Discrete):
     r"""
-    Geometric log-likelihood. The probability that the first success in a
-    sequence of Bernoulli trials occurs on the x'th trial.
+    Geometric log-likelihood.
 
-    .. math::
+    The probability that the first success in a sequence of Bernoulli
+    trials occurs on the x'th trial.
 
-       f(x \mid p) = p(1-p)^{x-1}
+    .. math:: f(x \mid p) = p(1-p)^{x-1}
+
+    ========  =============================
+    Support   :math:`x \in \mathbb{N}_{>0}`
+    Mean      :math:`\dfrac{1}{p}`
+    Variance  :math:`\dfrac{1 - p}{p^2}`
+    ========  =============================
 
     Parameters
     ----------
     p : float
-        Probability of success on an individual trial, :math:`p \in [0,1]`
-
-    Notes
-    -----
-    - :math:`E(X)=1/p`
-    - :math:`Var(X)=\frac{1-p}{p^2}`
+        Probability of success on an individual trial (0 < p <= 1).
     """
     def __init__(self, p, *args, **kwargs):
         super(Geometric, self).__init__(*args, **kwargs)
@@ -292,9 +298,13 @@ class DiscreteUniform(Discrete):
     r"""
     Discrete uniform distribution.
 
-    .. math::
+    .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower}
 
-       f(x \mid lower, upper) = \frac{1}{upper-lower}
+    ========  ===============================================
+    Support   :math:`x \in {lower, lower + 1, \ldots, upper}`
+    Mean      :math:`\dfrac{lower + upper}{2}`
+    Variance  :math:`\dfrac{(upper - lower)^2}{12}`
+    ========  ===============================================
 
     Parameters
     ----------
@@ -332,16 +342,20 @@ class DiscreteUniform(Discrete):
 
 class Categorical(Discrete):
     r"""
-    Categorical log-likelihood. The most general discrete distribution.
+    Categorical log-likelihood.
 
-    .. math:: f(x=i \mid p) = p_i
+    The most general discrete distribution.
 
-    for :math:`i \in 0 \ldots k-1`.
+    .. math:: f(x \mid p) = p_x
+
+    ========  ===================================
+    Support   :math:`x \in \{1, 2, \ldots, |p|\}`
+    ========  ===================================
 
     Parameters
     ----------
     p : float
-        :math:`p > 0`, :math:`\sum p = 1`
+        p > 0 and the elements of p must sum to 1.
     """
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
@@ -369,12 +383,12 @@ class Categorical(Discrete):
 
 class ConstantDist(Discrete):
     """
-    Constant log-likelihood with parameter c={0}.
+    Constant log-likelihood.
 
     Parameters
     ----------
     value : float or int
-        Data value(s)
+        Constant parameter.
     """
     def __init__(self, c, *args, **kwargs):
         super(ConstantDist, self).__init__(*args, **kwargs)

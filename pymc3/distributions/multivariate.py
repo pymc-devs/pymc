@@ -15,13 +15,19 @@ __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart', 'LKJCorr']
 
 class MvNormal(Continuous):
     r"""
-    Multivariate normal distribution.
+    Multivariate normal log-likelihood.
 
     .. math::
 
        f(x \mid \pi, T) =
            \frac{|T|^{1/2}}{(2\pi)^{1/2}}
-           \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime}T(x-\mu) \right\}
+           \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime} T (x-\mu) \right\}
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{R}^k`
+    Mean      :math:`\mu`
+    Variance  :math:`T^{-1}`
+    ========  ==========================
 
     Parameters
     ----------
@@ -64,9 +70,7 @@ class MvNormal(Continuous):
 
 class Dirichlet(Continuous):
     r"""
-    Dirichlet distribution.
-
-    This is a multivariate continuous distribution.
+    Dirichlet log-likelihood.
 
     .. math::
 
@@ -75,20 +79,21 @@ class Dirichlet(Continuous):
            \prod_{i=1}^{k-1} x_i^{\theta_i - 1}
            \left(1-\sum_{i=1}^{k-1}x_i\right)^\theta_k
 
+    ========  ===============================================
+    Support   :math:`x_i \in (0, 1)` for :math:`i \in \{1, \ldots, K\}`
+              such that :math:`\sum x_i = 1`
+    Mean      :math:`\dfrac{a_i}{\sum a_i}`
+    Variance  :math:`\dfrac{a_i - \sum a_0}{a_0^2 (a_0 + 1)}`
+              where :math:`a_0 = \sum a_i`
+    ========  ===============================================
+
     Parameters
     ----------
-    a : float tensor
-        a > 0
-        concentration parameters
-        last index is the k index
+    a : array
+        Concentration parameters (a > 0).
 
-    Support
-    -------
-    x : array
-        sum(x) == 1 and x > 0
-
-    Note
-    ----
+    Notes
+    -----
     Only the first `k-1` elements of `x` are expected. Can be used
     as a parent of Multinomial and Categorical nevertheless.
     """
@@ -130,35 +135,33 @@ class Dirichlet(Continuous):
 
 class Multinomial(Discrete):
     r"""
-    Generalization of the binomial
-    distribution, but instead of each trial resulting in "success" or
-    "failure", each one results in exactly one of some fixed finite number k
-    of possible outcomes over n independent trials. 'x[i]' indicates the number
-    of times outcome number i was observed over the n trials.
+    Multinomial log-likelihood.
+
+    Generalizes binomial distribution, but instead of each trial resulting
+    in "success" or "failure", each one results in exactly one of some
+    fixed finite number k of possible outcomes over n independent trials.
+    'x[i]' indicates the number of times outcome number i was observed
+    over the n trials.
 
     .. math::
 
        f(x \mid n, p) = \frac{n!}{\prod_{i=1}^k x_i!} \prod_{i=1}^k p_i^{x_i}
 
+    ==========  ===========================================
+    Support     :math:`x \in \{0, 1, \ldots, n\}` such that
+                :math:`\sum x_i = n`
+    Mean        :math:`n p_i`
+    Variance    :math:`n p_i (1 - p_i)`
+    Covariance  :math:`-n p_i p_j` for :math:`i \ne j`
+    ==========  ===========================================
+
     Parameters
     ----------
     n : int
-        Number of trials.
-    p : (k,)
-        Probability of each one of the different outcomes.
-        :math:`\sum_{i=1}^k p_i = 1)`, :math:`p_i \ge 0`.
-
-    Support
-    -------
-    x : (ns, k) int
-        Random variable indicating the number of time outcome i is
-        observed. :math:`\sum_{i=1}^k x_i=n`, :math:`x_i \ge 0`.
-
-    Note
-    ----
-    - :math:`E(X_i)=n p_i`
-    - :math:`Var(X_i)=n p_i(1-p_i)`
-    - :math:`Cov(X_i,X_j) = -n p_i p_j`
+        Number of trials (n > 0).
+    p : array
+        Probability of each one of the different outcomes. Elements must
+        be non-negative and sum to 1.
     """
     def __init__(self, n, p, *args, **kwargs):
         super(Multinomial, self).__init__(*args, **kwargs)
@@ -191,9 +194,11 @@ class Multinomial(Discrete):
 
 class Wishart(Continuous):
     r"""
+    Wishart log-likelihood.
+
     The Wishart distribution is the probability
     distribution of the maximum-likelihood estimator (MLE) of the precision
-    matrix of a multivariate normal distribution. If V=1, the distribution
+    matrix of a multivariate normal distribution.  If V=1, the distribution
     is identical to the chi-square distribution with n degrees of freedom.
 
     For an alternative parameterization based on :math:`C=T{-1}`
@@ -207,17 +212,18 @@ class Wishart(Continuous):
 
     where :math:`k` is the rank of X.
 
+    ========  =========================================
+    Support   :math:`X(p x p)` positive definite matrix
+    Mean      :math:`n V`
+    Variance  :math:`n (v_{ij}^2 + v_{ii} v_{jj})`
+    ========  =========================================
+
     Parameters
     ----------
     n : int
         Degrees of freedom, > 0.
     V : array
-        p x p positive definite matrix
-
-    Support
-    -------
-    X : matrix
-        Symmetric, positive definite.
+        p x p positive definite matrix.
     """
     def __init__(self, n, V, *args, **kwargs):
         super(Wishart, self).__init__(*args, **kwargs)
@@ -254,18 +260,28 @@ class Wishart(Continuous):
 
 class LKJCorr(Continuous):
     r"""
-    The LKJ (Lewandowski, Kurowicka and Joe) distribution.
+    The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
 
     The LKJ distribution is a prior distribution for correlation matrices.
     If n = 1 this corresponds to the uniform distribution over correlation
     matrices. For n -> oo the LKJ prior approaches the identity matrix.
 
-    For more details see:
-    http://www.sciencedirect.com/science/article/pii/S0047259X09000876
+    ========  ==============================================
+    Support   Upper triangular matrix with values in [-1, 1]
+    ========  ==============================================
 
-    This implementation only returns the values of the upper triangular matrix
-    excluding the diagonal. Here is a schematic for p = 5, showing the indexes
-    of the elements::
+    Parameters
+    ----------
+    n : float
+        Shape parameter (n > 0). Uniform distribution at n = 1.
+    p : int
+        Dimension of correlation matrix (p > 0).
+
+    Notes
+    -----
+    This implementation only returns the values of the upper triangular
+    matrix excluding the diagonal. Here is a schematic for p = 5, showing
+    the indexes of the elements::
 
         [[- 0 1 2 3]
          [- - 4 5 6]
@@ -273,17 +289,13 @@ class LKJCorr(Continuous):
          [- - - - 9]
          [- - - - -]]
 
-    Parameters
-    ----------
-    n : float
-        Shape parameter, Uniform distribution at n=1, > 0
-    p : int
-        Dimension of correlation matrix
 
-    Support
-    -------
-    x : array of size p * (p - 1) / 2
-        Upper triangular matrix values [-1,1].
+    References
+    ----------
+    .. [LKJ2009] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+        "Generating random correlation matrices based on vines and
+        extended onion method." Journal of multivariate analysis,
+        100(9), pp.1989-2001.
     """
     def __init__(self, n, p, *args, **kwargs):
         self.n = n

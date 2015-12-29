@@ -84,12 +84,18 @@ class Uniform(Continuous):
 
        f(x \mid lower, upper) = \frac{1}{upper-lower}
 
+    ========  =====================================
+    Support   :math:`x \in [lower, upper]`
+    Mean      :math:`\dfrac{lower + upper}{2}`
+    Variance  :math:`\dfrac{(upper - lower)^2}{12}`
+    ========  =====================================
+
     Parameters
     ----------
     lower : float
-        Lower limit (defaults to 0)
+        Lower limit.
     upper : float
-        Upper limit (defaults to 1)
+        Upper limit.
     """
     def __init__(self, lower=0, upper=1, transform='interval',
                  *args, **kwargs):
@@ -144,20 +150,28 @@ class Normal(Continuous):
            \sqrt{\frac{\tau}{2\pi}}
            \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
 
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu`
+    Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
+    ========  ==========================================
+
+    Normal distribution can be parameterized either in terms of precision
+    or standard deviation. The link between the two parametrizations is
+    given by
+
+    .. math::
+
+       \tau = \dfrac{1}{\sigma^2}
+
     Parameters
     ----------
     mu : float
-        Mean of the distribution.
+        Mean.
     tau : float
-        Precision of the distribution, which corresponds to
-        :math:`\dfrac{1}{\sigma^2}` (tau > 0).
+        Precision (tau > 0).
     sd : float
-        Standard deviation of the distribution. Alternative parameterization.
-
-    Notes
-    -----
-    - :math:`E(X) = \mu`
-    - :math:`Var(X) = 1/\tau`
+        Standard deviation (sd > 0).
     """
     def __init__(self, mu=0.0, tau=None, sd=None, *args, **kwargs):
         super(Normal, self).__init__(*args, **kwargs)
@@ -182,8 +196,7 @@ class Normal(Continuous):
 
 class HalfNormal(PositiveContinuous):
     r"""
-    Half-normal log-likelihood, a normal distribution with mean 0 limited
-    to the domain :math:`x \in [0, \infty)`.
+    Half-normal log-likelihood.
 
     .. math::
 
@@ -191,13 +204,18 @@ class HalfNormal(PositiveContinuous):
            \sqrt{\frac{2\tau}{\pi}}
            \exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
 
+    ========  ==========================================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`0`
+    Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
+    ========  ==========================================
+
     Parameters
     ----------
     tau : float
-        Precision of the distribution, which corresponds to
-        :math:`\dfrac{1}{\sigma^2}` (tau > 0).
+        Precision (tau > 0).
     sd : float
-        Standard deviation of the distribution. Alternative parameterization.
+        Standard deviation (sd > 0).
     """
     def __init__(self, tau=None, sd=None, *args, **kwargs):
         super(HalfNormal, self).__init__(*args, **kwargs)
@@ -221,7 +239,7 @@ class HalfNormal(PositiveContinuous):
 
 class Wald(PositiveContinuous):
     r"""
-    Wald random variable with support :math:`x \in (0, \infty)`.
+    Wald log-likelihood.
 
     .. math::
 
@@ -231,6 +249,19 @@ class Wald(PositiveContinuous):
                -\frac{\lambda}{2x}\left(\frac{x-\mu}{\mu}\right)^2
            \right\}
 
+    ========  =============================
+    Support   :math:`x \in (0, \infty)`
+    Mean      :math:`\mu`
+    Variance  :math:`\dfrac{\mu^3}{\lambda}`
+    ========  =============================
+
+    Wald distribution can be parameterized either in terms of lam or phi.
+    The link between the two parametrizations is given by
+
+    .. math::
+
+       \phi = \dfrac{\lambda}{\mu}
+
     Parameters
     ----------
     mu : float, optional
@@ -238,17 +269,18 @@ class Wald(PositiveContinuous):
     lam : float, optional
         Relative precision (lam > 0).
     phi : float, optional
-        Shape. Alternative parametrisation where phi = lam / mu (phi > 0).
+        Alternative shape parameter (phi > 0).
     alpha : float, optional
-        Shift/location (alpha >= 0).
+        Shift/location parameter (alpha >= 0).
 
     Notes
     -----
-    The Wald can be instantiated by specifying mu only (so lam=1),
-    mu and lam, mu and phi, or lam and phi.
+    To instantiate the distribution specify any of the following
 
-    - :math:`E(X) = \mu`
-    - :math:`Var(X) = \frac{\mu^3}{\lambda}`
+    - only mu (in this case lam will be 1)
+    - mu and lam
+    - mu and phi
+    - lam and phi
 
     References
     ----------
@@ -319,38 +351,43 @@ class Wald(PositiveContinuous):
 
 class Beta(UnitContinuous):
     r"""
-    Beta log-likelihood. The conjugate prior for the parameter
-    :math:`p` of the binomial distribution.
+    Beta log-likelihood.
 
     .. math::
 
        f(x \mid \alpha, \beta) =
            \frac{x^{\alpha - 1} (1 - x)^{\beta - 1}}{B(\alpha, \beta)}
 
-    Beta distribution can be parameterized either in terms of alpha and beta
-    or mean and standard deviation. The link between the two parametrizations
-    is given by
+    ========  ==============================================================
+    Support   :math:`x \in (0, 1)`
+    Mean      :math:`\dfrac{\alpha}{\alpha + \beta}`
+    Variance  :math:`\dfrac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
+    ========  ==============================================================
+
+    Beta distribution can be parameterized either in terms of alpha and
+    beta or mean and standard deviation. The link between the two
+    parametrizations is given by
 
     .. math::
 
        \alpha &= \mu \sigma \\
-       \beta &= (1 - \mu) \sigma
+       \beta  &= (1 - \mu) \sigma
 
     Parameters
     ----------
     alpha : float
-        alpha > 0
+        alpha > 0.
     beta : float
-        beta > 0
+        beta > 0.
     mu : float
-        1 > mu > 0
+        Alternative mean (0 < mu < 1).
     sd : float
-        sd > 0
+        Alternative standard deviation (sd > 0).
 
     Notes
     -----
-    - :math:`E(X)=\frac{\alpha}{\alpha+\beta}`
-    - :math:`Var(X)=\frac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
+    Beta distribution is a conjugate prior for the parameter :math:`p` of
+    the binomial distribution.
     """
     def __init__(self, alpha=None, beta=None, mu=None, sd=None,
                  *args, **kwargs):
@@ -393,14 +430,23 @@ class Beta(UnitContinuous):
 
 
 class Exponential(PositiveContinuous):
-    """
-    Exponential distribution
+    r"""
+    Exponential log-likelihood.
+
+    .. math::
+
+       f(x \mid \lambda) = \lambda \exp\left\{ -\lambda x \right\}
+
+    ========  ============================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`\dfrac{1}{\lambda}`
+    Variance  :math:`\dfrac{1}{\lambda^2}`
+    ========  ============================
 
     Parameters
     ----------
     lam : float
-        lam > 0
-        rate or inverse scale
+        Rate or inverse scale (lam > 0)
     """
     def __init__(self, lam, *args, **kwargs):
         super(Exponential, self).__init__(*args, **kwargs)
@@ -423,17 +469,27 @@ class Exponential(PositiveContinuous):
 
 
 class Laplace(Continuous):
-    """
-    Laplace distribution
+    r"""
+    Laplace log-likelihood.
+
+    .. math::
+
+       f(x \mid \alpha, \beta) =
+           \frac{1}{2b} \exp \left\{ - \frac{|x - \mu|}{b} \right\}
+
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu`
+    Variance  :math:`2 b^2`
+    ========  ========================
 
     Parameters
     ----------
     mu : float
-        mean
+        Location parameter.
     b : float
-        scale
+        Scale parameter (b > 0).
     """
-
     def __init__(self, mu, b, *args, **kwargs):
         super(Laplace, self).__init__(*args, **kwargs)
         self.b = b
@@ -469,17 +525,18 @@ class Lognormal(PositiveContinuous):
            \sqrt{\frac{\tau}{2\pi}}
            \frac{\exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}}{x}
 
+    ========  ================================================================
+    Support   :math:`x \in (0, 1)`
+    Mean      :math:`\exp\{\mu + \frac{1}{2\tau}\}`
+    Variance  :math:`\exp\{\frac{1}{\tau} - 1\} \exp\{2\mu + \frac{1}{\tau}\}`
+    ========  ================================================================
+
     Parameters
     ----------
     mu : float
         Location parameter.
     tau : float
         Scale parameter (tau > 0).
-
-    Notes
-    -----
-    - :math:`E(X)=e^{\mu+\frac{1}{2\tau}}`
-    - :math:`Var(X)=(e^{1/\tau}-1)e^{2\mu+\frac{1}{\tau}}`
     """
     def __init__(self, mu=0, tau=1, *args, **kwargs):
         super(Lognormal, self).__init__(*args, **kwargs)
@@ -514,8 +571,8 @@ class StudentT(Continuous):
     r"""
     Non-central Student's T log-likelihood.
 
-    Describes a normal variable whose precision is gamma distributed. If
-    only nu parameter is passed, this specifies a standard (central)
+    Describes a normal variable whose precision is gamma distributed.
+    If only nu parameter is passed, this specifies a standard (central)
     Student's T.
 
     .. math::
@@ -525,14 +582,18 @@ class StudentT(Continuous):
            \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}}
            \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}
 
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    ========  ========================
+
     Parameters
     ----------
     nu : int
-        Degrees of freedom
+        Degrees of freedom (nu > 0).
     mu : float
-        Location parameter (defaults to 0)
+        Location parameter.
     lam : float
-        Scale parameter (defaults to 1)
+        Scale parameter (lam > 0).
     """
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
         super(StudentT, self).__init__(*args, **kwargs)
@@ -566,26 +627,28 @@ class StudentT(Continuous):
 
 class Pareto(PositiveContinuous):
     r"""
-    Pareto log-likelihood. The Pareto is a continuous, positive
-    probability distribution with two parameters. It is often used
-    to characterize wealth distribution, or other examples of the
+    Pareto log-likelihood.
+
+    Often used to characterize wealth distribution, or other examples of the
     80/20 rule.
 
     .. math::
 
        f(x \mid \alpha, m) = \frac{\alpha m^{\alpha}}{x^{\alpha+1}}
 
+    ========  =============================================================
+    Support   :math:`x \in [m, \infty)`
+    Mean      :math:`\dfrac{\alpha m}{\alpha - 1}` for :math:`\alpha \ge 1`
+    Variance  :math:`\dfrac{m \alpha}{(\alpha - 1)^2 (\alpha - 2)}`
+              for :math:`\alpha > 2`
+    ========  =============================================================
+
     Parameters
     ----------
     alpha : float
-        Shape parameter (alpha>0)
+        Shape parameter (alpha > 0).
     m : float
-        Scale parameter (m>0)
-
-    Notes
-    -----
-    - :math:`E(x)=\frac{\alpha m}{\alpha-1} if \alpha > 1`
-    - :math:`Var(x)=\frac{m^2 \alpha}{(\alpha-1)^2(\alpha-2)} if \alpha > 2`
+        Scale parameter (m > 0).
     """
     def __init__(self, alpha, m, *args, **kwargs):
         super(Pareto, self).__init__(*args, **kwargs)
@@ -619,13 +682,21 @@ class Pareto(PositiveContinuous):
 
 class Cauchy(Continuous):
     r"""
-    Cauchy log-likelihood. The Cauchy distribution is also known as the
-    Lorentz or the Breit-Wigner distribution.
+    Cauchy log-likelihood.
+
+    Also known as the Lorentz or the Breit-Wigner distribution.
 
     .. math::
 
        f(x \mid \alpha, \beta) =
            \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
+
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    Mode      :math:`\alpha`
+    Mean      undefined
+    Variance  undefined
+    ========  ========================
 
     Parameters
     ----------
@@ -633,10 +704,6 @@ class Cauchy(Continuous):
         Location parameter
     beta : float
         Scale parameter > 0
-
-    Notes
-    -----
-    Mode and median are at alpha.
     """
     def __init__(self, alpha, beta, *args, **kwargs):
         super(Cauchy, self).__init__(*args, **kwargs)
@@ -664,11 +731,18 @@ class Cauchy(Continuous):
 
 class HalfCauchy(PositiveContinuous):
     r"""
-    Half-Cauchy log-likelihood. Simply the absolute value of Cauchy.
+    Half-Cauchy log-likelihood.
 
     .. math::
 
        f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}
+
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    Mode      0
+    Mean      undefined
+    Variance  undefined
+    ========  ========================
 
     Parameters
     ----------
@@ -710,9 +784,15 @@ class Gamma(PositiveContinuous):
        f(x \mid \alpha, \beta) =
            \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}
 
-    Gamma distribution can be parameterized either in terms of alpha and beta
-    or mean and standard deviation. The link between the two parametrizations
-    is given by
+    ========  ===============================
+    Support   :math:`x \in (0, \infty)`
+    Mean      :math:`\dfrac{\alpha}{\beta}`
+    Variance  :math:`\dfrac{\alpha}{\beta^2}`
+    ========  ===============================
+
+    Gamma distribution can be parameterized either in terms of alpha and
+    beta or mean and standard deviation. The link between the two
+    parametrizations is given by
 
     .. math::
 
@@ -725,11 +805,10 @@ class Gamma(PositiveContinuous):
         Shape parameter (alpha > 0).
     beta : float
         Rate parameter (beta > 0).
-
-    Notes
-    -----
-    - :math:`E(X) = \frac{\alpha}{\beta}`
-    - :math:`Var(X) = \frac{\alpha}{\beta^2}`
+    mu : float
+        Alternative shape parameter (mu > 0).
+    sd : float
+        Alternative scale parameter (sd > 0).
     """
     def __init__(self, alpha=None, beta=None, mu=None, sd=None,
                  *args, **kwargs):
@@ -783,18 +862,19 @@ class InverseGamma(PositiveContinuous):
            \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1}
            \exp\left(\frac{-\beta}{x}\right)
 
+    ========  ======================================================
+    Support   :math:`x \in (0, \infty)`
+    Mean      :math:`\dfrac{\beta}{\alpha-1}` for :math:`\alpha > 1`
+    Variance  :math:`\dfrac{\beta^2}{(\alpha-1)^2(\alpha)}`
+              for :math:`\alpha > 2`
+    ========  ======================================================
+
     Parameters
     ----------
     alpha : float
         Shape parameter (alpha > 0).
     beta : float
         Scale parameter (beta > 0).
-
-    Notes
-    -----
-    - :math:`E(X)=\frac{\beta}{\alpha-1}` for :math:`\alpha > 1`
-    - :math:`Var(X)=\frac{\beta^2}{(\alpha-1)^2(\alpha)}`
-      for :math:`\alpha > 2`
     """
     def __init__(self, alpha, beta=1, *args, **kwargs):
         super(InverseGamma, self).__init__(*args, **kwargs)
@@ -823,31 +903,32 @@ class InverseGamma(PositiveContinuous):
 
 class ChiSquared(Gamma):
     r"""
-    Chi-squared :math:`\chi^2` log-likelihood.
+    :math:`\chi^2` log-likelihood.
 
     .. math::
 
        f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
 
+    ========  ===============================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`\nu`
+    Variance  :math:`2 \nu`
+    ========  ===============================
+
     Parameters
     ----------
     nu : int
-        Degrees of freedom, nu > 0.
-
-    Notes
-    -----
-    - :math:`E(X)=\nu`
-    - :math:`Var(X)=2\nu`
+        Degrees of freedom (nu > 0).
     """
     def __init__(self, nu, *args, **kwargs):
         self.nu = nu
-        super(ChiSquared, self).__init__(
-            alpha=nu/2., beta=0.5, *args, **kwargs)
+        super(ChiSquared, self).__init__(alpha=nu / 2., beta=0.5,
+                                         *args, **kwargs)
 
 
 class Weibull(PositiveContinuous):
     r"""
-    Weibull log-likelihood
+    Weibull log-likelihood.
 
     .. math::
 
@@ -855,18 +936,18 @@ class Weibull(PositiveContinuous):
            \frac{\alpha x^{\alpha - 1}
            \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
 
+    ========  ====================================================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`\beta \Gamma(1 + \frac{1}{\alpha})`
+    Variance  :math:`\beta^2 \Gamma(1 + \frac{2}{\alpha} - \mu^2)`
+    ========  ====================================================
+
     Parameters
     ----------
     alpha : float
-        alpha > 0.
+        Shape parameter (alpha > 0).
     beta : float
-        beta > 0.
-
-    Notes
-    -----
-    - :math:`E(x)=\beta \Gamma(1+\frac{1}{\alpha})`
-    - :math:`median(x)=\Gamma(\log(2))^{1/\alpha}`
-    - :math:`Var(x)=\beta^2 \Gamma(1+\frac{2}{\alpha} - \mu^2)`
+        Scale parameter (beta > 0).
     """
     def __init__(self, alpha, beta, *args, **kwargs):
         super(Weibull, self).__init__(*args, **kwargs)
@@ -955,9 +1036,9 @@ StudentTpos = Bound(StudentT, 0)
 
 class ExGaussian(Continuous):
     r"""
-    Exponentially modified Gaussian random variable with
-    support :math:`x \in [-\infty, \infty]`.This results from
-    the convolution of a normal distribution with an exponential
+    Exponentially modified Gaussian log-likelihood.
+
+    Results from the convolution of a normal distribution with an exponential
     distribution.
 
     .. math::
@@ -970,19 +1051,20 @@ class ExGaussian(Continuous):
     where :math:`\Phi` is the cumulative distribution function of the
     standard normal distribution.
 
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu + \nu`
+    Variance  :math:`\sigma^2 + \nu^2`
+    ========  ========================
+
     Parameters
     ----------
     mu : float
-        Mean of the normal distribution (-inf < mu < inf).
+        Mean of the normal distribution.
     sigma : float
         Standard deviation of the normal distribution (sigma > 0).
     nu : float
         Mean of the exponential distribution (nu > 0).
-
-    Notes
-    -----
-    - :math:`E(X) = \mu + \nu`
-    - :math:`Var(X) = \sigma^2 + \nu^2`
 
     References
     ----------
