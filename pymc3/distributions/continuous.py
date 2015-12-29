@@ -725,7 +725,7 @@ class Cauchy(Continuous):
         alpha = self.alpha
         beta = self.beta
         return bound(- T.log(np.pi) - T.log(beta)
-                     - T.log(1 + ((value - alpha) / beta)**2),
+                     - T.log1p(((value - alpha) / beta)**2),
                      beta > 0)
 
 
@@ -768,7 +768,7 @@ class HalfCauchy(PositiveContinuous):
     def logp(self, value):
         beta = self.beta
         return bound(T.log(2) - T.log(np.pi) - T.log(beta)
-                     - T.log(1 + (value / beta)**2),
+                     - T.log1p((value / beta)**2),
                      value >= 0, beta > 0)
 
 
