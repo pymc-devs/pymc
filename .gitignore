@@ -1,5 +1,6 @@
 *.pyc
 examples/*.png
+docs/*/*.png
 build/*
 dist/*
 *.egg-info/
