@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="PyMC devs">
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+
+	<title>Gaussian Process (GP) smoothing - PyMC3</title>
+
+        <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="../css/highlight.css">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="..">PyMC3</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            
+                <!-- Main navigation -->
+                <ul class="nav navbar-nav">
+                
+                
+                    <li >
+                        <a href="..">Overview</a>
+                    </li>
+                
+                
+                
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../getting_started/">Getting started</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                
+                    <li class="dropdown active">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Examples <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../BEST/">BEST</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../stochastic_volatility/">Stochastic Volatility</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../hierarchical/">Hierarchical model</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-linear/">Linear Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-robust/">Robust Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../RobustRegression_OutlierDetection_Hogg/">Robust Regression with outlier detection</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-hierarchical/">Hierarchical linear regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../pmf-pymc/">Probabilistic Matrix Factorization</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../posterior_predictive/">Posterior Predictive checks and prediction</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../survival_analysis/">Survival Analysis</a>
+</li>
+
+                        
+                            
+<li class="active">
+    <a href="./">Gaussian Process (GP) smoothing</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                </ul>
+            
+
+            <ul class="nav navbar-nav navbar-right">
+                <li>
+                    <a href="#" data-toggle="modal" data-target="#mkdocs_search_modal">
+                        <i class="fa fa-search"></i> Search
+                    </a>
+                </li>
+                
+                    <li >
+                        <a rel="next" href="../survival_analysis/">
+                            <i class="fa fa-arrow-left"></i> Previous
+                        </a>
+                    </li>
+                    <li class="disabled">
+                        <a rel="prev" >
+                            Next <i class="fa fa-arrow-right"></i>
+                        </a>
+                    </li>
+                
+                
+                    <li>
+                        <a href="https://github.com/pymc-devs/pymc3">
+                            
+                                <i class="fa fa-github"></i>
+                            
+                            GitHub
+                        </a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            
+                <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#gaussian-process-gp-smoothing">Gaussian Process (GP) smoothing</a></li>
+        
+            <li><a href="#lets-try-a-linear-regression-first">Let's try a linear regression first</a></li>
+        
+            <li><a href="#linear-regression-model-recap">Linear regression model recap</a></li>
+        
+            <li><a href="#gaussian-process-smoothing-model">Gaussian Process smoothing model</a></li>
+        
+            <li><a href="#lets-describe-the-above-gp-smoothing-model-in-pymc3">Let's describe the above GP-smoothing model in PyMC3</a></li>
+        
+            <li><a href="#exploring-different-levels-of-smoothing">Exploring different levels of smoothing</a></li>
+        
+            <li><a href="#smoothing-to-the-limits">Smoothing "to the limits"</a></li>
+        
+            <li><a href="#interactive-smoothing">Interactive smoothing</a></li>
+        
+    
+    </ul>
+</div></div>
+                <div class="col-md-9" role="main">
+
+<h1 id="gaussian-process-gp-smoothing">Gaussian Process (GP) smoothing</h1>
+<p>This example deals with the case when we want to <strong>smooth</strong> the observed data points <mathjax>$(x_i, y_i)$</mathjax> of some 1-dimensional function <mathjax>$y=f(x)$</mathjax>, by finding the new values <mathjax>$(x_i, y'_i)$</mathjax> such that the new data is more "smooth" (see more on the definition of smoothness through allocation of variance in the model description below) when moving along the <mathjax>$x$</mathjax> axis. </p>
+<p>It is important to note that we are <strong>not</strong> dealing with the problem of interpolating the function <mathjax>$y=f(x)$</mathjax> at the unknown values of <mathjax>$x$</mathjax>. Such problem would be called "regression" not "smoothing", and will be considered in other examples.</p>
+<p>If we assume the functional dependency between <mathjax>$x$</mathjax> and <mathjax>$y$</mathjax> is <strong>linear</strong> then, by making the independence and normality assumptions about the noise, we can infer a straight line that approximates the dependency between the variables, i.e. perform a linear regression. We can also fit more complex functional dependencies (like quadratic, cubic, etc), if we know the functional form of the dependency in advance.</p>
+<p>However, the <strong>functional form</strong> of <mathjax>$y=f(x)$</mathjax> is <strong>not always known in advance</strong>, and it might be hard to choose which one to fit, given the data. For example, you wouldn't necessarily know which function to use, given the following observed data. Assume you haven't seen the formula that generated it:</p>
+<pre><code class="python">%pylab inline
+figsize(12, 6);
+</code></pre>
+
+<pre><code>Populating the interactive namespace from numpy and matplotlib
+</code></pre>
+<pre><code class="python">import numpy as np
+import scipy.stats as stats
+
+x = np.linspace(0, 50, 100)
+y = (np.exp(1.0 + np.power(x, 0.5) - np.exp(x/15.0)) + 
+     np.random.normal(scale=1.0, size=x.shape))
+
+plot(x, y);
+xlabel(&quot;x&quot;);
+ylabel(&quot;y&quot;);
+title(&quot;Observed Data&quot;);
+</code></pre>
+
+<p><img alt="png" src="../GP-smoothing_files/GP-smoothing_2_0.png" /></p>
+<h3 id="lets-try-a-linear-regression-first">Let's try a linear regression first</h3>
+<p>As humans, we see that there is a non-linear dependency with some noise, and we would like to capture that dependency. If we perform a linear regression, we see that the "smoothed" data is less than satisfactory:</p>
+<pre><code class="python">plot(x, y);
+xlabel(&quot;x&quot;);
+ylabel(&quot;y&quot;);
+
+lin = stats.linregress(x, y)
+plot(x, lin.intercept + lin.slope * x);
+title(&quot;Linear Smoothing&quot;);
+</code></pre>
+
+<p><img alt="png" src="../GP-smoothing_files/GP-smoothing_4_0.png" /></p>
+<h3 id="linear-regression-model-recap">Linear regression model recap</h3>
+<p>The linear regression assumes there is a linear dependency between the input <mathjax>$x$</mathjax> and output <mathjax>$y$</mathjax>, sprinkled with some noise around it so that for each observed data point we have:</p>
+<p><mathjax>$$ y_i = a + b\, x_i + \epsilon_i $$</mathjax></p>
+<p>where the observation errors at each data point satisfy:</p>
+<p><mathjax>$$ \epsilon_i \sim N(0, \sigma^2) $$</mathjax></p>
+<p>with the same <mathjax>$\sigma$</mathjax>, and the errors are independent:</p>
+<p><mathjax>$$ cov(\epsilon_i, \epsilon_j) = 0 \: \text{ for } i \neq j $$</mathjax></p>
+<p>The parameters of this model are <mathjax>$a$</mathjax>, <mathjax>$b$</mathjax>, and <mathjax>$\sigma$</mathjax>. It turns out that, under these assumptions, the maximum likelihood estimates of <mathjax>$a$</mathjax> and <mathjax>$b$</mathjax> don't depend on <mathjax>$\sigma$</mathjax>. Then <mathjax>$\sigma$</mathjax> can be estimated separately, after finding the most likely values for <mathjax>$a$</mathjax> and <mathjax>$b$</mathjax>.</p>
+<h3 id="gaussian-process-smoothing-model">Gaussian Process smoothing model</h3>
+<p>This model allows departure from the linear dependency by assuming that the dependency between <mathjax>$x$</mathjax> and <mathjax>$y$</mathjax> is a Brownian motion over the domain of <mathjax>$x$</mathjax>. This doesn't go as far as assuming a particular functional dependency between the variables. Instead, by <strong>controlling the standard deviation of the unobserved Brownian motion</strong> we can achieve different levels of smoothness of the recovered functional dependency at the original data points. </p>
+<p>The particular model we are going to discuss assumes that the observed data points are <strong>evenly spaced</strong> across the domain of <mathjax>$x$</mathjax>, and therefore can be indexed by <mathjax>$i=1,\dots,N$</mathjax> without the loss of generality. The model is described as follows:</p>
+<p><mathjax>$$ z_i \sim N(z_{i-1} + \mu, (1 - \alpha)\cdot\sigma^2) \: \text{ for } i=2,\dots,N $$</mathjax></p>
+<p><mathjax>$$ z_1 \sim ImproperFlat(-\infty,\infty) $$</mathjax></p>
+<p><mathjax>$$ y_i \sim N(z_i, \alpha\cdot\sigma^2) $$</mathjax></p>
+<p>where <mathjax>$z$</mathjax> is the hidden Brownian motion, <mathjax>$y$</mathjax> is the observed data, and the total variance <mathjax>$\sigma^2$</mathjax> of each ovservation is split between the hidden Brownian motion and the noise in proportions of <mathjax>$1 - \alpha$</mathjax> and <mathjax>$\alpha$</mathjax> respectively, with parameter <mathjax>$0 &lt; \alpha &lt; 1$</mathjax> specifying the degree of smoothing.</p>
+<p>When we estimate the maximum likelihood values of the hidden process <mathjax>$z_i$</mathjax> at each of the data points, <mathjax>$i=1,\dots,N$</mathjax>, these values provide an approximation of the functional dependency <mathjax>$y=f(x)$</mathjax> as <mathjax>$\mathrm{E}\,[f(x_i)] = z_i$</mathjax> at the original data points <mathjax>$x_i$</mathjax> only. Therefore, again, the method is called smoothing and not regression.</p>
+<h3 id="lets-describe-the-above-gp-smoothing-model-in-pymc3">Let's describe the above GP-smoothing model in PyMC3</h3>
+<pre><code class="python">import pymc3 as pm
+from theano import shared
+from pymc3.distributions.timeseries import GaussianRandomWalk
+from scipy import optimize
+</code></pre>
+
+<p>Let's create a model with a shared parameter for specifying different levels of smoothing. We use very wide priors for the "mu" and "tau" parameters of the hidden Brownian motion, which you can adjust according to your application.</p>
+<pre><code class="python">LARGE_NUMBER = 1e5
+
+model = pm.Model()
+with model:
+    smoothing_param = shared(0.9)
+    mu = pm.Normal(&quot;mu&quot;, sd=LARGE_NUMBER)
+    tau = pm.Exponential(&quot;tau&quot;, 1.0/LARGE_NUMBER)
+    z = GaussianRandomWalk(&quot;z&quot;,
+                           mu=mu,
+                           tau=tau / (1.0 - smoothing_param), 
+                           shape=y.shape)
+    obs = pm.Normal(&quot;obs&quot;, 
+                    mu=z, 
+                    tau=tau / smoothing_param, 
+                    observed=y)
+</code></pre>
+
+<p>Let's also make a helper function for inferring the most likely values of <mathjax>$z$</mathjax>:</p>
+<pre><code class="python">def infer_z(smoothing):
+    with model:
+        smoothing_param.set_value(smoothing)
+        res = pm.find_MAP(vars=[z], fmin=optimize.fmin_l_bfgs_b)
+        return res['z']
+</code></pre>
+
+<p>Please note that in this example, we are only looking at the MAP estimate of the unobserved variables. We are not really interested in inferring the posterior distributions. Instead, we have a control parameter <mathjax>$\alpha$</mathjax> which lets us allocate the variance between the hidden Brownian motion and the noise. Other goals and/or different models may require sampling to obtain the posterior distributions, but for our goal a MAP estimate will suffice.</p>
+<h3 id="exploring-different-levels-of-smoothing">Exploring different levels of smoothing</h3>
+<p>Let's try to allocate 50% variance to the noise, and see if the result matches our expectations.</p>
+<pre><code class="python">smoothing = 0.5
+z_val = infer_z(smoothing)
+
+plot(x, y);
+plot(x, z_val);
+title(&quot;Smoothing={}&quot;.format(smoothing));
+</code></pre>
+
+<p><img alt="png" src="../GP-smoothing_files/GP-smoothing_14_0.png" /></p>
+<p>It appears that the variance is split evenly between the noise and the hidden process, as expected. </p>
+<p>Let's try gradually increasing the smoothness parameter to see if we can obtain smoother data:</p>
+<pre><code class="python">smoothing = 0.9
+z_val = infer_z(smoothing)
+
+plot(x, y);
+plot(x, z_val);
+title(&quot;Smoothing={}&quot;.format(smoothing));
+</code></pre>
+
+<p><img alt="png" src="../GP-smoothing_files/GP-smoothing_16_0.png" /></p>
+<h3 id="smoothing-to-the-limits">Smoothing "to the limits"</h3>
+<p>By increading the smoothing parameter, we can gradually make the inferred values of the hidden Brownian motion approach the average value of the data. This is because as we increase the smoothing parameter, we allow less and less of the variance to be allocated to the Brownian motion, so eventually it aproaches the process which almost doesn't change over the domain of <mathjax>$x$</mathjax>:</p>
+<pre><code class="python">fig, axes = subplots(2, 2)
+
+for ax, smoothing in zip(axes.ravel(), [0.95, 0.99, 0.999, 0.9999]):
+
+    z_val = infer_z(smoothing)
+
+    ax.plot(x, y)
+    ax.plot(x, z_val)
+    ax.set_title('Smoothing={:05.4f}'.format(smoothing))
+</code></pre>
+
+<p><img alt="png" src="../GP-smoothing_files/GP-smoothing_18_0.png" /></p>
+<h3 id="interactive-smoothing">Interactive smoothing</h3>
+<p>Below you can interactively test different levels of smoothing. Notice, because we use a <strong>shared Theano variable</strong> to specify the smoothing above, the model doesn't need to be recompiled every time you move the slider, and so the <strong>inference is fast</strong>!</p>
+<pre><code class="python">from IPython.html.widgets import interact
+@interact(smoothing=[0.01,0.99])
+def plot_smoothed(smoothing=0.9):
+    z_val = infer_z(smoothing)
+
+    plot(x, y);
+    plot(x, z_val);
+    title(&quot;Smoothing={}&quot;.format(smoothing));
+</code></pre>
+
+<p><img alt="png" src="../GP-smoothing_files/GP-smoothing_20_0.png" /></p>
+<p>This example originally contributed by: Andrey Kuzmenko, http://github.com/akuz</p></div>
+            
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            
+            <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+
+        <script src="../js/jquery-1.10.2.min.js"></script>
+        <script src="../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../js/highlight.pack.js"></script>
+        <script>var base_url = '..';</script>
+        <script data-main="../mkdocs/js/search.js" src="../mkdocs/js/require.js"></script>
+        <script src="../js/base.js"></script>
+        <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+        <script src="../js/mathjaxhelper.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="exampleModalLabel">Search</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>
+                            From here you can search these documents. Enter
+                            your search terms below.
+                        </p>
+                        <form role="form">
+                            <div class="form-group">
+                                <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query">
+                            </div>
+                        </form>
+                        <div id="mkdocs-search-results"></div>
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </body>
+</html>
