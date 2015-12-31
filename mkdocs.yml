@@ -17,7 +17,7 @@ pages:
   - 'Robust Regression with outlier detection': 'RobustRegression_OutlierDetection_Hogg.md'
   - 'Hierarchical linear regression': 'GLM-hierarchical.md'
   - 'Probabilistic Matrix Factorization': 'pmf-pymc.md'
-#  - 'Rugby Analytics example': 'rugby_analytics.md'
+  - 'Rugby Analytics example': 'rugby_analytics.md'
   - 'Posterior Predictive checks and prediction': 'posterior_predictive.md'
   - 'Survival Analysis': 'survival_analysis.md'
   - 'Gaussian Process (GP) smoothing': 'GP-smoothing.md'
