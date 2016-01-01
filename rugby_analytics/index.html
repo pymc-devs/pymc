@@ -213,6 +213,12 @@
         <li class="main "><a href="#the-model">The model.</a></li>
         
     
+        <li class="main "><a href="#building-of-the-model">Building of the model</a></li>
+        
+    
+        <li class="main "><a href="#results">Results</a></li>
+        
+    
     </ul>
 </div></div>
                 <div class="col-md-9" role="main">
@@ -307,107 +313,125 @@ We want the answers as distributions not point estimates</p>
 </ul>
 <h1 id="the-model">The model.</h1>
 <p>The league is made up by a total of T= 6 teams, playing each other once 
-in a season. We indicate the number of points scored by the home and the away team in the g-th game of the season (15 games) as $y_{g1}$ and $y_{g2}$ respectively. </p>
-
-<p>The vector of observed counts $\mathbb{y} = (y_{g1}, y_{g2})$ is modelled as independent Poisson:
-$y_{gi}| \theta_{gj} \tilde\;\;  Poisson(\theta_{gj})$
-where the theta parameters represent the scoring intensity in the g-th game for the team playing at home (j=1) and away (j=2), respectively.</p>
-
+in a season. We indicate the number of points scored by the home and the away team in the g-th game of the season (15 games) as <mathjax>$y_{g1}$</mathjax> and <mathjax>$y_{g2}$</mathjax> respectively. </p>
+The vector of observed counts <mathjax>$\mathbb{y} = (y_{g1}, y_{g2})$</mathjax> is modelled as independent Poisson:
+<mathjax>$y_{gi}| \theta_{gj} \tilde\;\;  Poisson(\theta_{gj})$</mathjax>
+where the theta parameters represent the scoring intensity in the g-th game for the team playing at home (j=1) and away (j=2), respectively.</p></p>
 <p>We model these parameters according to a formulation that has been used widely in the statistical literature, assuming a log-linear random effect model:
-$$log \theta_{g1} = home + att_{h(g)} + def_{a(g)} $$
-$$log \theta_{g2} = att_{a(g)} + def_{h(g)}$$
+<mathjax>$$log \theta_{g1} = home + att_{h(g)} + def_{a(g)} $$</mathjax>
+<mathjax>$$log \theta_{g2} = att_{a(g)} + def_{h(g)}$$</mathjax></p>
+<ul>
+<li>The parameter home represents the advantage for the team hosting the game and we assume that this effect is constant for all the teams and throughout the season</li>
+<li>
+<p>The scoring intensity is determined jointly by the attack and defense ability of the two teams involved, represented by the parameters att and def, respectively</p>
+</li>
+<li>
+<p>Conversely, for each t = 1, ..., T, the team-specific effects are modelled as exchangeable from a common distribution:</p>
+</li>
+<li>
+<p><mathjax>$att_{t} \; \tilde\;\; Normal(\mu_{att},\tau_{att})$</mathjax> and <mathjax>$def_{t} \; \tilde\;\;Normal(\mu_{def},\tau_{def})$</mathjax></p>
+</li>
+</ul>
+<pre><code class="python">df = pd.read_csv(data_csv)
 
-* The parameter home represents the advantage for the team hosting the game and we assume that this effect is constant for all the teams and throughout the season
-* The scoring intensity is determined jointly by the attack and defense ability of the two teams involved, represented by the parameters att and def, respectively
+teams = df.home_team.unique()
+teams = pd.DataFrame(teams, columns=['team'])
+teams['i'] = teams.index
 
-* Conversely, for each t = 1, ..., T, the team-specific effects are modelled as exchangeable from a common distribution:
+df = pd.merge(df, teams, left_on='home_team', right_on='team', how='left')
+df = df.rename(columns = {'i': 'i_home'}).drop('team', 1)
+df = pd.merge(df, teams, left_on='away_team', right_on='team', how='left')
+df = df.rename(columns = {'i': 'i_away'}).drop('team', 1)
 
-* $att_{t} \; \tilde\;\; Normal(\mu_{att},\tau_{att})$ and $def_{t} \; \tilde\;\;Normal(\mu_{def},\tau_{def})$
+observed_home_goals = df.home_score.values
+observed_away_goals = df.away_score.values
 
-Note that they're breaking out team strength into attacking and defending strength. A negative defense parameter will sap the mojo from the opposing team's attacking parameter.
-I made two tweaks to the model. It didn't make sense to me to have a μatt when we're enforcing the sum-to-zero constraint by subtracting the mean anyway. So I eliminated μatt and μdef
-Also because of the sum-to-zero constraint, it seemed to me that we needed an intercept term in the log-linear model, capturing the average goals scored per game by the away team. This we model with the following hyperprior.
-intercept~Normal(0,0.001)
+home_team = df.i_home.values
+away_team = df.i_away.values
 
-The hyper-priors on the attack and defense parameters are also flat
-* $\mu_{att}\;\tilde\;\;Normal(0,0.001)$
-* $\mu_{def}\;\tilde\;\;Normal(0,0.001)$
-* $\tau_{att}\;\tilde\;\;\Gamma(0.1,0.1)$
-* $\tau_{def}\;\tilde\;\;\Gamma(0.1,0.1)$
+num_teams = len(df.i_home.drop_duplicates())
+num_games = len(home_team)
 
+g = df.groupby('i_away')
+att_starting_points = np.log(g.away_score.mean())
+g = df.groupby('i_home')
+def_starting_points = -np.log(g.away_score.mean())
+</code></pre>
 
+<ul>
+<li>We did some munging above and adjustments of the data to make it <strong>tidier</strong> for our model. </li>
+<li>The log function to away scores and home scores is a standard trick in the sports analytics literature</li>
+</ul>
+<h1 id="building-of-the-model">Building of the model</h1>
+<ul>
+<li>We now build the model in PyMC3, specifying the global parameters, and the team-specific parameters and the likelihood function </li>
+</ul>
+<pre><code class="python">model = pm.Model()
+with pm.Model() as model:
+    # global model parameters
+    home        = pm.Normal('home',      0, .0001)
+    tau_att     = pm.Gamma('tau_att',   .1, .1)
+    tau_def     = pm.Gamma('tau_def',   .1, .1)
+    intercept   = pm.Normal('intercept', 0, .0001)
 
+    # team-specific model parameters
+    atts_star   = pm.Normal(&quot;atts_star&quot;, 
+                           mu   =0,
+                           tau  =tau_att, 
+                           shape=num_teams)
+    defs_star   = pm.Normal(&quot;defs_star&quot;, 
+                           mu   =0,
+                           tau  =tau_def,  
+                           shape=num_teams) 
 
+    atts        = pm.Deterministic('atts', atts_star - tt.mean(atts_star))
+    defs        = pm.Deterministic('defs', defs_star - tt.mean(defs_star))
+    home_theta  = tt.exp(intercept + home + atts[away_team] + defs[home_team])
+    away_theta  = tt.exp(intercept + atts[away_team] + defs[home_team])
 
-wzxhzdk:3
+    # likelihood of observed data
+    home_points = pm.Poisson('home_points', mu=home_theta, observed=observed_home_goals)
+    away_points = pm.Poisson('away_points', mu=away_theta, observed=observed_away_goals)
+</code></pre>
 
+<ul>
+<li>
+<p>We specified the model and the likelihood function</p>
+</li>
+<li>
+<p>All this runs on a Theano graph under the hood</p>
+</li>
+<li>Now we need to fit our model using the Maximum A Posteriori algorithm to decide where to start out No U Turn Sampler</li>
+</ul>
+<pre><code class="python">with model:
 
-* We did some munging above and adjustments of the data to make it **tidier** for our model. 
-* The log function to away scores and home scores is a standard trick in the sports analytics literature
-# Building of the model 
-* We now build the model in PyMC3, specifying the global parameters, and the team-specific parameters and the likelihood function 
+    start = pm.find_MAP()
+    step = pm.NUTS(state=start)
+    trace = pm.sample(2000, step, start=start, progressbar=True)
 
+    pm.traceplot(trace)
+</code></pre>
 
+<pre><code> [-----------------100%-----------------] 2000 of 2000 complete in 4.9 sec
+</code></pre>
+<p><img alt="png" src="../rugby_analytics_files/rugby_analytics_16_1.png" /></p>
+<h1 id="results">Results</h1>
+<p>From the above we can start to understand the different distributions of attacking strength and defensive strength.
+These are probabilistic estimates and help us better understand the uncertainty in sports analytics</p>
+<pre><code class="python">pm.forestplot(trace, vars=['atts'], ylabels=['France', 'Ireland', 'Scotland', 'Italy', 'England', 'Wales'], main=&quot;Team Offense&quot;)
+</code></pre>
 
+<pre><code>&lt;matplotlib.gridspec.GridSpec at 0x10cc77510&gt;
+</code></pre>
+<p><img alt="png" src="../rugby_analytics_files/rugby_analytics_18_1.png" /></p>
+<pre><code class="python">pm.forestplot(trace, vars=['defs'], ylabels=['France', 'Ireland', 'Scotland', 'Italy', 'England', 'Wales'], main=&quot;Team Defense&quot;)
+</code></pre>
 
-wzxhzdk:4
-
-
-* We specified the model and the likelihood function
-
-* All this runs on a Theano graph under the hood
-* Now we need to fit our model using the Maximum A Posteriori algorithm to decide where to start out No U Turn Sampler
-
-
-
-wzxhzdk:5
-
-
-     [-----------------100%-----------------] 2000 of 2000 complete in 4.9 sec
-
-
-![png](rugby_analytics_files/rugby_analytics_15_1.png)
-
-
-# Results
-From the above we can start to understand the different distributions of attacking strength and defensive strength.
-These are probabilistic estimates and help us better understand the uncertainty in sports analytics
-
-
-
-wzxhzdk:6
-
-
-
-
-
-    <matplotlib.gridspec.GridSpec at 0x10cc77510>
-
-
-
-
-![png](rugby_analytics_files/rugby_analytics_17_1.png)
-
-
-
-
-wzxhzdk:7
-
-
-
-
-
-    <matplotlib.gridspec.GridSpec at 0x10cc77490>
-
-
-
-
-![png](rugby_analytics_files/rugby_analytics_18_1.png)
-
-
-
-
-wzxhzdk:8</div>
+<pre><code>&lt;matplotlib.gridspec.GridSpec at 0x10cc77490&gt;
+</code></pre>
+<p><img alt="png" src="../rugby_analytics_files/rugby_analytics_19_1.png" /></p>
+<pre><code class="python">
+</code></pre></div>
             
         </div>
 
