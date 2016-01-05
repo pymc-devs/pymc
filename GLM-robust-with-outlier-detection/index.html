@@ -9,7 +9,7 @@
         
         <link rel="shortcut icon" href="../img/favicon.ico">
 
-	<title>Robust Regression with outlier detection - PyMC3</title>
+	<title>Robust Regression with Outlier Detection - PyMC3</title>
 
         <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
         <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
@@ -110,7 +110,7 @@
                         
                             
 <li class="active">
-    <a href="./">Robust Regression with outlier detection</a>
+    <a href="./">Robust Regression with Outlier Detection</a>
 </li>
 
                         
@@ -204,7 +204,7 @@
         <li class="main active"><a href="#pymc3-examples">PyMC3 Examples</a></li>
         
     
-        <li class="main "><a href="#robust-regression-with-outlier-detection">Robust Regression with Outlier Detection</a></li>
+        <li class="main "><a href="#glm-robust-regression-with-outlier-detection">GLM Robust Regression with Outlier Detection</a></li>
         
     
         <li class="main "><a href="#setup">Setup</a></li>
@@ -253,10 +253,7 @@
                 <div class="col-md-9" role="main">
 
 <h5 id="pymc3-examples">PyMC3 Examples</h5>
-<h1 id="robust-regression-with-outlier-detection">Robust Regression with Outlier Detection</h1>
-<p>@author: Jonathan Sedar<br />
-@email: jon@sedar.co<br />
-@date: Mon 21 Dec 2015  </p>
+<h1 id="glm-robust-regression-with-outlier-detection">GLM Robust Regression with Outlier Detection</h1>
 <p><strong>A minimal reproducable example of Robust Regression with Outlier Detection using Hogg 2010 Signal vs Noise method.</strong></p>
 <ul>
 <li>This is a complementary approach to the Student-T robust regression as illustrated in Thomas Wiecki's notebook in the <a href="http://pymc-devs.github.io/pymc3/GLM-robust/">PyMC3 documentation</a>, that approach is also compared here.</li>
@@ -327,7 +324,7 @@ np.random.seed(0)
 <h2 id="load-and-prepare-data">Load and Prepare Data</h2>
 <p>We'll use the Hogg 2010 data available at  https://github.com/astroML/astroML/blob/master/astroML/datasets/hogg2010test.py</p>
 <p>It's a very small dataset so for convenience, it's hardcoded below</p>
-<pre><code class="python">## cut &amp; pasted directly from the fetch_hogg2010test() function
+<pre><code class="python">#### cut &amp; pasted directly from the fetch_hogg2010test() function
 ## identical to the original dataset as hardcoded in the Hogg 2010 paper
 
 dfhogg = pd.DataFrame(np.array([[1, 201, 592, 61, 9, -0.84],
@@ -362,17 +359,23 @@ dfhoggs = (dfhogg[['x','y']] - dfhogg[['x','y']].mean(0)) / dfhogg[['x','y']].st
 dfhoggs['sigma_y'] = dfhogg['sigma_y'] / dfhogg['y'].std(0)
 dfhoggs['sigma_x'] = dfhogg['sigma_x'] / dfhogg['x'].std(0)
 
+## create xlims ylims for plotting
+xlims = (dfhoggs['x'].min() - np.ptp(dfhoggs['x'])/5
+                 ,dfhoggs['x'].max() + np.ptp(dfhoggs['x'])/5)
+ylims = (dfhoggs['y'].min() - np.ptp(dfhoggs['y'])/5
+                 ,dfhoggs['y'].max() + np.ptp(dfhoggs['y'])/5)
+
 ## scatterplot the standardized data
 g = sns.FacetGrid(dfhoggs, size=8)
 _ = g.map(plt.errorbar, 'x', 'y', 'sigma_y', 'sigma_x', marker=&quot;o&quot;, ls='')
-_ = g.axes[0][0].set_ylim((-3,3))
-_ = g.axes[0][0].set_xlim((-3,3))
+_ = g.axes[0][0].set_ylim(ylims)
+_ = g.axes[0][0].set_xlim(xlims)
 
 plt.subplots_adjust(top=0.92)
 _ = g.fig.suptitle('Scatterplot of Hogg 2010 dataset after standardization', fontsize=16)
 </code></pre>
 
-<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_6_0.png" /></p>
+<p><img alt="png" src="../GLM-robust-with-outlier-detection_files/GLM-robust-with-outlier-detection_6_0.png" /></p>
 <p><strong>Observe</strong>:  </p>
 <ul>
 <li>Even judging just by eye, you can see these datapoints mostly fall on / around a straight line with positive gradient</li>
@@ -403,7 +406,7 @@ _ = g.fig.suptitle('Scatterplot of Hogg 2010 dataset after standardization', fon
                             dtype=thno.config.floatX), name='sigma_y')
 
     ## Define Normal likelihood
-    likelihood = pm.Normal('likelihood', mu=yest, sd=sigma_y**2, observed=dfhoggs['y'])
+    likelihood = pm.Normal('likelihood', mu=yest, sd=sigma_y, observed=dfhoggs['y'])
 
 </code></pre>
 
@@ -418,10 +421,10 @@ _ = g.fig.suptitle('Scatterplot of Hogg 2010 dataset after standardization', fon
 </code></pre>
 
 <pre><code>Optimization terminated successfully.
-         Current function value: 4555.263214
+         Current function value: 145.777745
          Iterations: 3
-         Function evaluations: 110
- [-----------------100%-----------------] 2000 of 2000 complete in 0.6 sec
+         Function evaluations: 118
+ [-----------------100%-----------------] 2000 of 2000 complete in 0.9 sec
 </code></pre>
 <h5 id="view-traces">View Traces</h5>
 <p><strong>NOTE</strong>: I'll 'burn' the traces to only retain the final 1000 samples</p>
@@ -429,7 +432,7 @@ _ = g.fig.suptitle('Scatterplot of Hogg 2010 dataset after standardization', fon
                 lines={k: v['mean'] for k, v in pm.df_summary(traces_ols[-1000:]).iterrows()})
 </code></pre>
 
-<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_16_0.png" /></p>
+<p><img alt="png" src="../GLM-robust-with-outlier-detection_files/GLM-robust-with-outlier-detection_16_0.png" /></p>
 <p><strong>NOTE:</strong> We'll illustrate this OLS fit and compare to the datapoints in the final plot</p>
 <hr />
 <hr />
@@ -455,7 +458,7 @@ _ = g.fig.suptitle('Scatterplot of Hogg 2010 dataset after standardization', fon
     nu = pm.DiscreteUniform('nu', lower=1, upper=100)
 
     ## Define Student T likelihood
-    likelihood = pm.StudentT('likelihood', mu=yest, sd=sigma_y**2, nu=nu
+    likelihood = pm.StudentT('likelihood', mu=yest, sd=sigma_y, nu=nu
                            ,observed=dfhoggs['y'])
 
 </code></pre>
@@ -475,10 +478,10 @@ _ = g.fig.suptitle('Scatterplot of Hogg 2010 dataset after standardization', fon
 </code></pre>
 
 <pre><code>Optimization terminated successfully.
-         Current function value: 430.443483
+         Current function value: 107.488021
          Iterations: 3
-         Function evaluations: 86
- [-----------------100%-----------------] 2000 of 2000 complete in 1.3 sec
+         Function evaluations: 77
+ [-----------------100%-----------------] 2000 of 2000 complete in 1.0 sec
 </code></pre>
 <h5 id="view-traces_1">View Traces</h5>
 <pre><code class="python">_ = pm.traceplot(traces_studentt[-1000:]
@@ -486,7 +489,7 @@ _ = g.fig.suptitle('Scatterplot of Hogg 2010 dataset after standardization', fon
             ,lines={k: v['mean'] for k, v in pm.df_summary(traces_studentt[-1000:]).iterrows()})
 </code></pre>
 
-<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_26_0.png" /></p>
+<p><img alt="png" src="../GLM-robust-with-outlier-detection_files/GLM-robust-with-outlier-detection_26_0.png" /></p>
 <p><strong>Observe:</strong></p>
 <ul>
 <li>Both parameters <code>b0</code> and <code>b1</code> show quite a skew to the right, possibly this is the action of a few samples regressing closer to the OLS estimate which is towards the left</li>
@@ -516,12 +519,12 @@ $$</mathjax></p>
     '''   
 
     # likelihood for inliers
-    pdfs_in = T.exp(-(yobs - yest_in + 1e-6)**2 / (2 * sigma_y_in**2)) 
+    pdfs_in = T.exp(-(yobs - yest_in + 1e-4)**2 / (2 * sigma_y_in**2)) 
     pdfs_in /= T.sqrt(2 * np.pi * sigma_y_in**2)
     logL_in = T.sum(T.log(pdfs_in) * (1 - is_outlier))
 
     # likelihood for outliers
-    pdfs_out = T.exp(-(yobs - yest_out + 1e-6)**2 / (2 * (sigma_y_in**2 + sigma_y_out**2))) 
+    pdfs_out = T.exp(-(yobs - yest_out + 1e-4)**2 / (2 * (sigma_y_in**2 + sigma_y_out**2))) 
     pdfs_out /= T.sqrt(2 * np.pi * (sigma_y_in**2 + sigma_y_out**2))
     logL_out = T.sum(T.log(pdfs_out) * is_outlier)
 
@@ -565,7 +568,7 @@ $$</mathjax></p>
 
     ## two-step sampling to create Bernoulli inlier/outlier flags
     step1 = pm.NUTS([frac_outliers, yest_out, sigma_y_out, b0, b1])
-    step2 = pm.BinaryMetropolis([is_outlier])
+    step2 = pm.BinaryMetropolis([is_outlier], tune_interval=100)
 
     ## find MAP using Powell, seems to be more robust
     start_MAP = pm.find_MAP(fmin=optimize.fmin_powell, disp=True)
@@ -577,16 +580,16 @@ $$</mathjax></p>
 <pre><code>Optimization terminated successfully.
          Current function value: 155.449990
          Iterations: 3
-         Function evaluations: 202
- [-----------------100%-----------------] 2000 of 2000 complete in 180.3 sec
+         Function evaluations: 213
+ [-----------------100%-----------------] 2000 of 2000 complete in 169.1 sec
 </code></pre>
 <h5 id="view-traces_2">View Traces</h5>
 <pre><code class="python">_ = pm.traceplot(traces_signoise[-1000:], figsize=(12,len(traces_signoise.varnames)*1.5),
             lines={k: v['mean'] for k, v in pm.df_summary(traces_signoise[-1000:]).iterrows()})
 </code></pre>
 
-<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_37_0.png" /></p>
-<p><strong>NOTE:</strong>:</p>
+<p><img alt="png" src="../GLM-robust-with-outlier-detection_files/GLM-robust-with-outlier-detection_37_0.png" /></p>
+<p><strong>NOTE:</strong></p>
 <ul>
 <li>During development I've found that 3 datapoints id=[1,2,3] are always indicated as outliers, but the remaining ordering of datapoints by decreasing outlier-hood is unstable between runs: the posterior surface appears to have a small number of solutions with very similar probability.</li>
 <li>The NUTS sampler seems to work okay, and indeed it's a nice opportunity to demonstrate a custom likelihood which is possible to express as a theano function (thus allowing a gradient-based sampler like NUTS). However, with a more complicated dataset, I would spend time understanding this instability and potentially prefer using more samples under Metropolis-Hastings.</li>
@@ -613,7 +616,7 @@ _ = ax0.set_title('Prop. of the trace where datapoint is an outlier')
 _ = ax0.set_xlabel('Prop. of the trace where is_outlier == 1')
 </code></pre>
 
-<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_43_0.png" /></p>
+<p><img alt="png" src="../GLM-robust-with-outlier-detection_files/GLM-robust-with-outlier-detection_43_0.png" /></p>
 <p><strong>Observe</strong>:</p>
 <ul>
 <li>The plot above shows the number of samples in the traces in which each datapoint is marked as an outlier, expressed as a percentage.</li>
@@ -644,24 +647,24 @@ Name: outlier, dtype: int64
 lm = lambda x, samp: samp['b0_intercept'] + samp['b1_slope'] * x
 
 pm.glm.plot_posterior_predictive(traces_ols[-1000:],
-        eval=np.linspace(-3, 3, 10), lm=lm, samples=200, color='#00AA00', alpha=.1)
+        eval=np.linspace(-3, 3, 10), lm=lm, samples=200, color='#22CC00', alpha=.2)
 
 pm.glm.plot_posterior_predictive(traces_studentt[-1000:], lm=lm,
-        eval=np.linspace(-3, 3, 10), samples=200, color='#FF9900', alpha=.3)
+        eval=np.linspace(-3, 3, 10), samples=200, color='#FFA500', alpha=.5)
 
 pm.glm.plot_posterior_predictive(traces_signoise[-1000:], lm=lm,
-        eval=np.linspace(-3, 3, 10), samples=200,
-        color=sns.palettes.color_palette('Set1')[1], alpha=.3)
+        eval=np.linspace(-3, 3, 10), samples=200, color='#357EC7', alpha=.3)
 
 _ = g.map(plt.errorbar, 'x', 'y', 'sigma_y', 'sigma_x', marker=&quot;o&quot;, ls='').add_legend()
 
 _ = g.axes[0][0].annotate('OLS Fit: Green\nStudent-T Fit: Orange\nSignal Vs Noise Fit: Blue',
                           size='x-large', xy=(1,0), xycoords='axes fraction',
                           xytext=(-160,10), textcoords='offset points')
-_ = g.axes[0][0].set_ylim((-3,3))
+_ = g.axes[0][0].set_ylim(ylims)
+_ = g.axes[0][0].set_xlim(xlims)
 </code></pre>
 
-<p><img alt="png" src="../RobustRegression_OutlierDetection_Hogg_files/RobustRegression_OutlierDetection_Hogg_48_0.png" /></p>
+<p><img alt="png" src="../GLM-robust-with-outlier-detection_files/GLM-robust-with-outlier-detection_48_0.png" /></p>
 <p><strong>Observe</strong>:</p>
 <ul>
 <li>
@@ -689,7 +692,8 @@ _ = g.axes[0][0].set_ylim((-3,3))
 </ul>
 </li>
 </ul>
-<hr /></div>
+<hr />
+<p>Example originally contributed by Jonathan Sedar 2015-12-21 <a href="https://github.com/jonsedar">github.com/jonsedar</a></p></div>
             
         </div>
 
