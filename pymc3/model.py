@@ -15,9 +15,9 @@ __all__ = ['Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext', 'Point
 
 class InstanceMethod(object):
     """Class for hiding references to instance methods so they can be pickled.
-    
+
     >>> self.method = InstanceMethod(some_object, 'method_name')
-    
+
     """
     def __init__(self, obj, method_name):
         self.obj = obj
@@ -35,13 +35,13 @@ def incorporate_methods(source=None,
     """
     Add attributes to a destination object which points to
     methods from from a source object.
-    
+
     Parameters
     ----------
     source - object
         The source object containing the methods.
     destination - object
-        The destination object for the methods. 
+        The destination object for the methods.
     methods - list of str
         Names of methods to incorporate.
     default -
@@ -51,8 +51,8 @@ def incorporate_methods(source=None,
         wrapped. Should take the form my_wrapper(source, method_name)
         and return a single value.
     override - bool
-        If the destination object already has a method/attribute 
-        an AttributeError will be raised if override is False (the default).            
+        If the destination object already has a method/attribute
+        an AttributeError will be raised if override is False (the default).
     """
     for method in methods:
         if hasattr(destination, method) and not override:
@@ -202,7 +202,7 @@ class Model(Context, Factor):
     def disc_vars(self):
         """All the discrete variables in the model"""
         return list(typefilter(self.vars, discrete_types))
-        
+
     @property
     def cont_vars(self):
         """All the continuous variables in the model"""
@@ -226,7 +226,12 @@ class Model(Context, Factor):
                 var = FreeRV(name=name, distribution=dist, model=self)
                 self.free_RVs.append(var)
             else:
-                var = TransformedRV(name=name, distribution=dist, model=self, transform=dist.transform) 
+                var = TransformedRV(name=name, distribution=dist, model=self, transform=dist.transform)
+                print('Applied {transform}-transform to {name}'
+                      ' and added transformed {orig_name} to model.'.format(
+                          transform=dist.transform.name,
+                          name=name,
+                          orig_name='{}_{}'.format(name, dist.transform.name)))
                 self.deterministics.append(var)
                 return var
         elif isinstance(data, dict):
@@ -237,7 +242,7 @@ class Model(Context, Factor):
                 self.missing_values += var.missing_values
                 for v in var.missing_values:
                     self.named_vars[v.name] = v
-        else: 
+        else:
             var = ObservedRV(name=name, data=data, distribution=dist, model=self)
             self.observed_RVs.append(var)
             if var.missing_values:
@@ -318,7 +323,7 @@ class Model(Context, Factor):
         point : point
             Point to pass to the function
         profile : True or ProfileStats
-        *args, **kwargs 
+        *args, **kwargs
             Compilation args
 
         Returns
@@ -326,7 +331,7 @@ class Model(Context, Factor):
         ProfileStats
             Use .summary() to print stats."""
         f = self.makefn(outs, profile=profile, *args, **kwargs)
-        if point is None: 
+        if point is None:
             point = self.test_point
 
         for i in range(n):
@@ -334,7 +339,7 @@ class Model(Context, Factor):
 
         return f.profile
 
-        
+
 
 def fn(outs, mode=None, model=None, *args, **kwargs):
     """Compiles a Theano function which returns the values of `outs` and takes values of model
@@ -437,37 +442,37 @@ class FreeRV(Factor, TensorVariable):
                 distribution.shape, distribution.dtype) * distribution.default()
             self.logp_elemwiset = distribution.logp(self)
             self.model = model
-            
-            incorporate_methods(source=distribution, destination=self, 
+
+            incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
-                                wrapper=InstanceMethod)    
-       
+                                wrapper=InstanceMethod)
+
 
 def pandas_to_array(data):
     if hasattr(data, 'values'): #pandas
         if data.isnull().any().any(): #missing values
             return np.ma.MaskedArray(data.values, data.isnull().values)
-        else: 
+        else:
             return data.values
     elif hasattr(data, 'mask'):
         return data
     elif isinstance(data, theano.gof.graph.Variable):
-        return data 
+        return data
     else:
         return np.asarray(data)
-        
+
 
 def as_tensor(data, name,model, dtype):
     data = pandas_to_array(data).astype(dtype)
 
-    if hasattr(data, 'mask'): 
+    if hasattr(data, 'mask'):
         from .distributions import NoDistribution
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype, testval=data.mean().astype(dtype))
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist, model=model)
 
         constant = t.as_tensor_variable(data.filled())
 
-        dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()], missing_values) 
+        dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()], missing_values)
         dataTensor.missing_values = missing_values
         return dataTensor
     else:
@@ -499,7 +504,7 @@ class ObservedRV(Factor, TensorVariable):
         super(TensorVariable, self).__init__(type, None, None, name)
 
         if distribution is not None:
-            data = as_tensor(data, name,model,distribution.dtype) 
+            data = as_tensor(data, name,model,distribution.dtype)
             self.missing_values = data.missing_values
 
             self.logp_elemwiset = distribution.logp(data)
@@ -593,7 +598,7 @@ class TransformedRV(TensorVariable):
             theano.Apply(theano.compile.view_op, inputs=[normalRV], outputs=[self])
             self.tag.test_value = normalRV.tag.test_value
 
-            incorporate_methods(source=distribution, destination=self, 
+            incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
                                 wrapper=InstanceMethod)
 
