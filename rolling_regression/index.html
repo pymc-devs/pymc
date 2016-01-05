@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="PyMC devs">
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+
+	<title>Rolling Regression - PyMC3</title>
+
+        <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="../css/highlight.css">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="..">PyMC3</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            
+                <!-- Main navigation -->
+                <ul class="nav navbar-nav">
+                
+                
+                    <li >
+                        <a href="..">Overview</a>
+                    </li>
+                
+                
+                
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../getting_started/">Getting started</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                
+                    <li class="dropdown active">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Examples <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../BEST/">BEST</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../stochastic_volatility/">Stochastic Volatility</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../hierarchical/">Hierarchical model</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-linear/">Linear Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-robust/">Robust Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../RobustRegression_OutlierDetection_Hogg/">Robust Regression with outlier detection</a>
+</li>
+
+                        
+                            
+<li class="active">
+    <a href="./">Rolling Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-hierarchical/">Hierarchical linear regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../pmf-pymc/">Probabilistic Matrix Factorization</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../rugby_analytics/">Rugby Analytics example</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../posterior_predictive/">Posterior Predictive checks and prediction</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../survival_analysis/">Survival Analysis</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GP-smoothing/">Gaussian Process (GP) smoothing</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                </ul>
+            
+
+            <ul class="nav navbar-nav navbar-right">
+                <li>
+                    <a href="#" data-toggle="modal" data-target="#mkdocs_search_modal">
+                        <i class="fa fa-search"></i> Search
+                    </a>
+                </li>
+                
+                    <li >
+                        <a rel="next" href="../RobustRegression_OutlierDetection_Hogg/">
+                            <i class="fa fa-arrow-left"></i> Previous
+                        </a>
+                    </li>
+                    <li >
+                        <a rel="prev" href="../GLM-hierarchical/">
+                            Next <i class="fa fa-arrow-right"></i>
+                        </a>
+                    </li>
+                
+                
+                    <li>
+                        <a href="https://github.com/pymc-devs/pymc3">
+                            
+                                <i class="fa fa-github"></i>
+                            
+                            GitHub
+                        </a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            
+                <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#bayesian-rolling-regression-in-pymc3">Bayesian Rolling Regression in PyMC3</a></li>
+        
+            <li><a href="#author-thomas-wiecki">Author: Thomas Wiecki</a></li>
+        
+            <li><a href="#rolling-regression">Rolling regression</a></li>
+        
+            <li><a href="#analysis-of-results">Analysis of results</a></li>
+        
+    
+    </ul>
+</div></div>
+                <div class="col-md-9" role="main">
+
+<h1 id="bayesian-rolling-regression-in-pymc3">Bayesian Rolling Regression in PyMC3</h1>
+<h2 id="author-thomas-wiecki">Author: Thomas Wiecki</h2>
+<ul>
+<li><a href="https://www.quantopian.com/posts/pairs-trading-algorithm-1">Pairs trading</a> is a famous technique in algorithmic trading that plays two stocks against each other.</li>
+<li>For this to work, stocks must be correlated (cointegrated).</li>
+<li>One common example is the price of gold (GLD) and the price of gold mining operations (GDX).</li>
+</ul>
+<pre><code class="python">%matplotlib inline
+import pandas as pd
+from pandas_datareader import data
+import numpy as np
+import pymc3 as pm
+import matplotlib.pyplot as plt
+</code></pre>
+
+<p>Lets load the prices of GDX and GLD.</p>
+<pre><code class="python">prices = data.YahooDailyReader(symbols=['GLD', 'GDX'], end='2014-8-1').read().loc['Adj Close', :, :].iloc[:1000]
+prices.head()
+</code></pre>
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>GDX</th>
+      <th>GLD</th>
+    </tr>
+    <tr>
+      <th>Date</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2010-01-04</th>
+      <td>45.642212</td>
+      <td>109.800003</td>
+    </tr>
+    <tr>
+      <th>2010-01-05</th>
+      <td>46.082275</td>
+      <td>109.699997</td>
+    </tr>
+    <tr>
+      <th>2010-01-06</th>
+      <td>47.201568</td>
+      <td>111.510002</td>
+    </tr>
+    <tr>
+      <th>2010-01-07</th>
+      <td>46.971968</td>
+      <td>110.820000</td>
+    </tr>
+    <tr>
+      <th>2010-01-08</th>
+      <td>47.679898</td>
+      <td>111.370003</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>Plotting the prices over time suggests a strong correlation. However, the correlation seems to change over time.</p>
+<pre><code class="python">fig = plt.figure(figsize=(9, 6))
+ax = fig.add_subplot(111, xlabel='Price GDX in \$', ylabel='Price GLD in \$')
+colors = np.linspace(0.1, 1, len(prices))
+mymap = plt.get_cmap(&quot;winter&quot;)
+sc = ax.scatter(prices.GDX, prices.GLD, c=colors, cmap=mymap, lw=0)
+cb = plt.colorbar(sc)
+cb.ax.set_yticklabels([str(p.date()) for p in prices[::len(prices)//10].index]);
+</code></pre>
+
+<p><img alt="png" src="../rolling_regression_files/rolling_regression_5_0.png" /></p>
+<p>A naive approach would be to estimate a linear model and ignore the time domain.</p>
+<pre><code class="python">with pm.Model() as model_reg:
+    pm.glm.glm('GLD ~ GDX', prices)
+    trace_reg = pm.sample(2000)
+</code></pre>
+
+<pre><code>Assigned NUTS to Intercept
+Assigned NUTS to GDX
+Assigned NUTS to sd_log
+ [-----------------100%-----------------] 2000 of 2000 complete in 6.4 sec
+</code></pre>
+<p>The posterior predictive plot shows how bad the fit is.</p>
+<pre><code class="python">fig = plt.figure(figsize=(9, 6))
+ax = fig.add_subplot(111, xlabel='Price GDX in \$', ylabel='Price GLD in \$', 
+            title='Posterior predictive regression lines')
+sc = ax.scatter(prices.GDX, prices.GLD, c=colors, cmap=mymap, lw=0)
+pm.glm.plot_posterior_predictive(trace_reg[100:], samples=100, 
+                              label='posterior predictive regression lines',
+                              lm=lambda x, sample: sample['Intercept'] + sample['GDX'] * x,
+                              eval=np.linspace(prices.GDX.min(), prices.GDX.max(), 100))
+cb = plt.colorbar(sc)
+cb.ax.set_yticklabels([str(p.date()) for p in prices[::len(prices)//10].index]);
+ax.legend(loc=0);
+</code></pre>
+
+<p><img alt="png" src="../rolling_regression_files/rolling_regression_9_0.png" /></p>
+<h2 id="rolling-regression">Rolling regression</h2>
+<p>Next, we will build an improved model that will allow for changes in the regression coefficients over time. Specifically, we will assume that intercept and slope follow a random-walk through time. That idea is similar to the <a href="http://pymc-devs.github.io/pymc3/stochastic_volatility/">stochastic volatility model</a>.</p>
+<p><mathjax>$$ \alpha_t \sim \mathcal{N}(\alpha_{t-1}, \sigma_\alpha^2) $$</mathjax>
+<mathjax>$$ \beta_t \sim \mathcal{N}(\beta_{t-1}, \sigma_\beta^2) $$</mathjax></p>
+<p>First, lets define the hyper-priors for <mathjax>$\sigma_\alpha^2$</mathjax> and <mathjax>$\sigma_\beta^2$</mathjax>. This parameter can be interpreted as the volatility in the regression coefficients.</p>
+<pre><code class="python">model_randomwalk = pm.Model()
+with model_randomwalk:
+    # std of random walk, best sampled in log space.
+    sigma_alpha = pm.Exponential('sigma_alpha', 1./.02, testval = .1)
+    sigma_beta = pm.Exponential('sigma_beta', 1./.02, testval = .1)
+</code></pre>
+
+<p>Next, we define the regression parameters that are not a single random variable but rather a random vector with the above stated dependence structure. So as not to fit a coefficient to a single data point, we will chunk the data into bins of 50 and apply the same coefficients to all data points in a single bin.</p>
+<pre><code class="python">import theano.tensor as T
+
+# To make the model simpler, we will apply the same coefficient for 50 data points at a time
+subsample_alpha = 50
+subsample_beta = 50
+with model_randomwalk:
+    alpha = pm.GaussianRandomWalk('alpha', sigma_alpha**-2, 
+                                  shape=len(prices) // subsample_alpha)
+    beta = pm.GaussianRandomWalk('beta', sigma_beta**-2, 
+                                 shape=len(prices) // subsample_beta)
+
+    # Make coefficients have the same length as prices
+    alpha_r = T.repeat(alpha, subsample_alpha)
+    beta_r = T.repeat(beta, subsample_beta)    
+</code></pre>
+
+<p>Perform the regression given coefficients and data and link to the data via the likelihood.</p>
+<pre><code class="python">with model_randomwalk:
+    # Define regression
+    regression = alpha_r + beta_r * prices.GDX.values
+
+    # Assume prices are Normally distributed, the mean comes from the regression.
+    sd = pm.Uniform('sd', 0, 20)
+    likelihood = pm.Normal('y', 
+                           mu=regression, 
+                           sd=sd, 
+                           observed=prices.GLD.values)
+</code></pre>
+
+<p>Inference. Despite this being quite a complex model, NUTS handles it wells.</p>
+<pre><code class="python">from scipy import optimize
+with model_randomwalk:
+    # First optimize random walk
+    start = pm.find_MAP(vars=[alpha, beta], fmin=optimize.fmin_l_bfgs_b)
+
+    # Sample
+    step = pm.NUTS(scaling=start)
+    trace_rw = pm.sample(2000, step, start=start)
+</code></pre>
+
+<h2 id="analysis-of-results">Analysis of results</h2>
+<p><mathjax>$\alpha$</mathjax>, the intercept, does not seem to change over time.</p>
+<pre><code class="python">fig = plt.figure(figsize=(8, 6))
+ax = plt.subplot(111, xlabel='time', ylabel='alpha', title='Change of alpha over time.')
+ax.plot(trace_rw[-1000:][alpha].T, 'r', alpha=.05);
+ax.set_xticklabels([str(p.date()) for p in prices[::len(prices)//5].index]);
+</code></pre>
+
+<p><img alt="png" src="../rolling_regression_files/rolling_regression_21_0.png" /></p>
+<p>However, the slope does.</p>
+<pre><code class="python">fig = plt.figure(figsize=(8, 6))
+ax = fig.add_subplot(111, xlabel='time', ylabel='beta', title='Change of beta over time')
+ax.plot(trace_rw[-1000:][beta].T, 'b', alpha=.05);
+ax.set_xticklabels([str(p.date()) for p in prices[::len(prices)//5].index]);
+</code></pre>
+
+<p><img alt="png" src="../rolling_regression_files/rolling_regression_23_0.png" /></p>
+<p>The posterior predictive plot shows that we capture the change in regression over time much better. Note that we should have used returns instead of prices. The model would still work the same, but the visualisations would not be quite as clear.</p>
+<pre><code class="python">fig = plt.figure(figsize=(8, 6))
+ax = fig.add_subplot(111, xlabel='Price GDX in \$', ylabel='Price GLD in \$', 
+            title='Posterior predictive regression lines')
+
+colors = np.linspace(0.1, 1, len(prices))
+colors_sc = np.linspace(0.1, 1, len(trace_rw[-500::10]['alpha'].T))
+mymap = plt.get_cmap('winter')
+mymap_sc = plt.get_cmap('winter')
+
+xi = np.linspace(prices.GDX.min(), prices.GDX.max(), 50)
+for i, (alpha, beta) in enumerate(zip(trace_rw[-500::10]['alpha'].T, trace_rw[-500::10]['beta'].T)):
+    for a, b in zip(alpha, beta):
+        ax.plot(xi, a + b*xi, alpha=.05, lw=1, c=mymap_sc(colors_sc[i]))
+
+sc = ax.scatter(prices.GDX, prices.GLD, label='data', cmap=mymap, c=colors)
+cb = plt.colorbar(sc)
+cb.ax.set_yticklabels([str(p.date()) for p in prices[::len(prices)//10].index]);
+</code></pre>
+
+<p><img alt="png" src="../rolling_regression_files/rolling_regression_25_0.png" /></p></div>
+            
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            
+            <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+
+        <script src="../js/jquery-1.10.2.min.js"></script>
+        <script src="../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../js/highlight.pack.js"></script>
+        <script>var base_url = '..';</script>
+        <script data-main="../mkdocs/js/search.js" src="../mkdocs/js/require.js"></script>
+        <script src="../js/base.js"></script>
+        <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+        <script src="../js/mathjaxhelper.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="exampleModalLabel">Search</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>
+                            From here you can search these documents. Enter
+                            your search terms below.
+                        </p>
+                        <form role="form">
+                            <div class="form-group">
+                                <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query">
+                            </div>
+                        </form>
+                        <div id="mkdocs-search-results"></div>
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </body>
+</html>
