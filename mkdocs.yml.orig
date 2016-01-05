@@ -14,7 +14,12 @@ pages:
   - 'Hierarchical model': 'hierarchical.md'
   - 'Linear Regression': 'GLM-linear.md'
   - 'Robust Regression': 'GLM-robust.md'
+<<<<<<< fac62ed9533b4d0daa9ed9c27017bda383400e1a
   - 'Robust Regression with Outlier Detection': 'GLM-robust-with-outlier-detection.md'
+=======
+  - 'Robust Regression with outlier detection': 'RobustRegression_OutlierDetection_Hogg.md'
+  - 'Rolling Regression': 'rolling_regression.md'
+>>>>>>> DOC Add example to mkdocs file.
   - 'Hierarchical linear regression': 'GLM-hierarchical.md'
   - 'Probabilistic Matrix Factorization': 'pmf-pymc.md'
   - 'Rugby Analytics example': 'rugby_analytics.md'
