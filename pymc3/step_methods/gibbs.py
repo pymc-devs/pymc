@@ -26,11 +26,15 @@ class ElemwiseCategoricalStep(ArrayStep):
     # variables)
     def __init__(self, vars, values=None, model=None):
         model = modelcontext(model)
-        self.sh = ones(vars.dshape, vars.dtype)
-        self.values = values
-        self.vars = vars
+        self.var = vars[0]
+        self.sh = ones(self.var.dshape, self.var.dtype)
+        if values is None:
+            self.values = list(range(self.var.distribution.k))
+        else:
+            self.values = values
+        
 
-        super(ElemwiseCategoricalStep, self).__init__([vars], [elemwise_logp(model, vars)])
+        super(ElemwiseCategoricalStep, self).__init__(vars, [elemwise_logp(model, self.var)])
 
     def astep(self, q, logp):
         p = array([logp(v * self.sh) for v in self.values])
