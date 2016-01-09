@@ -5,6 +5,7 @@ Created on May 12, 2012
 '''
 from ..core import *
 from .arraystep import *
+from ..distributions.discrete import Categorical
 from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones
 from numpy.random import uniform
 
@@ -23,18 +24,30 @@ class ElemwiseCategoricalStep(ArrayStep):
     # TODO: It would be great to come up with a way to make
     # ElemwiseCategoricalStep  more general (handling more complex elementwise
     # variables)
-    def __init__(self, var, values, model=None):
+    def __init__(self, vars, values=None, model=None):
         model = modelcontext(model)
-        self.sh = ones(var.dshape, var.dtype)
-        self.values = values
-        self.var = var
+        self.var = vars[0]
+        self.sh = ones(self.var.dshape, self.var.dtype)
+        if values is None:
+            self.values = list(range(self.var.distribution.k))
+        else:
+            self.values = values
+        
 
-        super(ElemwiseCategoricalStep, self).__init__([var], [elemwise_logp(model, var)])
+        super(ElemwiseCategoricalStep, self).__init__(vars, [elemwise_logp(model, self.var)])
 
     def astep(self, q, logp):
         p = array([logp(v * self.sh) for v in self.values])
         return categorical(p, self.var.dshape)
 
+    @staticmethod
+    def competence(var):
+        if isinstance(var.distribution, Categorical):
+            if var.distribution.k>2:
+                return Competence.ideal
+            else:
+                return Competence.compatible
+        return Competence.incompatible
 
 def elemwise_logp(model, var):
     terms = [v.logp_elemwiset for v in model.basic_RVs if var in inputs([v.logpt])]
