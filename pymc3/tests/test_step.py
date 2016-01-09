@@ -4,7 +4,7 @@ from theano.tensor import constant
 from scipy.stats.mstats import moment
 from pymc3.sampling import assign_step_methods
 from pymc3.model import Model
-from pymc3.step_methods import NUTS, BinaryMetropolis, Metropolis, Constant
+from pymc3.step_methods import NUTS, BinaryMetropolis, Metropolis, Constant, ElemwiseCategoricalStep
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
 from numpy.testing import assert_almost_equal
 
