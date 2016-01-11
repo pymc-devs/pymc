@@ -23,3 +23,4 @@ pages:
   - 'Posterior Predictive checks and prediction': 'posterior_predictive.md'
   - 'Survival Analysis': 'survival_analysis.md'
   - 'Gaussian Process (GP) smoothing': 'GP-smoothing.md'
+  - 'Bayesian Logistic Regression for predicting salary': 'Bayesian_LogReg.md'  
