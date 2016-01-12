@@ -1,0 +1,2830 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="PyMC devs">
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+
+	<title>Bayesian Logistic Regression for predicting salary - PyMC3</title>
+
+        <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="../css/highlight.css">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="..">PyMC3</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            
+                <!-- Main navigation -->
+                <ul class="nav navbar-nav">
+                
+                
+                    <li >
+                        <a href="..">Overview</a>
+                    </li>
+                
+                
+                
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../getting_started/">Getting started</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                
+                    <li class="dropdown active">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Examples <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../BEST/">BEST</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../stochastic_volatility/">Stochastic Volatility</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../hierarchical/">Hierarchical model</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-linear/">Linear Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-robust/">Robust Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-robust-with-outlier-detection/">Robust Regression with Outlier Detection</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-model-selection/">Model Selection for Regression using DIC and WAIC</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../rolling_regression/">Rolling Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-hierarchical/">Hierarchical linear regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../pmf-pymc/">Probabilistic Matrix Factorization</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../rugby_analytics/">Rugby Analytics example</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../posterior_predictive/">Posterior Predictive checks and prediction</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../survival_analysis/">Survival Analysis</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GP-smoothing/">Gaussian Process (GP) smoothing</a>
+</li>
+
+                        
+                            
+<li class="active">
+    <a href="./">Bayesian Logistic Regression for predicting salary</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                </ul>
+            
+
+            <ul class="nav navbar-nav navbar-right">
+                <li>
+                    <a href="#" data-toggle="modal" data-target="#mkdocs_search_modal">
+                        <i class="fa fa-search"></i> Search
+                    </a>
+                </li>
+                
+                    <li >
+                        <a rel="next" href="../GP-smoothing/">
+                            <i class="fa fa-arrow-left"></i> Previous
+                        </a>
+                    </li>
+                    <li class="disabled">
+                        <a rel="prev" >
+                            Next <i class="fa fa-arrow-right"></i>
+                        </a>
+                    </li>
+                
+                
+                    <li>
+                        <a href="https://github.com/pymc-devs/pymc3">
+                            
+                                <i class="fa fa-github"></i>
+                            
+                            GitHub
+                        </a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            
+                <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#bayesian-logistic-regression-with-pymc3">Bayesian Logistic Regression with PyMC3</a></li>
+        
+    
+        <li class="main "><a href="#scrubbing-and-cleaning">Scrubbing and cleaning</a></li>
+        
+    
+        <li class="main "><a href="#exploring-the-data">Exploring the data</a></li>
+        
+    
+        <li class="main "><a href="#the-model">The model</a></li>
+        
+    
+        <li class="main "><a href="#some-results">Some results</a></li>
+        
+    
+        <li class="main "><a href="#model-selection">Model selection</a></li>
+        
+    
+    </ul>
+</div></div>
+                <div class="col-md-9" role="main">
+
+<h1 id="bayesian-logistic-regression-with-pymc3">Bayesian Logistic Regression with PyMC3</h1>
+<ul>
+<li>
+<p>This is a reproduction with a few slight alterations of <a href="http://jbencook.github.io/portfolio/bayesian_logistic_regression.html">Bayesian Log Reg</a> by J. Benjamin Cook</p>
+</li>
+<li>
+<p>Author: Peadar Coyle and J. Benjamin Cook</p>
+</li>
+<li>How likely am I to make more than $50,000 US Dollars?</li>
+<li>Exploration of model selection techniques too - I use DIC and WAIC to select the best model. </li>
+<li>The convenience functions are all taken from Jon Sedars work.</li>
+<li>This example also has some explorations of the features so serves as a good example of Exploratory Data Analysis and how that can guide the model creation/ model selection process. </li>
+</ul>
+<pre><code class="python">%matplotlib inline
+import pandas as pd
+import numpy as np
+import pymc3 as pm
+import matplotlib.pyplot as plt
+import seaborn
+import warnings
+warnings.filterwarnings('ignore')
+from collections import OrderedDict
+from time import time
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from scipy.optimize import fmin_powell
+from scipy import integrate
+
+import theano as thno
+import theano.tensor as T 
+
+</code></pre>
+
+<pre><code class="python">def run_models(df, upper_order=5):
+    ''' 
+    Convenience function:
+    Fit a range of pymc3 models of increasing polynomial complexity. 
+    Suggest limit to max order 5 since calculation time is exponential.
+    '''
+
+    models, traces = OrderedDict(), OrderedDict()
+
+    for k in range(1,upper_order+1):
+
+        nm = 'k{}'.format(k)
+        fml = create_poly_modelspec(k)
+
+        with pm.Model() as models[nm]:
+
+            print('\nRunning: {}'.format(nm))
+            pm.glm.glm(fml, df, family=pm.glm.families.Normal())
+
+            start_MAP = pm.find_MAP(fmin=fmin_powell, disp=False)
+            traces[nm] = pm.sample(2000, start=start_MAP, step=pm.NUTS(), progressbar=True) 
+
+    return models, traces
+
+def plot_traces(traces, retain=1000):
+    ''' 
+    Convenience function:
+    Plot traces with overlaid means and values
+    '''
+
+    ax = pm.traceplot(traces[-retain:], figsize=(12,len(traces.varnames)*1.5),
+        lines={k: v['mean'] for k, v in pm.df_summary(traces[-retain:]).iterrows()})
+
+    for i, mn in enumerate(pm.df_summary(traces[-retain:])['mean']):
+        ax[i,0].annotate('{:.2f}'.format(mn), xy=(mn,0), xycoords='data'
+                    ,xytext=(5,10), textcoords='offset points', rotation=90
+                    ,va='bottom', fontsize='large', color='#AA0022')
+
+def create_poly_modelspec(k=1):
+    ''' 
+    Convenience function:
+    Create a polynomial modelspec string for patsy
+    '''
+    return ('income ~ educ + hours + age ' + ' '.join(['+ np.power(age,{})'.format(j) 
+                                     for j in range(2,k+1)])).strip()
+</code></pre>
+
+<p>The <a href="http://archive.ics.uci.edu/ml/datasets/Adult">Adult Data Set</a> is commonly used to benchmark machine learning algorithms. The goal is to use demographic features, or variables, to predict whether an individual makes more than \$50,000 per year. The data set is almost 20 years old, and therefore, not perfect for determining the probability that I will make more than \$50K, but it is a nice, simple dataset that can be used to showcase a few benefits of using Bayesian logistic regression over its frequentist counterpart.</p>
+<p>The motivation for myself to reproduce this piece of work was to learn how to use Odd Ratio in Bayesian Regression.</p>
+<pre><code class="python">data = pd.read_csv(&quot;https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data&quot;, header=None, names=['age', 'workclass', 'fnlwgt', 
+                'education-categorical', 'educ', 
+                'marital-status', 'occupation',
+                'relationship', 'race', 'sex', 
+                'captial-gain', 'capital-loss', 
+                'hours', 'native-country', 
+                'income'])
+</code></pre>
+
+<pre><code class="python">data
+</code></pre>
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>age</th>
+      <th>workclass</th>
+      <th>fnlwgt</th>
+      <th>education-categorical</th>
+      <th>educ</th>
+      <th>marital-status</th>
+      <th>occupation</th>
+      <th>relationship</th>
+      <th>race</th>
+      <th>sex</th>
+      <th>captial-gain</th>
+      <th>capital-loss</th>
+      <th>hours</th>
+      <th>native-country</th>
+      <th>income</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>39</td>
+      <td>State-gov</td>
+      <td>77516</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Never-married</td>
+      <td>Adm-clerical</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>2174</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>50</td>
+      <td>Self-emp-not-inc</td>
+      <td>83311</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>13</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>38</td>
+      <td>Private</td>
+      <td>215646</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Divorced</td>
+      <td>Handlers-cleaners</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>53</td>
+      <td>Private</td>
+      <td>234721</td>
+      <td>11th</td>
+      <td>7</td>
+      <td>Married-civ-spouse</td>
+      <td>Handlers-cleaners</td>
+      <td>Husband</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>28</td>
+      <td>Private</td>
+      <td>338409</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Married-civ-spouse</td>
+      <td>Prof-specialty</td>
+      <td>Wife</td>
+      <td>Black</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>Cuba</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>37</td>
+      <td>Private</td>
+      <td>284582</td>
+      <td>Masters</td>
+      <td>14</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Wife</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>49</td>
+      <td>Private</td>
+      <td>160187</td>
+      <td>9th</td>
+      <td>5</td>
+      <td>Married-spouse-absent</td>
+      <td>Other-service</td>
+      <td>Not-in-family</td>
+      <td>Black</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>16</td>
+      <td>Jamaica</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>52</td>
+      <td>Self-emp-not-inc</td>
+      <td>209642</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>45</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>31</td>
+      <td>Private</td>
+      <td>45781</td>
+      <td>Masters</td>
+      <td>14</td>
+      <td>Never-married</td>
+      <td>Prof-specialty</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>14084</td>
+      <td>0</td>
+      <td>50</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>42</td>
+      <td>Private</td>
+      <td>159449</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>5178</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>37</td>
+      <td>Private</td>
+      <td>280464</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Husband</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>80</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>30</td>
+      <td>State-gov</td>
+      <td>141297</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Married-civ-spouse</td>
+      <td>Prof-specialty</td>
+      <td>Husband</td>
+      <td>Asian-Pac-Islander</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>India</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>23</td>
+      <td>Private</td>
+      <td>122272</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Never-married</td>
+      <td>Adm-clerical</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>30</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>32</td>
+      <td>Private</td>
+      <td>205019</td>
+      <td>Assoc-acdm</td>
+      <td>12</td>
+      <td>Never-married</td>
+      <td>Sales</td>
+      <td>Not-in-family</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>50</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>40</td>
+      <td>Private</td>
+      <td>121772</td>
+      <td>Assoc-voc</td>
+      <td>11</td>
+      <td>Married-civ-spouse</td>
+      <td>Craft-repair</td>
+      <td>Husband</td>
+      <td>Asian-Pac-Islander</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>?</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>34</td>
+      <td>Private</td>
+      <td>245487</td>
+      <td>7th-8th</td>
+      <td>4</td>
+      <td>Married-civ-spouse</td>
+      <td>Transport-moving</td>
+      <td>Husband</td>
+      <td>Amer-Indian-Eskimo</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>45</td>
+      <td>Mexico</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>25</td>
+      <td>Self-emp-not-inc</td>
+      <td>176756</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Never-married</td>
+      <td>Farming-fishing</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>35</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>32</td>
+      <td>Private</td>
+      <td>186824</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Never-married</td>
+      <td>Machine-op-inspct</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>38</td>
+      <td>Private</td>
+      <td>28887</td>
+      <td>11th</td>
+      <td>7</td>
+      <td>Married-civ-spouse</td>
+      <td>Sales</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>50</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>43</td>
+      <td>Self-emp-not-inc</td>
+      <td>292175</td>
+      <td>Masters</td>
+      <td>14</td>
+      <td>Divorced</td>
+      <td>Exec-managerial</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>45</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>40</td>
+      <td>Private</td>
+      <td>193524</td>
+      <td>Doctorate</td>
+      <td>16</td>
+      <td>Married-civ-spouse</td>
+      <td>Prof-specialty</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>60</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>54</td>
+      <td>Private</td>
+      <td>302146</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Separated</td>
+      <td>Other-service</td>
+      <td>Unmarried</td>
+      <td>Black</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>20</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>35</td>
+      <td>Federal-gov</td>
+      <td>76845</td>
+      <td>9th</td>
+      <td>5</td>
+      <td>Married-civ-spouse</td>
+      <td>Farming-fishing</td>
+      <td>Husband</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>43</td>
+      <td>Private</td>
+      <td>117037</td>
+      <td>11th</td>
+      <td>7</td>
+      <td>Married-civ-spouse</td>
+      <td>Transport-moving</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>2042</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>59</td>
+      <td>Private</td>
+      <td>109015</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Divorced</td>
+      <td>Tech-support</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>56</td>
+      <td>Local-gov</td>
+      <td>216851</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Married-civ-spouse</td>
+      <td>Tech-support</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>19</td>
+      <td>Private</td>
+      <td>168294</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Never-married</td>
+      <td>Craft-repair</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>54</td>
+      <td>?</td>
+      <td>180211</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Married-civ-spouse</td>
+      <td>?</td>
+      <td>Husband</td>
+      <td>Asian-Pac-Islander</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>60</td>
+      <td>South</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>39</td>
+      <td>Private</td>
+      <td>367260</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Divorced</td>
+      <td>Exec-managerial</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>80</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>49</td>
+      <td>Private</td>
+      <td>193366</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Married-civ-spouse</td>
+      <td>Craft-repair</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>32531</th>
+      <td>30</td>
+      <td>?</td>
+      <td>33811</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Never-married</td>
+      <td>?</td>
+      <td>Not-in-family</td>
+      <td>Asian-Pac-Islander</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>99</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32532</th>
+      <td>34</td>
+      <td>Private</td>
+      <td>204461</td>
+      <td>Doctorate</td>
+      <td>16</td>
+      <td>Married-civ-spouse</td>
+      <td>Prof-specialty</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>60</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32533</th>
+      <td>54</td>
+      <td>Private</td>
+      <td>337992</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Husband</td>
+      <td>Asian-Pac-Islander</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>50</td>
+      <td>Japan</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32534</th>
+      <td>37</td>
+      <td>Private</td>
+      <td>179137</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Divorced</td>
+      <td>Adm-clerical</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>39</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32535</th>
+      <td>22</td>
+      <td>Private</td>
+      <td>325033</td>
+      <td>12th</td>
+      <td>8</td>
+      <td>Never-married</td>
+      <td>Protective-serv</td>
+      <td>Own-child</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>35</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32536</th>
+      <td>34</td>
+      <td>Private</td>
+      <td>160216</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Never-married</td>
+      <td>Exec-managerial</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>55</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32537</th>
+      <td>30</td>
+      <td>Private</td>
+      <td>345898</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Never-married</td>
+      <td>Craft-repair</td>
+      <td>Not-in-family</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>46</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32538</th>
+      <td>38</td>
+      <td>Private</td>
+      <td>139180</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Divorced</td>
+      <td>Prof-specialty</td>
+      <td>Unmarried</td>
+      <td>Black</td>
+      <td>Female</td>
+      <td>15020</td>
+      <td>0</td>
+      <td>45</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32539</th>
+      <td>71</td>
+      <td>?</td>
+      <td>287372</td>
+      <td>Doctorate</td>
+      <td>16</td>
+      <td>Married-civ-spouse</td>
+      <td>?</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>10</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32540</th>
+      <td>45</td>
+      <td>State-gov</td>
+      <td>252208</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Separated</td>
+      <td>Adm-clerical</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32541</th>
+      <td>41</td>
+      <td>?</td>
+      <td>202822</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Separated</td>
+      <td>?</td>
+      <td>Not-in-family</td>
+      <td>Black</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>32</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32542</th>
+      <td>72</td>
+      <td>?</td>
+      <td>129912</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Married-civ-spouse</td>
+      <td>?</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>25</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32543</th>
+      <td>45</td>
+      <td>Local-gov</td>
+      <td>119199</td>
+      <td>Assoc-acdm</td>
+      <td>12</td>
+      <td>Divorced</td>
+      <td>Prof-specialty</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>48</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32544</th>
+      <td>31</td>
+      <td>Private</td>
+      <td>199655</td>
+      <td>Masters</td>
+      <td>14</td>
+      <td>Divorced</td>
+      <td>Other-service</td>
+      <td>Not-in-family</td>
+      <td>Other</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>30</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32545</th>
+      <td>39</td>
+      <td>Local-gov</td>
+      <td>111499</td>
+      <td>Assoc-acdm</td>
+      <td>12</td>
+      <td>Married-civ-spouse</td>
+      <td>Adm-clerical</td>
+      <td>Wife</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>20</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32546</th>
+      <td>37</td>
+      <td>Private</td>
+      <td>198216</td>
+      <td>Assoc-acdm</td>
+      <td>12</td>
+      <td>Divorced</td>
+      <td>Tech-support</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32547</th>
+      <td>43</td>
+      <td>Private</td>
+      <td>260761</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Married-civ-spouse</td>
+      <td>Machine-op-inspct</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>Mexico</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32548</th>
+      <td>65</td>
+      <td>Self-emp-not-inc</td>
+      <td>99359</td>
+      <td>Prof-school</td>
+      <td>15</td>
+      <td>Never-married</td>
+      <td>Prof-specialty</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>1086</td>
+      <td>0</td>
+      <td>60</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32549</th>
+      <td>43</td>
+      <td>State-gov</td>
+      <td>255835</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Divorced</td>
+      <td>Adm-clerical</td>
+      <td>Other-relative</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32550</th>
+      <td>43</td>
+      <td>Self-emp-not-inc</td>
+      <td>27242</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Married-civ-spouse</td>
+      <td>Craft-repair</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>50</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32551</th>
+      <td>32</td>
+      <td>Private</td>
+      <td>34066</td>
+      <td>10th</td>
+      <td>6</td>
+      <td>Married-civ-spouse</td>
+      <td>Handlers-cleaners</td>
+      <td>Husband</td>
+      <td>Amer-Indian-Eskimo</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32552</th>
+      <td>43</td>
+      <td>Private</td>
+      <td>84661</td>
+      <td>Assoc-voc</td>
+      <td>11</td>
+      <td>Married-civ-spouse</td>
+      <td>Sales</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>45</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32553</th>
+      <td>32</td>
+      <td>Private</td>
+      <td>116138</td>
+      <td>Masters</td>
+      <td>14</td>
+      <td>Never-married</td>
+      <td>Tech-support</td>
+      <td>Not-in-family</td>
+      <td>Asian-Pac-Islander</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>11</td>
+      <td>Taiwan</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32554</th>
+      <td>53</td>
+      <td>Private</td>
+      <td>321865</td>
+      <td>Masters</td>
+      <td>14</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32555</th>
+      <td>22</td>
+      <td>Private</td>
+      <td>310152</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Never-married</td>
+      <td>Protective-serv</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32556</th>
+      <td>27</td>
+      <td>Private</td>
+      <td>257302</td>
+      <td>Assoc-acdm</td>
+      <td>12</td>
+      <td>Married-civ-spouse</td>
+      <td>Tech-support</td>
+      <td>Wife</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>38</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32557</th>
+      <td>40</td>
+      <td>Private</td>
+      <td>154374</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Married-civ-spouse</td>
+      <td>Machine-op-inspct</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32558</th>
+      <td>58</td>
+      <td>Private</td>
+      <td>151910</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Widowed</td>
+      <td>Adm-clerical</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32559</th>
+      <td>22</td>
+      <td>Private</td>
+      <td>201490</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Never-married</td>
+      <td>Adm-clerical</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>20</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32560</th>
+      <td>52</td>
+      <td>Self-emp-inc</td>
+      <td>287927</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Wife</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>15024</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+  </tbody>
+</table>
+<p>32561 rows × 15 columns</p>
+</div>
+
+<h1 id="scrubbing-and-cleaning">Scrubbing and cleaning</h1>
+<p>We need to remove any null entries in Income. 
+And we also want to restrict this study to the United States.</p>
+<pre><code class="python">data = data[~pd.isnull(data['income'])]
+
+</code></pre>
+
+<pre><code class="python">data[data['native-country']==&quot; United-States&quot;]
+</code></pre>
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>age</th>
+      <th>workclass</th>
+      <th>fnlwgt</th>
+      <th>education-categorical</th>
+      <th>educ</th>
+      <th>marital-status</th>
+      <th>occupation</th>
+      <th>relationship</th>
+      <th>race</th>
+      <th>sex</th>
+      <th>captial-gain</th>
+      <th>capital-loss</th>
+      <th>hours</th>
+      <th>native-country</th>
+      <th>income</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>39</td>
+      <td>State-gov</td>
+      <td>77516</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Never-married</td>
+      <td>Adm-clerical</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>2174</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>50</td>
+      <td>Self-emp-not-inc</td>
+      <td>83311</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>13</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>38</td>
+      <td>Private</td>
+      <td>215646</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Divorced</td>
+      <td>Handlers-cleaners</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>53</td>
+      <td>Private</td>
+      <td>234721</td>
+      <td>11th</td>
+      <td>7</td>
+      <td>Married-civ-spouse</td>
+      <td>Handlers-cleaners</td>
+      <td>Husband</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>37</td>
+      <td>Private</td>
+      <td>284582</td>
+      <td>Masters</td>
+      <td>14</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Wife</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>52</td>
+      <td>Self-emp-not-inc</td>
+      <td>209642</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>45</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>31</td>
+      <td>Private</td>
+      <td>45781</td>
+      <td>Masters</td>
+      <td>14</td>
+      <td>Never-married</td>
+      <td>Prof-specialty</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>14084</td>
+      <td>0</td>
+      <td>50</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>42</td>
+      <td>Private</td>
+      <td>159449</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>5178</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>37</td>
+      <td>Private</td>
+      <td>280464</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Husband</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>80</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>23</td>
+      <td>Private</td>
+      <td>122272</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Never-married</td>
+      <td>Adm-clerical</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>30</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>32</td>
+      <td>Private</td>
+      <td>205019</td>
+      <td>Assoc-acdm</td>
+      <td>12</td>
+      <td>Never-married</td>
+      <td>Sales</td>
+      <td>Not-in-family</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>50</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>25</td>
+      <td>Self-emp-not-inc</td>
+      <td>176756</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Never-married</td>
+      <td>Farming-fishing</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>35</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>32</td>
+      <td>Private</td>
+      <td>186824</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Never-married</td>
+      <td>Machine-op-inspct</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>38</td>
+      <td>Private</td>
+      <td>28887</td>
+      <td>11th</td>
+      <td>7</td>
+      <td>Married-civ-spouse</td>
+      <td>Sales</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>50</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>43</td>
+      <td>Self-emp-not-inc</td>
+      <td>292175</td>
+      <td>Masters</td>
+      <td>14</td>
+      <td>Divorced</td>
+      <td>Exec-managerial</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>45</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>40</td>
+      <td>Private</td>
+      <td>193524</td>
+      <td>Doctorate</td>
+      <td>16</td>
+      <td>Married-civ-spouse</td>
+      <td>Prof-specialty</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>60</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>54</td>
+      <td>Private</td>
+      <td>302146</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Separated</td>
+      <td>Other-service</td>
+      <td>Unmarried</td>
+      <td>Black</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>20</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>35</td>
+      <td>Federal-gov</td>
+      <td>76845</td>
+      <td>9th</td>
+      <td>5</td>
+      <td>Married-civ-spouse</td>
+      <td>Farming-fishing</td>
+      <td>Husband</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>43</td>
+      <td>Private</td>
+      <td>117037</td>
+      <td>11th</td>
+      <td>7</td>
+      <td>Married-civ-spouse</td>
+      <td>Transport-moving</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>2042</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>59</td>
+      <td>Private</td>
+      <td>109015</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Divorced</td>
+      <td>Tech-support</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>56</td>
+      <td>Local-gov</td>
+      <td>216851</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Married-civ-spouse</td>
+      <td>Tech-support</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>19</td>
+      <td>Private</td>
+      <td>168294</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Never-married</td>
+      <td>Craft-repair</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>39</td>
+      <td>Private</td>
+      <td>367260</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Divorced</td>
+      <td>Exec-managerial</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>80</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>49</td>
+      <td>Private</td>
+      <td>193366</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Married-civ-spouse</td>
+      <td>Craft-repair</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>23</td>
+      <td>Local-gov</td>
+      <td>190709</td>
+      <td>Assoc-acdm</td>
+      <td>12</td>
+      <td>Never-married</td>
+      <td>Protective-serv</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>52</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>20</td>
+      <td>Private</td>
+      <td>266015</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Never-married</td>
+      <td>Sales</td>
+      <td>Own-child</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>44</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>45</td>
+      <td>Private</td>
+      <td>386940</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Divorced</td>
+      <td>Exec-managerial</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>1408</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>30</td>
+      <td>Federal-gov</td>
+      <td>59951</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Married-civ-spouse</td>
+      <td>Adm-clerical</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>22</td>
+      <td>State-gov</td>
+      <td>311512</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Married-civ-spouse</td>
+      <td>Other-service</td>
+      <td>Husband</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>15</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>21</td>
+      <td>Private</td>
+      <td>197200</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Never-married</td>
+      <td>Machine-op-inspct</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>32528</th>
+      <td>31</td>
+      <td>Private</td>
+      <td>292592</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Married-civ-spouse</td>
+      <td>Machine-op-inspct</td>
+      <td>Wife</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32529</th>
+      <td>29</td>
+      <td>Private</td>
+      <td>125976</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Separated</td>
+      <td>Sales</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>35</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32530</th>
+      <td>35</td>
+      <td>?</td>
+      <td>320084</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Married-civ-spouse</td>
+      <td>?</td>
+      <td>Wife</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>55</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32531</th>
+      <td>30</td>
+      <td>?</td>
+      <td>33811</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Never-married</td>
+      <td>?</td>
+      <td>Not-in-family</td>
+      <td>Asian-Pac-Islander</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>99</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32532</th>
+      <td>34</td>
+      <td>Private</td>
+      <td>204461</td>
+      <td>Doctorate</td>
+      <td>16</td>
+      <td>Married-civ-spouse</td>
+      <td>Prof-specialty</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>60</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32534</th>
+      <td>37</td>
+      <td>Private</td>
+      <td>179137</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Divorced</td>
+      <td>Adm-clerical</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>39</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32535</th>
+      <td>22</td>
+      <td>Private</td>
+      <td>325033</td>
+      <td>12th</td>
+      <td>8</td>
+      <td>Never-married</td>
+      <td>Protective-serv</td>
+      <td>Own-child</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>35</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32536</th>
+      <td>34</td>
+      <td>Private</td>
+      <td>160216</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Never-married</td>
+      <td>Exec-managerial</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>55</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32537</th>
+      <td>30</td>
+      <td>Private</td>
+      <td>345898</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Never-married</td>
+      <td>Craft-repair</td>
+      <td>Not-in-family</td>
+      <td>Black</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>46</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32538</th>
+      <td>38</td>
+      <td>Private</td>
+      <td>139180</td>
+      <td>Bachelors</td>
+      <td>13</td>
+      <td>Divorced</td>
+      <td>Prof-specialty</td>
+      <td>Unmarried</td>
+      <td>Black</td>
+      <td>Female</td>
+      <td>15020</td>
+      <td>0</td>
+      <td>45</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32539</th>
+      <td>71</td>
+      <td>?</td>
+      <td>287372</td>
+      <td>Doctorate</td>
+      <td>16</td>
+      <td>Married-civ-spouse</td>
+      <td>?</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>10</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32540</th>
+      <td>45</td>
+      <td>State-gov</td>
+      <td>252208</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Separated</td>
+      <td>Adm-clerical</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32541</th>
+      <td>41</td>
+      <td>?</td>
+      <td>202822</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Separated</td>
+      <td>?</td>
+      <td>Not-in-family</td>
+      <td>Black</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>32</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32542</th>
+      <td>72</td>
+      <td>?</td>
+      <td>129912</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Married-civ-spouse</td>
+      <td>?</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>25</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32543</th>
+      <td>45</td>
+      <td>Local-gov</td>
+      <td>119199</td>
+      <td>Assoc-acdm</td>
+      <td>12</td>
+      <td>Divorced</td>
+      <td>Prof-specialty</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>48</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32544</th>
+      <td>31</td>
+      <td>Private</td>
+      <td>199655</td>
+      <td>Masters</td>
+      <td>14</td>
+      <td>Divorced</td>
+      <td>Other-service</td>
+      <td>Not-in-family</td>
+      <td>Other</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>30</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32545</th>
+      <td>39</td>
+      <td>Local-gov</td>
+      <td>111499</td>
+      <td>Assoc-acdm</td>
+      <td>12</td>
+      <td>Married-civ-spouse</td>
+      <td>Adm-clerical</td>
+      <td>Wife</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>20</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32546</th>
+      <td>37</td>
+      <td>Private</td>
+      <td>198216</td>
+      <td>Assoc-acdm</td>
+      <td>12</td>
+      <td>Divorced</td>
+      <td>Tech-support</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32548</th>
+      <td>65</td>
+      <td>Self-emp-not-inc</td>
+      <td>99359</td>
+      <td>Prof-school</td>
+      <td>15</td>
+      <td>Never-married</td>
+      <td>Prof-specialty</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>1086</td>
+      <td>0</td>
+      <td>60</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32549</th>
+      <td>43</td>
+      <td>State-gov</td>
+      <td>255835</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Divorced</td>
+      <td>Adm-clerical</td>
+      <td>Other-relative</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32550</th>
+      <td>43</td>
+      <td>Self-emp-not-inc</td>
+      <td>27242</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Married-civ-spouse</td>
+      <td>Craft-repair</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>50</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32551</th>
+      <td>32</td>
+      <td>Private</td>
+      <td>34066</td>
+      <td>10th</td>
+      <td>6</td>
+      <td>Married-civ-spouse</td>
+      <td>Handlers-cleaners</td>
+      <td>Husband</td>
+      <td>Amer-Indian-Eskimo</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32552</th>
+      <td>43</td>
+      <td>Private</td>
+      <td>84661</td>
+      <td>Assoc-voc</td>
+      <td>11</td>
+      <td>Married-civ-spouse</td>
+      <td>Sales</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>45</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32554</th>
+      <td>53</td>
+      <td>Private</td>
+      <td>321865</td>
+      <td>Masters</td>
+      <td>14</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32555</th>
+      <td>22</td>
+      <td>Private</td>
+      <td>310152</td>
+      <td>Some-college</td>
+      <td>10</td>
+      <td>Never-married</td>
+      <td>Protective-serv</td>
+      <td>Not-in-family</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32556</th>
+      <td>27</td>
+      <td>Private</td>
+      <td>257302</td>
+      <td>Assoc-acdm</td>
+      <td>12</td>
+      <td>Married-civ-spouse</td>
+      <td>Tech-support</td>
+      <td>Wife</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>38</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32557</th>
+      <td>40</td>
+      <td>Private</td>
+      <td>154374</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Married-civ-spouse</td>
+      <td>Machine-op-inspct</td>
+      <td>Husband</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+    <tr>
+      <th>32558</th>
+      <td>58</td>
+      <td>Private</td>
+      <td>151910</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Widowed</td>
+      <td>Adm-clerical</td>
+      <td>Unmarried</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>0</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32559</th>
+      <td>22</td>
+      <td>Private</td>
+      <td>201490</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Never-married</td>
+      <td>Adm-clerical</td>
+      <td>Own-child</td>
+      <td>White</td>
+      <td>Male</td>
+      <td>0</td>
+      <td>0</td>
+      <td>20</td>
+      <td>United-States</td>
+      <td>&lt;=50K</td>
+    </tr>
+    <tr>
+      <th>32560</th>
+      <td>52</td>
+      <td>Self-emp-inc</td>
+      <td>287927</td>
+      <td>HS-grad</td>
+      <td>9</td>
+      <td>Married-civ-spouse</td>
+      <td>Exec-managerial</td>
+      <td>Wife</td>
+      <td>White</td>
+      <td>Female</td>
+      <td>15024</td>
+      <td>0</td>
+      <td>40</td>
+      <td>United-States</td>
+      <td>&gt;50K</td>
+    </tr>
+  </tbody>
+</table>
+<p>29170 rows × 15 columns</p>
+</div>
+
+<pre><code class="python">income = 1 * (data['income'] == &quot; &gt;50K&quot;)
+age2 = np.square(data['age'])
+</code></pre>
+
+<pre><code class="python">data = data[['age', 'educ', 'hours']]
+data['age2'] = age2
+data['income'] = income
+</code></pre>
+
+<pre><code class="python">income.value_counts()
+</code></pre>
+
+<pre><code>0    24720
+1     7841
+dtype: int64
+</code></pre>
+<h1 id="exploring-the-data">Exploring the data</h1>
+<p>Let us get a feel for the parameters. 
+<em> We see that age is a tailed distribution. Certainly not Gaussian!
+</em> We don't see much of a correlation between many of the features, with the exception of Age and Age2. 
+* Hours worked has some interesting behaviour. How would one describe this distribution? </p>
+<pre><code class="python">
+g = seaborn.pairplot(data)
+</code></pre>
+
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_13_0.png" /></p>
+<pre><code class="python"># Compute the correlation matrix
+corr = data.corr()
+
+# Generate a mask for the upper triangle
+mask = np.zeros_like(corr, dtype=np.bool)
+mask[np.triu_indices_from(mask)] = True
+
+# Set up the matplotlib figure
+f, ax = plt.subplots(figsize=(11, 9))
+
+# Generate a custom diverging colormap
+cmap = seaborn.diverging_palette(220, 10, as_cmap=True)
+
+# Draw the heatmap with the mask and correct aspect ratio
+seaborn.heatmap(corr, mask=mask, cmap=cmap, vmax=.3,
+            linewidths=.5, cbar_kws={&quot;shrink&quot;: .5}, ax=ax)
+</code></pre>
+
+<pre><code>&lt;matplotlib.axes._subplots.AxesSubplot at 0x111f04990&gt;
+</code></pre>
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_14_1.png" /></p>
+<p>We see here not many strong correlations. The highest is 0.30 according to this plot. We see a weak-correlation between hours and income 
+(which is logical), we see a slighty stronger correlation between education and income (which is the kind of question we are answering).</p>
+<h1 id="the-model">The model</h1>
+<p>We will use a simple model, which assumes that the probability of making more than $50K 
+is a function of age, years of education and hours worked per week. We will use PyMC3 
+do inference. </p>
+<p>In Bayesian statistics, we treat everything as a random variable and we want to know the posterior probability distribution of the parameters
+(in this case the regression coefficients)
+The posterior is equal to the likelihood <mathjax>$$p(\theta | D) = \frac{p(D|\theta)p(\theta)}{p(D)}$$</mathjax></p>
+<p>Because the denominator is a notoriously difficult integral, <mathjax>$p(D) = \int p(D | \theta) p(\theta) d \theta $</mathjax> we would prefer to skip computing it. Fortunately, if we draw examples from the parameter space, with probability proportional to the height of the posterior at any given point, we end up with an empirical distribution that converges to the posterior as the number of samples approaches infinity.  </p>
+<p>What this means in practice is that we only need to worry about the numerator. </p>
+<p>Getting back to logistic regression, we need to specify a prior and a likelihood in order to draw samples from the posterior. We could use sociological knowledge about the effects of age and education on income, but instead, let's use the default prior specification for GLM coefficients that PyMC3 gives us, which is <mathjax>$p(θ)=N(0,10^{12}I)$</mathjax>. This is a very vague prior that will let the data speak for themselves.</p>
+<p>The likelihood is the product of n Bernoulli trials, <mathjax>$\prod^{n}_{i=1} p_{i}^{y} (1 - p_{i})^{1-y_{i}}$</mathjax>,
+where <mathjax>$p_i = \frac{1}{1 + e^{-z_i}}$</mathjax>, </p>
+<p><mathjax>$z_{i} = \beta_{0} + \beta_{1}(age)_{i} + \beta_2(age)^{2}_{i} + \beta_{3}(educ)_{i} + \beta_{4}(hours)_{i}$</mathjax> and <mathjax>$y_{i} = 1$</mathjax> if income is greater than 50K and <mathjax>$y_{i} = 0$</mathjax> otherwise. </p>
+<p>With the math out of the way we can get back to the data. Here I use PyMC3 to draw samples from the posterior. The sampling algorithm used is NUTS, which is a form of Hamiltonian Monte Carlo, in which parameteres are tuned automatically. Notice, that we get to borrow the syntax of specifying GLM's from R, very convenient! I use a convenience function from above to plot the trace infromation from the first 1000 parameters. </p>
+<pre><code class="python">with pm.Model() as logistic_model:
+    pm.glm.glm('income ~ age + age2 + educ + hours', data, family=pm.glm.families.Binomial())
+    trace_logistic_model = pm.sample(2000, pm.NUTS(), progressbar=True)
+
+</code></pre>
+
+<pre><code> [-----------------100%-----------------] 2000 of 2000 complete in 583.6 sec
+</code></pre>
+<pre><code class="python">plot_traces(trace_logistic_model, retain=1000)
+</code></pre>
+
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_18_0.png" /></p>
+<h1 id="some-results">Some results</h1>
+<p>One of the major benefits that makes Bayesian data analysis worth the extra computational effort in many circumstances is that we can be explicit about our uncertainty. Maximum likelihood returns a number, but how certain can we be that we found the right number? Instead, Bayesian inference returns a distribution over parameter values.</p>
+<p>I'll use seaborn to look at the distribution of some of these factors. </p>
+<pre><code class="python">plt.figure(figsize=(9,7))
+trace = trace_logistic_model[1000:]
+seaborn.jointplot(trace['age'], trace['educ'], kind=&quot;hex&quot;, color=&quot;#4CB391&quot;)
+plt.xlabel(&quot;beta_age&quot;)
+plt.ylabel(&quot;beta_educ&quot;)
+plt.show()
+</code></pre>
+
+<pre><code>&lt;matplotlib.figure.Figure at 0x17f6efd50&gt;
+</code></pre>
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_20_1.png" /></p>
+<p>So how do age and education affect the probability of making more than <mathjax>$$50K?$</mathjax> To answer this question, we can show how the probability of making more than $50K changes with age for a few different education levels. Here, we assume that the number of hours worked per week is fixed at 50. PyMC3 gives us a convenient way to plot the posterior predictive distribution. We need to give the function a linear model and a set of points to evaluate. We will pass in three different linear models: one with educ == 12 (finished high school), one with educ == 16 (finished undergrad) and one with educ == 19 (three years of grad school).</p>
+<pre><code class="python"># Linear model with hours == 50 and educ == 12
+lm = lambda x, samples: 1 / (1 + np.exp(-(samples['Intercept'] + 
+                                          samples['age']*x + 
+                                          samples['age2']*np.square(x) + 
+                                          samples['educ']*12 + 
+                                          samples['hours']*50)))
+
+# Linear model with hours == 50 and educ == 16
+lm2 = lambda x, samples: 1 / (1 + np.exp(-(samples['Intercept'] + 
+                                          samples['age']*x + 
+                                          samples['age2']*np.square(x) + 
+                                          samples['educ']*16 + 
+                                          samples['hours']*50)))
+
+# Linear model with hours == 50 and educ == 19
+lm3 = lambda x, samples: 1 / (1 + np.exp(-(samples['Intercept'] + 
+                                          samples['age']*x + 
+                                          samples['age2']*np.square(x) + 
+                                          samples['educ']*19 + 
+                                          samples['hours']*50)))
+</code></pre>
+
+<p>Each curve shows how the probability of earning more than <mathjax>$ 50K$</mathjax> changes with age. The red curve represents 19 years of education, the green curve represents 16 years of education and the blue curve represents 12 years of education. For all three education levels, the probability of making more than $50K increases with age until approximately age 60, when the probability begins to drop off. Notice that each curve is a little blurry. This is because we are actually plotting 100 different curves for each level of education. Each curve is a draw from our posterior distribution. Because the curves are somewhat translucent, we can interpret dark, narrow portions of a curve as places where we have low uncertainty and light, spread out portions of the curve as places where we have somewhat higher uncertainty about our coefficient values.</p>
+<pre><code class="python"># Plot the posterior predictive distributions of P(income &gt; $50K) vs. age
+pm.glm.plot_posterior_predictive(trace, eval=np.linspace(25, 75, 1000), lm=lm, samples=100, color=&quot;blue&quot;, alpha=.15)
+pm.glm.plot_posterior_predictive(trace, eval=np.linspace(25, 75, 1000), lm=lm2, samples=100, color=&quot;green&quot;, alpha=.15)
+pm.glm.plot_posterior_predictive(trace, eval=np.linspace(25, 75, 1000), lm=lm3, samples=100, color=&quot;red&quot;, alpha=.15)
+import matplotlib.lines as mlines
+blue_line = mlines.Line2D(['lm'], [], color='b', label='High School Education')
+green_line = mlines.Line2D(['lm2'], [], color='g', label='Bachelors')
+red_line = mlines.Line2D(['lm3'], [], color='r', label='Grad School')
+plt.legend(handles=[blue_line, green_line, red_line], loc='lower right')
+plt.ylabel(&quot;P(Income &gt; $50K)&quot;)
+plt.xlabel(&quot;Age&quot;)
+plt.show()
+</code></pre>
+
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_24_0.png" /></p>
+<pre><code class="python">b = trace['educ']
+plt.hist(np.exp(b), bins=20, normed=True)
+plt.xlabel(&quot;Odds Ratio&quot;)
+plt.show()
+</code></pre>
+
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_25_0.png" /></p>
+<p>Finally, we can find a credible interval (remember kids - credible intervals are Bayesian and confidence intervals are frequentist) for this quantity. This may be the best part about Bayesian statistics: we get to interpret credibility intervals the way we've always wanted to interpret them. We are 95% confident that the odds ratio lies within our interval!</p>
+<pre><code class="python">lb, ub = np.percentile(b, 2.5), np.percentile(b, 97.5)
+
+print(&quot;P(%.3f &lt; O.R. &lt; %.3f) = 0.95&quot;%(np.exp(3*lb),np.exp(3*ub)))
+</code></pre>
+
+<pre><code>P(2.617 &lt; O.R. &lt; 2.843) = 0.95
+</code></pre>
+<h1 id="model-selection">Model selection</h1>
+<p>The <a href="https://en.wikipedia.org/wiki/Deviance_information_criterion">Deviance Information Criterion (DIC)</a> is a fairly unsophisticated method for comparing the deviance of likelhood across the the sample traces of a model run. However, this simplicity apparently yields quite good results in a variety of cases. We'll run the model with a few changes to see what effect higher order terms have on this model.</p>
+<p>One question that was immediately asked was what effect does age have on the model, and why should it be age^2 versus age? We'll use the DIC to answer this question. </p>
+<pre><code class="python">models_lin, traces_lin = run_models(data, 4)
+</code></pre>
+
+<pre><code>Running: k1
+ [-----------------100%-----------------] 2000 of 2000 complete in 52.9 sec
+Running: k2
+ [-----------------100%-----------------] 2000 of 2000 complete in 112.5 sec
+Running: k3
+ [-----------------100%-----------------] 2000 of 2000 complete in 327.2 sec
+Running: k4
+ [-----------------100%-----------------] 2000 of 2000 complete in 1394.3 sec
+</code></pre>
+<pre><code class="python">dfdic = pd.DataFrame(index=['k1','k2','k3','k4'], columns=['lin'])
+dfdic.index.name = 'model'
+
+for nm in dfdic.index:
+    dfdic.loc[nm, 'lin'] = pm.stats.dic(traces_lin[nm],models_lin[nm])
+
+
+dfdic = pd.melt(dfdic.reset_index(), id_vars=['model'], var_name='poly', value_name='dic')
+
+g = seaborn.factorplot(x='model', y='dic', col='poly', hue='poly', data=dfdic, kind='bar', size=6)
+</code></pre>
+
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_30_0.png" /></p>
+<p>There isn't a lot of difference between these models in terms of DIC. So our choice is fine in the model above, and there isn't much to be gained for going up to age^3 for example.
+Next we look at <a href="http://watanabe-www.math.dis.titech.ac.jp/users/swatanab/dicwaic.html">WAIC</a>. Which is another model selection technique.</p>
+<pre><code class="python">dfdic = pd.DataFrame(index=['k1','k2','k3','k4'], columns=['lin'])
+dfdic.index.name = 'model'
+
+for nm in dfdic.index:
+    dfdic.loc[nm, 'lin'] = pm.stats.waic(traces_lin[nm],models_lin[nm])
+
+
+dfdic = pd.melt(dfdic.reset_index(), id_vars=['model'], var_name='poly', value_name='waic')
+
+g = seaborn.factorplot(x='model', y='waic', col='poly', hue='poly', data=dfdic, kind='bar', size=6)
+</code></pre>
+
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_32_0.png" /></p>
+<p>The WAIC confirms our decision to use age^2. </p>
+<pre><code class="python">
+</code></pre></div>
+            
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            
+            <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+
+        <script src="../js/jquery-1.10.2.min.js"></script>
+        <script src="../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../js/highlight.pack.js"></script>
+        <script>var base_url = '..';</script>
+        <script data-main="../mkdocs/js/search.js" src="../mkdocs/js/require.js"></script>
+        <script src="../js/base.js"></script>
+        <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+        <script src="../js/mathjaxhelper.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="exampleModalLabel">Search</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>
+                            From here you can search these documents. Enter
+                            your search terms below.
+                        </p>
+                        <form role="form">
+                            <div class="form-group">
+                                <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query">
+                            </div>
+                        </form>
+                        <div id="mkdocs-search-results"></div>
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </body>
+</html>

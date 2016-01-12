@@ -4,7 +4,7 @@
     
     <url>
      <loc>None/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
     
@@ -13,7 +13,7 @@
         
     <url>
      <loc>None/getting_started/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
@@ -23,79 +23,91 @@
         
     <url>
      <loc>None/BEST/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/stochastic_volatility/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/hierarchical/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/GLM-linear/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/GLM-robust/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/GLM-robust-with-outlier-detection/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+        
+    <url>
+     <loc>None/GLM-model-selection/</loc>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/rolling_regression/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/GLM-hierarchical/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/pmf-pymc/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/rugby_analytics/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/posterior_predictive/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/survival_analysis/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>None/GP-smoothing/</loc>
-     <lastmod>2016-01-05</lastmod>
+     <lastmod>2016-01-12</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+        
+    <url>
+     <loc>None/Bayesian_LogReg/</loc>
+     <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
