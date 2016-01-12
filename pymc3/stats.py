@@ -10,7 +10,7 @@ from .model import modelcontext
 
 from .backends import tracetab as ttab
 
-__all__ = ['autocorr', 'autocov', 'dic', 'waic', 'hpd', 'quantiles', 'mc_error',
+__all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'hpd', 'quantiles', 'mc_error',
            'summary', 'df_summary']
 
 def statfunc(f):
@@ -77,6 +77,7 @@ def autocov(x, lag=1):
 def dic(trace, model=None):
     """
     Calculate the deviance information criterion of the samples in trace from model
+    Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
     """
     model = modelcontext(model)
 
@@ -99,6 +100,7 @@ def dic(trace, model=None):
 def waic(trace, model=None):
     """
     Calculate the widely available information criterion of the samples in trace from model.
+    Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
     """
     model = modelcontext(model)
     
@@ -121,6 +123,29 @@ def waic(trace, model=None):
     p_waic = np.sum(np.var(log_py, axis=0))
     
     return -2 * lppd + 2 * p_waic
+
+def bpic(trace, model=None):
+    """
+    Calculates Bayesian predictive information criterion n of the samples in trace from model
+    Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
+    """
+    model = modelcontext(model)
+
+    transformed_rvs = [rv for rv in model.free_RVs if hasattr(rv.distribution, 'transform_used')]
+    if transformed_rvs:
+        warnings.warn("""
+            BPIC estimates are biased for models that include transformed random variables.
+            See https://github.com/pymc-devs/pymc3/issues/789.
+            The following random variables are the result of transformations:
+            {}
+        """.format(', '.join(rv.name for rv in transformed_rvs)))
+
+    mean_deviance = -2 * np.mean([model.logp(pt) for pt in trace])
+
+    free_rv_means = {rv.name: trace[rv.name].mean(axis=0) for rv in model.free_RVs}
+    deviance_at_mean = -2 * model.logp(free_rv_means)
+
+    return 3 * mean_deviance - 2 * deviance_at_mean
 
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions

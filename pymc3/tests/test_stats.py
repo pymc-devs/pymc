@@ -41,6 +41,25 @@ def test_dic():
 
     assert_almost_equal(calculated, actual, decimal=2)
 
+def test_bpic():
+    """Test Bayesian predictive information criterion"""
+    x_obs = np.arange(6)
+
+    with pm.Model() as model:
+        p = pm.Beta('p', 1., 1., transform=None)
+        x = pm.Binomial('x', 5, p, observed=x_obs)
+
+        step = pm.Metropolis()
+        trace = pm.sample(100, step)
+        calculated = pm.bpic(trace)
+
+    mean_deviance = -2 * st.binom.logpmf(np.repeat(np.atleast_2d(x_obs), 100, axis=0), 5,
+                                         np.repeat(np.atleast_2d(trace['p']), 6, axis=0).T).sum(axis=1).mean()
+    deviance_at_mean = -2 * st.binom.logpmf(x_obs, 5, trace['p'].mean()).sum()
+    actual = 3 * mean_deviance - 2 * deviance_at_mean
+
+    assert_almost_equal(calculated, actual, decimal=2)
+
 def test_dic_warns_on_transformed_rv():
     """
     Test that deviance information criterion calculation warns when an RV is transformed
