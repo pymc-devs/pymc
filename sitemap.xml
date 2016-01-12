@@ -58,6 +58,12 @@
     </url>
         
     <url>
+     <loc>None/GLM-logistic/</loc>
+     <lastmod>2016-01-12</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+        
+    <url>
      <loc>None/GLM-model-selection/</loc>
      <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
@@ -101,12 +107,6 @@
         
     <url>
      <loc>None/GP-smoothing/</loc>
-     <lastmod>2016-01-12</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-        
-    <url>
-     <loc>None/Bayesian_LogReg/</loc>
      <lastmod>2016-01-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
