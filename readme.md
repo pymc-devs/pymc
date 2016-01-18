@@ -31,6 +31,7 @@ PyMC3 is Beta software. Users should consider using [PyMC 2 repository](https://
  * [Talk at PyData NYC 2013 on PyMC3](http://twiecki.github.io/blog/2013/12/12/bayesian-data-analysis-pymc3/)
  * [PyMC3 port of the models presented in the book "Doing Bayesian Data Analysis" by John Kruschke](https://github.com/aloctavodia/Doing_bayesian_data_analysis)
  * [The PyMC3 examples folder](https://github.com/pymc-devs/pymc3/tree/master/pymc3/examples)
+ * [Manual of PyMC3 distributions](http://pymc-devs.github.io/pymc3/manual/api.html#distributions)
 
 ## Installation
 
