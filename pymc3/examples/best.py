@@ -35,12 +35,12 @@ with pm.Model() as model:
     group1_std = pm.Uniform('group1_std', lower=sigma_low, upper=sigma_high, testval=y1.std())
     group2_std = pm.Uniform('group2_std', lower=sigma_low, upper=sigma_high, testval=y2.std())
     nu = pm.Exponential('nu_minus_one', 1/29.) + 1
-    
+
     lam1 = group1_std**-2
     lam2 = group2_std**-2
 
-    group1 = pm.T('drug', nu=nu, mu=group1_mean, lam=lam1, observed=y1)
-    group2 = pm.T('placebo', nu=nu, mu=group2_mean, lam=lam2, observed=y2)
+    group1 = pm.StudentT('drug', nu=nu, mu=group1_mean, lam=lam1, observed=y1)
+    group2 = pm.StudentT('placebo', nu=nu, mu=group2_mean, lam=lam2, observed=y2)
 
     diff_of_means = pm.Deterministic('difference of means', group1_mean - group2_mean)
     diff_of_stds = pm.Deterministic('difference of stds', group1_std - group2_std)
@@ -58,7 +58,6 @@ def run(n=3000):
 
     pm.traceplot(trace[burn:]);
     pm.plots.summary(trace[burn:])
-        
+
 if __name__ == '__main__':
     run()
-
