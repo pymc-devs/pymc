@@ -15,6 +15,10 @@
         <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
         <link rel="stylesheet" href="../css/highlight.css">
+        <link href="../source/_build/html/_static/basic.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/pygments.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/css/badge_only.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/css/theme.css" rel="stylesheet">
 
         <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
         <!--[if lt IE 9]>
@@ -116,12 +120,6 @@
                         
                             
 <li >
-    <a href="../GLM-logistic/">Logistic Regression for predicting salary</a>
-</li>
-
-                        
-                            
-<li >
     <a href="../GLM-model-selection/">Model Selection for Regression using DIC and WAIC</a>
 </li>
 
@@ -165,6 +163,12 @@
                             
 <li >
     <a href="../GP-smoothing/">Gaussian Process (GP) smoothing</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../Bayesian_LogReg/">Bayesian Logistic Regression for predicting salary</a>
 </li>
 
                         
@@ -323,7 +327,7 @@ plt.legend();
 <p>As you can see, the probability of values far away from the mean (0 in this case) are much more likely under the <code>T</code> distribution than under the Normal distribution.</p>
 <p>To define the usage of a T distribution in <code>PyMC3</code> we can pass a family object -- <code>T</code> -- that specifies that our data is Student T-distributed (see <code>glm.families</code> for more choices). Note that this is the same syntax as <code>R</code> and <code>statsmodels</code> use.</p>
 <pre><code class="python">with pm.Model() as model_robust:
-    family = pm.glm.families.T()
+    family = pm.glm.families.StudentT()
     pm.glm.glm('y ~ x', data, family=family)
     start = pm.find_MAP()
     step = pm.NUTS(scaling=start)

@@ -9,12 +9,16 @@
         
         <link rel="shortcut icon" href="../img/favicon.ico">
 
-	<title>Logistic Regression for predicting salary - PyMC3</title>
+	<title>Bayesian Logistic Regression for predicting salary - PyMC3</title>
 
         <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
         <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
         <link rel="stylesheet" href="../css/highlight.css">
+        <link href="../source/_build/html/_static/basic.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/pygments.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/css/badge_only.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/css/theme.css" rel="stylesheet">
 
         <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
         <!--[if lt IE 9]>
@@ -115,12 +119,6 @@
 
                         
                             
-<li class="active">
-    <a href="./">Logistic Regression for predicting salary</a>
-</li>
-
-                        
-                            
 <li >
     <a href="../GLM-model-selection/">Model Selection for Regression using DIC and WAIC</a>
 </li>
@@ -168,6 +166,12 @@
 </li>
 
                         
+                            
+<li class="active">
+    <a href="./">Bayesian Logistic Regression for predicting salary</a>
+</li>
+
+                        
                         </ul>
                     </li>
                 
@@ -183,12 +187,12 @@
                 </li>
                 
                     <li >
-                        <a rel="next" href="../GLM-robust-with-outlier-detection/">
+                        <a rel="next" href="../GP-smoothing/">
                             <i class="fa fa-arrow-left"></i> Previous
                         </a>
                     </li>
-                    <li >
-                        <a rel="prev" href="../GLM-model-selection/">
+                    <li class="disabled">
+                        <a rel="prev" >
                             Next <i class="fa fa-arrow-right"></i>
                         </a>
                     </li>
@@ -2619,7 +2623,7 @@ dtype: int64
 g = seaborn.pairplot(data)
 </code></pre>
 
-<p><img alt="png" src="../GLM-logistic_files/GLM-logistic_13_0.png" /></p>
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_13_0.png" /></p>
 <pre><code class="python"># Compute the correlation matrix
 corr = data.corr()
 
@@ -2640,7 +2644,7 @@ seaborn.heatmap(corr, mask=mask, cmap=cmap, vmax=.3,
 
 <pre><code>&lt;matplotlib.axes._subplots.AxesSubplot at 0x111f04990&gt;
 </code></pre>
-<p><img alt="png" src="../GLM-logistic_files/GLM-logistic_14_1.png" /></p>
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_14_1.png" /></p>
 <p>We see here not many strong correlations. The highest is 0.30 according to this plot. We see a weak-correlation between hours and income 
 (which is logical), we see a slighty stronger correlation between education and income (which is the kind of question we are answering).</p>
 <h1 id="the-model">The model</h1>
@@ -2668,7 +2672,7 @@ where <mathjax>$p_i = \frac{1}{1 + e^{-z_i}}$</mathjax>, </p>
 <pre><code class="python">plot_traces(trace_logistic_model, retain=1000)
 </code></pre>
 
-<p><img alt="png" src="../GLM-logistic_files/GLM-logistic_18_0.png" /></p>
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_18_0.png" /></p>
 <h1 id="some-results">Some results</h1>
 <p>One of the major benefits that makes Bayesian data analysis worth the extra computational effort in many circumstances is that we can be explicit about our uncertainty. Maximum likelihood returns a number, but how certain can we be that we found the right number? Instead, Bayesian inference returns a distribution over parameter values.</p>
 <p>I'll use seaborn to look at the distribution of some of these factors. </p>
@@ -2682,7 +2686,7 @@ plt.show()
 
 <pre><code>&lt;matplotlib.figure.Figure at 0x17f6efd50&gt;
 </code></pre>
-<p><img alt="png" src="../GLM-logistic_files/GLM-logistic_20_1.png" /></p>
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_20_1.png" /></p>
 <p>So how do age and education affect the probability of making more than <mathjax>$$50K?$</mathjax> To answer this question, we can show how the probability of making more than $50K changes with age for a few different education levels. Here, we assume that the number of hours worked per week is fixed at 50. PyMC3 gives us a convenient way to plot the posterior predictive distribution. We need to give the function a linear model and a set of points to evaluate. We will pass in three different linear models: one with educ == 12 (finished high school), one with educ == 16 (finished undergrad) and one with educ == 19 (three years of grad school).</p>
 <pre><code class="python"># Linear model with hours == 50 and educ == 12
 lm = lambda x, samples: 1 / (1 + np.exp(-(samples['Intercept'] + 
@@ -2721,14 +2725,14 @@ plt.xlabel(&quot;Age&quot;)
 plt.show()
 </code></pre>
 
-<p><img alt="png" src="../GLM-logistic_files/GLM-logistic_24_0.png" /></p>
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_24_0.png" /></p>
 <pre><code class="python">b = trace['educ']
 plt.hist(np.exp(b), bins=20, normed=True)
 plt.xlabel(&quot;Odds Ratio&quot;)
 plt.show()
 </code></pre>
 
-<p><img alt="png" src="../GLM-logistic_files/GLM-logistic_25_0.png" /></p>
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_25_0.png" /></p>
 <p>Finally, we can find a credible interval (remember kids - credible intervals are Bayesian and confidence intervals are frequentist) for this quantity. This may be the best part about Bayesian statistics: we get to interpret credibility intervals the way we've always wanted to interpret them. We are 95% confident that the odds ratio lies within our interval!</p>
 <pre><code class="python">lb, ub = np.percentile(b, 2.5), np.percentile(b, 97.5)
 
@@ -2764,7 +2768,7 @@ dfdic = pd.melt(dfdic.reset_index(), id_vars=['model'], var_name='poly', value_n
 g = seaborn.factorplot(x='model', y='dic', col='poly', hue='poly', data=dfdic, kind='bar', size=6)
 </code></pre>
 
-<p><img alt="png" src="../GLM-logistic_files/GLM-logistic_30_0.png" /></p>
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_30_0.png" /></p>
 <p>There isn't a lot of difference between these models in terms of DIC. So our choice is fine in the model above, and there isn't much to be gained for going up to age^3 for example.
 Next we look at <a href="http://watanabe-www.math.dis.titech.ac.jp/users/swatanab/dicwaic.html">WAIC</a>. Which is another model selection technique.</p>
 <pre><code class="python">dfdic = pd.DataFrame(index=['k1','k2','k3','k4'], columns=['lin'])
@@ -2779,7 +2783,7 @@ dfdic = pd.melt(dfdic.reset_index(), id_vars=['model'], var_name='poly', value_n
 g = seaborn.factorplot(x='model', y='waic', col='poly', hue='poly', data=dfdic, kind='bar', size=6)
 </code></pre>
 
-<p><img alt="png" src="../GLM-logistic_files/GLM-logistic_32_0.png" /></p>
+<p><img alt="png" src="../Bayesian_LogReg_files/Bayesian_LogReg_32_0.png" /></p>
 <p>The WAIC confirms our decision to use age^2. </p>
 <pre><code class="python">
 </code></pre></div>

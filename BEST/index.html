@@ -15,6 +15,10 @@
         <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
         <link rel="stylesheet" href="../css/highlight.css">
+        <link href="../source/_build/html/_static/basic.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/pygments.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/css/badge_only.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/css/theme.css" rel="stylesheet">
 
         <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
         <!--[if lt IE 9]>
@@ -116,12 +120,6 @@
                         
                             
 <li >
-    <a href="../GLM-logistic/">Logistic Regression for predicting salary</a>
-</li>
-
-                        
-                            
-<li >
     <a href="../GLM-model-selection/">Model Selection for Regression using DIC and WAIC</a>
 </li>
 
@@ -165,6 +163,12 @@
                             
 <li >
     <a href="../GP-smoothing/">Gaussian Process (GP) smoothing</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../Bayesian_LogReg/">Bayesian Logistic Regression for predicting salary</a>
 </li>
 
                         
@@ -257,8 +261,8 @@ with pm.Model() as model:
     lam1 = group1_std**-2
     lam2 = group2_std**-2
 
-    group1 = pm.T('drug', nu=nu, mu=group1_mean, lam=lam1, observed=y1)
-    group2 = pm.T('placebo', nu=nu, mu=group2_mean, lam=lam2, observed=y2)
+    group1 = pm.StudentT('drug', nu=nu, mu=group1_mean, lam=lam1, observed=y1)
+    group2 = pm.StudentT('placebo', nu=nu, mu=group2_mean, lam=lam2, observed=y2)
 
     diff_of_means = pm.Deterministic('difference of means', group1_mean - group2_mean)
     diff_of_stds = pm.Deterministic('difference of stds', group1_std - group2_std)

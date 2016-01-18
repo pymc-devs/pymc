@@ -15,6 +15,10 @@
         <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
         <link rel="stylesheet" href="../css/highlight.css">
+        <link href="../source/_build/html/_static/basic.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/pygments.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/css/badge_only.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/css/theme.css" rel="stylesheet">
 
         <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
         <!--[if lt IE 9]>
@@ -116,12 +120,6 @@
                         
                             
 <li >
-    <a href="../GLM-logistic/">Logistic Regression for predicting salary</a>
-</li>
-
-                        
-                            
-<li >
     <a href="../GLM-model-selection/">Model Selection for Regression using DIC and WAIC</a>
 </li>
 
@@ -165,6 +163,12 @@
                             
 <li >
     <a href="../GP-smoothing/">Gaussian Process (GP) smoothing</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../Bayesian_LogReg/">Bayesian Logistic Regression for predicting salary</a>
 </li>
 
                         
@@ -620,7 +624,7 @@ plt.ylabel('daily returns in %');
 <p>In PyMC3, variables with purely positive priors like <code>Exponential</code> are transformed with a log transform. This makes sampling more robust. Behind the scenes, a variable in the unconstrained space (named "variableName_log") is added to the model for sampling. In this model this happens behind the scenes for both the degrees of freedom, <code>nu</code>, and the scale parameter for the volatility process, <code>sigma</code>, since they both have exponential priors. Variables with priors that constrain them on two sides, like <code>Beta</code> or <code>Uniform</code>, are also transformed to be unconstrained but with a log odds transform. </p>
 <p>Although, unlike model specification in PyMC2, we do not typically provide starting points for variables at the model specification stage, we can also provide an initial value for any distribution (called a "test value") using the <code>testval</code> argument. This overrides the default test value for the distribution (usually the mean, median or mode of the distribution), and is most often useful if some values are illegal and we want to ensure we select a legal one. The test values for the distributions are also used as a starting point for sampling and optimization by default, though this is easily overriden. </p>
 <p>The vector of latent volatilities <code>s</code> is given a prior distribution by <code>GaussianRandomWalk</code>. As its name suggests GaussianRandomWalk is a vector valued distribution where the values of the vector form a random normal walk of length n, as specified by the <code>shape</code> argument. The scale of the innovations of the random walk, <code>sigma</code>, is specified in terms of the precision of the normally distributed innovations and can be a scalar or vector. </p>
-<pre><code class="python">from pymc3 import Exponential, T, exp, Deterministic
+<pre><code class="python">from pymc3 import Exponential, StudentT, exp, Deterministic
 from pymc3.distributions.timeseries import GaussianRandomWalk
 
 with Model() as sp500_model:
@@ -633,7 +637,7 @@ with Model() as sp500_model:
 
     volatility_process = Deterministic('volatility_process', exp(-2*s))
 
-    r = T('r', nu, lam=1/volatility_process, observed=returns['S&amp;P500'])
+    r = StudentT('r', nu, lam=1/volatility_process, observed=returns['S&amp;P500'])
 </code></pre>
 
 <p>Notice that we transform the log volatility process <code>s</code> into the volatility process by <code>exp(-2*s)</code>. Here, <code>exp</code> is a Theano function, rather than the corresponding function in NumPy; Theano provides a large subset of the mathematical functions that NumPy does.</p>
