@@ -158,9 +158,15 @@ class Factor(object):
         return t.sum(self.logp_elemwiset)
 
 class Model(Context, Factor):
-    """Encapsulates the variables and likelihood factors of a model."""
+    """Encapsulates the variables and likelihood factors of a model.
+    
+    Parameters
+    ----------
+    verbose : int
+        Setting for model feedback verbosity (Defaults to 1 -- normal verbosity).
+    """
 
-    def __init__(self):
+    def __init__(self, verbose=1):
         self.named_vars = {}
         self.free_RVs = []
         self.observed_RVs = []
@@ -168,6 +174,7 @@ class Model(Context, Factor):
         self.potentials = []
         self.missing_values = []
         self.model = self
+        self.verbose = verbose
 
     @property
     @memoize
@@ -227,7 +234,8 @@ class Model(Context, Factor):
                 self.free_RVs.append(var)
             else:
                 var = TransformedRV(name=name, distribution=dist, model=self, transform=dist.transform)
-                print('Applied {transform}-transform to {name}'
+                if self.verbose:
+                    print('Applied {transform}-transform to {name}'
                       ' and added transformed {orig_name} to model.'.format(
                           transform=dist.transform.name,
                           name=name,
