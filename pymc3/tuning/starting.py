@@ -15,7 +15,7 @@ __all__ = ['find_MAP', 'scipyminimize']
 
 
 def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
-            model=None, *args, **kwargs):
+             verbose=False, model=None, *args, **kwargs):
     """
     Sets state to the local maximum a posteriori point given a model.
     Current default of fmin_Hessian does not deal well with optimizing close
@@ -32,6 +32,9 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
         `scipy.optimize.fmin_powell` which will perform better).
     return_raw : Bool
         Whether to return extra value returned by fmin (Defaults to `False`)
+    verbose : Bool
+        Display helpful warnings, and verbose output of `fmin` (Defaults to
+        `False`)
     model : Model (optional if in `with` context)
     *args, **kwargs
         Extra args passed to fmin
@@ -46,7 +49,7 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
 
     disc_vars = list(typefilter(vars, discrete_types))
 
-    if disc_vars and model.verbose:
+    if disc_vars and disp:
         print("Warning: vars contains discrete variables. MAP " +
               "estimates may not be accurate for the default " +
               "parameters. Defaulting to non-gradient minimization " +
@@ -75,9 +78,9 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     # Check to see if minimization function actually uses the gradient
     if 'fprime' in getargspec(fmin).args:
         r = fmin(logp_o, bij.map(
-            start), fprime=grad_logp_o, disp=bool(model.verbose), *args, **kwargs)
+            start), fprime=grad_logp_o, disp=verbose, *args, **kwargs)
     else:
-        r = fmin(logp_o, bij.map(start), disp=bool(model.verbose), *args, **kwargs)
+        r = fmin(logp_o, bij.map(start), disp=verbose, *args, **kwargs)
 
     if isinstance(r, tuple):
         mx0 = r[0]
