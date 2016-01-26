@@ -411,8 +411,8 @@ def df_summary(trace, vars=None, stat_funcs=None, extend=False,
 
 
 def _hpd_df(x, alpha):
-    cnames = ['hpd_{0:g}'.format(100 * alpha),
-              'hpd_{0:g}'.format(100 * (1 - alpha))]
+    cnames = ['hpd_{0:g}'.format(100 * alpha/2),
+              'hpd_{0:g}'.format(100 * (1 - alpha/2))]
     return pd.DataFrame(hpd(x, alpha), columns=cnames)
 
 
