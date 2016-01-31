@@ -369,7 +369,7 @@ def df_summary(trace, vars=None, stat_funcs=None, extend=False,
     >>> trace.mu.shape
     (1000, 2)
     >>> pm.df_summary(trace, ['mu'])
-               mean        sd  mc_error     hpd_5    hpd_95
+               mean        sd  mc_error   hpd_2.5  hpd_97.5
     mu__0  0.106897  0.066473  0.001818 -0.020612  0.231626
     mu__1 -0.046597  0.067513  0.002048 -0.174753  0.081924
 
@@ -383,7 +383,7 @@ def df_summary(trace, vars=None, stat_funcs=None, extend=False,
     ...     return pd.DataFrame(pm.quantiles(x, [5, 50, 95]))
     ...
     >>> pm.df_summary(trace, ['mu'], stat_funcs=[trace_sd, trace_quantiles])
-                 sd         5        50        95
+                 sd       2.5        50      97.5
     mu__0  0.066473  0.000312  0.105039  0.214242
     mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
@@ -521,7 +521,7 @@ class _StatSummary(_Summary):
     def __init__(self, roundto, batches, alpha):
         super(_StatSummary, self).__init__(roundto)
         spaces = 17
-        hpd_name = '{0:g}% HPD interval'.format(100 * (1 - alpha))
+        hpd_name = '{0:g}% HPD interval'.format(100 * (1 - alpha/2))
         value_line = '{mean:<{pad}}{sd:<{pad}}{mce:<{pad}}{hpd:<{pad}}'
         header = value_line.format(mean='Mean', sd='SD', mce='MC Error',
                                   hpd=hpd_name, pad=spaces).strip()
