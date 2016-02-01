@@ -25,7 +25,7 @@ class NUTS(ArrayStepShared):
     
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False, state=None,
                  Emax=1000,
-                 target_accept=0.8,
+                 target_accept=0.65,
                  gamma=0.05,
                  k=0.75,
                  t0=10,
