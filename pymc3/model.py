@@ -236,7 +236,7 @@ class Model(Context, Factor):
                 self.free_RVs.append(var)
             else:
                 var = TransformedRV(name=name, distribution=dist, model=self, transform=dist.transform)
-                if model.verbose:
+                if self.verbose:
                     print('Applied {transform}-transform to {name}'
                           ' and added transformed {orig_name} to model.'.format(
                               transform=dist.transform.name,
