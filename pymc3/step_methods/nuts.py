@@ -25,7 +25,7 @@ class NUTS(ArrayStepShared):
     
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False, state=None,
                  Emax=1000,
-                 target_accept=0.65,
+                 target_accept=0.8,
                  gamma=0.05,
                  k=0.75,
                  t0=10,
@@ -45,7 +45,7 @@ class NUTS(ArrayStepShared):
                 state to start from
             Emax : float, default 1000
                 maximum energy
-            target_accept : float (0,1) default .65
+            target_accept : float (0,1) default .8
                 target for avg accept probability between final branch and initial position
             gamma : float, default .05
             k : float (.5,1) default .75
