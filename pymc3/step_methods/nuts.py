@@ -45,7 +45,7 @@ class NUTS(ArrayStepShared):
                 state to start from
             Emax : float, default 1000
                 maximum energy
-            target_accept : float (0,1) default .65
+            target_accept : float (0,1) default .8
                 target for avg accept probability between final branch and initial position
             gamma : float, default .05
             k : float (.5,1) default .75
