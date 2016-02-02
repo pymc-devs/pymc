@@ -30,7 +30,7 @@ with model:
 # to specify if we would like to use the discrete variables.
 
 with model:
-    print(mc.find_MAP(vars=model.vars, disp=True))
+    print(mc.find_MAP(vars=model.vars))
 
 # We set the `disp` variable to display a warning that we are using a
 # non-gradient minimization technique, as discrete variables do not give much

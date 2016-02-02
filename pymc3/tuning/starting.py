@@ -15,7 +15,7 @@ __all__ = ['find_MAP', 'scipyminimize']
 
 
 def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
-             disp=False, model=None, *args, **kwargs):
+             model=None, *args, **kwargs):
     """
     Sets state to the local maximum a posteriori point given a model.
     Current default of fmin_Hessian does not deal well with optimizing close
@@ -32,9 +32,6 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
         `scipy.optimize.fmin_powell` which will perform better).
     return_raw : Bool
         Whether to return extra value returned by fmin (Defaults to `False`)
-    disp : Bool
-        Display helpful warnings, and verbose output of `fmin` (Defaults to
-        `False`)
     model : Model (optional if in `with` context)
     *args, **kwargs
         Extra args passed to fmin
@@ -48,7 +45,9 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     vars = inputvars(vars)
 
     disc_vars = list(typefilter(vars, discrete_types))
-
+    
+    disp = model.verbose > 1
+    
     if disc_vars and disp:
         print("Warning: vars contains discrete variables. MAP " +
               "estimates may not be accurate for the default " +
