@@ -6,7 +6,7 @@ from numpy.linalg import LinAlgError
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
 
-def traceplot(trace, vars=None, figsize=None,
+def traceplot(trace, varnames=None, figsize=None,
               lines=None, combined=False, grid=True,
               alpha=0.35, ax=None):
     """Plot samples histograms and values
@@ -15,7 +15,7 @@ def traceplot(trace, vars=None, figsize=None,
     ----------
 
     trace : result of MCMC run
-    vars : list of variable names
+    varnames : list of variable names
         Variables to be plotted, if None all variable are plotted
     figsize : figure size tuple
         If None, size is (12, num of variables * 2) inch
@@ -38,10 +38,10 @@ def traceplot(trace, vars=None, figsize=None,
 
     """
     import matplotlib.pyplot as plt
-    if vars is None:
-        vars = trace.varnames
+    if varnames is None:
+        varnames = trace.varnames
 
-    n = len(vars)
+    n = len(varnames)
 
     if figsize is None:
         figsize = (12, n*2)
@@ -52,7 +52,7 @@ def traceplot(trace, vars=None, figsize=None,
         print('traceplot requires n*2 subplots')
         return None
 
-    for i, v in enumerate(vars):
+    for i, v in enumerate(varnames):
         for d in trace.get_values(v, combine=combined, squeeze=False):
             d = np.squeeze(d)
             d = make_2d(d)
@@ -259,7 +259,7 @@ def var_str(name, shape):
     return names
 
 
-def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
+def forestplot(trace_obj, varnames=None, alpha=0.05, quartiles=True, rhat=True,
                main=None, xtitle=None, xrange=None, ylabels=None,
                chain_spacing=0.05, vline=0, gs=None):
     """ Forest plot (model summary plot)
@@ -271,7 +271,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
         trace_obj: NpTrace or MultiTrace object
             Trace(s) from an MCMC sample.
 
-        vars: list
+        varnames: list
             List of variables to plot (defaults to None, which results in all
             variables plotted).
 
@@ -339,14 +339,14 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
         from .diagnostics import gelman_rubin
 
         R = gelman_rubin(trace_obj)
-        if vars is not None:
-            R = {v: R[v] for v in vars}
+        if varnames is not None:
+            R = {v: R[v] for v in varnames}
     else:
         # Can't calculate Gelman-Rubin with a single trace
         rhat = False
 
-    if vars is None:
-        vars = trace_obj.varnames
+    if varnames is None:
+        varnames = trace_obj.varnames
 
     # Empty list for y-axis labels
     labels = []
@@ -370,7 +370,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
     for j, chain in enumerate(trace_obj.chains):
         # Counter for current variable
         var = 1
-        for varname in vars:
+        for varname in varnames:
             var_quantiles = trace_quantiles[chain][varname]
 
             quants = [var_quantiles[v] for v in qlist]
@@ -533,7 +533,7 @@ def forestplot(trace_obj, vars=None, alpha=0.05, quartiles=True, rhat=True,
         plt.yticks([-(l + 1) for l in range(len(labels))], "")
 
         i = 1
-        for varname in vars:
+        for varname in varnames:
 
             chain = trace_obj.chains[0]
             value = trace_obj.get_values(varname, chains=[chain])[0]

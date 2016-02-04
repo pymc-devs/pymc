@@ -313,14 +313,14 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
         print("Too few elements for quantile calculation")
 
 
-def df_summary(trace, vars=None, stat_funcs=None, extend=False,
+def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
                alpha=0.05, batches=100):
     """Create a data frame with summary statistics.
 
     Parameters
     ----------
     trace : MultiTrace instance
-    vars : list
+    varnames : list
         Names of variables to include in summary
     stat_funcs : None or list
         A list of functions used to calculate statistics. By default,
@@ -387,8 +387,8 @@ def df_summary(trace, vars=None, stat_funcs=None, extend=False,
     mu__0  0.066473  0.000312  0.105039  0.214242
     mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
-    if vars is None:
-        vars = trace.varnames
+    if varnames is None:
+        varnames = trace.varnames
 
     funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
              lambda x: pd.Series(np.std(x, 0), name='sd'),
@@ -401,7 +401,7 @@ def df_summary(trace, vars=None, stat_funcs=None, extend=False,
         stat_funcs = funcs
 
     var_dfs = []
-    for var in vars:
+    for var in varnames:
         vals = trace.get_values(var, combine=True)
         flat_vals = vals.reshape(vals.shape[0], -1)
         var_df = pd.concat([f(flat_vals) for f in stat_funcs], axis=1)
@@ -416,7 +416,7 @@ def _hpd_df(x, alpha):
     return pd.DataFrame(hpd(x, alpha), columns=cnames)
 
 
-def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3,
+def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
             to_file=None):
     """
     Generate a pretty-printed summary of the node.
@@ -425,7 +425,7 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3,
     trace : Trace object
       Trace containing MCMC sample
 
-    vars : list of strings
+    varnames : list of strings
       List of variables to summarize. Defaults to None, which results
       in all variables summarized.
 
@@ -448,8 +448,8 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3,
       File to write results to. If not given, print to stdout.
 
     """
-    if vars is None:
-        vars = trace.varnames
+    if varnames is None:
+        varnames = trace.varnames
 
     stat_summ = _StatSummary(roundto, batches, alpha)
     pq_summ = _PosteriorQuantileSummary(roundto, alpha)
@@ -459,7 +459,7 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3,
     else:
         fh = open(to_file, mode='w')
 
-    for var in vars:
+    for var in varnames:
         # Extract sampled values
         sample = trace.get_values(var, burn=start, combine=True)
 
