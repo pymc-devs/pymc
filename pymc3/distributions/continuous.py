@@ -205,7 +205,7 @@ class HalfNormal(PositiveContinuous):
            \exp\left\{ {\frac{-x^2 \tau}{2}}\right\}
 
     ========  ==========================================
-    Support   :math:`x \in [0, \infty)`
+    Support   :math:`x non-negative`
     Mean      :math:`0`
     Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
     ========  ==========================================

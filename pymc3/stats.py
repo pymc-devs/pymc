@@ -147,13 +147,19 @@ def loo(trace, model=None):
     # Extract largest 20% of importance ratios and fit generalized Pareto to each 
     # (returns tuple with shape, location, scale)
     q80 = int(len(log_py)*0.8)
-    pareto_fit = map(lambda x: sp.pareto.fit(x, floc=0), r_sorted[q80:].T)
+    pareto_fit = np.apply_along_axis(lambda x: sp.pareto.fit(x, floc=0), 0, r_sorted[q80:])
+    
+    if np.any(pareto_fit[0] > 0.5):
+        warnings.warn("""Estimated shape parameter of Pareto distribution
+        is for one or more samples is greater than 0.5. This may indicate
+        that the variance of the Pareto smoothed importance sampling estimate 
+        is very large.""")
     
     # Calculate expected values of the order statistics of the fitted Pareto
     S = len(r_sorted)
     M = S - q80
     z = (np.arange(M)+0.5)/M
-    expvals = map(lambda x: sp.pareto.ppf(z, x[0], scale=x[2]), pareto_fit)
+    expvals = map(lambda x: sp.pareto.ppf(z, x[0], scale=x[2]), pareto_fit.T)
     
     # Replace importance ratios with order statistics of fitted Pareto
     r_sorted[q80:] = np.vstack(expvals).T
