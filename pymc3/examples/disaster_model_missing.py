@@ -60,7 +60,7 @@ def run(n=1000):
 
         tr = sample(n, tune=500, start=start, step=step)
         
-        summary(tr, vars=['disasters_missing'])
+        summary(tr, varnames=['disasters_missing'])
 
 if __name__ == '__main__':
     run()

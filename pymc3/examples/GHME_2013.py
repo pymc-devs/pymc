@@ -108,7 +108,7 @@ def run(n=3000):
 
     # <codecell>
 
-    traceplot(trace[100:], vars = [coeff_sd,sd ]);
+    traceplot(trace[100:], varnames = [coeff_sd,sd ]);
 
     # <codecell>
 
