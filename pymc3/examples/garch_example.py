@@ -1,8 +1,15 @@
-from pymc3 import Normal, sample, Model, Bound
+from pymc3 import Normal, sample, Model, Bound, traceplot, plots, NUTS
+from pymc3.distributions.timeseries import GARCH
 import theano.tensor as tt
 import numpy as np
-import math
+
 """
+GARCH(1,1) example
+It is interesting to note just how much more compact this is that the original STAN example
+
+The original implementation is in the STAN documentation by Gelman et al and is reproduced below
+
+
 Example from STAN
 // GARCH(1,1)
 
@@ -28,6 +35,7 @@ transformed parameters {
 model {
   r ~ normal(mu,sigma);
 }
+Ported to PyMC3 by Peadar Coyle (c) 2016.
 """
 T = 8
 r = np.array([28,  8, -3,  7, -1,  1, 18, 12])
@@ -41,15 +49,22 @@ with Model() as garch:
     beta1 = BoundedNormal('beta1', 0, sd=1e6)
     mu = Normal('mu', 0, sd=1e6)
 
-    theta = tt.sqrt(alpha0 + alpha1*tt.pow(r - mu, 2) + beta1 * tt.pow(sigma1, 2))
+    sd = tt.sqrt(alpha0 + alpha1*tt.pow(r - mu, 2) + beta1 * tt.pow(sigma1, 2))
 
-    obs = Normal('obs', mu, sd=theta, observed=r)
+    obs = GARCH('garchy', observed=r)
+
+    step = NUTS()
 
 def run(n=1000):
     if n == "short":
         n = 50
     with garch:
-        tr = sample(n)
+        trace = sample(n, step)
+
+    burn = n/10
+
+    traceplot(trace[burn:])
+    plots.summary(trace[burn:])
 
 if __name__ == '__main__':
     run()
