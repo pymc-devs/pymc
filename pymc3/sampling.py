@@ -1,7 +1,7 @@
 from . import backends
 from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
-import multiprocessing as mp
+from joblib import Parallel, delayed
 from time import time
 from .core import *
 from .step_methods import *
@@ -124,37 +124,26 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     step = assign_step_methods(model, step)
 
     if njobs is None:
+        import multiprocessing
         njobs = max(mp.cpu_count() - 2, 1)
-    if njobs > 1:
-        try:
-            if not len(random_seed) == njobs:
-                random_seeds = [random_seed] * njobs
-            else:
-                random_seeds = random_seed
-        except TypeError:  # None, int
-            random_seeds = [random_seed] * njobs
 
-        chains = list(range(chain, chain + njobs))
-
-        pbars = [progressbar] + [False] * (njobs - 1)
-
-        argset = zip([draws] * njobs,
-                     [step] * njobs,
-                     [start] * njobs,
-                     [trace] * njobs,
-                     chains,
-                     [tune] * njobs,
-                     pbars,
-                     [model] * njobs,
-                     random_seeds)
-        argset = list(argset)
+    sample_args = {'draws':draws, 
+                    'step':step, 
+                    'start':start, 
+                    'trace':trace, 
+                    'chain':chain,
+                    'tune':tune, 
+                    'progressbar':progressbar, 
+                    'model':model, 
+                    'random_seed':random_seed}
+               
+    if njobs>1:
         sample_func = _mp_sample
-        sample_args = [njobs, argset]
+        sample_args['njobs'] = njobs
     else:
         sample_func = _sample
-        sample_args = [draws, step, start, trace, chain,
-                       tune, progressbar, model, random_seed]
-    return sample_func(*sample_args)
+        
+    return sample_func(**sample_args)
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
@@ -273,10 +262,14 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
         raise ValueError('Argument `trace` is invalid.')
 
 
-def _mp_sample(njobs, args):
-    p = mp.Pool(njobs)
-    traces = p.map(argsample, args)
-    p.close()
+def _mp_sample(**kwargs):
+    njobs = kwargs.pop('njobs')
+    chain = kwargs.pop('chain')
+    chains = list(range(chain, chain + njobs))
+    pbars = [kwargs.pop('progressbar')] + [False] * (njobs - 1)
+    traces = Parallel(n_jobs=njobs)(delayed(_sample)(chain=chains[i],
+                                                    progressbar=pbars[i],
+                                                    **kwargs) for i in range(njobs))
     return merge_traces(traces)
 
 
@@ -290,12 +283,6 @@ def stop_tuning(step):
         step.methods = [stop_tuning(s) for s in step.methods]
 
     return step
-
-
-def argsample(args):
-    """ defined at top level so it can be pickled"""
-    return _sample(*args)
-
 
 def _soft_update(a, b):
     """As opposed to dict.update, don't overwrite keys if present.
