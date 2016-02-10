@@ -6,7 +6,7 @@ from numpy.linalg import LinAlgError
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot']
 
 
-def traceplot(trace, vars=None, figsize=None,
+def traceplot(trace, varsnames=None, figsize=None,
               lines=None, combined=False, alpha=0.35, grid=False, 
               priors=None, prior_alpha=1, prior_style='--',
               ax=None):
@@ -16,7 +16,7 @@ def traceplot(trace, vars=None, figsize=None,
     ----------
 
     trace : result of MCMC run
-    vars : list of variable names
+    varnames : list of variable names
         Variables to be plotted, if None all variable are plotted
     figsize : figure size tuple
         If None, size is (12, num of variables * 2) inch
