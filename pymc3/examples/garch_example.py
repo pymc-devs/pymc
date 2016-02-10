@@ -1,11 +1,17 @@
-from pymc3 import Normal, sample, Model, Bound
+from pymc3 import Normal, sample, Model, Bound, traceplot, plots, NUTS
+from pymc3.distributions.timeseries import GARCH
 import theano.tensor as T
 import numpy as np
 
 """
-Example from STAN - slightly altered
-// GARCH(1,1)
 
+Example from STAN - slightly altered
+
+GARCH(1,1) example
+It is interesting to note just how much more compact this is that the original STAN example
+
+The original implementation is in the STAN documentation by Gelman et al and is reproduced below
+A good reference studying GARCH models in depth is  http://www.stat-d.si/mz/mz2.1/posedel.pdf
 data {
   int<lower=0> T;
   real r[T];
@@ -28,6 +34,7 @@ transformed parameters {
 model {
   r ~ normal(mu,sigma);
 }
+Ported to PyMC3 by Peadar Coyle (c) 2016.
 """
 J = 8
 r = np.array([28, 8, -3, 7, -1, 1, 18, 12])
@@ -42,14 +49,21 @@ with Model() as garch:
 
     theta = T.sqrt(alpha0 + alpha1 * T.pow(r - mu, 2) + beta1 * T.pow(sigma1, 2))
 
-    obs = Normal('obs', mu, sd=theta, observed=r)
+    obs = GARCH('garchy_garch', observed=r)
+
+    step = NUTS()
 
 
 def run(n=1000):
     if n == "short":
         n = 50
     with garch:
-        tr = sample(n)
+        trace = sample(n, step)
+
+    burn = n / 10
+
+    traceplot(trace[burn:])
+    plots.summary(trace[burn:])
 
 
 if __name__ == '__main__':
