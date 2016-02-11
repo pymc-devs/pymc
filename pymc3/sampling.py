@@ -9,6 +9,9 @@ from .progressbar import progress_bar
 from numpy.random import randint, seed
 from collections import defaultdict
 
+import sys
+sys.setrecursionlimit(10000)
+
 __all__ = ['sample', 'iter_sample', 'sample_ppc']
 
 def assign_step_methods(model, step=None,
