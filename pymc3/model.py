@@ -186,6 +186,12 @@ class Model(Context, Factor):
         return t.add(*map(t.sum, factors))
 
     @property
+    def varlogpt(self):
+        """Theano scalar of log-probability of the discrete random variables."""
+        factors = [var.logpt for var in self.disc_vars]
+        return t.add(*map(t.sum, factors))
+
+    @property
     def vars(self):
         """List of unobserved random variables used as inputs to the model (which excludes deterministics)."""
         return self.free_RVs

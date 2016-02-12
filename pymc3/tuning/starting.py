@@ -45,7 +45,7 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     vars = inputvars(vars)
 
     disc_vars = list(typefilter(vars, discrete_types))
-    
+
     disp = model.verbose > 1
     
     if disc_vars and disp:
@@ -53,6 +53,7 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
               "estimates may not be accurate for the default " +
               "parameters. Defaulting to non-gradient minimization " +
               "fmin_powell.")
+        fmin = optimize.fmin_powell
 
     if fmin is None:
         if disc_vars:
@@ -65,8 +66,10 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     start = Point(start, model=model)
     bij = DictToArrayBijection(ArrayOrdering(vars), start)
 
+    if not disc_vars:
+        dlogp = bij.mapf(model.fastdlogp(vars))
+
     logp = bij.mapf(model.fastlogp)
-    dlogp = bij.mapf(model.fastdlogp(vars))
 
     def logp_o(point):
         return nan_to_high(-logp(point))
