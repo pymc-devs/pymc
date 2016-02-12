@@ -91,12 +91,16 @@ class Metropolis(ArrayStepShared):
         self.accepted = 0
 
         # Determine type of variables
-        self.discrete = np.array([v.dtype in discrete_types for v in vars])
+        # self.discrete = np.array([v.dtype in discrete_types for v in vars])
+        self.discrete = np.hstack(np.ravel([[v.dtype in discrete_types ] * v.dsize for v in vars]))
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
 
         shared = make_shared_replacements(vars, model)
         self.delta_logp = delta_logp(model.logpt, vars, shared)
+
+        shared_non_disc = make_shared_replacements(inputvars(model.disc_vars), model)
+        self.check_disc_bnd =  check_disc_bnd(model.varlogpt, inputvars(model.disc_vars), shared_non_disc)
         super(Metropolis, self).__init__(vars, shared)
 
     def astep(self, q0):
@@ -109,15 +113,23 @@ class Metropolis(ArrayStepShared):
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
 
+
         delta = self.proposal_dist() * self.scaling
         if self.any_discrete:
-            if self.all_discrete:
-                delta = round(delta, 0).astype(int)
-                q0 = q0.astype(int)
-                q = (q0 + delta).astype(int)
-            else:
-                delta[self.discrete] = round(delta[self.discrete], 0).astype(int)
-                q = q0 + delta
+            check_bnd = 1
+            while check_bnd == 1:
+                if self.all_discrete:
+                    delta = round(delta, 0).astype(int)
+                    q0 = q0.astype(int)
+                    q = (q0 + delta).astype(int)
+                else:
+                    delta[self.discrete] = round(delta[self.discrete], 0).astype(int)
+                    q = q0 + delta
+
+                if np.isfinite(self.check_disc_bnd(q[self.discrete].astype(int))):
+                    check_bnd = 0
+                else:
+                    delta = self.proposal_dist() * self.scaling
         else:
             q = q0 + delta
 
@@ -235,3 +247,18 @@ def delta_logp(logp, vars, shared):
     f = theano.function([inarray1, inarray0], logp1 - logp0)
     f.trust_input = True
     return f
+
+def check_disc_bnd(logp, disc_vars, shared):
+    [logp0], inarray0 = join_nonshared_inputs([logp], disc_vars, shared)
+
+    f = theano.function([inarray0], logp0)
+    f.trust_input = True
+    return f
+
+
+
+
+
+
+
+
