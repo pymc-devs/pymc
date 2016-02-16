@@ -71,7 +71,7 @@ class Metropolis(ArrayStepShared):
 
     """
     default_blocked = False
-    
+
     def __init__(self, vars=None, S=None, proposal_dist=NormalProposal, scaling=1.,
                  tune=True, tune_interval=100, model=None, gibbs=None, **kwargs):
 
@@ -119,7 +119,10 @@ class Metropolis(ArrayStepShared):
         else:
             self.index = slice(None) # select all
 
-        delta = (self.proposal_dist() * self.scaling)[self.index]
+        mask = np.zeros(self.dim, dtype=np.bool8)
+        mask[self.index] = True
+
+        delta = (self.proposal_dist() * self.scaling)
 
         if self.any_discrete:
             if self.all_discrete:
@@ -132,6 +135,8 @@ class Metropolis(ArrayStepShared):
         else:
             q = q0 + delta
 
+        q = q[mask]
+
         q_new = metrop_select(self.delta_logp(q, q0), q, q0)
 
         if q_new is q:
@@ -140,7 +145,7 @@ class Metropolis(ArrayStepShared):
         self.steps_until_tune -= 1
 
         return q_new
-        
+
     @staticmethod
     def competence(var):
         if var.dtype in discrete_types:
@@ -189,16 +194,20 @@ def tune(scale, acc_rate):
 
 class BinaryMetropolis(ArrayStep):
     """Metropolis-Hastings optimized for binary variables"""
-    
-    def __init__(self, vars, scaling=1., tune=True, tune_interval=100, model=None):
+
+    def __init__(self, vars, scaling=1., tune=True, tune_interval=100, gibbs='random', model=None):
 
         model = modelcontext(model)
+
+        self.dim = sum(v.dsize for v in vars)
 
         self.scaling = scaling
         self.tune = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.accepted = 0
+        self.gibbs = gibbs
+        self.index = 0
 
         if not all([v.dtype in discrete_types for v in vars]):
             raise ValueError(
@@ -208,23 +217,33 @@ class BinaryMetropolis(ArrayStep):
 
     def astep(self, q0, logp):
 
+        if self.gibbs == 'sequential':
+            self.index = (self.index + 1) % self.dim
+        elif self.gibbs == 'random':
+            self.index = np.random.randint(0, self.dim)
+        else:
+            self.index = slice(None) # select all
+
+        mask = np.zeros(self.dim, dtype=np.bool8)
+        mask[self.index] = True
+
         # Convert adaptive_scale_factor to a jump probability
         p_jump = 1. - .5 ** self.scaling
 
         rand_array = random(q0.shape)
         q = copy(q0)
         # Locations where switches occur, according to p_jump
-        switch_locs = where(rand_array < p_jump)
+        switch_locs = (rand_array < p_jump) & mask
         q[switch_locs] = True - q[switch_locs]
 
         q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
         return q_new
-        
+
     @staticmethod
     def competence(var):
         '''
-        BinaryMetropolis is only suitable for binary (bool) 
+        BinaryMetropolis is only suitable for binary (bool)
         and Categorical variables with k=1.
         '''
         if isinstance(var.distribution, Bernoulli) or (var.dtype in bool_types):
