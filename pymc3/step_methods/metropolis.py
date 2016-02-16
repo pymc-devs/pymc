@@ -82,7 +82,7 @@ class Metropolis(ArrayStepShared):
         vars = inputvars(vars)
 
         if S is None:
-            S = np.ones(self.dim)
+            S = np.ones(sum(v.dsize for v in vars))
         self.proposal_dist = proposal_dist(S)
         self.scaling = np.atleast_1d(scaling)
         self.tune = tune
@@ -109,7 +109,7 @@ class Metropolis(ArrayStepShared):
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
 
-        delta = (self.proposal_dist() * self.scaling)
+        delta = self.proposal_dist() * self.scaling
 
         if self.any_discrete:
             if self.all_discrete:
@@ -180,18 +180,15 @@ def tune(scale, acc_rate):
 class BinaryMetropolis(ArrayStep):
     """Metropolis-Hastings optimized for binary variables"""
 
-    def __init__(self, vars, scaling=1., tune=True, tune_interval=100, gibbs='random', model=None):
+    def __init__(self, vars, scaling=1., tune=True, tune_interval=100, model=None):
 
         model = modelcontext(model)
-
-        self.dim = sum(v.dsize for v in vars)
 
         self.scaling = scaling
         self.tune = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.accepted = 0
-        self.gibbs = gibbs
 
         if not all([v.dtype in discrete_types for v in vars]):
             raise ValueError(
