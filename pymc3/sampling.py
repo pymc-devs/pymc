@@ -12,21 +12,21 @@ from collections import defaultdict
 __all__ = ['sample', 'iter_sample', 'sample_ppc']
 
 def assign_step_methods(model, step=None,
-        methods=(NUTS, HamiltonianMC, Metropolis, BinaryMetropolis, 
+        methods=(NUTS, HamiltonianMC, Metropolis, BinaryMetropolis, BinaryGibbsMetropolis,
         Slice, ElemwiseCategoricalStep)):
     '''
-    Assign model variables to appropriate step methods. Passing a specified 
+    Assign model variables to appropriate step methods. Passing a specified
     model will auto-assign its constituent stochastic variables to step methods
     based on the characteristics of the variables. This function is intended to
     be called automatically from `sample()`, but may be called manually. Each
     step method passed should have a `competence()` method that returns an
     ordinal competence value corresponding to the variable passed to it. This
-    value quantifies the appropriateness of the step method for sampling the 
-    variable. 
-    
+    value quantifies the appropriateness of the step method for sampling the
+    variable.
+
     Parameters
     ----------
-    
+
     model : Model object
         A fully-specified model object
     step : step function or vector of step functions
@@ -35,12 +35,12 @@ def assign_step_methods(model, step=None,
     methods : vector of step method classes
         The set of step methods from which the function may choose. Defaults
         to the main step methods provided by PyMC3.
-        
+
     Returns
     -------
     List of step methods associated with the model's variables.
     '''
-        
+
     steps = []
     assigned_vars = set()
     if step is not None:
@@ -51,26 +51,26 @@ def assign_step_methods(model, step=None,
             except AttributeError:
                 for m in s.methods:
                     assigned_vars = assigned_vars | set(m.vars)
-    
+
     # Use competence classmethods to select step methods for remaining variables
     selected_steps = defaultdict(list)
     for var in model.free_RVs:
         if not var in assigned_vars:
-               
+
             competences = {s:s._competence(var) for s in methods}
 
             selected = max(competences.keys(), key=(lambda k: competences[k]))
-            
+
             if model.verbose:
                 print('Assigned {0} to {1}'.format(selected.__name__, var))
             selected_steps[selected].append(var)
-    
+
     # Instantiate all selected step methods
     steps += [s(vars=selected_steps[s]) for s in selected_steps if selected_steps[s]]
-    
+
     if len(steps)==1:
-        steps = steps[0]    
-                
+        steps = steps[0]
+
     return steps
 
 def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None,
@@ -86,8 +86,8 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     draws : int
         The number of samples to draw
     step : function or iterable of functions
-        A step function or collection of functions. If no step methods are 
-        specified, or are partially specified, they will be assigned 
+        A step function or collection of functions. If no step methods are
+        specified, or are partially specified, they will be assigned
         automatically (defaults to None).
     start : dict
         Starting point in parameter space (or partial point)
@@ -120,7 +120,7 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     MultiTrace object with access to sampling values
     """
     model = modelcontext(model)
-    
+
     step = assign_step_methods(model, step)
 
     if njobs is None:
@@ -184,7 +184,7 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
     draws : int
         The number of samples to draw
-    step : function 
+    step : function
         Step function
     start : dict
         Starting point in parameter space (or partial point)

@@ -13,7 +13,7 @@ import theano
 from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor
 
 
-__all__ = ['Metropolis', 'BinaryMetropolis', 'NormalProposal', 'CauchyProposal', 'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal']
+__all__ = ['Metropolis', 'BinaryMetropolis', 'BinaryGibbsMetropolis', 'NormalProposal', 'CauchyProposal', 'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal']
 
 # Available proposal distributions for Metropolis
 
@@ -207,7 +207,6 @@ class BinaryMetropolis(ArrayStep):
         self.steps_until_tune = tune_interval
         self.accepted = 0
         self.gibbs = gibbs
-        self.index = 0
 
         if not all([v.dtype in discrete_types for v in vars]):
             raise ValueError(
@@ -217,26 +216,26 @@ class BinaryMetropolis(ArrayStep):
 
     def astep(self, q0, logp):
 
-        if self.gibbs == 'sequential':
-            self.index = (self.index + 1) % self.dim
-        elif self.gibbs == 'random':
-            self.index = np.random.randint(0, self.dim)
+        if (self.gibbs == 'sequential') or (self.gibbs == 'random'):
+            order = list(range(self.dim))
+            if self.gibbs == 'random':
+                np.random.shuffle(order)
+
+            q = copy(q0)
+            for idx in order:
+                q[idx] = True - q[idx]
+                q = metrop_select(logp(q) - logp(q0), q, q0)
+            q_new = q
         else:
-            self.index = slice(None) # select all
+            # Convert adaptive_scale_factor to a jump probability
+            p_jump = 1. - .5 ** self.scaling
 
-        mask = np.zeros(self.dim, dtype=np.bool8)
-        mask[self.index] = True
-
-        # Convert adaptive_scale_factor to a jump probability
-        p_jump = 1. - .5 ** self.scaling
-
-        rand_array = random(q0.shape)
-        q = copy(q0)
-        # Locations where switches occur, according to p_jump
-        switch_locs = (rand_array < p_jump) & mask
-        q[switch_locs] = True - q[switch_locs]
-
-        q_new = metrop_select(logp(q) - logp(q0), q, q0)
+            rand_array = random(q0.shape)
+            q = copy(q0)
+            # Locations where switches occur, according to p_jump
+            switch_locs = (rand_array < p_jump)
+            q[switch_locs] = True - q[switch_locs]
+            q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
         return q_new
 
@@ -247,10 +246,49 @@ class BinaryMetropolis(ArrayStep):
         and Categorical variables with k=1.
         '''
         if isinstance(var.distribution, Bernoulli) or (var.dtype in bool_types):
+            return Competence.compatible
+        elif isinstance(var.distribution, Categorical) and (var.distribution.k == 2):
+            return Competence.compatible
+        return Competence.incompatible
+
+class BinaryGibbsMetropolis(ArrayStep):
+    """Metropolis-Hastings optimized for binary variables"""
+
+    def __init__(self, vars, order='random', model=None):
+
+        model = modelcontext(model)
+
+        self.dim = sum(v.dsize for v in vars)
+        self.order = order
+
+        if not all([v.dtype in discrete_types for v in vars]):
+            raise ValueError(
+                'All variables must be Bernoulli for BinaryGibbsMetropolis')
+
+        super(BinaryGibbsMetropolis, self).__init__(vars, [model.fastlogp])
+
+    def astep(self, q0, logp):
+        order = list(range(self.dim))
+        if self.order == 'random':
+            np.random.shuffle(order)
+
+        q = copy(q0)
+        for idx in order:
+            q[idx] = True - q[idx]
+            q = metrop_select(logp(q) - logp(q0), q, q0)
+
+        return q
+
+    @staticmethod
+    def competence(var):
+        '''
+        BinaryMetropolis is only suitable for binary (bool)
+        and Categorical variables with k=1.
+        '''
+        if isinstance(var.distribution, Bernoulli) or (var.dtype in bool_types):
             return Competence.ideal
-        if isinstance(var.distribution, Categorical):
-            if var.distribution.k==2:
-                return Competence.ideal
+        elif isinstance(var.distribution, Categorical) and (var.distribution.k == 2):
+            return Competence.ideal
         return Competence.incompatible
 
 def delta_logp(logp, vars, shared):
