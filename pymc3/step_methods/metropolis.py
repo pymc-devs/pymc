@@ -73,14 +73,13 @@ class Metropolis(ArrayStepShared):
     default_blocked = False
 
     def __init__(self, vars=None, S=None, proposal_dist=NormalProposal, scaling=1.,
-                 tune=True, tune_interval=100, model=None, gibbs=None, **kwargs):
+                 tune=True, tune_interval=100, model=None, **kwargs):
 
         model = modelcontext(model)
 
         if vars is None:
             vars = model.vars
         vars = inputvars(vars)
-        self.dim = sum(v.dsize for v in vars)
 
         if S is None:
             S = np.ones(self.dim)
@@ -90,8 +89,6 @@ class Metropolis(ArrayStepShared):
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.accepted = 0
-        self.gibbs = gibbs
-        self.index = 0
 
         # Determine type of variables
         self.discrete = np.array([v.dtype in discrete_types for v in vars])
@@ -112,16 +109,6 @@ class Metropolis(ArrayStepShared):
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
 
-        if self.gibbs == 'sequential':
-            self.index = (self.index + 1) % self.dim
-        elif self.gibbs == 'random':
-            self.index = np.random.randint(0, self.dim)
-        else:
-            self.index = slice(None) # select all
-
-        mask = np.zeros(self.dim, dtype=np.bool8)
-        mask[self.index] = True
-
         delta = (self.proposal_dist() * self.scaling)
 
         if self.any_discrete:
@@ -134,8 +121,6 @@ class Metropolis(ArrayStepShared):
                 q = q0 + delta
         else:
             q = q0 + delta
-
-        q = q[mask]
 
         q_new = metrop_select(self.delta_logp(q, q0), q, q0)
 
@@ -215,27 +200,15 @@ class BinaryMetropolis(ArrayStep):
         super(BinaryMetropolis, self).__init__(vars, [model.fastlogp])
 
     def astep(self, q0, logp):
+        # Convert adaptive_scale_factor to a jump probability
+        p_jump = 1. - .5 ** self.scaling
 
-        if (self.gibbs == 'sequential') or (self.gibbs == 'random'):
-            order = list(range(self.dim))
-            if self.gibbs == 'random':
-                np.random.shuffle(order)
-
-            q = copy(q0)
-            for idx in order:
-                q[idx] = True - q[idx]
-                q = metrop_select(logp(q) - logp(q0), q, q0)
-            q_new = q
-        else:
-            # Convert adaptive_scale_factor to a jump probability
-            p_jump = 1. - .5 ** self.scaling
-
-            rand_array = random(q0.shape)
-            q = copy(q0)
-            # Locations where switches occur, according to p_jump
-            switch_locs = (rand_array < p_jump)
-            q[switch_locs] = True - q[switch_locs]
-            q_new = metrop_select(logp(q) - logp(q0), q, q0)
+        rand_array = random(q0.shape)
+        q = copy(q0)
+        # Locations where switches occur, according to p_jump
+        switch_locs = (rand_array < p_jump)
+        q[switch_locs] = True - q[switch_locs]
+        q_new = metrop_select(logp(q) - logp(q0), q, q0)
 
         return q_new
 
@@ -274,12 +247,13 @@ class BinaryGibbsMetropolis(ArrayStep):
 
         q_prop = copy(q0)
         q_cur = copy(q0)
+
         for idx in order:
             q_prop[idx] = True - q_prop[idx]
             q_cur = metrop_select(logp(q_prop) - logp(q_cur), q_prop, q_cur)
             q_prop = copy(q_cur)
 
-        return q_prop
+        return q_cur
 
     @staticmethod
     def competence(var):
