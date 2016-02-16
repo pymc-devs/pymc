@@ -272,12 +272,14 @@ class BinaryGibbsMetropolis(ArrayStep):
         if self.order == 'random':
             np.random.shuffle(order)
 
-        q = copy(q0)
+        q_prop = copy(q0)
+        q_cur = copy(q0)
         for idx in order:
-            q[idx] = True - q[idx]
-            q = metrop_select(logp(q) - logp(q0), q, q0)
+            q_prop[idx] = True - q_prop[idx]
+            q_cur = metrop_select(logp(q_prop) - logp(q_cur), q_prop, q_cur)
+            q_prop = copy(q_cur)
 
-        return q
+        return q_prop
 
     @staticmethod
     def competence(var):
