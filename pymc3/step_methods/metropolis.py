@@ -91,7 +91,7 @@ class Metropolis(ArrayStepShared):
         self.accepted = 0
 
         # Determine type of variables
-        self.discrete = np.array([v.dtype in discrete_types for v in vars])
+        self.discrete = np.ravel([[v.dtype in discrete_types ] * (v.dsize or 1) for v in vars])
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
 

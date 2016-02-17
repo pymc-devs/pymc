@@ -53,6 +53,7 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
               "estimates may not be accurate for the default " +
               "parameters. Defaulting to non-gradient minimization " +
               "fmin_powell.")
+        fmin = optimize.fmin_powell
 
     if fmin is None:
         if disc_vars:
