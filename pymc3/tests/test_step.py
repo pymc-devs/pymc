@@ -4,7 +4,7 @@ from theano.tensor import constant
 from scipy.stats.mstats import moment
 from pymc3.sampling import assign_step_methods
 from pymc3.model import Model
-from pymc3.step_methods import NUTS, BinaryMetropolis, Metropolis, Constant, ElemwiseCategoricalStep
+from pymc3.step_methods import NUTS, BinaryMetropolis, BinaryGibbsMetropolis, Metropolis, Constant, ElemwiseCategoricalStep
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
 from numpy.testing import assert_almost_equal
 
@@ -96,7 +96,7 @@ def test_step_discrete():
             yield check_stat, repr(st), h, var, stat, val, bound
 
 def test_constant_step():
-    
+
     with Model() as model:
         x = Normal('x', 0, 1)
         start = {'x':-1}
@@ -104,33 +104,33 @@ def test_constant_step():
         assert_almost_equal(tr['x'], start['x'], decimal=10)
 
 def test_assign_step_methods():
-    
+
     with Model() as model:
         x = Bernoulli('x', 0.5)
         steps = assign_step_methods(model, [])
-        
-        assert isinstance(steps, BinaryMetropolis)
-    
+
+        assert isinstance(steps, BinaryGibbsMetropolis)
+
     with Model() as model:
         x = Normal('x', 0, 1)
         steps = assign_step_methods(model, [])
-    
+
         assert isinstance(steps, NUTS)
-        
+
     with Model() as model:
         x = Categorical('x', np.array([0.25, 0.75]))
         steps = assign_step_methods(model, [])
-    
-        assert isinstance(steps, BinaryMetropolis)
-        
+
+        assert isinstance(steps, BinaryGibbsMetropolis)
+
     with Model() as model:
         x = Categorical('x', np.array([0.25, 0.70, 0.05]))
         steps = assign_step_methods(model, [])
-    
+
         assert isinstance(steps, ElemwiseCategoricalStep)
-        
+
     with Model() as model:
         x = Binomial('x', 10, 0.5)
         steps = assign_step_methods(model, [])
-    
+
         assert isinstance(steps, Metropolis)
