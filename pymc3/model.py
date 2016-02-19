@@ -1,23 +1,22 @@
-from .vartypes import *
-
-from theano import theano, tensor as t, function
+import numpy as np
+import theano
+import theano.tensor as T
 from theano.tensor.var import TensorVariable
 
-import numpy as np
-from functools import wraps
-from .theanof import *
-from inspect import getargspec
-
 from .memoize import memoize
+from .theanof import gradient, hessian
+from .vartypes import typefilter, discrete_types, continuous_types
 
-__all__ = ['Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext', 'Point', 'Deterministic', 'Potential']
+__all__ = [
+    'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
+    'Point', 'Deterministic', 'Potential'
+]
 
 
 class InstanceMethod(object):
     """Class for hiding references to instance methods so they can be pickled.
 
     >>> self.method = InstanceMethod(some_object, 'method_name')
-
     """
     def __init__(self, obj, method_name):
         self.obj = obj
@@ -26,46 +25,44 @@ class InstanceMethod(object):
     def __call__(self, *args, **kwargs):
         return getattr(self.obj, self.method_name)(*args, **kwargs)
 
-def incorporate_methods(source=None,
-                        destination=None,
-                        methods=[],
-                        default=None,
-                        wrapper=None,
-                        override=False):
+
+def incorporate_methods(source, destination, methods, default=None,
+                        wrapper=None, override=False):
     """
     Add attributes to a destination object which points to
     methods from from a source object.
 
     Parameters
     ----------
-    source - object
+    source : object
         The source object containing the methods.
-    destination - object
+    destination : object
         The destination object for the methods.
-    methods - list of str
+    methods : list of str
         Names of methods to incorporate.
-    default -
+    default : object
         The value used if the source does not have one of the listed methods.
-    wrapper - function
+    wrapper : function
         An optional function to allow the source method to be
         wrapped. Should take the form my_wrapper(source, method_name)
         and return a single value.
-    override - bool
+    override : bool
         If the destination object already has a method/attribute
         an AttributeError will be raised if override is False (the default).
     """
     for method in methods:
         if hasattr(destination, method) and not override:
-            raise AttributeError("Cannot add method '{0}' to destination object as "
-                                 "it already exists. To prevent this error set "
-                                 "'override=True'.".format(method))
+            raise AttributeError("Cannot add method {!r}".format(method) +
+                                 "to destination object as it already exists. "
+                                 "To prevent this error set 'override=True'.")
         if hasattr(source, method):
-            if wrapper == None:
+            if wrapper is None:
                 setattr(destination, method, getattr(source, method))
             else:
                 setattr(destination, method, wrapper(source, method))
         else:
             setattr(destination, method, None)
+
 
 def get_named_nodes(graph):
     """Get the named nodes in a theano graph
@@ -80,6 +77,7 @@ def get_named_nodes(graph):
     """
     return _get_named_nodes(graph, {})
 
+
 def _get_named_nodes(graph, nodes):
     if graph.owner == None:
         if graph.name is not None:
@@ -89,8 +87,11 @@ def _get_named_nodes(graph, nodes):
             nodes.update(_get_named_nodes(i, nodes))
     return nodes
 
+
 class Context(object):
-    """Functionality for objects that put themselves in a context using the `with` statement."""
+    """Functionality for objects that put themselves in a context using
+    the `with` statement.
+    """
     def __enter__(self):
         type(self).get_contexts().append(self)
         return self
@@ -115,13 +116,18 @@ class Context(object):
 
 
 def modelcontext(model):
-    """return the given model or try to find it in the context if there was none supplied."""
+    """return the given model or try to find it in the context if there was
+    none supplied.
+    """
     if model is None:
         return Model.get_context()
     return model
 
+
 class Factor(object):
-    """Common functionality for objects with a log probability density associated with them."""
+    """Common functionality for objects with a log probability density
+    associated with them.
+    """
     @property
     def logp(self):
         """Compiled log probability density function"""
@@ -155,17 +161,18 @@ class Factor(object):
     @property
     def logpt(self):
         """Theano scalar of log-probability of the model"""
-        return t.sum(self.logp_elemwiset)
+        return T.sum(self.logp_elemwiset)
+
 
 class Model(Context, Factor):
     """Encapsulates the variables and likelihood factors of a model.
-    
+
     Parameters
     ----------
-        verbose : int
-            Model verbosity setting, determining how much feedback various operations
-            provide. Normal verbosity is verbose=1 (default), silence is verbose=0, high
-            is any value greater than 1.
+    verbose : int
+        Model verbosity setting, determining how much feedback various
+        operations provide. Normal verbosity is verbose=1 (default), silence
+        is verbose=0, high is any value greater than 1.
     """
 
     def __init__(self, verbose=1):
@@ -183,16 +190,20 @@ class Model(Context, Factor):
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         factors = [var.logpt for var in self.basic_RVs] + self.potentials
-        return t.add(*map(t.sum, factors))
+        return T.add(*map(T.sum, factors))
 
     @property
     def vars(self):
-        """List of unobserved random variables used as inputs to the model (which excludes deterministics)."""
+        """List of unobserved random variables used as inputs to the model
+        (which excludes deterministics).
+        """
         return self.free_RVs
 
     @property
     def basic_RVs(self):
-        """List of random variables the model is defined in terms of (which excludes deterministics)."""
+        """List of random variables the model is defined in terms of
+        (which excludes deterministics).
+        """
         return (self.free_RVs + self.observed_RVs)
 
     @property
@@ -218,24 +229,28 @@ class Model(Context, Factor):
         return list(typefilter(self.vars, continuous_types))
 
     def Var(self, name, dist, data=None):
-        """Create and add (un)observed random variable to the model with an appropriate prior distribution.
+        """Create and add (un)observed random variable to the model with an
+        appropriate prior distribution.
 
         Parameters
         ----------
-            name : str
-            dist : distribution for the random variable
-            data : arraylike (optional)
-               if data is provided, the variable is observed. If None, the variable is unobserved.
+        name : str
+        dist : distribution for the random variable
+        data : array_like (optional)
+           If data is provided, the variable is observed. If None,
+           the variable is unobserved.
+
         Returns
         -------
-            FreeRV or ObservedRV
+        FreeRV or ObservedRV
         """
         if data is None:
             if getattr(dist, "transform", None) is None:
                 var = FreeRV(name=name, distribution=dist, model=self)
                 self.free_RVs.append(var)
             else:
-                var = TransformedRV(name=name, distribution=dist, model=self, transform=dist.transform)
+                var = TransformedRV(name=name, distribution=dist, model=self,
+                                    transform=dist.transform)
                 if self.verbose:
                     print('Applied {transform}-transform to {name}'
                           ' and added transformed {orig_name} to model.'.format(
@@ -245,7 +260,8 @@ class Model(Context, Factor):
                 self.deterministics.append(var)
                 return var
         elif isinstance(data, dict):
-            var = MultiObservedRV(name=name, data=data, distribution=dist, model=self)
+            var = MultiObservedRV(name=name, data=data, distribution=dist,
+                                  model=self)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs += var.missing_values
@@ -285,16 +301,17 @@ class Model(Context, Factor):
 
         Returns
         -------
-        Compiled Theano function"""
-        return function(self.vars, outs,
-                     allow_input_downcast=True,
-                     on_unused_input='ignore',
-                     accept_inplace=True,
-                     mode=mode, *args, **kwargs)
+        Compiled Theano function
+        """
+        return theano.function(self.vars, outs,
+                               allow_input_downcast=True,
+                               on_unused_input='ignore',
+                               accept_inplace=True,
+                               mode=mode, *args, **kwargs)
 
     def fn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Theano function which returns the values of `outs` and takes values of model
-        vars as arguments.
+        """Compiles a Theano function which returns the values of `outs`
+        and takes values of model vars as arguments.
 
         Parameters
         ----------
@@ -303,12 +320,13 @@ class Model(Context, Factor):
 
         Returns
         -------
-        Compiled Theano function"""
+        Compiled Theano function
+        """
         return LoosePointFunc(self.makefn(outs, mode, *args, **kwargs), self)
 
     def fastfn(self, outs, mode=None, *args, **kwargs):
-        """Compiles a Theano function which returns `outs` and takes values of model
-        vars as a dict as an argument.
+        """Compiles a Theano function which returns `outs` and takes values
+        of model vars as a dict as an argument.
 
         Parameters
         ----------
@@ -317,13 +335,14 @@ class Model(Context, Factor):
 
         Returns
         -------
-        Compiled Theano function as point function."""
+        Compiled Theano function as point function.
+        """
         f = self.makefn(outs, mode, *args, **kwargs)
         return FastPointFunc(f)
 
     def profile(self, outs, n=1000, point=None, profile=True, *args, **kwargs):
-        """Compiles and profiles a Theano function which returns `outs` and takes values of model
-        vars as a dict as an argument.
+        """Compiles and profiles a Theano function which returns `outs` and
+        takes values of model vars as a dict as an argument.
 
         Parameters
         ----------
@@ -339,7 +358,8 @@ class Model(Context, Factor):
         Returns
         -------
         ProfileStats
-            Use .summary() to print stats."""
+            Use .summary() to print stats.
+        """
         f = self.makefn(outs, profile=profile, *args, **kwargs)
         if point is None:
             point = self.test_point
@@ -350,10 +370,9 @@ class Model(Context, Factor):
         return f.profile
 
 
-
 def fn(outs, mode=None, model=None, *args, **kwargs):
-    """Compiles a Theano function which returns the values of `outs` and takes values of model
-    vars as arguments.
+    """Compiles a Theano function which returns the values of `outs` and
+    takes values of model vars as arguments.
 
     Parameters
     ----------
@@ -362,9 +381,11 @@ def fn(outs, mode=None, model=None, *args, **kwargs):
 
     Returns
     -------
-    Compiled Theano function"""
+    Compiled Theano function
+    """
     model = modelcontext(model)
     return model.fn(outs,mode, *args, **kwargs)
+
 
 def fastfn(outs, mode=None, model=None):
     """Compiles a Theano function which returns `outs` and takes values of model
@@ -377,7 +398,8 @@ def fastfn(outs, mode=None, model=None):
 
     Returns
     -------
-    Compiled Theano function as point function."""
+    Compiled Theano function as point function.
+    """
     model = modelcontext(model)
     return model.fastfn(outs,mode)
 
@@ -388,22 +410,20 @@ def Point(*args, **kwargs):
 
     Parameters
     ----------
-        *args, **kwargs
-            arguments to build a dict"""
+    *args, **kwargs
+        arguments to build a dict
+    """
     model = modelcontext(kwargs.pop('model', None))
-
-    args = [a for a in args]
+    args = list(args)
     try:
         d = dict(*args, **kwargs)
     except Exception as e:
         raise TypeError(
-            "can't turn " + str(args) + " and " + str(kwargs) +
-            " into a dict. " + str(e))
+            "can't turn {} and {} into a dict. {}".format(args, kwargs, e))
 
-    varnames = list(map(str, model.vars))
-    return dict((str(k), np.array(v))
-                for (k, v) in d.items()
-                if str(k) in varnames)
+    return dict((str(k), np.array(v)) for k, v in d.items()
+                if str(k) in map(str, model.vars))
+
 
 class FastPointFunc(object):
     """Wraps so a function so it takes a dict of arguments instead of arguments."""
@@ -412,6 +432,7 @@ class FastPointFunc(object):
 
     def __call__(self, state):
         return self.f(**state)
+
 
 class LoosePointFunc(object):
     """Wraps so a function so it takes a dict of arguments instead of arguments
@@ -429,14 +450,13 @@ compilef = fastfn
 
 class FreeRV(Factor, TensorVariable):
     """Unobserved random variable that a model is specified in terms of."""
-    def __init__(self, type=None, owner=None, index=None, name=None, distribution=None, model=None):
+    def __init__(self, type=None, owner=None, index=None, name=None,
+                 distribution=None, model=None):
         """
         Parameters
         ----------
-
         type : theano type (optional)
         owner : theano owner (optional)
-
         name : str
         distribution : Distribution
         model : Model"""
@@ -477,31 +497,34 @@ def as_tensor(data, name,model, dtype):
 
     if hasattr(data, 'mask'):
         from .distributions import NoDistribution
-        fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype, testval=data.mean().astype(dtype))
-        missing_values = FreeRV(name=name + '_missing', distribution=fakedist, model=model)
+        fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
+                                       testval=data.mean().astype(dtype))
+        missing_values = FreeRV(name=name + '_missing', distribution=fakedist,
+                                model=model)
 
-        constant = t.as_tensor_variable(data.filled())
+        constant = T.as_tensor_variable(data.filled())
 
-        dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()], missing_values)
+        dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()],
+                                                 missing_values)
         dataTensor.missing_values = missing_values
         return dataTensor
     else:
-        data = t.as_tensor_variable(data, name=name)
+        data = T.as_tensor_variable(data, name=name)
         data.missing_values = None
         return data
+
 
 class ObservedRV(Factor, TensorVariable):
     """Observed random variable that a model is specified in terms of.
     Potentially partially observed.
     """
-    def __init__(self, type=None, owner=None, index=None, name=None, data=None, distribution=None, model=None):
+    def __init__(self, type=None, owner=None, index=None, name=None, data=None,
+                 distribution=None, model=None):
         """
         Parameters
         ----------
-
         type : theano type (optional)
         owner : theano owner (optional)
-
         name : str
         distribution : Distribution
         model : Model
@@ -522,7 +545,8 @@ class ObservedRV(Factor, TensorVariable):
             self.distribution = distribution
 
             #make this RV a view on the combined missing/nonmissing array
-            theano.gof.Apply(theano.compile.view_op, inputs=[data], outputs=[self])
+            theano.gof.Apply(theano.compile.view_op,
+                             inputs=[data], outputs=[self])
 
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
 
@@ -534,56 +558,62 @@ class MultiObservedRV(Factor):
         """
         Parameters
         ----------
-
         type : theano type (optional)
         owner : theano owner (optional)
-
         name : str
         distribution : Distribution
         model : Model
         """
         self.name = name
 
-        self.data = { name : as_tensor(data, name, model, distribution.dtype) for name, data in data.items()}
+        self.data = {name : as_tensor(data, name, model, distribution.dtype)
+                     for name, data in data.items()}
 
-        self.missing_values = [ data.missing_values for data in self.data.values() if data.missing_values is not None]
+        self.missing_values = [data.missing_values for data in self.data.values()
+                               if data.missing_values is not None]
         self.logp_elemwiset = distribution.logp(**self.data)
         self.model = model
         self.distribution = distribution
+
 
 def Deterministic(name, var, model=None):
     """Create a named deterministic variable
 
     Parameters
     ----------
-        name : str
-        var : theano variables
+    name : str
+    var : theano variables
+
     Returns
     -------
-        n : var but with name name"""
+    n : var but with name name
+    """
     var.name = name
     modelcontext(model).deterministics.append(var)
     modelcontext(model).add_random_variable(var)
     return var
+
 
 def Potential(name, var, model=None):
     """Add an arbitrary factor potential to the model likelihood
 
     Parameters
     ----------
-        name : str
-        var : theano variables
+    name : str
+    var : theano variables
+
     Returns
     -------
-        var : var, with name attribute
+    var : var, with name attribute
     """
-
     var.name = name
     modelcontext(model).potentials.append(var)
     return var
 
+
 class TransformedRV(TensorVariable):
-    def __init__(self, type=None, owner=None, index=None, name=None, distribution=None, model=None, transform=None):
+    def __init__(self, type=None, owner=None, index=None, name=None,
+                 distribution=None, model=None, transform=None):
         """
         Parameters
         ----------
