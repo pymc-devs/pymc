@@ -53,7 +53,7 @@ def run_adagrad(uw, grad, inarray, n):
     shared_inarray = theano.shared(uw, 'uw_shared')
     grad = CallableTensor(grad)(shared_inarray)
 
-    updates = adagrad(grad, shared_inarray, learning_rate=-.1, epsilon=.1, n=10)
+    updates = adagrad(grad, shared_inarray, learning_rate=-.001, epsilon=.1, n=10)
 
     # Create in-place update function
     f = theano.function([], [shared_inarray, grad], updates=updates)
@@ -76,7 +76,8 @@ def variational_gradient_estimate(vars, model):
 
     # Naive Monte-Carlo
     r = MRG_RandomStreams(seed=1)
-    n = r.normal(size=(1,))
+    #import pdb; pdb.set_trace()
+    n = r.normal(size=inarray.tag.test_value.shape)
 
     gradient_estimate = inner_gradients(logp, n, uw)
 
