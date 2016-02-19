@@ -16,7 +16,7 @@ from collections import OrderedDict
 
 __all__ = ['advi']
 
-def advi(vars=None, start=None, model=None, n=5000):
+def advi(vars=None, start=None, model=None, n=5000, learning_rate=-.001, epsilon=.1):
     model = modelcontext(model)
     if start is None:
         start = model.test_point
@@ -38,7 +38,7 @@ def advi(vars=None, start=None, model=None, n=5000):
     w_start = np.zeros_like(u_start)
     uw = np.concatenate([u_start, w_start])
 
-    result = run_adagrad(uw, grad, inarray, n)
+    result = run_adagrad(uw, grad, inarray, n, learning_rate=learning_rate, epsilon=epsilon)
 
     l = result.size / 2
 
@@ -49,11 +49,11 @@ def advi(vars=None, start=None, model=None, n=5000):
         w[var] = np.exp(w[var])
     return u, w
 
-def run_adagrad(uw, grad, inarray, n):
+def run_adagrad(uw, grad, inarray, n, learning_rate=-.001, epsilon=.1):
     shared_inarray = theano.shared(uw, 'uw_shared')
     grad = CallableTensor(grad)(shared_inarray)
 
-    updates = adagrad(grad, shared_inarray, learning_rate=-.001, epsilon=.1, n=10)
+    updates = adagrad(grad, shared_inarray, learning_rate=learning_rate, epsilon=epsilon, n=10)
 
     # Create in-place update function
     f = theano.function([], [shared_inarray, grad], updates=updates)
