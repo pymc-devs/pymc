@@ -3,7 +3,7 @@ import theano.tensor as T
 from .continuous import Normal, Flat
 from .distribution import Continuous
 
-__all__ = ['AR1', 'GaussianRandomWalk']
+__all__ = ['AR1', 'GaussianRandomWalk', 'GARCH']
 
 
 class AR1(Continuous):
@@ -71,3 +71,29 @@ class GaussianRandomWalk(Continuous):
 
         innov_like = Normal.dist(mu=x_im1 + mu, tau=tau, sd=sd).logp(x_i)
         return init.logp(x[0]) + T.sum(innov_like)
+
+
+class GARCH(Continuous):
+    """
+    Garch with Normal innovations
+    """
+    def __init__(self, tau=None, init=Flat.dist(), sd=None, mu=0.,
+                 *args, **kwargs):
+        super(GARCH, self).__init__(*args, **kwargs)
+        self.sd = sd
+        self.mu = mu
+        self.init = init
+        self.mean = 0.
+
+    def logp(self, x):
+        sigma_0 = self.sigma_0
+        alpha_0 = self.alpha_0
+        alpha_1 = self.alpha_1
+        beta_1 = self.beta_1
+
+        x_im1 = x[:-1]
+        x_i = x[1:]
+        sd = T.sqrt(alpha_0 + alpha_1 * (x_im1 / sigma_0) ** 2
+                       + beta_1 * sigma_0 ** 2)
+        innov_like = Normal.dist(mu=0., sd=sd).logp(x_i)
+        return T.sum(innov_like)
