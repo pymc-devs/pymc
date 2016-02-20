@@ -11,7 +11,7 @@ from ..core import *
 import theano
 from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor, gradient
 from theano.tensor import exp, concatenate, dvector
-import theano.tensor as t
+import theano.tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from collections import OrderedDict
 
@@ -115,7 +115,7 @@ def inner_elbo(logp, uw, n_mcsamples_elbo):
     logps, _ = theano.scan(fn=lambda q: logp(q), 
                            outputs_info=None, 
                            sequences=[qs])
-    elbo = t.mean(logps) + t.sum(w)
+    elbo = T.mean(logps) + t.sum(w)
 
     return elbo
 
