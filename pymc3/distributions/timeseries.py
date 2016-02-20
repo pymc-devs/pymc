@@ -1,9 +1,10 @@
 import theano.tensor as T
+from theano import scan
 
 from .continuous import Normal, Flat
 from .distribution import Continuous
 
-__all__ = ['AR1', 'GaussianRandomWalk']
+__all__ = ['AR1', 'GaussianRandomWalk', 'GARCH11']
 
 
 class AR1(Continuous):
@@ -71,3 +72,52 @@ class GaussianRandomWalk(Continuous):
 
         innov_like = Normal.dist(mu=x_im1 + mu, tau=tau, sd=sd).logp(x_i)
         return init.logp(x[0]) + T.sum(innov_like)
+
+
+class GARCH11(Continuous):
+    """
+    GARCH(1,1) with Normal innovations. The model is specified by
+
+    y_t = sigma_t * z_t
+    sigma_t^2 = omega + alpha_1 * y_{t-1}^2 + beta_1 * sigma_{t-1}^2
+
+    with z_t iid and Normal with mean zero and unit standard deviation.
+
+    Parameters
+    ----------
+    omega : distribution
+        omega > 0, distribution for mean variance
+    alpha_1 : distribution
+        alpha_1 >= 0, distribution for autoregressive term
+    beta_1 : distribution
+        beta_1 >= 0, alpha_1 + beta_1 < 1, distribution for moving
+        average term
+    initial_vol : distribution
+        initial_vol >= 0, distribution for initial volatility, sigma_0
+    """
+    def __init__(self, omega=None, alpha_1=None, beta_1=None,
+                 initial_vol=None, *args, **kwargs):
+        super(GARCH11, self).__init__(*args, **kwargs)
+
+        self.omega = omega
+        self.alpha_1 = alpha_1
+        self.beta_1 = beta_1
+        self.initial_vol = initial_vol
+        self.mean = 0
+
+    def _get_volatility(self, x):
+
+        def volatility_update(x, vol, w, a, b):
+            return T.sqrt(w + a * T.square(x) + b * T.square(vol))
+
+        vol, _ = scan(fn=volatility_update,
+                      sequences=[x],
+                      outputs_info=[self.initial_vol],
+                      non_sequences=[self.omega, self.alpha_1,
+                                     self.beta_1])
+        return vol
+
+    def logp(self, x):
+        vol = self._get_volatility(x[:-1])
+        return (Normal.dist(0., sd=self.initial_vol).logp(x[0]) +
+                T.sum(Normal.dist(0, sd=vol).logp(x[1:])))
