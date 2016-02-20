@@ -17,7 +17,7 @@ from collections import OrderedDict
 
 __all__ = ['advi']
 
-def advi(vars=None, start=None, model=None, n=5000, learning_rate=-.001, epsilon=.1):
+def advi(vars=None, start=None, model=None, n=5000, learning_rate=-.001, epsilon=.1, n_mcsamples_elbo=10):
     model = modelcontext(model)
     if start is None:
         start = model.test_point
@@ -27,7 +27,7 @@ def advi(vars=None, start=None, model=None, n=5000, learning_rate=-.001, epsilon
     vars = inputvars(vars)
 
     # Create variational gradient tensor
-    grad, elbo, inarray, shared = variational_gradient_estimate(vars, model)
+    grad, elbo, inarray, shared = variational_gradient_estimate(vars, model, n_mcsamples_elbo)
 
     # Set starting values
     for var, share in shared.items():
@@ -68,7 +68,7 @@ def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=-.001, epsilon=.1):
 
     return uw_i, elbos
 
-def variational_gradient_estimate(vars, model):
+def variational_gradient_estimate(vars, model, n_mcsamples_elbo):
     theano.config.compute_test_value = 'ignore'
     shared = make_shared_replacements(vars, model)
     [logp], inarray = join_nonshared_inputs([model.logpt], vars, shared)
@@ -84,7 +84,7 @@ def variational_gradient_estimate(vars, model):
     n = r.normal(size=inarray.tag.test_value.shape)
 
     gradient_estimate = inner_gradients(logp, n, uw)
-    elbo_estimate = inner_elbo(logp, n, uw)
+    elbo_estimate = inner_elbo(logp, uw, n_mcsamples_elbo)
 
     return gradient_estimate, elbo_estimate, inarray, shared
 
@@ -103,18 +103,18 @@ def inner_gradients(logp, n, uw):
     duw = theano.tensor.set_subtensor(duw[l:], duw[l:] + 1)
     return duw
 
-def inner_elbo(logp, n, uw):
+def inner_elbo(logp, uw, n_mcsamples_elbo):
     # uw contains both, mean and diagonals
     l = (uw.size/2).astype('int64')
     u = uw[:l]
     w = uw[l:]
 
     r = MRG_RandomStreams(seed=1)
-    n = r.normal(size=(10, u.tag.test_value.shape[0]))
+    n = r.normal(size=(n_mcsamples_elbo, u.tag.test_value.shape[0]))
     qs = n * exp(w) + u
     logps, _ = theano.scan(fn=lambda q: logp(q), 
                            outputs_info=None, 
-                           sequences=[qs])    
+                           sequences=[qs])
     elbo = t.mean(logps) + t.sum(w)
 
     return elbo
