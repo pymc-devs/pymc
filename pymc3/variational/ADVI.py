@@ -4,13 +4,12 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 '''
-from scipy import optimize
 import numpy as np
-from ..core import *
+from ..core import modelcontext, inputvars, ArrayOrdering, DictToArrayBijection
 
 import theano
 from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor, gradient
-from theano.tensor import exp, concatenate, dvector
+from theano.tensor import exp, dvector
 import theano.tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from collections import OrderedDict
@@ -105,7 +104,6 @@ def inner_gradients(logp, n, uw):
     duw = theano.tensor.set_subtensor(duw[l:], duw[l:] + 1)
     return duw, elbo
 
-# This function can be used to 
 # def inner_elbo(logp, uw, n_mcsamples_elbo):
 #     """Compute get more accurate ELBO than the one in inner_gradients(). 
 #     
