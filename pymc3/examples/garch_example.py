@@ -1,5 +1,10 @@
-from pymc3 import Normal, sample, Model, Bound
+from pymc3 import Normal, sample, Model, Bound, traceplot, plots, find_MAP
+from pymc3 import *
+from pymc3.distributions.timeseries import GARCH11
+from scipy import optimize
+
 import theano.tensor as T
+from theano import shared
 import numpy as np
 
 """
@@ -28,28 +33,31 @@ transformed parameters {
 model {
   r ~ normal(mu,sigma);
 }
+
+Ported to PyMC3 by Peadar Coyle and Olaf Smits (c) 2016.
 """
-J = 8
-r = np.array([28, 8, -3, 7, -1, 1, 18, 12])
-sigma1 = np.array([15, 10, 16, 11, 9, 11, 10, 18])
-alpha0 = np.array([10, 10, 16, 8, 9, 11, 12, 18])
+r = shared(np.array([28, 8, -3, 7, -1, 1, 18, 12, 15], dtype=np.float32))
+sigma1 = shared(np.array(.2, dtype=np.float32))
+alpha0 = shared(np.array(.5, dtype=np.float32))
 
 with Model() as garch:
-    alpha1 = Normal('alpha1', 0, 1, shape=J)
-    BoundedNormal = Bound(Normal, upper=(1 - alpha1))
-    beta1 = BoundedNormal('beta1', 0, sd=1e6)
-    mu = Normal('mu', 0, sd=1e6)
+    alpha1 = Normal('alpha1', 0., 1., dtype='float32')
+    BoundedNormal = Bound(Normal, lower=0., upper=(1 - alpha1))
+    beta1 = BoundedNormal('beta1', 0., sd=1e3, dtype='float32')
 
-    theta = T.sqrt(alpha0 + alpha1 * T.pow(r - mu, 2) + beta1 * T.pow(sigma1, 2))
-
-    obs = Normal('obs', mu, sd=theta, observed=r)
+    obs = GARCH11('garchy_garch', omega=alpha0, alpha_1=alpha1,
+                  beta_1=beta1, initial_vol=sigma1, observed=r,
+                  dtype='float32')
 
 
 def run(n=1000):
-    if n == "short":
-        n = 50
     with garch:
         tr = sample(n)
+        start = find_MAP(fmin=optimize.fmin_bfgs)
+        trace = sample(n, Slice(), start=start)
+
+    traceplot(trace)
+    plots.summary(trace)
 
 
 if __name__ == '__main__':
