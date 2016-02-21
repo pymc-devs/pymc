@@ -4,19 +4,23 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 '''
+from scipy import optimize
 import numpy as np
-from ..core import modelcontext, inputvars, ArrayOrdering, DictToArrayBijection
+from ..core import *
 
 import theano
 from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor, gradient
-from theano.tensor import exp, dvector
+from theano.tensor import exp, concatenate, dvector
 import theano.tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from collections import OrderedDict
 
+from ..progressbar import progress_bar
+
 __all__ = ['advi']
 
-def advi(vars=None, start=None, model=None, n=5000, learning_rate=-.001, epsilon=.1):
+def advi(vars=None, start=None, model=None, n=5000, progressbar=True, 
+    learning_rate=.001, epsilon=.1):
     model = modelcontext(model)
     if start is None:
         start = model.test_point
@@ -38,7 +42,7 @@ def advi(vars=None, start=None, model=None, n=5000, learning_rate=-.001, epsilon
     w_start = np.zeros_like(u_start)
     uw = np.concatenate([u_start, w_start])
 
-    result, elbos = run_adagrad(uw, grad, elbo, inarray, n, learning_rate=learning_rate, epsilon=epsilon)
+    result, elbos = run_adagrad(uw, grad, elbo, inarray, n, learning_rate=learning_rate, epsilon=epsilon, progressbar=progressbar)
 
     l = result.size / 2
 
@@ -49,7 +53,7 @@ def advi(vars=None, start=None, model=None, n=5000, learning_rate=-.001, epsilon
         w[var] = np.exp(w[var])
     return u, w, elbos
 
-def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=-.001, epsilon=.1):
+def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=.001, epsilon=.1, progressbar=True):
     shared_inarray = theano.shared(uw, 'uw_shared')
     grad = CallableTensor(grad)(shared_inarray)
     elbo = CallableTensor(elbo)(shared_inarray)
@@ -58,12 +62,17 @@ def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=-.001, epsilon=.1):
 
     # Create in-place update function
     f = theano.function([], [shared_inarray, grad, elbo], updates=updates)
+    
+    if progressbar:
+        progress = progress_bar(n)
 
     # Run adagrad steps
     elbos = []
     for i in range(n):
         uw_i, g, e = f()
         elbos.append(e)
+        if progressbar:
+            progress.update(i)
 
     return uw_i, elbos
 
@@ -104,6 +113,7 @@ def inner_gradients(logp, n, uw):
     duw = theano.tensor.set_subtensor(duw[l:], duw[l:] + 1)
     return duw, elbo
 
+# This function can be used to 
 # def inner_elbo(logp, uw, n_mcsamples_elbo):
 #     """Compute get more accurate ELBO than the one in inner_gradients(). 
 #     
@@ -139,6 +149,6 @@ def adagrad(grad, param, learning_rate, epsilon, n):
     updates[i] = i_new
 
     accu_sum = accu_new.sum(axis=1)
-    updates[param] = param - (learning_rate * grad /
+    updates[param] = param - (-learning_rate * grad /
                               theano.tensor.sqrt(accu_sum + epsilon))
     return updates
