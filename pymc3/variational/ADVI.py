@@ -13,11 +13,13 @@ from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableT
 from theano.tensor import exp, concatenate, dvector
 import theano.tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
 from ..progressbar import progress_bar
 
 __all__ = ['advi']
+
+ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
 
 def advi(vars=None, start=None, model=None, n=5000, progressbar=True, 
     learning_rate=.001, epsilon=.1):
@@ -51,7 +53,7 @@ def advi(vars=None, start=None, model=None, n=5000, progressbar=True,
     # w is in log space
     for var in w.keys():
         w[var] = np.exp(w[var])
-    return u, w, elbos
+    return ADVIFit(u, w, elbos)
 
 def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=.001, epsilon=.1, progressbar=True):
     shared_inarray = theano.shared(uw, 'uw_shared')
@@ -67,10 +69,10 @@ def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=.001, epsilon=.1, prog
         progress = progress_bar(n)
 
     # Run adagrad steps
-    elbos = []
+    elbos = np.empty(n)
     for i in range(n):
         uw_i, g, e = f()
-        elbos.append(e)
+        elbos[i] = e
         if progressbar:
             progress.update(i)
 
