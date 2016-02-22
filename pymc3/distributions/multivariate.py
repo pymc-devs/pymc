@@ -2,6 +2,8 @@ import warnings
 
 import numpy as np
 import theano.tensor as T
+import theano
+
 from scipy import stats
 from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
 
@@ -191,6 +193,55 @@ class Multinomial(Discrete):
             T.all(x >= 0), T.all(x <= n), T.eq(T.sum(x), n),
             n >= 0)
 
+def posdef(AA):
+    try:
+        fct = np.linalg.cholesky(AA)
+        return 1
+    except np.linalg.LinAlgError:
+        return 0
+
+
+class PosDefMatrix(theano.Op):
+    """
+    Check if input is positive definite. Input should be a square matrix.
+
+    """
+
+    #Properties attribute
+    __props__ = ()
+
+
+    #Compulsory if itypes and otypes are not defined
+
+    def make_node(self, x):
+        x = theano.tensor.as_tensor_variable(x)
+        assert x.ndim == 2
+        o=T.TensorType(dtype='int8', broadcastable = [])()
+        return theano.Apply(self, [x], [o])
+
+    # Python implementation:
+    def perform(self, node, inputs, outputs):
+
+        (x,) = inputs
+        (z,) = outputs
+        try:
+            z[0] = np.array(posdef(x), dtype='int8')
+        except Exception:
+            print('Failed to check if positive definite', x)
+            raise
+
+    def infer_shape(self, node, shapes):
+        return [[]]
+
+    def grad(self, inp, grads):
+        x, = inp
+        return [x.zeros_like(theano.config.floatX)]
+
+    def __str__(self):
+        return "MatrixIsPositiveDefinite"
+
+matrix_pos_def = PosDefMatrix()
+
 
 class Wishart(Continuous):
     r"""
@@ -254,10 +305,12 @@ class Wishart(Continuous):
                      - trace(matrix_inverse(V).dot(X))
                      - n * p * T.log(2) - n * T.log(IVI)
                      - 2 * multigammaln(n / 2., p)) / 2,
-                     T.all(eigh(X)[0] > 0), T.eq(X, X.T),
+                     matrix_pos_def(X),
+                     T.eq(X, X.T),
                      n > (p - 1))
 
 
+    
 class LKJCorr(Continuous):
     r"""
     The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
@@ -337,4 +390,5 @@ class LKJCorr(Continuous):
         result += (n - 1.) * T.log(det(X))
         return bound(result,
                      T.all(X <= 1), T.all(X >= -1),
+                     matrix_pos_def(X),
                      n > 0)
