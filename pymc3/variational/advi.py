@@ -15,14 +15,12 @@ import theano.tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from collections import OrderedDict, namedtuple
 
-from ..progressbar import progress_bar
-
 __all__ = ['advi']
 
 ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
 
-def advi(vars=None, start=None, model=None, n=5000, progressbar=True,
-         accurate_elbo=False, learning_rate=.001, epsilon=.1):
+def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False, 
+    learning_rate=.001, epsilon=.1, verbose=1):
     model = modelcontext(model)
     if start is None:
         start = model.test_point
@@ -44,7 +42,7 @@ def advi(vars=None, start=None, model=None, n=5000, progressbar=True,
     w_start = np.zeros_like(u_start)
     uw = np.concatenate([u_start, w_start])
 
-    result, elbos = run_adagrad(uw, grad, elbo, inarray, n, learning_rate=learning_rate, epsilon=epsilon, progressbar=progressbar)
+    result, elbos = run_adagrad(uw, grad, elbo, inarray, n, learning_rate=learning_rate, epsilon=epsilon, verbose=verbose)
 
     l = result.size / 2
 
@@ -56,7 +54,7 @@ def advi(vars=None, start=None, model=None, n=5000, progressbar=True,
     return ADVIFit(u, w, elbos)
 
 def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=.001, epsilon=.1,
-                progressbar=True):
+                verbose=1):
     shared_inarray = theano.shared(uw, 'uw_shared')
     grad = CallableTensor(grad)(shared_inarray)
     elbo = CallableTensor(elbo)(shared_inarray)
@@ -66,16 +64,13 @@ def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=.001, epsilon=.1,
     # Create in-place update function
     f = theano.function([], [shared_inarray, grad, elbo], updates=updates)
 
-    if progressbar:
-        progress = progress_bar(n)
-
     # Run adagrad steps
     elbos = np.empty(n)
     for i in range(n):
         uw_i, g, e = f()
         elbos[i] = e
-        if progressbar:
-            progress.update(i)
+        if verbose and not i % (n//10):
+            print('Iteration {0} [{1}%]: ELBO = {2:.2f}'.format(i, 100*i/n, e))
 
     return uw_i, elbos
 
