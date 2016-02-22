@@ -71,7 +71,9 @@ def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=.001, epsilon=.1,
         elbos[i] = e
         if verbose and not i % (n//10):
             print('Iteration {0} [{1}%]: ELBO = {2}'.format(i, 100*i//n, e.round(2)))
-
+    
+    if verbose:
+        print('Finished [100%]: ELBO = {}'.format(elbos[-1].round(2)))
     return uw_i, elbos
 
 def variational_gradient_estimate(vars, model, accurate_elbo=False):
