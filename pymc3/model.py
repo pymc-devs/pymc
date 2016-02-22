@@ -477,6 +477,10 @@ class FreeRV(Factor, TensorVariable):
                                 methods=['random'],
                                 wrapper=InstanceMethod)
 
+    @property
+    def init_value(self):
+        """Convenience attribute to return tag.test_value"""
+        return self.tag.test_value
 
 def pandas_to_array(data):
     if hasattr(data, 'values'): #pandas
@@ -549,6 +553,12 @@ class ObservedRV(Factor, TensorVariable):
                              inputs=[data], outputs=[self])
 
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
+            
+    @property
+    def init_value(self):
+        """Convenience attribute to return tag.test_value"""
+        return self.tag.test_value
+        
 
 class MultiObservedRV(Factor):
     """Observed random variable that a model is specified in terms of.
@@ -641,7 +651,11 @@ class TransformedRV(TensorVariable):
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
                                 wrapper=InstanceMethod)
-
+    @property
+    def init_value(self):
+        """Convenience attribute to return tag.test_value"""
+        return self.tag.test_value
+        
 def as_iterargs(data):
     if isinstance(data, tuple):
         return data

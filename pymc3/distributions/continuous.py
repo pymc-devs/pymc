@@ -77,7 +77,7 @@ def get_tau_sd(tau=None, sd=None):
 
 
 class Uniform(Continuous):
-    r"""
+    R"""
     Continuous uniform log-likelihood.
 
     .. math::
@@ -141,7 +141,7 @@ class Flat(Continuous):
 
 
 class Normal(Continuous):
-    r"""
+    R"""
     Univariate normal log-likelihood.
 
     .. math::
@@ -195,7 +195,7 @@ class Normal(Continuous):
 
 
 class HalfNormal(PositiveContinuous):
-    r"""
+    R"""
     Half-normal log-likelihood.
 
     .. math::
@@ -238,7 +238,7 @@ class HalfNormal(PositiveContinuous):
 
 
 class Wald(PositiveContinuous):
-    r"""
+    R"""
     Wald log-likelihood.
 
     .. math::
@@ -350,7 +350,7 @@ class Wald(PositiveContinuous):
 
 
 class Beta(UnitContinuous):
-    r"""
+    R"""
     Beta log-likelihood.
 
     .. math::
@@ -370,8 +370,10 @@ class Beta(UnitContinuous):
 
     .. math::
 
-       \alpha &= \mu \sigma \\
-       \beta  &= (1 - \mu) \sigma
+       \alpha &= \mu \kappa \\
+       \beta  &= (1 - \mu) \kappa
+       
+       \text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1 
 
     Parameters
     ----------
@@ -404,8 +406,9 @@ class Beta(UnitContinuous):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sd is not None):
-            alpha = mu * sd
-            beta = (1 - mu) * sd
+            kappa = mu * (1-mu) / sd**2 - 1 
+            alpha = mu * kappa
+            beta = (1 - mu) * kappa
         else:
             raise ValueError('Incompatible parameterization. Either use alpha '
                              'and beta, or mu and sd to specify distribution.')
@@ -430,7 +433,7 @@ class Beta(UnitContinuous):
 
 
 class Exponential(PositiveContinuous):
-    r"""
+    R"""
     Exponential log-likelihood.
 
     .. math::
@@ -469,7 +472,7 @@ class Exponential(PositiveContinuous):
 
 
 class Laplace(Continuous):
-    r"""
+    R"""
     Laplace log-likelihood.
 
     .. math::
@@ -511,7 +514,7 @@ class Laplace(Continuous):
 
 
 class Lognormal(PositiveContinuous):
-    r"""
+    R"""
     Log-normal log-likelihood.
 
     Distribution of any random variable whose logarithm is normally
@@ -568,7 +571,7 @@ class Lognormal(PositiveContinuous):
 
 
 class StudentT(Continuous):
-    r"""
+    R"""
     Non-central Student's T log-likelihood.
 
     Describes a normal variable whose precision is gamma distributed.
@@ -626,7 +629,7 @@ class StudentT(Continuous):
 
 
 class Pareto(PositiveContinuous):
-    r"""
+    R"""
     Pareto log-likelihood.
 
     Often used to characterize wealth distribution, or other examples of the
@@ -681,7 +684,7 @@ class Pareto(PositiveContinuous):
 
 
 class Cauchy(Continuous):
-    r"""
+    R"""
     Cauchy log-likelihood.
 
     Also known as the Lorentz or the Breit-Wigner distribution.
@@ -730,7 +733,7 @@ class Cauchy(Continuous):
 
 
 class HalfCauchy(PositiveContinuous):
-    r"""
+    R"""
     Half-Cauchy log-likelihood.
 
     .. math::
@@ -773,7 +776,7 @@ class HalfCauchy(PositiveContinuous):
 
 
 class Gamma(PositiveContinuous):
-    r"""
+    R"""
     Gamma log-likelihood.
 
     Represents the sum of alpha exponentially distributed random variables,
@@ -853,7 +856,7 @@ class Gamma(PositiveContinuous):
 
 
 class InverseGamma(PositiveContinuous):
-    r"""
+    R"""
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
     .. math::
@@ -902,7 +905,7 @@ class InverseGamma(PositiveContinuous):
 
 
 class ChiSquared(Gamma):
-    r"""
+    R"""
     :math:`\chi^2` log-likelihood.
 
     .. math::
@@ -927,7 +930,7 @@ class ChiSquared(Gamma):
 
 
 class Weibull(PositiveContinuous):
-    r"""
+    R"""
     Weibull log-likelihood.
 
     .. math::
@@ -1035,7 +1038,7 @@ StudentTpos = Bound(StudentT, 0)
 
 
 class ExGaussian(Continuous):
-    r"""
+    R"""
     Exponentially modified Gaussian log-likelihood.
 
     Results from the convolution of a normal distribution with an exponential
