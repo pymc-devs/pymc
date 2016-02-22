@@ -70,7 +70,7 @@ def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=.001, epsilon=.1,
         uw_i, g, e = f()
         elbos[i] = e
         if verbose and not i % (n//10):
-            print('Iteration {0} [{1}%]: ELBO = {2:.2f}'.format(i, 100*i/n, e))
+            print('Iteration {0} [{1}%]: ELBO = {2}'.format(i, 100*i//n, e.round(2)))
 
     return uw_i, elbos
 
