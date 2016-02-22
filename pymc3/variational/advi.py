@@ -93,7 +93,7 @@ def variational_gradient_estimate(vars, model, accurate_elbo=False):
     r = MRG_RandomStreams(seed=1)
     n = r.normal(size=inarray.tag.test_value.shape)
 
-    gradient_estimate, eblo_estimate = inner_gradients(logp, n, uw)
+    gradient_estimate, elbo_estimate = inner_gradients(logp, n, uw)
 
     # More accurate estimation of ELBO
     if accurate_elbo:
