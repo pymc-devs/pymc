@@ -21,8 +21,8 @@ __all__ = ['advi']
 
 ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
 
-def advi(vars=None, start=None, model=None, n=5000, progressbar=True, 
-    learning_rate=.001, epsilon=.1):
+def advi(vars=None, start=None, model=None, n=5000, progressbar=True,
+         accurate_elbo=False, learning_rate=.001, epsilon=.1):
     model = modelcontext(model)
     if start is None:
         start = model.test_point
@@ -32,7 +32,7 @@ def advi(vars=None, start=None, model=None, n=5000, progressbar=True,
     vars = inputvars(vars)
 
     # Create variational gradient tensor
-    grad, elbo, inarray, shared = variational_gradient_estimate(vars, model)
+    grad, elbo, inarray, shared = variational_gradient_estimate(vars, model, accurate_elbo=accurate_elbo)
 
     # Set starting values
     for var, share in shared.items():
@@ -55,7 +55,8 @@ def advi(vars=None, start=None, model=None, n=5000, progressbar=True,
         w[var] = np.exp(w[var])
     return ADVIFit(u, w, elbos)
 
-def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=.001, epsilon=.1, progressbar=True):
+def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=.001, epsilon=.1,
+                progressbar=True):
     shared_inarray = theano.shared(uw, 'uw_shared')
     grad = CallableTensor(grad)(shared_inarray)
     elbo = CallableTensor(elbo)(shared_inarray)
@@ -64,7 +65,7 @@ def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=.001, epsilon=.1, prog
 
     # Create in-place update function
     f = theano.function([], [shared_inarray, grad, elbo], updates=updates)
-    
+
     if progressbar:
         progress = progress_bar(n)
 
@@ -78,7 +79,7 @@ def run_adagrad(uw, grad, elbo, inarray, n, learning_rate=.001, epsilon=.1, prog
 
     return uw_i, elbos
 
-def variational_gradient_estimate(vars, model):
+def variational_gradient_estimate(vars, model, accurate_elbo=False):
     theano.config.compute_test_value = 'ignore'
     shared = make_shared_replacements(vars, model)
     [logp], inarray = join_nonshared_inputs([model.logpt], vars, shared)
@@ -90,12 +91,13 @@ def variational_gradient_estimate(vars, model):
 
     # Naive Monte-Carlo
     r = MRG_RandomStreams(seed=1)
-    #import pdb; pdb.set_trace()
     n = r.normal(size=inarray.tag.test_value.shape)
 
-    gradient_estimate, elbo_estimate = inner_gradients(logp, n, uw)
-    # For more accurate estimation of ELBO 
-    # elbo_estimate = inner_elbo(logp, uw, n_mcsamples_elbo)
+    gradient_estimate, eblo_estimate = inner_gradients(logp, n, uw)
+
+    # More accurate estimation of ELBO
+    if accurate_elbo:
+        elbo_estimate = inner_elbo(logp, uw, 100)
 
     return gradient_estimate, elbo_estimate, inarray, shared
 
@@ -115,26 +117,26 @@ def inner_gradients(logp, n, uw):
     duw = theano.tensor.set_subtensor(duw[l:], duw[l:] + 1)
     return duw, elbo
 
-# This function can be used to 
-# def inner_elbo(logp, uw, n_mcsamples_elbo):
-#     """Compute get more accurate ELBO than the one in inner_gradients(). 
-#     
-#     Draw the specified number of MC samples. 
-#     """
-#     # uw contains both, mean and diagonals
-#     l = (uw.size/2).astype('int64')
-#     u = uw[:l]
-#     w = uw[l:]
+# This function can be used to
+def inner_elbo(logp, uw, n_mcsamples_elbo):
+    """Compute get more accurate ELBO than the one in inner_gradients().
 
-#     r = MRG_RandomStreams(seed=1)
-#     n = r.normal(size=(n_mcsamples_elbo, u.tag.test_value.shape[0]))
-#     qs = n * exp(w) + u
-#     logps, _ = theano.scan(fn=lambda q: logp(q), 
-#                            outputs_info=None, 
-#                            sequences=[qs])
-#     elbo = T.mean(logps) + T.sum(w)
+    Draw the specified number of MC samples.
+    """
+    # uw contains both, mean and diagonals
+    l = (uw.size/2).astype('int64')
+    u = uw[:l]
+    w = uw[l:]
 
-#     return elbo
+    r = MRG_RandomStreams(seed=1)
+    n = r.normal(size=(n_mcsamples_elbo, u.tag.test_value.shape[0]))
+    qs = n * exp(w) + u
+    logps, _ = theano.scan(fn=lambda q: logp(q),
+                           outputs_info=None,
+                           sequences=[qs])
+    elbo = T.mean(logps) + T.sum(w)
+
+    return elbo
 
 def adagrad(grad, param, learning_rate, epsilon, n):
     # Compute windowed adagrad using last n gradients
