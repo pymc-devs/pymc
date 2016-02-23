@@ -1,3 +1,8 @@
+from .vartypes import *
+
+from theano import theano, tensor as t, function
+from theano.tensor.var import TensorVariable
+
 import numpy as np
 import theano
 import theano.tensor as T
@@ -420,8 +425,11 @@ def Point(*args, **kwargs):
     except Exception as e:
         raise TypeError(
             "can't turn {} and {} into a dict. {}".format(args, kwargs, e))
+            " into a dict. " + str(e))
 
+    varnames = list(map(str, model.vars))
     return dict((str(k), np.array(v)) for k, v in d.items()
+                for (k, v) in d.items()
                 if str(k) in map(str, model.vars))
 
 
@@ -475,8 +483,12 @@ class FreeRV(Factor, TensorVariable):
 
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
-                                wrapper=InstanceMethod)
-
+                                wrapper=InstanceMethod)    
+       
+    @property
+    def init_value(self):
+        """Convenience attribute to return tag.test_value"""
+        return self.tag.test_value
 
 def pandas_to_array(data):
     if hasattr(data, 'values'): #pandas
@@ -550,6 +562,12 @@ class ObservedRV(Factor, TensorVariable):
 
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
 
+    @property
+    def init_value(self):
+        """Convenience attribute to return tag.test_value"""
+        return self.tag.test_value
+        
+        
 class MultiObservedRV(Factor):
     """Observed random variable that a model is specified in terms of.
     Potentially partially observed.
@@ -641,7 +659,12 @@ class TransformedRV(TensorVariable):
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
                                 wrapper=InstanceMethod)
-
+    @property
+    def init_value(self):
+        """Convenience attribute to return tag.test_value"""
+        return self.tag.test_value
+        
+        
 def as_iterargs(data):
     if isinstance(data, tuple):
         return data
