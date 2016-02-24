@@ -14,7 +14,7 @@ __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
 
 
 class Binomial(Discrete):
-    r"""
+    R"""
     Binomial log-likelihood.
 
     The discrete probability distribution of the number of successes
@@ -59,7 +59,7 @@ class Binomial(Discrete):
 
 
 class BetaBinomial(Discrete):
-    r"""
+    R"""
     Beta-binomial log-likelihood.
 
     Equivalent to binomial random variable with success probability
@@ -123,7 +123,7 @@ class BetaBinomial(Discrete):
 
 
 class Bernoulli(Discrete):
-    r"""Bernoulli log-likelihood
+    R"""Bernoulli log-likelihood
 
     The Bernoulli distribution describes the probability of successes
     (x=1) and failures (x=0).
@@ -161,7 +161,7 @@ class Bernoulli(Discrete):
 
 
 class Poisson(Discrete):
-    r"""
+    R"""
     Poisson log-likelihood.
 
     Often used to model the number of events occurring in a fixed period
@@ -205,7 +205,7 @@ class Poisson(Discrete):
 
 
 class NegativeBinomial(Discrete):
-    r"""
+    R"""
     Negative binomial log-likelihood.
 
     The negative binomial distribution describes a Poisson random variable
@@ -258,7 +258,7 @@ class NegativeBinomial(Discrete):
 
 
 class Geometric(Discrete):
-    r"""
+    R"""
     Geometric log-likelihood.
 
     The probability that the first success in a sequence of Bernoulli
@@ -295,7 +295,7 @@ class Geometric(Discrete):
 
 
 class DiscreteUniform(Discrete):
-    r"""
+    R"""
     Discrete uniform distribution.
 
     .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower}
@@ -341,7 +341,7 @@ class DiscreteUniform(Discrete):
 
 
 class Categorical(Discrete):
-    r"""
+    R"""
     Categorical log-likelihood.
 
     The most general discrete distribution.
