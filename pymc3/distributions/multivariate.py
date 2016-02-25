@@ -16,7 +16,7 @@ __all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart', 'LKJCorr']
 
 
 class MvNormal(Continuous):
-    r"""
+    R"""
     Multivariate normal log-likelihood.
 
     .. math::
@@ -71,7 +71,7 @@ class MvNormal(Continuous):
 
 
 class Dirichlet(Continuous):
-    r"""
+    R"""
     Dirichlet log-likelihood.
 
     .. math::
@@ -136,7 +136,7 @@ class Dirichlet(Continuous):
 
 
 class Multinomial(Discrete):
-    r"""
+    R"""
     Multinomial log-likelihood.
 
     Generalizes binomial distribution, but instead of each trial resulting
@@ -244,7 +244,7 @@ matrix_pos_def = PosDefMatrix()
 
 
 class Wishart(Continuous):
-    r"""
+    R"""
     Wishart log-likelihood.
 
     The Wishart distribution is the probability
@@ -312,7 +312,7 @@ class Wishart(Continuous):
 
     
 class LKJCorr(Continuous):
-    r"""
+    R"""
     The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
 
     The LKJ distribution is a prior distribution for correlation matrices.
