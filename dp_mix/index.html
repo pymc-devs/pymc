@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="PyMC devs">
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+
+	<title>Density Estimation with Dirichlet Process Mixtures - PyMC3</title>
+
+        <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="../css/highlight.css">
+        <link href="../source/_build/html/_static/basic.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/pygments.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/css/badge_only.css" rel="stylesheet">
+        <link href="../source/_build/html/_static/css/theme.css" rel="stylesheet">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="..">PyMC3</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            
+                <!-- Main navigation -->
+                <ul class="nav navbar-nav">
+                
+                
+                    <li >
+                        <a href="..">Overview</a>
+                    </li>
+                
+                
+                
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../getting_started/">Getting started</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                
+                    <li class="dropdown active">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Examples <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            
+<li >
+    <a href="../BEST/">BEST</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../stochastic_volatility/">Stochastic Volatility</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../hierarchical/">Hierarchical model</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-linear/">Linear Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-robust/">Robust Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-robust-with-outlier-detection/">Robust Regression with Outlier Detection</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-model-selection/">Model Selection for Regression using DIC and WAIC</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../rolling_regression/">Rolling Regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GLM-hierarchical/">Hierarchical linear regression</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../pmf-pymc/">Probabilistic Matrix Factorization</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../rugby_analytics/">Rugby Analytics example</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../posterior_predictive/">Posterior Predictive checks and prediction</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../survival_analysis/">Survival Analysis</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../GP-smoothing/">Gaussian Process (GP) smoothing</a>
+</li>
+
+                        
+                            
+<li >
+    <a href="../Bayesian_LogReg/">Bayesian Logistic Regression for predicting salary</a>
+</li>
+
+                        
+                            
+<li class="active">
+    <a href="./">Density Estimation with Dirichlet Process Mixtures</a>
+</li>
+
+                        
+                        </ul>
+                    </li>
+                
+                
+                </ul>
+            
+
+            <ul class="nav navbar-nav navbar-right">
+                <li>
+                    <a href="#" data-toggle="modal" data-target="#mkdocs_search_modal">
+                        <i class="fa fa-search"></i> Search
+                    </a>
+                </li>
+                
+                    <li >
+                        <a rel="next" href="../Bayesian_LogReg/">
+                            <i class="fa fa-arrow-left"></i> Previous
+                        </a>
+                    </li>
+                    <li class="disabled">
+                        <a rel="prev" >
+                            Next <i class="fa fa-arrow-right"></i>
+                        </a>
+                    </li>
+                
+                
+                    <li>
+                        <a href="https://github.com/pymc-devs/pymc3">
+                            
+                                <i class="fa fa-github"></i>
+                            
+                            GitHub
+                        </a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            
+                <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#dirichlet-process-mixtures-for-density-estimation">Dirichlet process mixtures for density estimation</a></li>
+        
+            <li><a href="#dirichlet-processes">Dirichlet processes</a></li>
+        
+            <li><a href="#dirichlet-process-mixtures">Dirichlet process mixtures</a></li>
+        
+    
+    </ul>
+</div></div>
+                <div class="col-md-9" role="main">
+
+<h1 id="dirichlet-process-mixtures-for-density-estimation">Dirichlet process mixtures for density estimation</h1>
+<p>Author: <a href="https://github.com/AustinRochford/">Austin Rochford</a></p>
+<h2 id="dirichlet-processes">Dirichlet processes</h2>
+<p>The <a href="https://en.wikipedia.org/wiki/Dirichlet_process">Dirichlet process</a> is a flexible probability distribution over the space of distributions.  Most generally, a probability distribution, <mathjax>$P$</mathjax>, on a set <mathjax>$\Omega$</mathjax> is a [measure](https://en.wikipedia.org/wiki/Measure_(mathematics%29) that assigns measure one to the entire space (<mathjax>$P(\Omega) = 1$</mathjax>).  A Dirichlet process <mathjax>$P \sim \textrm{DP}(\alpha, P_0)$</mathjax> is a measure that has the property that, for every finite <a href="https://en.wikipedia.org/wiki/Disjoint_sets">disjoint</a> partition <mathjax>$S_1, \ldots, S_n$</mathjax> of <mathjax>$\Omega$</mathjax>,</p>
+<p><mathjax>$$(P(S_1), \ldots, P(S_n)) \sim \textrm{Dir}(\alpha P_0(S_1), \ldots, \alpha P_0(S_n)).$$</mathjax></p>
+<p>Here <mathjax>$P_0$</mathjax> is the base probability measure on the space <mathjax>$\Omega$</mathjax>.  The precision parameter <mathjax>$\alpha &gt; 0$</mathjax> controls how close samples from the Dirichlet process are to the base measure, <mathjax>$P_0$</mathjax>.  As <mathjax>$\alpha \to \infty$</mathjax>, samples from the Dirichlet process approach the base measure <mathjax>$P_0$</mathjax>.</p>
+<p>Dirichlet processes have several properties that make then quite suitable to <a href="https://en.wikipedia.org/wiki/Markov_chain_Monte_Carlo">MCMC</a> simulation.</p>
+<ol>
+<li>
+<p>The posterior given <a href="https://en.wikipedia.org/wiki/Independent_and_identically_distributed_random_variables">i.i.d.</a> observations <mathjax>$\omega_1, \ldots, \omega_n$</mathjax> from a Dirichlet process <mathjax>$P \sim \textrm{DP}(\alpha, P_0)$</mathjax> is also a Dirichlet process with</p>
+<p><mathjax>$$P\ |\ \omega_1, \ldots, \omega_n \sim \textrm{DP}\left(\alpha + n, \frac{\alpha}{\alpha + n} P_0 + \frac{1}{\alpha + n} \sum_{i = 1}^n \delta_{\omega_i}\right),$$</mathjax></p>
+</li>
+</ol>
+<p>where <mathjax>$\delta$</mathjax> is the <a href="https://en.wikipedia.org/wiki/Dirac_delta_function">Dirac delta measure</a></p>
+<p><mathjax>$$\begin{align*}
+     \delta_{\omega}(S)
+         &amp; = \begin{cases}
+                 1 &amp; \textrm{if } \omega \in S \\
+                 0 &amp; \textrm{if } \omega \not \in S
+             \end{cases}
+ \end{align*}.$$</mathjax></p>
+<ol>
+<li>
+<p>The posterior predictive distribution of a new observation is a compromise between the base measure and the observations,</p>
+<p><mathjax>$$\omega\ |\ \omega_1, \ldots, \omega_n \sim \frac{\alpha}{\alpha + n} P_0 + \frac{1}{\alpha + n} \sum_{i = 1}^n \delta_{\omega_i}.$$</mathjax></p>
+</li>
+</ol>
+<p>We see that the prior precision <mathjax>$\alpha$</mathjax> can naturally be interpreted as a prior sample size.  The form of this posterior predictive distribution also lends itself to Gibbs sampling.</p>
+<ol>
+<li>
+<p>Samples, <mathjax>$P \sim \textrm{DP}(\alpha, P_0)$</mathjax>, from a Dirichlet process are discrete with probability one.  That is, there are elements <mathjax>$\omega_1, \omega_2, \ldots$</mathjax> in <mathjax>$\Omega$</mathjax> and weights <mathjax>$w_1, w_2, \ldots$</mathjax> with <mathjax>$\sum_{i = 1}^{\infty} w_i = 1$</mathjax> such that</p>
+<p><mathjax>$$P = \sum_{i = 1}^\infty w_i \delta_{\omega_i}.$$</mathjax></p>
+</li>
+<li>
+<p>The <a href="https://en.wikipedia.org/wiki/Dirichlet_process#The_stick-breaking_process">stick-breaking process</a> gives an explicit construction of the weights <mathjax>$w_i$</mathjax> and samples <mathjax>$\omega_i$</mathjax> above that is straightforward to sample from.  If <mathjax>$\beta_1, \beta_2, \ldots \sim \textrm{Beta}(1, \alpha)$</mathjax>, then <mathjax>$w_i = \beta_i \prod_{j = 1}^{j - 1} (1 - \beta_j)$</mathjax>.  The relationship between this representation and stick breaking may be illustrated as follows:</p>
+<ol>
+<li>Start with a stick of length one.</li>
+<li>Break the stick into two portions, the first of proportion <mathjax>$w_1 = \beta_1$</mathjax> and the second of proportion <mathjax>$1 - w_1$</mathjax>.</li>
+<li>Further break the second portion into two portions, the first of proportion <mathjax>$\beta_2$</mathjax> and the second of proportion <mathjax>$1 - \beta_2$</mathjax>.  The length of the first portion of this stick is <mathjax>$\beta_2 (1 - \beta_1)$</mathjax>; the length of the second portion is <mathjax>$(1 - \beta_1) (1 - \beta_2)$</mathjax>.</li>
+<li>Continue breaking the second portion from the previous break in this manner forever.  If <mathjax>$\omega_1, \omega_2, \ldots \sim P_0$</mathjax>, then</li>
+</ol>
+<p><mathjax>$$P = \sum_{i = 1}^\infty w_i \delta_{\omega_i} \sim \textrm{DP}(\alpha, P_0).$$</mathjax></p>
+</li>
+</ol>
+<p>We can use the stick-breaking process above to easily sample from a Dirichlet process in Python.  For this example, <mathjax>$\alpha = 2$</mathjax> and the base distribution is <mathjax>$N(0, 1)$</mathjax>.</p>
+<pre><code class="python">%matplotlib inline
+</code></pre>
+
+<pre><code class="python">from __future__ import division
+</code></pre>
+
+<pre><code class="python">from matplotlib import pyplot as plt
+import numpy as np
+import pymc3 as pm
+import scipy as sp
+import seaborn as sns
+from statsmodels.datasets import get_rdataset
+from theano import tensor as T
+</code></pre>
+
+<pre><code>Couldn't import dot_parser, loading of dot files will not be possible.
+</code></pre>
+<pre><code class="python">blue = sns.color_palette()[0]
+</code></pre>
+
+<pre><code class="python">np.random.seed(462233) # from random.org
+</code></pre>
+
+<pre><code class="python">N = 20
+K = 30
+
+alpha = 2.
+P0 = sp.stats.norm
+</code></pre>
+
+<p>We draw and plot samples from the stick-breaking process.</p>
+<pre><code class="python">beta = sp.stats.beta.rvs(1, alpha, size=(N, K))
+w = np.empty_like(beta)
+w[:, 0] = beta[:, 0]
+w[:, 1:] = beta[:, 1:] * (1 - beta[:, :-1]).cumprod(axis=1)
+
+omega = P0.rvs(size=(N, K))
+
+x_plot = np.linspace(-3, 3, 200)
+
+sample_cdfs = (w[..., np.newaxis] * np.less.outer(omega, x_plot)).sum(axis=1)
+</code></pre>
+
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
+
+ax.plot(x_plot, sample_cdfs[0], c='gray', alpha=0.75,
+        label='DP sample CDFs');
+ax.plot(x_plot, sample_cdfs[1:].T, c='gray', alpha=0.75);
+ax.plot(x_plot, P0.cdf(x_plot), c='k', label='Base CDF');
+
+ax.set_title(r'$\alpha = {}$'.format(alpha));
+ax.legend(loc=2);
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_9_0.png" /></p>
+<p>As stated above, as <mathjax>$\alpha \to \infty$</mathjax>, samples from the Dirichlet process converge to the base distribution.</p>
+<pre><code class="python">fig, (l_ax, r_ax) = plt.subplots(ncols=2, sharex=True, sharey=True, figsize=(16, 6))
+
+K = 50
+alpha = 10.
+
+beta = sp.stats.beta.rvs(1, alpha, size=(N, K))
+w = np.empty_like(beta)
+w[:, 0] = beta[:, 0]
+w[:, 1:] = beta[:, 1:] * (1 - beta[:, :-1]).cumprod(axis=1)
+
+omega = P0.rvs(size=(N, K))
+
+sample_cdfs = (w[..., np.newaxis] * np.less.outer(omega, x_plot)).sum(axis=1)
+
+l_ax.plot(x_plot, sample_cdfs[0], c='gray', alpha=0.75,
+          label='DP sample CDFs');
+l_ax.plot(x_plot, sample_cdfs[1:].T, c='gray', alpha=0.75);
+l_ax.plot(x_plot, P0.cdf(x_plot), c='k', label='Base CDF');
+
+l_ax.set_title(r'$\alpha = {}$'.format(alpha));
+l_ax.legend(loc=2);
+
+K = 200
+alpha = 50.
+
+beta = sp.stats.beta.rvs(1, alpha, size=(N, K))
+w = np.empty_like(beta)
+w[:, 0] = beta[:, 0]
+w[:, 1:] = beta[:, 1:] * (1 - beta[:, :-1]).cumprod(axis=1)
+
+omega = P0.rvs(size=(N, K))
+
+sample_cdfs = (w[..., np.newaxis] * np.less.outer(omega, x_plot)).sum(axis=1)
+
+r_ax.plot(x_plot, sample_cdfs[0], c='gray', alpha=0.75,
+          label='DP sample CDFs');
+r_ax.plot(x_plot, sample_cdfs[1:].T, c='gray', alpha=0.75);
+r_ax.plot(x_plot, P0.cdf(x_plot), c='k', label='Base CDF');
+
+r_ax.set_title(r'$\alpha = {}$'.format(alpha));
+r_ax.legend(loc=2);
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_11_0.png" /></p>
+<h2 id="dirichlet-process-mixtures">Dirichlet process mixtures</h2>
+<p>For the task of density estimation, the (almost sure) discreteness of samples from the Dirichlet process is a significant drawback.  This problem can be solved with another level of indirection by using Dirichlet process mixtures for density estimation.  A Dirichlet process mixture uses component densities from a parametric family <mathjax>$\mathcal{F} = \{f_{\theta}\ |\ \theta \in \Theta\}$</mathjax> and represents the mixture weights as a Dirichlet process.  If <mathjax>$P_0$</mathjax> is a probability measure on the parameter space <mathjax>$\Theta$</mathjax>, a Dirichlet process mixture is the hierarchical model</p>
+<p><mathjax>$$
+\begin{align*}
+    x_i\ |\ \theta_i
+        &amp; \sim f_{\theta_i} \\
+    \theta_1, \ldots, \theta_n
+        &amp; \sim P \\
+    P
+        &amp; \sim \textrm{DP}(\alpha, P_0).
+\end{align*}
+$$</mathjax></p>
+<p>To illustrate this model, we simulate draws from a Dirichlet process mixture with <mathjax>$\alpha = 2$</mathjax>, <mathjax>$\theta \sim N(0, 1)$</mathjax>, <mathjax>$x\ |\ \theta \sim N(\theta, (0.3)^2)$</mathjax>.</p>
+<pre><code class="python">N = 5
+K = 30
+
+alpha = 2
+P0 = sp.stats.norm
+f = lambda x, theta: sp.stats.norm.pdf(x, theta, 0.3)
+</code></pre>
+
+<pre><code class="python">beta = sp.stats.beta.rvs(1, alpha, size=(N, K))
+w = np.empty_like(beta)
+w[:, 0] = beta[:, 0]
+w[:, 1:] = beta[:, 1:] * (1 - beta[:, :-1]).cumprod(axis=1)
+
+theta = P0.rvs(size=(N, K))
+
+dpm_pdf_components = f(x_plot[np.newaxis, np.newaxis, :], theta[..., np.newaxis])
+dpm_pdfs = (w[..., np.newaxis] * dpm_pdf_components).sum(axis=1)
+</code></pre>
+
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
+
+ax.plot(x_plot, dpm_pdfs.T, c='gray');
+
+ax.set_yticklabels([]);
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_15_0.png" /></p>
+<p>We now focus on a single mixture and decompose it into its individual (weighted) mixture components.</p>
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
+
+ix = 1
+
+ax.plot(x_plot, dpm_pdfs[ix], c='k', label='Density');
+ax.plot(x_plot, (w[..., np.newaxis] * dpm_pdf_components)[ix, 0],
+        '--', c='k', label='Mixture components (weighted)');
+ax.plot(x_plot, (w[..., np.newaxis] * dpm_pdf_components)[ix].T,
+        '--', c='k');
+
+ax.set_yticklabels([]);
+ax.legend(loc=1);
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_17_0.png" /></p>
+<p>Sampling from these stochastic processes is fun, but these ideas become truly useful when we fit them to data.  The discreteness of samples and the stick-breaking representation of the Dirichlet process lend themselves nicely to Markov chain Monte Carlo simulation of posterior distributions.  We will perform this sampling using <a href="https://pymc-devs.github.io/pymc3/"><code>pymc3</code></a>.</p>
+<p>Our first example uses a Dirichlet process mixture to estimate the density of waiting times between eruptions of the <a href="https://en.wikipedia.org/wiki/Old_Faithful">Old Faithful</a> geyser in <a href="https://en.wikipedia.org/wiki/Yellowstone_National_Park">Yellowstone National Park</a>.</p>
+<pre><code class="python">old_faithful_df = get_rdataset('faithful', cache=True).data[['waiting']]
+</code></pre>
+
+<p>For convenience in specifying the prior, we standardize the waiting time between eruptions.</p>
+<pre><code class="python">old_faithful_df['std_waiting'] = (old_faithful_df.waiting - old_faithful_df.waiting.mean()) / old_faithful_df.waiting.std()
+</code></pre>
+
+<pre><code class="python">old_faithful_df.head()
+</code></pre>
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>waiting</th>
+      <th>std_waiting</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>79</td>
+      <td>0.596025</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>54</td>
+      <td>-1.242890</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>74</td>
+      <td>0.228242</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>62</td>
+      <td>-0.654437</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>85</td>
+      <td>1.037364</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
+
+n_bins = 20
+ax.hist(old_faithful_df.std_waiting, bins=n_bins, color=blue, lw=0, alpha=0.5);
+
+ax.set_xlabel('Standardized waiting time between eruptions');
+ax.set_ylabel('Number of eruptions');
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_23_0.png" /></p>
+<p>Observant readers will have noted that we have not been continuing the stick-breaking process indefinitely as indicated by its definition, but rather have been truncating this process after a finite number of breaks.  Obviously, when computing with Dirichlet processes, it is necessary to only store a finite number of its point masses and weights in memory.  This restriction is not terribly onerous, since with a finite number of observations, it seems quite likely that the number of mixture components that contribute non-neglible mass to the mixture will grow slower than the number of samples.  This intuition can be formalized to show that the (expected) number of components that contribute non-negligible mass to the mixture approaches <mathjax>$\alpha \log N$</mathjax>, where <mathjax>$N$</mathjax> is the sample size.</p>
+<p>There are various clever <a href="https://en.wikipedia.org/wiki/Gibbs_sampling">Gibbs sampling</a> techniques for Dirichlet processes that allow the number of components stored to grow as needed.  <a href="http://danroy.org/papers/RoyManGooTen-ICMLNPB-2008.pdf">Stochastic memoization</a> is another powerful technique for simulating Dirichlet processes while only storing finitely many components in memory.  In this introductory example, we take the much less sophistocated approach of simple truncating the Dirichlet process components that are stored after a fixed number, <mathjax>$K$</mathjax>, of components.  Importantly, this approach is compatible with some of <code>pymc3</code>'s (current) technical limitations.  <a href="http://fisher.osu.edu/~schroeder.9/AMIS900/Ohlssen2006.pdf">Ohlssen, et al.</a> provide justification for truncation, showing that <mathjax>$K &gt; 5 \alpha + 2$</mathjax> is most likely sufficient to capture almost all of the mixture weights (<mathjax>$\sum_{i = 1}^{K} w_i &gt; 0.99$</mathjax>).  We can practically verify the suitability of our truncated approximation to the Dirichlet process by checking the number of components that contribute non-negligible mass to the mixture.  If, in our simulations, all components contribute non-negligible mass to the mixture, we have truncated our Dirichlet process too early.</p>
+<p>Our Dirichlet process mixture model for the standardized waiting times is</p>
+<p><mathjax>$$
+\begin{align*}
+    x_i\ |\ \mu_i, \lambda_i, \tau_i
+        &amp; \sim N\left(\mu, (\lambda_i \tau_i)^{-1}\right) \\
+    \mu_i\ |\ \lambda_i, \tau_i
+        &amp; \sim N\left(0, (\lambda_i \tau_i)^{-1}\right) \\
+    (\lambda_1, \tau_1), (\lambda_2, \tau_2), \ldots
+        &amp; \sim P \\
+    P
+        &amp; \sim \textrm{DP}(\alpha, U(0, 5) \times \textrm{Gamma}(1, 1)) \\
+    \alpha
+        &amp; \sim \textrm{Gamma}(1, 1).
+\end{align*}
+$$</mathjax></p>
+<p>Note that instead of fixing a value of <mathjax>$\alpha$</mathjax>, as in our previous simulations, we specify a prior on <mathjax>$\alpha$</mathjax>, so that we may learn its posterior distribution from the observations.  This model is therefore actually a mixture of Dirichlet process mixtures, since each fixed value of <mathjax>$\alpha$</mathjax> results in a Dirichlet process mixture.</p>
+<p>We now construct this model using <code>pymc3</code>.</p>
+<pre><code class="python">N = old_faithful_df.shape[0]
+
+K = 30
+</code></pre>
+
+<pre><code class="python">with pm.Model() as model:
+    alpha = pm.Gamma('alpha', 1., 1.)
+    beta = pm.Beta('beta', 1., alpha, shape=K)
+    w = pm.Deterministic('w', beta * T.concatenate([[1], T.extra_ops.cumprod(1 - beta)[:-1]]))
+    component = pm.Categorical('component', w, shape=N)
+
+    tau = pm.Gamma('tau', 1., 1., shape=K)
+    lambda_ = pm.Uniform('lambda', 0, 5, shape=K)
+    mu = pm.Normal('mu', 0, lambda_ * tau, shape=K)
+    obs = pm.Normal('obs', mu[component], lambda_[component] * tau[component],
+                    observed=old_faithful_df.std_waiting.values)
+</code></pre>
+
+<pre><code>Applied log-transform to alpha and added transformed alpha_log to model.
+Applied logodds-transform to beta and added transformed beta_logodds to model.
+Applied log-transform to tau and added transformed tau_log to model.
+Applied interval-transform to lambda and added transformed lambda_interval to model.
+</code></pre>
+<p>We sample from the posterior distribution 20,000 times, burn the first 10,000 samples, and thin to every tenth sample.</p>
+<pre><code class="python">with model:
+    step1 = pm.Metropolis(vars=[alpha, beta, w, lambda_, tau, mu, obs])
+    step2 = pm.ElemwiseCategoricalStep([component], np.arange(K))
+
+    trace_ = pm.sample(20000, [step1, step2])
+
+trace = trace_[10000::10]
+</code></pre>
+
+<pre><code> [-----------------100%-----------------] 20000 of 20000 complete in 133.1 sec
+</code></pre>
+<p>The posterior distribution of <mathjax>$\alpha$</mathjax> is concentrated between 0.2 and 1.2.</p>
+<pre><code class="python">pm.traceplot(trace, varnames=['alpha']);
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_30_0.png" /></p>
+<p>To verify that our truncation point is not biasing our results, we plot the distribution of the number of mixture components used.</p>
+<pre><code class="python">n_components_used = np.apply_along_axis(lambda x: np.unique(x).size, 1, trace['component'])
+</code></pre>
+
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
+
+bins = np.arange(n_components_used.min(), n_components_used.max() + 1)
+ax.hist(n_components_used + 1, bins=bins, normed=True, lw=0, alpha=0.75);
+
+ax.set_xticks(bins + 0.5);
+ax.set_xticklabels(bins);
+ax.set_xlim(bins.min(), bins.max() + 1);
+ax.set_xlabel('Number of mixture components used');
+
+ax.set_ylabel('Posterior probability');
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_33_0.png" /></p>
+<p>We see that the vast majority of samples use four mixture components, and the largest number of mixture components used by any sample is nine.  Since we truncated our Dirichlet process mixture at thirty components, we can be quite sure that truncation did not bias our results.</p>
+<p>We now compute and plot our posterior density estimate.</p>
+<pre><code class="python">post_pdf_contribs = sp.stats.norm.pdf(np.atleast_3d(x_plot),
+                                      trace['mu'][:, np.newaxis, :],
+                                      1. / np.sqrt(trace['lambda'] * trace['tau'])[:, np.newaxis, :])
+post_pdfs = (trace['w'][:, np.newaxis, :] * post_pdf_contribs).sum(axis=-1)
+
+post_pdf_low, post_pdf_high = np.percentile(post_pdfs, [2.5, 97.5], axis=0)
+</code></pre>
+
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
+
+n_bins = 20
+ax.hist(old_faithful_df.std_waiting.values, bins=n_bins, normed=True,
+        color=blue, lw=0, alpha=0.5);
+
+ax.fill_between(x_plot, post_pdf_low, post_pdf_high,
+                color='gray', alpha=0.45);
+ax.plot(x_plot, post_pdfs[0],
+        c='gray', label='Posterior sample densities');
+ax.plot(x_plot, post_pdfs[::100].T, c='gray');
+ax.plot(x_plot, post_pdfs.mean(axis=0),
+        c='k', label='Posterior expected density');
+
+ax.set_xlabel('Standardized waiting time between eruptions');
+
+ax.set_yticklabels([]);
+ax.set_ylabel('Density');
+
+ax.legend(loc=2);
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_36_0.png" /></p>
+<p>As above, we can decompose this density estimate into its (weighted) mixture components.</p>
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
+
+n_bins = 20
+ax.hist(old_faithful_df.std_waiting.values, bins=n_bins, normed=True,
+        color=blue, lw=0, alpha=0.5);
+
+ax.plot(x_plot, post_pdfs.mean(axis=0),
+        c='k', label='Posterior expected density');
+ax.plot(x_plot, (trace['w'][:, np.newaxis, :] * post_pdf_contribs).mean(axis=0)[:, 0],
+        '--', c='k', label='Posterior expected mixture\ncomponents\n(weighted)');
+ax.plot(x_plot, (trace['w'][:, np.newaxis, :] * post_pdf_contribs).mean(axis=0),
+        '--', c='k');
+
+ax.set_xlabel('Standardized waiting time between eruptions');
+
+ax.set_yticklabels([]);
+ax.set_ylabel('Density');
+
+ax.legend(loc=2);
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_38_0.png" /></p>
+<p>The Dirichlet process mixture model is incredibly flexible in terms of the family of parametric component distributions <mathjax>$\{f_{\theta}\ |\ f_{\theta} \in \Theta\}$</mathjax>.  We illustrate this flexibility below by using Poisson component distributions to estimate the density of sunspots per year.</p>
+<pre><code class="python">sunspot_df = get_rdataset('sunspot.year', cache=True).data
+</code></pre>
+
+<pre><code class="python">sunspot_df.head()
+</code></pre>
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>time</th>
+      <th>sunspot.year</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1700</td>
+      <td>5</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1701</td>
+      <td>11</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1702</td>
+      <td>16</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1703</td>
+      <td>23</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1704</td>
+      <td>36</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>For this problem, the model is</p>
+<p><mathjax>$$
+\begin{align*}
+    x_i\ |\ \lambda_i
+        &amp; \sim \textrm{Poisson}(\lambda_i) \\
+    \lambda_1, \lambda_2, \ldots
+        &amp; \sim P \\
+    P
+        &amp; \sim \textrm{DP}(\alpha, U(0, 300)) \\
+    \alpha
+        &amp; \sim \textrm{Gamma}(1, 1).
+\end{align*}
+$$</mathjax></p>
+<pre><code class="python">N = sunspot_df.shape[0]
+
+K = 30
+</code></pre>
+
+<pre><code class="python">with pm.Model() as model:
+    alpha = pm.Gamma('alpha', 1., 1.)
+    beta = pm.Beta('beta', 1, alpha, shape=K)
+    w = pm.Deterministic('beta', beta * T.concatenate([[1], T.extra_ops.cumprod(1 - beta[:-1])]))
+    component = pm.Categorical('component', w, shape=N)
+
+    mu = pm.Uniform('mu', 0., 300., shape=K)
+    obs = pm.Poisson('obs', mu[component], observed=sunspot_df['sunspot.year'])
+</code></pre>
+
+<pre><code>Applied log-transform to alpha and added transformed alpha_log to model.
+Applied logodds-transform to beta and added transformed beta_logodds to model.
+Applied interval-transform to mu and added transformed mu_interval to model.
+</code></pre>
+<pre><code class="python">with model:
+    step1 = pm.Metropolis(vars=[alpha, beta, w, mu, obs])
+    step2 = pm.ElemwiseCategoricalStep([component], np.arange(K))
+
+    trace_ = pm.sample(20000, [step1, step2])
+</code></pre>
+
+<pre><code> [-----------------100%-----------------] 20000 of 20000 complete in 116.3 sec
+</code></pre>
+<pre><code class="python">trace = trace_[10000::10]
+</code></pre>
+
+<p>For the sunspot model, the posterior distribution of <mathjax>$\alpha$</mathjax> is concentrated between one and three, indicating that we should expect more components to contribute non-negligible amounts to the mixture than for the Old Faithful waiting time model.</p>
+<pre><code class="python">pm.traceplot(trace, varnames=['alpha']);
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_48_0.png" /></p>
+<p>Indeed, we see that there are (on average) about ten to fifteen components used by this model.</p>
+<pre><code class="python">n_components_used = np.apply_along_axis(lambda x: np.unique(x).size, 1, trace['component'])
+</code></pre>
+
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
+
+bins = np.arange(n_components_used.min(), n_components_used.max() + 1)
+ax.hist(n_components_used + 1, bins=bins, normed=True, lw=0, alpha=0.75);
+
+ax.set_xticks(bins + 0.5);
+ax.set_xticklabels(bins);
+ax.set_xlim(bins.min(), bins.max() + 1);
+ax.set_xlabel('Number of mixture components used');
+
+ax.set_ylabel('Posterior probability');
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_51_0.png" /></p>
+<p>We now calculate and plot the fitted density estimate.</p>
+<pre><code class="python">x_plot = np.arange(250)
+</code></pre>
+
+<pre><code class="python">post_pmf_contribs = sp.stats.poisson.pmf(np.atleast_3d(x_plot),
+                                         trace['mu'][:, np.newaxis, :])
+post_pmfs = (trace['beta'][:, np.newaxis, :] * post_pmf_contribs).sum(axis=-1)
+
+post_pmf_low, post_pmf_high = np.percentile(post_pmfs, [2.5, 97.5], axis=0)
+</code></pre>
+
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
+
+ax.hist(sunspot_df['sunspot.year'].values, bins=40, normed=True, lw=0, alpha=0.75);
+
+ax.fill_between(x_plot, post_pmf_low, post_pmf_high,
+                 color='gray', alpha=0.45)
+ax.plot(x_plot, post_pmfs[0],
+        c='gray', label='Posterior sample densities');
+ax.plot(x_plot, post_pmfs[::200].T, c='gray');
+ax.plot(x_plot, post_pmfs.mean(axis=0),
+        c='k', label='Posterior expected density');
+
+ax.set_xlabel('Yearly sunspot count');
+ax.set_yticklabels([]);
+ax.legend(loc=1);
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_55_0.png" /></p>
+<p>Again, we can decompose the posterior expected density into weighted mixture densities.</p>
+<pre><code class="python">fig, ax = plt.subplots(figsize=(8, 6))
+
+ax.hist(sunspot_df['sunspot.year'].values, bins=40, normed=True, lw=0, alpha=0.75);
+ax.plot(x_plot, post_pmfs.mean(axis=0),
+        c='k', label='Posterior expected density');
+ax.plot(x_plot, (trace['beta'][:, np.newaxis, :] * post_pmf_contribs).mean(axis=0)[:, 0],
+        '--', c='k', label='Posterior expected\nmixture components\n(weighted)');
+ax.plot(x_plot, (trace['beta'][:, np.newaxis, :] * post_pmf_contribs).mean(axis=0),
+        '--', c='k');
+
+ax.set_xlabel('Yearly sunspoit count');
+ax.set_yticklabels([]);
+ax.legend(loc=1);
+</code></pre>
+
+<p><img alt="png" src="../dp_mix_files/dp_mix_57_0.png" /></p>
+<p>This example first appeared <a href="http://austinrochford.com/posts/2016-02-25-density-estimation-dpm.html">here</a>.</p></div>
+            
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            
+            <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+
+        <script src="../js/jquery-1.10.2.min.js"></script>
+        <script src="../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../js/highlight.pack.js"></script>
+        <script>var base_url = '..';</script>
+        <script data-main="../mkdocs/js/search.js" src="../mkdocs/js/require.js"></script>
+        <script src="../js/base.js"></script>
+        <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+        <script src="../js/mathjaxhelper.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="exampleModalLabel">Search</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>
+                            From here you can search these documents. Enter
+                            your search terms below.
+                        </p>
+                        <form role="form">
+                            <div class="form-group">
+                                <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query">
+                            </div>
+                        </form>
+                        <div id="mkdocs-search-results"></div>
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </body>
+</html>

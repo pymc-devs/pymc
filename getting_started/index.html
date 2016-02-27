@@ -172,6 +172,12 @@
 </li>
 
                         
+                            
+<li >
+    <a href="../dp_mix/">Density Estimation with Dirichlet Process Mixtures</a>
+</li>
+
+                        
                         </ul>
                     </li>
                 
@@ -339,6 +345,8 @@ with basic_model:
     Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 </code></pre>
 
+<pre><code>Applied log-transform to sigma and added transformed sigma_log to model.
+</code></pre>
 <p>The first line,</p>
 <pre><code class="python">basic_model = Model()
 </code></pre>
@@ -393,6 +401,7 @@ ight\}
  |  Methods defined here:
  |  
  |  __init__(self, mu=0.0, tau=None, sd=None, *args, **kwargs)
+ |      Initialize self.  See help(type(self)) for accurate signature.
  |  
  |  logp(self, value)
  |  
@@ -418,6 +427,7 @@ ight\}
  |  Static methods inherited from pymc3.distributions.distribution.Distribution:
  |  
  |  __new__(cls, name, *args, **kwargs)
+ |      Create and return a new object.  See help(type) for accurate signature.
  |  
  |  ----------------------------------------------------------------------
  |  Data descriptors inherited from pymc3.distributions.distribution.Distribution:
@@ -452,7 +462,7 @@ map_estimate = find_MAP(model=basic_model)
 print(map_estimate)
 </code></pre>
 
-<pre><code>{'alpha': array(0.9065985757590524), 'sigma_log': array(-0.03278147323479127), 'beta': array([ 0.94848596,  2.60705517])}
+<pre><code>{'sigma_log': array(-0.03278146854842092), 'alpha': array(0.9065985664354854), 'beta': array([ 0.948486  ,  2.60705513])}
 </code></pre>
 <p>By default, <code>find_MAP</code> uses the Broyden–Fletcher–Goldfarb–Shanno (BFGS) optimization algorithm to find the maximum of the log-posterior but also allows selection of other optimization algorithms from the <code>scipy.optimize</code> module. For example, below we use Powell's method to find the MAP.</p>
 <pre><code class="python">from scipy import optimize
@@ -462,7 +472,7 @@ map_estimate = find_MAP(model=basic_model, fmin=optimize.fmin_powell)
 print(map_estimate)
 </code></pre>
 
-<pre><code>{'alpha': array(0.9090521896381477), 'sigma_log': array(-0.030009775415224028), 'beta': array([ 0.95140146,  2.61437458])}
+<pre><code>{'sigma_log': array(-0.03000977520318259), 'alpha': array(0.9090521898978398), 'beta': array([ 0.95140146,  2.61437458])}
 </code></pre>
 <p>It is important to note that the MAP estimate is not always reasonable, especially if the mode is at an extreme. This can be a subtle issue; with high dimensional posteriors, one can have areas of extremely high density but low total probability because the volume is very small. This will often occur in hierarchical models with the variance parameter for the random effect. If the individual group means are all the same, the posterior will have near infinite density if the scale parameter for the group means is almost zero, even though the probability of such a small scale parameter will be small since the group means must be extremely close together. </p>
 <p>Most techniques for finding the MAP estimate also only find a <em>local</em> optimum (which is often good enough), but can fail badly for multimodal posteriors if the different modes are meaningfully different.</p>
@@ -491,16 +501,16 @@ with basic_model:
     trace = sample(2000, start=start) 
 </code></pre>
 
-<pre><code>Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to alpha
-Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to beta
-Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to sigma_log
- [-----------------100%-----------------] 2000 of 2000 complete in 1.4 sec
+<pre><code>Assigned NUTS to alpha
+Assigned NUTS to beta
+Assigned NUTS to sigma_log
+ [-----------------100%-----------------] 2000 of 2000 complete in 2.0 sec
 </code></pre>
 <p>The <code>sample</code> function runs the step method(s) assigned (or passed) to it for the given number of iterations and returns a <code>Trace</code> object containing the samples collected, in the order they were collected. The <code>trace</code> object can be queried in a similar way to a <code>dict</code> containing a map from variable names to <code>numpy.array</code>s. The first dimension of the array is the sampling index and the later dimensions match the shape of the variable. We can see the last 5 values for the <code>alpha</code> variable as follows:</p>
 <pre><code class="python">trace['alpha'][-5:]
 </code></pre>
 
-<pre><code>array([ 0.80387719,  0.88728378,  1.06832995,  0.71061793,  0.84123803])
+<pre><code>array([ 0.78571996,  0.92956343,  0.94043112,  0.85358826,  0.93449035])
 </code></pre>
 <p>If we wanted to use the slice sampling algorithm to <code>sigma</code> instead of NUTS (which was assigned automatically), we could have specified this as the <code>step</code> argument for <code>sample</code>.</p>
 <pre><code class="python">from pymc3 import Slice
@@ -518,9 +528,9 @@ with basic_model:
 
 </code></pre>
 
-<pre><code>Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to alpha
-Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to beta
- [-----------------100%-----------------] 5000 of 5000 complete in 13.3 sec
+<pre><code>Assigned NUTS to alpha
+Assigned NUTS to beta
+ [-----------------100%-----------------] 5000 of 5000 complete in 12.7 sec
 </code></pre>
 <h3 id="posterior-analysis">Posterior analysis</h3>
 <p><code>PyMC3</code> provides plotting and summarization functions for inspecting the sampling output. A simple posterior plot can be created using <code>traceplot</code>.</p>
@@ -542,13 +552,13 @@ summary(trace)
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.907            0.099            0.001            [0.718, 1.099]
+  0.908            0.100            0.001            [0.714, 1.105]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.720          0.839          0.904          0.975          1.103
+  0.715          0.838          0.909          0.973          1.109
 
 
 beta:
@@ -556,15 +566,15 @@ beta:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.949            0.091            0.001            [0.777, 1.127]
-  2.598            0.510            0.006            [1.647, 3.635]
+  0.950            0.090            0.001            [0.772, 1.125]
+  2.596            0.515            0.007            [1.611, 3.625]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.774          0.887          0.948          1.010          1.126
-  1.585          2.257          2.602          2.946          3.584
+  0.773          0.888          0.951          1.012          1.127
+  1.564          2.248          2.592          2.950          3.593
 
 
 sigma_log:
@@ -572,13 +582,13 @@ sigma_log:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  -0.012           0.070            0.001            [-0.149, 0.124]
+  -0.011           0.074            0.001            [-0.157, 0.128]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  -0.147         -0.059         -0.013         0.034          0.127
+  -0.149         -0.064         -0.012         0.040          0.139
 
 
 sigma:
@@ -586,13 +596,13 @@ sigma:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.991            0.069            0.001            [0.852, 1.121]
+  0.992            0.074            0.001            [0.855, 1.137]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.863          0.943          0.987          1.034          1.136
+  0.861          0.938          0.988          1.040          1.149
 </code></pre>
 <h2 id="case-study-1-stochastic-volatility">Case study 1: Stochastic volatility</h2>
 <p>We present a case study of stochastic volatility, time varying stock market volatility, to illustrate PyMC3's use in addressing a more realistic problem. The distribution of market returns is highly non-normal, which makes sampling the volatilities significantly more difficult. This example has 400+ parameters so using common sampling algorithms like Metropolis-Hastings would get bogged down, generating highly autocorrelated samples. Instead, we use NUTS, which is dramatically more efficient.</p>
@@ -640,6 +650,9 @@ with Model() as sp500_model:
     r = StudentT('r', nu, lam=1/volatility_process, observed=returns['S&amp;P500'])
 </code></pre>
 
+<pre><code>Applied log-transform to nu and added transformed nu_log to model.
+Applied log-transform to sigma and added transformed sigma_log to model.
+</code></pre>
 <p>Notice that we transform the log volatility process <code>s</code> into the volatility process by <code>exp(-2*s)</code>. Here, <code>exp</code> is a Theano function, rather than the corresponding function in NumPy; Theano provides a large subset of the mathematical functions that NumPy does.</p>
 <p>Also note that we have declared the <code>Model</code> name <code>sp500_model</code> in the first occurrence of the context manager, rather than splitting it into two lines, as we did for the first example.</p>
 <h3 id="fitting">Fitting</h3>
@@ -654,7 +667,7 @@ with sp500_model:
 
     # Start next run at the last sampled position.
     step = NUTS(scaling=trace[-1], gamma=.25)
-    trace = sample(2000, step, start=trace[-1], progressbar=False, njobs=4)
+    trace = sample(2000, step, start=trace[-1], progressbar=False)
 </code></pre>
 
 <p>We can check our samples by looking at the traceplot for <code>nu</code> and <code>sigma</code>.</p>
@@ -670,7 +683,7 @@ ax.set(title='volatility_process', xlabel='time', ylabel='volatility');
 ax.legend(['S&amp;P500', 'stochastic volatility process'])
 </code></pre>
 
-<pre><code>&lt;matplotlib.legend.Legend at 0x7f6055033b00&gt;
+<pre><code>&lt;matplotlib.legend.Legend at 0x118834dd8&gt;
 </code></pre>
 <p><img alt="png" src="../getting_started_files/getting_started_41_1.png" /></p>
 <p>As you can see, the model correctly infers the increase in volatility during the 2008 financial crash. Moreover, note that this model is quite complex because of its high dimensionality and dependency-structure in the random walk distribution. NUTS as implemented in PyMC3, however, correctly infers the posterior distribution with ease.</p>
@@ -686,12 +699,12 @@ ax.legend(['S&amp;P500', 'stochastic volatility process'])
                             0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1], value=-999)
 year = np.arange(1851, 1962)
 
-plot(year, disaster_data, 'o', markersize=8);
-ylabel(&quot;Disaster count&quot;)
-xlabel(&quot;Year&quot;)
+plt.plot(year, disaster_data, 'o', markersize=8);
+plt.ylabel(&quot;Disaster count&quot;)
+plt.xlabel(&quot;Year&quot;)
 </code></pre>
 
-<pre><code>&lt;matplotlib.text.Text at 0x7f605096dcc0&gt;
+<pre><code>&lt;matplotlib.text.Text at 0x11a5a0710&gt;
 </code></pre>
 <p><img alt="png" src="../getting_started_files/getting_started_44_1.png" /></p>
 <p>Occurrences of disasters in the time series is thought to follow a Poisson process with a large rate parameter in the early part of the time series, and from one with a smaller rate in the later part. We are interested in locating the change point in the series, which perhaps is related to changes in mining safety regulations.</p>
@@ -731,6 +744,9 @@ with Model() as disaster_model:
     disasters = Poisson('disasters', rate, observed=disaster_data)
 </code></pre>
 
+<pre><code>Applied log-transform to early_rate and added transformed early_rate_log to model.
+Applied log-transform to late_rate and added transformed late_rate_log to model.
+</code></pre>
 <p>The logic for the rate random variable,</p>
 <pre><code class="python">rate = switch(switchpoint &gt;= year, early_rate, late_rate)
 </code></pre>
@@ -750,7 +766,7 @@ with disaster_model:
     trace = sample(10000, step=[step1, step2])
 </code></pre>
 
-<pre><code> [-----------------100%-----------------] 10000 of 10000 complete in 8.8 sec
+<pre><code> [-----------------100%-----------------] 10000 of 10000 complete in 8.9 sec
 </code></pre>
 <p>In the trace plot below we can see that there's about a 10 year span that's plausible for a significant change in safety, but a 5 year span that contains most of the probability mass. The distribution is jagged because of the jumpy relationship between the year switchpoint and the likelihood  and not due to sampling error.</p>
 <pre><code class="python">traceplot(trace);
@@ -832,11 +848,12 @@ with Model() as model_glm:
     trace = sample(5000)
 </code></pre>
 
-<pre><code>Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to Intercept
-Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to x1
-Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to x2
-Assigned &lt;class 'pymc3.step_methods.nuts.NUTS'&gt; to sd_log
- [-----------------100%-----------------] 5000 of 5000 complete in 4.3 sec
+<pre><code>Applied log-transform to sd and added transformed sd_log to model.
+Assigned NUTS to Intercept
+Assigned NUTS to x1
+Assigned NUTS to x2
+Assigned NUTS to sd_log
+ [-----------------100%-----------------] 5000 of 5000 complete in 6.2 sec
 </code></pre>
 <p>The error distribution, if not specified via the <code>family</code> argument, is assumed to be normal. In the case of logistic regression, this can be modified by passing in a <code>Binomial</code> family object.</p>
 <pre><code class="python">from pymc3.glm.families import Binomial
@@ -847,6 +864,8 @@ with Model() as model_glm_logistic:
     glm('y ~ x1', df_logistic, family=Binomial())
 </code></pre>
 
+<pre><code>Applied logodds-transform to p and added transformed p_logodds to model.
+</code></pre>
 <h2 id="backends">Backends</h2>
 <p><code>PyMC3</code> has support for different ways to store samples during and after sampling, called backends, including in-memory (default), text file, and SQLite. These can be found in <code>pymc.backends</code>:</p>
 <p>By default, an in-memory <code>ndarray</code> is used but if the samples would get too large to be held in memory we could use the <code>sqlite</code> backend:</p>
@@ -861,7 +880,8 @@ with Model() as model_glm_logistic:
     trace = sample(5000, step=step, start=start, trace=backend)
 </code></pre>
 
-<pre><code> [-----------------100%-----------------] 5000 of 5000 complete in 4.5 sec
+<pre><code>Applied logodds-transform to p and added transformed p_logodds to model.
+ [-----------------100%-----------------] 5000 of 5000 complete in 4.8 sec
 </code></pre>
 <pre><code class="python">summary(trace, vars=['x1'])
 </code></pre>
@@ -871,13 +891,13 @@ with Model() as model_glm_logistic:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  -1.128           211.811          1.126            [-0.917, 0.916]
+  0.001            0.130            0.002            [-0.254, 0.259]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  -0.908         -0.216         0.002          0.223          0.926
+  -0.264         -0.086         0.002          0.091          0.253
 </code></pre>
 <p>The stored trace can then later be loaded using the <code>load</code> command:</p>
 <pre><code class="python">from pymc3.backends.sqlite import load

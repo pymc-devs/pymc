@@ -172,6 +172,12 @@
 </li>
 
                         
+                            
+<li >
+    <a href="../dp_mix/">Density Estimation with Dirichlet Process Mixtures</a>
+</li>
+
+                        
                         </ul>
                     </li>
                 
@@ -241,6 +247,9 @@
         <li class="main "><a href="#results">Results</a></li>
         
     
+        <li class="main "><a href="#covariates">Covariates.</a></li>
+        
+    
     </ul>
 </div></div>
                 <div class="col-md-9" role="main">
@@ -281,7 +290,7 @@ except ImportError:
 import pymc3 as pm, theano.tensor as tt
 </code></pre>
 
-<pre><code>Fri Jan  1 14:54:51 GMT 2016
+<pre><code>Thu Feb 11 10:18:38 CST 2016
 </code></pre>
 <p>This is a Rugby prediction exercise. So we'll input some data</p>
 <pre><code class="python">data_csv = StringIO(&quot;&quot;&quot;home_team,away_team,home_score,away_score
@@ -416,6 +425,9 @@ with pm.Model() as model:
     away_points = pm.Poisson('away_points', mu=away_theta, observed=observed_away_goals)
 </code></pre>
 
+<pre><code>Applied log-transform to tau_att and added transformed tau_att_log to model.
+Applied log-transform to tau_def and added transformed tau_def_log to model.
+</code></pre>
 <ul>
 <li>
 <p>We specified the model and the likelihood function</p>
@@ -429,31 +441,59 @@ with pm.Model() as model:
 
     start = pm.find_MAP()
     step = pm.NUTS(state=start)
-    trace = pm.sample(2000, step, start=start, progressbar=True)
+    trace = pm.sample(2000, step, start=start, njobs=4)
 
     pm.traceplot(trace)
 </code></pre>
 
-<pre><code> [-----------------100%-----------------] 2000 of 2000 complete in 4.9 sec
+<pre><code> [-----------------100%-----------------] 2000 of 2000 complete in 28.2 sec
 </code></pre>
 <p><img alt="png" src="../rugby_analytics_files/rugby_analytics_16_1.png" /></p>
 <h1 id="results">Results</h1>
 <p>From the above we can start to understand the different distributions of attacking strength and defensive strength.
 These are probabilistic estimates and help us better understand the uncertainty in sports analytics</p>
-<pre><code class="python">pm.forestplot(trace, vars=['atts'], ylabels=['France', 'Ireland', 'Scotland', 'Italy', 'England', 'Wales'], main=&quot;Team Offense&quot;)
+<pre><code class="python">pm.forestplot(trace, varnames=['atts'], ylabels=['France', 'Ireland', 'Scotland', 'Italy', 'England', 'Wales'], main=&quot;Team Offense&quot;)
 </code></pre>
 
-<pre><code>&lt;matplotlib.gridspec.GridSpec at 0x10cc77510&gt;
+<pre><code>&lt;matplotlib.gridspec.GridSpec at 0x11672a6a0&gt;
 </code></pre>
 <p><img alt="png" src="../rugby_analytics_files/rugby_analytics_18_1.png" /></p>
-<pre><code class="python">pm.forestplot(trace, vars=['defs'], ylabels=['France', 'Ireland', 'Scotland', 'Italy', 'England', 'Wales'], main=&quot;Team Defense&quot;)
+<pre><code class="python">pm.forestplot(trace, varnames=['defs'], ylabels=['France', 'Ireland', 'Scotland', 'Italy', 'England', 'Wales'], main=&quot;Team Defense&quot;)
 </code></pre>
 
-<pre><code>&lt;matplotlib.gridspec.GridSpec at 0x10cc77490&gt;
+<pre><code>&lt;matplotlib.gridspec.GridSpec at 0x11787b160&gt;
 </code></pre>
 <p><img alt="png" src="../rugby_analytics_files/rugby_analytics_19_1.png" /></p>
-<pre><code class="python">
-</code></pre></div>
+<h1 id="covariates">Covariates.</h1>
+<p>We should do some exploration. of the variables too</p>
+<pre><code class="python">df_trace = pm.trace_to_dataframe(trace[:1000])
+
+
+</code></pre>
+
+<pre><code class="python">import seaborn as sns
+df_trace_att = df_trace[['atts_star__0','atts_star__1',
+ 'atts_star__2',
+ 'atts_star__3',
+ 'atts_star__4',
+ 'atts_star__5']]
+df_trace_att.rename(columns={'atts_star__0':'atts_star_france','atts_star__1':'atts_star_ireland',
+ 'atts_star__2':'atts_star_scotland',
+ 'atts_star__3':'atts_star_italy',
+ 'atts_star__4':'atts_star_england',
+ 'atts_star__5':'atts_star_wales'}, inplace=True)
+_ = sns.pairplot(df_trace_att)
+</code></pre>
+
+<pre><code>/Users/fonnescj/anaconda3/lib/python3.5/site-packages/pandas/core/frame.py:2697: SettingWithCopyWarning: 
+A value is trying to be set on a copy of a slice from a DataFrame
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+  **kwargs)
+</code></pre>
+<p><img alt="png" src="../rugby_analytics_files/rugby_analytics_22_1.png" /></p>
+<p>We observe that there isn't a lot of correlation between these covariates, other than the weaker teams like Italy have a more negative distribution of these variables. 
+Nevertheless this is a good method to get some insight into how the variables are behaving. </p></div>
             
         </div>
 
