@@ -25,3 +25,4 @@ pages:
   - 'Gaussian Process (GP) smoothing': 'GP-smoothing.md'
   - 'Bayesian Logistic Regression for predicting salary': 'Bayesian_LogReg.md'
   - 'Modelling Energy Market data with an Autoregressive Model': 'arma_example.md'  
+  - 'Density Estimation with Dirichlet Process Mixtures': 'dp_mix.md'
