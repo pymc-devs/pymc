@@ -97,12 +97,18 @@ def dic(trace, model=None):
     deviance_at_mean = -2 * model.logp(free_rv_means)
 
     return 2 * mean_deviance - deviance_at_mean
+    
+def log_post_trace(trace, model):
+    '''
+    Calculate the elementwise log-posterior for the sampled trace.
+    '''
+    return np.hstack([obs.logp_elemwise(pt) for pt in trace] for obs in model.observed_RVs)
 
 def waic(trace, model=None):
     """
     Calculate the widely available information criterion of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
-    """
+    """    
     model = modelcontext(model)
     
     transformed_rvs = [rv for rv in model.free_RVs if hasattr(rv.distribution, 'transform_used')]
@@ -113,12 +119,9 @@ def waic(trace, model=None):
             The following random variables are the result of transformations:
             {}
         """.format(', '.join(rv.name for rv in transformed_rvs)))
-    
-    log_py = []
-    for obs in model.observed_RVs:
-        log_py.append([obs.logp_elemwise(pt) for pt in trace ])
-    log_py = np.hstack(log_py)
-   
+
+    log_py = log_post_trace(trace, model)
+
     lppd =  np.sum(np.log(np.mean(np.exp(log_py), axis=0)))
         
     p_waic = np.sum(np.var(log_py, axis=0))
@@ -130,13 +133,12 @@ def loo(trace, model=None):
     Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
     Pareto-smoothed importance sampling (PSIS).
+    
+    Returns log pointwise predictive density calculated via approximated LOO cross-validation.
     """
     model = modelcontext(model)
     
-    log_py = []
-    for obs in model.observed_RVs:
-        log_py.append([obs.logp_elemwise(pt) for pt in trace ])
-    log_py = np.hstack(log_py)
+    log_py = log_post_trace(trace, model)
     
     q = int(len(log_py)*0.8)
     
@@ -165,7 +167,7 @@ def loo(trace, model=None):
     r_sorted[q80:] = np.vstack(expvals).T
     
     # Truncate weights to guarantee finite variance
-    w = np.minimum(r_sorted, r_sorted.mean(axis=0) * 80**0.75)
+    w = np.minimum(r_sorted, r_sorted.mean(axis=0) * S**0.75)
     
     loo_lppd =  np.sum(np.log(np.sum(w * np.exp(log_py), axis=0) / np.sum(w, axis=0)))
     
