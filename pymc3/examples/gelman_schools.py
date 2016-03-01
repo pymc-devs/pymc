@@ -1,4 +1,4 @@
-from pymc3 import Normal, sample, Model, loo
+from pymc3 import HalfCauchy, Normal, sample, Model, loo
 import numpy as np
 
 '''Original Stan model
@@ -32,7 +32,7 @@ with Model() as schools:
     
     eta = Normal('eta', 0, 1, shape=J)
     mu = Normal('mu', 0, sd=1e6)
-    tau = Normal('tau', 0, sd=1e6)
+    tau = HalfCauchy('tau', 25)
     
     theta = mu + tau*eta
     
