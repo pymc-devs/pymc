@@ -7,7 +7,7 @@ import sys
 import warnings
 from .model import modelcontext
 
-import scipy.stats.distributions  as sp
+from scipy.stats.distributions import pareto
 
 from .backends import tracetab as ttab
 
@@ -147,7 +147,7 @@ def loo(trace, model=None):
     # Extract largest 20% of importance ratios and fit generalized Pareto to each 
     # (returns tuple with shape, location, scale)
     q80 = int(len(log_py)*0.8)
-    pareto_fit = np.apply_along_axis(lambda x: sp.pareto.fit(x, floc=0), 0, r_sorted[q80:])
+    pareto_fit = np.apply_along_axis(lambda x: pareto.fit(x, floc=0), 0, r_sorted[q80:])
     
     if np.any(pareto_fit[0] > 0.5):
         warnings.warn("""Estimated shape parameter of Pareto distribution
