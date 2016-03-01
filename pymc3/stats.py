@@ -108,7 +108,7 @@ def waic(trace, model=None):
     """
     Calculate the widely available information criterion of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
-    """    
+    """
     model = modelcontext(model)
     
     transformed_rvs = [rv for rv in model.free_RVs if hasattr(rv.distribution, 'transform_used')]
@@ -140,8 +140,6 @@ def loo(trace, model=None):
     
     log_py = log_post_trace(trace, model)
     
-    q = int(len(log_py)*0.8)
-    
     # Importance ratios
     r = 1./np.exp(log_py)
     r_sorted = np.sort(r, axis=0)
@@ -169,7 +167,7 @@ def loo(trace, model=None):
     # Truncate weights to guarantee finite variance
     w = np.minimum(r_sorted, r_sorted.mean(axis=0) * S**0.75)
     
-    loo_lppd =  np.sum(np.log(np.sum(w * np.exp(log_py), axis=0) / np.sum(w, axis=0)))
+    loo_lppd = np.sum(np.log(np.sum(w * np.exp(log_py), axis=0) / np.sum(w, axis=0)))
     
     return loo_lppd
     
