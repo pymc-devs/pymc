@@ -159,13 +159,15 @@ def loo(trace, model=None):
     S = len(r_sorted)
     M = S - q80
     z = (np.arange(M)+0.5)/M
-    expvals = map(lambda x: sp.pareto.ppf(z, x[0], scale=x[2]), pareto_fit.T)
+    expvals = map(lambda x: pareto.ppf(z, x[0], scale=x[2]), pareto_fit.T)
     
     # Replace importance ratios with order statistics of fitted Pareto
     r_sorted[q80:] = np.vstack(expvals).T
+    # Unsort ratios (within columns) before using them as weights
+    r_new = np.array([r[np.argsort(i)] for r,i in zip(r_sorted, np.argsort(r, axis=0))])
     
     # Truncate weights to guarantee finite variance
-    w = np.minimum(r_sorted, r_sorted.mean(axis=0) * S**0.75)
+    w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
     
     loo_lppd = np.sum(np.log(np.sum(w * np.exp(log_py), axis=0) / np.sum(w, axis=0)))
     
