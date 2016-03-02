@@ -1,4 +1,4 @@
-"""Utility functions for PyMC"""
+"""Statistical utility functions for PyMC"""
 
 import numpy as np
 import pandas as pd
@@ -7,11 +7,12 @@ import sys
 import warnings
 from .model import modelcontext
 
+from scipy.stats.distributions import pareto
 
 from .backends import tracetab as ttab
 
-__all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'hpd', 'quantiles', 'mc_error',
-           'summary', 'df_summary']
+__all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles', 
+            'mc_error', 'summary', 'df_summary']
 
 def statfunc(f):
     """
@@ -96,6 +97,12 @@ def dic(trace, model=None):
     deviance_at_mean = -2 * model.logp(free_rv_means)
 
     return 2 * mean_deviance - deviance_at_mean
+    
+def log_post_trace(trace, model):
+    '''
+    Calculate the elementwise log-posterior for the sampled trace.
+    '''
+    return np.hstack([obs.logp_elemwise(pt) for pt in trace] for obs in model.observed_RVs)
 
 def waic(trace, model=None):
     """
@@ -112,17 +119,60 @@ def waic(trace, model=None):
             The following random variables are the result of transformations:
             {}
         """.format(', '.join(rv.name for rv in transformed_rvs)))
-    
-    log_py = []
-    for obs in model.observed_RVs:
-        log_py.append([obs.logp_elemwise(pt) for pt in trace ])
-    log_py = np.hstack(log_py)
-   
+
+    log_py = log_post_trace(trace, model)
+
     lppd =  np.sum(np.log(np.mean(np.exp(log_py), axis=0)))
         
     p_waic = np.sum(np.var(log_py, axis=0))
     
     return -2 * lppd + 2 * p_waic
+    
+def loo(trace, model=None):
+    """
+    Calculates leave-one-out (LOO) cross-validation for out of sample predictive
+    model fit, following Vehtari et al. (2015). Cross-validation is computed using
+    Pareto-smoothed importance sampling (PSIS).
+    
+    Returns log pointwise predictive density calculated via approximated LOO cross-validation.
+    """
+    model = modelcontext(model)
+    
+    log_py = log_post_trace(trace, model)
+    
+    # Importance ratios
+    r = 1./np.exp(log_py)
+    r_sorted = np.sort(r, axis=0)
+
+    # Extract largest 20% of importance ratios and fit generalized Pareto to each 
+    # (returns tuple with shape, location, scale)
+    q80 = int(len(log_py)*0.8)
+    pareto_fit = np.apply_along_axis(lambda x: pareto.fit(x, floc=0), 0, r_sorted[q80:])
+    
+    if np.any(pareto_fit[0] > 0.5):
+        warnings.warn("""Estimated shape parameter of Pareto distribution
+        is for one or more samples is greater than 0.5. This may indicate
+        that the variance of the Pareto smoothed importance sampling estimate 
+        is very large.""")
+    
+    # Calculate expected values of the order statistics of the fitted Pareto
+    S = len(r_sorted)
+    M = S - q80
+    z = (np.arange(M)+0.5)/M
+    expvals = map(lambda x: pareto.ppf(z, x[0], scale=x[2]), pareto_fit.T)
+    
+    # Replace importance ratios with order statistics of fitted Pareto
+    r_sorted[q80:] = np.vstack(expvals).T
+    # Unsort ratios (within columns) before using them as weights
+    r_new = np.array([r[np.argsort(i)] for r,i in zip(r_sorted, np.argsort(r, axis=0))])
+    
+    # Truncate weights to guarantee finite variance
+    w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
+    
+    loo_lppd = np.sum(np.log(np.sum(w * np.exp(log_py), axis=0) / np.sum(w, axis=0)))
+    
+    return loo_lppd
+    
 
 def bpic(trace, model=None):
     """
