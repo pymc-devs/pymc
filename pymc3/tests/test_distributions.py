@@ -218,6 +218,12 @@ def check_wald(value, mu, lam, phi, alpha, logp):
     assert_almost_equal(model.fastlogp(pt),
                     logp, decimal=6, err_msg=str(pt))
 
+def beta_mu_sd(value, mu, sd):
+    kappa = mu * (1-mu) / sd**2 - 1
+    if kappa > 0:
+        sp.beta.logpdf(value, mu*kappa, (1-mu)*kappa)
+    else:
+        return -inf
 
 def test_beta():
     pymc3_matches_scipy(
@@ -226,7 +232,7 @@ def test_beta():
             )
     pymc3_matches_scipy(
             Beta, Unit, {'mu': Unit, 'sd': Rplus},
-            lambda value, mu, sd: sp.beta.logpdf(value, mu * sd, (1 - mu) * sd)
+            beta_mu_sd
             )
 
 

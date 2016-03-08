@@ -541,13 +541,8 @@ class ScalarParameterSamples(unittest.TestCase):
     def test_beta(self):
         pymc3_random(
                 Beta, {'alpha': Rplus, 'beta': Rplus},
-                ref_rand=lambda size, alpha=None, beta=None: \
-                    st.beta.rvs(a=alpha, b=beta, size=size)
-                )
-        pymc3_random(
-                Beta, {'mu': Unit, 'sd': Rplus},
-                ref_rand=lambda size, mu=None, sd=None: \
-                    st.beta.rvs(a=mu*sd, b=(1-mu)*sd, size=size)
+                ref_rand=(lambda size, alpha=None, beta=None: 
+                    st.beta.rvs(a=alpha, b=beta, size=size))
                 )
 
     def test_exponential(self):

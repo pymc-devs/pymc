@@ -370,8 +370,10 @@ class Beta(UnitContinuous):
 
     .. math::
 
-       \alpha &= \mu \sigma \\
-       \beta  &= (1 - \mu) \sigma
+       \alpha &= \mu \kappa \\
+       \beta  &= (1 - \mu) \kappa
+       
+       \text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1 
 
     Parameters
     ----------
@@ -404,8 +406,9 @@ class Beta(UnitContinuous):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sd is not None):
-            alpha = mu * sd
-            beta = (1 - mu) * sd
+            kappa = mu * (1-mu) / sd**2 - 1 
+            alpha = mu * kappa
+            beta = (1 - mu) * kappa
         else:
             raise ValueError('Incompatible parameterization. Either use alpha '
                              'and beta, or mu and sd to specify distribution.')
