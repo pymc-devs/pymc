@@ -223,7 +223,7 @@ def beta_mu_sd(value, mu, sd):
     if kappa > 0:
         sp.beta.logpdf(value, mu*kappa, (1-mu)*kappa)
     else:
-        return -inf
+        return None
 
 def test_beta():
     pymc3_matches_scipy(
