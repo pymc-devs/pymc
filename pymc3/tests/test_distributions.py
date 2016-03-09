@@ -221,9 +221,9 @@ def check_wald(value, mu, lam, phi, alpha, logp):
 def beta_mu_sd(value, mu, sd):
     kappa = mu * (1-mu) / sd**2 - 1
     if kappa > 0:
-        sp.beta.logpdf(value, mu*kappa, (1-mu)*kappa)
+        return sp.beta.logpdf(value, mu*kappa, (1-mu)*kappa)
     else:
-        return None
+        return -inf
 
 def test_beta():
     pymc3_matches_scipy(
