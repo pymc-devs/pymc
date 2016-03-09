@@ -45,8 +45,8 @@ class PoissonProposal(Proposal):
 
 
 class MultivariateNormalProposal(Proposal):
-    def __call__(self):
-        return np.random.multivariate_normal(mean=np.zeros(self.s.shape[0]), cov=self.s)
+    def __call__(self, num_draws=None):
+        return np.random.multivariate_normal(mean=np.zeros(self.s.shape[0]), cov=self.s, size=num_draws)
 
 
 class Metropolis(ArrayStepShared):
