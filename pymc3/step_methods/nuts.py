@@ -22,7 +22,7 @@ class NUTS(ArrayStepShared):
     The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
     default_blocked = True
-    
+
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False, state=None,
                  Emax=1000,
                  target_accept=0.8,
@@ -142,12 +142,12 @@ class NUTS(ArrayStepShared):
         if var.dtype in continuous_types:
             return Competence.ideal
         return Competence.incompatible
-            
+
 
 def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):
     if j == 0:
         leapfrog1_dE = H
-        q1, p1, dE = leapfrog1_dE(q, p, np.array(v*e))
+        q1, p1, dE = leapfrog1_dE(q, p, np.array(v*e), q0, p0)
 
         n1 = int(log(u) + dE <= 0)
         s1 = int(log(u) + dE < Emax)
@@ -172,11 +172,12 @@ def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):
         return qn, pn, qp, pp, q1, n1, s1, a1, na1
     return
 
+
 def leapfrog1_dE(logp, vars, shared, pot, profile):
     """Computes a theano function that computes one leapfrog step and the energy difference between the beginning and end of the trajectory.
     Parameters
     ----------
-    logp : TensorVariable 
+    logp : TensorVariable
     vars : list of tensor variables
     shared : list of shared variables not to compute leapfrog over
     pot : quadpotential
@@ -188,23 +189,28 @@ def leapfrog1_dE(logp, vars, shared, pot, profile):
     q_new, p_new, delta_E
     """
     dlogp = gradient(logp, vars)
-    (logp, dlogp), q0 = join_nonshared_inputs([logp, dlogp], vars, shared)
+    (logp, dlogp), q = join_nonshared_inputs([logp, dlogp], vars, shared)
     logp = CallableTensor(logp)
     dlogp = CallableTensor(dlogp)
 
     H = Hamiltonian(logp, dlogp, pot)
 
+    p = theano.tensor.dvector('p')
+    p.tag.test_value = q.tag.test_value
+
+    q0 = theano.tensor.dvector('q0')
+    q0.tag.test_value = q.tag.test_value
     p0 = theano.tensor.dvector('p0')
-    p0.tag.test_value = q0.tag.test_value
+    p0.tag.test_value = p.tag.test_value
+
     e = theano.tensor.dscalar('e')
     e.tag.test_value = 1
 
-    q1, p1 = leapfrog(H, q0, p0, 1, e)
+    q1, p1 = leapfrog(H, q, p, 1, e)
     E = energy(H, q1, p1)
     E0 = energy(H, q0, p0)
     dE = E - E0
 
-    f = theano.function([q0, p0, e], [q1, p1, dE], profile=profile)
+    f = theano.function([q, p, e, q0, p0], [q1, p1, dE], profile=profile)
     f.trust_input = True
     return f
-
