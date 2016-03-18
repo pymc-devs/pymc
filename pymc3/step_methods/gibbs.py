@@ -6,7 +6,7 @@ Created on May 12, 2012
 from ..core import *
 from .arraystep import *
 from ..distributions.discrete import Categorical
-from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones
+from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones, arange
 from numpy.random import uniform
 
 from theano.gof.graph import inputs
@@ -29,7 +29,7 @@ class ElemwiseCategoricalStep(ArrayStep):
         self.var = vars[0]
         self.sh = ones(self.var.dshape, self.var.dtype)
         if values is None:
-            self.values = list(range(self.var.distribution.k))
+            self.values = arange(self.var.distribution.k)
         else:
             self.values = values
         
