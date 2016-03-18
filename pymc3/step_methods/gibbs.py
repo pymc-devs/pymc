@@ -6,7 +6,7 @@ Created on May 12, 2012
 from ..core import *
 from .arraystep import *
 from ..distributions.discrete import Categorical
-from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones
+from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones, arange, squeeze
 from numpy.random import uniform
 
 from theano.gof.graph import inputs
@@ -29,7 +29,7 @@ class ElemwiseCategoricalStep(ArrayStep):
         self.var = vars[0]
         self.sh = ones(self.var.dshape, self.var.dtype)
         if values is None:
-            self.values = list(range(self.var.distribution.shape.squeeze()))
+            self.values = arange(self.var.distribution.k)
         else:
             self.values = values
         
@@ -43,7 +43,7 @@ class ElemwiseCategoricalStep(ArrayStep):
     @staticmethod
     def competence(var):
         if isinstance(var.distribution, Categorical):
-            if var.distribution.shape.squeeze()>2:
+            if var.distribution.k>2:
                 return Competence.ideal
             else:
                 return Competence.compatible
