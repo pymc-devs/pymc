@@ -9,7 +9,7 @@ from __future__ import division
 
 import numpy as np
 import theano.tensor as T
-from scipy import stats
+from scipy import stats, special
 
 from . import transforms
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf
@@ -18,7 +18,7 @@ from .distribution import Continuous, draw_values, generate_samples
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'Bound', 'StudentTpos', 'Lognormal', 'ChiSquared', 'HalfNormal',
-           'Wald', 'Pareto', 'InverseGamma', 'ExGaussian']
+           'Wald', 'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises']
 
 
 class PositiveContinuous(Continuous):
@@ -1113,3 +1113,43 @@ class ExGaussian(Continuous):
                       - T.log(sigma * T.sqrt(2 * np.pi))
                       - 0.5 * ((value - mu) / sigma)**2)
         return bound(lp, sigma > 0., nu > 0.)
+
+
+class VonMises(Continuous):
+    R"""
+    Univariate VonMises log-likelihood.
+    .. math::
+        f(x \mid \mu, \kappa) =  
+            \frac{e^{\kappa\cos(x-\mu)}}{2\pi I_0(\kappa)}
+             
+    where :I_0 is the modified Bessel function of order 0.
+    
+    ========  ==========================================
+    Support   :math:`x \in [-\pi, \pi]`
+    Mean      :math:`\mu`
+    Variance  :math:`\frac{1-I1(\kappa)}{I0(\kappa)}`
+    ========  ==========================================
+    Parameters
+    ----------
+    mu : float
+        Mean.
+    kappa : float
+        Concentration (\frac{1}{kappa} is analogous to \sigma^2).
+    """
+    def __init__(self, mu=0.0, kappa=None, *args, **kwargs):
+        super(VonMises, self).__init__(*args, **kwargs)
+        self.mean = self.median = self.mode = self.mu = mu
+        self.kappa = kappa 
+        self.variance = 1. - special.i1(self.kappa) / special.i0(self.kappa)
+
+    def random(self, point=None, size=None, repeat=None):
+        mu, kappa = draw_values([self.mu, self.kappa],
+                                  point=point)
+        return generate_samples(stats.vonmises.rvs, loc=mu, kappa=kappa,
+                                dist_shape=self.shape,
+                                size=size)
+
+    def logp(self, value):
+        mu = self.mu
+        kappa = self.kappa
+        return bound(kappa * T.cos(mu - value) - T.log(2 * np.pi * special.i0(kappa)), value >= -np.pi, value <= np.pi, kappa >= 0)

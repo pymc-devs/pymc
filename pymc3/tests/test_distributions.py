@@ -653,6 +653,11 @@ def check_ex_gaussian(value, mu, sigma, nu, logp):
     assert_almost_equal(model.fastlogp(pt),
                 logp, decimal=6, err_msg=str(pt))
 
+def test_vonmises():
+    pymc3_matches_scipy(
+            VonMises, R, {'mu': R, 'kappa': Rplus},
+            lambda value, mu, kappa: sp.vonmises.logpdf(value, kappa, loc=mu)
+            )
 
 def test_multidimensional_beta_construction():
     with Model() as m:
