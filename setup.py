@@ -27,7 +27,7 @@ classifiers = ['Development Status :: 4 - Beta',
                'Operating System :: OS Independent']
 
 install_reqs = ['numpy>=1.7.1', 'scipy>=0.12.0', 'matplotlib>=1.2.1',
-                'Theano<=0.7.1dev', 'pandas>=0.15.0', 'patsy>=0.4.0', 'joblib>=0.9']
+                'Theano>=0.7.1dev', 'pandas>=0.15.0', 'patsy>=0.4.0', 'joblib>=0.9']
 if sys.version_info < (3, 4):
     install_reqs.append('enum34')
 
@@ -35,7 +35,7 @@ test_reqs = ['nose']
 if sys.version_info[0] == 2:  # py3 has mock in stdlib
     test_reqs.append('mock')
 
-dep_links = ['https://github.com/Theano/Theano/tarball/master#egg=Theano-0.7.1dev']
+dep_links = ['https://github.com/Theano/Theano/tarball/master']
 
 if __name__ == "__main__":
     setup(name=DISTNAME,
