@@ -19,7 +19,7 @@ __all__ = ['ATMCMC', 'ATMIP_sample']
 
 class ATMCMC(pm.arraystep.ArrayStepShared):
     """
-    Transitional Marcov-Chain Monte-Carlo
+    Adaptive Transitional Markov-Chain Monte-Carlo
     following: Ching & Chen 2007: Transitional Markov chain Monte Carlo method
                 for Bayesian model updating, model class selection and model
                 averaging
@@ -160,7 +160,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
 
     def calc_covariance(self):
         '''Calculate covariance based on importance weights.'''
-        return num.cov(self.array_population, aweights=self.weights, rowvar=0)
+        return num.cov(self.array_population, aweights=self.weights)
 
     def select_end_points(self, mtrace):
         '''Read trace results and take end points for each chain and set as
@@ -169,17 +169,17 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             Returns: population
                      array_population
                      likelihoods'''
-        array_population = num.zeros((self.N_chains,
-                                                     self.ordering.dimensions))
+        array_population = num.zeros((self.ordering.dimensions,
+                                        self.N_chains))
         N_steps = len(mtrace)
 
         if self.stage > 0:
             # collect end points of each chain and put into array
             for var, slc, _, _ in self.ordering.vmap:
-                array_population[:, slc] = mtrace.get_values(
+                array_population[slc, :] = num.atleast_2d(mtrace.get_values(
                                     varname=var,
                                     burn=N_steps - 1,
-                                    combine=True)
+                                    combine=True))
 
             population = []
             likelihoods = []
@@ -196,7 +196,8 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             population = self.population
             likelihoods = mtrace.get_values('llk')
             for var, slc, _, _ in self.ordering.vmap:
-                array_population[:, slc] = mtrace.get_values(var)
+                array_population[slc, :] = num.atleast_2d(
+                                                mtrace.get_values(var))
 
         return population, array_population, likelihoods
 
@@ -246,10 +247,9 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
     N_steps : int
         The number of samples to draw for each Markov-chain per stage
     step : function from TMCMC initialisation
-    start : dict
-        Starting point in parameter space (or partial point)
-        Defaults to trace.point(-1)) if there is a trace provided and
-        model.test_point if not (defaults to empty dict)
+    start : List of dicts with length(N_chains)
+        Starting points in parameter space (or partial point)
+        Defaults to random draws from variables (defaults to empty dict)
     trace : backend
         This should be a backend instance.
         Passing either "text" or "sqlite" is taken as a shortcut to set
@@ -294,16 +294,18 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
         raise Exception('Argument `trace` should be either sqlite or text \
                         backend object.')
 
-    if start is None:
-        start = {}
+    if start is not None:
+        if len(start) != step.N_chains:
+            raise Exception('Argument `start` should have dicts equal the \
+                             number of chains (step.N-chains)')
+        else:
+            step.population = start
 
     if stage is not None:
         step.stage = stage
 
     if progressbar:
         verbosity = 5
-        if njobs > 1:
-            progressbar = False
     else:
         verbosity = 0
 
@@ -336,6 +338,8 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
                     step.stage += 1
                     del(strace, mtrace, trace)
                 else:
+                    if progressbar and njobs > 1:
+                        progressbar = False
                     # Metropolis sampling intermediate stages
                     stage_path = homepath + '/stage_' + str(step.stage)
                     step.proposal_dist = MvNPd(step.Covariance)
