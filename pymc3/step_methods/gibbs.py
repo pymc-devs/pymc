@@ -6,7 +6,7 @@ Created on May 12, 2012
 from ..core import *
 from .arraystep import *
 from ..distributions.discrete import Categorical
-from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones, arange, squeeze
+from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones, arange
 from numpy.random import uniform
 
 from theano.gof.graph import inputs
