@@ -29,7 +29,7 @@ class ElemwiseCategoricalStep(ArrayStep):
         self.var = vars[0]
         self.sh = ones(self.var.dshape, self.var.dtype)
         if values is None:
-            self.values = list(range(self.var.distribution.k))
+            self.values = list(range(self.var.distribution.shape.squeeze()))
         else:
             self.values = values
         
@@ -43,7 +43,7 @@ class ElemwiseCategoricalStep(ArrayStep):
     @staticmethod
     def competence(var):
         if isinstance(var.distribution, Categorical):
-            if var.distribution.k>2:
+            if var.distribution.shape.squeeze()>2:
                 return Competence.ideal
             else:
                 return Competence.compatible
