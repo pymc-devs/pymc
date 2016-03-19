@@ -69,7 +69,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
         self.N_chains = N_chains
         self.likelihoods = []
         self.likelihood_name = likelihood_name
-        self.discrete = num.ravel(
+        self.discrete = num.concatenate(
             [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in vars])
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
@@ -110,7 +110,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             while check_bnd:
                 if self.any_discrete:
                     if self.all_discrete:
-                        delta = round(delta, 0)
+                        delta = num.round(delta, 0)
                         q0 = q0.astype(int)
                         q = (q0 + delta).astype(int)
                         varlogp = self.check_bnd(q)
@@ -379,7 +379,10 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
                             'stage_path': stage_path,
                             'progressbar': progressbar,
                             'model': model}
-                    mtrace = _iter_parallel_chains(parallel, **sample_args)
+                    if njobs == 1:
+                        mtrace = _iter_serial_chains(**sample_args)
+                    else:
+                        mtrace = _iter_parallel_chains(parallel, **sample_args)
 
                     step.population, step.array_population, step.likelihoods = \
                                             step.select_end_points(mtrace)
@@ -404,7 +407,10 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
 
             sample_args['step'] = step
             sample_args['stage_path'] = stage_path
-            mtrace = _iter_parallel_chains(parallel, **sample_args)
+            if njobs == 1:
+                mtrace = _iter_serial_chains(**sample_args)
+            else:
+                mtrace = _iter_parallel_chains(parallel, **sample_args)
 
             return mtrace
 
@@ -414,8 +420,15 @@ def _iter_initial(step, chain=0, trace=None, model=None):
        _iter_sample, just different input to loop over.'''
 
     strace = pm.sampling._choose_backend(trace, chain, model=model)
-    l_tr = len(strace)
-    strace.setup(step.N_chains, chain=0)
+    # check if trace file already exists before setup
+    filename = os.path.join(strace.name, 'chain-{}.csv'.format(chain))
+    if os.path.exists(filename):
+        strace.setup(step.N_chains, chain=0)
+        l_tr = len(strace)
+    else:
+        strace.setup(step.N_chains, chain=0)
+        l_tr = 0
+
     if l_tr == step.N_chains:
         # only return strace
         for i in range(1):
