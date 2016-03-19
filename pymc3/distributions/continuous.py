@@ -9,7 +9,8 @@ from __future__ import division
 
 import numpy as np
 import theano.tensor as T
-from scipy import stats, special
+from scipy import stats
+from scipy import special
 
 from . import transforms
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf
@@ -1123,11 +1124,11 @@ class VonMises(Continuous):
             \frac{e^{\kappa\cos(x-\mu)}}{2\pi I_0(\kappa)}
              
     where :I_0 is the modified Bessel function of order 0.
-    
+        
     ========  ==========================================
     Support   :math:`x \in [-\pi, \pi]`
     Mean      :math:`\mu`
-    Variance  :math:`\frac{1-I1(\kappa)}{I0(\kappa)}`
+    Variance  :math:`1-\frac{I_1(\kappa)}{I_0(\kappa)}`
     ========  ==========================================
     Parameters
     ----------
@@ -1140,8 +1141,10 @@ class VonMises(Continuous):
         super(VonMises, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
         self.kappa = kappa 
-        self.variance = 1. - special.i1(self.kappa) / special.i0(self.kappa)
-
+        self.variance = T.switch(T.lt(kappa, 1.5), 
+        1 - kappa/2 * (1 - 1/8*kappa**2 + 1/48*kappa**4), 
+        1/(2*kappa) + 1/(8*kappa**2) + 1/(8*kappa**3))
+            
     def random(self, point=None, size=None, repeat=None):
         mu, kappa = draw_values([self.mu, self.kappa],
                                   point=point)
