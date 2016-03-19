@@ -7,6 +7,7 @@ Created on March, 2016
 import numpy as num
 import pymc3 as pm
 
+import os
 import theano
 
 from pymc3.theanof import make_shared_replacements, join_nonshared_inputs
@@ -34,6 +35,8 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
                of number of njobs (processors to be used) on the machine.
     Covariance - Initial Covariance matrix for proposal distribution,
         if None - identity matrix taken
+    likelihood_name - name of the determinsitic variable that contains the
+                      model likelihood - defaults to 'like'
     proposal_dist - Type of proposal distribution, see metropolis.py for
                     options
     model : PyMC Model
@@ -44,7 +47,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
 
     def __init__(self, vars=None, Covariance=None, scaling=1., N_chains=100,
                  tune=True, tune_interval=100, model=None,
-                 proposal_dist=MvNPd,
+                 likelihood_name='like', proposal_dist=MvNPd,
                  N_steps=1000, **kwargs):
 
         model = pm.modelcontext(model)
@@ -65,6 +68,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
         self.stage = 0
         self.N_chains = N_chains
         self.likelihoods = []
+        self.likelihood_name = likelihood_name
         self.discrete = num.ravel(
             [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in vars])
         self.any_discrete = self.discrete.any()
@@ -160,7 +164,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
 
     def calc_covariance(self):
         '''Calculate covariance based on importance weights.'''
-        return num.cov(self.array_population, aweights=self.weights)
+        return num.cov(self.array_population, aweights=self.weights, rowvar=0)
 
     def select_end_points(self, mtrace):
         '''Read trace results and take end points for each chain and set as
@@ -169,24 +173,31 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             Returns: population
                      array_population
                      likelihoods'''
-        array_population = num.zeros((self.ordering.dimensions,
-                                        self.N_chains))
+        array_population = num.zeros((self.N_chains,
+                                      self.ordering.dimensions))
         N_steps = len(mtrace)
 
         if self.stage > 0:
             # collect end points of each chain and put into array
-            for var, slc, _, _ in self.ordering.vmap:
-                array_population[slc, :] = num.atleast_2d(mtrace.get_values(
+            for var, slc, shp, _ in self.ordering.vmap:
+                if len(shp) == 0:
+                    array_population[:, slc] = num.atleast_2d(
+                        mtrace.get_values(
                                     varname=var,
                                     burn=N_steps - 1,
-                                    combine=True))
+                                    combine=True)).T
+                else:
+                    array_population[:, slc] = mtrace.get_values(
+                                    varname=var,
+                                    burn=N_steps - 1,
+                                    combine=True)
 
             population = []
             likelihoods = []
             # collect end points of each chain
             for i in range(self.N_chains):
                 point = mtrace.point(-1, chain=i)
-                likelihoods.append(point.pop('llk'))
+                likelihoods.append(point.pop(self.likelihood_name))
                 population.append(point)
 
             likelihoods = num.array(likelihoods)
@@ -194,10 +205,19 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             # for initial stage only one trace that contains all points for
             # each chain
             population = self.population
-            likelihoods = mtrace.get_values('llk')
-            for var, slc, _, _ in self.ordering.vmap:
-                array_population[slc, :] = num.atleast_2d(
-                                                mtrace.get_values(var))
+            likelihoods = mtrace.get_values(self.likelihood_name)
+            for var, slc, shp, _ in self.ordering.vmap:
+                if len(shp) == 0:
+                    array_population[:, slc] = num.atleast_2d(
+                        mtrace.get_values(
+                                    varname=var,
+                                    burn=N_steps - 1,
+                                    combine=True)).T
+                else:
+                    array_population[:, slc] = mtrace.get_values(
+                                    varname=var,
+                                    burn=N_steps - 1,
+                                    combine=True)
 
         return population, array_population, likelihoods
 
@@ -261,17 +281,19 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
     stage : int
         Stage where to start or continue the calculation. If None the start
         will be at stage = 0.
-    njobs : int recommended njobs=1 Some internal parallelisation in Theano?
-                njobs=1  ca. 3 times faster with 12 cores on station than
-                njobs=10
+    njobs : int
+        The number of cores to be used in parallel. Be aware that theano has
+        internal parallelisation. Sometimes this is more efficient especially
+        for simple models.
         step.N_chains / njobs has to be an integer number!
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
-    trace : result_folder for storing stages
+    trace : result_folder for storing stages, will be created if not existing
     progressbar : bool
         Flag for progress bar
     model : Model (optional if in `with` context) has to contain deterministic
-            variable 'llk' that contains model likelihood
+            variable 'name defined under step.likelihood_name' that contains
+            model likelihood
     random_seed : int or list of ints
         A list is accepted if more if `njobs` is greater than one.
 
@@ -291,18 +313,24 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
         raise Exception('Argument `step` has to be a TMCMC step object.')
 
     if trace is None:
-        raise Exception('Argument `trace` should be either sqlite or text \
-                        backend object.')
+        raise Exception('Argument `trace` should be either sqlite or text '
+                        'backend object.')
 
     if start is not None:
         if len(start) != step.N_chains:
-            raise Exception('Argument `start` should have dicts equal the \
-                             number of chains (step.N-chains)')
+            raise Exception('Argument `start` should have dicts equal the '
+                            'number of chains (step.N-chains)')
         else:
             step.population = start
 
     if stage is not None:
         step.stage = stage
+
+    if not any(
+            step.likelihood_name in var.name for var in model.deterministics):
+            raise Exception('Model (deterministic) variables need to contain '
+                            'a variable `' + step.likelihood_name + '` as '
+                            'defined in `step`.')
 
     if progressbar:
         verbosity = 5
@@ -310,6 +338,9 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
         verbosity = 0
 
     homepath = trace
+
+    if not os.path.exists(homepath):
+        os.mkdir(homepath)
 
     with model:
         with Parallel(n_jobs=njobs, verbose=verbosity) as parallel:
@@ -320,8 +351,7 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
                     print 'Sample initial stage: ...'
                     stage_path = homepath + '/stage_' + str(step.stage)
                     trace = pm.backends.Text(stage_path, model=model)
-                    initial = _iter_initial(step, chain=chain, trace=trace,
-                                            start=None)
+                    initial = _iter_initial(step, chain=chain, trace=trace)
                     progress = pm.progressbar.progress_bar(step.N_chains)
                     try:
                         for i, strace in enumerate(initial):
@@ -355,7 +385,7 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
                                             step.select_end_points(mtrace)
                     step.beta, step.old_beta, step.weights = step.calc_beta()
                     if step.beta > 1.:
-                        print 'Beta above 1.:', str(step.beta)
+                        print 'Beta > 1.:', str(step.beta)
                         break
 
                     step.Covariance = step.calc_covariance()
@@ -379,28 +409,25 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
             return mtrace
 
 
-def _iter_initial(step, chain=0, trace=None, model=None, start=None):
+def _iter_initial(step, chain=0, trace=None, model=None):
     '''Yields generator for Iteration over initial stage similar to
        _iter_sample, just different input to loop over.'''
 
-    if start is None:
-        start = {}
-
     strace = pm.sampling._choose_backend(trace, chain, model=model)
     l_tr = len(strace)
-
-    if l_tr > 0:
-        pm.sampling._soft_update(start, strace.point(-1))
-    else:
-        pm.sampling._soft_update(start, step.population[0])
-
     strace.setup(step.N_chains, chain=0)
-    for i in range(l_tr, step.N_chains):
-        point = step.step(step.population[i])
-        strace.record(point)
-        yield strace
+    if l_tr == step.N_chains:
+        # only return strace
+        for i in range(1):
+            print 'Using results of previous run'
+            yield strace
     else:
-        strace.close()
+        for i in range(l_tr, step.N_chains):
+            point = step.step(step.population[i])
+            strace.record(point)
+            yield strace
+        else:
+            strace.close()
 
 
 def _iter_serial_chains(draws, step=None, stage_path=None,
