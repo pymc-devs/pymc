@@ -93,21 +93,19 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             self.likelihoods.append(self.logp_forw(q0))
             q_new = q0
         else:
-            if not self.steps_until_tune and self.tune:
-                # Tune scaling parameter
-                R = self.accepted / float(self.tune_interval)
-                # a and b after Muto & Beck 2008 .
-                a = 1. / 9
-                b = 8. / 9
-                self.scaling = num.power((a + (b * R)), 2)
-
-                # Reset counter
-                self.steps_until_tune = self.tune_interval
-                self.accepted = 0
-
-            delta = self.proposal_dist() * self.scaling
             check_bnd = True
             while check_bnd:
+                if not self.steps_until_tune and self.tune:
+                    # Tune scaling parameter
+                    self.scaling = tune(self.accepted /
+                                        float(self.tune_interval))
+
+                    # Reset counter
+                    self.steps_until_tune = self.tune_interval
+                    self.accepted = 0
+
+                delta = self.proposal_dist() * self.scaling
+
                 if self.any_discrete:
                     if self.all_discrete:
                         delta = num.round(delta, 0)
@@ -126,10 +124,10 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
                 if num.isfinite(varlogp):
                     check_bnd = False
                 else:
-                    delta = self.proposal_dist() * self.scaling
+                    self.steps_until_tune -= 1
 
-            q = q0 + delta
-            q_new = pm.metropolis.metrop_select(self.delta_logp(q, q0), q, q0)
+            q_new = pm.metropolis.metrop_select(
+                                    self.beta * self.delta_logp(q, q0), q, q0)
 
             if q_new is q:
                 self.accepted += 1
@@ -209,15 +207,9 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             for var, slc, shp, _ in self.ordering.vmap:
                 if len(shp) == 0:
                     array_population[:, slc] = num.atleast_2d(
-                        mtrace.get_values(
-                                    varname=var,
-                                    burn=N_steps - 1,
-                                    combine=True)).T
+                        mtrace.get_values(varname=var)).T
                 else:
-                    array_population[:, slc] = mtrace.get_values(
-                                    varname=var,
-                                    burn=N_steps - 1,
-                                    combine=True)
+                    array_population[:, slc] = mtrace.get_values(varname=var)
 
         return population, array_population, likelihoods
 
@@ -379,10 +371,7 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
                             'stage_path': stage_path,
                             'progressbar': progressbar,
                             'model': model}
-                    if njobs == 1:
-                        mtrace = _iter_serial_chains(**sample_args)
-                    else:
-                        mtrace = _iter_parallel_chains(parallel, **sample_args)
+                    mtrace = _iter_parallel_chains(parallel, **sample_args)
 
                     step.population, step.array_population, step.likelihoods = \
                                             step.select_end_points(mtrace)
@@ -407,11 +396,7 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
 
             sample_args['step'] = step
             sample_args['stage_path'] = stage_path
-            if njobs == 1:
-                mtrace = _iter_serial_chains(**sample_args)
-            else:
-                mtrace = _iter_parallel_chains(parallel, **sample_args)
-
+            mtrace = _iter_parallel_chains(parallel, **sample_args)
             return mtrace
 
 
@@ -467,7 +452,7 @@ def _iter_serial_chains(draws, step=None, stage_path=None,
 
 def _iter_parallel_chains(parallel, **kwargs):
     '''Do Metropolis sampling over all the chains with each chain being
-       sampled 'draws' times. Parallel execution according to after another.'''
+       sampled 'draws' times. Parallel execution according to njobs.'''
     stage_path = kwargs.pop('stage_path')
     step = kwargs['step']
     chains = list(range(step.N_chains))
@@ -482,6 +467,14 @@ def _iter_parallel_chains(parallel, **kwargs):
                         start=step.population[step.res_indx[chain]],
                         **kwargs) for chain in chains)
     return pm.sampling.merge_traces(traces)
+
+
+def tune(acc_rate):
+    '''Tune adaptively based on the acceptance rate.'''
+    # a and b after Muto & Beck 2008 .
+    a = 1. / 9
+    b = 8. / 9
+    return num.power((a + (b * acc_rate)), 2)
 
 
 def logp_forw(logp, vars, shared):
