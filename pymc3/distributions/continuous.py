@@ -13,7 +13,7 @@ from scipy import stats
 from scipy import special
 
 from . import transforms
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf
+from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
 from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -1141,9 +1141,7 @@ class VonMises(Continuous):
         super(VonMises, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
         self.kappa = kappa 
-        self.variance = T.switch(T.lt(kappa, 1.5), 
-        1 - kappa/2 * (1 - 1/8*kappa**2 + 1/48*kappa**4), 
-        1/(2*kappa) + 1/(8*kappa**2) + 1/(8*kappa**3))
+        self.variance = 1 - i1(kappa)/i0(kappa)
             
     def random(self, point=None, size=None, repeat=None):
         mu, kappa = draw_values([self.mu, self.kappa],
@@ -1155,4 +1153,4 @@ class VonMises(Continuous):
     def logp(self, value):
         mu = self.mu
         kappa = self.kappa
-        return bound(kappa * T.cos(mu - value) - T.log(2 * np.pi * special.i0(kappa)), value >= -np.pi, value <= np.pi, kappa >= 0)
+        return bound(kappa * T.cos(mu - value) - T.log(2 * np.pi * i0(kappa)), value >= -np.pi, value <= np.pi, kappa >= 0)

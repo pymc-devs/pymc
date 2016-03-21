@@ -60,3 +60,17 @@ def std_cdf(x):
     Calculates the standard normal cumulative distribution function.
     """
     return 0.5 + 0.5*T.erf(x / T.sqrt(2.))
+    
+
+def i0(x):
+    """
+    Calculates the 0 order modified Bessel function of the first kind""
+    """
+    return T.switch(T.lt(x, 5), 1 + x**2/4 + x**4/64 + x**6/2304 + x**8/147456, np.e**x/(2*np.pi*x)**0.5*(1+1/(8*x) + 9/(128*x**2) + 225/(3072*x**3) + 11025/(98304*x**4)))
+
+
+def i1(x):
+    """
+    Calculates the 1 order modified Bessel function of the first kind""
+    """
+    return T.switch(T.lt(x, 5),  x/2 + x**3/16 + x**5/384 + x**7/18432 + x**9/1474560, np.e**x/(2*np.pi*x)**0.5*(1-3/(8*x) + 15/(128*x**2) + 315/(3072*x**3) + 14175/(98304*x**4)))
