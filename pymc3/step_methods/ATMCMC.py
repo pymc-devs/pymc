@@ -8,7 +8,6 @@ import numpy as np
 import pymc3 as pm
 
 import os
-import copy
 import theano
 
 from pymc3.theanof import make_shared_replacements, join_nonshared_inputs
@@ -29,7 +28,9 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
                 Journal of Engineering Mechanics 2007
                 DOI:10.1016/(ASCE)0733-9399(2007)133:7(816)
     http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399%282007%29133:7%28816%29
+
     Creates initial samples and framework around the (C)ATMIP parameters
+
     Parameters
     ----------
     vars : list
@@ -211,9 +212,9 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             for var, slc, shp, _ in self.ordering.vmap:
                 if len(shp) == 0:
                     array_population[:, slc] = np.atleast_2d(
-                        mtrace.get_values(varname=var,
-                                          burn=n_steps - 1,
-                                          combine=True)).T
+                                        mtrace.get_values(varname=var,
+                                                    burn=n_steps - 1,
+                                                    combine=True)).T
                 else:
                     array_population[:, slc] = mtrace.get_values(
                                                         varname=var,
