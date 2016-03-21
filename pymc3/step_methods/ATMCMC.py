@@ -33,12 +33,19 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
         List of variables for sampler
     N_chains : (integer) Number of chains per stage has to be a large number
                of number of njobs (processors to be used) on the machine.
-    Covariance - Initial Covariance matrix for proposal distribution,
-        if None - identity matrix taken
-    likelihood_name - name of the determinsitic variable that contains the
+    Covariance - (N_chains x N_chains) Numpy array
+                 Initial Covariance matrix for proposal distribution,
+                 if None - identity matrix taken
+    likelihood_name - string
+                      name of the determinsitic variable that contains the
                       model likelihood - defaults to 'like'
-    proposal_dist - Type of proposal distribution, see metropolis.py for
+    proposal_dist - pymc3 object
+                    Type of proposal distribution, see metropolis.py for
                     options
+    check_bound - boolean
+                  check if current sample lies outside of variable definition
+                  speeds up computation as the forward model wont be executed
+                  default: True
     model : PyMC Model
         Optional model for sampling step.
         Defaults to None (taken from context).
@@ -46,7 +53,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
     default_blocked = True
 
     def __init__(self, vars=None, Covariance=None, scaling=1., N_chains=100,
-                 tune=True, tune_interval=100, model=None,
+                 tune=True, tune_interval=100, model=None, check_bound=True,
                  likelihood_name='like', proposal_dist=MvNPd,
                  N_steps=1000, **kwargs):
 
@@ -60,6 +67,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             self.Covariance = num.eye(sum(v.dsize for v in vars))
         self.scaling = num.atleast_1d(scaling)
         self.tune = tune
+        self.check_bnd = check_bound
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.proposal_dist = proposal_dist(self.Covariance)
@@ -93,54 +101,54 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             self.likelihoods.append(self.logp_forw(q0))
             q_new = q0
         else:
-            check_bnd = True
-            while check_bnd:
-                if not self.steps_until_tune and self.tune:
-                    # Tune scaling parameter
-                    self.scaling = tune(self.accepted /
-                                        float(self.tune_interval))
+            if not self.steps_until_tune and self.tune:
+                # Tune scaling parameter
+                self.scaling = tune(self.accepted /
+                                    float(self.tune_interval))
 
-                    # Reset counter
-                    self.steps_until_tune = self.tune_interval
-                    self.accepted = 0
+                # Reset counter
+                self.steps_until_tune = self.tune_interval
+                self.accepted = 0
 
-                delta = self.proposal_dist() * self.scaling
+            delta = self.proposal_dist() * self.scaling
 
-                if self.any_discrete:
-                    if self.all_discrete:
-                        delta = num.round(delta, 0)
-                        q0 = q0.astype(int)
-                        q = (q0 + delta).astype(int)
-                        varlogp = self.check_bnd(q)
-                    else:
-                        delta[self.discrete] = round(
-                                        delta[self.discrete], 0).astype(int)
-                        q = q0 + delta
-                        varlogp = self.check_bnd(q[self.discrete].astype(int))
+            if self.any_discrete:
+                if self.all_discrete:
+                    delta = num.round(delta, 0)
+                    q0 = q0.astype(int)
+                    q = (q0 + delta).astype(int)
                 else:
+                    delta[self.discrete] = round(
+                                    delta[self.discrete], 0).astype(int)
                     q = q0 + delta
-                    varlogp = self.check_bnd(q)
+                    q = q[self.discrete].astype(int)
+            else:
+                q = q0 + delta
 
+            if self.check_bnd:
+                varlogp = self.check_bnd(q)
                 if num.isfinite(varlogp):
-                    check_bnd = False
-                else:
-                    self.steps_until_tune -= 1
-
-            q_new = pm.metropolis.metrop_select(
+                    q_new = pm.metropolis.metrop_select(
                                     self.beta * self.delta_logp(q, q0), q, q0)
-
-            if q_new is q:
-                self.accepted += 1
+                    if q_new is q:
+                        self.accepted += 1
+                else:
+                    q_new = q0
+            else:
+                q_new = pm.metropolis.metrop_select(
+                                self.beta * self.delta_logp(q, q0), q, q0)
+                if q_new is q:
+                    self.accepted += 1
 
             self.steps_until_tune -= 1
         return q_new
 
     def calc_beta(self):
-        '''Calculate next tempering beta and importance weights.
-            Inputs: beta(m) - tempering parameter (float 0 <= beta <= 1)
-                    log_likelihoods of stage samples
-                                (Ndarray[N_chains * N_sample])
-            returns: beta(m+1), NdArray Importance weights'''
+        '''Calculate next tempering beta and importance weights based on
+           current beta and sample likelihoods.
+            returns: beta(m+1),
+                     beta(m),
+                     NdArray of importance weights (floats)'''
 
         low_beta = self.beta
         up_beta = 2.
@@ -161,19 +169,20 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
         return beta, old_beta, weights
 
     def calc_covariance(self):
-        '''Calculate covariance based on importance weights.'''
+        '''Calculate trace covariance matrix based on importance weights.'''
         return num.cov(self.array_population, aweights=self.weights, rowvar=0)
 
     def select_end_points(self, mtrace):
         '''Read trace results and take end points for each chain and set as
            start population for the next stage.
             Input: Multitrace object
-            Returns: population
-                     array_population
+            Returns: population,
+                     array_population,
                      likelihoods'''
         array_population = num.zeros((self.N_chains,
                                       self.ordering.dimensions))
         N_steps = len(mtrace)
+        bij = pm.DictToArrayBijection(self.ordering, self.population[0])
 
         if self.stage > 0:
             # collect end points of each chain and put into array
@@ -189,20 +198,20 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
                                     varname=var,
                                     burn=N_steps - 1,
                                     combine=True)
-
+            # get likelihoods
+            likelihoods = mtrace.get_values(
+                                    varname=self.likelihood_name,
+                                    burn=N_steps - 1,
+                                    combine=True)
             population = []
-            likelihoods = []
-            # collect end points of each chain
-            for i in range(self.N_chains):
-                point = mtrace.point(-1, chain=i)
-                likelihoods.append(point.pop(self.likelihood_name))
-                population.append(point)
 
-            likelihoods = num.array(likelihoods)
+            # map end array_endpoints to dict points
+            for i in range(self.N_chains):
+                population.append(bij.rmap(array_population[i,:]))
+
         else:
             # for initial stage only one trace that contains all points for
             # each chain
-            population = self.population
             likelihoods = mtrace.get_values(self.likelihood_name)
             for var, slc, shp, _ in self.ordering.vmap:
                 if len(shp) == 0:
@@ -210,6 +219,10 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
                         mtrace.get_values(varname=var)).T
                 else:
                     array_population[:, slc] = mtrace.get_values(varname=var)
+
+            population = []
+            for i in range(self.N_chains):
+                population.append(bij.rmap(array_population[i,:]))
 
         return population, array_population, likelihoods
 
@@ -378,6 +391,7 @@ def ATMIP_sample(N_steps, step=None, start=None, trace=None, chain=0,
                     step.beta, step.old_beta, step.weights = step.calc_beta()
                     if step.beta > 1.:
                         print 'Beta > 1.:', str(step.beta)
+                        step.beta = 1.
                         break
 
                     step.Covariance = step.calc_covariance()
@@ -457,6 +471,7 @@ def _iter_parallel_chains(parallel, **kwargs):
     step = kwargs['step']
     chains = list(range(step.N_chains))
     trace_list = []
+    print 'Initialising chain traces ...'
     for chain in chains:
         trace_list.append(pm.backends.Text(stage_path))
 
