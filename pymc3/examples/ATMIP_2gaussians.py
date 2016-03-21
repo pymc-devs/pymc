@@ -1,13 +1,13 @@
 import pymc3 as pm
 import numpy as num
-import ATMCMC as atmcmc
+from pymc3.step_methods import ATMCMC as atmcmc
 import theano.tensor as tt
 from matplotlib import pylab as pl
 
 test_folder = ('ATMIP_TEST')
 
-N_chains = 500
-N_steps = 100
+n_chains = 500
+n_steps = 100
 tune_interval = 25
 njobs = 1
 
@@ -45,11 +45,11 @@ with pm.Model() as ATMIP_test:
     llk = pm.Potential('like', like)
 
 with ATMIP_test:
-    step = atmcmc.ATMCMC(N_chains=N_chains, tune_interval=tune_interval,
+    step = atmcmc.ATMCMC(n_chains=n_chains, tune_interval=tune_interval,
                          likelihood_name=ATMIP_test.deterministics[0].name)
 
 trcs = atmcmc.ATMIP_sample(
-                        N_steps=N_steps,
+                        n_steps=n_steps,
                         step=step,
                         njobs=njobs,
                         progressbar=True,
