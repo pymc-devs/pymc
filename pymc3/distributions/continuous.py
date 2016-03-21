@@ -10,7 +10,6 @@ from __future__ import division
 import numpy as np
 import theano.tensor as T
 from scipy import stats
-from scipy import special
 
 from . import transforms
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
