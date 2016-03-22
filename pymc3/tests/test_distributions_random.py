@@ -173,6 +173,9 @@ class ScalarParameterShape(unittest.TestCase):
 
     def test_ex_gaussian(self):
         self.check(ExGaussian, mu=0., sigma=1., nu=1.)
+        
+    def test_vonmises(self):
+        self.check(VonMises, mu=0., kappa=1.)
 
     def test_binomial(self):
         self.check(Binomial,  n=5., p=0.5)
@@ -266,6 +269,9 @@ class ScalarShape(unittest.TestCase):
 
     def test_ex_gaussian(self):
         self.check(ExGaussian, mu=0., sigma=1., nu=1.)
+        
+    def test_vonmises(self):
+        self.check(VonMises, mu=0., kappa=1.)
 
     def test_binomial(self):
         self.check(Binomial,  n=5., p=0.5)
@@ -367,6 +373,9 @@ class Parameters1dShape(unittest.TestCase):
 
     def test_ex_gaussian(self):
         self.check(ExGaussian, mu=self.zeros, sigma=self.ones, nu=self.ones)
+        
+    def test_vonmises(self):
+        self.check(VonMises, mu=self.zeros, kappa=self.ones)
 
     def test_binomial(self):
         self.check(Binomial,  n=(self.ones * 5).astype(int), p=self.ones / 5)
@@ -477,6 +486,9 @@ class BroadcastShape(unittest.TestCase):
 
     def test_ex_gaussian(self):
         self.check(ExGaussian, mu=self.zeros, sigma=self.ones, nu=self.ones)
+        
+    def test_vonmises(self):
+        self.check(VonMises, mu=self.zeros, kappa=self.ones)
 
     def test_binomial(self):
         self.check(Binomial, n=(self.ones * 5).astype(int), p=self.ones / 5)
@@ -616,6 +628,10 @@ class ScalarParameterSamples(unittest.TestCase):
                 ref_rand=lambda size, mu=None, sigma=None, nu=None: \
                     nr.normal(mu, sigma, size=size) + nr.exponential(scale=nu, size=size)
                 )
+                
+    def test_vonmises(self):
+        pymc3_random(VonMises, {'mu':R, 'kappa':Rplus},
+                     ref_rand=lambda size, mu=None, kappa=None: st.vonmises.rvs(size=size,loc=mu, kappa=kappa))
 
     def test_bounded(self):
         # A bit crude...
