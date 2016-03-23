@@ -58,8 +58,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
 
     def __init__(self, vars=None, covariance=None, scaling=1., n_chains=100,
                  tune=True, tune_interval=100, model=None, check_bound=True,
-                 likelihood_name='like', proposal_dist=MvNPd,
-                 n_steps=1000, **kwargs):
+                 likelihood_name='like', proposal_dist=MvNPd, **kwargs):
 
         model = pm.modelcontext(model)
 
@@ -110,6 +109,9 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             self.likelihoods.append(self.logp_forw(q0))
             q_new = q0
         else:
+            if not self.stage_sample:
+                self.proposal_samples_array = self.proposal_dist(self.n_steps)
+
             if not self.steps_until_tune and self.tune:
                 # Tune scaling parameter
                 self.scaling = tune(self.accepted /
@@ -149,8 +151,13 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
                 if q_new is q:
                     self.accepted += 1
 
-            self.stage_sample += 1
             self.steps_until_tune -= 1
+            self.stage_sample += 1
+
+            # reset sample counter
+            if self.stage_sample == self.n_steps:
+                self.stage_sample = 0
+
         return q_new
 
     def calc_beta(self):
@@ -340,7 +347,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
     """
 
     model = pm.modelcontext(model)
-    n_steps = int(n_steps)
+    step.n_steps = int(n_steps)
     seed(random_seed)
 
     if n_steps < 1:
@@ -410,8 +417,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
                     # Metropolis sampling intermediate stages
                     stage_path = homepath + '/stage_' + str(step.stage)
                     step.proposal_dist = MvNPd(step.covariance)
-                    step.proposal_samples_array = step.proposal_dist(
-                                            step.n_chains * n_steps)
+
                     sample_args = {
                             'draws': n_steps,
                             'step': step,
@@ -424,7 +430,6 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
                                             step.select_end_points(mtrace)
                     step.beta, step.old_beta, step.weights = step.calc_beta()
                     step.stage += 1
-                    step.stage_sample = 0
 
                     if step.beta > 1.:
                         print 'Beta > 1.:', str(step.beta)
@@ -434,7 +439,6 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
                     step.covariance = step.calc_covariance()
                     step.res_indx = step.resample()
 
-
             # Metropolis sampling final stage
             print 'Sample final stage'
             stage_path = homepath + '/stage_final'
@@ -443,8 +447,6 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
             step.weights = temp / np.sum(temp)
             step.covariance = step.calc_covariance()
             step.proposal_dist = MvNPd(step.covariance)
-            step.proposal_samples_array = step.proposal_dist(
-                                            step.n_chains * n_steps)
             step.res_indx = step.resample()
 
             sample_args['step'] = step
