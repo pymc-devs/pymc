@@ -74,7 +74,11 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
         self.check_bnd = check_bound
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
+
         self.proposal_dist = proposal_dist(self.covariance)
+        self.proposal_samples_array = self.proposal_dist(n_chains)
+        self.stage_sample = 0
+
         self.accepted = 0
         self.beta = 0
         self.stage = 0
@@ -85,6 +89,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in vars])
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
+
         # create initial population
         self.population = []
         self.array_population = np.zeros(n_chains)
@@ -113,7 +118,8 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
                 self.steps_until_tune = self.tune_interval
                 self.accepted = 0
 
-            delta = self.proposal_dist() * self.scaling
+            delta = self.proposal_samples_array[self.stage_sample, :] * \
+                                                                self.scaling
 
             if self.any_discrete:
                 if self.all_discrete:
@@ -143,6 +149,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
                 if q_new is q:
                     self.accepted += 1
 
+            self.stage_sample += 1
             self.steps_until_tune -= 1
         return q_new
 
@@ -179,7 +186,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
     def calc_covariance(self):
         """
         Calculate trace covariance matrix based on importance weights.
-        
+
         Returns
         -------
         Ndarray of weighted covariances (NumPy > 1.10. required)
@@ -228,7 +235,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
 
             # map end array_endpoints to dict points
             for i in range(self.n_chains):
-                population.append(bij.rmap(array_population[i,:]))
+                population.append(bij.rmap(array_population[i, :]))
 
         else:
             # for initial stage only one trace that contains all points for
@@ -243,7 +250,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
 
             population = []
             for i in range(self.n_chains):
-                population.append(bij.rmap(array_population[i,:]))
+                population.append(bij.rmap(array_population[i, :]))
 
         return population, array_population, likelihoods
 
@@ -403,6 +410,8 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
                     # Metropolis sampling intermediate stages
                     stage_path = homepath + '/stage_' + str(step.stage)
                     step.proposal_dist = MvNPd(step.covariance)
+                    step.proposal_samples_array = step.proposal_dist(
+                                            step.n_chains * n_steps)
                     sample_args = {
                             'draws': n_steps,
                             'step': step,
@@ -414,6 +423,9 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
                     step.population, step.array_population, step.likelihoods = \
                                             step.select_end_points(mtrace)
                     step.beta, step.old_beta, step.weights = step.calc_beta()
+                    step.stage += 1
+                    step.stage_sample = 0
+
                     if step.beta > 1.:
                         print 'Beta > 1.:', str(step.beta)
                         step.beta = 1.
@@ -421,7 +433,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
 
                     step.covariance = step.calc_covariance()
                     step.res_indx = step.resample()
-                    step.stage += 1
+
 
             # Metropolis sampling final stage
             print 'Sample final stage'
@@ -431,6 +443,8 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
             step.weights = temp / np.sum(temp)
             step.covariance = step.calc_covariance()
             step.proposal_dist = MvNPd(step.covariance)
+            step.proposal_samples_array = step.proposal_dist(
+                                            step.n_chains * n_steps)
             step.res_indx = step.resample()
 
             sample_args['step'] = step
@@ -524,12 +538,12 @@ def tune(acc_rate):
     ----------
     acc_rate: scalar float
               Acceptance rate of the Metropolis sampling
-    
+
     Returns
     -------
     scaling: scalar float
     """
-    
+
     # a and b after Muto & Beck 2008 .
     a = 1. / 9
     b = 8. / 9
