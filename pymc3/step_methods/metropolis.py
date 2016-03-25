@@ -20,33 +20,44 @@ __all__ = ['Metropolis', 'BinaryMetropolis', 'BinaryGibbsMetropolis', 'NormalPro
 
 class Proposal(object):
     def __init__(self, s):
-        self.s = s
+        self.s = np.atleast_1d(s)
 
 
 class NormalProposal(Proposal):
-    def __call__(self):
-        return normal(scale=self.s)
+    def __call__(self, num_draws=None):
+        size = (self.s.shape)
+        if num_draws:
+            size += (num_draws,)
+        return normal(scale=self.s[0], size=size).T
 
 
 class CauchyProposal(Proposal):
-    def __call__(self):
-        return standard_cauchy(size=np.size(self.s)) * self.s
+    def __call__(self, num_draws=None):
+        size = (self.s.shape)
+        if num_draws:
+            size += (num_draws,)
+        return standard_cauchy(size=size).T * self.s
 
 
 class LaplaceProposal(Proposal):
-    def __call__(self):
-        size = np.size(self.s)
-        return (standard_exponential(size=size) - standard_exponential(size=size)) * self.s
+    def __call__(self, num_draws=None):
+        size = (self.s.shape)
+        if num_draws:
+            size += (num_draws,)
+        return (standard_exponential(size=size) - standard_exponential(size=size)).T * self.s
 
 
 class PoissonProposal(Proposal):
-    def __call__(self):
-        return poisson(lam=self.s, size=np.size(self.s)) - self.s
+    def __call__(self, num_draws=None):
+        size = (self.s.shape)
+        if num_draws:
+            size += (num_draws,)
+        return poisson(lam=self.s, size=size).T - self.s
 
 
 class MultivariateNormalProposal(Proposal):
-    def __call__(self):
-        return np.random.multivariate_normal(mean=np.zeros(self.s.shape[0]), cov=self.s)
+    def __call__(self, num_draws=None):
+        return np.random.multivariate_normal(mean=np.zeros(self.s.shape[0]), cov=self.s, size=num_draws)
 
 
 class Metropolis(ArrayStepShared):
@@ -89,6 +100,7 @@ class Metropolis(ArrayStepShared):
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.accepted = 0
+        self.sample_num = 0
 
         # Determine type of variables
         self.discrete = np.ravel([[v.dtype in discrete_types ] * (v.dsize or 1) for v in vars])
@@ -101,6 +113,10 @@ class Metropolis(ArrayStepShared):
 
     def astep(self, q0):
 
+        if not self.sample_num:
+            # pre-generate all steps
+            self.delta_array = self.proposal_dist(self.draws)
+
         if not self.steps_until_tune and self.tune:
             # Tune scaling parameter
             self.scaling = tune(
@@ -109,7 +125,7 @@ class Metropolis(ArrayStepShared):
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
 
-        delta = self.proposal_dist() * self.scaling
+        delta = self.delta_array[self.sample_num,:] * self.scaling
 
         if self.any_discrete:
             if self.all_discrete:
@@ -128,6 +144,7 @@ class Metropolis(ArrayStepShared):
             self.accepted += 1
 
         self.steps_until_tune -= 1
+        self.sample_num += 1
 
         return q_new
 

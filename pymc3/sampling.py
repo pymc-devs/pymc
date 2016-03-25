@@ -125,6 +125,7 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     model = modelcontext(model)
 
     step = assign_step_methods(model, step)
+    step.draws = draws
 
     if njobs is None:
         import multiprocessing
