@@ -125,7 +125,7 @@ class Metropolis(ArrayStepShared):
             self.steps_until_tune = self.tune_interval
             self.accepted = 0
 
-        delta = self.delta_array[self.sample_num,:] * self.scaling
+        delta = self.delta_array[self.sample_num, :].ravel() * self.scaling
 
         if self.any_discrete:
             if self.all_discrete:

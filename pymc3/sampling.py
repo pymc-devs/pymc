@@ -125,7 +125,6 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     model = modelcontext(model)
 
     step = assign_step_methods(model, step)
-    step.draws = draws
 
     if njobs is None:
         import multiprocessing
@@ -231,6 +230,14 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         step = CompoundStep(step)
     except TypeError:
         pass
+
+    if isinstance(step, CompoundStep):
+        for i in step.methods:
+            if isinstance(i, Metropolis):
+                i.draws = draws
+    else:
+        if isinstance(step, Metropolis):
+            step.draws = draws
 
     point = Point(start, model=model)
 
