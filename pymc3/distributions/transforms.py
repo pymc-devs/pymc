@@ -3,6 +3,7 @@ import theano.tensor as T
 from ..model import FreeRV
 from ..theanof import gradient
 from .distribution import Distribution
+import numpy as np
 
 __all__ = ['transform', 'stick_breaking', 'logodds', 'log']
 
@@ -180,3 +181,17 @@ class StickBreaking(Transform):
                      0)
 
 stick_breaking = StickBreaking()
+
+
+class Circular(ElemwiseTransform):
+    """Transforms a linear space into a circular one.
+    """
+    name = "circular"
+
+    def backward(self, y):
+        return T.arctan2(T.sin(y), T.cos(y))
+
+    def forward(self, x): 
+        return x
+
+circular = Circular()
