@@ -235,6 +235,11 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         for i in step.methods:
             if isinstance(i, Metropolis):
                 i.draws = draws
+            # compound step within compound step
+            elif isinstance(i, CompoundStep):
+                for j in i.methods:
+                    if isinstance(j, Metropolis):
+                        j.draws = draws
     else:
         if isinstance(step, Metropolis):
             step.draws = draws

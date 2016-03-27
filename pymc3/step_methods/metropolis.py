@@ -145,6 +145,9 @@ class Metropolis(ArrayStepShared):
 
         self.steps_until_tune -= 1
         self.sample_num += 1
+        # reset sample counter
+        if self.sample_num == self.draws:
+            self.sample_num = 0
 
         return q_new
 
