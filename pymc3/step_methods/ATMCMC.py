@@ -410,7 +410,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
     with model:
         with Parallel(n_jobs=njobs, verbose=verbosity) as parallel:
             while step.beta < 1.:
-                print('Beta: ', str(step.beta), ' Stage: ', str(step.stage))
+                print('Beta: ' + str(step.beta), ' Stage: ' + str(step.stage))
                 if step.stage == 0:
                     # Initial stage
                     print('Sample initial stage: ...')
