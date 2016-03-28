@@ -1,8 +1,8 @@
 import pymc3 as pm
-import numpy as num
+import numpy as np
 from pymc3.step_methods import ATMCMC as atmcmc
 import theano.tensor as tt
-from matplotlib import pylab as pl
+from matplotlib import pylab as plt
 
 test_folder = ('ATMIP_TEST')
 
@@ -13,23 +13,23 @@ njobs = 1
 
 n = 4
 
-mu1 = num.ones(n) * (1. / 2)
+mu1 = np.ones(n) * (1. / 2)
 mu2 = -mu1
 
 stdev = 0.1
-sigma = num.power(stdev, 2) * num.eye(n)
-isigma = num.linalg.inv(sigma)
-dsigma = num.linalg.det(sigma)
+sigma = np.power(stdev, 2) * np.eye(n)
+isigma = np.linalg.inv(sigma)
+dsigma = np.linalg.det(sigma)
 
 w1 = stdev
 w2 = (1 - stdev)
 
 
 def two_gaussians(x):
-    log_like1 = - 0.5 * n * tt.log(2 * num.pi) \
+    log_like1 = - 0.5 * n * tt.log(2 * np.pi) \
                 - 0.5 * tt.log(dsigma) \
                 - 0.5 * (x - mu1).T.dot(isigma).dot(x - mu1)
-    log_like2 = - 0.5 * n * tt.log(2 * num.pi) \
+    log_like2 = - 0.5 * n * tt.log(2 * np.pi) \
                 - 0.5 * tt.log(dsigma) \
                 - 0.5 * (x - mu2).T.dot(isigma).dot(x - mu2)
     return tt.log(w1 * tt.exp(log_like1) + w2 * tt.exp(log_like2))
@@ -37,9 +37,9 @@ def two_gaussians(x):
 with pm.Model() as ATMIP_test:
     X = pm.Uniform('X',
                    shape=n,
-                   lower=-2. * num.ones_like(mu1),
-                   upper=2. * num.ones_like(mu1),
-                   testval=-1. * num.ones_like(mu1),
+                   lower=-2. * np.ones_like(mu1),
+                   upper=2. * np.ones_like(mu1),
+                   testval=-1. * np.ones_like(mu1),
                    transform=None)
     like = pm.Deterministic('like', two_gaussians(X))
     llk = pm.Potential('like', like)
@@ -58,4 +58,4 @@ trcs = atmcmc.ATMIP_sample(
 
 pm.summary(trcs)
 Pltr = pm.traceplot(trcs, combined=True)
-pl.show(Pltr[0][0])
+plt.show(Pltr[0][0])
