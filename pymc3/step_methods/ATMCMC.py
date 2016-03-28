@@ -46,6 +46,12 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
     proposal_dist : pymc3 object
                     Type of proposal distribution, see metropolis.py for
                     options
+    coef_variation : scalar, float
+                     Coefficient of variation, determines the change of beta
+                     from stage to stage, i.e.indirectly the number of stages,
+                     low coef_variation --> slow beta change,
+                                         results in many stages and vice verca
+                     (default: 1.)
     check_bound : boolean
                   check if current sample lies outside of variable definition
                   speeds up computation as the forward model wont be executed
@@ -58,7 +64,8 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
 
     def __init__(self, vars=None, covariance=None, scaling=1., n_chains=100,
                  tune=True, tune_interval=100, model=None, check_bound=True,
-                 likelihood_name='like', proposal_dist=MvNPd, **kwargs):
+                 likelihood_name='like', proposal_dist=MvNPd,
+                 coef_variation=1., **kwargs):
 
         model = pm.modelcontext(model)
 
@@ -76,11 +83,13 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
 
         self.proposal_dist = proposal_dist(self.covariance)
         self.proposal_samples_array = self.proposal_dist(n_chains)
-        self.stage_sample = 0
 
+        self.stage_sample = 0
         self.accepted = 0
+
         self.beta = 0
         self.stage = 0
+        self.coef_variation = coef_variation
         self.n_chains = n_chains
         self.likelihoods = []
         self.likelihood_name = likelihood_name
@@ -181,7 +190,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             temp = np.exp((current_beta - self.beta) * \
                            (self.likelihoods - self.likelihoods.max()))
             cov_temp = np.std(temp) / np.mean(temp)
-            if cov_temp > 1:
+            if cov_temp > self.coef_variation:
                 up_beta = current_beta
             else:
                 low_beta = current_beta
@@ -305,6 +314,18 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
         Theory and algorithm
     (without cascading- C)
     https://gji.oxfordjournals.org/content/194/3/1701.full
+    Samples the solution space with n_chains of Metropolis chains, where each
+    chain has n_steps iterations. Once finished, the sampled traces are
+    evaluated:
+    (1) Based on the likelihoods of the final samples, chains are weighted
+    (2) the weighted covariance of the ensemble is calculated and set as new
+        proposal distribution
+    (3) the variation in the ensemble is calculated and the next tempering
+        parameter (beta) calculated
+    (4) New n_chains Metropolis chains are seeded on the traces with high
+        weight for n_steps iterations
+    (5) Repeat until beta > 1.
+
     Parameters
     ----------
 
