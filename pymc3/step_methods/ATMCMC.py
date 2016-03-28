@@ -410,10 +410,10 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
     with model:
         with Parallel(n_jobs=njobs, verbose=verbosity) as parallel:
             while step.beta < 1.:
-                print 'Beta:', str(step.beta), 'Stage', str(step.stage)
+                print('Beta: ', str(step.beta), ' Stage: ', str(step.stage))
                 if step.stage == 0:
                     # Initial stage
-                    print 'Sample initial stage: ...'
+                    print('Sample initial stage: ...')
                     stage_path = homepath + '/stage_' + str(step.stage)
                     trace = pm.backends.Text(stage_path, model=model)
                     initial = _iter_initial(step, chain=chain, trace=trace)
@@ -453,7 +453,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
                     step.stage += 1
 
                     if step.beta > 1.:
-                        print 'Beta > 1.:', str(step.beta)
+                        print('Beta > 1.: ' + str(step.beta))
                         step.beta = 1.
                         break
 
@@ -461,7 +461,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
                     step.res_indx = step.resample()
 
             # Metropolis sampling final stage
-            print 'Sample final stage'
+            print('Sample final stage')
             stage_path = homepath + '/stage_final'
             temp = np.exp((1 - step.old_beta) * \
                                (step.likelihoods - step.likelihoods.max()))
@@ -495,7 +495,7 @@ def _iter_initial(step, chain=0, trace=None, model=None):
     if l_tr == step.n_chains:
         # only return strace
         for i in range(1):
-            print 'Using results of previous run'
+            print('Using results of previous run!')
             yield strace
     else:
         for i in range(l_tr, step.n_chains):
@@ -540,11 +540,11 @@ def _iter_parallel_chains(parallel, **kwargs):
     chains = list(range(step.n_chains))
     trace_list = []
 
-    print 'Initialising chain traces ...'
+    print('Initialising chain traces ...')
     for chain in chains:
         trace_list.append(pm.backends.Text(stage_path))
 
-    print 'Sampling ...'
+    print('Sampling ...')
     traces = parallel(delayed(
                     pm.sampling._sample)(
                         chain=chain,
