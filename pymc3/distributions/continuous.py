@@ -1136,11 +1136,15 @@ class VonMises(Continuous):
     kappa : float
         Concentration (\frac{1}{kappa} is analogous to \sigma^2).
     """
-    def __init__(self, mu=0.0, kappa=None, *args, **kwargs):
+    def __init__(self, mu=0.0, kappa=None, transform='circular',
+    *args, **kwargs):
         super(VonMises, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
         self.kappa = kappa 
         self.variance = 1 - i1(kappa)/i0(kappa)
+        
+        if transform == 'circular':
+            self.transform = transforms.Circular()
             
     def random(self, point=None, size=None, repeat=None):
         mu, kappa = draw_values([self.mu, self.kappa],
