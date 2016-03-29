@@ -1,4 +1,3 @@
-from . import meta
 from . import timeseries
 from . import transforms
 
