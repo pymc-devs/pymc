@@ -7,6 +7,7 @@ from .core import *
 from .step_methods import *
 from .progressbar import progress_bar
 from numpy.random import randint, seed
+from numpy import shape
 from collections import defaultdict
 
 import sys
@@ -268,10 +269,16 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
 def _mp_sample(**kwargs):
     njobs = kwargs.pop('njobs')
     chain = kwargs.pop('chain')
+    random_seed = kwargs.pop('random_seed')
+    if not shape(random_seed):
+        rseed = [random_seed]*njobs
+    else:
+        rseed = random_seed
     chains = list(range(chain, chain + njobs))
     pbars = [kwargs.pop('progressbar')] + [False] * (njobs - 1)
     traces = Parallel(n_jobs=njobs)(delayed(_sample)(chain=chains[i],
                                                     progressbar=pbars[i],
+                                                    random_seed=rseed[i],
                                                     **kwargs) for i in range(njobs))
     return merge_traces(traces)
 
