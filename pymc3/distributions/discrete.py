@@ -359,9 +359,13 @@ class Categorical(Discrete):
     """
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
-        self.k = np.shape(p)[-1]
+        try:
+            self.k = np.shape(p)[-1].tag.test_value
+        except AttributeError:
+            self.k = np.shape(p)[-1]
         self.p = T.as_tensor_variable(p)
         self.mode = T.argmax(p)
+
 
     def random(self, point=None, size=None, repeat=None):
         p, k = draw_values([self.p, self.k], point=point)
