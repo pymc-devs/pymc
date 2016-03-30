@@ -359,10 +359,7 @@ class Categorical(Discrete):
     """
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
-        try:
-            self.k = np.shape(p)[-1].tag.test_value
-        except AttributeError:
-            self.k = np.shape(p)[-1]
+        self.k = np.shape(p)[-1]
         self.p = T.as_tensor_variable(p)
         self.mode = T.argmax(p)
 
@@ -378,8 +375,12 @@ class Categorical(Discrete):
         p = self.p
         k = self.k
 
-        sumto1 = theano.gradient.zero_grad(T.le(abs(T.sum(p) - 1), 1e-5))
-        return bound(T.log(p[value]),
+        sumto1 = theano.gradient.zero_grad(T.le(abs(T.sum(p, axis=-1) - 1), 1e-5))
+        if p.ndim > 1:
+            a = T.log(p[T.arange(p.shape[0]), value])
+        else:
+            a = T.log(p[value])
+        return bound(a,
                      value >= 0, value <= (k - 1),
                      sumto1)
 
