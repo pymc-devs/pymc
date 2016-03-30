@@ -11,7 +11,7 @@ from ..core import *
 import theano
 from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor, gradient
 from theano.tensor import exp, concatenate, dvector
-import theano.tensor as T
+import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from collections import OrderedDict, namedtuple
 
@@ -55,7 +55,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         w[var] = np.exp(w[var])
     return ADVIFit(u, w, elbos)
 
-def advi_minibatch(vars=None, start=None, model=None, n=5000, accurate_elbo=False, 
+def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1, 
     minibatch_RVs=None, minibatch_tensors=None, minibatches=None, total_size=None, 
     learning_rate=.001, epsilon=.1, verbose=1):
     model = modelcontext(model)
@@ -70,7 +70,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, accurate_elbo=Fals
     # Create variational gradient tensor
     grad, elbo, shared, uw = variational_gradient_estimate(
         vars, model, minibatch_RVs, minibatch_tensors, total_size, 
-        accurate_elbo=accurate_elbo)
+        n_mcsamples=n_mcsamples)
 
     # Set starting values
     for var, share in shared.items():
@@ -134,7 +134,7 @@ def run_adagrad(uw, grad, elbo, n, learning_rate=.001, epsilon=.1, verbose=1):
 
 def variational_gradient_estimate(
     vars, model, minibatch_RVs=[], minibatch_tensors=[], total_size=None, 
-    accurate_elbo=False):
+    n_mcsamples=1):
     theano.config.compute_test_value = 'ignore'
     shared = make_shared_replacements(vars, model)
 
@@ -145,7 +145,8 @@ def variational_gradient_estimate(
     other_RVs = set(model.basic_RVs) - set(minibatch_RVs)
     factors = [r * var.logpt for var in minibatch_RVs] + \
               [var.logpt for var in other_RVs] + model.potentials
-    logpt = T.add(*map(T.sum, factors))
+    print(minibatch_RVs, other_RVs) # debug
+    logpt = tt.add(*map(tt.sum, factors))
     
     [logp], inarray = join_nonshared_inputs([logpt], vars, shared)
 
@@ -153,7 +154,7 @@ def variational_gradient_estimate(
     uw.tag.test_value = np.concatenate([inarray.tag.test_value,
                                         inarray.tag.test_value])
 
-    elbo = elbo_t(logp, uw, inarray, n_mcsamples=1)
+    elbo = elbo_t(logp, uw, inarray, n_mcsamples=n_mcsamples)
 
     # Gradient
     grad = gradient(elbo, [uw])
@@ -174,14 +175,14 @@ def elbo_t(logp, uw, inarray, n_mcsamples):
     if n_mcsamples == 1:
         n = r.normal(size=inarray.tag.test_value.shape)
         q = n * exp(w) + u
-        elbo = logp_(q) + T.sum(w)
+        elbo = logp_(q) + tt.sum(w) + 0.5 * l * (1 + np.log(2.0 * np.pi))
     else:
         n = r.normal(size=(n_mcsamples, u.tag.test_value.shape[0]))
         qs = n * exp(w) + u
         logps, _ = theano.scan(fn=lambda q: logp_(q),
                                outputs_info=None,
                                sequences=[qs])
-        elbo = T.mean(logps) + T.sum(w)
+        elbo = tt.mean(logps) + tt.sum(w) + 0.5 * l * (1 + np.log(2.0 * np.pi))
 
     return elbo
 
