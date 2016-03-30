@@ -145,7 +145,6 @@ def variational_gradient_estimate(
     other_RVs = set(model.basic_RVs) - set(minibatch_RVs)
     factors = [r * var.logpt for var in minibatch_RVs] + \
               [var.logpt for var in other_RVs] + model.potentials
-    print(minibatch_RVs, other_RVs) # debug
     logpt = tt.add(*map(tt.sum, factors))
     
     [logp], inarray = join_nonshared_inputs([logpt], vars, shared)
