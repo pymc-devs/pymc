@@ -21,9 +21,37 @@ ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False, 
     learning_rate=.001, epsilon=.1, verbose=1):
+    """Run ADVI. 
+
+    Parameters
+    ----------
+    vars : object
+        Random variables. 
+    start : Dict or None
+        Initial values of parameters (variational means). 
+    model : Model
+        Probabilistic model. 
+    n : int
+        Number of interations updating parameters. 
+    accurate_elbo : bool
+        If true, 100 MC samples are used for accurate calculation of ELBO. 
+    learning_rate: float
+        Adagrad base learning rate. 
+    epsilon : float
+        Offset in denominator of the scale of learning rate in Adagrad.  
+
+    Returns
+    -------
+    ADVIFit
+        Named tuple, which includes 'means', 'stds', and 'elbo_vals'. 
+
+    'means' and 'stds' include parameters of the variational posterior. 
+    """
     model = modelcontext(model)
     if start is None:
         start = model.test_point
+        import pdb
+        pdb.set_trace()
 
     if vars is None:
         vars = model.vars
@@ -58,6 +86,41 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1, 
     minibatch_RVs=None, minibatch_tensors=None, minibatches=None, total_size=None, 
     learning_rate=.001, epsilon=.1, verbose=1):
+    """Run mini-batch ADVI. 
+
+    minibatch_RVs, minibatch_tensors and minibatches should be in the 
+    same order. 
+
+    Parameters
+    ----------
+    vars : object
+        Random variables. 
+    start : Dict or None
+        Initial values of parameters (variational means). 
+    model : Model
+        Probabilistic model. 
+    n : int
+        Number of interations updating parameters. 
+    n_mcsamples : int
+        Number of Monte Carlo samples to approximate ELBO. 
+    minibatch_RVs : list of ObservedRVs
+        Random variables for mini-batch. 
+    minibatch_tensors : list of tensors
+        Tensors used to create ObservedRVs in minibatch_RVs. 
+    minibatches : list of generators
+        Generates minibatches when calling next(). 
+    totalsize : int
+        Total size of training samples. 
+    learning_rate: float
+        Adagrad base learning rate. 
+    epsilon : float
+        Offset in denominator of the scale of learning rate in Adagrad.  
+
+    Returns
+    -------
+    ADVIFit
+        Named tuple, which includes 'means', 'stds', and 'elbo_vals'. 
+    """
     model = modelcontext(model)
     if start is None:
         start = model.test_point
@@ -111,6 +174,10 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     return ADVIFit(u, w, elbos)
     
 def run_adagrad(uw, grad, elbo, n, learning_rate=.001, epsilon=.1, verbose=1):
+    """Run Adagrad parameter update. 
+
+    This function is only used in batch training. 
+    """
     shared_inarray = theano.shared(uw, 'uw_shared')
     grad = CallableTensor(grad)(shared_inarray)
     elbo = CallableTensor(elbo)(shared_inarray)
@@ -135,6 +202,8 @@ def run_adagrad(uw, grad, elbo, n, learning_rate=.001, epsilon=.1, verbose=1):
 def variational_gradient_estimate(
     vars, model, minibatch_RVs=[], minibatch_tensors=[], total_size=None, 
     n_mcsamples=1):
+    """Calculate approximate ELBO and its (stochastic) gradient. 
+    """
     theano.config.compute_test_value = 'ignore'
     shared = make_shared_replacements(vars, model)
 
@@ -161,6 +230,8 @@ def variational_gradient_estimate(
     return grad, elbo, shared, uw
 
 def elbo_t(logp, uw, inarray, n_mcsamples):
+    """Create Theano tensor of approximate ELBO by Monte Carlo sampling. 
+    """
     l = (uw.size/2).astype('int64')
     u = uw[:l]
     w = uw[l:]
@@ -186,6 +257,8 @@ def elbo_t(logp, uw, inarray, n_mcsamples):
     return elbo
 
 def adagrad(grad, param, learning_rate, epsilon, n):
+    """Create Theano parameter (tensor) updates by Adagrad. 
+    """
     # Compute windowed adagrad using last n gradients
     i = theano.shared(np.array(0), 'i')
     value = param.get_value(borrow=True)
