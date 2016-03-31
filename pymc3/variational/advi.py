@@ -7,6 +7,9 @@ Created on Mar 12, 2011
 from scipy import optimize
 import numpy as np
 from ..core import *
+from ..distributions import Discrete
+from ..distributions.transforms import TransformedDistribution
+from ..model import ObservedRV
 
 import theano
 from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor, gradient
@@ -18,6 +21,22 @@ from collections import OrderedDict, namedtuple
 __all__ = ['advi']
 
 ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
+
+def is_discreteRV(var):
+    dist = var.distribution
+
+    # Transformed distributions are continuous. (is it true?)
+    if isinstance(dist, TransformedDistribution):
+        return False
+
+    return isinstance(dist, Discrete)
+
+def check_discrete_rvs(vars):
+    """Check that vars not include discrete variables, excepting ObservedRVs. 
+    """
+    vars_ = [var for var in vars if not isinstance(var, ObservedRV)]
+    if any([is_discreteRV(var) for var in vars_]):
+        raise ValueError('Model should not include discrete RVs for ADVI.')
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False, 
     learning_rate=.001, epsilon=.1, verbose=1):
@@ -50,12 +69,12 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     model = modelcontext(model)
     if start is None:
         start = model.test_point
-        import pdb
-        pdb.set_trace()
 
     if vars is None:
         vars = model.vars
     vars = inputvars(vars)
+
+    check_discrete_rvs(vars)
 
     n_mcsamples = 100 if accurate_elbo else 1
 
@@ -129,6 +148,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         vars = model.vars
 
     vars = set(inputvars(vars)) - set(minibatch_RVs)
+
+    check_discrete_rvs(vars)
 
     # Create variational gradient tensor
     grad, elbo, shared, uw = variational_gradient_estimate(
