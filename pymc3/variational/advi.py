@@ -93,7 +93,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
     result, elbos = run_adagrad(uw, grad, elbo, n, learning_rate=learning_rate, epsilon=epsilon, verbose=verbose)
 
-    l = result.size / 2
+    l = int(result.size / 2)
 
     u = bij.rmap(result[:l])
     w = bij.rmap(result[l:])
