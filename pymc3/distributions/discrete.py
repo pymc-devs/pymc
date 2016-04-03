@@ -366,6 +366,7 @@ class Categorical(Discrete):
         self.p = T.as_tensor_variable(p)
         self.mode = T.argmax(p)
 
+
     def random(self, point=None, size=None, repeat=None):
         p, k = draw_values([self.p, self.k], point=point)
         return generate_samples(partial(np.random.choice, np.arange(k)),
@@ -378,8 +379,12 @@ class Categorical(Discrete):
         p = self.p
         k = self.k
 
-        sumto1 = theano.gradient.zero_grad(T.le(abs(T.sum(p) - 1), 1e-5))
-        return bound(T.log(p[value]),
+        sumto1 = theano.gradient.zero_grad(T.le(abs(T.sum(p, axis=-1) - 1), 1e-5))
+        if p.ndim > 1:
+            a = T.log(p[T.arange(p.shape[0]), value])
+        else:
+            a = T.log(p[value])
+        return bound(a,
                      value >= 0, value <= (k - 1),
                      sumto1)
 
