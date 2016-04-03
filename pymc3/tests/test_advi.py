@@ -91,3 +91,41 @@ def test_check_discrete_minibatch():
         minibatch_RVs=[disasters], minibatch_tensors=[disaster_data_t], 
         minibatches=[create_minibatch()], verbose=False)
     
+
+def test_advi():
+    data = np.random.randn(100)
+
+    with Model() as model: 
+        mu = Normal('mu', mu=0, sd=1, testval=0)
+        sd = HalfNormal('sd', sd=1)
+        n = Normal('n', mu=mu, sd=sd, observed=data)
+
+    means, sds, elbos = advi(model=model, n=10, accurate_elbo=True)
+
+def test_advi_minibatch():
+    total_size = 1000
+    data = np.random.randn(total_size)
+
+    data_t = tt.vector()
+    data_t.tag.test_value=np.zeros(1,)
+
+    with Model() as model:
+        mu = Normal('mu', mu=0, sd=1, testval=0)
+        sd = HalfNormal('sd', sd=1)
+        n = Normal('n', mu=mu, sd=sd, observed=data_t)
+        
+    minibatch_RVs = [n]
+    minibatch_tensors = [data_t]
+
+    def create_minibatch(data):
+        while True:
+            data = np.roll(data, 100, axis=0)
+            yield data[:100]
+
+    minibatches = [create_minibatch(data)]
+
+    means, sds, elbos = advi_minibatch(
+        model=model, n=10, minibatch_tensors=minibatch_tensors, 
+        minibatch_RVs=minibatch_RVs, minibatches=minibatches, 
+        total_size=total_size
+    )
