@@ -7,9 +7,8 @@ Created on Mar 12, 2011
 from scipy import optimize
 import numpy as np
 from ..core import *
-from ..distributions import Discrete
-from ..distributions.transforms import TransformedDistribution
 from ..model import ObservedRV
+from ..vartypes import discrete_types
 
 import theano
 from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor, gradient
@@ -22,20 +21,11 @@ __all__ = ['advi']
 
 ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
 
-def is_discreteRV(var):
-    dist = var.distribution
-
-    # Transformed distributions are continuous. (is it true?)
-    if isinstance(dist, TransformedDistribution):
-        return False
-
-    return isinstance(dist, Discrete)
-
 def check_discrete_rvs(vars):
     """Check that vars not include discrete variables, excepting ObservedRVs. 
     """
     vars_ = [var for var in vars if not isinstance(var, ObservedRV)]
-    if any([is_discreteRV(var) for var in vars_]):
+    if any([var.dtype in discrete_types for var in vars_]):
         raise ValueError('Model should not include discrete RVs for ADVI.')
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False, 
