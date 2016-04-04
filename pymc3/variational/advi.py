@@ -28,7 +28,7 @@ def check_discrete_rvs(vars):
         raise ValueError('Model should not include discrete RVs for ADVI.')
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False, 
-    learning_rate=.001, epsilon=.1, verbose=1):
+    learning_rate=.001, epsilon=.1, seed=1, verbose=1):
     """Run ADVI. 
 
     Parameters
@@ -47,6 +47,8 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         Adagrad base learning rate. 
     epsilon : float
         Offset in denominator of the scale of learning rate in Adagrad.  
+    seed : int
+        Seed to initialize random state. 
 
     Returns
     -------
@@ -68,7 +70,8 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     n_mcsamples = 100 if accurate_elbo else 1
 
     # Create variational gradient tensor
-    grad, elbo, shared, _ = variational_gradient_estimate(vars, model, n_mcsamples=n_mcsamples)
+    grad, elbo, shared, _ = variational_gradient_estimate(
+        vars, model, n_mcsamples=n_mcsamples, seed=seed)
 
     # Set starting values
     for var, share in shared.items():
@@ -93,7 +96,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
 def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1, 
     minibatch_RVs=None, minibatch_tensors=None, minibatches=None, total_size=None, 
-    learning_rate=.001, epsilon=.1, verbose=1):
+    learning_rate=.001, epsilon=.1, seed=1, verbose=1):
     """Run mini-batch ADVI. 
 
     minibatch_RVs, minibatch_tensors and minibatches should be in the 
@@ -123,6 +126,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         Adagrad base learning rate. 
     epsilon : float
         Offset in denominator of the scale of learning rate in Adagrad.  
+    seed : int
+        Seed to initialize random state. 
 
     Returns
     -------
@@ -143,7 +148,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     # Create variational gradient tensor
     grad, elbo, shared, uw = variational_gradient_estimate(
         vars, model, minibatch_RVs, minibatch_tensors, total_size, 
-        n_mcsamples=n_mcsamples)
+        n_mcsamples=n_mcsamples, seed=seed)
 
     # Set starting values
     for var, share in shared.items():
@@ -211,7 +216,7 @@ def run_adagrad(uw, grad, elbo, n, learning_rate=.001, epsilon=.1, verbose=1):
 
 def variational_gradient_estimate(
     vars, model, minibatch_RVs=[], minibatch_tensors=[], total_size=None, 
-    n_mcsamples=1):
+    n_mcsamples=1, seed=1):
     """Calculate approximate ELBO and its (stochastic) gradient. 
     """
     theano.config.compute_test_value = 'ignore'
@@ -232,14 +237,14 @@ def variational_gradient_estimate(
     uw.tag.test_value = np.concatenate([inarray.tag.test_value,
                                         inarray.tag.test_value])
 
-    elbo = elbo_t(logp, uw, inarray, n_mcsamples=n_mcsamples)
+    elbo = elbo_t(logp, uw, inarray, n_mcsamples=n_mcsamples, seed=seed)
 
     # Gradient
     grad = gradient(elbo, [uw])
 
     return grad, elbo, shared, uw
 
-def elbo_t(logp, uw, inarray, n_mcsamples):
+def elbo_t(logp, uw, inarray, n_mcsamples, seed):
     """Create Theano tensor of approximate ELBO by Monte Carlo sampling. 
     """
     l = (uw.size/2).astype('int64')
@@ -250,7 +255,7 @@ def elbo_t(logp, uw, inarray, n_mcsamples):
     logp_ = lambda input: theano.clone(logp, {inarray: input}, strict=False)
 
     # Naive Monte-Carlo
-    r = MRG_RandomStreams(seed=1)
+    r = MRG_RandomStreams(seed=seed)
 
     if n_mcsamples == 1:
         n = r.normal(size=inarray.tag.test_value.shape)
