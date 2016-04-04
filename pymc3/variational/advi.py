@@ -4,7 +4,6 @@ Created on Mar 12, 2011
 
 @author: johnsalvatier
 '''
-from scipy import optimize
 import numpy as np
 from ..core import *
 from ..model import ObservedRV
@@ -12,7 +11,7 @@ from ..vartypes import discrete_types
 
 import theano
 from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor, gradient
-from theano.tensor import exp, concatenate, dvector
+from theano.tensor import exp, dvector
 import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from collections import OrderedDict, namedtuple
