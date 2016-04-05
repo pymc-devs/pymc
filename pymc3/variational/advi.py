@@ -57,7 +57,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
     'means' and 'stds' include parameters of the variational posterior. 
     """
-    seed = seed if type(seed) is int else np.random.randint(2**31)
+    seed = seed if type(seed) is int else 12345
 
     model = modelcontext(model)
     if start is None:
@@ -136,7 +136,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     ADVIFit
         Named tuple, which includes 'means', 'stds', and 'elbo_vals'. 
     """
-    seed = seed if type(seed) is int else np.random.randint(2**31)
+    seed = seed if type(seed) is int else 12345
 
     model = modelcontext(model)
     if start is None:
@@ -223,7 +223,7 @@ def variational_gradient_estimate(
     n_mcsamples=1, seed=None):
     """Calculate approximate ELBO and its (stochastic) gradient. 
     """
-    seed = seed if type(seed) is int else np.random.randint(2**31)
+    seed = seed if type(seed) is int else 12345
 
     theano.config.compute_test_value = 'ignore'
     shared = make_shared_replacements(vars, model)
