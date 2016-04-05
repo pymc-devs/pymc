@@ -28,7 +28,7 @@ def check_discrete_rvs(vars):
         raise ValueError('Model should not include discrete RVs for ADVI.')
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False, 
-    learning_rate=.001, epsilon=.1, seed=1, verbose=1):
+    learning_rate=.001, epsilon=.1, seed=None, verbose=1):
     """Run ADVI. 
 
     Parameters
@@ -57,6 +57,8 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
     'means' and 'stds' include parameters of the variational posterior. 
     """
+    seed = seed if type(seed) is int else np.random.randint(2**31)
+
     model = modelcontext(model)
     if start is None:
         start = model.test_point
@@ -96,7 +98,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
 def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1, 
     minibatch_RVs=None, minibatch_tensors=None, minibatches=None, total_size=None, 
-    learning_rate=.001, epsilon=.1, seed=1, verbose=1):
+    learning_rate=.001, epsilon=.1, seed=None, verbose=1):
     """Run mini-batch ADVI. 
 
     minibatch_RVs, minibatch_tensors and minibatches should be in the 
@@ -134,6 +136,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     ADVIFit
         Named tuple, which includes 'means', 'stds', and 'elbo_vals'. 
     """
+    seed = seed if type(seed) is int else np.random.randint(2**31)
+
     model = modelcontext(model)
     if start is None:
         start = model.test_point
@@ -216,9 +220,11 @@ def run_adagrad(uw, grad, elbo, n, learning_rate=.001, epsilon=.1, verbose=1):
 
 def variational_gradient_estimate(
     vars, model, minibatch_RVs=[], minibatch_tensors=[], total_size=None, 
-    n_mcsamples=1, seed=1):
+    n_mcsamples=1, seed=None):
     """Calculate approximate ELBO and its (stochastic) gradient. 
     """
+    seed = seed if type(seed) is int else np.random.randint(2**31)
+
     theano.config.compute_test_value = 'ignore'
     shared = make_shared_replacements(vars, model)
 
