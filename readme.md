@@ -23,6 +23,7 @@ PyMC3 is Beta software. Users should consider using [PyMC 2 repository](https://
 
 ## Getting started
  * [PyMC3 Tutorial](http://pymc-devs.github.io/pymc3/getting_started/)
+ * [PyMC3 paper](https://peerj.com/articles/cs-55/)
  * [Bayesian Modelling in Python -- tutorials on Bayesian statistics and PyMC3 as Jupyter Notebooks by Mark Dregan](https://github.com/markdregan/Bayesian-Modelling-in-Python)
  * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py)
  * [Global Health Metrics & Evaluation model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/GHME%202013.ipynb) case study for GHME 2013
@@ -72,6 +73,9 @@ ln -s /usr/local/Cellar/suite-sparse/4.2.1/include/ /usr/local/include/suitespar
 pip install git+https://github.com/njsmith/scikits-sparse.git
 ```
 
+## Citing PyMC3
+
+Salvatier J, Wiecki TV, Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC3. PeerJ Computer Science 2:e55 https://doi.org/10.7717/peerj-cs.55
 
 ## License
 [Apache License, Version 2.0](https://github.com/pymc-devs/pymc3/blob/master/LICENSE)
