@@ -128,7 +128,7 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     step = assign_step_methods(model, step)
 
     if njobs is None:
-        import multiprocessing
+        import multiprocessing as mp
         njobs = max(mp.cpu_count() - 2, 1)
 
     sample_args = {'draws':draws, 
