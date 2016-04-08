@@ -1,5 +1,5 @@
 import numpy as np
-from pymc3 import Model, Normal, HalfNormal, DiscreteUniform, Poisson, switch, Exponential
+from pymc3 import Model, Normal, DiscreteUniform, Poisson, switch, Exponential
 from pymc3.theanof import inputvars
 from pymc3.variational.advi import variational_gradient_estimate, advi, advi_minibatch
 from theano import function
@@ -21,7 +21,7 @@ def test_elbo():
 
     # Create variational gradient tensor
     grad, elbo, shared, uw = variational_gradient_estimate(
-        vars, model, n_mcsamples=10000)
+        vars, model, n_mcsamples=10000, seed=1)
 
     # Variational posterior parameters
     uw_ = np.array([1.88, np.log(1)])
@@ -91,3 +91,66 @@ def test_check_discrete_minibatch():
         minibatch_RVs=[disasters], minibatch_tensors=[disaster_data_t], 
         minibatches=[create_minibatch()], verbose=False)
     
+
+def test_advi():
+    n = 1000
+    sd0 = 2.
+    mu0 = 4.
+    sd = 3.
+    mu = -5.
+
+    data = sd * np.random.RandomState(0).randn(n) + mu
+
+    d = n / sd**2 + 1 / sd0**2
+    mu_post = (n * np.mean(data) / sd**2 + mu0 / sd0**2) / d
+
+    with Model() as model: 
+        mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
+        x = Normal('x', mu=mu_, sd=sd, observed=data)
+
+    means, sds, elbos = advi(
+        model=model, n=1000, accurate_elbo=False, learning_rate=1e-1, 
+        seed=1)
+
+    np.testing.assert_allclose(means['mu'], mu_post, rtol=0.1)
+
+def test_advi_minibatch():
+    n = 1000
+    sd0 = 2.
+    mu0 = 4.
+    sd = 3.
+    mu = -5.
+
+    data = sd * np.random.RandomState(0).randn(n) + mu
+
+    d = n / sd**2 + 1 / sd0**2
+    mu_post = (n * np.mean(data) / sd**2 + mu0 / sd0**2) / d
+
+    data_t = tt.vector()
+    data_t.tag.test_value=np.zeros(1,)
+
+    with Model() as model:
+        mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
+        x = Normal('x', mu=mu_, sd=sd, observed=data_t)
+
+        # mu = Normal('mu', mu=0, sd=1, testval=0)
+        # sd = HalfNormal('sd', sd=1)
+        # n = Normal('n', mu=mu, sd=sd, observed=data_t)
+        
+    minibatch_RVs = [x]
+    minibatch_tensors = [data_t]
+
+    def create_minibatch(data):
+        while True:
+            data = np.roll(data, 100, axis=0)
+            yield data[:100]
+
+    minibatches = [create_minibatch(data)]
+
+    means, sds, elbos = advi_minibatch(
+        model=model, n=1000, minibatch_tensors=minibatch_tensors, 
+        minibatch_RVs=minibatch_RVs, minibatches=minibatches, 
+        total_size=n, learning_rate=1e-1, seed=1
+    )
+
+    np.testing.assert_allclose(means['mu'], mu_post, rtol=0.1)
