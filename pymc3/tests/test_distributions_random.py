@@ -94,9 +94,9 @@ def check_dist(dist_case, test_cases, shape=None):
     dist, dist_kwargs = dist_case
     with Model():
         if shape is None:
-            rv = dist(dist.__name__, transform=None, **dist_kwargs)
+            rv = dist(getattr(dist, "__name__", "none"), transform=None, **dist_kwargs)
         else:
-            rv = dist(dist.__name__, shape=shape, transform=None,
+            rv = dist(getattr(dist, "__name__", "none"), shape=shape, transform=None,
                       **dist_kwargs)
         for size, expected in test_cases:
             check_shape(rv, size=size, expected=expected)
@@ -434,6 +434,10 @@ class BroadcastShape(unittest.TestCase):
 
     def test_normal(self):
         self.check(Normal, mu=self.zeros, tau=self.ones)
+
+    def test_bounded(self):
+        BoundedNormal = Bound(Normal, upper=0)
+        self.check(BoundedNormal, mu=self.zeros, tau=self.ones)
 
     def test_uniform(self):
         self.check(Uniform, lower=self.zeros, upper=self.ones)

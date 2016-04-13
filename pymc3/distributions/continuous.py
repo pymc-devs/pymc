@@ -991,24 +991,53 @@ class Bounded(Continuous):
         if hasattr(self.dist, 'mode'):
             self.mode = self.dist.mode
 
-    def _random(self, lower, upper, point=None, size=None):
-        samples = np.zeros(size).flatten()
+    def _random(self, lower, upper, point=None, **kwargs):
+        r"""Rejection approach to truncated sampling.
+
+        Samples from `self.dist` (i.e. the underlying distribution)
+        and accepts samples, :math:`x`, that satisfy
+        .. math::
+
+            \mathtt{lower} < x \leq \mathtt{upper}.
+
+        Parameters
+        ----------
+        lower : numpy.ndarray
+            Lower bound.  Must be comparable to `self.dist.shape`.
+        upper : numpy.ndarray
+            Upper bound.  Must be comparable to `self.dist.shape`.
+        point : dict or None
+            Conditional parameter values?
+
+        Returns
+        -------
+        numpy.ndarray
+            A single truncated sample from `self.dist`.
+
+        Notes
+        -----
+        Assumes that `self.dist` is a  `self.shape`-tensor consists of
+        i.i.d. random variables.
+        """
+        samples = np.zeros(shape=self.shape).flatten()
+        shape_len = self.dist.shape.prod()
         i, n = 0, len(samples)
         while i < len(samples):
-            sample = self.dist.random(point=point, size=n)
+            q, r = divmod(n, shape_len)
+            sample_size = q + min(1, r)
+            sample = self.dist.random(point=point, size=(sample_size,))
             select = sample[np.logical_and(sample > lower, sample <= upper)]
-            samples[i:(i+len(select))] = select[:]
+            samples[i:(i+len(select))] = select[0:n]
             i += len(select)
             n -= len(select)
-        if size is not None:
-            return np.reshape(samples, size)
-        else:
-            return samples
+
+        return np.reshape(samples, self.shape)
 
     def random(self, point=None, size=None, repeat=None):
         lower, upper = draw_values([self.lower, self.upper], point=point)
         return generate_samples(self._random, lower, upper, point,
                                 dist_shape=self.shape,
+                                broadcast_shape=tuple(self.shape),
                                 size=size)
 
     def logp(self, value):
