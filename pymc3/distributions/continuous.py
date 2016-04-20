@@ -991,7 +991,7 @@ class Bounded(Continuous):
         if hasattr(self.dist, 'mode'):
             self.mode = self.dist.mode
 
-    def _random(self, lower, upper, point=None, **kwargs):
+    def _random(self, lower, upper, point=None, iid=False, **kwargs):
         r"""Rejection approach to truncated sampling.
 
         Samples from `self.dist` (i.e. the underlying distribution)
@@ -1008,6 +1008,8 @@ class Bounded(Continuous):
             Upper bound.  Must be comparable to `self.dist.shape`.
         point : dict or None
             Conditional parameter values?
+        iid : bool
+            Are the samples independent and identically distributed?
 
         Returns
         -------
@@ -1026,8 +1028,14 @@ class Bounded(Continuous):
             q, r = divmod(n, shape_len)
             sample_size = q + min(1, r)
             sample = self.dist.random(point=point, size=(sample_size,))
-            select = sample[np.logical_and(sample > lower, sample <= upper)]
-            samples[i:(i+len(select))] = select[0:n]
+            accepted_ind = np.logical_and(sample > lower, sample <= upper)
+
+            if not iid and not np.all(accepted_ind):
+                continue
+
+            select = sample[accepted_ind]
+            sel_len = min(n, len(select))
+            samples[i:(i+sel_len)] = select[0:sel_len]
             i += len(select)
             n -= len(select)
 
