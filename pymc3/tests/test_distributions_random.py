@@ -119,12 +119,17 @@ def check_shape(rv, size=None, expected=None):
 @attr('scalar_parameter_shape')
 class ScalarParameterShape(unittest.TestCase):
 
-    def check(self, dist, **kwargs):
-        test_cases = [(None, (1,)), (5, (5,)), ((4, 5), (4, 5))]
+    def check(self, dist, test_cases=None, **kwargs):
+        if test_cases is None:
+            test_cases = [(None, (1,)), (5, (5,)), ((4, 5), (4, 5))]
         check_dist((dist, kwargs), test_cases)
 
     def test_normal(self):
         self.check(Normal, mu=0., tau=1.)
+
+    def test_bounded(self):
+        BoundedNormal = Bound(Normal, upper=0)
+        self.check(BoundedNormal, mu=0., tau=1.)
 
     def test_uniform(self):
         self.check(Uniform, lower=0., upper=1.)
@@ -214,13 +219,17 @@ class ScalarParameterShape(unittest.TestCase):
 @attr('scalar_shape')
 class ScalarShape(unittest.TestCase):
 
-    def check(self, dist, **kwargs):
-        n = 10
-        test_cases = [(None, (n,)), (5, (5, n,)), ((4, 5), (4, 5, n,))]
-        check_dist((dist, kwargs), test_cases, n)
+    def check(self, dist, _n=10, test_cases=None, **kwargs):
+        if test_cases is None:
+            test_cases = [(None, (_n,)), (5, (5, _n,)), ((4, 5), (4, 5, _n,))]
+        check_dist((dist, kwargs), test_cases, _n)
 
     def test_normal(self):
         self.check(Normal, mu=0., tau=1.)
+
+    def test_bounded(self):
+        BoundedNormal = Bound(Normal, upper=0)
+        self.check(BoundedNormal, _n=3, mu=0., tau=1.)
 
     def test_uniform(self):
         self.check(Uniform, lower=0., upper=1.)
@@ -314,13 +323,20 @@ class Parameters1dShape(unittest.TestCase):
         self.zeros = np.zeros(self.n)
         self.ones = np.ones(self.n)
 
-    def check(self, dist, **kwargs):
-        n = self.n
-        test_cases = [(None, (n,)), (5, (5, n,)), ((4, 5), (4, 5, n,))]
-        check_dist((dist, kwargs), test_cases, n)
+    def check(self, dist, _n=None, test_cases=None, **kwargs):
+        if _n is None:
+            _n = self.n
+        if test_cases is None:
+            test_cases = [(None, (_n,)), (5, (5, _n,)), ((4, 5), (4, 5, _n,))]
+        check_dist((dist, kwargs), test_cases, _n)
 
     def test_normal(self):
         self.check(Normal, mu=self.zeros, tau=self.ones)
+
+    def test_bounded(self):
+        BoundedNormal = Bound(Normal, upper=0)
+        n = 2
+        self.check(BoundedNormal, _n=n, mu=np.zeros(n), tau=np.ones(n))
 
     def test_uniform(self):
         self.check(Uniform, lower=self.zeros, upper=self.ones)
@@ -425,11 +441,13 @@ class BroadcastShape(unittest.TestCase):
         self.zeros = np.zeros(self.n)
         self.ones = np.ones(self.n)
 
-    def check(self, dist, **kwargs):
-        n = self.n
-        shape = (2*n, n)
-        test_cases = [(None, shape), (5, (5,) + shape),
-                      ((4, 5), (4, 5) + shape)]
+    def check(self, dist, _n=None, test_cases=None, **kwargs):
+        if _n is None:
+            _n = self.n
+        shape = (2*_n, _n)
+        if test_cases is None:
+            test_cases = [(None, shape), (5, (5,) + shape),
+                          ((4, 5), (4, 5) + shape)]
         check_dist((dist, kwargs), test_cases, shape)
 
     def test_normal(self):
@@ -437,7 +455,8 @@ class BroadcastShape(unittest.TestCase):
 
     def test_bounded(self):
         BoundedNormal = Bound(Normal, upper=0)
-        self.check(BoundedNormal, mu=self.zeros, tau=self.ones)
+        n = 2
+        self.check(BoundedNormal, _n=n, mu=np.zeros(n), tau=np.ones(n))
 
     def test_uniform(self):
         self.check(Uniform, lower=self.zeros, upper=self.ones)
