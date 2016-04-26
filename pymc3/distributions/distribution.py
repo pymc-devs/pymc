@@ -179,21 +179,20 @@ def draw_value(param, point=None, givens=[]):
                 value = param.random(point=point, size=None)
             else:
                 value = param.tag.test_value
-        elif len(givens) > 0:
+        else:
             input_pairs = ([g[0] for g in givens],
                            [g[1] for g in givens])
 
-            value = _compile_theano_function(param, input_pairs[0])(*input_pairs[1])
-        else:
-            value = param
+            value = _compile_theano_function(param,
+                                             input_pairs[0])(*input_pairs[1])
     else:
         value = param
 
     # Sanitising values may be necessary.
     if hasattr(param, 'value'):
-        value = value.value
+        value = param.value
     elif hasattr(param, 'get_value'):
-        value = value.get_value()
+        value = param.get_value()
 
     if hasattr(param, 'dtype'):
         value = np.atleast_1d(value).astype(param.dtype)
