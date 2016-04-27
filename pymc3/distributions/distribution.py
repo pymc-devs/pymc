@@ -170,7 +170,7 @@ def _compile_theano_function(param, vars, givens=None):
                     allow_input_downcast=True)
 
 
-def draw_value(param, point=None, givens=[]):
+def draw_value(param, point=None, givens=()):
     if hasattr(param, 'name'):
         if hasattr(param, 'model'):
             if point is not None and param.name in point:
@@ -189,10 +189,10 @@ def draw_value(param, point=None, givens=[]):
         value = param
 
     # Sanitising values may be necessary.
-    if hasattr(param, 'value'):
-        value = param.value
-    elif hasattr(param, 'get_value'):
-        value = param.get_value()
+    if hasattr(value, 'value'):
+        value = value.value
+    elif hasattr(value, 'get_value'):
+        value = value.get_value()
 
     if hasattr(param, 'dtype'):
         value = np.atleast_1d(value).astype(param.dtype)
@@ -200,7 +200,7 @@ def draw_value(param, point=None, givens=[]):
         try:
             shape = param.shape.tag.test_value
         except:
-           shape = param.shape
+            shape = param.shape
         if len(shape) == 0 and len(value) == 1:
             value = value[0]
     return value
