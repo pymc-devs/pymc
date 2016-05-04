@@ -63,6 +63,56 @@ def test_soft_update_empty():
     assert start == test_point
 
 
+class TestNamedSampling(unittest.TestCase):
+
+    # TODO: Set a seed for these!
+
+    def test_shared_named(self):
+        from theano import shared
+        import theano.tensor as T
+
+        G_var = shared(value=np.atleast_2d(1.), broadcastable=(True, False),
+                       name="G")
+
+        with pymc3.Model():
+            theta0 = pymc3.Normal('theta0', mu=np.atleast_2d(0),
+                                  tau=np.atleast_2d(1e20), shape=(1, 1),
+                                  testval=np.atleast_2d(0))
+            theta = pymc3.Normal('theta', mu=T.dot(G_var, theta0),
+                                 tau=np.atleast_2d(1e20), shape=(1, 1))
+
+            res = theta.random()
+            assert np.isclose(res, 0.)
+
+    def test_shared_unnamed(self):
+        from theano import shared
+        import theano.tensor as T
+        G_var = shared(value=np.atleast_2d(1.), broadcastable=(True, False))
+        with pymc3.Model():
+            theta0 = pymc3.Normal('theta0', mu=np.atleast_2d(0),
+                                  tau=np.atleast_2d(1e20), shape=(1, 1),
+                                  testval=np.atleast_2d(0))
+            theta = pymc3.Normal('theta', mu=T.dot(G_var, theta0),
+                                 tau=np.atleast_2d(1e20), shape=(1, 1))
+
+            res = theta.random()
+            assert np.isclose(res, 0.)
+
+    def test_constant_named(self):
+        import theano.tensor as T
+
+        G_var = T.constant(np.atleast_2d(1.), name="G")
+        with pymc3.Model():
+            theta0 = pymc3.Normal('theta0', mu=np.atleast_2d(0),
+                                  tau=np.atleast_2d(1e20), shape=(1, 1),
+                                  testval=np.atleast_2d(0))
+            theta = pymc3.Normal('theta', mu=T.dot(G_var, theta0),
+                                 tau=np.atleast_2d(1e20), shape=(1, 1))
+
+            res = theta.random()
+            assert np.isclose(res, 0.)
+
+
 class TestChooseBackend(unittest.TestCase):
 
     def test_choose_backend_none(self):

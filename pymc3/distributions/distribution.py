@@ -132,7 +132,9 @@ def draw_values(params, point=None):
             if param.name in named_nodes:
                 named_nodes.pop(param.name)
             for name, node in named_nodes.items():
-                givens[name] = (node, draw_value(node, point=point))
+                if not isinstance(node, (T.sharedvar.TensorSharedVariable,
+                                  T.TensorConstant)):
+                    givens[name] = (node, draw_value(node, point=point))
     values = [None for _ in params]
     for i, param in enumerate(params):
         # "Homogonise" output
@@ -144,7 +146,7 @@ def draw_values(params, point=None):
 
 
 @memoize
-def _compile_theano_function(param, vars):
+def _compile_theano_function(param, vars, givens=None):
     """Compile theano function for a given parameter and input variables.
 
     This function is memoized to avoid repeating costly theano compilations
@@ -155,19 +157,20 @@ def _compile_theano_function(param, vars):
     ----------
     param : Model variable from which to draw value
     vars : Children variables of `param`
+    givens : Variables to be replaced in the Theano graph
 
     Returns
     -------
     A compiled theano function that takes the values of `vars` as input
         positional args
     """
-    return function(vars, param,
+    return function(vars, param, givens=givens,
                     rebuild_strict=True,
                     on_unused_input='ignore',
                     allow_input_downcast=True)
 
 
-def draw_value(param, point=None, givens=None):
+def draw_value(param, point=None, givens=()):
     if hasattr(param, 'name'):
         if hasattr(param, 'model'):
             if point is not None and param.name in point:
@@ -177,19 +180,27 @@ def draw_value(param, point=None, givens=None):
             else:
                 value = param.tag.test_value
         else:
-            input_args = [g[0] for g in givens]
-            input_vals = [g[1] for g in givens]
-            value = _compile_theano_function(param, input_args)(*input_vals)
+            input_pairs = ([g[0] for g in givens],
+                           [g[1] for g in givens])
+
+            value = _compile_theano_function(param,
+                                             input_pairs[0])(*input_pairs[1])
     else:
         value = param
+
     # Sanitising values may be necessary.
+    if hasattr(value, 'value'):
+        value = value.value
+    elif hasattr(value, 'get_value'):
+        value = value.get_value()
+
     if hasattr(param, 'dtype'):
         value = np.atleast_1d(value).astype(param.dtype)
     if hasattr(param, 'shape'):
         try:
             shape = param.shape.tag.test_value
         except:
-           shape = param.shape
+            shape = param.shape
         if len(shape) == 0 and len(value) == 1:
             value = value[0]
     return value
@@ -259,7 +270,7 @@ def generate_samples(generator, *args, **kwargs):
         the shape of the probabilities in the Categorical distribution.
 
     Any remaining *args and **kwargs are passed on to the generator function.
-"""
+    """
     dist_shape = kwargs.pop('dist_shape', ())
     size = kwargs.pop('size', None)
     broadcast_shape = kwargs.pop('broadcast_shape', None)
