@@ -75,6 +75,17 @@ class NDArray(base.BaseTrace):
         self.samples = {var: vtrace[:self.draw_idx]
                         for var, vtrace in self.samples.items()}
 
+    def rm_transformed(self):
+        """Remove transformed variables from a trace.
+        """
+        transformed = [str(rv) for rv in self.model.free_RVs 
+        if hasattr(rv.distribution, 'transform_used')]
+        for i in transformed:
+            del self.samples[i]
+            del self.var_dtypes[i]
+            del self.var_shapes[i]
+            self.varnames.remove(i)
+
     ## Selection methods
 
     def __len__(self):
