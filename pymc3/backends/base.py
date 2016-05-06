@@ -4,7 +4,7 @@ See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
 import numpy as np
-from ..model import modelcontext
+from ..model import modelcontext, TransformedRV
 
 
 class BackendError(Exception):
@@ -31,8 +31,9 @@ class BaseTrace(object):
         self.model = model
         if vars is None:
             vars = model.unobserved_RVs
-        self.vars = vars
-        self.varnames = [str(var) for var in vars]
+        transformed_vars = [v.transformed for v in vars if hasattr(v,'transformed')]
+        self.vars = [v for v in vars if v not in transformed_vars]
+        self.varnames = [str(var) for var in self.vars]
         self.fn = model.fastfn(vars)
 
 
