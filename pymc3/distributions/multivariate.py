@@ -97,6 +97,7 @@ class MvNormal(Continuous):
         mu, cov = draw_values([self.mu, self.cov], point=point)
 
         def _random(mean, cov, size=None):
+            # FIXME: cov here is actually precision?
             return stats.multivariate_normal.rvs(
                 mean, cov, None if size == mean.shape else size)
 
@@ -117,6 +118,38 @@ class MvNormal(Continuous):
         result = k * tt.log(2 * np.pi) + tt.log(1. / det(tau))
         result += (delta.dot(tau) * delta).sum(axis=delta.ndim - 1)
         return -1 / 2. * result
+
+    #def logp(self, value):
+    #    mu = tt.as_tensor_variable(self.mu)
+    #    tau = tt.as_tensor_variable(self.tau)
+
+    #    reps_shape_T = tau.shape[:-2]
+    #    reps_shape_prod = tt.prod(reps_shape_T, keepdims=True)
+    #    dist_shape_T = mu.shape[-1:]
+
+    #    # collapse reps dimensions
+    #    flat_supp_shape = tt.concatenate([reps_shape_prod, dist_shape_T])
+    #    mus_collapsed = mu.reshape(flat_supp_shape, ndim=2)
+    #    taus_collapsed = tau.reshape(tt.concatenate([reps_shape_prod,
+    #        dist_shape_T, dist_shape_T]), ndim=3)
+
+    #    # force value to conform to reps_shape
+    #    value_reshape = tt.ones_like(mu) * value
+    #    values_collapsed = value_reshape.reshape(flat_supp_shape, ndim=2)
+
+    #    def single_logl(_mu, _tau, _value, k):
+    #        delta = _value - _mu
+    #        result = k * tt.log(2 * np.pi) + tt.log(det(_tau))
+    #        result += tt.square(delta.dot(_tau)).sum(axis=-1)
+    #        return -result/2
+
+    #    from theano import scan
+    #    res, _ = scan(fn=single_logl
+    #            , sequences=[mus_collapsed, taus_collapsed, values_collapsed]
+    #            , non_sequences=[dist_shape_T]
+    #            , strict=True
+    #            )
+    #    return res.sum()
 
 
 class MvStudentT(Continuous):
@@ -170,6 +203,7 @@ class MvStudentT(Continuous):
         mu = self.mu
 
         d = S.shape[0]
+        n = value.shape[0]
 
         X = value - mu
 
