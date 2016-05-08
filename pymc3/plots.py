@@ -39,7 +39,7 @@ def traceplot(trace, varnames=None, figsize=None,
     """
     import matplotlib.pyplot as plt
     if varnames is None:
-        varnames = trace.varnames
+        varnames = trace.original_varnames
 
     n = len(varnames)
 
@@ -188,7 +188,7 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0,
             yield varname
 
     if varnames is None:
-        varnames = trace.varnames
+        varnames = trace.original_varnames
     else:
         varnames = [str(v) for v in varnames]
 
