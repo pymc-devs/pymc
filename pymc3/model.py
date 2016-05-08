@@ -178,6 +178,7 @@ class Model(Context, Factor):
     def __init__(self, verbose=1):
         self.named_vars = {}
         self.free_RVs = []
+        self.untransformed_vars = []
         self.observed_RVs = []
         self.deterministics = []
         self.potentials = []
@@ -218,7 +219,6 @@ class Model(Context, Factor):
         """List of all random variable, including deterministic ones."""
         return self.vars + self.deterministics
 
-
     @property
     def test_point(self):
         """Test point used to check that the model doesn't generate errors"""
@@ -255,6 +255,7 @@ class Model(Context, Factor):
             if getattr(dist, "transform", None) is None:
                 var = FreeRV(name=name, distribution=dist, model=self)
                 self.free_RVs.append(var)
+                self.untransformed_vars.append(var)
             else:
                 var = TransformedRV(name=name, distribution=dist, model=self,
                                     transform=dist.transform)
@@ -265,6 +266,7 @@ class Model(Context, Factor):
                               name=name,
                               orig_name='{}_{}'.format(name, dist.transform.name)))
                 self.deterministics.append(var)
+                self.untransformed_vars.append(var)
                 return var
         elif isinstance(data, dict):
             var = MultiObservedRV(name=name, data=data, distribution=dist,
@@ -427,7 +429,6 @@ def Point(*args, **kwargs):
     except Exception as e:
         raise TypeError(
             "can't turn {} and {} into a dict. {}".format(args, kwargs, e))
-
     return dict((str(k), np.array(v)) for k, v in d.items()
                 if str(k) in map(str, model.vars))
 

@@ -30,11 +30,9 @@ class BaseTrace(object):
         model = modelcontext(model)
         self.model = model
         if vars is None:
-            vars = model.unobserved_RVs
+            vars = model.untransformed_vars
         self.vars = vars
-        self.transformed_vars = [v.transformed for v in vars if hasattr(v,'transformed')]
-        self.original_vars = [v for v in vars if v not in self.transformed_vars]
-        self.varnames = [str(var) for var in self.original_vars]
+        self.varnames = [str(var) for var in vars]
         self.fn = model.fastfn(vars)
 
 
