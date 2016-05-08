@@ -30,7 +30,7 @@ class BaseTrace(object):
         model = modelcontext(model)
         self.model = model
         if vars is None:
-            vars = model.untransformed_vars
+            vars = model.untransformed_RVs
         self.vars = vars
         self.varnames = [str(var) for var in vars]
         self.fn = model.fastfn(vars)

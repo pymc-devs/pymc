@@ -178,7 +178,6 @@ class Model(Context, Factor):
     def __init__(self, verbose=1):
         self.named_vars = {}
         self.free_RVs = []
-        self.untransformed_vars = []
         self.observed_RVs = []
         self.deterministics = []
         self.potentials = []
@@ -218,6 +217,13 @@ class Model(Context, Factor):
     def unobserved_RVs(self):
         """List of all random variable, including deterministic ones."""
         return self.vars + self.deterministics
+        
+    @property
+    def untransformed_RVs(self):
+        """All variables except those transformed for MCMC"""
+        deterministic_names = [det.name+'_' for det in self.deterministics]
+        untransformed = [v for v in self.vars if not np.any([v.name.startswith(n) for n in deterministic_names])]
+        return untransformed + self.deterministics
 
     @property
     def test_point(self):
@@ -255,7 +261,6 @@ class Model(Context, Factor):
             if getattr(dist, "transform", None) is None:
                 var = FreeRV(name=name, distribution=dist, model=self)
                 self.free_RVs.append(var)
-                self.untransformed_vars.append(var)
             else:
                 var = TransformedRV(name=name, distribution=dist, model=self,
                                     transform=dist.transform)
@@ -266,7 +271,6 @@ class Model(Context, Factor):
                               name=name,
                               orig_name='{}_{}'.format(name, dist.transform.name)))
                 self.deterministics.append(var)
-                self.untransformed_vars.append(var)
                 return var
         elif isinstance(data, dict):
             var = MultiObservedRV(name=name, data=data, distribution=dist,
@@ -274,7 +278,6 @@ class Model(Context, Factor):
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs += var.missing_values
-                self.untransformed_vars.append(var.missing_values)
                 self.missing_values += var.missing_values
                 for v in var.missing_values:
                     self.named_vars[v.name] = v
@@ -283,7 +286,6 @@ class Model(Context, Factor):
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs.append(var.missing_values)
-                self.untransformed_vars.append(var.missing_values)
                 self.missing_values.append(var.missing_values)
                 self.named_vars[var.missing_values.name] = var.missing_values
 
