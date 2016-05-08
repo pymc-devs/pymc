@@ -179,6 +179,7 @@ class Model(Context, Factor):
         self.named_vars = {}
         self.free_RVs = []
         self.observed_RVs = []
+        self.hidden_RVs = []
         self.deterministics = []
         self.potentials = []
         self.missing_values = []
@@ -221,9 +222,7 @@ class Model(Context, Factor):
     @property
     def untransformed_RVs(self):
         """All variables except those transformed for MCMC"""
-        deterministic_names = [det.name+'_' for det in self.deterministics]
-        untransformed = [v for v in self.vars if not np.any([v.name.startswith(n) for n in deterministic_names])]
-        return untransformed + self.deterministics
+        return [v for v in self.vars if v not in self.hidden_RVs] + self.deterministics
 
     @property
     def test_point(self):
@@ -655,6 +654,8 @@ class TransformedRV(TensorVariable):
             self.model = model
 
             self.transformed = model.Var(name + "_" + transform.name, transform.apply(distribution))
+            
+            self.model.hidden_RVs.append(self.transformed)
 
             normalRV = transform.backward(self.transformed)
 
