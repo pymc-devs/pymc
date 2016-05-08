@@ -274,6 +274,7 @@ class Model(Context, Factor):
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs += var.missing_values
+                self.untransformed_vars.append(var.missing_values)
                 self.missing_values += var.missing_values
                 for v in var.missing_values:
                     self.named_vars[v.name] = v
@@ -282,6 +283,7 @@ class Model(Context, Factor):
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs.append(var.missing_values)
+                self.untransformed_vars.append(var.missing_values)
                 self.missing_values.append(var.missing_values)
                 self.named_vars[var.missing_values.name] = var.missing_values
 
@@ -608,6 +610,7 @@ def Deterministic(name, var, model=None):
     """
     var.name = name
     modelcontext(model).deterministics.append(var)
+    modelcontext(model).untransformed_vars.append(var)
     modelcontext(model).add_random_variable(var)
     return var
 
