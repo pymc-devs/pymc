@@ -611,7 +611,6 @@ def Deterministic(name, var, model=None):
     """
     var.name = name
     modelcontext(model).deterministics.append(var)
-    modelcontext(model).untransformed_vars.append(var)
     modelcontext(model).add_random_variable(var)
     return var
 
