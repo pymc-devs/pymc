@@ -411,7 +411,7 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
     mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
     if varnames is None:
-        varnames = trace.varnames
+        varnames = trace.original_varnames
 
     funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
              lambda x: pd.Series(np.std(x, 0), name='sd'),
@@ -472,7 +472,7 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
 
     """
     if varnames is None:
-        varnames = trace.varnames
+        varnames = trace.original_varnames
 
     stat_summ = _StatSummary(roundto, batches, alpha)
     pq_summ = _PosteriorQuantileSummary(roundto, alpha)

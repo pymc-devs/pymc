@@ -179,6 +179,7 @@ class Model(Context, Factor):
         self.named_vars = {}
         self.free_RVs = []
         self.observed_RVs = []
+        self.hidden_RVs = []
         self.deterministics = []
         self.potentials = []
         self.missing_values = []
@@ -217,7 +218,11 @@ class Model(Context, Factor):
     def unobserved_RVs(self):
         """List of all random variable, including deterministic ones."""
         return self.vars + self.deterministics
-
+        
+    @property
+    def untransformed_RVs(self):
+        """All variables except those transformed for MCMC"""
+        return [v for v in self.vars if v not in self.hidden_RVs] + self.deterministics
 
     @property
     def test_point(self):
@@ -427,7 +432,6 @@ def Point(*args, **kwargs):
     except Exception as e:
         raise TypeError(
             "can't turn {} and {} into a dict. {}".format(args, kwargs, e))
-
     return dict((str(k), np.array(v)) for k, v in d.items()
                 if str(k) in map(str, model.vars))
 
@@ -649,6 +653,8 @@ class TransformedRV(TensorVariable):
             self.model = model
 
             self.transformed = model.Var(name + "_" + transform.name, transform.apply(distribution))
+            
+            self.model.hidden_RVs.append(self.transformed)
 
             normalRV = transform.backward(self.transformed)
 
