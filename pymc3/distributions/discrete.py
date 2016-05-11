@@ -199,9 +199,12 @@ class Poisson(Discrete):
 
     def logp(self, value):
         mu = self.mu
-        return bound(
+        log_prob =  bound(
             logpow(mu, value) - factln(value) - mu,
             mu >= 0, value >= 0)
+        # Return zero when mu and value are both zero
+        return T.switch(1 * T.eq(mu, 0) * T.eq(value, 0),
+                        0, log_prob)
 
 
 class NegativeBinomial(Discrete):
