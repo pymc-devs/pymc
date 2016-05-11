@@ -40,7 +40,7 @@ def logpow(x, m):
     Calculates log(x**m) since m*log(x) will fail when m, x = 0.
     """
     # return m * log(x)
-    return T.switch(T.any(T.eq(x, 0)), -np.inf, m * T.log(x))
+    return T.switch(T.eq(x, 0), -np.inf, m * T.log(x))
 
 
 def factln(n):
