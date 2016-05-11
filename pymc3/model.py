@@ -507,13 +507,13 @@ def pandas_to_array(data):
         return np.asarray(data)
 
 
-def as_tensor(data, name,model, dtype):
+def as_tensor(data, name, model, dtype):
     data = pandas_to_array(data).astype(dtype)
 
     if hasattr(data, 'mask'):
         from .distributions import NoDistribution
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
-                                       testval=data.mean().astype(dtype))
+                                       testval=data.filled().mean().astype(dtype))
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist,
                                 model=model)
 
