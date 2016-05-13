@@ -78,6 +78,21 @@ def TensorType(dtype, shape):
     return T.TensorType(str(dtype), np.atleast_1d(shape) == 1)
 
 class NoDistribution(Distribution):
+    
+    def __init__(self, shape, dtype, testval=None, defaults=[], transform=None, parent_dist=None, *args, **kwargs):
+        super(NoDistribution, self).__init__(shape=shape, dtype=dtype, 
+                                            testval=testval, defaults=defaults, 
+                                            *args, **kwargs)
+        self.parent_dist = parent_dist
+    
+
+    def __getattr__(self, name):
+        try:
+            self.__dict__[name]
+        except KeyError:
+            print('getting',name,'=',getattr(self.parent_dist, name))
+            return getattr(self.parent_dist, name)
+    
     def logp(self, x):
         return 0
 

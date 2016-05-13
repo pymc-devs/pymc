@@ -134,8 +134,8 @@ class Metropolis(ArrayStepShared):
     @staticmethod
     def competence(var):
         if var.dtype in discrete_types:
-            return Competence.compatible
-        return Competence.incompatible
+            return Competence.COMPATIBLE
+        return Competence.INCOMPATIBLE
 
 
 def tune(scale, acc_rate):
@@ -217,11 +217,12 @@ class BinaryMetropolis(ArrayStep):
         BinaryMetropolis is only suitable for binary (bool)
         and Categorical variables with k=1.
         '''
-        if isinstance(var.distribution, Bernoulli) or (var.dtype in bool_types):
-            return Competence.compatible
-        elif isinstance(var.distribution, Categorical) and (var.distribution.k == 2):
-            return Competence.compatible
-        return Competence.incompatible
+        distribution = getattr(var.distribution, 'parent_dist', var.distribution)
+        if isinstance(distribution, Bernoulli) or (var.dtype in bool_types):
+            return Competence.COMPATIBLE
+        elif isinstance(distribution, Categorical) and (distribution.k == 2):
+            return Competence.COMPATIBLE
+        return Competence.INCOMPATIBLE
 
 class BinaryGibbsMetropolis(ArrayStep):
     """Metropolis-Hastings optimized for binary variables"""
@@ -260,11 +261,12 @@ class BinaryGibbsMetropolis(ArrayStep):
         BinaryMetropolis is only suitable for binary (bool)
         and Categorical variables with k=1.
         '''
-        if isinstance(var.distribution, Bernoulli) or (var.dtype in bool_types):
-            return Competence.ideal
-        elif isinstance(var.distribution, Categorical) and (var.distribution.k == 2):
-            return Competence.ideal
-        return Competence.incompatible
+        distribution = getattr(var.distribution, 'parent_dist', var.distribution)
+        if isinstance(distribution, Bernoulli) or (var.dtype in bool_types):
+            return Competence.IDEAL
+        elif isinstance(distribution, Categorical) and (distribution.k == 2):
+            return Competence.IDEAL
+        return Competence.INCOMPATIBLE
 
 def delta_logp(logp, vars, shared):
     [logp0], inarray0 = join_nonshared_inputs([logp], vars, shared)

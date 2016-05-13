@@ -15,15 +15,15 @@ __all__ = ['ArrayStep', 'ArrayStepShared', 'metrop_select', 'SamplerHist',
 class Competence(IntEnum):
     """Enum for charaterizing competence classes of step methods.
     Values include:
-    0: incompatible
-    1: compatible
-    2: preferred
-    3: ideal
+    0: INCOMPATIBLE
+    1: COMPATIBLE
+    2: PREFERRED
+    3: IDEAL
     """
-    incompatible = 0
-    compatible   = 1
-    preferred    = 2
-    ideal        = 3
+    INCOMPATIBLE = 0
+    COMPATIBLE   = 1
+    PREFERRED    = 2
+    IDEAL        = 3
 
 class BlockedStep(object):
     def __new__(cls, *args, **kwargs):
@@ -64,7 +64,7 @@ class BlockedStep(object):
             
     @staticmethod
     def competence(var):
-        return Competence.incompatible
+        return Competence.INCOMPATIBLE
         
     @classmethod
     def _competence(cls, vars):

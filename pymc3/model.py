@@ -515,10 +515,9 @@ def as_tensor(data, name, model, distribution):
         from .distributions import NoDistribution
         testval = distribution.testval or data.mean().astype(dtype)
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
-                                       testval=testval)
+                                       testval=testval, parent_dist=distribution)
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist,
                                 model=model)
-
         constant = T.as_tensor_variable(data.filled())
 
         dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()],

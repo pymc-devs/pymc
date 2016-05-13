@@ -93,6 +93,6 @@ class Slice(ArrayStep):
     def competence(var):
         if var.dtype in continuous_types:
             if not var.shape:
-                return Competence.preferred
-            return Competence.compatible
-        return Competence.incompatible
+                return Competence.PREFERRED
+            return Competence.COMPATIBLE
+        return Competence.INCOMPATIBLE
