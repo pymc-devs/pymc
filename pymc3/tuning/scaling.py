@@ -46,6 +46,33 @@ def approx_hessian(point, vars=None, model=None):
     return -Jacobian(grad_logp)(bij.map(point))
 
 
+def fixed_hessian(point, vars=None, model=None):
+    """
+    Returns a fixed Hessian for any chain location.
+
+    Parameters
+    ----------
+    model : Model (optional if in `with` context)
+    point : dict
+    vars : list
+        Variables for which Hessian is to be calculated.
+    """
+
+    model = modelcontext(model)
+    if vars is None:
+        vars = model.cont_vars
+    vars = inputvars(vars)
+
+
+    point = Point(point, model=model)
+
+    bij = DictToArrayBijection(ArrayOrdering(vars), point)
+    dlogp = bij.mapf(model.fastdlogp(vars))
+
+    rval = np.ones(bij.map(point).size)/10
+    return rval
+
+
 def find_hessian(point, vars=None, model=None):
     """
     Returns Hessian of logp at the point passed.
@@ -78,7 +105,10 @@ def find_hessian_diag(point, vars=None, model=None):
 
 def guess_scaling(point, vars=None, model=None):
     model = modelcontext(model)
-    h = find_hessian_diag(point, vars, model=model)
+    try:
+        h = find_hessian_diag(point, vars, model=model)
+    except NotImplementedError:
+        h = fixed_hessian(point, vars, model=model)
     return adjust_scaling(h)
 
 def adjust_scaling(s):

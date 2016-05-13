@@ -5,7 +5,7 @@ import theano.tensor
 from ..model import modelcontext
 from .. import distributions as pm_dists
 
-__all__ = ['Normal', 'T', 'Binomial', 'Poisson']
+__all__ = ['Normal', 'StudentT', 'Binomial', 'Poisson']
 
 # Define link functions
 
@@ -73,9 +73,9 @@ class Family(object):
     Link function: {link}.""".format(klass=self.__class__, likelihood=self.likelihood.__name__, parent=self.parent, priors=self.priors, link=self.link)
 
 
-class T(Family):
+class StudentT(Family):
     link = identity
-    likelihood = pm_dists.T
+    likelihood = pm_dists.StudentT
     parent = 'mu'
     priors = {'lam': pm_dists.HalfCauchy.dist(beta=10, testval=1.),
               'nu': 1}

@@ -1,10 +1,9 @@
-import theano.tensor as t
 import numpy as np
-from ..model import Model
-
+import theano.tensor as T
 from theano import function
+
 from ..memoize import memoize
-from ..model import get_named_nodes
+from ..model import Model, get_named_nodes
 
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete', 'NoDistribution', 'TensorType']
@@ -16,14 +15,16 @@ class Distribution(object):
         try:
             model = Model.get_context()
         except TypeError:
-            raise TypeError("No model on context stack, which is needed to use the Normal('x', 0,1) syntax. Add a 'with model:' block")
+            raise TypeError("No model on context stack, which is needed to "
+                            "use the Normal('x', 0,1) syntax. "
+                            "Add a 'with model:' block")
 
         if isinstance(name, str):
             data = kwargs.pop('observed', None)
             dist = cls.dist(*args, **kwargs)
             return model.Var(name, dist, data)
         elif name is None:
-            return object.__new__(cls) #for pickle
+            return object.__new__(cls)  # for pickle
         else:
             raise TypeError("needed name or None but got: " + name)
 
@@ -67,14 +68,14 @@ class Distribution(object):
         if isinstance(val, str):
             val = getattr(self, val)
 
-        if isinstance(val, t.TensorVariable):
+        if isinstance(val, T.TensorVariable):
             return val.tag.test_value
 
         return val
 
 
 def TensorType(dtype, shape):
-    return t.TensorType(str(dtype), np.atleast_1d(shape) == 1)
+    return T.TensorType(str(dtype), np.atleast_1d(shape) == 1)
 
 class NoDistribution(Distribution):
     def logp(self, x):
@@ -131,7 +132,9 @@ def draw_values(params, point=None):
             if param.name in named_nodes:
                 named_nodes.pop(param.name)
             for name, node in named_nodes.items():
-                givens[name] = (node, draw_value(node, point=point))
+                if not isinstance(node, (T.sharedvar.TensorSharedVariable,
+                                  T.TensorConstant)):
+                    givens[name] = (node, draw_value(node, point=point))
     values = [None for _ in params]
     for i, param in enumerate(params):
         # "Homogonise" output
@@ -143,7 +146,7 @@ def draw_values(params, point=None):
 
 
 @memoize
-def _compile_theano_function(param, vars):
+def _compile_theano_function(param, vars, givens=None):
     """Compile theano function for a given parameter and input variables.
 
     This function is memoized to avoid repeating costly theano compilations
@@ -154,19 +157,20 @@ def _compile_theano_function(param, vars):
     ----------
     param : Model variable from which to draw value
     vars : Children variables of `param`
+    givens : Variables to be replaced in the Theano graph
 
     Returns
     -------
     A compiled theano function that takes the values of `vars` as input
         positional args
     """
-    return function(vars, param,
+    return function(vars, param, givens=givens,
                     rebuild_strict=True,
                     on_unused_input='ignore',
                     allow_input_downcast=True)
 
 
-def draw_value(param, point=None, givens=None):
+def draw_value(param, point=None, givens=()):
     if hasattr(param, 'name'):
         if hasattr(param, 'model'):
             if point is not None and param.name in point:
@@ -176,19 +180,27 @@ def draw_value(param, point=None, givens=None):
             else:
                 value = param.tag.test_value
         else:
-            input_args = [g[0] for g in givens]
-            input_vals = [g[1] for g in givens]
-            value = _compile_theano_function(param, input_args)(*input_vals)
+            input_pairs = ([g[0] for g in givens],
+                           [g[1] for g in givens])
+
+            value = _compile_theano_function(param,
+                                             input_pairs[0])(*input_pairs[1])
     else:
         value = param
+
     # Sanitising values may be necessary.
+    if hasattr(value, 'value'):
+        value = value.value
+    elif hasattr(value, 'get_value'):
+        value = value.get_value()
+
     if hasattr(param, 'dtype'):
         value = np.atleast_1d(value).astype(param.dtype)
     if hasattr(param, 'shape'):
         try:
             shape = param.shape.tag.test_value
         except:
-           shape = param.shape
+            shape = param.shape
         if len(shape) == 0 and len(value) == 1:
             value = value[0]
     return value
@@ -232,7 +244,7 @@ def replicate_samples(generator, size, repeats, *args, **kwargs):
 
 def generate_samples(generator, *args, **kwargs):
     """Generate samples from the distribution of a random variable.
- 
+
     Parameters
     ----------
     generator : function
@@ -242,10 +254,10 @@ def generate_samples(generator, *args, **kwargs):
         of the samples.
         The *args and **kwargs (stripped of the keywords below) will be
         passed to the generator function.
- 
+
     keyword arguments
     ~~~~~~~~~~~~~~~~
- 
+
     dist_shape : int or tuple of int
         The shape of the random variable (i.e., the shape attribute).
     size : int or tuple of int
@@ -256,9 +268,9 @@ def generate_samples(generator, *args, **kwargs):
         parameters. This may be required when the parameter shape
         does not determine the shape of a single sample, for example,
         the shape of the probabilities in the Categorical distribution.
- 
+
     Any remaining *args and **kwargs are passed on to the generator function.
-"""
+    """
     dist_shape = kwargs.pop('dist_shape', ())
     size = kwargs.pop('size', None)
     broadcast_shape = kwargs.pop('broadcast_shape', None)
@@ -306,4 +318,3 @@ def generate_samples(generator, *args, **kwargs):
             if broadcast_shape == (1,):
                 samples = np.reshape(samples, prefix_shape)
     return samples
-

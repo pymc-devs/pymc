@@ -1,4 +1,4 @@
-"""Utility functions for PyMC"""
+"""Statistical utility functions for PyMC"""
 
 import numpy as np
 import pandas as pd
@@ -7,11 +7,12 @@ import sys
 import warnings
 from .model import modelcontext
 
+from scipy.stats.distributions import pareto
 
 from .backends import tracetab as ttab
 
-__all__ = ['autocorr', 'autocov', 'dic', 'waic', 'hpd', 'quantiles', 'mc_error',
-           'summary', 'df_summary']
+__all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles', 
+            'mc_error', 'summary', 'df_summary']
 
 def statfunc(f):
     """
@@ -77,17 +78,9 @@ def autocov(x, lag=1):
 def dic(trace, model=None):
     """
     Calculate the deviance information criterion of the samples in trace from model
+    Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
     """
     model = modelcontext(model)
-
-    transformed_rvs = [rv for rv in model.free_RVs if hasattr(rv.distribution, 'transform_used')]
-    if transformed_rvs:
-        warnings.warn("""
-            DIC estimates are biased for models that include transformed random variables.
-            See https://github.com/pymc-devs/pymc3/issues/789.
-            The following random variables are the result of transformations:
-            {}
-        """.format(', '.join(rv.name for rv in transformed_rvs)))
 
     mean_deviance = -2 * np.mean([model.logp(pt) for pt in trace])
 
@@ -95,32 +88,87 @@ def dic(trace, model=None):
     deviance_at_mean = -2 * model.logp(free_rv_means)
 
     return 2 * mean_deviance - deviance_at_mean
+    
+def log_post_trace(trace, model):
+    '''
+    Calculate the elementwise log-posterior for the sampled trace.
+    '''
+    return np.hstack([obs.logp_elemwise(pt) for pt in trace] for obs in model.observed_RVs)
 
 def waic(trace, model=None):
     """
     Calculate the widely available information criterion of the samples in trace from model.
+    Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
     """
     model = modelcontext(model)
     
-    transformed_rvs = [rv for rv in model.free_RVs if hasattr(rv.distribution, 'transform_used')]
-    if transformed_rvs:
-        warnings.warn("""
-            WAIC estimates are biased for models that include transformed random variables.
-            See https://github.com/pymc-devs/pymc3/issues/789.
-            The following random variables are the result of transformations:
-            {}
-        """.format(', '.join(rv.name for rv in transformed_rvs)))
-    
-    log_py = []
-    for obs in model.observed_RVs:
-        log_py.append([obs.logp_elemwise(pt) for pt in trace ])
-    log_py = np.hstack(log_py)
-   
+    log_py = log_post_trace(trace, model)
+
     lppd =  np.sum(np.log(np.mean(np.exp(log_py), axis=0)))
         
     p_waic = np.sum(np.var(log_py, axis=0))
     
     return -2 * lppd + 2 * p_waic
+    
+def loo(trace, model=None):
+    """
+    Calculates leave-one-out (LOO) cross-validation for out of sample predictive
+    model fit, following Vehtari et al. (2015). Cross-validation is computed using
+    Pareto-smoothed importance sampling (PSIS).
+    
+    Returns log pointwise predictive density calculated via approximated LOO cross-validation.
+    """
+    model = modelcontext(model)
+    
+    log_py = log_post_trace(trace, model)
+    
+    # Importance ratios
+    r = 1./np.exp(log_py)
+    r_sorted = np.sort(r, axis=0)
+
+    # Extract largest 20% of importance ratios and fit generalized Pareto to each 
+    # (returns tuple with shape, location, scale)
+    q80 = int(len(log_py)*0.8)
+    pareto_fit = np.apply_along_axis(lambda x: pareto.fit(x, floc=0), 0, r_sorted[q80:])
+    
+    if np.any(pareto_fit[0] > 0.5):
+        warnings.warn("""Estimated shape parameter of Pareto distribution
+        is for one or more samples is greater than 0.5. This may indicate
+        that the variance of the Pareto smoothed importance sampling estimate 
+        is very large.""")
+    
+    # Calculate expected values of the order statistics of the fitted Pareto
+    S = len(r_sorted)
+    M = S - q80
+    z = (np.arange(M)+0.5)/M
+    expvals = map(lambda x: pareto.ppf(z, x[0], scale=x[2]), pareto_fit.T)
+    
+    # Replace importance ratios with order statistics of fitted Pareto
+    r_sorted[q80:] = np.vstack(expvals).T
+    # Unsort ratios (within columns) before using them as weights
+    r_new = np.array([r[np.argsort(i)] for r,i in zip(r_sorted, np.argsort(r, axis=0))])
+    
+    # Truncate weights to guarantee finite variance
+    w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
+    
+    loo_lppd = np.sum(np.log(np.sum(w * np.exp(log_py), axis=0) / np.sum(w, axis=0)))
+    
+    return loo_lppd
+    
+
+def bpic(trace, model=None):
+    """
+    Calculates Bayesian predictive information criterion n of the samples in trace from model
+    Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
+    """
+    model = modelcontext(model)
+
+    mean_deviance = -2 * np.mean([model.logp(pt) for pt in trace])
+
+    free_rv_means = {rv.name: trace[rv.name].mean(axis=0) for rv in model.free_RVs}
+    deviance_at_mean = -2 * model.logp(free_rv_means)
+
+    return 3 * mean_deviance - 2 * deviance_at_mean
 
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
@@ -288,14 +336,14 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
         print("Too few elements for quantile calculation")
 
 
-def df_summary(trace, vars=None, stat_funcs=None, extend=False,
+def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
                alpha=0.05, batches=100):
     """Create a data frame with summary statistics.
 
     Parameters
     ----------
     trace : MultiTrace instance
-    vars : list
+    varnames : list
         Names of variables to include in summary
     stat_funcs : None or list
         A list of functions used to calculate statistics. By default,
@@ -362,8 +410,8 @@ def df_summary(trace, vars=None, stat_funcs=None, extend=False,
     mu__0  0.066473  0.000312  0.105039  0.214242
     mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
-    if vars is None:
-        vars = trace.varnames
+    if varnames is None:
+        varnames = trace.original_varnames
 
     funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
              lambda x: pd.Series(np.std(x, 0), name='sd'),
@@ -376,7 +424,7 @@ def df_summary(trace, vars=None, stat_funcs=None, extend=False,
         stat_funcs = funcs
 
     var_dfs = []
-    for var in vars:
+    for var in varnames:
         vals = trace.get_values(var, combine=True)
         flat_vals = vals.reshape(vals.shape[0], -1)
         var_df = pd.concat([f(flat_vals) for f in stat_funcs], axis=1)
@@ -386,12 +434,12 @@ def df_summary(trace, vars=None, stat_funcs=None, extend=False,
 
 
 def _hpd_df(x, alpha):
-    cnames = ['hpd_{0:g}'.format(100 * alpha),
-              'hpd_{0:g}'.format(100 * (1 - alpha))]
+    cnames = ['hpd_{0:g}'.format(100 * alpha/2),
+              'hpd_{0:g}'.format(100 * (1 - alpha/2))]
     return pd.DataFrame(hpd(x, alpha), columns=cnames)
 
 
-def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3,
+def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
             to_file=None):
     """
     Generate a pretty-printed summary of the node.
@@ -400,7 +448,7 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3,
     trace : Trace object
       Trace containing MCMC sample
 
-    vars : list of strings
+    varnames : list of strings
       List of variables to summarize. Defaults to None, which results
       in all variables summarized.
 
@@ -423,8 +471,8 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3,
       File to write results to. If not given, print to stdout.
 
     """
-    if vars is None:
-        vars = trace.varnames
+    if varnames is None:
+        varnames = trace.original_varnames
 
     stat_summ = _StatSummary(roundto, batches, alpha)
     pq_summ = _PosteriorQuantileSummary(roundto, alpha)
@@ -434,7 +482,7 @@ def summary(trace, vars=None, alpha=0.05, start=0, batches=100, roundto=3,
     else:
         fh = open(to_file, mode='w')
 
-    for var in vars:
+    for var in varnames:
         # Extract sampled values
         sample = trace.get_values(var, burn=start, combine=True)
 

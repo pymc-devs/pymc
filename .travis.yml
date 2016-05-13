@@ -13,7 +13,7 @@ before_install:
 install:
   - conda create -n testenv --yes pip python=$TRAVIS_PYTHON_VERSION
   - source activate testenv
-  - conda install --yes jupyter pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels
+  - conda install --yes jupyter pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels joblib
 
   - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then conda install --yes mock enum34; fi
   - pip install --no-deps numdifftools
@@ -24,6 +24,7 @@ install:
 env:
   - TESTCMD=" -vv --with-timer -e test_examples -e test_distributions"
   - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions"
+  - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions_random"
   - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples0"
   - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples1"
   - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples2"

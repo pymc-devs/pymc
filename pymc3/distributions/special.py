@@ -1,14 +1,9 @@
-'''
-Created on Mar 17, 2011
-
-@author: jsalvatier
-'''
+import numpy as np
+import theano.tensor as T
+from scipy import special
 from theano import scalar, tensor
-import numpy
-from scipy import special, misc
-from .dist_math import *
 
-__all__ = ['gammaln', 'multigammaln', 'psi', 'trigamma', 'factln']
+__all__ = ['gammaln', 'multigammaln', 'psi', 'trigamma']
 
 
 class GammaLn(scalar.UnaryScalarOp):
@@ -23,8 +18,8 @@ class GammaLn(scalar.UnaryScalarOp):
         return GammaLn.st_impl(x)
 
     def grad(self, inp, grads):
-        x, = inp
-        gz, = grads
+        [x] = inp
+        [gz] = grads
         return [gz * scalar_psi(x)]
 
     def c_code(self, node, name, inp, out, sub):
@@ -39,7 +34,7 @@ class GammaLn(scalar.UnaryScalarOp):
         return hash(type(self))
 
 scalar_gammaln = GammaLn(scalar.upgrade_to_float, name='scalar_gammaln')
-gammaln = tensor.Elemwise(scalar_gammaln, name='gammaln')
+gammaln = T.Elemwise(scalar_gammaln, name='gammaln')
 
 
 def multigammaln(a, p):
@@ -50,9 +45,9 @@ def multigammaln(a, p):
         p : int degrees of freedom
             p > 0
     """
-    i = arange(1, p + 1)
-
-    return p * (p - 1) * log(pi) / 4. + t.sum(gammaln(a + (1. - i) / 2.), axis=0)
+    i = T.arange(1, p + 1)
+    return (p * (p - 1) * T.log(np.pi) / 4.
+            + T.sum(gammaln(a + (1. - i) / 2.), axis=0))
 
 
 cpsifunc = """
@@ -60,9 +55,12 @@ cpsifunc = """
 #define _PSIFUNCDEFINED
 double _psi(double x){
 
-    /*taken from
-    Bernardo, J. M. (1976). Algorithm AS 103: Psi (Digamma) Function. Applied Statistics. 25 (3), 315-317.
-    http://www.uv.es/~bernardo/1976AppStatist.pdf */
+    /**
+     * Taken from
+     * Bernardo, J. M. (1976). Algorithm AS 103: Psi (Digamma) Function.
+     *     Applied Statistics. 25 (3), 315-317.
+     * http://www.uv.es/~bernardo/1976AppStatist.pdf
+     */
 
     double y, R, psi_ = 0;
     double S  = 1.0e-5;
@@ -117,8 +115,9 @@ class Psi(scalar.UnaryScalarOp):
         x, = inp
         z, = out
         if node.inputs[0].type in scalar.complex_types:
-            raise NotImplementedError('type not supported', node.inputs[0].type)
-        
+            raise NotImplementedError(
+                'type not supported', node.inputs[0].type)
+
         return """%(z)s = _psi(%(x)s);""" % locals()
 
     def __eq__(self, other):
@@ -128,7 +127,7 @@ class Psi(scalar.UnaryScalarOp):
         return hash(type(self))
 
 scalar_psi = Psi(scalar.upgrade_to_float, name='scalar_psi')
-psi = tensor.Elemwise(scalar_psi, name='psi')
+psi = T.Elemwise(scalar_psi, name='psi')
 
 
 class Trigamma(scalar.UnaryScalarOp):

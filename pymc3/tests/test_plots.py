@@ -54,7 +54,7 @@ def test_multichain_plots():
         start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
         ptrace = sample(1000, [step1, step2], start, njobs=2)
 
-    forestplot(ptrace, vars=['early_mean', 'late_mean'])
+    forestplot(ptrace, varnames=['early_mean', 'late_mean'])
 
     autocorrplot(ptrace, varnames=['switchpoint'])
 

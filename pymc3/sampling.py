@@ -1,32 +1,36 @@
 from . import backends
 from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
-import multiprocessing as mp
+from joblib import Parallel, delayed
 from time import time
 from .core import *
 from .step_methods import *
 from .progressbar import progress_bar
 from numpy.random import randint, seed
+from numpy import shape
 from collections import defaultdict
+
+import sys
+sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_ppc']
 
 def assign_step_methods(model, step=None,
-        methods=(NUTS, HamiltonianMC, Metropolis, BinaryMetropolis, 
+        methods=(NUTS, HamiltonianMC, Metropolis, BinaryMetropolis, BinaryGibbsMetropolis,
         Slice, ElemwiseCategoricalStep)):
     '''
-    Assign model variables to appropriate step methods. Passing a specified 
+    Assign model variables to appropriate step methods. Passing a specified
     model will auto-assign its constituent stochastic variables to step methods
     based on the characteristics of the variables. This function is intended to
     be called automatically from `sample()`, but may be called manually. Each
     step method passed should have a `competence()` method that returns an
     ordinal competence value corresponding to the variable passed to it. This
-    value quantifies the appropriateness of the step method for sampling the 
-    variable. 
-    
+    value quantifies the appropriateness of the step method for sampling the
+    variable.
+
     Parameters
     ----------
-    
+
     model : Model object
         A fully-specified model object
     step : step function or vector of step functions
@@ -35,12 +39,12 @@ def assign_step_methods(model, step=None,
     methods : vector of step method classes
         The set of step methods from which the function may choose. Defaults
         to the main step methods provided by PyMC3.
-        
+
     Returns
     -------
     List of step methods associated with the model's variables.
     '''
-        
+
     steps = []
     assigned_vars = set()
     if step is not None:
@@ -51,25 +55,26 @@ def assign_step_methods(model, step=None,
             except AttributeError:
                 for m in s.methods:
                     assigned_vars = assigned_vars | set(m.vars)
-    
+
     # Use competence classmethods to select step methods for remaining variables
     selected_steps = defaultdict(list)
     for var in model.free_RVs:
         if not var in assigned_vars:
-               
+
             competences = {s:s._competence(var) for s in methods}
 
             selected = max(competences.keys(), key=(lambda k: competences[k]))
-            
-            print('Assigned {0} to {1}'.format(selected.__name__, var))
+
+            if model.verbose:
+                print('Assigned {0} to {1}'.format(selected.__name__, var))
             selected_steps[selected].append(var)
-    
+
     # Instantiate all selected step methods
     steps += [s(vars=selected_steps[s]) for s in selected_steps if selected_steps[s]]
-    
+
     if len(steps)==1:
-        steps = steps[0]    
-                
+        steps = steps[0]
+
     return steps
 
 def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None,
@@ -85,8 +90,8 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     draws : int
         The number of samples to draw
     step : function or iterable of functions
-        A step function or collection of functions. If no step methods are 
-        specified, or are partially specified, they will be assigned 
+        A step function or collection of functions. If no step methods are
+        specified, or are partially specified, they will be assigned
         automatically (defaults to None).
     start : dict
         Starting point in parameter space (or partial point)
@@ -119,41 +124,30 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     MultiTrace object with access to sampling values
     """
     model = modelcontext(model)
-    
+
     step = assign_step_methods(model, step)
 
     if njobs is None:
+        import multiprocessing as mp
         njobs = max(mp.cpu_count() - 2, 1)
-    if njobs > 1:
-        try:
-            if not len(random_seed) == njobs:
-                random_seeds = [random_seed] * njobs
-            else:
-                random_seeds = random_seed
-        except TypeError:  # None, int
-            random_seeds = [random_seed] * njobs
 
-        chains = list(range(chain, chain + njobs))
-
-        pbars = [progressbar] + [False] * (njobs - 1)
-
-        argset = zip([draws] * njobs,
-                     [step] * njobs,
-                     [start] * njobs,
-                     [trace] * njobs,
-                     chains,
-                     [tune] * njobs,
-                     pbars,
-                     [model] * njobs,
-                     random_seeds)
-        argset = list(argset)
+    sample_args = {'draws':draws, 
+                    'step':step, 
+                    'start':start, 
+                    'trace':trace, 
+                    'chain':chain,
+                    'tune':tune, 
+                    'progressbar':progressbar, 
+                    'model':model, 
+                    'random_seed':random_seed}
+               
+    if njobs>1:
         sample_func = _mp_sample
-        sample_args = [njobs, argset]
+        sample_args['njobs'] = njobs
     else:
         sample_func = _sample
-        sample_args = [draws, step, start, trace, chain,
-                       tune, progressbar, model, random_seed]
-    return sample_func(*sample_args)
+        
+    return sample_func(**sample_args)
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
@@ -183,7 +177,7 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
     draws : int
         The number of samples to draw
-    step : function 
+    step : function
         Step function
     start : dict
         Starting point in parameter space (or partial point)
@@ -272,10 +266,20 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
         raise ValueError('Argument `trace` is invalid.')
 
 
-def _mp_sample(njobs, args):
-    p = mp.Pool(njobs)
-    traces = p.map(argsample, args)
-    p.close()
+def _mp_sample(**kwargs):
+    njobs = kwargs.pop('njobs')
+    chain = kwargs.pop('chain')
+    random_seed = kwargs.pop('random_seed')
+    if not shape(random_seed):
+        rseed = [random_seed]*njobs
+    else:
+        rseed = random_seed
+    chains = list(range(chain, chain + njobs))
+    pbars = [kwargs.pop('progressbar')] + [False] * (njobs - 1)
+    traces = Parallel(n_jobs=njobs)(delayed(_sample)(chain=chains[i],
+                                                    progressbar=pbars[i],
+                                                    random_seed=rseed[i],
+                                                    **kwargs) for i in range(njobs))
     return merge_traces(traces)
 
 
@@ -289,12 +293,6 @@ def stop_tuning(step):
         step.methods = [stop_tuning(s) for s in step.methods]
 
     return step
-
-
-def argsample(args):
-    """ defined at top level so it can be pickled"""
-    return _sample(*args)
-
 
 def _soft_update(a, b):
     """As opposed to dict.update, don't overwrite keys if present.

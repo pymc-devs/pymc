@@ -112,7 +112,7 @@ class MultiSimplex(object):
 
 def PdMatrix(n):
     if n == 1:
-        return PdMatrix1 
+        return PdMatrix1
     elif n == 2:
         return PdMatrix2
     elif n == 3:
@@ -192,7 +192,7 @@ def test_wald_scipy():
 def test_wald():
     # Log probabilities calculated using the dIG function from the R package gamlss.
     # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/.
-    test_cases = [# 
+    test_cases = [#
         (.5, .001, .5, None, 0., -124500.7257914),
         (1., .5, .001, None, 0., -4.3733162),
         (2., 1., None, None, 0., -2.2086593),
@@ -210,14 +210,20 @@ def test_wald():
         ]
     for value, mu, lam, phi, alpha, logp in test_cases:
         yield check_wald, value, mu, lam, phi, alpha, logp
-             
-def check_wald(value, mu, lam, phi, alpha, logp):   
+
+def check_wald(value, mu, lam, phi, alpha, logp):
     with Model() as model:
         wald = Wald('wald', mu=mu, lam=lam, phi=phi, alpha=alpha, transform=None)
     pt = {'wald': value}
     assert_almost_equal(model.fastlogp(pt),
-                    logp, decimal=6, err_msg=str(pt))  
-    
+                    logp, decimal=6, err_msg=str(pt))
+
+def beta_mu_sd(value, mu, sd):
+    kappa = mu * (1-mu) / sd**2 - 1
+    if kappa > 0:
+        return sp.beta.logpdf(value, mu*kappa, (1-mu)*kappa)
+    else:
+        return -inf
 
 def test_beta():
     pymc3_matches_scipy(
@@ -226,7 +232,7 @@ def test_beta():
             )
     pymc3_matches_scipy(
             Beta, Unit, {'mu': Unit, 'sd': Rplus},
-            lambda value, mu, sd: sp.beta.logpdf(value, mu * sd, (1 - mu) * sd)
+            beta_mu_sd
             )
 
 
@@ -265,7 +271,7 @@ def test_lognormal():
 
 def test_t():
     pymc3_matches_scipy(
-            T, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
+            StudentT, R, {'nu': Rplus, 'mu': R, 'lam': Rplus},
             lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5)
             )
 
@@ -323,12 +329,13 @@ def test_weibull():
             scipy_exponweib_sucks
             )
 
-def test_tpos():
+
+def test_student_tpos():
     #TODO: this actually shouldn't pass
     pymc3_matches_scipy(
-            Tpos, Rplus, {'nu': Rplus, 'mu': R, 'lam': Rplus},
-            lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5)
-            )
+           StudentTpos, Rplus, {'nu': Rplus, 'mu': R, 'lam': Rplus},
+           lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5)
+           )
 
 
 def test_binomial():
@@ -337,8 +344,8 @@ def test_binomial():
             lambda value, n, p: sp.binom.logpmf(value, n, p)
             )
 
-def test_betabin():
-    checkd(BetaBin, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': NatSmall})
+def test_beta_binomial():
+    checkd(BetaBinomial, Nat, {'alpha': Rplus, 'beta': Rplus, 'n': NatSmall})
 
 
 def test_bernoulli():
@@ -622,7 +629,7 @@ def checkd(distfam, valuedomain, vardomains,
             check(m, m.named_vars['value'], valuedomain, vardomains)
 
 
-    
+
 def test_ex_gaussian():
     # Log probabilities calculated using the dexGAUS function from the R package gamlss.
     # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/.
@@ -638,7 +645,7 @@ def test_ex_gaussian():
         ]
     for value, mu, sigma, nu, logp in test_cases:
         yield check_ex_gaussian, value, mu, sigma, nu, logp
-             
+
 def check_ex_gaussian(value, mu, sigma, nu, logp):
     with Model() as model:
         ig = ExGaussian('eg', mu=mu, sigma=sigma, nu=nu)
@@ -646,6 +653,11 @@ def check_ex_gaussian(value, mu, sigma, nu, logp):
     assert_almost_equal(model.fastlogp(pt),
                 logp, decimal=6, err_msg=str(pt))
 
+def test_vonmises():
+    pymc3_matches_scipy(
+            VonMises, R, {'mu': R, 'kappa': Rplus},
+            lambda value, mu, kappa: sp.vonmises.logpdf(value, kappa, loc=mu)
+            )
 
 def test_multidimensional_beta_construction():
     with Model() as m:
