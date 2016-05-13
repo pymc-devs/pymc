@@ -12,17 +12,17 @@ from numpy.random import uniform
 from theano.gof.graph import inputs
 from theano.tensor import add 
 
-__all__ = ['ElemwiseCategoricalStep']
+__all__ = ['ElemwiseCategorical']
 
 
-class ElemwiseCategoricalStep(ArrayStep):
+class ElemwiseCategorical(ArrayStep):
     """
-    Gibbs sampling for categorical variables that only have only have elementwise effects
+    Gibbs sampling for categorical variables that only have only have ElemwiseCategoricalise effects
     the variable can't be indexed into or transposed or anything otherwise that will mess things up
 
     """
     # TODO: It would be great to come up with a way to make
-    # ElemwiseCategoricalStep  more general (handling more complex elementwise
+    # ElemwiseCategorical  more general (handling more complex elementwise
     # variables)
     def __init__(self, vars, values=None, model=None):
         model = modelcontext(model)
@@ -34,7 +34,7 @@ class ElemwiseCategoricalStep(ArrayStep):
             self.values = values
         
 
-        super(ElemwiseCategoricalStep, self).__init__(vars, [elemwise_logp(model, self.var)])
+        super(ElemwiseCategorical, self).__init__(vars, [elemwise_logp(model, self.var)])
 
     def astep(self, q, logp):
         p = array([logp(v * self.sh) for v in self.values])
@@ -42,12 +42,13 @@ class ElemwiseCategoricalStep(ArrayStep):
 
     @staticmethod
     def competence(var):
-        if isinstance(var.distribution, Categorical):
-            if var.distribution.k>2:
-                return Competence.ideal
+        distribution = getattr(var.distribution, 'parent_dist', var.distribution)
+        if isinstance(distribution, Categorical):
+            if distribution.k>2:
+                return Competence.IDEAL
             else:
-                return Competence.compatible
-        return Competence.incompatible
+                return Competence.COMPATIBLE
+        return Competence.INCOMPATIBLE
 
 def elemwise_logp(model, var):
     terms = [v.logp_elemwiset for v in model.basic_RVs if var in inputs([v.logpt])]

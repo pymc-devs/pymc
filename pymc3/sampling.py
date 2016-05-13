@@ -17,7 +17,7 @@ __all__ = ['sample', 'iter_sample', 'sample_ppc']
 
 def assign_step_methods(model, step=None,
         methods=(NUTS, HamiltonianMC, Metropolis, BinaryMetropolis, BinaryGibbsMetropolis,
-        Slice, ElemwiseCategoricalStep)):
+        Slice, ElemwiseCategorical)):
     '''
     Assign model variables to appropriate step methods. Passing a specified
     model will auto-assign its constituent stochastic variables to step methods
