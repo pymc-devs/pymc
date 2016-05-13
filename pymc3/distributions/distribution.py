@@ -90,7 +90,6 @@ class NoDistribution(Distribution):
         try:
             self.__dict__[name]
         except KeyError:
-            print('getting',name,'=',getattr(self.parent_dist, name))
             return getattr(self.parent_dist, name)
     
     def logp(self, x):
