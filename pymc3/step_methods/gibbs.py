@@ -42,11 +42,11 @@ class ElemwiseCategoricalStep(ArrayStep):
 
     @staticmethod
     def competence(var):
-        if isinstance(var.distribution, Categorical):
-            if var.distribution.k>2:
-                return Competence.ideal
-            else:
-                return Competence.compatible
+        # if isinstance(var.distribution, Categorical):
+        #     if var.distribution.k>2:
+        #         return Competence.ideal
+        #     else:
+        #         return Competence.compatible
         return Competence.incompatible
 
 def elemwise_logp(model, var):

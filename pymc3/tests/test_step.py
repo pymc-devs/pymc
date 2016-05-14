@@ -123,11 +123,11 @@ def test_assign_step_methods():
 
         assert isinstance(steps, BinaryGibbsMetropolis)
 
-    with Model() as model:
-        x = Categorical('x', np.array([0.25, 0.70, 0.05]))
-        steps = assign_step_methods(model, [])
-
-        assert isinstance(steps, ElemwiseCategoricalStep)
+    # with Model() as model:
+    #     x = Categorical('x', np.array([0.25, 0.70, 0.05]))
+    #     steps = assign_step_methods(model, [])
+    #
+    #     assert isinstance(steps, ElemwiseCategoricalStep)
 
     with Model() as model:
         x = Binomial('x', 10, 0.5)
