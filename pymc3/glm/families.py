@@ -17,7 +17,7 @@ class Identity():
 identity = Identity()
 logit = theano.tensor.nnet.sigmoid
 inverse = theano.tensor.inv
-log = theano.tensor.log
+exp = theano.tensor.exp
 
 class Family(object):
     """Base class for Family of likelihood distribution and link functions.
@@ -94,7 +94,7 @@ class Binomial(Family):
 
 
 class Poisson(Family):
-    link = log
+    link = exp
     likelihood = pm_dists.Poisson
     parent = 'mu'
     priors = {'mu': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
