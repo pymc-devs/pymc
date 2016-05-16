@@ -48,7 +48,7 @@ class ElemwiseCategorical(ArrayStep):
         #         return Competence.ideal
         #     else:
         #         return Competence.compatible
-        return Competence.incompatible
+        return Competence.INCOMPATIBLE
 
 def elemwise_logp(model, var):
     terms = [v.logp_elemwiset for v in model.basic_RVs if var in inputs([v.logpt])]
