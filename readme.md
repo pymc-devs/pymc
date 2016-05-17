@@ -39,10 +39,18 @@ PyMC3 is Beta software. Users should consider using [PyMC 2 repository](https://
 The latest version of PyMC3 can be installed from the master branch using pip:
 
 ```
-pip install --process-dependency-links git+https://github.com/pymc-devs/pymc3
+pip install git+https://github.com/pymc-devs/pymc3
 ```
 
-The `--process-dependency-links` flag ensures that the developmental branch of Theano, which PyMC3 requires, is installed. If a recent developmental version of Theano has been installed with another method, this flag can be dropped.
+To ensure the development branch of Theano is installed alongside PyMC3 (recommended), you can install PyMC3 using the `requirements.txt` file. This requires cloning the repository to your computer:
+
+```
+git clone https://github.com/pymc-devs/pymc3
+cd pymc3
+pip install -r requirements.txt
+```
+
+However, if a recent version of Theano has already been installed on your system, you can install PyMC3 directly from GitHub.
 
 Another option is to clone the repository and install PyMC3 using `python setup.py install` or `python setup.py develop`.
 
