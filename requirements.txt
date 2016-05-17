@@ -1,7 +1,7 @@
 numpy>=1.7.1
 scipy>=0.12.0
 matplotlib>=1.2.1
--e git+https://github.com/Theano/Theano.git#egg=Package
+theano>=0.8.2
 pandas>=0.15.0
 patsy>=0.4.0
 joblib>=0.9         
