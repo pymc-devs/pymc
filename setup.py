@@ -26,8 +26,9 @@ classifiers = ['Development Status :: 4 - Beta',
                'Topic :: Scientific/Engineering :: Mathematics',
                'Operating System :: OS Independent']
 
-install_reqs = ['numpy>=1.7.1', 'scipy>=0.12.0', 'matplotlib>=1.2.1',
-                'Theano>=0.8.2', 'pandas>=0.15.0', 'patsy>=0.4.0', 'joblib>=0.9']
+with open('requirements.txt') as f:
+    install_reqs = f.read().splitlines()
+
 if sys.version_info < (3, 4):
     install_reqs.append('enum34')
 
