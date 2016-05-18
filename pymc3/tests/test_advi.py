@@ -21,7 +21,7 @@ def test_elbo():
 
     # Create variational gradient tensor
     grad, elbo, shared, uw = variational_gradient_estimate(
-        vars, model, n_mcsamples=10000, seed=1)
+        vars, model, n_mcsamples=10000, random_seed=1)
 
     # Variational posterior parameters
     uw_ = np.array([1.88, np.log(1)])
@@ -110,7 +110,7 @@ def test_advi():
 
     means, sds, elbos = advi(
         model=model, n=1000, accurate_elbo=False, learning_rate=1e-1, 
-        seed=1)
+        random_seed=1)
 
     np.testing.assert_allclose(means['mu'], mu_post, rtol=0.1)
 
@@ -150,7 +150,7 @@ def test_advi_minibatch():
     means, sds, elbos = advi_minibatch(
         model=model, n=1000, minibatch_tensors=minibatch_tensors, 
         minibatch_RVs=minibatch_RVs, minibatches=minibatches, 
-        total_size=n, learning_rate=1e-1, seed=1
+        total_size=n, learning_rate=1e-1, random_seed=1
     )
 
     np.testing.assert_allclose(means['mu'], mu_post, rtol=0.1)

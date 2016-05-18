@@ -28,7 +28,7 @@ def check_discrete_rvs(vars):
         raise ValueError('Model should not include discrete RVs for ADVI.')
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False, 
-    learning_rate=.001, epsilon=.1, seed=None, verbose=1):
+    learning_rate=.001, epsilon=.1, random_seed=None, verbose=1):
     """Run ADVI. 
 
     Parameters
@@ -73,7 +73,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
     # Create variational gradient tensor
     grad, elbo, shared, _ = variational_gradient_estimate(
-        vars, model, n_mcsamples=n_mcsamples, seed=seed)
+        vars, model, n_mcsamples=n_mcsamples, random_seed=seed)
 
     # Set starting values
     for var, share in shared.items():
@@ -98,7 +98,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
 def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1, 
     minibatch_RVs=None, minibatch_tensors=None, minibatches=None, total_size=None, 
-    learning_rate=.001, epsilon=.1, seed=None, verbose=1):
+    learning_rate=.001, epsilon=.1, random_seed=None, verbose=1):
     """Run mini-batch ADVI. 
 
     minibatch_RVs, minibatch_tensors and minibatches should be in the 
@@ -152,7 +152,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     # Create variational gradient tensor
     grad, elbo, shared, uw = variational_gradient_estimate(
         vars, model, minibatch_RVs, minibatch_tensors, total_size, 
-        n_mcsamples=n_mcsamples, seed=seed)
+        n_mcsamples=n_mcsamples, random_seed=seed)
 
     # Set starting values
     for var, share in shared.items():
@@ -220,7 +220,7 @@ def run_adagrad(uw, grad, elbo, n, learning_rate=.001, epsilon=.1, verbose=1):
 
 def variational_gradient_estimate(
     vars, model, minibatch_RVs=[], minibatch_tensors=[], total_size=None, 
-    n_mcsamples=1, seed=None):
+    n_mcsamples=1, random_seed=None):
     """Calculate approximate ELBO and its (stochastic) gradient. 
     """
     seed = seed if type(seed) is int else 12345
@@ -243,7 +243,7 @@ def variational_gradient_estimate(
     uw.tag.test_value = np.concatenate([inarray.tag.test_value,
                                         inarray.tag.test_value])
 
-    elbo = elbo_t(logp, uw, inarray, n_mcsamples=n_mcsamples, seed=seed)
+    elbo = elbo_t(logp, uw, inarray, n_mcsamples=n_mcsamples, random_seed=seed)
 
     # Gradient
     grad = gradient(elbo, [uw])
@@ -261,7 +261,7 @@ def elbo_t(logp, uw, inarray, n_mcsamples, seed):
     logp_ = lambda input: theano.clone(logp, {inarray: input}, strict=False)
 
     # Naive Monte-Carlo
-    r = MRG_RandomStreams(seed=seed)
+    r = MRG_RandomStreams(random_seed=seed)
 
     if n_mcsamples == 1:
         n = r.normal(size=inarray.tag.test_value.shape)
