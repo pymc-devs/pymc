@@ -11,7 +11,6 @@ pages:
 - Examples:
   - 'BEST': 'BEST.md'
   - 'Stochastic Volatility': 'stochastic_volatility.md'
-  - 'Hierarchical model': 'hierarchical.md'
   - 'Linear Regression': 'GLM-linear.md'
   - 'Robust Regression': 'GLM-robust.md'
   - 'Robust Regression with Outlier Detection': 'GLM-robust-with-outlier-detection.md'
