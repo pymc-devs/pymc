@@ -12,7 +12,7 @@
 	<title>PyMC3</title>
 
         <link href="./css/bootstrap-custom.min.css" rel="stylesheet">
-        <link href="./css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="./css/font-awesome-4.5.0.css" rel="stylesheet">
         <link href="./css/base.css" rel="stylesheet">
         <link rel="stylesheet" href="./css/highlight.css">
         <link href="./source/_build/html/_static/basic.css" rel="stylesheet">
@@ -91,12 +91,6 @@
                             
 <li >
     <a href="stochastic_volatility/">Stochastic Volatility</a>
-</li>
-
-                        
-                            
-<li >
-    <a href="hierarchical/">Hierarchical model</a>
 </li>
 
                         
@@ -233,6 +227,8 @@
         
             <li><a href="#dependencies">Dependencies</a></li>
         
+            <li><a href="#citing-pymc3">Citing PyMC3</a></li>
+        
             <li><a href="#license">License</a></li>
         
             <li><a href="#contributors">Contributors</a></li>
@@ -263,6 +259,7 @@
 <h2 id="getting-started">Getting started</h2>
 <ul>
 <li><a href="http://pymc-devs.github.io/pymc3/getting_started/">PyMC3 Tutorial</a></li>
+<li><a href="https://peerj.com/articles/cs-55/">PyMC3 paper</a></li>
 <li><a href="https://github.com/markdregan/Bayesian-Modelling-in-Python">Bayesian Modelling in Python -- tutorials on Bayesian statistics and PyMC3 as Jupyter Notebooks by Mark Dregan</a></li>
 <li>Coal Mining Disasters model in <a href="https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py">PyMC 2</a> and <a href="https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py">PyMC 3</a></li>
 <li><a href="http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/GHME%202013.ipynb">Global Health Metrics &amp; Evaluation model</a> case study for GHME 2013</li>
@@ -275,10 +272,16 @@
 </ul>
 <h2 id="installation">Installation</h2>
 <p>The latest version of PyMC3 can be installed from the master branch using pip:</p>
-<pre><code>pip install --process-dependency-links git+https://github.com/pymc-devs/pymc3
+<pre><code>pip install git+https://github.com/pymc-devs/pymc3
 </code></pre>
 
-<p>The <code>--process-dependency-links</code> flag ensures that the developmental branch of Theano, which PyMC3 requires, is installed. If a recent developmental version of Theano has been installed with another method, this flag can be dropped.</p>
+<p>To ensure the development branch of Theano is installed alongside PyMC3 (recommended), you can install PyMC3 using the <code>requirements.txt</code> file. This requires cloning the repository to your computer:</p>
+<pre><code>git clone https://github.com/pymc-devs/pymc3
+cd pymc3
+pip install -r requirements.txt
+</code></pre>
+
+<p>However, if a recent version of Theano has already been installed on your system, you can install PyMC3 directly from GitHub.</p>
 <p>Another option is to clone the repository and install PyMC3 using <code>python setup.py install</code> or <code>python setup.py develop</code>.</p>
 <p><strong>Note:</strong> Running <code>pip install pymc</code> will install PyMC 2.3, not PyMC3, from PyPI.</p>
 <h2 id="dependencies">Dependencies</h2>
@@ -298,6 +301,8 @@ ln -s /usr/local/Cellar/suite-sparse/4.2.1/include/ /usr/local/include/suitespar
 pip install git+https://github.com/njsmith/scikits-sparse.git
 </code></pre>
 
+<h2 id="citing-pymc3">Citing PyMC3</h2>
+<p>Salvatier J, Wiecki TV, Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC3. PeerJ Computer Science 2:e55 https://doi.org/10.7717/peerj-cs.55</p>
 <h2 id="license">License</h2>
 <p><a href="https://github.com/pymc-devs/pymc3/blob/master/LICENSE">Apache License, Version 2.0</a></p>
 <h2 id="contributors">Contributors</h2>
@@ -349,6 +354,6 @@ pip install git+https://github.com/njsmith/scikits-sparse.git
 </html>
 
 <!--
-MkDocs version : 0.14.0
-Build Date UTC : 2016-02-27 12:04:17.441443
+MkDocs version : 0.15.3
+Build Date UTC : 2016-05-18 13:48:43.182027
 -->
