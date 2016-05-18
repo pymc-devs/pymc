@@ -564,7 +564,7 @@ def forestplot(trace_obj, varnames=None, alpha=0.05, quartiles=True, rhat=True,
 
 
 def plot_posterior(trace, varnames=None, figsize=None, alpha_level=0.05, round_to=3,
-                   point_estimate='mean', ROPE=None, ref_val=None, kde_plot=False, ax=None, **kwargs):
+                   point_estimate='mean', rope=None, ref_val=None, kde_plot=False, ax=None, **kwargs):
     """Plot Posterior densities in style of John K. Kruschke book
 
     Parameters
@@ -581,7 +581,7 @@ def plot_posterior(trace, varnames=None, figsize=None, alpha_level=0.05, round_t
         Controls formatting for floating point numbers
     point_estimate: str
         Must be in ('mode', 'mean', 'median')
-    ROPE: list or numpy array
+    rope: list or numpy array
         Lower and upper values of the Region Of Practical Equivalence
     ref_val: bool
         display the percentage below and above ref_val
@@ -621,14 +621,14 @@ def plot_posterior(trace, varnames=None, figsize=None, alpha_level=0.05, round_t
             ax.text(trace_values.mean(), plot_height * 0.6, ref_in_posterior,
                         size=14, horizontalalignment='center')
                         
-        def display_rope(ROPE):
-            pc_in_ROPE = format_as_percent(np.sum((trace_values > ROPE[0]) & 
-            (trace_values < ROPE[1]))/len(trace_values), round_to)
-            ax.plot(ROPE, (plot_height * 0.02, plot_height * 0.02), 
+        def display_rope(rope):
+            pc_in_rope = format_as_percent(np.sum((trace_values > rope[0]) & 
+            (trace_values < rope[1]))/len(trace_values), round_to)
+            ax.plot(rope, (plot_height * 0.02, plot_height * 0.02), 
             linewidth=20, color='r', alpha=0.75)
             text_props = dict(size=16, horizontalalignment='center', color='r')
-            ax.text(ROPE[0], plot_height * 0.14, ROPE[0], **text_props)
-            ax.text(ROPE[1], plot_height * 0.14, ROPE[1], **text_props)
+            ax.text(rope[0], plot_height * 0.14, rope[0], **text_props)
+            ax.text(rope[1], plot_height * 0.14, rope[1], **text_props)
 
         def display_point_estimate():
             if not point_estimate:
@@ -693,8 +693,8 @@ def plot_posterior(trace, varnames=None, figsize=None, alpha_level=0.05, round_t
         display_point_estimate()
         if ref_val is not None:
             display_ref_val(ref_val)
-        if ROPE is not None:
-            display_rope(ROPE)
+        if rope is not None:
+            display_rope(rope)
 
     def create_axes_grid(figsize, varnames):
         n = np.ceil(len(varnames) / 2.0).astype(int)
@@ -714,7 +714,6 @@ def plot_posterior(trace, varnames=None, figsize=None, alpha_level=0.05, round_t
             fig, ax = plt.subplots()
             plot_posterior_op(trace, ax)
     else:
-    
         if varnames is None:
             varnames = trace.original_varnames
 
