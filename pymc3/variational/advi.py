@@ -261,7 +261,7 @@ def elbo_t(logp, uw, inarray, n_mcsamples, seed):
     logp_ = lambda input: theano.clone(logp, {inarray: input}, strict=False)
 
     # Naive Monte-Carlo
-    r = MRG_RandomStreams(random_seed=seed)
+    r = MRG_RandomStreams(seed=seed)
 
     if n_mcsamples == 1:
         n = r.normal(size=inarray.tag.test_value.shape)
