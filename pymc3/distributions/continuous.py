@@ -125,7 +125,7 @@ class Uniform(Continuous):
 
     def __init__(self, lower=0, upper=1, transform='interval',
                  *args, **kwargs):
-        super(Uniform, self).__init__(*args, **kwargs)
+        super(Uniform, self).__init__(ndim=1, *args, **kwargs)
 
         self.lower = lower
         self.upper = upper
@@ -157,7 +157,7 @@ class Flat(Continuous):
     """
 
     def __init__(self, *args, **kwargs):
-        super(Flat, self).__init__(*args, **kwargs)
+        super(Flat, self).__init__(ndim=1, *args, **kwargs)
         self.median = 0
 
     def random(self, point=None, size=None, repeat=None):
@@ -200,8 +200,12 @@ class Normal(Continuous):
     tau : float
         Precision (tau > 0).
     """
+<<<<<<< 5696ed49a2fd50b7662a0089e6c2573a2600a8ac
 
     def __init__(self, *args, **kwargs):
+
+        super(Normal, self).__init__(ndim=1, *args, **kwargs)
+
         # FIXME In order to catch the case where Normal('x', 0, .1) is
         # called to display a warning we have to fetch the args and
         # kwargs manually.  After a certain period we should revert
@@ -270,9 +274,8 @@ class HalfNormal(PositiveContinuous):
     tau : float
         Precision (tau > 0).
     """
-
     def __init__(self, sd=None, tau=None, *args, **kwargs):
-        super(HalfNormal, self).__init__(*args, **kwargs)
+        super(HalfNormal, self).__init__(ndim=1, *args, **kwargs)
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.mean = tt.sqrt(2 / (np.pi * self.tau))
         self.variance = (1. - 2 / np.pi) / self.tau
@@ -351,7 +354,7 @@ class Wald(PositiveContinuous):
     """
 
     def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
-        super(Wald, self).__init__(*args, **kwargs)
+        super(Wald, self).__init__(ndim=1, *args, **kwargs)
         self.mu, self.lam, self.phi = self.get_mu_lam_phi(mu, lam, phi)
         self.alpha = alpha
         self.mean = self.mu + alpha
@@ -456,7 +459,7 @@ class Beta(UnitContinuous):
 
     def __init__(self, alpha=None, beta=None, mu=None, sd=None,
                  *args, **kwargs):
-        super(Beta, self).__init__(*args, **kwargs)
+        super(Beta, self).__init__(ndim=1, *args, **kwargs)
 
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
@@ -519,7 +522,7 @@ class Exponential(PositiveContinuous):
     """
 
     def __init__(self, lam, *args, **kwargs):
-        super(Exponential, self).__init__(*args, **kwargs)
+        super(Exponential, self).__init__(ndim=1, *args, **kwargs)
         self.lam = lam
         self.mean = 1. / lam
         self.median = self.mean * tt.log(2)
@@ -564,7 +567,7 @@ class Laplace(Continuous):
     """
 
     def __init__(self, mu, b, *args, **kwargs):
-        super(Laplace, self).__init__(*args, **kwargs)
+        super(Laplace, self).__init__(ndim=1, *args, **kwargs)
         self.b = b
         self.mean = self.median = self.mode = self.mu = mu
 
@@ -613,9 +616,10 @@ class Lognormal(PositiveContinuous):
     tau : float
         Scale parameter (tau > 0).
     """
+<<<<<<< 5696ed49a2fd50b7662a0089e6c2573a2600a8ac
 
     def __init__(self, mu=0, sd=None, tau=None, *args, **kwargs):
-        super(Lognormal, self).__init__(*args, **kwargs)
+        super(Lognormal, self).__init__(ndim=1, *args, **kwargs)
 
         self.mu = mu
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
@@ -677,7 +681,7 @@ class StudentT(Continuous):
     """
 
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
-        super(StudentT, self).__init__(*args, **kwargs)
+        super(StudentT, self).__init__(ndim=1, **args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
         self.lam, self.sd = get_tau_sd(tau=lam, sd=sd)
         self.mean = self.median = self.mode = self.mu = mu
@@ -736,7 +740,7 @@ class Pareto(PositiveContinuous):
     """
 
     def __init__(self, alpha, m, *args, **kwargs):
-        super(Pareto, self).__init__(*args, **kwargs)
+        super(Pareto, self).__init__(ndim=1, *args, **kwargs)
         self.alpha = alpha
         self.m = m
         self.mean = tt.switch(tt.gt(alpha, 1), alpha *
@@ -797,7 +801,7 @@ class Cauchy(Continuous):
     """
 
     def __init__(self, alpha, beta, *args, **kwargs):
-        super(Cauchy, self).__init__(*args, **kwargs)
+        super(Cauchy, self).__init__(ndim=1, *args, **kwargs)
         self.median = self.mode = self.alpha = alpha
         self.beta = beta
 
@@ -844,7 +848,7 @@ class HalfCauchy(PositiveContinuous):
     """
 
     def __init__(self, beta, *args, **kwargs):
-        super(HalfCauchy, self).__init__(*args, **kwargs)
+        super(HalfCauchy, self).__init__(ndim=1, *args, **kwargs)
         self.mode = 0
         self.median = beta
         self.beta = beta
@@ -909,7 +913,7 @@ class Gamma(PositiveContinuous):
 
     def __init__(self, alpha=None, beta=None, mu=None, sd=None,
                  *args, **kwargs):
-        super(Gamma, self).__init__(*args, **kwargs)
+        super(Gamma, self).__init__(ndim=1, *args, **kwargs)
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
         self.beta = beta
@@ -978,7 +982,7 @@ class InverseGamma(PositiveContinuous):
     """
 
     def __init__(self, alpha, beta=1, *args, **kwargs):
-        super(InverseGamma, self).__init__(*args, **kwargs)
+        super(InverseGamma, self).__init__(ndim=1, *args, **kwargs)
         self.alpha = alpha
         self.beta = beta
         self.mean = self._calculate_mean()
@@ -1034,7 +1038,7 @@ class ChiSquared(Gamma):
 
     def __init__(self, nu, *args, **kwargs):
         self.nu = nu
-        super(ChiSquared, self).__init__(alpha=nu / 2., beta=0.5,
+        super(ChiSquared, self).__init__(ndim=1, alpha=nu / 2., beta=0.5,
                                          *args, **kwargs)
 
 
@@ -1063,7 +1067,7 @@ class Weibull(PositiveContinuous):
     """
 
     def __init__(self, alpha, beta, *args, **kwargs):
-        super(Weibull, self).__init__(*args, **kwargs)
+        super(Weibull, self).__init__(ndim=1, *args, **kwargs)
         self.alpha = alpha
         self.beta = beta
         self.mean = beta * tt.exp(gammaln(1 + 1. / alpha))
@@ -1256,7 +1260,7 @@ class ExGaussian(Continuous):
     """
 
     def __init__(self, mu, sigma, nu, *args, **kwargs):
-        super(ExGaussian, self).__init__(*args, **kwargs)
+        super(ExGaussian, self).__init__(ndim=1, *args, **kwargs)
         self.mu = mu
         self.sigma = sigma
         self.nu = nu
@@ -1318,7 +1322,7 @@ class VonMises(Continuous):
 
     def __init__(self, mu=0.0, kappa=None, transform='circular',
                  *args, **kwargs):
-        super(VonMises, self).__init__(*args, **kwargs)
+        super(VonMises, self).__init__(ndim=1, *args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
         self.kappa = kappa
         self.variance = 1 - i1(kappa) / i0(kappa)
@@ -1381,7 +1385,7 @@ class SkewNormal(Continuous):
 
     """
     def __init__(self, mu=0.0, sd=None, tau=None, alpha=1,  *args, **kwargs):
-        super(SkewNormal, self).__init__(*args, **kwargs)
+        super(SkewNormal, self).__init__(ndim=1, *args, **kwargs)
         self.mu = mu
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.alpha = alpha

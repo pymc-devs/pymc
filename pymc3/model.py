@@ -500,11 +500,11 @@ class FreeRV(Factor, TensorVariable):
         super(FreeRV, self).__init__(type, owner, index, name)
 
         if distribution is not None:
-            self.dshape = tuple(distribution.shape)
-            self.dsize = int(np.prod(distribution.shape))
+            self.dshape = distribution.shape
+            self.dsize = tt.prod(distribution.shape)
             self.distribution = distribution
-            self.tag.test_value = np.ones(
-                distribution.shape, distribution.dtype) * distribution.default()
+            dist_test_val = distribution.default()
+            self.tag.test_value = np.ones(dist_test_val.shape, distribution.dtype) * dist_test_val
             self.logp_elemwiset = distribution.logp(self)
             self.model = model
 
@@ -579,7 +579,6 @@ class ObservedRV(Factor, TensorVariable):
         super(TensorVariable, self).__init__(type, None, None, name)
 
         if distribution is not None:
-
             data = as_tensor(data, name, model, distribution)
             self.missing_values = data.missing_values
 

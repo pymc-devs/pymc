@@ -59,7 +59,7 @@ def get_tau_cov(mu, tau=None, cov=None):
     return (tau, cov)
 
 class MvNormal(Continuous):
-    R"""
+    r"""
     Multivariate normal log-likelihood.
 
     .. math::
@@ -361,6 +361,7 @@ class Multinomial(Discrete):
             tt.all(tt.ge(n, 0)),
             broadcast_conditions=False
         )
+
 
 
 def posdef(AA):

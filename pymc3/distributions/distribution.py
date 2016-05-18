@@ -41,15 +41,52 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, shape, dtype, testval=None, defaults=[], transform=None):
-        self.shape = np.atleast_1d(shape)
-        if False in (np.floor(self.shape) == self.shape):
-            raise TypeError("Expected int elements in shape")
+    def __init__(self, ndim, size, dtype, testval=None, defaults=[], transform=None):
+        """
+        Parameters
+        ----------
+        ndim
+            Dimensions of the support for this distribution type.
+        size
+            Shape/dimensions of the space that will contain
+            independent draws under this distribution.
+        dtype
+            The Theano data type.
+        testval
+            Test value to be added to the Theano variable's tag.test_value.
+        defaults
+            List of string names for attributes that can be used as this
+            distribution's default value.
+        transform
+            A random variable transform to be applied?
+        """
+        #
+        # Following Theano Op's handling of shape parameters (well, at least
+        # theano.tensor.raw_random.RandomFunction).
+        #
+        #support_shape_ = T.as_tensor_variable(, ndim=1)
+        #if support_shape == ():
+        #    self.support_shape = support_shape_.astype('int64')
+        #else:
+        #    self.support_shape = support_shape_
+
+        #if self.support_shape.type.ndim != 1 or \
+        #    not (self.support_shape.type.dtype == 'int64') and \
+        #    not (self.support_shape.type.dtype == 'int32'):
+        #    raise TypeError("Expected int elements in shape")
+
+        from theano.tensor.raw_random import _infer_ndim_bcast
+        import ipdb; ipdb.set_trace()  # XXX BREAKPOINT
+
+        ndim, size, bcast = _infer_ndim_bcast(ndim, size, testval)
+
+        self.ndim = ndim
+        self.size = size
         self.dtype = dtype
-        self.type = TensorType(self.dtype, self.shape)
         self.testval = testval
         self.defaults = defaults
         self.transform = transform
+        self.type = T.TensorType(str(self.dtype), bcast)
 
     def default(self):
         return self.get_test_val(self.testval, self.defaults)
@@ -104,33 +141,36 @@ class NoDistribution(Distribution):
 class Discrete(Distribution):
     """Base class for discrete distributions"""
 
-    def __init__(self, shape=(), dtype='int64', defaults=['mode'], *args, **kwargs):
+    def __init__(self, ndim, size=(), dtype='int64', defaults=['mode'], *args, **kwargs):
         if dtype != 'int64':
             raise TypeError('Discrete classes expect dtype to be int64.')
         super(Discrete, self).__init__(
-            shape, dtype, defaults=defaults, *args, **kwargs)
+            ndim, size, dtype, defaults=defaults, *args, **kwargs)
 
 
 class Continuous(Distribution):
     """Base class for continuous distributions"""
 
-    def __init__(self, shape=(), dtype='float64', defaults=['median', 'mean', 'mode'], *args, **kwargs):
+    def __init__(self, ndim, size=(), dtype='float64', defaults=['median', 'mean', 'mode'], *args, **kwargs):
         super(Continuous, self).__init__(
-            shape, dtype, defaults=defaults, *args, **kwargs)
+            ndim, size, dtype, defaults=defaults, *args, **kwargs)
 
 
 class DensityDist(Distribution):
     """Distribution based on a given log density function."""
 
-    def __init__(self, logp, shape=(), dtype='float64', testval=0, *args, **kwargs):
+    def __init__(self, logp, ndim, size=(), dtype='float64', testval=0, *args, **kwargs):
         super(DensityDist, self).__init__(
-            shape, dtype, testval, *args, **kwargs)
+            ndim, size, dtype, testval, *args, **kwargs)
         self.logp = logp
 
 
 class MultivariateContinuous(Continuous):
 
-    pass
+    def __init__(self, ndim, size=(), *args, **kwargs):
+        super(MultivariateContinuous, self).__init__(
+            ndim, size, *args, **kwargs)
+
 
 
 class MultivariateDiscrete(Discrete):

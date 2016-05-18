@@ -20,7 +20,7 @@ class AR1(Continuous):
     """
 
     def __init__(self, k, tau_e, *args, **kwargs):
-        super(AR1, self).__init__(*args, **kwargs)
+        super(AR1, self).__init__(ndim=1, size=(), *args, **kwargs)
         self.k = k
         self.tau_e = tau_e
         self.tau = tau_e * (1 - k ** 2)
@@ -56,7 +56,7 @@ class GaussianRandomWalk(Continuous):
 
     def __init__(self, tau=None, init=Flat.dist(), sd=None, mu=0.,
                  *args, **kwargs):
-        super(GaussianRandomWalk, self).__init__(*args, **kwargs)
+        super(GaussianRandomWalk, self).__init__(ndim=1, size=(), *args, **kwargs)
         self.tau = tau
         self.sd = sd
         self.mu = mu
@@ -100,7 +100,7 @@ class GARCH11(Continuous):
 
     def __init__(self, omega=None, alpha_1=None, beta_1=None,
                  initial_vol=None, *args, **kwargs):
-        super(GARCH11, self).__init__(*args, **kwargs)
+        super(GARCH11, self).__init__(ndim=1, size=(), *args, **kwargs)
 
         self.omega = omega
         self.alpha_1 = alpha_1
