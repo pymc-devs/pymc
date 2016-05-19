@@ -47,7 +47,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         Adagrad base learning rate. 
     epsilon : float
         Offset in denominator of the scale of learning rate in Adagrad.  
-    seed : int
+    random_seed : int
         Seed to initialize random state. 
 
     Returns
@@ -57,7 +57,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
     'means' and 'stds' include parameters of the variational posterior. 
     """
-    seed = seed if type(seed) is int else 12345
+    seed = random_seed if isinstance(seed, int) else 12345
 
     model = modelcontext(model)
     if start is None:
@@ -136,7 +136,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     ADVIFit
         Named tuple, which includes 'means', 'stds', and 'elbo_vals'. 
     """
-    seed = seed if type(seed) is int else 12345
+    seed = random_seed if isinstance(random_seed, int) else 12345
 
     model = modelcontext(model)
     if start is None:
@@ -223,7 +223,7 @@ def variational_gradient_estimate(
     n_mcsamples=1, random_seed=None):
     """Calculate approximate ELBO and its (stochastic) gradient. 
     """
-    seed = seed if type(seed) is int else 12345
+    seed = random_seed if isinstance(seed, int) else 12345
 
     theano.config.compute_test_value = 'ignore'
     shared = make_shared_replacements(vars, model)
@@ -250,7 +250,7 @@ def variational_gradient_estimate(
 
     return grad, elbo, shared, uw
 
-def elbo_t(logp, uw, inarray, n_mcsamples, seed):
+def elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
     """Create Theano tensor of approximate ELBO by Monte Carlo sampling. 
     """
     l = (uw.size/2).astype('int64')
@@ -261,7 +261,7 @@ def elbo_t(logp, uw, inarray, n_mcsamples, seed):
     logp_ = lambda input: theano.clone(logp, {inarray: input}, strict=False)
 
     # Naive Monte-Carlo
-    r = MRG_RandomStreams(seed=seed)
+    r = MRG_RandomStreams(seed=random_seed)
 
     if n_mcsamples == 1:
         n = r.normal(size=inarray.tag.test_value.shape)
