@@ -57,7 +57,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
     'means' and 'stds' include parameters of the variational posterior. 
     """
-    seed = random_seed if isinstance(seed, int) else 12345
+    seed = random_seed if isinstance(random_seed, int) else 12345
 
     model = modelcontext(model)
     if start is None:
@@ -223,7 +223,7 @@ def variational_gradient_estimate(
     n_mcsamples=1, random_seed=None):
     """Calculate approximate ELBO and its (stochastic) gradient. 
     """
-    seed = random_seed if isinstance(seed, int) else 12345
+    seed = random_seed if isinstance(random_seed, int) else 12345
 
     theano.config.compute_test_value = 'ignore'
     shared = make_shared_replacements(vars, model)
