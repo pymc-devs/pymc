@@ -5,7 +5,7 @@ Created on Mar 12, 2011
 @author: johnsalvatier
 '''
 import numpy as np
-from ..core import *
+from ..core import modelcontext, inputvars, ArrayOrdering, DictToArrayBijection
 from ..model import ObservedRV
 from ..vartypes import discrete_types
 
