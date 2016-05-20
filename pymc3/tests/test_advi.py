@@ -1,7 +1,7 @@
 import numpy as np
 from pymc3 import Model, Normal, DiscreteUniform, Poisson, switch, Exponential
 from pymc3.theanof import inputvars
-from pymc3.variational.advi import variational_gradient_estimate, advi, advi_minibatch
+from pymc3.variational.advi import variational_gradient_estimate, advi, advi_minibatch, sample_vp
 from theano import function
 import theano.tensor as tt
 
@@ -91,7 +91,6 @@ def test_check_discrete_minibatch():
         minibatch_RVs=[disasters], minibatch_tensors=[disaster_data_t], 
         minibatches=[create_minibatch()], verbose=False)
     
-
 def test_advi():
     n = 1000
     sd0 = 2.
@@ -108,11 +107,16 @@ def test_advi():
         mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
         x = Normal('x', mu=mu_, sd=sd, observed=data)
 
-    means, sds, elbos = advi(
+    advi_fit = advi(
         model=model, n=1000, accurate_elbo=False, learning_rate=1e-1, 
         random_seed=1)
 
-    np.testing.assert_allclose(means['mu'], mu_post, rtol=0.1)
+    np.testing.assert_allclose(advi_fit.means['mu'], mu_post, rtol=0.1)
+
+    trace = sample_vp(10000, model, advi_fit)
+
+    np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
+    np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
 def test_advi_minibatch():
     n = 1000
@@ -147,10 +151,15 @@ def test_advi_minibatch():
 
     minibatches = [create_minibatch(data)]
 
-    means, sds, elbos = advi_minibatch(
+    advi_fit = advi_minibatch(
         model=model, n=1000, minibatch_tensors=minibatch_tensors, 
         minibatch_RVs=minibatch_RVs, minibatches=minibatches, 
         total_size=n, learning_rate=1e-1, random_seed=1
     )
 
-    np.testing.assert_allclose(means['mu'], mu_post, rtol=0.1)
+    np.testing.assert_allclose(advi_fit.means['mu'], mu_post, rtol=0.1)
+
+    trace = sample_vp(10000, model, advi_fit)
+
+    np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
+    np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
