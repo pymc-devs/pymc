@@ -15,6 +15,8 @@ from theano.tensor import exp, dvector
 import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from collections import OrderedDict, namedtuple
+from pymc3.sampling import NDArray
+from pymc3.backends.base import MultiTrace
 
 __all__ = ['advi']
 
@@ -294,3 +296,53 @@ def adagrad(grad, param, learning_rate, epsilon, n):
     updates[param] = param - (-learning_rate * grad /
                               theano.tensor.sqrt(accu_sum + epsilon))
     return updates
+
+def sample_vp(draws, model, vparams, seed=1):
+    """Draw samples from variational posterior. 
+
+    Parameters
+    ----------
+    draws : int
+        Number of random samples. 
+    model : pymc3.Model
+        Probabilistic model. 
+    vparams : dict or pymc3.variational.ADVIFit
+        Estimated variational parameters of the model. 
+    seed : int
+        Seed of random number generator. 
+
+    Returns
+    -------
+    trace : pymc3.backends.base.MultiTrace
+        Samples drawn from the variational posterior. 
+    """
+    if type(vparams) is ADVIFit:
+        vparams = {
+            'means': vparams.means, 
+            'stds': vparams.stds
+        }
+
+    # Make dict for replacements of random variables
+    r = MRG_RandomStreams(seed=seed)
+    updates = {}
+    for var in model.free_RVs:
+        u = theano.shared(vparams['means'][str(var)]).ravel()
+        w = theano.shared(vparams['stds'][str(var)]).ravel()
+        n = r.normal(size=u.tag.test_value.shape)
+        updates.update({var: (n * w + u).reshape(var.tag.test_value.shape)})
+    vars = model.free_RVs
+        
+    # Replace some nodes of the graph with variational distributions
+    samples = theano.clone(vars, updates)
+    f = theano.function([], samples)
+
+    varnames = [str(var) for var in model.unobserved_RVs]
+    trace = NDArray(model=model, vars=model.unobserved_RVs)
+    trace.setup(draws=draws, chain=0)
+
+    for i in range(draws):
+        # 'point' is like {'var1': np.array(0.1), 'var2': np.array(0.2), ...}
+        point = {varname: value for varname, value in zip(varnames, f())}
+        trace.record(point)
+
+    return MultiTrace([trace])
