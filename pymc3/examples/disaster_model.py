@@ -53,6 +53,8 @@ def run(n=1000):
         start = {'early_mean': 2., 'late_mean': 3.}
         
         tr = sample(n, tune=500, start=start)
+        
+        traceplot(tr, varnames=[early_mean, late_mean], priors=[Exponential.dist(1)]*2)
     
         if n!=50:
             summary(tr)
