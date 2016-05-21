@@ -297,7 +297,7 @@ def adagrad(grad, param, learning_rate, epsilon, n):
                               theano.tensor.sqrt(accu_sum + epsilon))
     return updates
 
-def sample_vp(draws, model, vparams, seed=1):
+def sample_vp(draws, model, vparams, random_seed=20090425):
     """Draw samples from variational posterior. 
 
     Parameters
@@ -308,7 +308,7 @@ def sample_vp(draws, model, vparams, seed=1):
         Probabilistic model. 
     vparams : dict or pymc3.variational.ADVIFit
         Estimated variational parameters of the model. 
-    seed : int
+    random_seed : int
         Seed of random number generator. 
 
     Returns
@@ -323,7 +323,7 @@ def sample_vp(draws, model, vparams, seed=1):
         }
 
     # Make dict for replacements of random variables
-    r = MRG_RandomStreams(seed=seed)
+    r = MRG_RandomStreams(seed=random_seed)
     updates = {}
     for var in model.free_RVs:
         u = theano.shared(vparams['means'][str(var)]).ravel()
