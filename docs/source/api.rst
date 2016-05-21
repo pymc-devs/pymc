@@ -70,3 +70,75 @@ Multivariate
 
 .. automodule:: pymc3.distributions.multivariate
    :members:
+
+Plots
+-----
+
+.. currentmodule:: pymc3.plots
+   :members:
+
+.. automodule:: pymc3.plots
+   :members:
+
+Inference
+---------
+
+Samplers
+^^^^^^^^
+
+NUTS
+""""
+
+.. currentmodule:: pymc3.step_methods.nuts
+   :members:
+
+.. automodule:: pymc3.step_methods.nuts
+   :members:
+
+Metropolis
+""""""""""
+
+.. currentmodule:: pymc3.step_methods.metropolis
+   :members:
+
+.. automodule:: pymc3.step_methods.metropolis
+   :members:
+
+Slice
+"""""
+
+.. currentmodule:: pymc3.step_methods.slicer
+   :members:
+
+.. automodule:: pymc3.step_methods.slicer
+   :members:
+
+Hamiltonian Monte Carlo
+"""""""""""""""""""""""
+
+.. currentmodule:: pymc3.step_methods.hmc
+   :members:
+
+.. automodule:: pymc3.step_methods.hmc
+   :members:
+
+ATMCMC
+""""""
+
+.. currentmodule:: pymc3.step_methods.ATMCMC
+   :members:
+
+.. automodule:: pymc3.step_methods.ATMCMC
+   :members:
+
+Vartional
+^^^^^^^^^
+
+ADVI
+""""
+
+.. currentmodule:: pymc3.variational.advi
+   :members:
+
+.. automodule:: pymc3.variational.advi
+   :members:

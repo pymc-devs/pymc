@@ -35,8 +35,8 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.mathjax',
-
     'numpydoc',
+    'nbsphinx',
 ]
 
 # Don't auto-generate summary for class members.
