@@ -316,7 +316,7 @@ def sample_vp(draws, model, vparams, seed=1):
     trace : pymc3.backends.base.MultiTrace
         Samples drawn from the variational posterior. 
     """
-    if type(vparams) is ADVIFit:
+    if isinstance(vparams, ADVIFit):
         vparams = {
             'means': vparams.means, 
             'stds': vparams.stds
