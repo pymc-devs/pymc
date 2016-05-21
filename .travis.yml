@@ -18,12 +18,13 @@ before_install:
 install:
   - conda create -n testenv --yes pip python=$TRAVIS_PYTHON_VERSION
   - source activate testenv
-  - conda install --yes jupyter pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels joblib
+  - conda install --yes jupyter pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels joblib sphinx
 
   - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then conda install --yes mock enum34; fi
   - pip install --no-deps numdifftools
   - pip install git+https://github.com/Theano/Theano.git
   - pip install git+https://github.com/mahmoudimus/nose-timer.git
+  - pip install travis-sphinx nbsphinx CommonMark==0.5.4 recommonmark
   - python setup.py build_ext --inplace
 
 env:
@@ -35,3 +36,6 @@ env:
   - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples2"
 script:
   - THEANO_FLAGS='gcc.cxxflags="-march=core2"' nosetests $TESTCMD
+  - travis-sphinx build
+after_success:
+  - travis-sphinx deploy

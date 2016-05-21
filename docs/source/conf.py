@@ -37,6 +37,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'numpydoc',
     'nbsphinx',
+    'IPython.sphinxext.ipython_console_highlighting',
 ]
 
 # Don't auto-generate summary for class members.
@@ -48,7 +49,10 @@ templates_path = ['_templates']
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_parsers = {
+    '.md': 'recommonmark.parser.CommonMarkParser',
+}
+source_suffix = ['.rst', '.md']
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
@@ -58,8 +62,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'pymc3'
-copyright = '2015, John Salvatier and Christopher Fonnesbeck'
-author = 'John Salvatier and Christopher Fonnesbeck'
+copyright = '2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki'
+author = 'John Salvatier, Christopher Fonnesbeck, Thomas Wiecki'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -85,7 +89,7 @@ language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -240,7 +244,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   (master_doc, 'pymc3.tex', 'pymc3 Documentation',
-   'John Salvatier and Christopher Fonnesbeck', 'manual'),
+   'John Salvatier, Christopher Fonnesbeck, Thomas Wiecki', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
