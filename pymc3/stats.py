@@ -292,7 +292,7 @@ def mc_error(x, batches=5):
         if batches == 1: return np.std(x)/np.sqrt(len(x))
 
         try:
-            batched_traces = np.resize(x, (batches, len(x)/batches))
+            batched_traces = np.resize(x, (batches, int(len(x)/batches)))
         except ValueError:
             # If batches do not divide evenly, trim excess samples
             resid = len(x) % batches
