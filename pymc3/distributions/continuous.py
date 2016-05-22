@@ -228,6 +228,9 @@ class Normal(UnivariateContinuous):
             sd = kwargs.pop('sd', None)
             tau = kwargs.pop('tau', None)
 
+    def __init__(self, mu=0.0, tau=None, sd=None, ndim=None, size=None, dtype=None, *args, **kwargs):
+
+        mu = tt.as_tensor_variable(mu)
         self.mean = self.median = self.mode = self.mu = mu
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.variance = 1. / self.tau
@@ -677,7 +680,7 @@ class StudentT(UnivariateContinuous):
 
     Describes a normal variable whose precision is gamma distributed.
     If only nu parameter is passed, this specifies a standard (central)
-    Student's tt.
+    Student's T.
 
     .. math::
 
@@ -1012,9 +1015,9 @@ class InverseGamma(PositiveUnivariateContinuous):
         Scale parameter (beta > 0).
     """
     def __init__(self, alpha, beta=1., ndim=None, size=None, dtype=None, *args, **kwargs):
-        self.alpha = alpha
-        self.beta = beta
-        self.mean = self._calculate_mean()
+        self.alpha = tt.as_tensor_variable(alpha)
+        self.beta = tt.as_tensor_variable(beta)
+        self.mean = (alpha > 1) * beta / (alpha - 1.) or np.inf
         self.mode = beta / (alpha + 1.)
         self.variance = tt.switch(tt.gt(alpha, 2),
                                   (beta**2) / (alpha * (alpha - 1.)**2),

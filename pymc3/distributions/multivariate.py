@@ -99,14 +99,19 @@ class MvNormal(MultivariateContinuous):
         self.dist_params = (self.mu, self.tau)
 
         # TODO: how do we want to use ndim and size?
-        shape_supp = self.mu[-1]
-        shape_ind = self.mu[:-1]
+        shape_supp = self.mu.shape[-1]
+        shape_ind = self.mu.shape[:-1]
 
-        bcast = (False,) * (shape_supp.ndim + shape_ind.ndim)
+        if self.mu.ndim > 0:
+            bcast = (False,) * (1 + tt.get_vector_length(shape_ind))
+        else:
+            bcast = (False,)
+
         if dtype is None:
             dtype = self.mu.dtype
 
-        super(MvNormal, self).__init__(shape_supp, shape_ind, (), ndim, bcast, dtype, *args, **kwargs)
+        super(MvNormal, self).__init__(shape_supp, shape_ind, (), bcast, dtype,
+                                       *args, **kwargs)
 
     def random(self, point=None, size=None):
         mu, cov = draw_values([self.mu, self.cov], point=point)
@@ -257,11 +262,17 @@ class Dirichlet(MultivariateContinuous):
         shape_ind = self.a.shape[:-1]
 
         # FIXME: this isn't correct/ideal
-        bcast = (False,) * (shape_supp.ndim + shape_ind.ndim)
+        if self.a.ndim > 0:
+            bcast = (False,) * (1 + tt.get_vector_length(shape_ind))
+        else:
+            bcast = (False,)
+
         if dtype is None:
             dtype = self.mu.dtype
 
-        super(Dirichlet, self).__init__(shape_supp, shape_ind, (), ndim, bcast, dtype, transform=transform, *args, **kwargs)
+        super(Dirichlet, self).__init__(shape_supp, shape_ind, (), bcast,
+                                        dtype, transform=transform, *args,
+                                        **kwargs)
 
     def random(self, point=None, size=None):
         a = draw_values([self.a], point=point)
@@ -270,7 +281,7 @@ class Dirichlet(MultivariateContinuous):
             return stats.dirichlet.rvs(a, None if size == a.shape else size)
 
         samples = generate_samples(_random, a,
-                                   dist_shape=self.shape_support,
+                                   dist_shape=self.shape_supp,
                                    size=size)
         return samples
 
@@ -318,9 +329,9 @@ class Multinomial(MultivariateDiscrete):
         rescaled otherwise.
     """
     def __init__(self, n, p, ndim=None, size=None, dtype=None, *args, **kwargs):
-        super(Multinomial, self).__init__(*args, **kwargs)
-
-        p = p / tt.sum(p, axis=-1, keepdims=True)
+        self.n = tt.as_tensor_variable(n, ndim=0)
+        self.p = tt.as_tensor_variable(p)
+        self.p = self.p / tt.sum(self.p, axis=-1, keepdims=True)
 
         if len(self.shape) == 2:
             try:
@@ -342,7 +353,7 @@ class Multinomial(MultivariateDiscrete):
 
         # TODO: do this correctly; what about replications?
         # check that n == len(p)?
-        shape_supp = tuple(self.n)
+        shape_supp = self.n
         shape_ind = ()
 
         # FIXME: this isn't correct/ideal
@@ -351,7 +362,8 @@ class Multinomial(MultivariateDiscrete):
             dtype = self.p.dtype
 
         # FIXME: n.shape == p.shape? bcast, etc.
-        super(Multinomial, self).__init__(shape_supp, shape_ind, (), ndim, bcast, dtype, *args, **kwargs)
+        super(Multinomial, self).__init__(shape_supp, shape_ind, (), bcast,
+                                          dtype, *args, **kwargs)
 
     def _random(self, n, p, size=None):
         if size == p.shape:
@@ -478,27 +490,29 @@ class Wishart(MultivariateContinuous):
         # TODO: allow tensor of independent n's.
         self.n = tt.as_tensor_variable(n, ndim=0)
         self.V = tt.as_tensor_variable(V)
-        self.mean = n * V
-        self.mode = tt.switch(1 * (n >= self.shape_support + 1),
-                             (n - self.shape_support - 1) * V,
-                             np.nan)
 
         self.dist_params = (self.n, self.V)
 
         # TODO: do this correctly; what about replications?
-        shape_supp = tuple(self.V.shape[-1])
+        shape_supp = self.V.shape[-1]
         shape_ind = ()
+
+        self.mode = tt.switch(1 * (self.n >= shape_supp + 1), (self.n -
+                                                               shape_supp - 1)
+                              * self.V, np.nan)
+        self.mean = self.n * self.V
 
         # FIXME: this isn't correct/ideal
         bcast = (False,)
         if dtype is None:
             dtype = self.V.dtype
 
-        super(Wishart, self).__init__(shape_supp, shape_ind, (), ndim, bcast, dtype, *args, **kwargs)
+        super(Wishart, self).__init__(shape_supp, shape_ind, (), bcast, dtype,
+                                      *args, **kwargs)
 
     def logp(self, X):
         n = self.n
-        p = self.shape_support
+        p = self.shape_supp
         V = self.V
 
         IVI = det(V)
@@ -634,21 +648,22 @@ class LKJCorr(MultivariateContinuous):
     """
 
     def __init__(self, n, p, ndim=None, size=None, dtype=None, *args, **kwargs):
+        # TODO: allow tensor of independent n's.
         self.n = tt.as_tensor_variable(n, ndim=0)
         self.p = tt.as_tensor_variable(p, ndim=0)
-        n_elem = (p * (p - 1) / 2)
+
+        n_elem = (self.p * (self.p - 1) / 2)
+        shape_supp = n_elem
         self.mean = tt.zeros(n_elem)
-        self.shape_support = n_elem
 
         # FIXME: triu, bcast, etc.
-        self.tri_index = tt.zeros((p, p), dtype=int)
-        self.tri_index[tt.triu(p, k=1)] = tt.arange(n_elem)
-        self.tri_index[tt.triu(p, k=1)[::-1]] = tt.arange(n_elem)
+        self.tri_index = tt.zeros((self.p, self.p), dtype=int)
+        self.tri_index[tt.triu(self.p, k=1)] = tt.arange(n_elem)
+        self.tri_index[tt.triu(self.p, k=1)[::-1]] = tt.arange(n_elem)
 
         self.dist_params = (self.n, self.p)
 
         # TODO: do this correctly; what about replications?
-        shape_supp = tuple(self.p)
         shape_ind = ()
 
         # FIXME: this isn't correct/ideal
@@ -656,7 +671,8 @@ class LKJCorr(MultivariateContinuous):
         if dtype is None:
             dtype = self.n.dtype
 
-        super(LKJCorr, self).__init__(shape_supp, shape_ind, (), ndim, bcast, dtype, *args, **kwargs)
+        super(LKJCorr, self).__init__(shape_supp, shape_ind, (), bcast, dtype,
+                                      *args, **kwargs)
 
     def _normalizing_constant(self, n, p):
         if n == 1:

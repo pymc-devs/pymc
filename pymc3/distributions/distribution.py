@@ -83,10 +83,10 @@ class Distribution(object):
 
         Here are a few ways of inferring shapes:
             * When a distribution is scalar, then `shape_supp = ()`
-                * and has an informative parameter, e.g. `mu`, then `shape_ind = T.shape(mu)`.
+                * and has an informative parameter, e.g. `mu`, then `shape_ind = tt.shape(mu)`.
             * When a distribution is multivariate
                 * and has an informative parameter, e.g. `mu`, then
-                `shape_supp = T.shape(mu)[-ndim_supp:]` and `shape_ind = T.shape(mu)[-ndim_supp:]`.
+                `shape_supp = tt.shape(mu)[-ndim_supp:]` and `shape_ind = tt.shape(mu)[-ndim_supp:]`.
         In all remaining cases the shapes must be provided by the caller.
         `shape_reps` is always provided by the caller.
 
@@ -118,10 +118,10 @@ class Distribution(object):
             A transform function
         """
 
-        self.shape_supp = shape_supp
-        self.shape_ind = shape_ind
-        self.shape_reps = shape_reps
-        self.shape = shape_supp + shape_ind + shape_reps
+        self.shape_supp = tt.cast(tt.as_tensor_variable(shape_supp, ndim=1), 'int64')
+        self.shape_ind = tt.cast(tt.as_tensor_variable(shape_ind, ndim=1), 'int64')
+        self.shape_reps = tt.cast(tt.as_tensor_variable(shape_reps, ndim=1), 'int64')
+        self.shape = tt.concatenate((self.shape_supp, self.shape_ind, self.shape_reps))
 
         #
         # Following Theano Op's handling of shape parameters (well, at least
@@ -138,7 +138,7 @@ class Distribution(object):
         self.testval = testval
         self.defaults = defaults
         self.transform = transform
-        self.type = T.TensorType(str(dtype), bcast)
+        self.type = tt.TensorType(str(dtype), bcast)
 
     def default(self):
         return self.get_test_val(self.testval, self.defaults)
@@ -146,21 +146,26 @@ class Distribution(object):
     def get_test_val(self, val, defaults):
         if val is None:
             for v in defaults:
-                if hasattr(self, v) and np.all(np.isfinite(self.getattr_value(v))):
+                the_attr = getattr(self, v, None)
+
+                if the_attr is not None and np.all(np.isfinite(self.getattr_value(v))):
                     return self.getattr_value(v)
         else:
             return self.getattr_value(val)
 
-        if val is None:
-            raise AttributeError(str(self) + " has no finite default value to use, checked: " +
-                                 str(defaults) + " pass testval argument or adjust so value is finite.")
+        raise AttributeError(str(self) + " has no finite default value to use, checked: " +
+                             str(defaults) + " pass testval argument or adjust so value is finite.")
 
     def getattr_value(self, val):
         if isinstance(val, string_types):
             val = getattr(self, val)
 
-        if isinstance(val, tt.TensorVariable):
+        if isinstance(val, tt.sharedvar.SharedVariable):
+            return val.get_value()
+        elif isinstance(val, tt.TensorVariable):
             return val.tag.test_value
+        elif isinstance(val, tt.TensorConstant):
+            return val.value
 
         if isinstance(val, tt.TensorConstant):
             return val.value
@@ -203,9 +208,10 @@ class Discrete(Distribution):
 class Continuous(Distribution):
     """Base class for continuous distributions"""
 
-    def __init__(self, ndim_support, ndim, size, bcast, dtype='float64', defaults=['median', 'mean', 'mode'], *args, **kwargs):
-        super(Continuous, self).__init__(ndim_support, ndim, size,
-                                         bcast, dtype, defaults=defaults, *args, **kwargs)
+    def __init__(self, shape_supp, shape_ind, shape_reps, bcast,
+            dtype='float64', defaults=['median', 'mean', 'mode'], *args, **kwargs):
+        super(Continuous, self).__init__(shape_supp, shape_ind, shape_reps,
+                bcast, dtype, defaults=defaults, *args, **kwargs)
 
 
 class DensityDist(Distribution):
@@ -231,15 +237,15 @@ class UnivariateContinuous(Continuous):
         """
 
         self.shape_supp = ()
-        dist_params = tuple(T.as_tensor_variable(x) for x in dist_params)
+        dist_params = tuple(tt.as_tensor_variable(x) for x in dist_params)
 
         ndim, size, bcast = _infer_ndim_bcast(*(ndim, size) + dist_params)
         if dtype is None:
-            dtype = T.scal.upcast(*(T.config.floatX,) + tuple(x.dtype for x in dist_params))
+            dtype = tt.scal.upcast(*(tt.config.floatX,) + tuple(x.dtype for x in dist_params))
 
         # We just assume
         super(UnivariateContinuous, self).__init__(
-            tuple(), tuple(size), size, bcast, *args, **kwargs)
+            tuple(), tuple(), size, bcast, *args, **kwargs)
 
 
 class MultivariateContinuous(Continuous):

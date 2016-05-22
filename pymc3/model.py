@@ -507,9 +507,12 @@ class FreeRV(Factor, TensorVariable):
             self.dshape = distribution.shape
             self.dsize = tt.prod(distribution.shape)
             self.distribution = distribution
-            dist_test_val = distribution.default()
-            self.tag.test_value = np.ones(
-                dist_test_val.shape, distribution.dtype) * dist_test_val
+            # TODO: why should we do this?  shouldn't the default/test_val
+            # of the distribution be enough?
+            #dist_test_val = distribution.default()
+            #self.tag.test_value = np.ones(
+            #    distribution.shape.tag.test_value, distribution.dtype) * dist_test_val
+            self.tag.test_value = distribution.default()
             self.logp_elemwiset = distribution.logp(self)
             self.model = model
 
