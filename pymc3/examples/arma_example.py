@@ -1,4 +1,4 @@
-from pymc3 import Normal, sample, Model, traceplot, plots, NUTS, Potential, Cauchy, find_MAP, Slice
+from pymc3 import Normal, sample, Model, traceplot, plots, NUTS, Potential, variational, Cauchy, find_MAP, Slice
 from theano import scan, shared
 from scipy import optimize
 import theano.tensor as T
@@ -57,7 +57,7 @@ t = np.array([1, 2, 4,5,6,8, 19, 18, 12])
 y = shared(np.array([15, 10, 16, 11, 9, 11, 10, 18], dtype=np.float32))
 
 
-with Model() as arma:
+with Model() as arma_model:
 
     sigma = Cauchy('sigma', 0, 5)
     theta = Normal('theta', 0, sd=2)
@@ -81,16 +81,21 @@ with Model() as arma:
                           sequences=dict(input=y, taps=[-1]),
                           outputs_info=[dict(initial=err0, taps=[-1])],
                           non_sequences=[mu, phi, theta])
-    import ipdb; ipdb.set_trace()
     like = Potential('like', Normal.dist(0, sd=sigma).logp(err))
 
-    step = NUTS()
+with arma_model:
+    mu, sds, elbo = variational.advi(n=2000)
+
+with arma_model:
+        # Start next run at the last sampled position.
+        step = NUTS()
+
 
 
 def run(n=1000):
     if n == "short":
         n = 50
-    with arma:
+    with arma_model:
 
         start = find_MAP(fmin=optimize.fmin_powell)
 
