@@ -28,7 +28,8 @@ class PositiveUnivariateContinuous(UnivariateContinuous):
 
     def __init__(self, *args, **kwargs):
         transform = kwargs.get('transform', transforms.log)
-        super(PositiveUnivariateContinuous, self).__init__(transform=transform, *args, **kwargs)
+        super(PositiveUnivariateContinuous, self).__init__(transform=transform,
+                                                           *args, **kwargs)
 
 
 class UnitUnivariateContinuous(UnivariateContinuous):
@@ -36,7 +37,8 @@ class UnitUnivariateContinuous(UnivariateContinuous):
 
     def __init__(self, *args, **kwargs):
         transform = kwargs.get('transform', transforms.logodds)
-        super(UnitUnivariateContinuous, self).__init__(transform=transform, *args, **kwargs)
+        super(UnitUnivariateContinuous, self).__init__(transform=transform,
+                                                       *args, **kwargs)
 
 def assert_negative_support(var, label, distname, value=-1e-6):
     # Checks for evidence of positive support for a variable
@@ -123,7 +125,8 @@ class Uniform(UnivariateContinuous):
         Upper limit.
     """
 
-    def __init__(self, lower=0, upper=1, transform='interval', size=None, ndim=None, dtype=None, *args, **kwargs):
+    def __init__(self, lower=0, upper=1, transform='interval', size=None,
+                 ndim=None, dtype=None, *args, **kwargs):
 
         lower = tt.as_tensor_variable(lower)
         upper = tt.as_tensor_variable(upper)
@@ -133,7 +136,8 @@ class Uniform(UnivariateContinuous):
         self.mean = (upper + lower) / 2.
         self.median = self.mean
 
-        super(Uniform, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Uniform, self).__init__(self.dist_params, ndim, size, dtype,
+                                      *args, **kwargs)
 
         if transform == 'interval':
             self.transform = transforms.interval(lower, upper)
@@ -164,7 +168,8 @@ class Flat(UnivariateContinuous):
         self.median = tt.as_tensor_variable(0.)
         self.dist_params = (self.median,)
 
-        super(Flat, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Flat, self).__init__(self.dist_params, ndim, size, dtype, *args,
+                                   **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         raise ValueError('Cannot sample from Flat distribution')
@@ -228,7 +233,8 @@ class Normal(UnivariateContinuous):
             sd = kwargs.pop('sd', None)
             tau = kwargs.pop('tau', None)
 
-    def __init__(self, mu=0.0, tau=None, sd=None, ndim=None, size=None, dtype=None, *args, **kwargs):
+    def __init__(self, mu=0.0, tau=None, sd=None, ndim=None, size=None,
+                 dtype=None, *args, **kwargs):
 
         mu = tt.as_tensor_variable(mu)
         self.mean = self.median = self.mode = self.mu = mu
@@ -240,7 +246,8 @@ class Normal(UnivariateContinuous):
 
         self.dist_params = (self.mu, self.tau)
 
-        super(Normal, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Normal, self).__init__(self.dist_params, ndim, size, dtype,
+                                     *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu, tau, sd = draw_values([self.mu, self.tau, self.sd],
@@ -280,7 +287,9 @@ class HalfNormal(PositiveUnivariateContinuous):
     tau : float
         Precision (tau > 0).
     """
-    def __init__(self, tau=None, sd=None, ndim=None, size=None, dtype=None, *args, **kwargs):
+    def __init__(self, tau=None, sd=None, ndim=None, size=None, dtype=None,
+                 *args, **kwargs):
+
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.mean = tt.sqrt(2 / (np.pi * self.tau))
         self.variance = (1. - 2 / np.pi) / self.tau
@@ -290,7 +299,8 @@ class HalfNormal(PositiveUnivariateContinuous):
 
         self.dist_params = (self.tau,)
 
-        super(HalfNormal, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(HalfNormal, self).__init__(self.dist_params, ndim, size, dtype,
+                                         *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         sd = draw_values([self.sd], point=point)
@@ -362,7 +372,8 @@ class Wald(PositiveUnivariateContinuous):
         The American Statistician, Vol. 30, No. 2, pp. 88-90
     """
 
-    def __init__(self, mu=None, lam=None, phi=None, alpha=0., ndim=None, size=None, dtype=None, *args, **kwargs):
+    def __init__(self, mu=None, lam=None, phi=None, alpha=0., ndim=None,
+                 size=None, dtype=None, *args, **kwargs):
 
         self.mu, self.lam, self.phi = self.get_mu_lam_phi(mu, lam, phi)
         self.alpha = alpha
@@ -377,7 +388,8 @@ class Wald(PositiveUnivariateContinuous):
 
         self.dist_params = (self.mu, self.lam, self.alpha)
 
-        super(Wald, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Wald, self).__init__(self.dist_params, ndim, size, dtype, *args,
+                                   **kwargs)
 
     def get_mu_lam_phi(self, mu, lam, phi):
         res = None
@@ -421,13 +433,12 @@ class Wald(PositiveUnivariateContinuous):
         lam = self.lam
         alpha = self.alpha
         # value *must* be iid. Otherwise this is wrong.
-        return bound(logpow(lam / (2. * np.pi), 0.5)
-                     - logpow(value - alpha, 1.5)
-                     - (0.5 * lam / (value - alpha)
-                        * ((value - alpha - mu) / mu)**2),
+        return bound(logpow(lam / (2. * np.pi), 0.5) -
+                     logpow(value - alpha, 1.5) -
+                     (0.5 * lam / (value - alpha) * ((value - alpha - mu) /
+                                                     mu)**2),
                      # XXX these two are redundant. Please, check.
-                     value > 0, value - alpha > 0,
-                     mu > 0, lam > 0, alpha >= 0)
+                     value > 0, value - alpha > 0, mu > 0, lam > 0, alpha >= 0)
 
 
 class Beta(UnitUnivariateContinuous):
@@ -473,7 +484,8 @@ class Beta(UnitUnivariateContinuous):
     the binomial distribution.
     """
 
-    def __init__(self, alpha=None, beta=None, mu=None, sd=None, ndim=None, size=None, dtype=None, *args, **kwargs):
+    def __init__(self, alpha=None, beta=None, mu=None, sd=None, ndim=None,
+                 size=None, dtype=None, *args, **kwargs):
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
         self.beta = beta
@@ -486,7 +498,8 @@ class Beta(UnitUnivariateContinuous):
 
         self.dist_params = (self.alpha, self.beta)
 
-        super(Beta, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Beta, self).__init__(self.dist_params, ndim, size, dtype, *args,
+                                   **kwargs)
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
@@ -512,9 +525,8 @@ class Beta(UnitUnivariateContinuous):
         alpha = self.alpha
         beta = self.beta
 
-        return bound(logpow(value, alpha - 1) + logpow(1 - value, beta - 1)
-                     - betaln(alpha, beta),
-                     value >= 0, value <= 1,
+        return bound(logpow(value, alpha - 1) + logpow(1 - value, beta - 1) -
+                     betaln(alpha, beta), value >= 0, value <= 1,
                      alpha > 0, beta > 0)
 
 
@@ -547,8 +559,6 @@ class Exponential(PositiveUnivariateContinuous):
         self.dist_params = (self.lam,)
 
         self.variance = lam**-2
-
-        assert_negative_support(lam, 'lam', 'Exponential')
 
         super(Exponential, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
@@ -596,7 +606,8 @@ class Laplace(UnivariateContinuous):
 
         self.dist_params = (self.b, self.mu)
 
-        super(Laplace, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Laplace, self).__init__(self.dist_params, ndim, size, dtype,
+                                      *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu, b = draw_values([self.mu, self.b], point=point)
@@ -639,21 +650,22 @@ class Lognormal(PositiveUnivariateContinuous):
     tau : float
         Scale parameter (tau > 0).
     """
-    def __init__(self, mu=0, tau=1, ndim=None, size=None, dtype=None, *args, **kwargs):
-        self.mu = mu
-        self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
-
-        self.mean = tt.exp(mu + 1. / (2 * self.tau))
-        self.median = tt.exp(mu)
-        self.mode = tt.exp(mu - 1. / self.tau)
-        self.variance = (tt.exp(1. / self.tau) - 1) * tt.exp(2 * mu + 1. / self.tau)
+    def __init__(self, mu=0, tau=1, ndim=None, size=None, dtype=None, *args,
+                 **kwargs):
+        self.mu = tt.as_tensor_variable(mu)
+        self.tau = tt.as_tensor_variable(tau)
+        self.mean = tt.exp(self.mu + 1. / (2. * self.tau))
+        self.median = tt.exp(self.mu)
+        self.mode = tt.exp(self.mu - 1. / self.tau)
+        self.variance = (tt.exp(1. / self.tau) - 1.) * tt.exp(2 * self.mu + 1. / self.tau)
 
         assert_negative_support(tau, 'tau', 'Lognormal')
         assert_negative_support(sd, 'sd', 'Lognormal')
 
         self.dist_params = (self.mu, self.tau)
 
-        super(Lognormal, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Lognormal, self).__init__(self.dist_params, ndim, size, dtype,
+                                        *args, **kwargs)
 
     def _random(self, mu, tau, size=None):
         samples = np.random.normal(size=size)
@@ -702,9 +714,8 @@ class StudentT(UnivariateContinuous):
     lam : float
         Scale parameter (lam > 0).
     """
-
-    def __init__(self, nu, mu=0, lam=None, sd=None, ndim=None,
-                 size=None, dtype=None, *args, **kwargs):
+    def __init__(self, nu, mu=0, lam=None, sd=None, ndim=None, size=None,
+                 dtype=None, *args, **kwargs):
         self.nu = nu = tt.as_tensor_variable(nu)
         self.lam, self.sd = get_tau_sd(tau=lam, sd=sd)
         self.mean = self.median = self.mode = self.mu = mu
@@ -767,11 +778,11 @@ class Pareto(PositiveUnivariateContinuous):
     def __init__(self, alpha, m, ndim=None, size=None, dtype=None, *args, **kwargs):
         self.alpha = tt.as_tensor_variable(alpha)
         self.m = tt.as_tensor_variable(m)
-        self.mean = tt.switch(tt.gt(alpha, 1), alpha * m / (alpha - 1.), np.inf)
-        self.median = m * 2.**(1. / alpha)
+        self.mean = tt.switch(tt.gt(self.alpha, 1), self.alpha * self.m / (self.alpha - 1.), np.inf)
+        self.median = self.m * 2.**(1. / self.alpha)
         self.variance = tt.switch(
-            tt.gt(alpha, 2),
-            (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2),
+            tt.gt(self.alpha, 2),
+            (self.alpha * self.m**2) / ((self.alpha - 2.) * (self.alpha - 1.)**2),
             np.inf)
 
         assert_negative_support(alpha, 'alpha', 'Pareto')
@@ -779,7 +790,8 @@ class Pareto(PositiveUnivariateContinuous):
 
         self.dist_params = (self.alpha, self.m)
 
-        super(Pareto, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Pareto, self).__init__(self.dist_params, ndim, size, dtype,
+                                     *args, **kwargs)
 
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
@@ -832,7 +844,8 @@ class Cauchy(UnivariateContinuous):
 
         self.dist_params = (self.alpha, self.beta)
 
-        super(Cauchy, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Cauchy, self).__init__(self.dist_params, ndim, size, dtype,
+                                     *args, **kwargs)
 
         assert_negative_support(beta, 'beta', 'Cauchy')
 
@@ -883,7 +896,8 @@ class HalfCauchy(PositiveUnivariateContinuous):
 
         self.dist_params = (self.beta,)
 
-        super(HalfCauchy, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(HalfCauchy, self).__init__(self.dist_params, ndim, size, dtype,
+                                         *args, **kwargs)
 
         assert_negative_support(beta, 'beta', 'HalfCauchy')
 
@@ -943,20 +957,22 @@ class Gamma(PositiveUnivariateContinuous):
         Alternative scale parameter (sd > 0).
     """
 
-    def __init__(self, alpha=None, beta=None, mu=None, sd=None, ndim=None, size=None, dtype=None, *args, **kwargs):
+    def __init__(self, alpha=None, beta=None, mu=None, sd=None, ndim=None,
+                 size=None, dtype=None, *args, **kwargs):
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
         self.beta = beta
-        self.mean = alpha / beta
-        self.mode = tt.maximum((alpha - 1) / beta, 0)
-        self.variance = alpha / beta**2
+        self.mean = self.alpha / self.beta
+        self.mode = tt.maximum((self.alpha - 1) / self.beta, 0)
+        self.variance = self.alpha / self.beta**2
 
         assert_negative_support(alpha, 'alpha', 'Gamma')
         assert_negative_support(beta, 'beta', 'Gamma')
 
         self.dist_params = (self.alpha, self.beta)
 
-        super(Gamma, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Gamma, self).__init__(self.dist_params, ndim, size, dtype, *args,
+                                    **kwargs)
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
@@ -1025,6 +1041,8 @@ class InverseGamma(PositiveUnivariateContinuous):
         assert_negative_support(alpha, 'alpha', 'InverseGamma')
         assert_negative_support(beta, 'beta', 'InverseGamma')
 
+        self.dist_params = (self.alpha, self.beta)
+
         super(InverseGamma, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def _calculate_mean(self):
@@ -1034,9 +1052,6 @@ class InverseGamma(PositiveUnivariateContinuous):
         except ValueError:  # alpha is an array
             m[self.alpha <= 1] = np.inf
             return m
-
-        self.dist_params = (self.alpha, self.beta)
-
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -1048,8 +1063,8 @@ class InverseGamma(PositiveUnivariateContinuous):
     def logp(self, value):
         alpha = self.alpha
         beta = self.beta
-        return bound(logpow(beta, alpha) - gammaln(alpha) - beta / value
-                     + logpow(value, -alpha - 1),
+        return bound(logpow(beta, alpha) - gammaln(alpha) - beta / value +
+                     logpow(value, -alpha - 1),
                      value > 0, alpha > 0, beta > 0)
 
 
@@ -1075,7 +1090,9 @@ class ChiSquared(Gamma):
 
     def __init__(self, nu, *args, **kwargs):
         self.nu = tt.as_tensor_variable(nu)
-        super(ChiSquared, self).__init__(alpha=self.nu / 2., beta=tt.as_tensor_variable(0.5), *args, **kwargs)
+        super(ChiSquared, self).__init__(alpha=self.nu / 2.,
+                                         beta=tt.as_tensor_variable(0.5),
+                                         *args, **kwargs)
 
 
 class Weibull(PositiveUnivariateContinuous):
@@ -1114,7 +1131,8 @@ class Weibull(PositiveUnivariateContinuous):
 
         self.dist_params = (self.alpha, self.beta)
 
-        super(Weibull, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Weibull, self).__init__(self.dist_params, ndim, size, dtype,
+                                      *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -1301,15 +1319,16 @@ class ExGaussian(UnivariateContinuous):
         self.mu = tt.as_tensor_variable(mu)
         self.sigma = tt.as_tensor_variable(sigma)
         self.nu = tt.as_tensor_variable(nu)
-        self.mean = mu + nu
-        self.variance = (sigma**2) + (nu**2)
+        self.mean = self.mu + self.nu
+        self.variance = self.sigma**2 + self.nu**2
 
         assert_negative_support(sigma, 'sigma', 'ExGaussian')
         assert_negative_support(nu, 'nu', 'ExGaussian')
 
         self.dist_params = (self.mu, self.sigma, self.nu)
 
-        super(ExGaussian, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(ExGaussian, self).__init__(self.dist_params, ndim, size, dtype,
+                                         *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu],
@@ -1361,15 +1380,16 @@ class VonMises(UnivariateContinuous):
         Concentration (\frac{1}{kappa} is analogous to \sigma^2).
     """
 
-    def __init__(self, mu=0.0, kappa=None, transform='circular', ndim=None, size=None, dtype=None, *args, **kwargs):
-        self.mean = self.median = self.mode = self.mu = tt.as_tensor_variable(
-            mu)
+    def __init__(self, mu=0.0, kappa=None, transform='circular', ndim=None,
+                 size=None, dtype=None, *args, **kwargs):
+        self.mean = self.median = self.mode = self.mu = tt.as_tensor_variable(mu)
         self.kappa = tt.as_tensor_variable(kappa)
-        self.variance = 1. - i1(kappa) / i0(kappa)
+        self.variance = 1. - i1(self.kappa) / i0(self.kappa)
 
         self.dist_params = (self.mu, self.kappa)
 
-        super(VonMises, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(VonMises, self).__init__(self.dist_params, ndim, size, dtype,
+                                       *args, **kwargs)
 
         if transform == 'circular':
             self.transform = transforms.Circular()

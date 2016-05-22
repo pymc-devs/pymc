@@ -44,7 +44,8 @@ class Binomial(UnivariateDiscrete):
 
         self.dist_params = (self.n, self.p)
 
-        super(Binomial, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Binomial, self).__init__(
+            self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         n, p = draw_values([self.n, self.p], point=point)
@@ -90,6 +91,7 @@ class BetaBinomial(UnivariateDiscrete):
     beta : float
         beta > 0.
     """
+
     def __init__(self, alpha, beta, n, ndim=None, size=None, dtype=None, *args, **kwargs):
         self.alpha = tt.as_tensor_variable(alpha)
         self.beta = tt.as_tensor_variable(beta)
@@ -98,7 +100,8 @@ class BetaBinomial(UnivariateDiscrete):
 
         self.dist_params = (self.alpha, self.beta, self.n)
 
-        super(BetaBinomial, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(BetaBinomial, self).__init__(
+            self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def _random(self, alpha, beta, n, size=None):
         size = size or 1
@@ -154,7 +157,8 @@ class Bernoulli(UnivariateDiscrete):
 
         self.dist_params = (self.p,)
         # FIXME: bcast, etc.
-        super(Bernoulli, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Bernoulli, self).__init__(
+            self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         p = draw_values([self.p], point=point)
@@ -202,7 +206,8 @@ class Poisson(UnivariateDiscrete):
 
         self.dist_params = (self.mu,)
 
-        super(Poisson, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Poisson, self).__init__(self.dist_params,
+                                      ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu = draw_values([self.mu], point=point)
@@ -252,7 +257,8 @@ class NegativeBinomial(UnivariateDiscrete):
 
         self.dist_params = (self.mu, self.alpha)
 
-        super(NegativeBinomial, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(NegativeBinomial, self).__init__(
+            self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point)
@@ -301,7 +307,8 @@ class Geometric(UnivariateDiscrete):
         self.mode = tt.as_tensor_variable(1)
         self.dist_params = (self.p,)
 
-        super(Geometric, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Geometric, self).__init__(
+            self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         p = draw_values([self.p], point=point)
@@ -334,6 +341,7 @@ class DiscreteUniform(UnivariateDiscrete):
     upper : int
         Upper limit (upper > lower).
     """
+
     def __init__(self, lower, upper, ndim=None, size=None, dtype=None, *args, **kwargs):
         self.lower = tt.floor(lower).astype('int32')
         self.upper = tt.floor(upper).astype('int32')
@@ -341,7 +349,8 @@ class DiscreteUniform(UnivariateDiscrete):
             tt.floor((upper - lower) / 2.).astype('int32'), self.lower)
         self.dist_params = (self.lower, self.upper)
 
-        super(DiscreteUniform, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(DiscreteUniform, self).__init__(
+            self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
@@ -397,8 +406,8 @@ class Categorical(UnivariateDiscrete):
         self.dist_params = (self.p,)
         # FIXME: The stated support is univariate?
 
-        super(Categorical, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
-
+        super(Categorical, self).__init__(
+            self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         def random_choice(k, *args, **kwargs):
@@ -437,10 +446,12 @@ class ConstantDist(UnivariateDiscrete):
     value : float or int
         Constant parameter.
     """
+
     def __init__(self, c, ndim=None, size=None, dtype=None, *args, **kwargs):
         self.mean = self.median = self.mode = self.c = tt.as_tensor_variable(c)
         self.dist_params = (self.c,)
-        super(ConstantDist, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(ConstantDist, self).__init__(
+            self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         c = draw_values([self.c], point=point)
@@ -497,9 +508,10 @@ class ZeroInflatedPoisson(Discrete):
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
-        self.dist_params = (self.theta, self.z)
+        self.dist_params = (self.theta, self.psi)
 
-        super(ZeroInflatedPoisson, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(ZeroInflatedPoisson, self).__init__(
+            self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         theta, psi = draw_values([self.theta, self.psi], point=point)

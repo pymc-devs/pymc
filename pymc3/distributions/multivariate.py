@@ -88,17 +88,20 @@ class MvNormal(MultivariateContinuous):
         TODO
 
     """
-    def __init__(self, mu, tau, ndim=None, size=None, dtype=None, *args, **kwargs):
+    def __init__(self, mu, tau, ndim=None, size=None, dtype=None, *args,
+                 **kwargs):
         warnings.warn(('The calling signature of MvNormal() has changed. The new signature is:\n'
                        'MvNormal(name, mu, cov) instead of MvNormal(name, mu, tau).'
                        'You do not need to explicitly invert the covariance matrix anymore.'),
                       DeprecationWarning)
-        self.mean = self.median = self.mode = self.mu = tt.as_tensor_variable(mu)
-        self.tau, self.cov = get_tau_cov(mu, tau=tau, cov=cov)
+        # TODO: Need to apply replications/size.
+        self.mu = tt.as_tensor_variable(mu)
+        self.tau = tt.as_tensor_variable(tau)
 
         self.dist_params = (self.mu, self.tau)
 
-        # TODO: how do we want to use ndim and size?
+        self.median = self.mode = self.mean = self.mu
+        # TODO: How do we want to use ndim?
         shape_supp = self.mu.shape[-1]
         shape_ind = self.mu.shape[:-1]
 
@@ -167,10 +170,11 @@ class MvStudentT(MultivariateContinuous):
         Vector of means.
     """
     def __init__(self, nu, Sigma, mu=None, ndim=None, size=None, dtype=None, *args, **kwargs):
+        # TODO: Need to apply replications/size.
         self.nu = tt.as_tensor_variable(nu)
         self.Sigma = tt.as_tensor_variable(Sigma)
 
-        # TODO: do this correctly; what about replications?
+        # TODO: How do we want to use ndim?
         shape_supp = self.Sigma.shape[0]
         shape_ind = self.Sigma.shape[:-2]
 
@@ -246,18 +250,16 @@ class Dirichlet(MultivariateContinuous):
     as a parent of Multinomial and Categorical nevertheless.
     """
     def __init__(self, a, transform=transforms.stick_breaking, ndim=None, size=None, dtype=None, *args, **kwargs):
+        # TODO: Need to apply replications/size.
         self.a = tt.as_tensor_variable(a)
         self.mean = self.a / tt.sum(self.a)
         self.mode = tt.switch(tt.all(self.a > 1),
-                             (self.a - 1) / tt.sum(self.a - 1),
-                             np.nan)
+                              (self.a - 1) / tt.sum(self.a - 1),
+                              np.nan)
 
         self.dist_params = (self.a,)
 
-        self.mode = tt.switch(tt.all(a > 1),
-                              (a - 1) / tt.sum(a - 1),
-                              np.nan)
-        # TODO: do this correctly; what about replications?
+        # TODO: How do we want to use ndim?
         shape_supp = self.a.shape[-1]
         shape_ind = self.a.shape[:-1]
 
@@ -328,7 +330,9 @@ class Multinomial(MultivariateDiscrete):
         be non-negative and sum to 1 along the last axis. They will be automatically
         rescaled otherwise.
     """
-    def __init__(self, n, p, ndim=None, size=None, dtype=None, *args, **kwargs):
+    def __init__(self, n, p, ndim=None, size=None, dtype=None, *args,
+                 **kwargs):
+        # TODO: Need to apply replications/size.
         self.n = tt.as_tensor_variable(n, ndim=0)
         self.p = tt.as_tensor_variable(p)
         self.p = self.p / tt.sum(self.p, axis=-1, keepdims=True)
@@ -351,8 +355,8 @@ class Multinomial(MultivariateDiscrete):
 
         self.dist_params = (self.n, self.p)
 
-        # TODO: do this correctly; what about replications?
-        # check that n == len(p)?
+        # TODO: check that n == len(p)?
+        # TODO: How do we want to use ndim?
         shape_supp = self.n
         shape_ind = ()
 
@@ -479,7 +483,8 @@ class Wishart(MultivariateContinuous):
     use WishartBartlett or LKJCorr.
     """
 
-    def __init__(self, n, V, ndim=None, size=None, dtype=None, *args, **kwargs):
+    def __init__(self, n, V, ndim=None, size=None, dtype=None, *args,
+                 **kwargs):
         warnings.warn('The Wishart distribution can currently not be used '
                       'for MCMC sampling. The probability of sampling a '
                       'symmetric matrix is basically zero. Instead, please '
@@ -487,13 +492,13 @@ class Wishart(MultivariateContinuous):
                       'For more information on the issues surrounding the '
                       'Wishart see here: https://github.com/pymc-devs/pymc3/issues/538.',
                       UserWarning)
-        # TODO: allow tensor of independent n's.
+        # TODO: Need to apply replications/size.
         self.n = tt.as_tensor_variable(n, ndim=0)
         self.V = tt.as_tensor_variable(V)
 
         self.dist_params = (self.n, self.V)
 
-        # TODO: do this correctly; what about replications?
+        # TODO: How do we want to use ndim?
         shape_supp = self.V.shape[-1]
         shape_ind = ()
 
@@ -506,6 +511,10 @@ class Wishart(MultivariateContinuous):
         bcast = (False,)
         if dtype is None:
             dtype = self.V.dtype
+
+        self.mode = tt.switch(1 * (self.n >= self.shape_supp + 1),
+                              (self.n - self.shape_supp - 1) * self.V,
+                              np.nan)
 
         super(Wishart, self).__init__(shape_supp, shape_ind, (), bcast, dtype,
                                       *args, **kwargs)
@@ -648,10 +657,11 @@ class LKJCorr(MultivariateContinuous):
     """
 
     def __init__(self, n, p, ndim=None, size=None, dtype=None, *args, **kwargs):
-        # TODO: allow tensor of independent n's.
+        # TODO: Need to apply replications/size.
         self.n = tt.as_tensor_variable(n, ndim=0)
         self.p = tt.as_tensor_variable(p, ndim=0)
 
+        # TODO: How do we want to use ndim?
         n_elem = (self.p * (self.p - 1) / 2)
         shape_supp = n_elem
         self.mean = tt.zeros(n_elem)

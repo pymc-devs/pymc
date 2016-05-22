@@ -212,10 +212,14 @@ def TensorType(dtype, shape):
 
 class NoDistribution(Distribution):
 
-    def __init__(self, shape, dtype, testval=None, defaults=[], transform=None, parent_dist=None, *args, **kwargs):
-        super(NoDistribution, self).__init__(shape=shape, dtype=dtype,
-                                             testval=testval, defaults=defaults,
-                                             *args, **kwargs)
+    def __init__(self, shape_supp, shape_ind, shape_reps, bcast, dtype,
+                 testval=None, defaults=[], transform=None, parent_dist=None,
+                 *args, **kwargs):
+        super(NoDistribution, self).__init__(shape_supp, shape_ind, shape_reps,
+                                             bcast, dtype=dtype,
+                                             testval=testval,
+                                             defaults=defaults, *args,
+                                             **kwargs)
         self.parent_dist = parent_dist
 
     def __getattr__(self, name):
@@ -230,35 +234,40 @@ class NoDistribution(Distribution):
 
 class Discrete(Distribution):
     """Base class for discrete distributions"""
-
-    def __init__(self, ndim, size=(), dtype='int64', defaults=['mode'], *args, **kwargs):
+    def __init__(self, shape_supp, shape_ind, shape_reps, bcast, dtype='int64',
+                 defaults=['mode'], *args, **kwargs):
         if dtype != 'int64':
             raise TypeError('Discrete classes expect dtype to be int64.')
-        super(Discrete, self).__init__(
-            ndim, size, dtype, defaults=defaults, *args, **kwargs)
+        super(Discrete, self).__init__(shape_supp, shape_ind, shape_reps,
+                                       bcast, dtype, defaults=defaults, *args,
+                                       **kwargs)
 
 
 class Continuous(Distribution):
     """Base class for continuous distributions"""
 
     def __init__(self, shape_supp, shape_ind, shape_reps, bcast,
-            dtype='float64', defaults=['median', 'mean', 'mode'], *args, **kwargs):
+                 dtype='float64', defaults=['median', 'mean', 'mode'], *args,
+                 **kwargs):
         super(Continuous, self).__init__(shape_supp, shape_ind, shape_reps,
-                bcast, dtype, defaults=defaults, *args, **kwargs)
+                                         bcast, dtype, defaults=defaults,
+                                         *args, **kwargs)
 
 
 class DensityDist(Distribution):
     """Distribution based on a given log density function."""
 
-    def __init__(self, logp, ndim_support, ndim, size, bcast, dtype='float64', *args, **kwargs):
-        super(DensityDist, self).__init__(
-            ndim, size, bcast, dtype, *args, **kwargs)
+    def __init__(self, logp, ndim_support, ndim, size, bcast, dtype='float64',
+                 *args, **kwargs):
+        super(DensityDist, self).__init__(ndim, size, bcast, dtype, *args,
+                                          **kwargs)
         self.logp = logp
 
 
 class UnivariateContinuous(Continuous):
 
-    def __init__(self, dist_params, ndim=None, size=None, dtype=None, bcast=None, *args, **kwargs):
+    def __init__(self, dist_params, ndim=None, size=None, dtype=None,
+                 bcast=None, *args, **kwargs):
         """
 
         Parameters
