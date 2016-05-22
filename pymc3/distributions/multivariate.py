@@ -12,9 +12,9 @@ from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
 from . import transforms
-from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
+from .distribution import MultivariateContinuous, MultivariateDiscrete, draw_values, generate_samples
 from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln
 
@@ -58,7 +58,7 @@ def get_tau_cov(mu, tau=None, cov=None):
 
     return (tau, cov)
 
-class MvNormal(Continuous):
+class MvNormal(MultivariateContinuous):
     r"""
     Multivariate normal log-likelihood.
 
@@ -82,16 +82,31 @@ class MvNormal(Continuous):
         Covariance matrix.
     tau : array, optional
         Precision matrix.
-    """
+    ndim : int
+        TODO
+    size : tuple of ints
+        TODO
 
-    def __init__(self, mu, cov=None, tau=None, *args, **kwargs):
-        super(MvNormal, self).__init__(*args, **kwargs)
+    """
+    def __init__(self, mu, tau, ndim=None, size=None, dtype=None, *args, **kwargs):
         warnings.warn(('The calling signature of MvNormal() has changed. The new signature is:\n'
                        'MvNormal(name, mu, cov) instead of MvNormal(name, mu, tau).'
                        'You do not need to explicitly invert the covariance matrix anymore.'),
                       DeprecationWarning)
-        self.mean = self.median = self.mode = self.mu = mu
+        self.mean = self.median = self.mode = self.mu = tt.as_tensor_variable(mu)
         self.tau, self.cov = get_tau_cov(mu, tau=tau, cov=cov)
+
+        self.dist_params = (self.mu, self.tau)
+
+        # TODO: how do we want to use ndim and size?
+        shape_supp = self.mu[-1]
+        shape_ind = self.mu[:-1]
+
+        bcast = (False,) * (shape_supp.ndim + shape_ind.ndim)
+        if dtype is None:
+            dtype = self.mu.dtype
+
+        super(MvNormal, self).__init__(shape_supp, shape_ind, (), ndim, bcast, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None):
         mu, cov = draw_values([self.mu, self.cov], point=point)
@@ -119,40 +134,8 @@ class MvNormal(Continuous):
         result += (delta.dot(tau) * delta).sum(axis=delta.ndim - 1)
         return -1 / 2. * result
 
-    #def logp(self, value):
-    #    mu = tt.as_tensor_variable(self.mu)
-    #    tau = tt.as_tensor_variable(self.tau)
 
-    #    reps_shape_T = tau.shape[:-2]
-    #    reps_shape_prod = tt.prod(reps_shape_T, keepdims=True)
-    #    dist_shape_T = mu.shape[-1:]
-
-    #    # collapse reps dimensions
-    #    flat_supp_shape = tt.concatenate([reps_shape_prod, dist_shape_T])
-    #    mus_collapsed = mu.reshape(flat_supp_shape, ndim=2)
-    #    taus_collapsed = tau.reshape(tt.concatenate([reps_shape_prod,
-    #        dist_shape_T, dist_shape_T]), ndim=3)
-
-    #    # force value to conform to reps_shape
-    #    value_reshape = tt.ones_like(mu) * value
-    #    values_collapsed = value_reshape.reshape(flat_supp_shape, ndim=2)
-
-    #    def single_logl(_mu, _tau, _value, k):
-    #        delta = _value - _mu
-    #        result = k * tt.log(2 * np.pi) + tt.log(det(_tau))
-    #        result += tt.square(delta.dot(_tau)).sum(axis=-1)
-    #        return -result/2
-
-    #    from theano import scan
-    #    res, _ = scan(fn=single_logl
-    #            , sequences=[mus_collapsed, taus_collapsed, values_collapsed]
-    #            , non_sequences=[dist_shape_T]
-    #            , strict=True
-    #            )
-    #    return res.sum()
-
-
-class MvStudentT(Continuous):
+class MvStudentT(MultivariateContinuous):
     R"""
     Multivariate Student-T log-likelihood.
 
@@ -178,14 +161,26 @@ class MvStudentT(Continuous):
     mu : array
         Vector of means.
     """
+    def __init__(self, nu, Sigma, mu=None, ndim=None, size=None, dtype=None, *args, **kwargs):
+        self.nu = tt.as_tensor_variable(nu)
+        self.Sigma = tt.as_tensor_variable(Sigma)
 
-    def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
-        super(MvStudentT, self).__init__(*args, **kwargs)
-        self.nu = nu
-        self.mu = np.zeros(Sigma.shape[0]) if mu is None else mu
-        self.Sigma = Sigma
+        # TODO: do this correctly; what about replications?
+        shape_supp = self.Sigma.shape[0]
+        shape_ind = self.Sigma.shape[:-2]
 
+        self.mu = tt.as_tensor_variable(tt.zeros(shape_supp) if mu is None else mu)
+
+        self.dist_params = (self.nu, self.mu, self.Sigma)
         self.mean = self.median = self.mode = self.mu = mu
+
+        # FIXME: this isn't correct/ideal
+        bcast = (False,) * (shape_supp.ndim + shape_ind.ndim)
+        if dtype is None:
+            dtype = self.mu.dtype
+
+        super(MvStudentT, self).__init__(shape_supp, shape_ind, (), ndim,
+                                         bcast, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None):
         chi2 = np.random.chisquare
@@ -216,7 +211,7 @@ class MvStudentT(Continuous):
         return log_pdf
 
 
-class Dirichlet(Continuous):
+class Dirichlet(MultivariateContinuous):
     R"""
     Dirichlet log-likelihood.
 
@@ -245,20 +240,28 @@ class Dirichlet(Continuous):
     Only the first `k-1` elements of `x` are expected. Can be used
     as a parent of Multinomial and Categorical nevertheless.
     """
+    def __init__(self, a, transform=transforms.stick_breaking, ndim=None, size=None, dtype=None, *args, **kwargs):
+        self.a = tt.as_tensor_variable(a)
+        self.mean = self.a / tt.sum(self.a)
+        self.mode = tt.switch(tt.all(self.a > 1),
+                             (self.a - 1) / tt.sum(self.a - 1),
+                             np.nan)
 
-    def __init__(self, a, transform=transforms.stick_breaking,
-                 *args, **kwargs):
-        shape = a.shape[-1]
-        kwargs.setdefault("shape", shape)
-        super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
-
-        self.k = shape
-        self.a = a
-        self.mean = a / tt.sum(a)
+        self.dist_params = (self.a,)
 
         self.mode = tt.switch(tt.all(a > 1),
                               (a - 1) / tt.sum(a - 1),
                               np.nan)
+        # TODO: do this correctly; what about replications?
+        shape_supp = self.a.shape[-1]
+        shape_ind = self.a.shape[:-1]
+
+        # FIXME: this isn't correct/ideal
+        bcast = (False,) * (shape_supp.ndim + shape_ind.ndim)
+        if dtype is None:
+            dtype = self.mu.dtype
+
+        super(Dirichlet, self).__init__(shape_supp, shape_ind, (), ndim, bcast, dtype, transform=transform, *args, **kwargs)
 
     def random(self, point=None, size=None):
         a = draw_values([self.a], point=point)
@@ -267,12 +270,12 @@ class Dirichlet(Continuous):
             return stats.dirichlet.rvs(a, None if size == a.shape else size)
 
         samples = generate_samples(_random, a,
-                                   dist_shape=self.shape,
+                                   dist_shape=self.shape_support,
                                    size=size)
         return samples
 
     def logp(self, value):
-        k = self.k
+        k = self.shape_supp
         a = self.a
 
         # only defined for sum(value) == 1
@@ -283,7 +286,7 @@ class Dirichlet(Continuous):
                      broadcast_conditions=False)
 
 
-class Multinomial(Discrete):
+class Multinomial(MultivariateDiscrete):
     R"""
     Multinomial log-likelihood.
 
@@ -314,8 +317,7 @@ class Multinomial(Discrete):
         be non-negative and sum to 1 along the last axis. They will be automatically
         rescaled otherwise.
     """
-
-    def __init__(self, n, p, *args, **kwargs):
+    def __init__(self, n, p, ndim=None, size=None, dtype=None, *args, **kwargs):
         super(Multinomial, self).__init__(*args, **kwargs)
 
         p = p / tt.sum(p, axis=-1, keepdims=True)
@@ -335,6 +337,21 @@ class Multinomial(Discrete):
 
         self.mean = self.n * self.p
         self.mode = tt.cast(tt.round(self.mean), 'int32')
+
+        self.dist_params = (self.n, self.p)
+
+        # TODO: do this correctly; what about replications?
+        # check that n == len(p)?
+        shape_supp = tuple(self.n)
+        shape_ind = ()
+
+        # FIXME: this isn't correct/ideal
+        bcast = (False,)
+        if dtype is None:
+            dtype = self.p.dtype
+
+        # FIXME: n.shape == p.shape? bcast, etc.
+        super(Multinomial, self).__init__(shape_supp, shape_ind, (), ndim, bcast, dtype, *args, **kwargs)
 
     def _random(self, n, p, size=None):
         if size == p.shape:
@@ -413,7 +430,7 @@ class PosDefMatrix(theano.Op):
 matrix_pos_def = PosDefMatrix()
 
 
-class Wishart(Continuous):
+class Wishart(MultivariateContinuous):
     R"""
     Wishart log-likelihood.
 
@@ -450,8 +467,7 @@ class Wishart(Continuous):
     use WishartBartlett or LKJCorr.
     """
 
-    def __init__(self, n, V, *args, **kwargs):
-        super(Wishart, self).__init__(*args, **kwargs)
+    def __init__(self, n, V, ndim=None, size=None, dtype=None, *args, **kwargs):
         warnings.warn('The Wishart distribution can currently not be used '
                       'for MCMC sampling. The probability of sampling a '
                       'symmetric matrix is basically zero. Instead, please '
@@ -459,17 +475,30 @@ class Wishart(Continuous):
                       'For more information on the issues surrounding the '
                       'Wishart see here: https://github.com/pymc-devs/pymc3/issues/538.',
                       UserWarning)
-        self.n = n
-        self.p = p = V.shape[0]
-        self.V = V
+        # TODO: allow tensor of independent n's.
+        self.n = tt.as_tensor_variable(n, ndim=0)
+        self.V = tt.as_tensor_variable(V)
         self.mean = n * V
-        self.mode = tt.switch(1 * (n >= p + 1),
-                              (n - p - 1) * V,
-                              np.nan)
+        self.mode = tt.switch(1 * (n >= self.shape_support + 1),
+                             (n - self.shape_support - 1) * V,
+                             np.nan)
+
+        self.dist_params = (self.n, self.V)
+
+        # TODO: do this correctly; what about replications?
+        shape_supp = tuple(self.V.shape[-1])
+        shape_ind = ()
+
+        # FIXME: this isn't correct/ideal
+        bcast = (False,)
+        if dtype is None:
+            dtype = self.V.dtype
+
+        super(Wishart, self).__init__(shape_supp, shape_ind, (), ndim, bcast, dtype, *args, **kwargs)
 
     def logp(self, X):
         n = self.n
-        p = self.p
+        p = self.shape_support
         V = self.V
 
         IVI = det(V)
@@ -564,7 +593,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         return Deterministic(name, tt.dot(tt.dot(tt.dot(L, A), A.T), L.T))
 
 
-class LKJCorr(Continuous):
+class LKJCorr(MultivariateContinuous):
     R"""
     The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
 
@@ -604,16 +633,30 @@ class LKJCorr(Continuous):
         100(9), pp.1989-2001.
     """
 
-    def __init__(self, n, p, *args, **kwargs):
-        self.n = n
-        self.p = p
-        n_elem = int(p * (p - 1) / 2)
-        self.mean = np.zeros(n_elem)
-        super(LKJCorr, self).__init__(shape=n_elem, *args, **kwargs)
+    def __init__(self, n, p, ndim=None, size=None, dtype=None, *args, **kwargs):
+        self.n = tt.as_tensor_variable(n, ndim=0)
+        self.p = tt.as_tensor_variable(p, ndim=0)
+        n_elem = (p * (p - 1) / 2)
+        self.mean = tt.zeros(n_elem)
+        self.shape_support = n_elem
 
-        self.tri_index = np.zeros([p, p], dtype=int)
-        self.tri_index[np.triu_indices(p, k=1)] = np.arange(n_elem)
-        self.tri_index[np.triu_indices(p, k=1)[::-1]] = np.arange(n_elem)
+        # FIXME: triu, bcast, etc.
+        self.tri_index = tt.zeros((p, p), dtype=int)
+        self.tri_index[tt.triu(p, k=1)] = tt.arange(n_elem)
+        self.tri_index[tt.triu(p, k=1)[::-1]] = tt.arange(n_elem)
+
+        self.dist_params = (self.n, self.p)
+
+        # TODO: do this correctly; what about replications?
+        shape_supp = tuple(self.p)
+        shape_ind = ()
+
+        # FIXME: this isn't correct/ideal
+        bcast = (False,)
+        if dtype is None:
+            dtype = self.n.dtype
+
+        super(LKJCorr, self).__init__(shape_supp, shape_ind, (), ndim, bcast, dtype, *args, **kwargs)
 
     def _normalizing_constant(self, n, p):
         if n == 1:

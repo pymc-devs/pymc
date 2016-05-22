@@ -14,7 +14,7 @@ import warnings
 
 from . import transforms
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
-from .distribution import Continuous, draw_values, generate_samples
+from .distribution import UnivariateContinuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
@@ -23,20 +23,20 @@ __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'VonMises', 'SkewNormal']
 
 
-class PositiveContinuous(Continuous):
-    """Base class for positive continuous distributions"""
+class PositiveUnivariateContinuous(UnivariateContinuous):
+    """Base class for positive univariate continuous distributions"""
 
-    def __init__(self, transform=transforms.log, *args, **kwargs):
-        super(PositiveContinuous, self).__init__(
-            transform=transform, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        transform = kwargs.get('transform', transforms.log)
+        super(PositiveUnivariateContinuous, self).__init__(transform=transform, *args, **kwargs)
 
 
-class UnitContinuous(Continuous):
-    """Base class for continuous distributions on [0,1]"""
+class UnitUnivariateContinuous(UnivariateContinuous):
+    """Base class for univariate continuous distributions in [0,1]"""
 
-    def __init__(self, transform=transforms.logodds, *args, **kwargs):
-        super(UnitContinuous, self).__init__(
-            transform=transform, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        transform = kwargs.get('transform', transforms.logodds)
+        super(UnitUnivariateContinuous, self).__init__(transform=transform, *args, **kwargs)
 
 def assert_negative_support(var, label, distname, value=-1e-6):
     # Checks for evidence of positive support for a variable
@@ -98,10 +98,10 @@ def get_tau_sd(tau=None, sd=None):
     tau = 1. * tau
     sd = 1. * sd
 
-    return (tau, sd)
+    return (tt.as_tensor_variable(tau), tt.as_tensor_variable(sd))
 
 
-class Uniform(Continuous):
+class Uniform(UnivariateContinuous):
     R"""
     Continuous uniform log-likelihood.
 
@@ -123,14 +123,17 @@ class Uniform(Continuous):
         Upper limit.
     """
 
-    def __init__(self, lower=0, upper=1, transform='interval',
-                 *args, **kwargs):
-        super(Uniform, self).__init__(ndim=1, *args, **kwargs)
+    def __init__(self, lower=0, upper=1, transform='interval', size=None, ndim=None, dtype=None, *args, **kwargs):
 
+        lower = tt.as_tensor_variable(lower)
+        upper = tt.as_tensor_variable(upper)
+        self.dist_params = (lower, upper)
         self.lower = lower
         self.upper = upper
         self.mean = (upper + lower) / 2.
         self.median = self.mean
+
+        super(Uniform, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
         if transform == 'interval':
             self.transform = transforms.interval(lower, upper)
@@ -150,15 +153,18 @@ class Uniform(Continuous):
                               value >= lower, value <= upper)
 
 
-class Flat(Continuous):
+class Flat(UnivariateContinuous):
     """
     Uninformative log-likelihood that returns 0 regardless of
     the passed value.
     """
 
-    def __init__(self, *args, **kwargs):
-        super(Flat, self).__init__(ndim=1, *args, **kwargs)
-        self.median = 0
+    def __init__(self, ndim=None, size=None, dtype=None, *args, **kwargs):
+
+        self.median = tt.as_tensor_variable(0.)
+        self.dist_params = (self.median,)
+
+        super(Flat, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         raise ValueError('Cannot sample from Flat distribution')
@@ -167,7 +173,7 @@ class Flat(Continuous):
         return tt.zeros_like(value)
 
 
-class Normal(Continuous):
+class Normal(UnivariateContinuous):
     R"""
     Univariate normal log-likelihood.
 
@@ -200,12 +206,7 @@ class Normal(Continuous):
     tau : float
         Precision (tau > 0).
     """
-<<<<<<< 5696ed49a2fd50b7662a0089e6c2573a2600a8ac
-
     def __init__(self, *args, **kwargs):
-
-        super(Normal, self).__init__(ndim=1, *args, **kwargs)
-
         # FIXME In order to catch the case where Normal('x', 0, .1) is
         # called to display a warning we have to fetch the args and
         # kwargs manually.  After a certain period we should revert
@@ -234,7 +235,9 @@ class Normal(Continuous):
         assert_negative_support(sd, 'sd', 'Normal')
         assert_negative_support(tau, 'tau', 'Normal')
 
-        super(Normal, self).__init__(**kwargs)
+        self.dist_params = (self.mu, self.tau)
+
+        super(Normal, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu, tau, sd = draw_values([self.mu, self.tau, self.sd],
@@ -251,7 +254,7 @@ class Normal(Continuous):
                      sd > 0)
 
 
-class HalfNormal(PositiveContinuous):
+class HalfNormal(PositiveUnivariateContinuous):
     R"""
     Half-normal log-likelihood.
 
@@ -274,14 +277,17 @@ class HalfNormal(PositiveContinuous):
     tau : float
         Precision (tau > 0).
     """
-    def __init__(self, sd=None, tau=None, *args, **kwargs):
-        super(HalfNormal, self).__init__(ndim=1, *args, **kwargs)
+    def __init__(self, tau=None, sd=None, ndim=None, size=None, dtype=None, *args, **kwargs):
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.mean = tt.sqrt(2 / (np.pi * self.tau))
         self.variance = (1. - 2 / np.pi) / self.tau
 
         assert_negative_support(tau, 'tau', 'HalfNormal')
         assert_negative_support(sd, 'sd', 'HalfNormal')
+
+        self.dist_params = (self.tau,)
+
+        super(HalfNormal, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         sd = draw_values([self.sd], point=point)
@@ -297,7 +303,7 @@ class HalfNormal(PositiveContinuous):
                      tau > 0, sd > 0)
 
 
-class Wald(PositiveContinuous):
+class Wald(PositiveUnivariateContinuous):
     R"""
     Wald log-likelihood.
 
@@ -353,8 +359,8 @@ class Wald(PositiveContinuous):
         The American Statistician, Vol. 30, No. 2, pp. 88-90
     """
 
-    def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
-        super(Wald, self).__init__(ndim=1, *args, **kwargs)
+    def __init__(self, mu=None, lam=None, phi=None, alpha=0., ndim=None, size=None, dtype=None, *args, **kwargs):
+
         self.mu, self.lam, self.phi = self.get_mu_lam_phi(mu, lam, phi)
         self.alpha = alpha
         self.mean = self.mu + alpha
@@ -366,22 +372,29 @@ class Wald(PositiveContinuous):
         assert_negative_support(mu, 'mu', 'Wald')
         assert_negative_support(lam, 'lam', 'Wald')
 
+        self.dist_params = (self.mu, self.lam, self.alpha)
+
+        super(Wald, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+
     def get_mu_lam_phi(self, mu, lam, phi):
+        res = None
         if mu is None:
             if lam is not None and phi is not None:
-                return lam / phi, lam, phi
+                res = (lam / phi, lam, phi)
         else:
             if lam is None:
                 if phi is None:
-                    return mu, 1., 1. / mu
+                    res = (mu, 1., 1. / mu)
                 else:
-                    return mu, mu * phi, phi
+                    res = (mu, mu * phi, phi)
             else:
                 if phi is None:
-                    return mu, lam, lam / mu
+                    res = (mu, lam, lam / mu)
 
-        raise ValueError('Wald distribution must specify either mu only, '
-                         'mu and lam, mu and phi, or lam and phi.')
+        if res is None:
+            raise ValueError('Wald distribution must specify either mu only, '
+                             'mu and lam, mu and phi, or lam and phi.')
+        return map(tt.as_tensor_variable, res)
 
     def _random(self, mu, lam, alpha, size=None):
         v = np.random.normal(size=size)**2
@@ -414,7 +427,7 @@ class Wald(PositiveContinuous):
                      mu > 0, lam > 0, alpha >= 0)
 
 
-class Beta(UnitContinuous):
+class Beta(UnitUnivariateContinuous):
     R"""
     Beta log-likelihood.
 
@@ -457,10 +470,7 @@ class Beta(UnitContinuous):
     the binomial distribution.
     """
 
-    def __init__(self, alpha=None, beta=None, mu=None, sd=None,
-                 *args, **kwargs):
-        super(Beta, self).__init__(ndim=1, *args, **kwargs)
-
+    def __init__(self, alpha=None, beta=None, mu=None, sd=None, ndim=None, size=None, dtype=None, *args, **kwargs):
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
         self.beta = beta
@@ -470,6 +480,10 @@ class Beta(UnitContinuous):
 
         assert_negative_support(alpha, 'alpha', 'Beta')
         assert_negative_support(beta, 'beta', 'Beta')
+
+        self.dist_params = (self.alpha, self.beta)
+
+        super(Beta, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
@@ -482,7 +496,7 @@ class Beta(UnitContinuous):
             raise ValueError('Incompatible parameterization. Either use alpha '
                              'and beta, or mu and sd to specify distribution.')
 
-        return alpha, beta
+        return tt.as_tensor_variable(alpha), tt.as_tensor_variable(beta)
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -501,7 +515,7 @@ class Beta(UnitContinuous):
                      alpha > 0, beta > 0)
 
 
-class Exponential(PositiveContinuous):
+class Exponential(PositiveUnivariateContinuous):
     R"""
     Exponential log-likelihood.
 
@@ -521,16 +535,19 @@ class Exponential(PositiveContinuous):
         Rate or inverse scale (lam > 0)
     """
 
-    def __init__(self, lam, *args, **kwargs):
-        super(Exponential, self).__init__(ndim=1, *args, **kwargs)
+    def __init__(self, lam, ndim=None, size=None, dtype=None, *args, **kwargs):
         self.lam = lam
         self.mean = 1. / lam
         self.median = self.mean * tt.log(2)
         self.mode = 0
 
+        self.dist_params = (self.lam,)
+
         self.variance = lam**-2
 
         assert_negative_support(lam, 'lam', 'Exponential')
+
+        super(Exponential, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         lam = draw_values([self.lam], point=point)
@@ -543,7 +560,7 @@ class Exponential(PositiveContinuous):
         return bound(tt.log(lam) - lam * value, value > 0, lam > 0)
 
 
-class Laplace(Continuous):
+class Laplace(UnivariateContinuous):
     R"""
     Laplace log-likelihood.
 
@@ -566,14 +583,17 @@ class Laplace(Continuous):
         Scale parameter (b > 0).
     """
 
-    def __init__(self, mu, b, *args, **kwargs):
-        super(Laplace, self).__init__(ndim=1, *args, **kwargs)
-        self.b = b
-        self.mean = self.median = self.mode = self.mu = mu
-
+    def __init__(self, mu, b, ndim=None, size=None, dtype=None, *args, **kwargs):
+        self.b = tt.as_tensor_variable(b)
+        self.mean = self.median = self.mode = self.mu = tt.as_tensor_variable(
+            mu)
         self.variance = 2 * b**2
 
         assert_negative_support(b, 'b', 'Laplace')
+
+        self.dist_params = (self.b, self.mu)
+
+        super(Laplace, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu, b = draw_values([self.mu, self.b], point=point)
@@ -588,7 +608,7 @@ class Laplace(Continuous):
         return -tt.log(2 * b) - abs(value - mu) / b
 
 
-class Lognormal(PositiveContinuous):
+class Lognormal(PositiveUnivariateContinuous):
     R"""
     Log-normal log-likelihood.
 
@@ -616,11 +636,7 @@ class Lognormal(PositiveContinuous):
     tau : float
         Scale parameter (tau > 0).
     """
-<<<<<<< 5696ed49a2fd50b7662a0089e6c2573a2600a8ac
-
-    def __init__(self, mu=0, sd=None, tau=None, *args, **kwargs):
-        super(Lognormal, self).__init__(ndim=1, *args, **kwargs)
-
+    def __init__(self, mu=0, tau=1, ndim=None, size=None, dtype=None, *args, **kwargs):
         self.mu = mu
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
 
@@ -631,6 +647,10 @@ class Lognormal(PositiveContinuous):
 
         assert_negative_support(tau, 'tau', 'Lognormal')
         assert_negative_support(sd, 'sd', 'Lognormal')
+
+        self.dist_params = (self.mu, self.tau)
+
+        super(Lognormal, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def _random(self, mu, tau, size=None):
         samples = np.random.normal(size=size)
@@ -651,13 +671,13 @@ class Lognormal(PositiveContinuous):
                      tau > 0)
 
 
-class StudentT(Continuous):
-    R"""
+class StudentT(UnivariateContinuous):
+    r"""
     Non-central Student's T log-likelihood.
 
     Describes a normal variable whose precision is gamma distributed.
     If only nu parameter is passed, this specifies a standard (central)
-    Student's T.
+    Student's tt.
 
     .. math::
 
@@ -680,8 +700,8 @@ class StudentT(Continuous):
         Scale parameter (lam > 0).
     """
 
-    def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
-        super(StudentT, self).__init__(ndim=1, **args, **kwargs)
+    def __init__(self, nu, mu=0, lam=None, sd=None, ndim=None,
+                 size=None, dtype=None, *args, **kwargs):
         self.nu = nu = tt.as_tensor_variable(nu)
         self.lam, self.sd = get_tau_sd(tau=lam, sd=sd)
         self.mean = self.median = self.mode = self.mu = mu
@@ -692,6 +712,9 @@ class StudentT(Continuous):
 
         assert_negative_support(lam, 'lam (sd)', 'StudentT')
         assert_negative_support(nu, 'nu', 'StudentT')
+
+        self.dist_params = (self.nu, self.mu, self.lam)
+        super(StudentT, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         nu, mu, lam = draw_values([self.nu, self.mu, self.lam],
@@ -713,7 +736,7 @@ class StudentT(Continuous):
                      lam > 0, nu > 0, sd > 0)
 
 
-class Pareto(PositiveContinuous):
+class Pareto(PositiveUnivariateContinuous):
     R"""
     Pareto log-likelihood.
 
@@ -738,13 +761,10 @@ class Pareto(PositiveContinuous):
     m : float
         Scale parameter (m > 0).
     """
-
-    def __init__(self, alpha, m, *args, **kwargs):
-        super(Pareto, self).__init__(ndim=1, *args, **kwargs)
-        self.alpha = alpha
-        self.m = m
-        self.mean = tt.switch(tt.gt(alpha, 1), alpha *
-                              m / (alpha - 1.), np.inf)
+    def __init__(self, alpha, m, ndim=None, size=None, dtype=None, *args, **kwargs):
+        self.alpha = tt.as_tensor_variable(alpha)
+        self.m = tt.as_tensor_variable(m)
+        self.mean = tt.switch(tt.gt(alpha, 1), alpha * m / (alpha - 1.), np.inf)
         self.median = m * 2.**(1. / alpha)
         self.variance = tt.switch(
             tt.gt(alpha, 2),
@@ -754,6 +774,9 @@ class Pareto(PositiveContinuous):
         assert_negative_support(alpha, 'alpha', 'Pareto')
         assert_negative_support(m, 'm', 'Pareto')
 
+        self.dist_params = (self.alpha, self.m)
+
+        super(Pareto, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
@@ -774,7 +797,7 @@ class Pareto(PositiveContinuous):
                      value >= m, alpha > 0, m > 0)
 
 
-class Cauchy(Continuous):
+class Cauchy(UnivariateContinuous):
     R"""
     Cauchy log-likelihood.
 
@@ -800,10 +823,13 @@ class Cauchy(Continuous):
         Scale parameter > 0
     """
 
-    def __init__(self, alpha, beta, *args, **kwargs):
-        super(Cauchy, self).__init__(ndim=1, *args, **kwargs)
-        self.median = self.mode = self.alpha = alpha
-        self.beta = beta
+    def __init__(self, alpha, beta, ndim=None, size=None, dtype=None, *args, **kwargs):
+        self.median = self.mode = self.alpha = tt.as_tensor_variable(alpha)
+        self.beta = tt.as_tensor_variable(beta)
+
+        self.dist_params = (self.alpha, self.beta)
+
+        super(Cauchy, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
         assert_negative_support(beta, 'beta', 'Cauchy')
 
@@ -826,7 +852,7 @@ class Cauchy(Continuous):
                      beta > 0)
 
 
-class HalfCauchy(PositiveContinuous):
+class HalfCauchy(PositiveUnivariateContinuous):
     R"""
     Half-Cauchy log-likelihood.
 
@@ -847,11 +873,14 @@ class HalfCauchy(PositiveContinuous):
         Scale parameter (beta > 0).
     """
 
-    def __init__(self, beta, *args, **kwargs):
-        super(HalfCauchy, self).__init__(ndim=1, *args, **kwargs)
-        self.mode = 0
+    def __init__(self, beta, ndim=None, size=None, dtype=None, *args, **kwargs):
+        self.mode = tt.as_tensor_variable(0.)
+        self.beta = tt.as_tensor_variable(beta)
         self.median = beta
-        self.beta = beta
+
+        self.dist_params = (self.beta,)
+
+        super(HalfCauchy, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
         assert_negative_support(beta, 'beta', 'HalfCauchy')
 
@@ -872,7 +901,7 @@ class HalfCauchy(PositiveContinuous):
                      value >= 0, beta > 0)
 
 
-class Gamma(PositiveContinuous):
+class Gamma(PositiveUnivariateContinuous):
     R"""
     Gamma log-likelihood.
 
@@ -911,9 +940,7 @@ class Gamma(PositiveContinuous):
         Alternative scale parameter (sd > 0).
     """
 
-    def __init__(self, alpha=None, beta=None, mu=None, sd=None,
-                 *args, **kwargs):
-        super(Gamma, self).__init__(ndim=1, *args, **kwargs)
+    def __init__(self, alpha=None, beta=None, mu=None, sd=None, ndim=None, size=None, dtype=None, *args, **kwargs):
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
         self.beta = beta
@@ -923,6 +950,10 @@ class Gamma(PositiveContinuous):
 
         assert_negative_support(alpha, 'alpha', 'Gamma')
         assert_negative_support(beta, 'beta', 'Gamma')
+
+        self.dist_params = (self.alpha, self.beta)
+
+        super(Gamma, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
@@ -935,7 +966,7 @@ class Gamma(PositiveContinuous):
                              'alpha and beta, or mu and sd to specify '
                              'distribution.')
 
-        return alpha, beta
+        return tt.as_tensor_variable(alpha), tt.as_tensor_variable(beta)
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -956,7 +987,7 @@ class Gamma(PositiveContinuous):
             beta > 0)
 
 
-class InverseGamma(PositiveContinuous):
+class InverseGamma(PositiveUnivariateContinuous):
     R"""
     Inverse gamma log-likelihood, the reciprocal of the gamma distribution.
 
@@ -980,9 +1011,7 @@ class InverseGamma(PositiveContinuous):
     beta : float
         Scale parameter (beta > 0).
     """
-
-    def __init__(self, alpha, beta=1, *args, **kwargs):
-        super(InverseGamma, self).__init__(ndim=1, *args, **kwargs)
+    def __init__(self, alpha, beta=1., ndim=None, size=None, dtype=None, *args, **kwargs):
         self.alpha = alpha
         self.beta = beta
         self.mean = self._calculate_mean()
@@ -993,6 +1022,8 @@ class InverseGamma(PositiveContinuous):
         assert_negative_support(alpha, 'alpha', 'InverseGamma')
         assert_negative_support(beta, 'beta', 'InverseGamma')
 
+        super(InverseGamma, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+
     def _calculate_mean(self):
         m = self.beta / (self.alpha - 1.)
         try:
@@ -1000,6 +1031,9 @@ class InverseGamma(PositiveContinuous):
         except ValueError:  # alpha is an array
             m[self.alpha <= 1] = np.inf
             return m
+
+        self.dist_params = (self.alpha, self.beta)
+
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -1037,12 +1071,11 @@ class ChiSquared(Gamma):
     """
 
     def __init__(self, nu, *args, **kwargs):
-        self.nu = nu
-        super(ChiSquared, self).__init__(ndim=1, alpha=nu / 2., beta=0.5,
-                                         *args, **kwargs)
+        self.nu = tt.as_tensor_variable(nu)
+        super(ChiSquared, self).__init__(alpha=self.nu / 2., beta=tt.as_tensor_variable(0.5), *args, **kwargs)
 
 
-class Weibull(PositiveContinuous):
+class Weibull(PositiveUnivariateContinuous):
     R"""
     Weibull log-likelihood.
 
@@ -1065,11 +1098,9 @@ class Weibull(PositiveContinuous):
     beta : float
         Scale parameter (beta > 0).
     """
-
-    def __init__(self, alpha, beta, *args, **kwargs):
-        super(Weibull, self).__init__(ndim=1, *args, **kwargs)
-        self.alpha = alpha
-        self.beta = beta
+    def __init__(self, alpha, beta, ndim=None, size=None, dtype=None, *args, **kwargs):
+        self.alpha = tt.as_tensor_variable(alpha)
+        self.beta = tt.as_tensor_variable(beta)
         self.mean = beta * tt.exp(gammaln(1 + 1. / alpha))
         self.median = beta * tt.exp(gammaln(tt.log(2)))**(1. / alpha)
         self.variance = (beta**2) * \
@@ -1077,6 +1108,10 @@ class Weibull(PositiveContinuous):
 
         assert_negative_support(alpha, 'alpha', 'Weibull')
         assert_negative_support(beta, 'beta', 'Weibull')
+
+        self.dist_params = (self.alpha, self.beta)
+
+        super(Weibull, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -1098,7 +1133,7 @@ class Weibull(PositiveContinuous):
                      value >= 0, alpha > 0, beta > 0)
 
 
-class Bounded(Continuous):
+class Bounded(UnivariateContinuous):
     R"""
     An upper, lower or upper+lower bounded distribution
 
@@ -1214,7 +1249,7 @@ def StudentTpos(*args, **kwargs):
 HalfStudentT = Bound(StudentT, lower=0)
 
 
-class ExGaussian(Continuous):
+class ExGaussian(UnivariateContinuous):
     R"""
     Exponentially modified Gaussian log-likelihood.
 
@@ -1259,16 +1294,19 @@ class ExGaussian(Continuous):
         Vol. 4, No. 1, pp 35-45.
     """
 
-    def __init__(self, mu, sigma, nu, *args, **kwargs):
-        super(ExGaussian, self).__init__(ndim=1, *args, **kwargs)
-        self.mu = mu
-        self.sigma = sigma
-        self.nu = nu
+    def __init__(self, mu, sigma, nu, ndim=None, size=None, dtype=None, *args, **kwargs):
+        self.mu = tt.as_tensor_variable(mu)
+        self.sigma = tt.as_tensor_variable(sigma)
+        self.nu = tt.as_tensor_variable(nu)
         self.mean = mu + nu
         self.variance = (sigma**2) + (nu**2)
 
         assert_negative_support(sigma, 'sigma', 'ExGaussian')
         assert_negative_support(nu, 'nu', 'ExGaussian')
+
+        self.dist_params = (self.mu, self.sigma, self.nu)
+
+        super(ExGaussian, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu],
@@ -1296,7 +1334,7 @@ class ExGaussian(Continuous):
         return bound(lp, sigma > 0., nu > 0.)
 
 
-class VonMises(Continuous):
+class VonMises(UnivariateContinuous):
     R"""
     Univariate VonMises log-likelihood.
 
@@ -1320,12 +1358,15 @@ class VonMises(Continuous):
         Concentration (\frac{1}{kappa} is analogous to \sigma^2).
     """
 
-    def __init__(self, mu=0.0, kappa=None, transform='circular',
-                 *args, **kwargs):
-        super(VonMises, self).__init__(ndim=1, *args, **kwargs)
-        self.mean = self.median = self.mode = self.mu = mu
-        self.kappa = kappa
-        self.variance = 1 - i1(kappa) / i0(kappa)
+    def __init__(self, mu=0.0, kappa=None, transform='circular', ndim=None, size=None, dtype=None, *args, **kwargs):
+        self.mean = self.median = self.mode = self.mu = tt.as_tensor_variable(
+            mu)
+        self.kappa = tt.as_tensor_variable(kappa)
+        self.variance = 1. - i1(kappa) / i0(kappa)
+
+        self.dist_params = (self.mu, self.kappa)
+
+        super(VonMises, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
 
         if transform == 'circular':
             self.transform = transforms.Circular()

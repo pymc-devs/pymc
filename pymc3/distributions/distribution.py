@@ -1,14 +1,17 @@
 import numpy as np
 import theano.tensor as tt
 from theano import function
+from theano.tensor.raw_random import _infer_ndim_bcast
 
 from ..memoize import memoize
 from ..model import Model, get_named_nodes
 from ..vartypes import string_types
 
 
-__all__ = ['DensityDist', 'Distribution', 'Continuous',
-           'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
+__all__ = ['DensityDist', 'Distribution',
+           'Continuous', 'Discrete', 'NoDistribution', 'TensorType',
+           'MultivariateContinuous', 'UnivariateContinuous',
+           'MultivariateDiscrete', 'UnivariateDiscrete']
 
 class _Unpickling(object):
     pass
@@ -41,52 +44,101 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, ndim, size, dtype, testval=None, defaults=[], transform=None):
-        """
+    def __init__(self, shape_supp, shape_ind, shape_reps, bcast, dtype, testval=None, defaults=[], transform=None):
+        r"""
+        Distributions are specified in terms of the shape of their support, the shape
+        of the space of independent instances and the shape of the space of replications.
+        The "total" shape of the distribution is the concatenation of each of these
+        spaces, i.e. `dist.shape = shape_reps + shape_ind + shape_supp`.
+
+        We're able to specify the number of dimensions for the
+        support of a concrete distribution type (e.g. scalar distributions have
+        `ndim_supp=0` and a multivariate normal has vector support,
+        so `ndim_supp=1`) and have the exact sizes of each dimension symbolic.
+        To actually instantiate a distribution,
+        we at least need a list/tuple/vector (`ndim_supp` in
+        length) containing symbolic scalars, `shape_supp`, representing the
+        exact size of each dimension.  In the case that `shape_supp` has an
+        unknown length at the graph building stage (e.g. it is a generic Theano
+        vector or tensor), we must provide `ndim_supp`.
+
+        The symbolic scalars `shape_supp` must either be required by a
+        distribution's constructor, or inferred through its required
+        parameters.  Since most distributions are either scalar, or
+        have parameters within the space of their support (e.g. the
+        multivariate normal's mean parameter) inference can be
+        straight-forward.  In the latter case, we refer to the parameters
+        as "informative".
+
+        We also attempt to handle the specification of a collections of independent--
+        but not identical instances of the base distribution (each with support as above).
+        These have a space with shape `shape_ind`.  Generally, `shape_ind` will be
+        implicitly given by the distribution's parameters.  For instance,
+        if a multivariate normal distribution is instantiated with a matrix mean
+        parameter `mu`, we can assume that each row specifies the mean for an
+        independent distribution.  In this case the covariance parameter would either
+        have to be an `ndim=3` tensor, for which the last two dimensions specify each
+        covariance matrix, or a single matrix that is to apply to each independent
+        variate implied by the matrix `mu`.
+
+        Here are a few ways of inferring shapes:
+            * When a distribution is scalar, then `shape_supp = ()`
+                * and has an informative parameter, e.g. `mu`, then `shape_ind = T.shape(mu)`.
+            * When a distribution is multivariate
+                * and has an informative parameter, e.g. `mu`, then
+                `shape_supp = T.shape(mu)[-ndim_supp:]` and `shape_ind = T.shape(mu)[-ndim_supp:]`.
+        In all remaining cases the shapes must be provided by the caller.
+        `shape_reps` is always provided by the caller.
+
+
         Parameters
         ----------
-        ndim
-            Dimensions of the support for this distribution type.
-        size
-            Shape/dimensions of the space that will contain
-            independent draws under this distribution.
+        shape_supp
+            tuple
+            Shape of the support for this distribution type.
+        shape_ind
+            tuple
+            Dimension of independent, but not necessarily identical, copies of
+            this distribution type.
+        shape_reps
+            tuple
+            Dimension of independent and identical copies of
+            this distribution type.
+        bcast
+            A tuple of boolean values.
+            Broadcast dimensions.
         dtype
-            The Theano data type.
+            The data type.
         testval
             Test value to be added to the Theano variable's tag.test_value.
         defaults
             List of string names for attributes that can be used as this
             distribution's default value.
         transform
-            A random variable transform to be applied?
+            A transform function
         """
+
+        self.shape_supp = shape_supp
+        self.shape_ind = shape_ind
+        self.shape_reps = shape_reps
+        self.shape = shape_supp + shape_ind + shape_reps
+
         #
         # Following Theano Op's handling of shape parameters (well, at least
-        # theano.tensor.raw_random.RandomFunction).
+        # theano.tensor.raw_random.RandomFunction.make_node).
         #
-        #support_shape_ = T.as_tensor_variable(, ndim=1)
-        #if support_shape == ():
-        #    self.support_shape = support_shape_.astype('int64')
-        #else:
-        #    self.support_shape = support_shape_
-
-        #if self.support_shape.type.ndim != 1 or \
-        #    not (self.support_shape.type.dtype == 'int64') and \
-        #    not (self.support_shape.type.dtype == 'int32'):
+        #if self.shape.type.ndim != 1 or \
+        #        not (self.shape.type.dtype == 'int64') and \
+        #        not (self.shape.type.dtype == 'int32'):
         #    raise TypeError("Expected int elements in shape")
 
-        from theano.tensor.raw_random import _infer_ndim_bcast
-        import ipdb; ipdb.set_trace()  # XXX BREAKPOINT
-
-        ndim, size, bcast = _infer_ndim_bcast(ndim, size, testval)
-
-        self.ndim = ndim
-        self.size = size
-        self.dtype = dtype
+        #self.ndim = self.shape.ndim
+        #self.dtype = dtype
+        #self.bcast = bcast
         self.testval = testval
         self.defaults = defaults
         self.transform = transform
-        self.type = T.TensorType(str(self.dtype), bcast)
+        self.type = T.TensorType(str(dtype), bcast)
 
     def default(self):
         return self.get_test_val(self.testval, self.defaults)
@@ -151,31 +203,63 @@ class Discrete(Distribution):
 class Continuous(Distribution):
     """Base class for continuous distributions"""
 
-    def __init__(self, ndim, size=(), dtype='float64', defaults=['median', 'mean', 'mode'], *args, **kwargs):
-        super(Continuous, self).__init__(
-            ndim, size, dtype, defaults=defaults, *args, **kwargs)
+    def __init__(self, ndim_support, ndim, size, bcast, dtype='float64', defaults=['median', 'mean', 'mode'], *args, **kwargs):
+        super(Continuous, self).__init__(ndim_support, ndim, size,
+                                         bcast, dtype, defaults=defaults, *args, **kwargs)
 
 
 class DensityDist(Distribution):
     """Distribution based on a given log density function."""
 
-    def __init__(self, logp, ndim, size=(), dtype='float64', testval=0, *args, **kwargs):
+    def __init__(self, logp, ndim_support, ndim, size, bcast, dtype='float64', *args, **kwargs):
         super(DensityDist, self).__init__(
-            ndim, size, dtype, testval, *args, **kwargs)
+            ndim, size, bcast, dtype, *args, **kwargs)
         self.logp = logp
+
+
+class UnivariateContinuous(Continuous):
+
+    def __init__(self, dist_params, ndim=None, size=None, dtype=None, bcast=None, *args, **kwargs):
+        """
+
+        Parameters
+        ==========
+
+        dist_params
+            list or tuple of parameters to use for shape inference
+
+        """
+
+        self.shape_supp = ()
+        dist_params = tuple(T.as_tensor_variable(x) for x in dist_params)
+
+        ndim, size, bcast = _infer_ndim_bcast(*(ndim, size) + dist_params)
+        if dtype is None:
+            dtype = T.scal.upcast(*(T.config.floatX,) + tuple(x.dtype for x in dist_params))
+
+        # We just assume
+        super(UnivariateContinuous, self).__init__(
+            tuple(), tuple(size), size, bcast, *args, **kwargs)
 
 
 class MultivariateContinuous(Continuous):
 
-    def __init__(self, ndim, size=(), *args, **kwargs):
-        super(MultivariateContinuous, self).__init__(
-            ndim, size, *args, **kwargs)
+    pass
 
 
 
 class MultivariateDiscrete(Discrete):
 
     pass
+
+
+class UnivariateDiscrete(Discrete):
+
+    def __init__(self, ndim, size, bcast, *args, **kwargs):
+        self.shape_supp = ()
+
+        super(UnivariateDiscrete, self).__init__(
+            0, ndim, size, bcast, *args, **kwargs)
 
 
 def draw_values(params, point=None):

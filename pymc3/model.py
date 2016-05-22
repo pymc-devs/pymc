@@ -183,7 +183,6 @@ class Model(Context, Factor):
         self.potentials = []
         self.missing_values = []
         self.model = self
-
     @property
     @memoize
     def bijection(self):
@@ -242,6 +241,11 @@ class Model(Context, Factor):
     def unobserved_RVs(self):
         """List of all random variable, including deterministic ones."""
         return self.vars + self.deterministics
+
+    @property
+    def untransformed_RVs(self):
+        """All variables except those transformed for MCMC"""
+        return [v for v in self.vars if v not in self.hidden_RVs] + self.deterministics
 
     @property
     def test_point(self):
@@ -504,7 +508,8 @@ class FreeRV(Factor, TensorVariable):
             self.dsize = tt.prod(distribution.shape)
             self.distribution = distribution
             dist_test_val = distribution.default()
-            self.tag.test_value = np.ones(dist_test_val.shape, distribution.dtype) * dist_test_val
+            self.tag.test_value = np.ones(
+                dist_test_val.shape, distribution.dtype) * dist_test_val
             self.logp_elemwiset = distribution.logp(self)
             self.model = model
 
