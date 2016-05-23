@@ -1,2 +1,1 @@
-from .advi import advi
-from .advi import advi_minibatch
+from .advi import advi, advi_minibatch, sample_vp
