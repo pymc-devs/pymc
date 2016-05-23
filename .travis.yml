@@ -18,8 +18,7 @@ before_install:
 install:
   - conda create -n testenv --yes pip python=$TRAVIS_PYTHON_VERSION
   - source activate testenv
-  - conda install --yes jupyter pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels joblib sphinx numpydoc
-
+  - conda install --yes jupyter pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels joblib sphinx numpydoc pandoc
   - if [ ${TRAVIS_PYTHON_VERSION:0:1} == "2" ]; then conda install --yes mock enum34; fi
   - pip install --no-deps numdifftools
   - pip install git+https://github.com/Theano/Theano.git
