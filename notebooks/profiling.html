@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Profiling &mdash; pymc3 3.0 documentation</title>
+  <title>Profiling &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -48,7 +48,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -80,8 +80,9 @@
             
             
                 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 </ul>
 
             
@@ -95,7 +96,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -305,22 +306,22 @@ example.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import numpy as np
-from pymc3 import *
-from pymc3.distributions.timeseries import *
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">pymc3.distributions.timeseries</span> <span class="kn">import</span> <span class="o">*</span>
 
-n = 400
-returns = np.genfromtxt(get_data_file(&#39;pymc3.examples&#39;, &quot;../data/SP500.csv&quot;))[-n:]
+<span class="n">n</span> <span class="o">=</span> <span class="mi">400</span>
+<span class="n">returns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="n">get_data_file</span><span class="p">(</span><span class="s1">&#39;pymc3.examples&#39;</span><span class="p">,</span> <span class="s2">&quot;../data/SP500.csv&quot;</span><span class="p">))[</span><span class="o">-</span><span class="n">n</span><span class="p">:]</span>
 
-model = Model()
-with model:
-    sigma = Exponential(&#39;sigma&#39;, 1. / .02, testval=.1)
+<span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mf">1.</span> <span class="o">/</span> <span class="o">.</span><span class="mo">02</span><span class="p">,</span> <span class="n">testval</span><span class="o">=.</span><span class="mi">1</span><span class="p">)</span>
 
-    nu = Exponential(&#39;nu&#39;, 1. / 10)
+    <span class="n">nu</span> <span class="o">=</span> <span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;nu&#39;</span><span class="p">,</span> <span class="mf">1.</span> <span class="o">/</span> <span class="mi">10</span><span class="p">)</span>
 
-    s = GaussianRandomWalk(&#39;s&#39;, sigma ** -2, shape=n)
+    <span class="n">s</span> <span class="o">=</span> <span class="n">GaussianRandomWalk</span><span class="p">(</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">sigma</span> <span class="o">**</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n</span><span class="p">)</span>
 
-    r = StudentT(&#39;r&#39;, nu, lam=exp(-2 * s), observed=returns)
+    <span class="n">r</span> <span class="o">=</span> <span class="n">StudentT</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">s</span><span class="p">),</span> <span class="n">observed</span><span class="o">=</span><span class="n">returns</span><span class="p">)</span>
 
 </pre></div>
 </div>
@@ -332,7 +333,7 @@ with model:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>model.profile(model.logpt).summary()
+<span></span><span class="n">model</span><span class="o">.</span><span class="n">profile</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">logpt</span><span class="p">)</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
 
 </pre></div>
 </div>
@@ -422,7 +423,7 @@ Apply
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>model.profile(gradient(model.logpt, model.vars)).summary()
+<span></span><span class="n">model</span><span class="o">.</span><span class="n">profile</span><span class="p">(</span><span class="n">gradient</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">logpt</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">))</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -526,7 +527,7 @@ Apply
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

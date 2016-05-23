@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>GLM: Linear regression &mdash; pymc3 3.0 documentation</title>
+  <title>GLM: Linear regression &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="GLM: Robust Linear Regression" href="GLM-robust.html"/>
         <link rel="prev" title="Stochastic Volatility model" href="stochastic_volatility.html"/> 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -83,6 +83,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
@@ -128,7 +129,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -441,12 +442,12 @@ more complex models.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%matplotlib inline
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 
-from pymc3 import  *
+<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span>  <span class="o">*</span>
 
-import numpy as np
-import matplotlib.pyplot as plt
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 </pre></div>
 </div>
 </div>
@@ -462,17 +463,17 @@ the regression line.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>size = 200
-true_intercept = 1
-true_slope = 2
+<span></span><span class="n">size</span> <span class="o">=</span> <span class="mi">200</span>
+<span class="n">true_intercept</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">true_slope</span> <span class="o">=</span> <span class="mi">2</span>
 
-x = np.linspace(0, 1, size)
-# y = a + b*x
-true_regression_line = true_intercept + true_slope * x
-# add noise
-y = true_regression_line + np.random.normal(scale=.5, size=size)
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+<span class="c1"># y = a + b*x</span>
+<span class="n">true_regression_line</span> <span class="o">=</span> <span class="n">true_intercept</span> <span class="o">+</span> <span class="n">true_slope</span> <span class="o">*</span> <span class="n">x</span>
+<span class="c1"># add noise</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">true_regression_line</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">scale</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
 
-data = dict(x=x, y=y)
+<span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -482,11 +483,11 @@ data = dict(x=x, y=y)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig = plt.figure(figsize=(7, 7))
-ax = fig.add_subplot(111, xlabel=&#39;x&#39;, ylabel=&#39;y&#39;, title=&#39;Generated data and underlying model&#39;)
-ax.plot(x, y, &#39;x&#39;, label=&#39;sampled data&#39;)
-ax.plot(x, true_regression_line, label=&#39;true regression line&#39;, lw=2.)
-plt.legend(loc=0);
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Generated data and underlying model&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;sampled data&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">true_regression_line</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;true regression line&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -494,7 +495,7 @@ plt.legend(loc=0);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-linear_6_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-linear_6_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-linear_6_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-linear_6_0.png" />
 </div>
 </div>
 </div>
@@ -512,20 +513,20 @@ draw 2000 posterior samples.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as model: # model specifications in PyMC3 are wrapped in a with-statement
-    # Define priors
-    sigma = HalfCauchy(&#39;sigma&#39;, beta=10, testval=1.)
-    intercept = Normal(&#39;Intercept&#39;, 0, sd=20)
-    x_coeff = Normal(&#39;x&#39;, 0, sd=20)
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span> <span class="c1"># model specifications in PyMC3 are wrapped in a with-statement</span>
+    <span class="c1"># Define priors</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+    <span class="n">intercept</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;Intercept&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+    <span class="n">x_coeff</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
 
-    # Define likelihood
-    likelihood = Normal(&#39;y&#39;, mu=intercept + x_coeff * x,
-                        sd=sigma, observed=y)
+    <span class="c1"># Define likelihood</span>
+    <span class="n">likelihood</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">intercept</span> <span class="o">+</span> <span class="n">x_coeff</span> <span class="o">*</span> <span class="n">x</span><span class="p">,</span>
+                        <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
 
-    # Inference!
-    start = find_MAP() # Find starting value by optimization
-    step = NUTS(scaling=start) # Instantiate MCMC sampling algorithm
-    trace = sample(2000, step, start=start, progressbar=False) # draw 2000 posterior samples using NUTS sampling
+    <span class="c1"># Inference!</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">()</span> <span class="c1"># Find starting value by optimization</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">)</span> <span class="c1"># Instantiate MCMC sampling algorithm</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span> <span class="c1"># draw 2000 posterior samples using NUTS sampling</span>
 </pre></div>
 </div>
 </div>
@@ -546,13 +547,13 @@ appopriate likelihood to the model.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as model:
-    # specify glm and pass in data. The resulting linear model, its likelihood and
-    # and all its parameters are automatically added to our model.
-    glm.glm(&#39;y ~ x&#39;, data)
-    start = find_MAP()
-    step = NUTS(scaling=start) # Instantiate MCMC sampling algorithm
-    trace = sample(2000, step, progressbar=False) # draw 2000 posterior samples using NUTS sampling
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="c1"># specify glm and pass in data. The resulting linear model, its likelihood and</span>
+    <span class="c1"># and all its parameters are automatically added to our model.</span>
+    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">()</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">)</span> <span class="c1"># Instantiate MCMC sampling algorithm</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span> <span class="c1"># draw 2000 posterior samples using NUTS sampling</span>
 </pre></div>
 </div>
 </div>
@@ -580,9 +581,9 @@ parameters and the individual samples we drew.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>plt.figure(figsize=(7, 7))
-traceplot(trace[100:])
-plt.tight_layout();
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+<span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">100</span><span class="p">:])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">();</span>
 </pre></div>
 </div>
 </div>
@@ -598,7 +599,7 @@ plt.tight_layout();
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-linear_15_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-linear_15_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-linear_15_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-linear_15_1.png" />
 </div>
 </div>
 <p>The left side shows our marginal posterior &#8211; for each parameter value
@@ -622,16 +623,16 @@ convenience function for this.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>plt.figure(figsize=(7, 7))
-plt.plot(x, y, &#39;x&#39;, label=&#39;data&#39;)
-glm.plot_posterior_predictive(trace, samples=100,
-                              label=&#39;posterior predictive regression lines&#39;)
-plt.plot(x, true_regression_line, label=&#39;true regression line&#39;, lw=3., c=&#39;y&#39;)
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">)</span>
+<span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                              <span class="n">label</span><span class="o">=</span><span class="s1">&#39;posterior predictive regression lines&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">true_regression_line</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;true regression line&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">3.</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">)</span>
 
-plt.title(&#39;Posterior predictive regression lines&#39;)
-plt.legend(loc=0)
-plt.xlabel(&#39;x&#39;)
-plt.ylabel(&#39;y&#39;);
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Posterior predictive regression lines&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -639,7 +640,7 @@ plt.ylabel(&#39;y&#39;);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-linear_18_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-linear_18_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-linear_18_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-linear_18_0.png" />
 </div>
 </div>
 <p>As you can see, our estimated regression lines are very similar to the
@@ -694,7 +695,7 @@ Programming</a></li>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

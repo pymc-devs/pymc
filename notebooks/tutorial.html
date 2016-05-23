@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Model &mdash; pymc3 3.0 documentation</title>
+  <title>Model &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -48,7 +48,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -80,6 +80,7 @@
             
             
                 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
@@ -95,7 +96,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -297,9 +298,9 @@ div.nboutput  > :nth-child(2).stderr {
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%matplotlib inline
-import pymc3 as pm
-import numpy as np
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 </pre></div>
 </div>
 </div>
@@ -321,12 +322,12 @@ length 2, and <span class="math">\(z_{data}\)</span> is a <span class="math">\(2
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>ndims = 2
-nobs = 20
+<span></span><span class="n">ndims</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">nobs</span> <span class="o">=</span> <span class="mi">20</span>
 
-xtrue = np.random.normal(scale=2., size=1)
-ytrue = np.random.normal(loc=np.exp(xtrue), scale=1, size=(ndims, 1))
-zdata = np.random.normal(loc=xtrue + ytrue, scale=.75, size=(ndims, nobs))
+<span class="n">xtrue</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ytrue</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xtrue</span><span class="p">),</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">ndims</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">zdata</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="n">xtrue</span> <span class="o">+</span> <span class="n">ytrue</span><span class="p">,</span> <span class="n">scale</span><span class="o">=.</span><span class="mi">75</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">ndims</span><span class="p">,</span> <span class="n">nobs</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -361,10 +362,10 @@ observed by specifying the data that was observed.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as model:
-    x = pm.Normal(&#39;x&#39;, mu=0., sd=1)
-    y = pm.Normal(&#39;y&#39;, mu=pm.exp(x), sd=2., shape=(ndims, 1)) # here, shape is telling us it&#39;s a vector rather than a scalar.
-    z = pm.Normal(&#39;z&#39;, mu=x + y, sd=.75, observed=zdata) # shape is inferred from zdata
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">sd</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">ndims</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="c1"># here, shape is telling us it&#39;s a vector rather than a scalar.</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">,</span> <span class="n">sd</span><span class="o">=.</span><span class="mi">75</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">zdata</span><span class="p">)</span> <span class="c1"># shape is inferred from zdata</span>
 </pre></div>
 </div>
 </div>
@@ -393,8 +394,8 @@ block.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    start = pm.find_MAP()
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -406,13 +407,13 @@ names as they keys and the value of the parameters as the values.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>print(&quot;MAP found:&quot;)
-print(&quot;x:&quot;, start[&#39;x&#39;])
-print(&quot;y:&quot;, start[&#39;y&#39;])
+<span></span><span class="k">print</span><span class="p">(</span><span class="s2">&quot;MAP found:&quot;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;x:&quot;</span><span class="p">,</span> <span class="n">start</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;y:&quot;</span><span class="p">,</span> <span class="n">start</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span>
 
-print(&quot;Compare with true values:&quot;)
-print(&quot;ytrue&quot;, ytrue)
-print(&quot;xtrue&quot;, xtrue)
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;Compare with true values:&quot;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;ytrue&quot;</span><span class="p">,</span> <span class="n">ytrue</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;xtrue&quot;</span><span class="p">,</span> <span class="n">xtrue</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -439,8 +440,8 @@ Compare with true values:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    step = pm.NUTS()
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -462,8 +463,8 @@ samples.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    trace = pm.sample(3000, step, start)
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">3000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -485,7 +486,7 @@ indexes the shape of the parameter. Thus for this example:</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>trace[y].shape
+<span></span><span class="n">trace</span><span class="p">[</span><span class="n">y</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
 </div>
 </div>
@@ -505,7 +506,7 @@ indexes the shape of the parameter. Thus for this example:</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>pm.traceplot(trace);
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -513,7 +514,7 @@ indexes the shape of the parameter. Thus for this example:</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_tutorial_15_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_tutorial_15_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_tutorial_15_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_tutorial_15_0.png" />
 </div>
 </div>
 </div>
@@ -554,7 +555,7 @@ random variable.</li>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>help(model)
+<span></span><span class="n">help</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -739,7 +740,7 @@ class Model(Context, Factor)
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

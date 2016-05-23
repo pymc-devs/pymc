@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>&lt;no title&gt; &mdash; pymc3 3.0 documentation</title>
+  <title>&lt;no title&gt; &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -48,7 +48,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -80,6 +80,7 @@
             
             
                 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
@@ -95,7 +96,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -297,12 +298,12 @@ div.nboutput  > :nth-child(2).stderr {
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%pylab inline
-import numpy as np
-from scipy import stats
-import pymc3 as pm
-import seaborn as sns
-import matplotlib.pyplot as plt
+<span></span><span class="o">%</span><span class="k">pylab</span> inline
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">stats</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 </pre></div>
 </div>
 </div>
@@ -320,7 +321,7 @@ Populating the interactive namespace from numpy and matplotlib
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>data = np.random.randn(100)
+<span></span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -330,10 +331,10 @@ Populating the interactive namespace from numpy and matplotlib
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as model:
-    mu = pm.Normal(&#39;mu&#39;, mu=0, sd=1, testval=0)
-    sd = pm.HalfNormal(&#39;sd&#39;, sd=1)
-    n = pm.Normal(&#39;n&#39;, mu=mu, sd=sd, observed=data)
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">sd</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfNormal</span><span class="p">(</span><span class="s1">&#39;sd&#39;</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sd</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -351,7 +352,7 @@ Applied log-transform to sd and added transformed sd_log to model.
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>means, sds, elbos = pm.variational.advi(model=model, n=20000, accurate_elbo=True)
+<span></span><span class="n">means</span><span class="p">,</span> <span class="n">sds</span><span class="p">,</span> <span class="n">elbos</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">20000</span><span class="p">,</span> <span class="n">accurate_elbo</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -379,9 +380,9 @@ Finished [100%]: ELBO = -149.73
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    step = pm.NUTS()
-    trace = pm.sample(500, step)
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">()</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -399,10 +400,10 @@ Finished [100%]: ELBO = -149.73
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>print(trace[&#39;mu&#39;].mean())
-print(trace[&#39;sd_log&#39;].mean())
-print(trace[&#39;mu&#39;].std())
-print(trace[&#39;sd_log&#39;].std())
+<span></span><span class="k">print</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+<span class="k">print</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;sd_log&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+<span class="k">print</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
+<span class="k">print</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;sd_log&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
@@ -423,13 +424,13 @@ print(trace[&#39;sd_log&#39;].std())
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>ax = sns.distplot(trace[&#39;mu&#39;], label=&#39;NUTS&#39;)
-xlim = ax.get_xlim()
-x = np.linspace(xlim[0], xlim[1], 100)
-y = stats.norm(means[&#39;mu&#39;], sds[&#39;mu&#39;]).pdf(x)
-ax.plot(x, y, label=&#39;ADVI&#39;)
-ax.set_title(&#39;mu&#39;)
-ax.legend(loc=0)
+<span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;NUTS&#39;</span><span class="p">)</span>
+<span class="n">xlim</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_xlim</span><span class="p">()</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">xlim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">xlim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">means</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">],</span> <span class="n">sds</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;ADVI&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -447,7 +448,7 @@ ax.legend(loc=0)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_advi_6_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_advi_6_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_advi_6_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_advi_6_1.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -456,13 +457,13 @@ ax.legend(loc=0)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>ax = sns.distplot(trace[&#39;sd_log&#39;], label=&#39;NUTS&#39;)
-xlim = ax.get_xlim()
-x = np.linspace(xlim[0], xlim[1], 100)
-y = stats.norm(means[&#39;sd_log&#39;], sds[&#39;sd_log&#39;]).pdf(x)
-ax.plot(x, y, label=&#39;ADVI&#39;)
-ax.set_title(&#39;log(sigma)&#39;)
-ax.legend(loc=0)
+<span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;sd_log&#39;</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;NUTS&#39;</span><span class="p">)</span>
+<span class="n">xlim</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_xlim</span><span class="p">()</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">xlim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">xlim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">means</span><span class="p">[</span><span class="s1">&#39;sd_log&#39;</span><span class="p">],</span> <span class="n">sds</span><span class="p">[</span><span class="s1">&#39;sd_log&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;ADVI&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;log(sigma)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -480,7 +481,7 @@ ax.legend(loc=0)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_advi_7_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_advi_7_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_advi_7_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_advi_7_1.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -489,8 +490,8 @@ ax.legend(loc=0)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import matplotlib.pyplot as plt
-plt.plot(elbos[5000:])
+<span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">elbos</span><span class="p">[</span><span class="mi">5000</span><span class="p">:])</span>
 </pre></div>
 </div>
 </div>
@@ -508,7 +509,7 @@ plt.plot(elbos[5000:])
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_advi_8_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_advi_8_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_advi_8_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_advi_8_1.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
@@ -532,7 +533,7 @@ plt.plot(elbos[5000:])
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

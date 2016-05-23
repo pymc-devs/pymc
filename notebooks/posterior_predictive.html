@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Posterior Predictive Checks &mdash; pymc3 3.0 documentation</title>
+  <title>Posterior Predictive Checks &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Bayesian Survival Analysis" href="survival_analysis.html"/>
         <link rel="prev" title="A Hierarchical model for Rugby prediction" href="rugby_analytics.html"/> 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -83,6 +83,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
@@ -120,7 +121,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -334,8 +335,8 @@ observed nodes of a model.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%load_ext autoreload
-%autoreload 2
+<span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
 </pre></div>
 </div>
 </div>
@@ -345,12 +346,12 @@ observed nodes of a model.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%matplotlib inline
-import numpy as np
-import pymc3 as pm
-import seaborn as sns
-import matplotlib.pyplot as plt
-from collections import defaultdict
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
 </pre></div>
 </div>
 </div>
@@ -361,15 +362,15 @@ from collections import defaultdict
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>data = np.random.randn(100)
+<span></span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
 
-with pm.Model() as model:
-    mu = pm.Normal(&#39;mu&#39;, mu=0, sd=1, testval=0)
-    sd = pm.HalfNormal(&#39;sd&#39;, sd=1)
-    n = pm.Normal(&#39;n&#39;, mu=mu, sd=sd, observed=data)
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">sd</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfNormal</span><span class="p">(</span><span class="s1">&#39;sd&#39;</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sd</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
 
-    step = pm.NUTS()
-    trace = pm.sample(5000, step)
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">()</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -396,7 +397,7 @@ with pm.Model() as model:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>pm.traceplot(trace);
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -404,7 +405,7 @@ with pm.Model() as model:
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_posterior_predictive_5_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_posterior_predictive_5_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_posterior_predictive_5_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_posterior_predictive_5_0.png" />
 </div>
 </div>
 <p>This function will randomly draw 50 samples of parameters from the
@@ -417,7 +418,7 @@ that sample.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>ppc = pm.sample_ppc(trace, samples=500, model=model, size=100)
+<span></span><span class="n">ppc</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample_ppc</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -429,7 +430,7 @@ each), each using a different parameter setting from the posterior:</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>np.asarray(ppc[&#39;n&#39;]).shape
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
 </div>
 </div>
@@ -452,10 +453,10 @@ inferred means to the actual sample mean:</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>ax = plt.subplot()
-sns.distplot([n.mean() for n in ppc[&#39;n&#39;]], kde=False, ax=ax)
-ax.axvline(data.mean())
-ax.set(title=&#39;Posterior predictive of the mean&#39;, xlabel=&#39;mean(x)&#39;, ylabel=&#39;Frequency&#39;);
+<span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">()</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">([</span><span class="n">n</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">]],</span> <span class="n">kde</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;Posterior predictive of the mean&#39;</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;mean(x)&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Frequency&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -463,7 +464,7 @@ ax.set(title=&#39;Posterior predictive of the mean&#39;, xlabel=&#39;mean(x)&#39
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_posterior_predictive_11_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_posterior_predictive_11_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_posterior_predictive_11_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_posterior_predictive_11_0.png" />
 </div>
 </div>
 <div class="section" id="Prediction">
@@ -477,8 +478,8 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Use a theano shared variable to be able to exchange the data the model runs on
-from theano import shared
+<span></span><span class="c1"># Use a theano shared variable to be able to exchange the data the model runs on</span>
+<span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">shared</span>
 </pre></div>
 </div>
 </div>
@@ -488,18 +489,18 @@ from theano import shared
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def invlogit(x):
-    return np.exp(x) / (1 + np.exp(x))
+<span></span><span class="k">def</span> <span class="nf">invlogit</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
 
-n = 4000
-n_oos = 50
-coeff = 1.
+<span class="n">n</span> <span class="o">=</span> <span class="mi">4000</span>
+<span class="n">n_oos</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="n">coeff</span> <span class="o">=</span> <span class="mf">1.</span>
 
-predictors = np.random.normal(size=n)
-# Turn predictor into a shared var so that we can change it later
-predictors_shared = shared(predictors)
+<span class="n">predictors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">n</span><span class="p">)</span>
+<span class="c1"># Turn predictor into a shared var so that we can change it later</span>
+<span class="n">predictors_shared</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="n">predictors</span><span class="p">)</span>
 
-outcomes = np.random.binomial(1, invlogit(coeff * predictors))
+<span class="n">outcomes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">invlogit</span><span class="p">(</span><span class="n">coeff</span> <span class="o">*</span> <span class="n">predictors</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -509,7 +510,7 @@ outcomes = np.random.binomial(1, invlogit(coeff * predictors))
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>outcomes
+<span></span><span class="n">outcomes</span>
 </pre></div>
 </div>
 </div>
@@ -529,8 +530,8 @@ outcomes = np.random.binomial(1, invlogit(coeff * predictors))
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>predictors_oos = np.random.normal(size=50)
-outcomes_oos = np.random.binomial(1, invlogit(coeff * predictors_oos))
+<span></span><span class="n">predictors_oos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="n">outcomes_oos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">invlogit</span><span class="p">(</span><span class="n">coeff</span> <span class="o">*</span> <span class="n">predictors_oos</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -540,19 +541,19 @@ outcomes_oos = np.random.binomial(1, invlogit(coeff * predictors_oos))
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def tinvlogit(x):
-    import theano.tensor as t
-    return t.exp(x) / (1 + t.exp(x))
+<span></span><span class="k">def</span> <span class="nf">tinvlogit</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">t</span>
+    <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">t</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
 
-with pm.Model() as model:
-    coeff = pm.Normal(&#39;coeff&#39;, mu=0, sd=1)
-    p = tinvlogit(coeff * predictors_shared)
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">coeff</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;coeff&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">tinvlogit</span><span class="p">(</span><span class="n">coeff</span> <span class="o">*</span> <span class="n">predictors_shared</span><span class="p">)</span>
 
-    o = pm.Bernoulli(&#39;o&#39;, p, observed=outcomes)
+    <span class="n">o</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Bernoulli</span><span class="p">(</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">outcomes</span><span class="p">)</span>
 
-    start = pm.find_MAP()
-    step = pm.NUTS(scaling=start)
-    trace = pm.sample(500, step)
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">()</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -570,8 +571,8 @@ with pm.Model() as model:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Changing values here will also change values in the model
-predictors_shared.set_value(predictors_oos)
+<span></span><span class="c1"># Changing values here will also change values in the model</span>
+<span class="n">predictors_shared</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">predictors_oos</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -581,8 +582,8 @@ predictors_shared.set_value(predictors_oos)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Simply running PPC will use the updated values and do prediction
-ppc = pm.sample_ppc(trace, model=model, samples=500)
+<span></span><span class="c1"># Simply running PPC will use the updated values and do prediction</span>
+<span class="n">ppc</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample_ppc</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -594,11 +595,11 @@ ppc = pm.sample_ppc(trace, model=model, samples=500)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>plt.errorbar(x=predictors_oos, y=np.asarray(ppc[&#39;o&#39;]).mean(axis=0), yerr=np.asarray(ppc[&#39;o&#39;]).std(axis=0), linestyle=&#39;&#39;, marker=&#39;o&#39;)
-plt.plot(predictors_oos, outcomes_oos, &#39;o&#39;)
-plt.ylim(-.05, 1.05)
-plt.xlabel(&#39;predictor&#39;)
-plt.ylabel(&#39;outcome&#39;)
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">predictors_oos</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;o&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">yerr</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;o&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">predictors_oos</span><span class="p">,</span> <span class="n">outcomes_oos</span><span class="p">,</span> <span class="s1">&#39;o&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-.</span><span class="mo">05</span><span class="p">,</span> <span class="mf">1.05</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;predictor&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;outcome&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -616,7 +617,7 @@ plt.ylabel(&#39;outcome&#39;)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_posterior_predictive_21_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_posterior_predictive_21_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_posterior_predictive_21_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_posterior_predictive_21_1.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
@@ -652,7 +653,7 @@ plt.ylabel(&#39;outcome&#39;)
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

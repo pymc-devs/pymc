@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>GLM: Robust Linear Regression &mdash; pymc3 3.0 documentation</title>
+  <title>GLM: Robust Linear Regression &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="GLM Robust Regression with Outlier Detection" href="GLM-robust-with-outlier-detection.html"/>
         <link rel="prev" title="GLM: Linear regression" href="GLM-linear.html"/> 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -83,6 +83,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
@@ -118,7 +119,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -359,14 +360,14 @@ the last post.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%matplotlib inline
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 
-import pymc3 as pm
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 
-import matplotlib.pyplot as plt
-import numpy as np
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 
-import theano
+<span class="kn">import</span> <span class="nn">theano</span>
 </pre></div>
 </div>
 </div>
@@ -377,21 +378,21 @@ import theano
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>size = 100
-true_intercept = 1
-true_slope = 2
+<span></span><span class="n">size</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">true_intercept</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">true_slope</span> <span class="o">=</span> <span class="mi">2</span>
 
-x = np.linspace(0, 1, size)
-# y = a + b*x
-true_regression_line = true_intercept + true_slope * x
-# add noise
-y = true_regression_line + np.random.normal(scale=.5, size=size)
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+<span class="c1"># y = a + b*x</span>
+<span class="n">true_regression_line</span> <span class="o">=</span> <span class="n">true_intercept</span> <span class="o">+</span> <span class="n">true_slope</span> <span class="o">*</span> <span class="n">x</span>
+<span class="c1"># add noise</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">true_regression_line</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">scale</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
 
-# Add outliers
-x_out = np.append(x, [.1, .15, .2])
-y_out = np.append(y, [8, 6, 9])
+<span class="c1"># Add outliers</span>
+<span class="n">x_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">[</span><span class="o">.</span><span class="mi">1</span><span class="p">,</span> <span class="o">.</span><span class="mi">15</span><span class="p">,</span> <span class="o">.</span><span class="mi">2</span><span class="p">])</span>
+<span class="n">y_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">])</span>
 
-data = dict(x=x_out, y=y_out)
+<span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x_out</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y_out</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -403,11 +404,11 @@ in the upper left corner are the outliers we added).</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig = plt.figure(figsize=(7, 7))
-ax = fig.add_subplot(111, xlabel=&#39;x&#39;, ylabel=&#39;y&#39;, title=&#39;Generated data and underlying model&#39;)
-ax.plot(x_out, y_out, &#39;x&#39;, label=&#39;sampled data&#39;)
-ax.plot(x, true_regression_line, label=&#39;true regression line&#39;, lw=2.)
-plt.legend(loc=0);
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Generated data and underlying model&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_out</span><span class="p">,</span> <span class="n">y_out</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;sampled data&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">true_regression_line</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;true regression line&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -415,7 +416,7 @@ plt.legend(loc=0);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust_6_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust_6_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust_6_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust_6_0.png" />
 </div>
 </div>
 <div class="section" id="Robust-Regression">
@@ -431,11 +432,11 @@ default.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as model:
-    pm.glm.glm(&#39;y ~ x&#39;, data)
-    start = pm.find_MAP()
-    step = pm.NUTS(scaling=start)
-    trace = pm.sample(2000, step, progressbar=False)
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">()</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -458,15 +459,15 @@ and plotting a regression line for each (this is all done inside of
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>plt.subplot(111, xlabel=&#39;x&#39;, ylabel=&#39;y&#39;,
-            title=&#39;Posterior predictive regression lines&#39;)
-plt.plot(x_out, y_out, &#39;x&#39;, label=&#39;data&#39;)
-pm.glm.plot_posterior_predictive(trace, samples=100,
-                                 label=&#39;posterior predictive regression lines&#39;)
-plt.plot(x, true_regression_line,
-         label=&#39;true regression line&#39;, lw=3., c=&#39;y&#39;)
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span>
+            <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Posterior predictive regression lines&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_out</span><span class="p">,</span> <span class="n">y_out</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">)</span>
+<span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                                 <span class="n">label</span><span class="o">=</span><span class="s1">&#39;posterior predictive regression lines&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">true_regression_line</span><span class="p">,</span>
+         <span class="n">label</span><span class="o">=</span><span class="s1">&#39;true regression line&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">3.</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">)</span>
 
-plt.legend(loc=0);
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -474,7 +475,7 @@ plt.legend(loc=0);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust_10_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust_10_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust_10_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust_10_0.png" />
 </div>
 </div>
 <p>As you can see, the fit is quite skewed and we have a fair amount of
@@ -501,14 +502,14 @@ formulate this).</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>normal_dist = pm.Normal.dist(mu=0, sd=1)
-t_dist = pm.T.dist(mu=0, lam=1, nu=1)
-x_eval = np.linspace(-8, 8, 300)
-plt.plot(x_eval, theano.tensor.exp(normal_dist.logp(x_eval)).eval(), label=&#39;Normal&#39;, lw=2.)
-plt.plot(x_eval, theano.tensor.exp(t_dist.logp(x_eval)).eval(), label=&#39;Student T&#39;, lw=2.)
-plt.xlabel(&#39;x&#39;)
-plt.ylabel(&#39;Probability density&#39;)
-plt.legend();
+<span></span><span class="n">normal_dist</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">t_dist</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">x_eval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_eval</span><span class="p">,</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">normal_dist</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">x_eval</span><span class="p">))</span><span class="o">.</span><span class="n">eval</span><span class="p">(),</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Normal&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_eval</span><span class="p">,</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">t_dist</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">x_eval</span><span class="p">))</span><span class="o">.</span><span class="n">eval</span><span class="p">(),</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Student T&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Probability density&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">();</span>
 </pre></div>
 </div>
 </div>
@@ -516,7 +517,7 @@ plt.legend();
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust_12_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust_12_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust_12_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust_12_0.png" />
 </div>
 </div>
 <p>As you can see, the probability of values far away from the mean (0 in
@@ -532,20 +533,20 @@ the same syntax as <code class="docutils literal"><span class="pre">R</span></co
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as model_robust:
-    family = pm.glm.families.StudentT()
-    pm.glm.glm(&#39;y ~ x&#39;, data, family=family)
-    start = pm.find_MAP()
-    step = pm.NUTS(scaling=start)
-    trace_robust = pm.sample(2000, step, progressbar=False)
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_robust</span><span class="p">:</span>
+    <span class="n">family</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">StudentT</span><span class="p">()</span>
+    <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">family</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">()</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+    <span class="n">trace_robust</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
-plt.figure(figsize=(5, 5))
-plt.plot(x_out, y_out, &#39;x&#39;)
-pm.glm.plot_posterior_predictive(trace_robust,
-                                 label=&#39;posterior predictive regression lines&#39;)
-plt.plot(x, true_regression_line,
-         label=&#39;true regression line&#39;, lw=3., c=&#39;y&#39;)
-plt.legend();
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_out</span><span class="p">,</span> <span class="n">y_out</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace_robust</span><span class="p">,</span>
+                                 <span class="n">label</span><span class="o">=</span><span class="s1">&#39;posterior predictive regression lines&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">true_regression_line</span><span class="p">,</span>
+         <span class="n">label</span><span class="o">=</span><span class="s1">&#39;true regression line&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">3.</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">();</span>
 </pre></div>
 </div>
 </div>
@@ -553,7 +554,7 @@ plt.legend();
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust_14_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust_14_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust_14_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust_14_0.png" />
 </div>
 </div>
 <p>There, much better! The outliers are barely influencing our estimation
@@ -608,7 +609,7 @@ by Allen Downey.</li>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

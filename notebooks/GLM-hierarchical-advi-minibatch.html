@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Mini-batch ADVI on hierarchical regression model &mdash; pymc3 3.0 documentation</title>
+  <title>Mini-batch ADVI on hierarchical regression model &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -48,7 +48,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -80,6 +80,7 @@
             
             
                 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
@@ -95,7 +96,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -303,17 +304,17 @@ of that.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%matplotlib inline
-import matplotlib.pyplot as plt
-import numpy as np
-import pymc3 as pm
-import pandas as pd
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 
-data = pd.read_csv(&#39;../data/radon.csv&#39;)
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/radon.csv&#39;</span><span class="p">)</span>
 
-county_names = data.county.unique()
-county_idx = data[&#39;county_code&#39;].values
-n_counties = len(data.county.unique())
+<span class="n">county_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">county</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+<span class="n">county_idx</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;county_code&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+<span class="n">n_counties</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">county</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
@@ -325,16 +326,16 @@ n_counties = len(data.county.unique())
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import theano.tensor as tt
+<span></span><span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
 
-log_radon_t = tt.vector()
-log_radon_t.tag.test_value = np.zeros(1)
-floor_t = tt.vector()
-floor_t.tag.test_value = np.zeros(1)
-county_idx_t = tt.ivector()
-county_idx_t.tag.test_value = np.zeros(1, dtype=&#39;int32&#39;)
+<span class="n">log_radon_t</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">vector</span><span class="p">()</span>
+<span class="n">log_radon_t</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">floor_t</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">vector</span><span class="p">()</span>
+<span class="n">floor_t</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">county_idx_t</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">ivector</span><span class="p">()</span>
+<span class="n">county_idx_t</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
 
-minibatch_tensors = [log_radon_t, floor_t, county_idx_t]
+<span class="n">minibatch_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">log_radon_t</span><span class="p">,</span> <span class="n">floor_t</span><span class="p">,</span> <span class="n">county_idx_t</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -344,32 +345,32 @@ minibatch_tensors = [log_radon_t, floor_t, county_idx_t]
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as hierarchical_model:
-    # Hyperpriors for group nodes
-    mu_a = pm.Normal(&#39;mu_alpha&#39;, mu=0., sd=100**2)
-    sigma_a = pm.Uniform(&#39;sigma_alpha&#39;, lower=0, upper=100)
-    mu_b = pm.Normal(&#39;mu_beta&#39;, mu=0., sd=100**2)
-    sigma_b = pm.Uniform(&#39;sigma_beta&#39;, lower=0, upper=100)
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">hierarchical_model</span><span class="p">:</span>
+    <span class="c1"># Hyperpriors for group nodes</span>
+    <span class="n">mu_a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_alpha&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">sigma_a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;sigma_alpha&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">mu_b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_beta&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">sigma_b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;sigma_beta&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-    # Intercept for each county, distributed around group mean mu_a
-    # Above we just set mu and sd to a fixed value while here we
-    # plug in a common group distribution for all a and b (which are
-    # vectors of length n_counties).
-    a = pm.Normal(&#39;alpha&#39;, mu=mu_a, sd=sigma_a, shape=n_counties)
-    # Intercept for each county, distributed around group mean mu_a
-    b = pm.Normal(&#39;beta&#39;, mu=mu_b, sd=sigma_b, shape=n_counties)
+    <span class="c1"># Intercept for each county, distributed around group mean mu_a</span>
+    <span class="c1"># Above we just set mu and sd to a fixed value while here we</span>
+    <span class="c1"># plug in a common group distribution for all a and b (which are</span>
+    <span class="c1"># vectors of length n_counties).</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_a</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma_a</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_counties</span><span class="p">)</span>
+    <span class="c1"># Intercept for each county, distributed around group mean mu_a</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_b</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma_b</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_counties</span><span class="p">)</span>
 
-    # Model error
-    eps = pm.Uniform(&#39;eps&#39;, lower=0, upper=100)
+    <span class="c1"># Model error</span>
+    <span class="n">eps</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;eps&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-    # Model prediction of radon level
-    # a[county_idx] translates to a[0, 0, 0, 1, 1, ...],
-    # we thus link multiple household measures of a county
-    # to its coefficients.
-    radon_est = a[county_idx_t] + b[county_idx_t] * floor_t
+    <span class="c1"># Model prediction of radon level</span>
+    <span class="c1"># a[county_idx] translates to a[0, 0, 0, 1, 1, ...],</span>
+    <span class="c1"># we thus link multiple household measures of a county</span>
+    <span class="c1"># to its coefficients.</span>
+    <span class="n">radon_est</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">county_idx_t</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">county_idx_t</span><span class="p">]</span> <span class="o">*</span> <span class="n">floor_t</span>
 
-    # Data likelihood
-    radon_like = pm.Normal(&#39;radon_like&#39;, mu=radon_est, sd=eps, observed=log_radon_t)
+    <span class="c1"># Data likelihood</span>
+    <span class="n">radon_like</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;radon_like&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">radon_est</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">eps</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">log_radon_t</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -392,7 +393,7 @@ likelihood term.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>minibatch_RVs = [radon_like]
+<span></span><span class="n">minibatch_RVs</span> <span class="o">=</span> <span class="p">[</span><span class="n">radon_like</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -404,20 +405,20 @@ above.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def create_minibatch(data):
-    rng = np.random.RandomState(0)
+<span></span><span class="k">def</span> <span class="nf">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
-    while True:
-        ixs = rng.randint(len(data), size=100)
-        yield data[ixs]
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">ixs</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="n">data</span><span class="p">[</span><span class="n">ixs</span><span class="p">]</span>
 
-minibatches = [
-    create_minibatch(data.log_radon.values),
-    create_minibatch(data.floor.values),
-    create_minibatch(data.county_code.values.astype(&#39;int32&#39;))
-]
+<span class="n">minibatches</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">log_radon</span><span class="o">.</span><span class="n">values</span><span class="p">),</span>
+    <span class="n">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">floor</span><span class="o">.</span><span class="n">values</span><span class="p">),</span>
+    <span class="n">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">county_code</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int32&#39;</span><span class="p">))</span>
+<span class="p">]</span>
 
-total_size = len(data)
+<span class="n">total_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -428,11 +429,11 @@ total_size = len(data)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>means, sds, elbos = pm.variational.advi_minibatch(
-    model=hierarchical_model, n=40000, minibatch_tensors=minibatch_tensors,
-    minibatch_RVs=minibatch_RVs, minibatches=minibatches,
-    total_size=total_size, learning_rate=1e-2, epsilon=1.0
-)
+<span></span><span class="n">means</span><span class="p">,</span> <span class="n">sds</span><span class="p">,</span> <span class="n">elbos</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi_minibatch</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">hierarchical_model</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">40000</span><span class="p">,</span> <span class="n">minibatch_tensors</span><span class="o">=</span><span class="n">minibatch_tensors</span><span class="p">,</span>
+    <span class="n">minibatch_RVs</span><span class="o">=</span><span class="n">minibatch_RVs</span><span class="p">,</span> <span class="n">minibatches</span><span class="o">=</span><span class="n">minibatches</span><span class="p">,</span>
+    <span class="n">total_size</span><span class="o">=</span><span class="n">total_size</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -461,10 +462,10 @@ Finished [100%]: ELBO = -1072.46
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import matplotlib.pyplot as plt
-import seaborn as sns
-plt.plot(elbos)
-plt.ylim(-5000, 0);
+<span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">elbos</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">5000</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -472,7 +473,7 @@ plt.ylim(-5000, 0);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-hierarchical-advi-minibatch_12_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-hierarchical-advi-minibatch_12_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical-advi-minibatch_12_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical-advi-minibatch_12_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -481,38 +482,38 @@ plt.ylim(-5000, 0);
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Inference button (TM)!
-with pm.Model():
-    # Hyperpriors for group nodes
-    mu_a = pm.Normal(&#39;mu_alpha&#39;, mu=0., sd=100**2)
-    sigma_a = pm.Uniform(&#39;sigma_alpha&#39;, lower=0, upper=100)
-    mu_b = pm.Normal(&#39;mu_beta&#39;, mu=0., sd=100**2)
-    sigma_b = pm.Uniform(&#39;sigma_beta&#39;, lower=0, upper=100)
+<span></span><span class="c1"># Inference button (TM)!</span>
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">():</span>
+    <span class="c1"># Hyperpriors for group nodes</span>
+    <span class="n">mu_a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_alpha&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">sigma_a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;sigma_alpha&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">mu_b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_beta&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">sigma_b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;sigma_beta&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-    # Intercept for each county, distributed around group mean mu_a
-    # Above we just set mu and sd to a fixed value while here we
-    # plug in a common group distribution for all a and b (which are
-    # vectors of length n_counties).
-    a = pm.Normal(&#39;alpha&#39;, mu=mu_a, sd=sigma_a, shape=n_counties)
-    # Intercept for each county, distributed around group mean mu_a
-    b = pm.Normal(&#39;beta&#39;, mu=mu_b, sd=sigma_b, shape=n_counties)
+    <span class="c1"># Intercept for each county, distributed around group mean mu_a</span>
+    <span class="c1"># Above we just set mu and sd to a fixed value while here we</span>
+    <span class="c1"># plug in a common group distribution for all a and b (which are</span>
+    <span class="c1"># vectors of length n_counties).</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_a</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma_a</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_counties</span><span class="p">)</span>
+    <span class="c1"># Intercept for each county, distributed around group mean mu_a</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_b</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma_b</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_counties</span><span class="p">)</span>
 
-    # Model error
-    eps = pm.Uniform(&#39;eps&#39;, lower=0, upper=100)
+    <span class="c1"># Model error</span>
+    <span class="n">eps</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;eps&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-    # Model prediction of radon level
-    # a[county_idx] translates to a[0, 0, 0, 1, 1, ...],
-    # we thus link multiple household measures of a county
-    # to its coefficients.
-    radon_est = a[county_idx] + b[county_idx] * data.floor.values
+    <span class="c1"># Model prediction of radon level</span>
+    <span class="c1"># a[county_idx] translates to a[0, 0, 0, 1, 1, ...],</span>
+    <span class="c1"># we thus link multiple household measures of a county</span>
+    <span class="c1"># to its coefficients.</span>
+    <span class="n">radon_est</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">county_idx</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">county_idx</span><span class="p">]</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">floor</span><span class="o">.</span><span class="n">values</span>
 
-    # Data likelihood
-    radon_like = pm.Normal(
-        &#39;radon_like&#39;, mu=radon_est, sd=eps, observed=data.log_radon.values)
+    <span class="c1"># Data likelihood</span>
+    <span class="n">radon_like</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span>
+        <span class="s1">&#39;radon_like&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">radon_est</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">eps</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">log_radon</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
 
-    #start = pm.find_MAP()
-    step = pm.NUTS(scaling=means)
-    hierarchical_trace = pm.sample(10000, step, start=means, progressbar=False)
+    <span class="c1">#start = pm.find_MAP()</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">means</span><span class="p">)</span>
+    <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">means</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -532,25 +533,25 @@ Applied interval-transform to eps and added transformed eps_interval to model.
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>from scipy import stats
-import seaborn as sns
-varnames = means.keys()
-fig, axs = plt.subplots(nrows=len(varnames), figsize=(12, 18))
-for var, ax in zip(varnames, axs):
-    mu_arr = means[var]
-    sigma_arr = sds[var]
-    ax.set_title(var)
-    for i, (mu, sigma) in enumerate(zip(mu_arr.flatten(), sigma_arr.flatten())):
-        sd3 = (-4*sigma + mu, 4*sigma + mu)
-        x = np.linspace(sd3[0], sd3[1], 300)
-        y = stats.norm(mu, sigma).pdf(x)
-        ax.plot(x, y)
-        if hierarchical_trace[var].ndim &gt; 1:
-            t = hierarchical_trace[var][i]
-        else:
-            t = hierarchical_trace[var]
-        sns.distplot(t, kde=False, norm_hist=True, ax=ax)
-fig.tight_layout()
+<span></span><span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">stats</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="n">varnames</span> <span class="o">=</span> <span class="n">means</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">nrows</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">varnames</span><span class="p">),</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">18</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">var</span><span class="p">,</span> <span class="n">ax</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">varnames</span><span class="p">,</span> <span class="n">axs</span><span class="p">):</span>
+    <span class="n">mu_arr</span> <span class="o">=</span> <span class="n">means</span><span class="p">[</span><span class="n">var</span><span class="p">]</span>
+    <span class="n">sigma_arr</span> <span class="o">=</span> <span class="n">sds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">mu_arr</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">sigma_arr</span><span class="o">.</span><span class="n">flatten</span><span class="p">())):</span>
+        <span class="n">sd3</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="o">*</span><span class="n">sigma</span> <span class="o">+</span> <span class="n">mu</span><span class="p">,</span> <span class="mi">4</span><span class="o">*</span><span class="n">sigma</span> <span class="o">+</span> <span class="n">mu</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">sd3</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sd3</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">300</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">)</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="n">var</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="n">var</span><span class="p">]</span>
+        <span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">norm_hist</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -558,7 +559,7 @@ fig.tight_layout()
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-hierarchical-advi-minibatch_14_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-hierarchical-advi-minibatch_14_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical-advi-minibatch_14_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical-advi-minibatch_14_0.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
@@ -583,7 +584,7 @@ fig.tight_layout()
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>&lt;no title&gt; &mdash; pymc3 3.0 documentation</title>
+  <title>&lt;no title&gt; &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -48,7 +48,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -80,6 +80,7 @@
             
             
                 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
@@ -95,7 +96,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -306,15 +307,15 @@ separately to show how to do block updates.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>%pylab inline
-from matplotlib.pylab import *
-from pymc3 import *
-import numpy as np
+<span></span><span class="o">%</span><span class="k">pylab</span> inline
+<span class="kn">from</span> <span class="nn">matplotlib.pylab</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 
-d = np.random.normal(size=(3, 30))
-d1 = d[0] + 4
-d2 = d[1] + 4
-yd = .2*d1 +.3*d2 + d[2]
+<span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span>
+<span class="n">d1</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">4</span>
+<span class="n">d2</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">4</span>
+<span class="n">yd</span> <span class="o">=</span> <span class="o">.</span><span class="mi">2</span><span class="o">*</span><span class="n">d1</span> <span class="o">+.</span><span class="mi">3</span><span class="o">*</span><span class="n">d2</span> <span class="o">+</span> <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -352,18 +353,18 @@ WARNING: pylab import has clobbered these variables: [&#39;prod&#39;, &#39;zeros
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>lam = 3
+<span></span><span class="n">lam</span> <span class="o">=</span> <span class="mi">3</span>
 
-with Model() as model:
-    s = Exponential(&#39;s&#39;, 1)
-    tau = Uniform(&#39;tau&#39;, 0, 1000)
-    b = lam * tau
-    m1 = Laplace(&#39;m1&#39;, 0, b)
-    m2 = Laplace(&#39;m2&#39;, 0, b)
+<span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">lam</span> <span class="o">*</span> <span class="n">tau</span>
+    <span class="n">m1</span> <span class="o">=</span> <span class="n">Laplace</span><span class="p">(</span><span class="s1">&#39;m1&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+    <span class="n">m2</span> <span class="o">=</span> <span class="n">Laplace</span><span class="p">(</span><span class="s1">&#39;m2&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
 
-    p = d1*m1 + d2*m2
+    <span class="n">p</span> <span class="o">=</span> <span class="n">d1</span><span class="o">*</span><span class="n">m1</span> <span class="o">+</span> <span class="n">d2</span><span class="o">*</span><span class="n">m2</span>
 
-    y = Normal(&#39;y&#39;, mu=p, sd=s, observed=yd)
+    <span class="n">y</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">s</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">yd</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -376,8 +377,8 @@ array parameters.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>import pymc3
-pymc3.variational.advi( model=model, n=100000)
+<span></span><span class="kn">import</span> <span class="nn">pymc3</span>
+<span class="n">pymc3</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -404,14 +405,14 @@ pymc3.variational.advi( model=model, n=100000)
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>with model:
-    start = find_MAP()
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">()</span>
 
-    step1 = Metropolis([m1, m2])
+    <span class="n">step1</span> <span class="o">=</span> <span class="n">Metropolis</span><span class="p">([</span><span class="n">m1</span><span class="p">,</span> <span class="n">m2</span><span class="p">])</span>
 
-    step2 = Slice([s, tau])
+    <span class="n">step2</span> <span class="o">=</span> <span class="n">Slice</span><span class="p">([</span><span class="n">s</span><span class="p">,</span> <span class="n">tau</span><span class="p">])</span>
 
-    trace = sample(10000, [step1, step2], start=start)
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="p">[</span><span class="n">step1</span><span class="p">,</span> <span class="n">step2</span><span class="p">],</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -430,7 +431,7 @@ pymc3.variational.advi( model=model, n=100000)
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
 
-<span></span>traceplot(trace);
+<span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -438,7 +439,7 @@ pymc3.variational.advi( model=model, n=100000)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_lasso_block_update_8_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_lasso_block_update_8_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_lasso_block_update_8_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_lasso_block_update_8_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -447,7 +448,7 @@ pymc3.variational.advi( model=model, n=100000)
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>hexbin(trace[m1],trace[m2], gridsize = 50)
+<span></span><span class="n">hexbin</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">m1</span><span class="p">],</span><span class="n">trace</span><span class="p">[</span><span class="n">m2</span><span class="p">],</span> <span class="n">gridsize</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -465,7 +466,7 @@ pymc3.variational.advi( model=model, n=100000)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_lasso_block_update_9_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_lasso_block_update_9_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_lasso_block_update_9_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_lasso_block_update_9_1.png" />
 </div>
 </div>
 
@@ -479,7 +480,7 @@ pymc3.variational.advi( model=model, n=100000)
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

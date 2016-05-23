@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Bayesian GLMs &mdash; pymc3 3.0 documentation</title>
+  <title>Bayesian GLMs &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -48,7 +48,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -80,6 +80,7 @@
             
             
                 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
@@ -95,7 +96,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -299,16 +300,16 @@ div.nboutput  > :nth-child(2).stderr {
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import matplotlib.pyplot as plt
-import numpy as np
-from pymc3 import  *
-import patsy
-import theano
-import pandas as pd
-from collections import defaultdict
-from statsmodels.formula.api import glm as glm_sm
-import statsmodels.api as sm
-from pandas.tools.plotting import scatter_matrix
+<span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span>  <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">patsy</span>
+<span class="kn">import</span> <span class="nn">theano</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">statsmodels.formula.api</span> <span class="kn">import</span> <span class="n">glm</span> <span class="k">as</span> <span class="n">glm_sm</span>
+<span class="kn">import</span> <span class="nn">statsmodels.api</span> <span class="kn">as</span> <span class="nn">sm</span>
+<span class="kn">from</span> <span class="nn">pandas.tools.plotting</span> <span class="kn">import</span> <span class="n">scatter_matrix</span>
 </pre></div>
 </div>
 </div>
@@ -323,14 +324,14 @@ linear GLM.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>size = 50
-true_intercept = 1
-true_slope = 2
+<span></span><span class="n">size</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="n">true_intercept</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">true_slope</span> <span class="o">=</span> <span class="mi">2</span>
 
-x = np.linspace(0, 1, size)
-y = true_intercept + x*true_slope + np.random.normal(scale=.5, size=size)
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">true_intercept</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">true_slope</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">scale</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
 
-data = dict(x=x, y=y)
+<span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -342,17 +343,17 @@ output variable y_est and coefficients of the specified linear model.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as model:
-    y_est, coeffs = glm.linear_component(&#39;y ~ x&#39;, data)
-    sigma = Uniform(&#39;sigma&#39;, 0, 20)
-    y_obs = Normal(&#39;y_obs&#39;, mu=y_est, sd=sigma, observed=y)
-    start = find_MAP(vars=[sigma])
-    step = Slice(model.vars)
-    trace = sample(2000, step, start, progressbar=False)
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">y_est</span><span class="p">,</span> <span class="n">coeffs</span> <span class="o">=</span> <span class="n">glm</span><span class="o">.</span><span class="n">linear_component</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+    <span class="n">y_obs</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y_obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">y_est</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">sigma</span><span class="p">])</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
-plt.figure(figsize=(5, 5))
-plt.plot(x, y, &#39;x&#39;)
-glm.plot_posterior_predictive(trace)
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -360,7 +361,7 @@ glm.plot_posterior_predictive(trace)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_5_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_5_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_5_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_5_0.png" />
 </div>
 </div>
 <p>Since there are a couple of general linear models that are being used
@@ -378,13 +379,13 @@ model as above, just more succinctly.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as model:
-    glm.glm(&#39;y ~ x&#39;, data)
-    trace = sample(2000, Slice(model.vars), progressbar=False)
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
-plt.figure(figsize=(5, 5))
-plt.plot(x, y, &#39;x&#39;)
-glm.plot_posterior_predictive(trace)
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -392,7 +393,7 @@ glm.plot_posterior_predictive(trace)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_7_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_7_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_7_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_7_0.png" />
 </div>
 </div>
 </div>
@@ -405,9 +406,9 @@ glm.plot_posterior_predictive(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>x_out = np.append(x, [.1, .15, .2])
-y_out = np.append(y, [8, 6, 9])
-data_outlier = dict(x=x_out, y=y_out)
+<span></span><span class="n">x_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">[</span><span class="o">.</span><span class="mi">1</span><span class="p">,</span> <span class="o">.</span><span class="mi">15</span><span class="p">,</span> <span class="o">.</span><span class="mi">2</span><span class="p">])</span>
+<span class="n">y_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">])</span>
+<span class="n">data_outlier</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x_out</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y_out</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -417,13 +418,13 @@ data_outlier = dict(x=x_out, y=y_out)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as model:
-    glm.glm(&#39;y ~ x&#39;, data_outlier)
-    trace = sample(2000, Slice(model.vars), progressbar=False)
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data_outlier</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
-plt.figure(figsize=(5, 5))
-plt.plot(x_out, y_out, &#39;x&#39;)
-glm.plot_posterior_predictive(trace)
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_out</span><span class="p">,</span> <span class="n">y_out</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -431,7 +432,7 @@ glm.plot_posterior_predictive(trace)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_10_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_10_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_10_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_10_0.png" />
 </div>
 </div>
 <p>Because the normal distribution does not have a lot of mass in the
@@ -452,17 +453,17 @@ are. Here we fix the degrees of freedom <code class="docutils literal"><span cla
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as model_robust:
-    family = glm.families.StudentT(link=glm.links.Identity,
-                                                 priors={&#39;nu&#39;: 1.5,
-                                                               &#39;lam&#39;: (&#39;sigma&#39;, Uniform.dist(0, 20))})
-    glm.glm(&#39;y ~ x&#39;, data_outlier, family=family)
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_robust</span><span class="p">:</span>
+    <span class="n">family</span> <span class="o">=</span> <span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">StudentT</span><span class="p">(</span><span class="n">link</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">links</span><span class="o">.</span><span class="n">Identity</span><span class="p">,</span>
+                                                 <span class="n">priors</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;nu&#39;</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">,</span>
+                                                               <span class="s1">&#39;lam&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="n">Uniform</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">))})</span>
+    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data_outlier</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">family</span><span class="p">)</span>
 
-    trace = sample(2000, Slice(model.vars), progressbar=False)
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
-plt.figure(figsize=(5, 5))
-plt.plot(x_out, y_out, &#39;x&#39;)
-glm.plot_posterior_predictive(trace)
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_out</span><span class="p">,</span> <span class="n">y_out</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -470,7 +471,7 @@ glm.plot_posterior_predictive(trace)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_12_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_12_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_12_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_12_0.png" />
 </div>
 </div>
 </div>
@@ -482,7 +483,7 @@ glm.plot_posterior_predictive(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>sat_data = pd.read_csv(&#39;../data/Guber1999data.txt&#39;)
+<span></span><span class="n">sat_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/Guber1999data.txt&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -492,21 +493,21 @@ glm.plot_posterior_predictive(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as model_sat:
-    grp_mean = Normal(&#39;grp_mean&#39;, mu=0, sd=10)
-    grp_sd = Uniform(&#39;grp_sd&#39;, 0, 200)
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_sat</span><span class="p">:</span>
+    <span class="n">grp_mean</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;grp_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">grp_sd</span> <span class="o">=</span> <span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;grp_sd&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
 
-    # Define priors for intercept and regression coefficients.
-    priors = {&#39;Intercept&#39;: Normal.dist(mu=sat_data.sat_t.mean(), sd=sat_data.sat_t.std()),
-          &#39;spend&#39;: Normal.dist(mu=grp_mean, sd=grp_sd),
-          &#39;stu_tea_rat&#39;: Normal.dist(mu=grp_mean, sd=grp_sd),
-          &#39;salary&#39;: Normal.dist(mu=grp_mean, sd=grp_sd),
-          &#39;prcnt_take&#39;: Normal.dist(mu=grp_mean, sd=grp_sd)
-    }
-    glm.glm(&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;,
-                    sat_data,
-                priors=priors)
-    trace_sat = sample(500, NUTS(), progressbar=False)
+    <span class="c1"># Define priors for intercept and regression coefficients.</span>
+    <span class="n">priors</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Intercept&#39;</span><span class="p">:</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">sat_data</span><span class="o">.</span><span class="n">sat_t</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">sd</span><span class="o">=</span><span class="n">sat_data</span><span class="o">.</span><span class="n">sat_t</span><span class="o">.</span><span class="n">std</span><span class="p">()),</span>
+          <span class="s1">&#39;spend&#39;</span><span class="p">:</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">grp_sd</span><span class="p">),</span>
+          <span class="s1">&#39;stu_tea_rat&#39;</span><span class="p">:</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">grp_sd</span><span class="p">),</span>
+          <span class="s1">&#39;salary&#39;</span><span class="p">:</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">grp_sd</span><span class="p">),</span>
+          <span class="s1">&#39;prcnt_take&#39;</span><span class="p">:</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">grp_sd</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;</span><span class="p">,</span>
+                    <span class="n">sat_data</span><span class="p">,</span>
+                <span class="n">priors</span><span class="o">=</span><span class="n">priors</span><span class="p">)</span>
+    <span class="n">trace_sat</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -516,7 +517,7 @@ glm.plot_posterior_predictive(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>scatter_matrix(trace_to_dataframe(trace_sat), figsize=(12,12));
+<span></span><span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_sat</span><span class="p">),</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">12</span><span class="p">));</span>
 </pre></div>
 </div>
 </div>
@@ -524,7 +525,7 @@ glm.plot_posterior_predictive(trace)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_16_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_16_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_16_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_16_0.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
@@ -533,14 +534,14 @@ glm.plot_posterior_predictive(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as model_sat:
-    grp_mean = Normal(&#39;grp_mean&#39;, mu=0, sd=10)
-    grp_prec = Gamma(&#39;grp_prec&#39;, alpha=1, beta=.1, testval=1.)
-    slope = T.dist(mu=grp_mean, lam=grp_prec, nu=1)
-    intercept = Normal.dist(mu=sat_data.sat_t.mean(), sd=sat_data.sat_t.std())
-    glm.glm(&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;, sat_data,
-        intercept_prior=intercept, regressor_prior=slope)
-    trace_sat = sample(500, NUTS(), progressbar=False)
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_sat</span><span class="p">:</span>
+    <span class="n">grp_mean</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;grp_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">grp_prec</span> <span class="o">=</span> <span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;grp_prec&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=.</span><span class="mi">1</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+    <span class="n">slope</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">grp_prec</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">intercept</span> <span class="o">=</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">sat_data</span><span class="o">.</span><span class="n">sat_t</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">sd</span><span class="o">=</span><span class="n">sat_data</span><span class="o">.</span><span class="n">sat_t</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
+    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;</span><span class="p">,</span> <span class="n">sat_data</span><span class="p">,</span>
+        <span class="n">intercept_prior</span><span class="o">=</span><span class="n">intercept</span><span class="p">,</span> <span class="n">regressor_prior</span><span class="o">=</span><span class="n">slope</span><span class="p">)</span>
+    <span class="n">trace_sat</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -550,7 +551,7 @@ glm.plot_posterior_predictive(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>scatter_matrix(trace_to_dataframe(trace_sat), figsize=(12,12));
+<span></span><span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_sat</span><span class="p">),</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">12</span><span class="p">));</span>
 </pre></div>
 </div>
 </div>
@@ -558,7 +559,7 @@ glm.plot_posterior_predictive(trace)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_18_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_18_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_18_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_18_0.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
@@ -567,22 +568,22 @@ glm.plot_posterior_predictive(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>tdf_gain = 5.
-with Model() as model_sat:
-    grp_mean = Normal(&#39;grp_mean&#39;, mu=0, sd=10)
-    grp_prec = Gamma(&#39;grp_prec&#39;, alpha=1, beta=.1, testval=1.)
-    #grp_sd = Uniform(&#39;grp_sd&#39;, 0, 100, testval=5)
-    #grp_df_raw = Uniform(&#39;grp_df&#39;, 0, 1, testval=0.5)
-    #grp_df = 1 - tdf_gain * theano.tensor.log((1-grp_df_raw))
-    slope = T.dist(mu=grp_mean, lam=grp_prec, nu=1) #grp_df)
-    intercept = Normal.dist(mu=sat_data.sat_t.mean(), sd=sat_data.sat_t.std())
-    glm.glm(&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;, sat_data,
-                intercept_prior=intercept, regressor_prior=slope)
+<span></span><span class="n">tdf_gain</span> <span class="o">=</span> <span class="mf">5.</span>
+<span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_sat</span><span class="p">:</span>
+    <span class="n">grp_mean</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;grp_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">grp_prec</span> <span class="o">=</span> <span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;grp_prec&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=.</span><span class="mi">1</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+    <span class="c1">#grp_sd = Uniform(&#39;grp_sd&#39;, 0, 100, testval=5)</span>
+    <span class="c1">#grp_df_raw = Uniform(&#39;grp_df&#39;, 0, 1, testval=0.5)</span>
+    <span class="c1">#grp_df = 1 - tdf_gain * theano.tensor.log((1-grp_df_raw))</span>
+    <span class="n">slope</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">grp_prec</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#grp_df)</span>
+    <span class="n">intercept</span> <span class="o">=</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">sat_data</span><span class="o">.</span><span class="n">sat_t</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">sd</span><span class="o">=</span><span class="n">sat_data</span><span class="o">.</span><span class="n">sat_t</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
+    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;</span><span class="p">,</span> <span class="n">sat_data</span><span class="p">,</span>
+                <span class="n">intercept_prior</span><span class="o">=</span><span class="n">intercept</span><span class="p">,</span> <span class="n">regressor_prior</span><span class="o">=</span><span class="n">slope</span><span class="p">)</span>
 
-    trace_sat = sample(2000, NUTS(), progressbar=False)
-    #step = NUTS([grp_mean, grp_prec, sigma] + coeffs, start)
-    #step2 = Slice([grp_df_raw])
-    #trace_sat = sample(2000, [step, step2], start)
+    <span class="n">trace_sat</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="c1">#step = NUTS([grp_mean, grp_prec, sigma] + coeffs, start)</span>
+    <span class="c1">#step2 = Slice([grp_df_raw])</span>
+    <span class="c1">#trace_sat = sample(2000, [step, step2], start)</span>
 </pre></div>
 </div>
 </div>
@@ -595,8 +596,8 @@ with Model() as model_sat:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>htwt_data = pd.read_csv(&#39;../data/HtWt.csv&#39;)
-htwt_data.head()
+<span></span><span class="n">htwt_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/HtWt.csv&#39;</span><span class="p">)</span>
+<span class="n">htwt_data</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -657,8 +658,8 @@ htwt_data.head()
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>m = glm_sm(&#39;male ~ height + weight&#39;, htwt_data, family=sm.families.Binomial()).fit()
-print m.summary()
+<span></span><span class="n">m</span> <span class="o">=</span> <span class="n">glm_sm</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">sm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">())</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="k">print</span> <span class="n">m</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -692,9 +693,9 @@ weight         0.0096      0.011      0.892      0.376        -0.012     0.031
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as model_htwt:
-    glm.glm(&#39;male ~ height + weight&#39;, htwt_data, family=glm.families.Binomial())
-    trace_htwt = sample(1000, NUTS(), progressbar=False)
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_htwt</span><span class="p">:</span>
+    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">())</span>
+    <span class="n">trace_htwt</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -704,11 +705,11 @@ weight         0.0096      0.011      0.892      0.376        -0.012     0.031
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>trace_df = trace_to_dataframe(trace_htwt)
-print trace_df.describe().drop(&#39;count&#39;).T
-scatter_matrix(trace_df, figsize=(8, 8));
-print &quot;P(weight &lt; 0) = &quot;, (trace_df[&#39;weight&#39;] &lt; 0).mean()
-print &quot;P(height &lt; 0) = &quot;, (trace_df[&#39;height&#39;] &lt; 0).mean()
+<span></span><span class="n">trace_df</span> <span class="o">=</span> <span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_htwt</span><span class="p">)</span>
+<span class="k">print</span> <span class="n">trace_df</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;count&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+<span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_df</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">));</span>
+<span class="k">print</span> <span class="s2">&quot;P(weight &lt; 0) = &quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">trace_df</span><span class="p">[</span><span class="s1">&#39;weight&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+<span class="k">print</span> <span class="s2">&quot;P(height &lt; 0) = &quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">trace_df</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -734,7 +735,7 @@ P(height &lt; 0) =  0.0
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_24_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_24_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_24_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_24_1.png" />
 </div>
 </div>
 <div class="section" id="Bayesian-Logistic-Lasso">
@@ -745,12 +746,12 @@ P(height &lt; 0) =  0.0
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>lp = Laplace.dist(mu=0, b=0.05)
-x_eval = np.linspace(-.5, .5, 300)
-plt.plot(x_eval, theano.tensor.exp(lp.logp(x_eval)).eval())
-plt.xlabel(&#39;x&#39;)
-plt.ylabel(&#39;Probability&#39;)
-plt.title(&#39;Laplace distribution&#39;);
+<span></span><span class="n">lp</span> <span class="o">=</span> <span class="n">Laplace</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="n">x_eval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-.</span><span class="mi">5</span><span class="p">,</span> <span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_eval</span><span class="p">,</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">lp</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">x_eval</span><span class="p">))</span><span class="o">.</span><span class="n">eval</span><span class="p">())</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Probability&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Laplace distribution&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -758,7 +759,7 @@ plt.title(&#39;Laplace distribution&#39;);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_26_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_26_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_26_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_26_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -767,22 +768,22 @@ plt.title(&#39;Laplace distribution&#39;);
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as model_lasso:
-    #grp_lambda = Uniform(&#39;grp_lambda&#39;, 0.00001, 10)
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_lasso</span><span class="p">:</span>
+    <span class="c1">#grp_lambda = Uniform(&#39;grp_lambda&#39;, 0.00001, 10)</span>
 
-    # Define priors for intercept and regression coefficients.
-    priors = {&#39;Intercept&#39;: Normal.dist(mu=0, sd=50),
-              &#39;height&#39;: Laplace.dist(mu=0, b=0.05),
-              &#39;weight&#39;: Laplace.dist(mu=0, b=0.05)
-    }
-    glm.glm(&#39;male ~ height + weight&#39;, htwt_data, family=glm.families.Binomial(),
-                    priors=priors)
+    <span class="c1"># Define priors for intercept and regression coefficients.</span>
+    <span class="n">priors</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Intercept&#39;</span><span class="p">:</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">50</span><span class="p">),</span>
+              <span class="s1">&#39;height&#39;</span><span class="p">:</span> <span class="n">Laplace</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">0.05</span><span class="p">),</span>
+              <span class="s1">&#39;weight&#39;</span><span class="p">:</span> <span class="n">Laplace</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">(),</span>
+                    <span class="n">priors</span><span class="o">=</span><span class="n">priors</span><span class="p">)</span>
 
-    trace_lasso = sample(500, NUTS(), progressbar=False)
+    <span class="n">trace_lasso</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
-trace_df = trace_to_dataframe(trace_lasso)
-scatter_matrix(trace_df, figsize=(8, 8));
-print trace_df.describe().drop(&#39;count&#39;).T
+<span class="n">trace_df</span> <span class="o">=</span> <span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_lasso</span><span class="p">)</span>
+<span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_df</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">));</span>
+<span class="k">print</span> <span class="n">trace_df</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;count&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 </pre></div>
 </div>
 </div>
@@ -806,7 +807,7 @@ weight     0.041575
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_27_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_27_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_27_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM_27_1.png" />
 </div>
 </div>
 </div>
@@ -822,7 +823,7 @@ weight     0.041575
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

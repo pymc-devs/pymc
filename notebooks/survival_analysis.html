@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Bayesian Survival Analysis &mdash; pymc3 3.0 documentation</title>
+  <title>Bayesian Survival Analysis &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Gaussian Process (GP) smoothing" href="GP-smoothing.html"/>
         <link rel="prev" title="Posterior Predictive Checks" href="posterior_predictive.html"/> 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -83,6 +83,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
@@ -121,7 +122,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -338,7 +339,7 @@ package.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%matplotlib inline
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 </pre></div>
 </div>
 </div>
@@ -348,13 +349,13 @@ package.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>from matplotlib import pyplot as plt
-import numpy as np
-import pymc3 as pm
-from pymc3.distributions.timeseries import GaussianRandomWalk
-import seaborn as sns
-from statsmodels import datasets
-from theano import tensor as T
+<span></span><span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">from</span> <span class="nn">pymc3.distributions.timeseries</span> <span class="kn">import</span> <span class="n">GaussianRandomWalk</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="kn">from</span> <span class="nn">statsmodels</span> <span class="kn">import</span> <span class="n">datasets</span>
+<span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">tensor</span> <span class="k">as</span> <span class="n">T</span>
 </pre></div>
 </div>
 </div>
@@ -375,11 +376,11 @@ makes it quite easy to load a number of data sets from <code class="docutils lit
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>df = datasets.get_rdataset(&#39;mastectomy&#39;, &#39;HSAUR&#39;, cache=True).data
-df.event = df.event.astype(np.int64)
-df.metastized = (df.metastized == &#39;yes&#39;).astype(np.int64)
-n_patients = df.shape[0]
-patients = np.arange(n_patients)
+<span></span><span class="n">df</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">get_rdataset</span><span class="p">(</span><span class="s1">&#39;mastectomy&#39;</span><span class="p">,</span> <span class="s1">&#39;HSAUR&#39;</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
+<span class="n">df</span><span class="o">.</span><span class="n">event</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">event</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">metastized</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">metastized</span> <span class="o">==</span> <span class="s1">&#39;yes&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+<span class="n">n_patients</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">patients</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_patients</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -389,7 +390,7 @@ patients = np.arange(n_patients)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>df.head()
+<span></span><span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -450,7 +451,7 @@ patients = np.arange(n_patients)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>n_patients
+<span></span><span class="n">n_patients</span>
 </pre></div>
 </div>
 </div>
@@ -519,7 +520,7 @@ observation is censored).</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>df.event.mean()
+<span></span><span class="n">df</span><span class="o">.</span><span class="n">event</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -541,27 +542,27 @@ observed durations and indicate which observations are censored below.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
-blue, _, red = sns.color_palette()[:3]
+<span class="n">blue</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">red</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]</span>
 
-ax.hlines(patients[df.event.values == 0], 0, df[df.event.values == 0].time,
-          color=blue, label=&#39;Censored&#39;)
+<span class="n">ax</span><span class="o">.</span><span class="n">hlines</span><span class="p">(</span><span class="n">patients</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">event</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">event</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
+          <span class="n">color</span><span class="o">=</span><span class="n">blue</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Censored&#39;</span><span class="p">)</span>
 
-ax.hlines(patients[df.event.values == 1], 0, df[df.event.values == 1].time,
-          color=red, label=&#39;Uncensored&#39;)
+<span class="n">ax</span><span class="o">.</span><span class="n">hlines</span><span class="p">(</span><span class="n">patients</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">event</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">event</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
+          <span class="n">color</span><span class="o">=</span><span class="n">red</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Uncensored&#39;</span><span class="p">)</span>
 
-ax.scatter(df[df.metastized.values == 1].time, patients[df.metastized.values == 1],
-           color=&#39;k&#39;, zorder=10, label=&#39;Metastized&#39;)
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">metastized</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">patients</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">metastized</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="mi">1</span><span class="p">],</span>
+           <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Metastized&#39;</span><span class="p">)</span>
 
-ax.set_xlim(left=0)
-ax.set_xlabel(&#39;Months since mastectomy&#39;)
-ax.set_yticks([])
-ax.set_ylabel(&#39;Subject&#39;)
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Months since mastectomy&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Subject&#39;</span><span class="p">)</span>
 
-ax.set_ylim(-0.25, n_patients + 0.25)
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">n_patients</span> <span class="o">+</span> <span class="mf">0.25</span><span class="p">)</span>
 
-ax.legend(loc=&#39;center right&#39;);
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;center right&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -569,7 +570,7 @@ ax.legend(loc=&#39;center right&#39;);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_11_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_11_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_11_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_11_0.png" />
 </div>
 </div>
 <p>When an observation is censored (<code class="docutils literal"><span class="pre">df.event</span></code> is zero), <code class="docutils literal"><span class="pre">df.time</span></code> is
@@ -639,10 +640,10 @@ mastectomy example, we make each interval three months long.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>interval_length = 3
-interval_bounds = np.arange(0, df.time.max() + interval_length + 1, interval_length)
-n_intervals = interval_bounds.size - 1
-intervals = np.arange(n_intervals)
+<span></span><span class="n">interval_length</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">interval_bounds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">interval_length</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">interval_length</span><span class="p">)</span>
+<span class="n">n_intervals</span> <span class="o">=</span> <span class="n">interval_bounds</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="mi">1</span>
+<span class="n">intervals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_intervals</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -654,22 +655,22 @@ intervals.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
-ax.hist(df[df.event == 1].time.values, bins=interval_bounds,
-        color=red, alpha=0.5, lw=0,
-        label=&#39;Uncensored&#39;);
-ax.hist(df[df.event == 0].time.values, bins=interval_bounds,
-        color=blue, alpha=0.5, lw=0,
-        label=&#39;Censored&#39;);
+<span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">event</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">interval_bounds</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">red</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Uncensored&#39;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">event</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">interval_bounds</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">blue</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Censored&#39;</span><span class="p">);</span>
 
-ax.set_xlim(0, interval_bounds[-1]);
-ax.set_xlabel(&#39;Months since mastectomy&#39;);
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">interval_bounds</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Months since mastectomy&#39;</span><span class="p">);</span>
 
-ax.set_yticks([0, 1, 2, 3]);
-ax.set_ylabel(&#39;Number of observations&#39;);
+<span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Number of observations&#39;</span><span class="p">);</span>
 
-ax.legend();
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">();</span>
 </pre></div>
 </div>
 </div>
@@ -677,7 +678,7 @@ ax.legend();
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_16_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_16_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_16_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_16_0.png" />
 </div>
 </div>
 <p>With the prior distributions on <span class="math">\(\beta\)</span> and <span class="math">\(\lambda_0(t)\)</span>
@@ -702,10 +703,10 @@ suject died in the <span class="math">\(j\)</span>-th interval,</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>last_period = np.floor((df.time - 0.01) / interval_length).astype(int)
+<span></span><span class="n">last_period</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="n">df</span><span class="o">.</span><span class="n">time</span> <span class="o">-</span> <span class="mf">0.01</span><span class="p">)</span> <span class="o">/</span> <span class="n">interval_length</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
 
-death = np.zeros((n_patients, n_intervals))
-death[patients, last_period] = df.event
+<span class="n">death</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_patients</span><span class="p">,</span> <span class="n">n_intervals</span><span class="p">))</span>
+<span class="n">death</span><span class="p">[</span><span class="n">patients</span><span class="p">,</span> <span class="n">last_period</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">event</span>
 </pre></div>
 </div>
 </div>
@@ -717,8 +718,8 @@ death[patients, last_period] = df.event
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>exposure = np.greater_equal.outer(df.time, interval_bounds[:-1]) * interval_length
-exposure[patients, last_period] = df.time - interval_bounds[last_period]
+<span></span><span class="n">exposure</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">greater_equal</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">interval_length</span>
+<span class="n">exposure</span><span class="p">[</span><span class="n">patients</span><span class="p">,</span> <span class="n">last_period</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">time</span> <span class="o">-</span> <span class="n">interval_bounds</span><span class="p">[</span><span class="n">last_period</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -734,7 +735,7 @@ following <code class="docutils literal"><span class="pre">pymc3</span></code> m
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>SEED = 5078864 # from random.org
+<span></span><span class="n">SEED</span> <span class="o">=</span> <span class="mi">5078864</span> <span class="c1"># from random.org</span>
 </pre></div>
 </div>
 </div>
@@ -744,16 +745,16 @@ following <code class="docutils literal"><span class="pre">pymc3</span></code> m
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as model:
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
 
-    lambda0 = pm.Gamma(&#39;lambda0&#39;, 0.01, 0.01, shape=n_intervals)
+    <span class="n">lambda0</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;lambda0&#39;</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_intervals</span><span class="p">)</span>
 
-    beta = pm.Normal(&#39;beta&#39;, 0, sd=1000)
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 
-    lambda_ = pm.Deterministic(&#39;lambda_&#39;, T.outer(T.exp(beta * df.metastized), lambda0))
-    mu = pm.Deterministic(&#39;mu&#39;, exposure * lambda_)
+    <span class="n">lambda_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;lambda_&#39;</span><span class="p">,</span> <span class="n">T</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">beta</span> <span class="o">*</span> <span class="n">df</span><span class="o">.</span><span class="n">metastized</span><span class="p">),</span> <span class="n">lambda0</span><span class="p">))</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">exposure</span> <span class="o">*</span> <span class="n">lambda_</span><span class="p">)</span>
 
-    obs = pm.Poisson(&#39;obs&#39;, mu, observed=death)
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Poisson</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">death</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -772,7 +773,7 @@ Applied log-transform to lambda0 and added transformed lambda0_log to model.
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>n_samples = 1000
+<span></span><span class="n">n_samples</span> <span class="o">=</span> <span class="mi">1000</span>
 </pre></div>
 </div>
 </div>
@@ -782,8 +783,8 @@ Applied log-transform to lambda0 and added transformed lambda0_log to model.
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    trace_ = pm.sample(n_samples,random_seed=SEED)
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span><span class="n">random_seed</span><span class="o">=</span><span class="n">SEED</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -803,7 +804,7 @@ Assigned NUTS to beta
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>trace = trace_[100:]
+<span></span><span class="n">trace</span> <span class="o">=</span> <span class="n">trace_</span><span class="p">[</span><span class="mi">100</span><span class="p">:]</span>
 </pre></div>
 </div>
 </div>
@@ -815,7 +816,7 @@ about double the rate of those whose cancer has not metastized.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>np.exp(trace[&#39;beta&#39;].mean())
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
@@ -835,7 +836,7 @@ about double the rate of those whose cancer has not metastized.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>pm.plot_posterior(trace, varnames=[&#39;beta&#39;], color=&#39;#87ceeb&#39;);
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#87ceeb&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -843,7 +844,7 @@ about double the rate of those whose cancer has not metastized.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_30_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_30_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_30_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_30_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -852,7 +853,7 @@ about double the rate of those whose cancer has not metastized.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>pm.autocorrplot(trace, varnames=[&#39;beta&#39;]);
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">autocorrplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -860,7 +861,7 @@ about double the rate of those whose cancer has not metastized.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_31_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_31_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_31_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_31_0.png" />
 </div>
 </div>
 <p>We now examine the effect of metastization on both the cumulative hazard
@@ -871,8 +872,8 @@ and on the survival function.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>base_hazard = trace[&#39;lambda0&#39;]
-met_hazard = trace[&#39;lambda0&#39;] * np.exp(np.atleast_2d(trace[&#39;beta&#39;]).T)
+<span></span><span class="n">base_hazard</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;lambda0&#39;</span><span class="p">]</span>
+<span class="n">met_hazard</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;lambda0&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -882,11 +883,11 @@ met_hazard = trace[&#39;lambda0&#39;] * np.exp(np.atleast_2d(trace[&#39;beta&#39
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def cum_hazard(hazard):
-    return (interval_length * hazard).cumsum(axis=-1)
+<span></span><span class="k">def</span> <span class="nf">cum_hazard</span><span class="p">(</span><span class="n">hazard</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">interval_length</span> <span class="o">*</span> <span class="n">hazard</span><span class="p">)</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
 
-def survival(hazard):
-    return np.exp(-cum_hazard(hazard))
+<span class="k">def</span> <span class="nf">survival</span><span class="p">(</span><span class="n">hazard</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">cum_hazard</span><span class="p">(</span><span class="n">hazard</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -896,14 +897,14 @@ def survival(hazard):
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def plot_with_hpd(x, hazard, f, ax, color=None, label=None, alpha=0.05):
-    mean = f(hazard.mean(axis=0))
+<span></span><span class="k">def</span> <span class="nf">plot_with_hpd</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">hazard</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span><span class="p">):</span>
+    <span class="n">mean</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">hazard</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
 
-    percentiles = 100 * np.array([alpha / 2., 1. - alpha / 2.])
-    hpd = np.percentile(f(hazard), percentiles, axis=0)
+    <span class="n">percentiles</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">alpha</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">,</span> <span class="mf">1.</span> <span class="o">-</span> <span class="n">alpha</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">])</span>
+    <span class="n">hpd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">hazard</span><span class="p">),</span> <span class="n">percentiles</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
-    ax.fill_between(x, hpd[0], hpd[1], color=color, alpha=0.25)
-    ax.step(x, mean, color=color, label=label);
+    <span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">hpd</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">hpd</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.25</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -913,31 +914,31 @@ def survival(hazard):
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig, (hazard_ax, surv_ax) = plt.subplots(ncols=2, sharex=True, sharey=False, figsize=(16, 6))
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">hazard_ax</span><span class="p">,</span> <span class="n">surv_ax</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
-plot_with_hpd(interval_bounds[:-1], base_hazard, cum_hazard,
-              hazard_ax, color=blue, label=&#39;Had not metastized&#39;)
-plot_with_hpd(interval_bounds[:-1], met_hazard, cum_hazard,
-              hazard_ax, color=red, label=&#39;Metastized&#39;)
+<span class="n">plot_with_hpd</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">base_hazard</span><span class="p">,</span> <span class="n">cum_hazard</span><span class="p">,</span>
+              <span class="n">hazard_ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">blue</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Had not metastized&#39;</span><span class="p">)</span>
+<span class="n">plot_with_hpd</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">met_hazard</span><span class="p">,</span> <span class="n">cum_hazard</span><span class="p">,</span>
+              <span class="n">hazard_ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">red</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Metastized&#39;</span><span class="p">)</span>
 
-hazard_ax.set_xlim(0, df.time.max());
-hazard_ax.set_xlabel(&#39;Months since mastectomy&#39;);
+<span class="n">hazard_ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">max</span><span class="p">());</span>
+<span class="n">hazard_ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Months since mastectomy&#39;</span><span class="p">);</span>
 
-hazard_ax.set_ylabel(r&#39;Cumulative hazard $\Lambda(t)$&#39;);
+<span class="n">hazard_ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">r&#39;Cumulative hazard $\Lambda(t)$&#39;</span><span class="p">);</span>
 
-hazard_ax.legend(loc=2);
+<span class="n">hazard_ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">2</span><span class="p">);</span>
 
-plot_with_hpd(interval_bounds[:-1], base_hazard, survival,
-              surv_ax, color=blue)
-plot_with_hpd(interval_bounds[:-1], met_hazard, survival,
-              surv_ax, color=red)
+<span class="n">plot_with_hpd</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">base_hazard</span><span class="p">,</span> <span class="n">survival</span><span class="p">,</span>
+              <span class="n">surv_ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">blue</span><span class="p">)</span>
+<span class="n">plot_with_hpd</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">met_hazard</span><span class="p">,</span> <span class="n">survival</span><span class="p">,</span>
+              <span class="n">surv_ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">red</span><span class="p">)</span>
 
-surv_ax.set_xlim(0, df.time.max());
-surv_ax.set_xlabel(&#39;Months since mastectomy&#39;);
+<span class="n">surv_ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">max</span><span class="p">());</span>
+<span class="n">surv_ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Months since mastectomy&#39;</span><span class="p">);</span>
 
-surv_ax.set_ylabel(&#39;Survival function $S(t)$&#39;);
+<span class="n">surv_ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Survival function $S(t)$&#39;</span><span class="p">);</span>
 
-fig.suptitle(&#39;Bayesian survival model&#39;);
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s1">&#39;Bayesian survival model&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -945,7 +946,7 @@ fig.suptitle(&#39;Bayesian survival model&#39;);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_36_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_36_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_36_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_36_0.png" />
 </div>
 </div>
 <p>We see that the cumulative hazard for metastized subjects increases more
@@ -976,15 +977,15 @@ form a normal random walk with <span class="math">\(\beta_1 \sim N(0, 1)\)</span
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as time_varying_model:
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">time_varying_model</span><span class="p">:</span>
 
-    lambda0 = pm.Gamma(&#39;lambda0&#39;, 0.01, 0.01, shape=n_intervals)
-    beta = GaussianRandomWalk(&#39;beta&#39;, tau=1., shape=n_intervals)
+    <span class="n">lambda0</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;lambda0&#39;</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_intervals</span><span class="p">)</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">GaussianRandomWalk</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_intervals</span><span class="p">)</span>
 
-    lambda_ = pm.Deterministic(&#39;h&#39;, lambda0 * T.exp(T.outer(T.constant(df.metastized), beta)))
-    mu = pm.Deterministic(&#39;mu&#39;, exposure * lambda_)
+    <span class="n">lambda_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;h&#39;</span><span class="p">,</span> <span class="n">lambda0</span> <span class="o">*</span> <span class="n">T</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">constant</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">metastized</span><span class="p">),</span> <span class="n">beta</span><span class="p">)))</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">exposure</span> <span class="o">*</span> <span class="n">lambda_</span><span class="p">)</span>
 
-    obs = pm.Poisson(&#39;obs&#39;, mu, observed=death)
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Poisson</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">death</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1003,8 +1004,8 @@ Applied log-transform to lambda0 and added transformed lambda0_log to model.
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with time_varying_model:
-    time_varying_trace_ = pm.sample(n_samples, random_seed=SEED)
+<span></span><span class="k">with</span> <span class="n">time_varying_model</span><span class="p">:</span>
+    <span class="n">time_varying_trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="n">SEED</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1024,7 +1025,7 @@ Assigned NUTS to beta
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>time_varying_trace = time_varying_trace_[100:]
+<span></span><span class="n">time_varying_trace</span> <span class="o">=</span> <span class="n">time_varying_trace_</span><span class="p">[</span><span class="mi">100</span><span class="p">:]</span>
 </pre></div>
 </div>
 </div>
@@ -1034,7 +1035,7 @@ Assigned NUTS to beta
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>pm.forestplot(time_varying_trace, varnames=[&#39;beta&#39;]);
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">time_varying_trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -1042,7 +1043,7 @@ Assigned NUTS to beta
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_43_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_43_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_43_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_43_0.png" />
 </div>
 </div>
 <p>We see from the plot of <span class="math">\(\beta_j\)</span> over time below that initially
@@ -1055,28 +1056,28 @@ eventually.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
-beta_hpd = np.percentile(time_varying_trace[&#39;beta&#39;], [2.5, 97.5], axis=0)
-beta_low = beta_hpd[0]
-beta_high = beta_hpd[1]
-ax.fill_between(interval_bounds[:-1], beta_low, beta_high,
-                color=blue, alpha=0.25);
-beta_hat = time_varying_trace[&#39;beta&#39;].mean(axis=0)
-ax.step(interval_bounds[:-1], beta_hat, color=blue);
-ax.scatter(interval_bounds[last_period[(df.event.values == 1) &amp; (df.metastized == 1)]],
-           beta_hat[last_period[(df.event.values == 1) &amp; (df.metastized == 1)]],
-           c=red, zorder=10, label=&#39;Died, cancer metastized&#39;);
-ax.scatter(interval_bounds[last_period[(df.event.values == 0) &amp; (df.metastized == 1)]],
-           beta_hat[last_period[(df.event.values == 0) &amp; (df.metastized == 1)]],
-           c=blue, zorder=10, label=&#39;Censored, cancer metastized&#39;);
+<span class="n">beta_hpd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">time_varying_trace</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.5</span><span class="p">,</span> <span class="mf">97.5</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">beta_low</span> <span class="o">=</span> <span class="n">beta_hpd</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">beta_high</span> <span class="o">=</span> <span class="n">beta_hpd</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">beta_low</span><span class="p">,</span> <span class="n">beta_high</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="n">blue</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.25</span><span class="p">);</span>
+<span class="n">beta_hat</span> <span class="o">=</span> <span class="n">time_varying_trace</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">beta_hat</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">blue</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[</span><span class="n">last_period</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">event</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">metastized</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)]],</span>
+           <span class="n">beta_hat</span><span class="p">[</span><span class="n">last_period</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">event</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">metastized</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)]],</span>
+           <span class="n">c</span><span class="o">=</span><span class="n">red</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Died, cancer metastized&#39;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[</span><span class="n">last_period</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">event</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">metastized</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)]],</span>
+           <span class="n">beta_hat</span><span class="p">[</span><span class="n">last_period</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">event</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">metastized</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)]],</span>
+           <span class="n">c</span><span class="o">=</span><span class="n">blue</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Censored, cancer metastized&#39;</span><span class="p">);</span>
 
-ax.set_xlim(0, df.time.max());
-ax.set_xlabel(&#39;Months since mastectomy&#39;);
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">max</span><span class="p">());</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Months since mastectomy&#39;</span><span class="p">);</span>
 
-ax.set_ylabel(r&#39;$\beta_j$&#39;);
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">r&#39;$\beta_j$&#39;</span><span class="p">);</span>
 
-ax.legend();
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">();</span>
 </pre></div>
 </div>
 </div>
@@ -1084,7 +1085,7 @@ ax.legend();
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_45_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_45_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_45_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_45_0.png" />
 </div>
 </div>
 <p>The coefficients <span class="math">\(\beta_j\)</span> begin declining rapidly around one
@@ -1100,8 +1101,8 @@ following plots.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>tv_base_hazard = time_varying_trace[&#39;lambda0&#39;]
-tv_met_hazard = time_varying_trace[&#39;lambda0&#39;] * np.exp(np.atleast_2d(time_varying_trace[&#39;beta&#39;]))
+<span></span><span class="n">tv_base_hazard</span> <span class="o">=</span> <span class="n">time_varying_trace</span><span class="p">[</span><span class="s1">&#39;lambda0&#39;</span><span class="p">]</span>
+<span class="n">tv_met_hazard</span> <span class="o">=</span> <span class="n">time_varying_trace</span><span class="p">[</span><span class="s1">&#39;lambda0&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">time_varying_trace</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">]))</span>
 </pre></div>
 </div>
 </div>
@@ -1111,25 +1112,25 @@ tv_met_hazard = time_varying_trace[&#39;lambda0&#39;] * np.exp(np.atleast_2d(tim
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
-ax.step(interval_bounds[:-1], cum_hazard(base_hazard.mean(axis=0)),
-        color=blue, label=&#39;Had not metastized&#39;);
-ax.step(interval_bounds[:-1], cum_hazard(met_hazard.mean(axis=0)),
-        color=red, label=&#39;Metastized&#39;);
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">cum_hazard</span><span class="p">(</span><span class="n">base_hazard</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)),</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">blue</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Had not metastized&#39;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">cum_hazard</span><span class="p">(</span><span class="n">met_hazard</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)),</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">red</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Metastized&#39;</span><span class="p">);</span>
 
-ax.step(interval_bounds[:-1], cum_hazard(tv_base_hazard.mean(axis=0)),
-        color=blue, linestyle=&#39;--&#39;, label=&#39;Had not metastized (time varying effect)&#39;);
-ax.step(interval_bounds[:-1], cum_hazard(tv_met_hazard.mean(axis=0)),
-        color=red, linestyle=&#39;--&#39;, label=&#39;Metastized (time varying effect)&#39;);
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">cum_hazard</span><span class="p">(</span><span class="n">tv_base_hazard</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)),</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">blue</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Had not metastized (time varying effect)&#39;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">cum_hazard</span><span class="p">(</span><span class="n">tv_met_hazard</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)),</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">red</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Metastized (time varying effect)&#39;</span><span class="p">);</span>
 
-ax.set_xlim(0, df.time.max() - 4);
-ax.set_xlabel(&#39;Months since mastectomy&#39;);
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="mi">4</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Months since mastectomy&#39;</span><span class="p">);</span>
 
-ax.set_ylim(0, 2);
-ax.set_ylabel(r&#39;Cumulative hazard $\Lambda(t)$&#39;);
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">r&#39;Cumulative hazard $\Lambda(t)$&#39;</span><span class="p">);</span>
 
-ax.legend(loc=2);
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">2</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -1137,7 +1138,7 @@ ax.legend(loc=2);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_48_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_48_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_48_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_48_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -1146,32 +1147,32 @@ ax.legend(loc=2);
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig, (hazard_ax, surv_ax) = plt.subplots(ncols=2, sharex=True, sharey=False, figsize=(16, 6))
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">hazard_ax</span><span class="p">,</span> <span class="n">surv_ax</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
-plot_with_hpd(interval_bounds[:-1], tv_base_hazard, cum_hazard,
-              hazard_ax, color=blue, label=&#39;Had not metastized&#39;)
-plot_with_hpd(interval_bounds[:-1], tv_met_hazard, cum_hazard,
-              hazard_ax, color=red, label=&#39;Metastized&#39;)
+<span class="n">plot_with_hpd</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">tv_base_hazard</span><span class="p">,</span> <span class="n">cum_hazard</span><span class="p">,</span>
+              <span class="n">hazard_ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">blue</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Had not metastized&#39;</span><span class="p">)</span>
+<span class="n">plot_with_hpd</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">tv_met_hazard</span><span class="p">,</span> <span class="n">cum_hazard</span><span class="p">,</span>
+              <span class="n">hazard_ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">red</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Metastized&#39;</span><span class="p">)</span>
 
-hazard_ax.set_xlim(0, df.time.max());
-hazard_ax.set_xlabel(&#39;Months since mastectomy&#39;);
+<span class="n">hazard_ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">max</span><span class="p">());</span>
+<span class="n">hazard_ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Months since mastectomy&#39;</span><span class="p">);</span>
 
-hazard_ax.set_ylim(0, 2);
-hazard_ax.set_ylabel(r&#39;Cumulative hazard $\Lambda(t)$&#39;);
+<span class="n">hazard_ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+<span class="n">hazard_ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">r&#39;Cumulative hazard $\Lambda(t)$&#39;</span><span class="p">);</span>
 
-hazard_ax.legend(loc=2);
+<span class="n">hazard_ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">2</span><span class="p">);</span>
 
-plot_with_hpd(interval_bounds[:-1], tv_base_hazard, survival,
-              surv_ax, color=blue)
-plot_with_hpd(interval_bounds[:-1], tv_met_hazard, survival,
-              surv_ax, color=red)
+<span class="n">plot_with_hpd</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">tv_base_hazard</span><span class="p">,</span> <span class="n">survival</span><span class="p">,</span>
+              <span class="n">surv_ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">blue</span><span class="p">)</span>
+<span class="n">plot_with_hpd</span><span class="p">(</span><span class="n">interval_bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">tv_met_hazard</span><span class="p">,</span> <span class="n">survival</span><span class="p">,</span>
+              <span class="n">surv_ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">red</span><span class="p">)</span>
 
-surv_ax.set_xlim(0, df.time.max());
-surv_ax.set_xlabel(&#39;Months since mastectomy&#39;);
+<span class="n">surv_ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">max</span><span class="p">());</span>
+<span class="n">surv_ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Months since mastectomy&#39;</span><span class="p">);</span>
 
-surv_ax.set_ylabel(&#39;Survival function $S(t)$&#39;);
+<span class="n">surv_ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Survival function $S(t)$&#39;</span><span class="p">);</span>
 
-fig.suptitle(&#39;Bayesian survival model with time varying effects&#39;);
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s1">&#39;Bayesian survival model with time varying effects&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -1179,7 +1180,7 @@ fig.suptitle(&#39;Bayesian survival model with time varying effects&#39;);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_49_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_survival_analysis_49_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_49_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_survival_analysis_49_0.png" />
 </div>
 </div>
 <p>We have really only scratched the surface of both survival analysis and
@@ -1222,7 +1223,7 @@ survival analysis. John Wiley &amp; Sons, Ltd, 2005.</td></tr>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

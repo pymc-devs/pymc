@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Gaussian Process (GP) smoothing &mdash; pymc3 3.0 documentation</title>
+  <title>Gaussian Process (GP) smoothing &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Dirichlet process mixtures for density estimation" href="dp_mix.html"/>
         <link rel="prev" title="Bayesian Survival Analysis" href="survival_analysis.html"/> 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -83,6 +83,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
@@ -123,7 +124,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -351,8 +352,8 @@ that generated it:</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%pylab inline
-figsize(12, 6);
+<span></span><span class="o">%</span><span class="k">pylab</span> inline
+<span class="n">figsize</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -370,17 +371,17 @@ Populating the interactive namespace from numpy and matplotlib
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import numpy as np
-import scipy.stats as stats
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.stats</span> <span class="kn">as</span> <span class="nn">stats</span>
 
-x = np.linspace(0, 50, 100)
-y = (np.exp(1.0 + np.power(x, 0.5) - np.exp(x/15.0)) +
-     np.random.normal(scale=1.0, size=x.shape))
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="o">/</span><span class="mf">15.0</span><span class="p">))</span> <span class="o">+</span>
+     <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
 
-plot(x, y);
-xlabel(&quot;x&quot;);
-ylabel(&quot;y&quot;);
-title(&quot;Observed Data&quot;);
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>
+<span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">);</span>
+<span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">);</span>
+<span class="n">title</span><span class="p">(</span><span class="s2">&quot;Observed Data&quot;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -388,7 +389,7 @@ title(&quot;Observed Data&quot;);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GP-smoothing_2_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GP-smoothing_2_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_2_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_2_0.png" />
 </div>
 </div>
 <div class="section" id="Let's-try-a-linear-regression-first">
@@ -402,13 +403,13 @@ regression, we see that the &#8220;smoothed&#8221; data is less than satisfactor
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>plot(x, y);
-xlabel(&quot;x&quot;);
-ylabel(&quot;y&quot;);
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>
+<span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">);</span>
+<span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">);</span>
 
-lin = stats.linregress(x, y)
-plot(x, lin.intercept + lin.slope * x);
-title(&quot;Linear Smoothing&quot;);
+<span class="n">lin</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">linregress</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">lin</span><span class="o">.</span><span class="n">intercept</span> <span class="o">+</span> <span class="n">lin</span><span class="o">.</span><span class="n">slope</span> <span class="o">*</span> <span class="n">x</span><span class="p">);</span>
+<span class="n">title</span><span class="p">(</span><span class="s2">&quot;Linear Smoothing&quot;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -416,7 +417,7 @@ title(&quot;Linear Smoothing&quot;);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GP-smoothing_4_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GP-smoothing_4_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_4_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_4_0.png" />
 </div>
 </div>
 </div>
@@ -478,10 +479,10 @@ smoothing and not regression.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import pymc3 as pm
-from theano import shared
-from pymc3.distributions.timeseries import GaussianRandomWalk
-from scipy import optimize
+<span></span><span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">shared</span>
+<span class="kn">from</span> <span class="nn">pymc3.distributions.timeseries</span> <span class="kn">import</span> <span class="n">GaussianRandomWalk</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
 </pre></div>
 </div>
 </div>
@@ -495,21 +496,21 @@ to your application.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>LARGE_NUMBER = 1e5
+<span></span><span class="n">LARGE_NUMBER</span> <span class="o">=</span> <span class="mf">1e5</span>
 
-model = pm.Model()
-with model:
-    smoothing_param = shared(0.9)
-    mu = pm.Normal(&quot;mu&quot;, sd=LARGE_NUMBER)
-    tau = pm.Exponential(&quot;tau&quot;, 1.0/LARGE_NUMBER)
-    z = GaussianRandomWalk(&quot;z&quot;,
-                           mu=mu,
-                           tau=tau / (1.0 - smoothing_param),
-                           shape=y.shape)
-    obs = pm.Normal(&quot;obs&quot;,
-                    mu=z,
-                    tau=tau / smoothing_param,
-                    observed=y)
+<span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">smoothing_param</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="mf">0.9</span><span class="p">)</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s2">&quot;mu&quot;</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">LARGE_NUMBER</span><span class="p">)</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s2">&quot;tau&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">LARGE_NUMBER</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">GaussianRandomWalk</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">,</span>
+                           <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span>
+                           <span class="n">tau</span><span class="o">=</span><span class="n">tau</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">smoothing_param</span><span class="p">),</span>
+                           <span class="n">shape</span><span class="o">=</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s2">&quot;obs&quot;</span><span class="p">,</span>
+                    <span class="n">mu</span><span class="o">=</span><span class="n">z</span><span class="p">,</span>
+                    <span class="n">tau</span><span class="o">=</span><span class="n">tau</span> <span class="o">/</span> <span class="n">smoothing_param</span><span class="p">,</span>
+                    <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -521,11 +522,11 @@ of <span class="math">\(z\)</span>:</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def infer_z(smoothing):
-    with model:
-        smoothing_param.set_value(smoothing)
-        res = pm.find_MAP(vars=[z], fmin=optimize.fmin_l_bfgs_b)
-        return res[&#39;z&#39;]
+<span></span><span class="k">def</span> <span class="nf">infer_z</span><span class="p">(</span><span class="n">smoothing</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+        <span class="n">smoothing_param</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">smoothing</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">z</span><span class="p">],</span> <span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span><span class="p">[</span><span class="s1">&#39;z&#39;</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -547,12 +548,12 @@ matches our expectations.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>smoothing = 0.5
-z_val = infer_z(smoothing)
+<span></span><span class="n">smoothing</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">z_val</span> <span class="o">=</span> <span class="n">infer_z</span><span class="p">(</span><span class="n">smoothing</span><span class="p">)</span>
 
-plot(x, y);
-plot(x, z_val);
-title(&quot;Smoothing={}&quot;.format(smoothing));
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z_val</span><span class="p">);</span>
+<span class="n">title</span><span class="p">(</span><span class="s2">&quot;Smoothing={}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">smoothing</span><span class="p">));</span>
 </pre></div>
 </div>
 </div>
@@ -560,7 +561,7 @@ title(&quot;Smoothing={}&quot;.format(smoothing));
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GP-smoothing_14_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GP-smoothing_14_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_14_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_14_0.png" />
 </div>
 </div>
 <p>It appears that the variance is split evenly between the noise and the
@@ -573,12 +574,12 @@ obtain smoother data:</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>smoothing = 0.9
-z_val = infer_z(smoothing)
+<span></span><span class="n">smoothing</span> <span class="o">=</span> <span class="mf">0.9</span>
+<span class="n">z_val</span> <span class="o">=</span> <span class="n">infer_z</span><span class="p">(</span><span class="n">smoothing</span><span class="p">)</span>
 
-plot(x, y);
-plot(x, z_val);
-title(&quot;Smoothing={}&quot;.format(smoothing));
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z_val</span><span class="p">);</span>
+<span class="n">title</span><span class="p">(</span><span class="s2">&quot;Smoothing={}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">smoothing</span><span class="p">));</span>
 </pre></div>
 </div>
 </div>
@@ -586,7 +587,7 @@ title(&quot;Smoothing={}&quot;.format(smoothing));
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GP-smoothing_16_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GP-smoothing_16_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_16_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_16_0.png" />
 </div>
 </div>
 </div>
@@ -604,15 +605,15 @@ change over the domain of <span class="math">\(x\)</span>:</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig, axes = subplots(2, 2)
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
 
-for ax, smoothing in zip(axes.ravel(), [0.95, 0.99, 0.999, 0.9999]):
+<span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="n">smoothing</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="p">[</span><span class="mf">0.95</span><span class="p">,</span> <span class="mf">0.99</span><span class="p">,</span> <span class="mf">0.999</span><span class="p">,</span> <span class="mf">0.9999</span><span class="p">]):</span>
 
-    z_val = infer_z(smoothing)
+    <span class="n">z_val</span> <span class="o">=</span> <span class="n">infer_z</span><span class="p">(</span><span class="n">smoothing</span><span class="p">)</span>
 
-    ax.plot(x, y)
-    ax.plot(x, z_val)
-    ax.set_title(&#39;Smoothing={:05.4f}&#39;.format(smoothing))
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z_val</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Smoothing={:05.4f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">smoothing</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -620,7 +621,7 @@ for ax, smoothing in zip(axes.ravel(), [0.95, 0.99, 0.999, 0.9999]):
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GP-smoothing_18_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GP-smoothing_18_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_18_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_18_0.png" />
 </div>
 </div>
 </div>
@@ -636,14 +637,14 @@ slider, and so the <strong>inference is fast</strong>!</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>from IPython.html.widgets import interact
-@interact(smoothing=[0.01,0.99])
-def plot_smoothed(smoothing=0.9):
-    z_val = infer_z(smoothing)
+<span></span><span class="kn">from</span> <span class="nn">IPython.html.widgets</span> <span class="kn">import</span> <span class="n">interact</span>
+<span class="nd">@interact</span><span class="p">(</span><span class="n">smoothing</span><span class="o">=</span><span class="p">[</span><span class="mf">0.01</span><span class="p">,</span><span class="mf">0.99</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">plot_smoothed</span><span class="p">(</span><span class="n">smoothing</span><span class="o">=</span><span class="mf">0.9</span><span class="p">):</span>
+    <span class="n">z_val</span> <span class="o">=</span> <span class="n">infer_z</span><span class="p">(</span><span class="n">smoothing</span><span class="p">)</span>
 
-    plot(x, y);
-    plot(x, z_val);
-    title(&quot;Smoothing={}&quot;.format(smoothing));
+    <span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>
+    <span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z_val</span><span class="p">);</span>
+    <span class="n">title</span><span class="p">(</span><span class="s2">&quot;Smoothing={}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">smoothing</span><span class="p">));</span>
 </pre></div>
 </div>
 </div>
@@ -651,7 +652,7 @@ def plot_smoothed(smoothing=0.9):
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GP-smoothing_20_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GP-smoothing_20_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_20_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_20_0.png" />
 </div>
 </div>
 <p>This example originally contributed by: Andrey Kuzmenko,
@@ -678,7 +679,7 @@ def plot_smoothed(smoothing=0.9):
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Bayesian Estimation Supersedes the T-Test &mdash; pymc3 3.0 documentation</title>
+  <title>Bayesian Estimation Supersedes the T-Test &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Stochastic Volatility model" href="stochastic_volatility.html"/>
         <link rel="prev" title="Examples" href="../examples.html"/> 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -83,6 +83,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
@@ -114,7 +115,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -326,9 +327,9 @@ found here: <a class="reference external" href="https://github.com/strawlab/best
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%matplotlib inline
-import numpy as np
-import pymc3 as pm
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 </pre></div>
 </div>
 </div>
@@ -339,12 +340,12 @@ import pymc3 as pm
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>drug = (101,100,102,104,102,97,105,105,98,101,100,123,105,103,100,95,102,106,
-        109,102,82,102,100,102,102,101,102,102,103,103,97,97,103,101,97,104,
-        96,103,124,101,101,100,101,101,104,100,101)
-placebo = (99,101,100,101,102,100,97,101,104,101,102,102,100,105,88,101,100,
-           104,100,100,100,101,102,103,97,101,101,100,101,99,101,100,100,
-           101,100,99,101,100,102,99,100,99)
+<span></span><span class="n">drug</span> <span class="o">=</span> <span class="p">(</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">104</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">97</span><span class="p">,</span><span class="mi">105</span><span class="p">,</span><span class="mi">105</span><span class="p">,</span><span class="mi">98</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">123</span><span class="p">,</span><span class="mi">105</span><span class="p">,</span><span class="mi">103</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">95</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">106</span><span class="p">,</span>
+        <span class="mi">109</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">82</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">103</span><span class="p">,</span><span class="mi">103</span><span class="p">,</span><span class="mi">97</span><span class="p">,</span><span class="mi">97</span><span class="p">,</span><span class="mi">103</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">97</span><span class="p">,</span><span class="mi">104</span><span class="p">,</span>
+        <span class="mi">96</span><span class="p">,</span><span class="mi">103</span><span class="p">,</span><span class="mi">124</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">104</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">101</span><span class="p">)</span>
+<span class="n">placebo</span> <span class="o">=</span> <span class="p">(</span><span class="mi">99</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">97</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">104</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">105</span><span class="p">,</span><span class="mi">88</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span>
+           <span class="mi">104</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">103</span><span class="p">,</span><span class="mi">97</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">99</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span>
+           <span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">99</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">99</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">99</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -355,15 +356,15 @@ placebo = (99,101,100,101,102,100,97,101,104,101,102,102,100,105,88,101,100,
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>y1 = np.array(drug)
-y2 = np.array(placebo)
-y = np.concatenate((y1, y2))
+<span></span><span class="n">y1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">drug</span><span class="p">)</span>
+<span class="n">y2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">placebo</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">y1</span><span class="p">,</span> <span class="n">y2</span><span class="p">))</span>
 
-mu_m = np.mean( y )
-mu_p = 0.000001 * 1/np.std(y)**2
+<span class="n">mu_m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span> <span class="n">y</span> <span class="p">)</span>
+<span class="n">mu_p</span> <span class="o">=</span> <span class="mf">0.000001</span> <span class="o">*</span> <span class="mi">1</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
 
-sigma_low = np.std(y)/1000
-sigma_high = np.std(y)*1000
+<span class="n">sigma_low</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">/</span><span class="mi">1000</span>
+<span class="n">sigma_high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">*</span><span class="mi">1000</span>
 </pre></div>
 </div>
 </div>
@@ -373,25 +374,25 @@ sigma_high = np.std(y)*1000
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as model:
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
 
-    group1_mean = pm.Normal(&#39;group1_mean&#39;, mu=mu_m, tau=mu_p, testval=y1.mean())
-    group2_mean = pm.Normal(&#39;group2_mean&#39;, mu=mu_m, tau=mu_p, testval=y2.mean())
-    group1_std = pm.Uniform(&#39;group1_std&#39;, lower=sigma_low, upper=sigma_high, testval=y1.std())
-    group2_std = pm.Uniform(&#39;group2_std&#39;, lower=sigma_low, upper=sigma_high, testval=y2.std())
-    nu = pm.Exponential(&#39;nu_minus_one&#39;, 1/29.) + 1
+    <span class="n">group1_mean</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;group1_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_m</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">mu_p</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">y1</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+    <span class="n">group2_mean</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;group2_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_m</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">mu_p</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">y2</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+    <span class="n">group1_std</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;group1_std&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="n">sigma_low</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">sigma_high</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">y1</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
+    <span class="n">group2_std</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;group2_std&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="n">sigma_low</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">sigma_high</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">y2</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
+    <span class="n">nu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;nu_minus_one&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="mf">29.</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
 
-    lam1 = group1_std**-2
-    lam2 = group2_std**-2
+    <span class="n">lam1</span> <span class="o">=</span> <span class="n">group1_std</span><span class="o">**-</span><span class="mi">2</span>
+    <span class="n">lam2</span> <span class="o">=</span> <span class="n">group2_std</span><span class="o">**-</span><span class="mi">2</span>
 
-    group1 = pm.StudentT(&#39;drug&#39;, nu=nu, mu=group1_mean, lam=lam1, observed=y1)
-    group2 = pm.StudentT(&#39;placebo&#39;, nu=nu, mu=group2_mean, lam=lam2, observed=y2)
+    <span class="n">group1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">StudentT</span><span class="p">(</span><span class="s1">&#39;drug&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="n">nu</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">group1_mean</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">lam1</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y1</span><span class="p">)</span>
+    <span class="n">group2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">StudentT</span><span class="p">(</span><span class="s1">&#39;placebo&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="n">nu</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">group2_mean</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">lam2</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y2</span><span class="p">)</span>
 
-    diff_of_means = pm.Deterministic(&#39;difference of means&#39;, group1_mean - group2_mean)
-    diff_of_stds = pm.Deterministic(&#39;difference of stds&#39;, group1_std - group2_std)
-    effect_size = pm.Deterministic(&#39;effect size&#39;, diff_of_means / pm.sqrt((group1_std**2 + group2_std**2) / 2))
+    <span class="n">diff_of_means</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;difference of means&#39;</span><span class="p">,</span> <span class="n">group1_mean</span> <span class="o">-</span> <span class="n">group2_mean</span><span class="p">)</span>
+    <span class="n">diff_of_stds</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;difference of stds&#39;</span><span class="p">,</span> <span class="n">group1_std</span> <span class="o">-</span> <span class="n">group2_std</span><span class="p">)</span>
+    <span class="n">effect_size</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;effect size&#39;</span><span class="p">,</span> <span class="n">diff_of_means</span> <span class="o">/</span> <span class="n">pm</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">group1_std</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">group2_std</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
 
-    trace = pm.sample(5000)
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -417,7 +418,7 @@ Assigned NUTS to nu_minus_one_log
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>pm.plot_posterior(trace[1000:], color=&#39;#87ceeb&#39;);
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#87ceeb&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -425,7 +426,7 @@ Assigned NUTS to nu_minus_one_log
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_BEST_8_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_BEST_8_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_BEST_8_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_BEST_8_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -434,7 +435,7 @@ Assigned NUTS to nu_minus_one_log
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>pm.plots.summary(trace[1000:])
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plots</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:])</span>
 </pre></div>
 </div>
 </div>
@@ -578,7 +579,7 @@ effect size:
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

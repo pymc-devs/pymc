@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>A Hierarchical model for Rugby prediction &mdash; pymc3 3.0 documentation</title>
+  <title>A Hierarchical model for Rugby prediction &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Posterior Predictive Checks" href="posterior_predictive.html"/>
         <link rel="prev" title="Probabilistic Matrix Factorization for Making Personalized Recommendations" href="pmf-pymc.html"/> 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -83,6 +83,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
@@ -124,7 +125,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -362,16 +363,16 @@ modeling these <strong>latent</strong> parameters</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>!date
+<span></span><span class="o">!</span>date
 
-import numpy as np
-import pandas as pd
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-%matplotlib inline
-import pymc3 as pm, theano.tensor as tt
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">StringIO</span> <span class="kn">import</span> <span class="n">StringIO</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">StringIO</span>
+<span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span><span class="o">,</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
 </pre></div>
 </div>
 </div>
@@ -390,22 +391,22 @@ Sat Apr  2 16:40:04 BST 2016
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>data_csv = StringIO(&quot;&quot;&quot;home_team,away_team,home_score,away_score
-Wales,Italy,23,15
-France,England,26,24
-Ireland,Scotland,28,6
-Ireland,Wales,26,3
-Scotland,England,0,20
-France,Italy,30,10
-Wales,France,27,6
-Italy,Scotland,20,21
-England,Ireland,13,10
-Ireland,Italy,46,7
-Scotland,France,17,19
-England,Wales,29,18
-Italy,England,11,52
-Wales,Scotland,51,3
-France,Ireland,20,22&quot;&quot;&quot;)
+<span></span><span class="n">data_csv</span> <span class="o">=</span> <span class="n">StringIO</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;home_team,away_team,home_score,away_score</span>
+<span class="s2">Wales,Italy,23,15</span>
+<span class="s2">France,England,26,24</span>
+<span class="s2">Ireland,Scotland,28,6</span>
+<span class="s2">Ireland,Wales,26,3</span>
+<span class="s2">Scotland,England,0,20</span>
+<span class="s2">France,Italy,30,10</span>
+<span class="s2">Wales,France,27,6</span>
+<span class="s2">Italy,Scotland,20,21</span>
+<span class="s2">England,Ireland,13,10</span>
+<span class="s2">Ireland,Italy,46,7</span>
+<span class="s2">Scotland,France,17,19</span>
+<span class="s2">England,Wales,29,18</span>
+<span class="s2">Italy,England,11,52</span>
+<span class="s2">Wales,Scotland,51,3</span>
+<span class="s2">France,Ireland,20,22&quot;&quot;&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -481,30 +482,30 @@ modelled as exchangeable from a common distribution:</li>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>df = pd.read_csv(data_csv)
+<span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">data_csv</span><span class="p">)</span>
 
-teams = df.home_team.unique()
-teams = pd.DataFrame(teams, columns=[&#39;team&#39;])
-teams[&#39;i&#39;] = teams.index
+<span class="n">teams</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">home_team</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+<span class="n">teams</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">teams</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;team&#39;</span><span class="p">])</span>
+<span class="n">teams</span><span class="p">[</span><span class="s1">&#39;i&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">teams</span><span class="o">.</span><span class="n">index</span>
 
-df = pd.merge(df, teams, left_on=&#39;home_team&#39;, right_on=&#39;team&#39;, how=&#39;left&#39;)
-df = df.rename(columns = {&#39;i&#39;: &#39;i_home&#39;}).drop(&#39;team&#39;, 1)
-df = pd.merge(df, teams, left_on=&#39;away_team&#39;, right_on=&#39;team&#39;, how=&#39;left&#39;)
-df = df.rename(columns = {&#39;i&#39;: &#39;i_away&#39;}).drop(&#39;team&#39;, 1)
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">teams</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="s1">&#39;home_team&#39;</span><span class="p">,</span> <span class="n">right_on</span><span class="o">=</span><span class="s1">&#39;team&#39;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;i&#39;</span><span class="p">:</span> <span class="s1">&#39;i_home&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;team&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">teams</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="s1">&#39;away_team&#39;</span><span class="p">,</span> <span class="n">right_on</span><span class="o">=</span><span class="s1">&#39;team&#39;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;i&#39;</span><span class="p">:</span> <span class="s1">&#39;i_away&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;team&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
-observed_home_goals = df.home_score.values
-observed_away_goals = df.away_score.values
+<span class="n">observed_home_goals</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">home_score</span><span class="o">.</span><span class="n">values</span>
+<span class="n">observed_away_goals</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">away_score</span><span class="o">.</span><span class="n">values</span>
 
-home_team = df.i_home.values
-away_team = df.i_away.values
+<span class="n">home_team</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">i_home</span><span class="o">.</span><span class="n">values</span>
+<span class="n">away_team</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">i_away</span><span class="o">.</span><span class="n">values</span>
 
-num_teams = len(df.i_home.drop_duplicates())
-num_games = len(home_team)
+<span class="n">num_teams</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">i_home</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">())</span>
+<span class="n">num_games</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">home_team</span><span class="p">)</span>
 
-g = df.groupby(&#39;i_away&#39;)
-att_starting_points = np.log(g.away_score.mean())
-g = df.groupby(&#39;i_home&#39;)
-def_starting_points = -np.log(g.away_score.mean())
+<span class="n">g</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;i_away&#39;</span><span class="p">)</span>
+<span class="n">att_starting_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">away_score</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;i_home&#39;</span><span class="p">)</span>
+<span class="n">def_starting_points</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">away_score</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
@@ -527,32 +528,32 @@ and the team-specific parameters and the likelihood function</li>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>model = pm.Model()
-with pm.Model() as model:
-    # global model parameters
-    home        = pm.Normal(&#39;home&#39;,      0, .0001)
-    tau_att     = pm.Gamma(&#39;tau_att&#39;,   .1, .1)
-    tau_def     = pm.Gamma(&#39;tau_def&#39;,   .1, .1)
-    intercept   = pm.Normal(&#39;intercept&#39;, 0, .0001)
+<span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="c1"># global model parameters</span>
+    <span class="n">home</span>        <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;home&#39;</span><span class="p">,</span>      <span class="mi">0</span><span class="p">,</span> <span class="o">.</span><span class="mo">0001</span><span class="p">)</span>
+    <span class="n">tau_att</span>     <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau_att&#39;</span><span class="p">,</span>   <span class="o">.</span><span class="mi">1</span><span class="p">,</span> <span class="o">.</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">tau_def</span>     <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau_def&#39;</span><span class="p">,</span>   <span class="o">.</span><span class="mi">1</span><span class="p">,</span> <span class="o">.</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">intercept</span>   <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;intercept&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">.</span><span class="mo">0001</span><span class="p">)</span>
 
-    # team-specific model parameters
-    atts_star   = pm.Normal(&quot;atts_star&quot;,
-                           mu   =0,
-                           tau  =tau_att,
-                           shape=num_teams)
-    defs_star   = pm.Normal(&quot;defs_star&quot;,
-                           mu   =0,
-                           tau  =tau_def,
-                           shape=num_teams)
+    <span class="c1"># team-specific model parameters</span>
+    <span class="n">atts_star</span>   <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s2">&quot;atts_star&quot;</span><span class="p">,</span>
+                           <span class="n">mu</span>   <span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                           <span class="n">tau</span>  <span class="o">=</span><span class="n">tau_att</span><span class="p">,</span>
+                           <span class="n">shape</span><span class="o">=</span><span class="n">num_teams</span><span class="p">)</span>
+    <span class="n">defs_star</span>   <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s2">&quot;defs_star&quot;</span><span class="p">,</span>
+                           <span class="n">mu</span>   <span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                           <span class="n">tau</span>  <span class="o">=</span><span class="n">tau_def</span><span class="p">,</span>
+                           <span class="n">shape</span><span class="o">=</span><span class="n">num_teams</span><span class="p">)</span>
 
-    atts        = pm.Deterministic(&#39;atts&#39;, atts_star - tt.mean(atts_star))
-    defs        = pm.Deterministic(&#39;defs&#39;, defs_star - tt.mean(defs_star))
-    home_theta  = tt.exp(intercept + home + atts[home_team] + defs[away_team])
-    away_theta  = tt.exp(intercept + atts[away_team] + defs[home_team])
+    <span class="n">atts</span>        <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;atts&#39;</span><span class="p">,</span> <span class="n">atts_star</span> <span class="o">-</span> <span class="n">tt</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">atts_star</span><span class="p">))</span>
+    <span class="n">defs</span>        <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;defs&#39;</span><span class="p">,</span> <span class="n">defs_star</span> <span class="o">-</span> <span class="n">tt</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">defs_star</span><span class="p">))</span>
+    <span class="n">home_theta</span>  <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">intercept</span> <span class="o">+</span> <span class="n">home</span> <span class="o">+</span> <span class="n">atts</span><span class="p">[</span><span class="n">home_team</span><span class="p">]</span> <span class="o">+</span> <span class="n">defs</span><span class="p">[</span><span class="n">away_team</span><span class="p">])</span>
+    <span class="n">away_theta</span>  <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">intercept</span> <span class="o">+</span> <span class="n">atts</span><span class="p">[</span><span class="n">away_team</span><span class="p">]</span> <span class="o">+</span> <span class="n">defs</span><span class="p">[</span><span class="n">home_team</span><span class="p">])</span>
 
-    # likelihood of observed data
-    home_points = pm.Poisson(&#39;home_points&#39;, mu=home_theta, observed=observed_home_goals)
-    away_points = pm.Poisson(&#39;away_points&#39;, mu=away_theta, observed=observed_away_goals)
+    <span class="c1"># likelihood of observed data</span>
+    <span class="n">home_points</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Poisson</span><span class="p">(</span><span class="s1">&#39;home_points&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">home_theta</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">observed_home_goals</span><span class="p">)</span>
+    <span class="n">away_points</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Poisson</span><span class="p">(</span><span class="s1">&#39;away_points&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">away_theta</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">observed_away_goals</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -577,13 +578,13 @@ to decide where to start out No U Turn Sampler</li>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
 
-    start = pm.find_MAP()
-    step = pm.NUTS(state=start)
-    trace = pm.sample(2000, step, start=start)
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">()</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
 
-    pm.traceplot(trace)
+    <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -599,7 +600,7 @@ to decide where to start out No U Turn Sampler</li>
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_rugby_analytics_15_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_rugby_analytics_15_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_15_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_15_1.png" />
 </div>
 </div>
 </div>
@@ -615,7 +616,7 @@ analytics</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>pm.forestplot(trace, varnames=[&#39;atts&#39;], ylabels=[&#39;France&#39;, &#39;Ireland&#39;, &#39;Scotland&#39;, &#39;Italy&#39;, &#39;England&#39;, &#39;Wales&#39;], main=&quot;Team Offense&quot;)
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;atts&#39;</span><span class="p">],</span> <span class="n">ylabels</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;France&#39;</span><span class="p">,</span> <span class="s1">&#39;Ireland&#39;</span><span class="p">,</span> <span class="s1">&#39;Scotland&#39;</span><span class="p">,</span> <span class="s1">&#39;Italy&#39;</span><span class="p">,</span> <span class="s1">&#39;England&#39;</span><span class="p">,</span> <span class="s1">&#39;Wales&#39;</span><span class="p">],</span> <span class="n">main</span><span class="o">=</span><span class="s2">&quot;Team Offense&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -633,7 +634,7 @@ analytics</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_rugby_analytics_17_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_rugby_analytics_17_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_17_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_17_1.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -642,7 +643,7 @@ analytics</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>pm.forestplot(trace, varnames=[&#39;defs&#39;], ylabels=[&#39;France&#39;, &#39;Ireland&#39;, &#39;Scotland&#39;, &#39;Italy&#39;, &#39;England&#39;, &#39;Wales&#39;], main=&quot;Team Defense&quot;)
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;defs&#39;</span><span class="p">],</span> <span class="n">ylabels</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;France&#39;</span><span class="p">,</span> <span class="s1">&#39;Ireland&#39;</span><span class="p">,</span> <span class="s1">&#39;Scotland&#39;</span><span class="p">,</span> <span class="s1">&#39;Italy&#39;</span><span class="p">,</span> <span class="s1">&#39;England&#39;</span><span class="p">,</span> <span class="s1">&#39;Wales&#39;</span><span class="p">],</span> <span class="n">main</span><span class="o">=</span><span class="s2">&quot;Team Defense&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -660,7 +661,7 @@ analytics</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_rugby_analytics_18_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_rugby_analytics_18_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_18_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_18_1.png" />
 </div>
 </div>
 </div>
@@ -673,7 +674,7 @@ analytics</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>df_trace = pm.trace_to_dataframe(trace[:1000])
+<span></span><span class="n">df_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace</span><span class="p">[:</span><span class="mi">1000</span><span class="p">])</span>
 
 
 </pre></div>
@@ -685,18 +686,18 @@ analytics</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import seaborn as sns
-df_trace_att = df_trace[[&#39;atts_star__0&#39;,&#39;atts_star__1&#39;,
- &#39;atts_star__2&#39;,
- &#39;atts_star__3&#39;,
- &#39;atts_star__4&#39;,
- &#39;atts_star__5&#39;]]
-df_trace_att.rename(columns={&#39;atts_star__0&#39;:&#39;atts_star_france&#39;,&#39;atts_star__1&#39;:&#39;atts_star_ireland&#39;,
- &#39;atts_star__2&#39;:&#39;atts_star_scotland&#39;,
- &#39;atts_star__3&#39;:&#39;atts_star_italy&#39;,
- &#39;atts_star__4&#39;:&#39;atts_star_england&#39;,
- &#39;atts_star__5&#39;:&#39;atts_star_wales&#39;}, inplace=True)
-_ = sns.pairplot(df_trace_att)
+<span></span><span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="n">df_trace_att</span> <span class="o">=</span> <span class="n">df_trace</span><span class="p">[[</span><span class="s1">&#39;atts_star__0&#39;</span><span class="p">,</span><span class="s1">&#39;atts_star__1&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;atts_star__2&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;atts_star__3&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;atts_star__4&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;atts_star__5&#39;</span><span class="p">]]</span>
+<span class="n">df_trace_att</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;atts_star__0&#39;</span><span class="p">:</span><span class="s1">&#39;atts_star_france&#39;</span><span class="p">,</span><span class="s1">&#39;atts_star__1&#39;</span><span class="p">:</span><span class="s1">&#39;atts_star_ireland&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;atts_star__2&#39;</span><span class="p">:</span><span class="s1">&#39;atts_star_scotland&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;atts_star__3&#39;</span><span class="p">:</span><span class="s1">&#39;atts_star_italy&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;atts_star__4&#39;</span><span class="p">:</span><span class="s1">&#39;atts_star_england&#39;</span><span class="p">,</span>
+ <span class="s1">&#39;atts_star__5&#39;</span><span class="p">:</span><span class="s1">&#39;atts_star_wales&#39;</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">pairplot</span><span class="p">(</span><span class="n">df_trace_att</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -716,7 +717,7 @@ See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stabl
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_rugby_analytics_21_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_rugby_analytics_21_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_21_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_rugby_analytics_21_1.png" />
 </div>
 </div>
 <p>We observe that there isn&#8217;t a lot of correlation between these
@@ -745,7 +746,7 @@ get some insight into how the variables are behaving.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Probabilistic Matrix Factorization for Making Personalized Recommendations &mdash; pymc3 3.0 documentation</title>
+  <title>Probabilistic Matrix Factorization for Making Personalized Recommendations &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="A Hierarchical model for Rugby prediction" href="rugby_analytics.html"/>
         <link rel="prev" title="Hierarchical Linear Regression" href="GLM-hierarchical.html"/> 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -83,6 +83,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
@@ -139,7 +140,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -494,14 +495,14 @@ contain.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>% matplotlib inline
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
+<span></span><span class="o">%</span> <span class="n">matplotlib</span> <span class="n">inline</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 
 
-data = pd.read_csv(&#39;../data/jester-dataset-v1-dense-first-1000.csv&#39;)
-data.head()
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/jester-dataset-v1-dense-first-1000.csv&#39;</span><span class="p">)</span>
+<span class="n">data</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -671,20 +672,20 @@ data.head()
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Extract the ratings from the DataFrame
-all_ratings = np.ndarray.flatten(data.values)
-ratings = pd.Series(all_ratings)
+<span></span><span class="c1"># Extract the ratings from the DataFrame</span>
+<span class="n">all_ratings</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+<span class="n">ratings</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">all_ratings</span><span class="p">)</span>
 
-# Plot histogram and density.
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
-ratings.plot(kind=&#39;density&#39;, ax=ax1, grid=False)
-ax1.set_ylim(0, 0.08)
-ax1.set_xlim(-11, 11)
+<span class="c1"># Plot histogram and density.</span>
+<span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax1</span><span class="p">,</span> <span class="n">ax2</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+<span class="n">ratings</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s1">&#39;density&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.08</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">)</span>
 
-# Plot histogram
-ratings.plot(kind=&#39;hist&#39;, ax=ax2, bins=20, grid=False)
-ax2.set_xlim(-11, 11)
-plt.show()
+<span class="c1"># Plot histogram</span>
+<span class="n">ratings</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s1">&#39;hist&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax2</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="n">ax2</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,</span> <span class="mi">11</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -692,7 +693,7 @@ plt.show()
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_pmf-pymc_4_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_pmf-pymc_4_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_pmf-pymc_4_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_pmf-pymc_4_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -701,7 +702,7 @@ plt.show()
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>ratings.describe()
+<span></span><span class="n">ratings</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -733,9 +734,9 @@ to see if we have any particularly good (or bad) humor here.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>joke_means = data.mean(axis=0)
-joke_means.plot(kind=&#39;bar&#39;, grid=False, figsize=(16, 6),
-                title=&quot;Mean Ratings for All 100 Jokes&quot;)
+<span></span><span class="n">joke_means</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">joke_means</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
+                <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Mean Ratings for All 100 Jokes&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -753,7 +754,7 @@ joke_means.plot(kind=&#39;bar&#39;, grid=False, figsize=(16, 6),
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_pmf-pymc_7_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_pmf-pymc_7_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_pmf-pymc_7_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_pmf-pymc_7_1.png" />
 </div>
 </div>
 <p>While the majority of the jokes generally get positive feedback from
@@ -765,26 +766,26 @@ take a look at the worst and best joke, just for fun.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import os
+<span></span><span class="kn">import</span> <span class="nn">os</span>
 
-# Worst and best joke?
-worst_joke_id = joke_means.argmin()
-best_joke_id = joke_means.argmax()
+<span class="c1"># Worst and best joke?</span>
+<span class="n">worst_joke_id</span> <span class="o">=</span> <span class="n">joke_means</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span>
+<span class="n">best_joke_id</span> <span class="o">=</span> <span class="n">joke_means</span><span class="o">.</span><span class="n">argmax</span><span class="p">()</span>
 
-# Let&#39;s see for ourselves. Load the jokes.
-joke_dir = &#39;../data/jokes&#39;
-files = [os.path.join(joke_dir, fname) for fname in os.listdir(joke_dir)]
-jokes = [fname for fname in files if fname.endswith(&#39;txt&#39;)]
-nums = [filter(lambda c: c.isdigit(), fname) for fname in jokes]
-joke_dict = {k: v for k, v in zip(nums, jokes)}
+<span class="c1"># Let&#39;s see for ourselves. Load the jokes.</span>
+<span class="n">joke_dir</span> <span class="o">=</span> <span class="s1">&#39;../data/jokes&#39;</span>
+<span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">joke_dir</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span> <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">joke_dir</span><span class="p">)]</span>
+<span class="n">jokes</span> <span class="o">=</span> <span class="p">[</span><span class="n">fname</span> <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="n">fname</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;txt&#39;</span><span class="p">)]</span>
+<span class="n">nums</span> <span class="o">=</span> <span class="p">[</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">isdigit</span><span class="p">(),</span> <span class="n">fname</span><span class="p">)</span> <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">jokes</span><span class="p">]</span>
+<span class="n">joke_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nums</span><span class="p">,</span> <span class="n">jokes</span><span class="p">)}</span>
 
-def read_joke(joke_id):
-    fname = joke_dict[joke_id]
-    with open(fname) as f:
-        return f.read()
+<span class="k">def</span> <span class="nf">read_joke</span><span class="p">(</span><span class="n">joke_id</span><span class="p">):</span>
+    <span class="n">fname</span> <span class="o">=</span> <span class="n">joke_dict</span><span class="p">[</span><span class="n">joke_id</span><span class="p">]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
 
-print &#39;The worst joke:\n---------------\n%s\n&#39; % read_joke(worst_joke_id)
-print &#39;The best joke:\n--------------\n%s&#39; % read_joke(best_joke_id)
+<span class="k">print</span> <span class="s1">&#39;The worst joke:</span><span class="se">\n</span><span class="s1">---------------</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">read_joke</span><span class="p">(</span><span class="n">worst_joke_id</span><span class="p">)</span>
+<span class="k">print</span> <span class="s1">&#39;The best joke:</span><span class="se">\n</span><span class="s1">--------------</span><span class="se">\n</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">read_joke</span><span class="p">(</span><span class="n">best_joke_id</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -825,12 +826,12 @@ others. Let&#8217;s take a look.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>user_means = data.mean(axis=1)
-fig, ax = plt.subplots(figsize=(16, 6))
-user_means.plot(kind=&#39;bar&#39;, grid=False, ax=ax,
-                title=&quot;Mean Ratings for All 1000 Users&quot;)
-ax.set_xticklabels(&#39;&#39;)  # 1000 labels is nonsensical
-fig.show()
+<span></span><span class="n">user_means</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">user_means</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Mean Ratings for All 1000 Users&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>  <span class="c1"># 1000 labels is nonsensical</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -838,7 +839,7 @@ fig.show()
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_pmf-pymc_11_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_pmf-pymc_11_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_pmf-pymc_11_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_pmf-pymc_11_0.png" />
 </div>
 </div>
 <p>We see even more significant trends here. Some users rate nearly
@@ -901,94 +902,94 @@ in.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>from collections import OrderedDict
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
 
 
-# Create a base class with scaffolding for our 3 baselines.
+<span class="c1"># Create a base class with scaffolding for our 3 baselines.</span>
 
-def split_title(title):
-    &quot;&quot;&quot;Change &quot;BaselineMethod&quot; to &quot;Baseline Method&quot;.&quot;&quot;&quot;
-    words = []
-    tmp = [title[0]]
-    for c in title[1:]:
-        if c.isupper():
-            words.append(&#39;&#39;.join(tmp))
-            tmp = [c]
-        else:
-            tmp.append(c)
-    words.append(&#39;&#39;.join(tmp))
-    return &#39; &#39;.join(words)
-
-
-class Baseline(object):
-    &quot;&quot;&quot;Calculate baseline predictions.&quot;&quot;&quot;
-
-    def __init__(self, train_data):
-        &quot;&quot;&quot;Simple heuristic-based transductive learning to fill in missing
-        values in data matrix.&quot;&quot;&quot;
-        self.predict(train_data.copy())
-
-    def predict(self, train_data):
-        raise NotImplementedError(
-            &#39;baseline prediction not implemented for base class&#39;)
-
-    def rmse(self, test_data):
-        &quot;&quot;&quot;Calculate root mean squared error for predictions on test data.&quot;&quot;&quot;
-        return rmse(test_data, self.predicted)
-
-    def __str__(self):
-        return split_title(self.__class__.__name__)
+<span class="k">def</span> <span class="nf">split_title</span><span class="p">(</span><span class="n">title</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Change &quot;BaselineMethod&quot; to &quot;Baseline Method&quot;.&quot;&quot;&quot;</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="p">[</span><span class="n">title</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">title</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">isupper</span><span class="p">():</span>
+            <span class="n">words</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tmp</span><span class="p">))</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+    <span class="n">words</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tmp</span><span class="p">))</span>
+    <span class="k">return</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
 
 
+<span class="k">class</span> <span class="nc">Baseline</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate baseline predictions.&quot;&quot;&quot;</span>
 
-# Implement the 3 baselines.
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">train_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Simple heuristic-based transductive learning to fill in missing</span>
+<span class="sd">        values in data matrix.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">train_data</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
 
-class UniformRandomBaseline(Baseline):
-    &quot;&quot;&quot;Fill missing values with uniform random values.&quot;&quot;&quot;
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">train_data</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="s1">&#39;baseline prediction not implemented for base class&#39;</span><span class="p">)</span>
 
-    def predict(self, train_data):
-        nan_mask = np.isnan(train_data)
-        masked_train = np.ma.masked_array(train_data, nan_mask)
-        pmin, pmax = masked_train.min(), masked_train.max()
-        N = nan_mask.sum()
-        train_data[nan_mask] = np.random.uniform(pmin, pmax, N)
-        self.predicted = train_data
+    <span class="k">def</span> <span class="nf">rmse</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate root mean squared error for predictions on test data.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">rmse</span><span class="p">(</span><span class="n">test_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">predicted</span><span class="p">)</span>
 
-
-class GlobalMeanBaseline(Baseline):
-    &quot;&quot;&quot;Fill in missing values using the global mean.&quot;&quot;&quot;
-
-    def predict(self, train_data):
-        nan_mask = np.isnan(train_data)
-        train_data[nan_mask] = train_data[~nan_mask].mean()
-        self.predicted = train_data
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">split_title</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
 
 
-class MeanOfMeansBaseline(Baseline):
-    &quot;&quot;&quot;Fill in missing values using mean of user/item/global means.&quot;&quot;&quot;
 
-    def predict(self, train_data):
-        nan_mask = np.isnan(train_data)
-        masked_train = np.ma.masked_array(train_data, nan_mask)
-        global_mean = masked_train.mean()
-        user_means = masked_train.mean(axis=1)
-        item_means = masked_train.mean(axis=0)
-        self.predicted = train_data.copy()
-        n, m = train_data.shape
-        for i in xrange(n):
-            for j in xrange(m):
-                if np.ma.isMA(item_means[j]):
-                    self.predicted[i,j] = np.mean(
-                        (global_mean, user_means[i]))
-                else:
-                    self.predicted[i,j] = np.mean(
-                        (global_mean, user_means[i], item_means[j]))
+<span class="c1"># Implement the 3 baselines.</span>
+
+<span class="k">class</span> <span class="nc">UniformRandomBaseline</span><span class="p">(</span><span class="n">Baseline</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Fill missing values with uniform random values.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">train_data</span><span class="p">):</span>
+        <span class="n">nan_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
+        <span class="n">masked_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">masked_array</span><span class="p">(</span><span class="n">train_data</span><span class="p">,</span> <span class="n">nan_mask</span><span class="p">)</span>
+        <span class="n">pmin</span><span class="p">,</span> <span class="n">pmax</span> <span class="o">=</span> <span class="n">masked_train</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">masked_train</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">nan_mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">train_data</span><span class="p">[</span><span class="n">nan_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">pmin</span><span class="p">,</span> <span class="n">pmax</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">predicted</span> <span class="o">=</span> <span class="n">train_data</span>
 
 
-baseline_methods = OrderedDict()
-baseline_methods[&#39;ur&#39;] = UniformRandomBaseline
-baseline_methods[&#39;gm&#39;] = GlobalMeanBaseline
-baseline_methods[&#39;mom&#39;] = MeanOfMeansBaseline
+<span class="k">class</span> <span class="nc">GlobalMeanBaseline</span><span class="p">(</span><span class="n">Baseline</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Fill in missing values using the global mean.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">train_data</span><span class="p">):</span>
+        <span class="n">nan_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
+        <span class="n">train_data</span><span class="p">[</span><span class="n">nan_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">train_data</span><span class="p">[</span><span class="o">~</span><span class="n">nan_mask</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">predicted</span> <span class="o">=</span> <span class="n">train_data</span>
+
+
+<span class="k">class</span> <span class="nc">MeanOfMeansBaseline</span><span class="p">(</span><span class="n">Baseline</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Fill in missing values using mean of user/item/global means.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">train_data</span><span class="p">):</span>
+        <span class="n">nan_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
+        <span class="n">masked_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">masked_array</span><span class="p">(</span><span class="n">train_data</span><span class="p">,</span> <span class="n">nan_mask</span><span class="p">)</span>
+        <span class="n">global_mean</span> <span class="o">=</span> <span class="n">masked_train</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="n">user_means</span> <span class="o">=</span> <span class="n">masked_train</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">item_means</span> <span class="o">=</span> <span class="n">masked_train</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">predicted</span> <span class="o">=</span> <span class="n">train_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="n">train_data</span><span class="o">.</span><span class="n">shape</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">isMA</span><span class="p">(</span><span class="n">item_means</span><span class="p">[</span><span class="n">j</span><span class="p">]):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">predicted</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+                        <span class="p">(</span><span class="n">global_mean</span><span class="p">,</span> <span class="n">user_means</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">predicted</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+                        <span class="p">(</span><span class="n">global_mean</span><span class="p">,</span> <span class="n">user_means</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">item_means</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span>
+
+
+<span class="n">baseline_methods</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+<span class="n">baseline_methods</span><span class="p">[</span><span class="s1">&#39;ur&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">UniformRandomBaseline</span>
+<span class="n">baseline_methods</span><span class="p">[</span><span class="s1">&#39;gm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">GlobalMeanBaseline</span>
+<span class="n">baseline_methods</span><span class="p">[</span><span class="s1">&#39;mom&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">MeanOfMeansBaseline</span>
 </pre></div>
 </div>
 </div>
@@ -1047,70 +1048,70 @@ estimates obtained from our data.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import time
-import logging
-import pymc3 as pm
-import theano
-import scipy as sp
+<span></span><span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">theano</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="kn">as</span> <span class="nn">sp</span>
 
 
-# Enable on-the-fly graph computations, but ignore
-# absence of intermediate test values.
-theano.config.compute_test_value = &#39;ignore&#39;
+<span class="c1"># Enable on-the-fly graph computations, but ignore</span>
+<span class="c1"># absence of intermediate test values.</span>
+<span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">compute_test_value</span> <span class="o">=</span> <span class="s1">&#39;ignore&#39;</span>
 
-# Set up logging.
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+<span class="c1"># Set up logging.</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
 
 
-class PMF(object):
-    &quot;&quot;&quot;Probabilistic Matrix Factorization model using pymc3.&quot;&quot;&quot;
+<span class="k">class</span> <span class="nc">PMF</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Probabilistic Matrix Factorization model using pymc3.&quot;&quot;&quot;</span>
 
-    def __init__(self, train, dim, alpha=2, std=0.01, bounds=(-10, 10)):
-        &quot;&quot;&quot;Build the Probabilistic Matrix Factorization model using pymc3.
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)):</span>
+        <span class="sd">&quot;&quot;&quot;Build the Probabilistic Matrix Factorization model using pymc3.</span>
 
-        :param np.ndarray train: The training data to use for learning the model.
-        :param int dim: Dimensionality of the model; number of latent factors.
-        :param int alpha: Fixed precision for the likelihood function.
-        :param float std: Amount of noise to use for model initialization.
-        :param (tuple of int) bounds: (lower, upper) bound of ratings.
-            These bounds will simply be used to cap the estimates produced for R.
+<span class="sd">        :param np.ndarray train: The training data to use for learning the model.</span>
+<span class="sd">        :param int dim: Dimensionality of the model; number of latent factors.</span>
+<span class="sd">        :param int alpha: Fixed precision for the likelihood function.</span>
+<span class="sd">        :param float std: Amount of noise to use for model initialization.</span>
+<span class="sd">        :param (tuple of int) bounds: (lower, upper) bound of ratings.</span>
+<span class="sd">            These bounds will simply be used to cap the estimates produced for R.</span>
 
-        &quot;&quot;&quot;
-        self.dim = dim
-        self.alpha = alpha
-        self.std = np.sqrt(1.0 / alpha)
-        self.bounds = bounds
-        self.data = train.copy()
-        n, m = self.data.shape
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">alpha</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span> <span class="o">=</span> <span class="n">bounds</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">train</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span>
 
-        # Perform mean value imputation
-        nan_mask = np.isnan(self.data)
-        self.data[nan_mask] = self.data[~nan_mask].mean()
+        <span class="c1"># Perform mean value imputation</span>
+        <span class="n">nan_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">nan_mask</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="o">~</span><span class="n">nan_mask</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 
-        # Low precision reflects uncertainty; prevents overfitting.
-        # Set to the mean variance across users and items.
-        self.alpha_u = 1 / self.data.var(axis=1).mean()
-        self.alpha_v = 1 / self.data.var(axis=0).mean()
+        <span class="c1"># Low precision reflects uncertainty; prevents overfitting.</span>
+        <span class="c1"># Set to the mean variance across users and items.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha_u</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha_v</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 
-        # Specify the model.
-        logging.info(&#39;building the PMF model&#39;)
-        with pm.Model() as pmf:
-            U = pm.MvNormal(
-                &#39;U&#39;, mu=0, tau=self.alpha_u * np.eye(dim),
-                shape=(n, dim), testval=np.random.randn(n, dim) * std)
-            V = pm.MvNormal(
-                &#39;V&#39;, mu=0, tau=self.alpha_v * np.eye(dim),
-                shape=(m, dim), testval=np.random.randn(m, dim) * std)
-            R = pm.Normal(
-                &#39;R&#39;, mu=theano.tensor.dot(U, V.T), tau=self.alpha * np.ones((n, m)),
-                observed=self.data)
+        <span class="c1"># Specify the model.</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;building the PMF model&#39;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">pmf</span><span class="p">:</span>
+            <span class="n">U</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span>
+                <span class="s1">&#39;U&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha_u</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">dim</span><span class="p">),</span>
+                <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dim</span><span class="p">),</span> <span class="n">testval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span><span class="p">)</span>
+            <span class="n">V</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span>
+                <span class="s1">&#39;V&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha_v</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">dim</span><span class="p">),</span>
+                <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">dim</span><span class="p">),</span> <span class="n">testval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="o">*</span> <span class="n">std</span><span class="p">)</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span>
+                <span class="s1">&#39;R&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">V</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="n">tau</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">)),</span>
+                <span class="n">observed</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
 
-        logging.info(&#39;done building the PMF model&#39;)
-        self.model = pmf
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;done building the PMF model&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">pmf</span>
 
-    def __str__(self):
-        return self.name
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
 </pre></div>
 </div>
 </div>
@@ -1145,85 +1146,85 @@ between each piece to make it clearer.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>try:
-    import ujson as json
-except ImportError:
-    import json
+<span></span><span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">ujson</span> <span class="kn">as</span> <span class="nn">json</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">json</span>
 
 
-# First define functions to save our MAP estimate after it is found.
-# We adapt these from `pymc3`&#39;s `backends` module, where the original
-# code is used to save the traces from MCMC samples.
-def save_np_vars(vars, savedir):
-    &quot;&quot;&quot;Save a dictionary of numpy variables to `savedir`. We assume
-    the directory does not exist; an OSError will be raised if it does.
-    &quot;&quot;&quot;
-    logging.info(&#39;writing numpy vars to directory: %s&#39; % savedir)
-    os.mkdir(savedir)
-    shapes = {}
-    for varname in vars:
-        data = vars[varname]
-        var_file = os.path.join(savedir, varname + &#39;.txt&#39;)
-        np.savetxt(var_file, data.reshape(-1, data.size))
-        shapes[varname] = data.shape
+<span class="c1"># First define functions to save our MAP estimate after it is found.</span>
+<span class="c1"># We adapt these from `pymc3`&#39;s `backends` module, where the original</span>
+<span class="c1"># code is used to save the traces from MCMC samples.</span>
+<span class="k">def</span> <span class="nf">save_np_vars</span><span class="p">(</span><span class="nb">vars</span><span class="p">,</span> <span class="n">savedir</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Save a dictionary of numpy variables to `savedir`. We assume</span>
+<span class="sd">    the directory does not exist; an OSError will be raised if it does.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;writing numpy vars to directory: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">savedir</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">savedir</span><span class="p">)</span>
+    <span class="n">shapes</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="nb">vars</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span>
+        <span class="n">var_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">savedir</span><span class="p">,</span> <span class="n">varname</span> <span class="o">+</span> <span class="s1">&#39;.txt&#39;</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">var_file</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
+        <span class="n">shapes</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span>
 
-        ## Store shape information for reloading.
-        shape_file = os.path.join(savedir, &#39;shapes.json&#39;)
-        with open(shape_file, &#39;w&#39;) as sfh:
-            json.dump(shapes, sfh)
-
-
-def load_np_vars(savedir):
-    &quot;&quot;&quot;Load numpy variables saved with `save_np_vars`.&quot;&quot;&quot;
-    shape_file = os.path.join(savedir, &#39;shapes.json&#39;)
-    with open(shape_file, &#39;r&#39;) as sfh:
-        shapes = json.load(sfh)
-
-    vars = {}
-    for varname, shape in shapes.items():
-        var_file = os.path.join(savedir, varname + &#39;.txt&#39;)
-        vars[varname] = np.loadtxt(var_file).reshape(shape)
-
-    return vars
+        <span class="c1">## Store shape information for reloading.</span>
+        <span class="n">shape_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">savedir</span><span class="p">,</span> <span class="s1">&#39;shapes.json&#39;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">shape_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sfh</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">shapes</span><span class="p">,</span> <span class="n">sfh</span><span class="p">)</span>
 
 
-# Now define the MAP estimation infrastructure.
-def _map_dir(self):
-    basename = &#39;pmf-map-d%d&#39; % self.dim
-    return os.path.join(&#39;data&#39;, basename)
+<span class="k">def</span> <span class="nf">load_np_vars</span><span class="p">(</span><span class="n">savedir</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Load numpy variables saved with `save_np_vars`.&quot;&quot;&quot;</span>
+    <span class="n">shape_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">savedir</span><span class="p">,</span> <span class="s1">&#39;shapes.json&#39;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">shape_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sfh</span><span class="p">:</span>
+        <span class="n">shapes</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">sfh</span><span class="p">)</span>
 
-def _find_map(self):
-    &quot;&quot;&quot;Find mode of posterior using Powell optimization.&quot;&quot;&quot;
-    tstart = time.time()
-    with self.model:
-        logging.info(&#39;finding PMF MAP using Powell optimization...&#39;)
-        self._map = pm.find_MAP(fmin=sp.optimize.fmin_powell, disp=True)
+    <span class="nb">vars</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">varname</span><span class="p">,</span> <span class="n">shape</span> <span class="ow">in</span> <span class="n">shapes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">var_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">savedir</span><span class="p">,</span> <span class="n">varname</span> <span class="o">+</span> <span class="s1">&#39;.txt&#39;</span><span class="p">)</span>
+        <span class="nb">vars</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">var_file</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
 
-    elapsed = int(time.time() - tstart)
-    logging.info(&#39;found PMF MAP in %d seconds&#39; % elapsed)
-
-    # This is going to take a good deal of time to find, so let&#39;s save it.
-    save_np_vars(self._map, self.map_dir)
-
-def _load_map(self):
-    self._map = load_np_vars(self.map_dir)
-
-def _map(self):
-    try:
-        return self._map
-    except:
-        if os.path.isdir(self.map_dir):
-            self.load_map()
-        else:
-            self.find_map()
-        return self._map
+    <span class="k">return</span> <span class="nb">vars</span>
 
 
-# Update our class with the new MAP infrastructure.
-PMF.find_map = _find_map
-PMF.load_map = _load_map
-PMF.map_dir = property(_map_dir)
-PMF.map = property(_map)
+<span class="c1"># Now define the MAP estimation infrastructure.</span>
+<span class="k">def</span> <span class="nf">_map_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">basename</span> <span class="o">=</span> <span class="s1">&#39;pmf-map-d</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">basename</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_find_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Find mode of posterior using Powell optimization.&quot;&quot;&quot;</span>
+    <span class="n">tstart</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;finding PMF MAP using Powell optimization...&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_map</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sp</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_powell</span><span class="p">,</span> <span class="n">disp</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="n">elapsed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">tstart</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;found PMF MAP in </span><span class="si">%d</span><span class="s1"> seconds&#39;</span> <span class="o">%</span> <span class="n">elapsed</span><span class="p">)</span>
+
+    <span class="c1"># This is going to take a good deal of time to find, so let&#39;s save it.</span>
+    <span class="n">save_np_vars</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_map</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">map_dir</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_load_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_map</span> <span class="o">=</span> <span class="n">load_np_vars</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">map_dir</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">map_dir</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load_map</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">find_map</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span>
+
+
+<span class="c1"># Update our class with the new MAP infrastructure.</span>
+<span class="n">PMF</span><span class="o">.</span><span class="n">find_map</span> <span class="o">=</span> <span class="n">_find_map</span>
+<span class="n">PMF</span><span class="o">.</span><span class="n">load_map</span> <span class="o">=</span> <span class="n">_load_map</span>
+<span class="n">PMF</span><span class="o">.</span><span class="n">map_dir</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">_map_dir</span><span class="p">)</span>
+<span class="n">PMF</span><span class="o">.</span><span class="n">map</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">_map</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1238,33 +1239,33 @@ approximate the posterior distribution of the PMF model.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Draw MCMC samples.
-def _trace_dir(self):
-    basename = &#39;pmf-mcmc-d%d&#39; % self.dim
-    return os.path.join(&#39;data&#39;, basename)
+<span></span><span class="c1"># Draw MCMC samples.</span>
+<span class="k">def</span> <span class="nf">_trace_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">basename</span> <span class="o">=</span> <span class="s1">&#39;pmf-mcmc-d</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">basename</span><span class="p">)</span>
 
-def _draw_samples(self, nsamples=1000, njobs=2):
-    # First make sure the trace_dir does not already exist.
-    if os.path.isdir(self.trace_dir):
-        raise OSError(
-            &#39;trace directory %s already exists. Please move or delete.&#39; % self.trace_dir)
-    start = self.map  # use our MAP as the starting point
-    with self.model:
-        logging.info(&#39;drawing %d samples using %d jobs&#39; % (nsamples, njobs))
-        step = pm.NUTS(scaling=start)
-        backend = pm.backends.Text(self.trace_dir)
-        logging.info(&#39;backing up trace to directory: %s&#39; % self.trace_dir)
-        self.trace = pm.sample(nsamples, step, start=start, njobs=njobs, trace=backend)
+<span class="k">def</span> <span class="nf">_draw_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nsamples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="c1"># First make sure the trace_dir does not already exist.</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trace_dir</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span>
+            <span class="s1">&#39;trace directory </span><span class="si">%s</span><span class="s1"> already exists. Please move or delete.&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">trace_dir</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">map</span>  <span class="c1"># use our MAP as the starting point</span>
+    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;drawing </span><span class="si">%d</span><span class="s1"> samples using </span><span class="si">%d</span><span class="s1"> jobs&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">nsamples</span><span class="p">,</span> <span class="n">njobs</span><span class="p">))</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+        <span class="n">backend</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">Text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trace_dir</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;backing up trace to directory: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">trace_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">nsamples</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="n">njobs</span><span class="p">,</span> <span class="n">trace</span><span class="o">=</span><span class="n">backend</span><span class="p">)</span>
 
-def _load_trace(self):
-    with self.model:
-        self.trace = pm.backends.text.load(self.trace_dir)
+<span class="k">def</span> <span class="nf">_load_trace</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trace_dir</span><span class="p">)</span>
 
 
-# Update our class with the sampling infrastructure.
-PMF.trace_dir = property(_trace_dir)
-PMF.draw_samples = _draw_samples
-PMF.load_trace = _load_trace
+<span class="c1"># Update our class with the sampling infrastructure.</span>
+<span class="n">PMF</span><span class="o">.</span><span class="n">trace_dir</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">_trace_dir</span><span class="p">)</span>
+<span class="n">PMF</span><span class="o">.</span><span class="n">draw_samples</span> <span class="o">=</span> <span class="n">_draw_samples</span>
+<span class="n">PMF</span><span class="o">.</span><span class="n">load_trace</span> <span class="o">=</span> <span class="n">_load_trace</span>
 </pre></div>
 </div>
 </div>
@@ -1293,23 +1294,23 @@ stored in the PMF object.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def _predict(self, U, V):
-    &quot;&quot;&quot;Estimate R from the given values of U and V.&quot;&quot;&quot;
-    R = np.dot(U, V.T)
-    n, m = R.shape
-    sample_R = np.array([
-        [np.random.normal(R[i,j], self.std) for j in xrange(m)]
-        for i in xrange(n)
-    ])
+<span></span><span class="k">def</span> <span class="nf">_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">U</span><span class="p">,</span> <span class="n">V</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Estimate R from the given values of U and V.&quot;&quot;&quot;</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">V</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+    <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">sample_R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">std</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">m</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="p">])</span>
 
-    # bound ratings
-    low, high = self.bounds
-    sample_R[sample_R &lt; low] = low
-    sample_R[sample_R &gt; high] = high
-    return sample_R
+    <span class="c1"># bound ratings</span>
+    <span class="n">low</span><span class="p">,</span> <span class="n">high</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span>
+    <span class="n">sample_R</span><span class="p">[</span><span class="n">sample_R</span> <span class="o">&lt;</span> <span class="n">low</span><span class="p">]</span> <span class="o">=</span> <span class="n">low</span>
+    <span class="n">sample_R</span><span class="p">[</span><span class="n">sample_R</span> <span class="o">&gt;</span> <span class="n">high</span><span class="p">]</span> <span class="o">=</span> <span class="n">high</span>
+    <span class="k">return</span> <span class="n">sample_R</span>
 
 
-PMF.predict = _predict
+<span class="n">PMF</span><span class="o">.</span><span class="n">predict</span> <span class="o">=</span> <span class="n">_predict</span>
 </pre></div>
 </div>
 </div>
@@ -1342,16 +1343,16 @@ our predictions from the actual user preferences.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Define our evaluation function.
-def rmse(test_data, predicted):
-    &quot;&quot;&quot;Calculate root mean squared error.
-    Ignoring missing values in the test data.
-    &quot;&quot;&quot;
-    I = ~np.isnan(test_data)   # indicator for missing values
-    N = I.sum()                # number of non-missing values
-    sqerror = abs(test_data - predicted) ** 2  # squared error array
-    mse = sqerror[I].sum() / N                 # mean squared error
-    return np.sqrt(mse)                        # RMSE
+<span></span><span class="c1"># Define our evaluation function.</span>
+<span class="k">def</span> <span class="nf">rmse</span><span class="p">(</span><span class="n">test_data</span><span class="p">,</span> <span class="n">predicted</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate root mean squared error.</span>
+<span class="sd">    Ignoring missing values in the test data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">I</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">test_data</span><span class="p">)</span>   <span class="c1"># indicator for missing values</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="n">I</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>                <span class="c1"># number of non-missing values</span>
+    <span class="n">sqerror</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">test_data</span> <span class="o">-</span> <span class="n">predicted</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>  <span class="c1"># squared error array</span>
+    <span class="n">mse</span> <span class="o">=</span> <span class="n">sqerror</span><span class="p">[</span><span class="n">I</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">N</span>                 <span class="c1"># mean squared error</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">mse</span><span class="p">)</span>                        <span class="c1"># RMSE</span>
 </pre></div>
 </div>
 </div>
@@ -1375,56 +1376,56 @@ indices selected for testing and use that to save the data.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import hashlib
+<span></span><span class="kn">import</span> <span class="nn">hashlib</span>
 
 
-# Define a function for splitting train/test data.
-def split_train_test(data, percent_test=10):
-    &quot;&quot;&quot;Split the data into train/test sets.
-    :param int percent_test: Percentage of data to use for testing. Default 10.
-    &quot;&quot;&quot;
-    n, m = data.shape             # # users, # jokes
-    N = n * m                     # # cells in matrix
-    test_size = N / percent_test  # use 10% of data as test set
-    train_size = N - test_size    # and remainder for training
+<span class="c1"># Define a function for splitting train/test data.</span>
+<span class="k">def</span> <span class="nf">split_train_test</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">percent_test</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Split the data into train/test sets.</span>
+<span class="sd">    :param int percent_test: Percentage of data to use for testing. Default 10.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span>             <span class="c1"># # users, # jokes</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">m</span>                     <span class="c1"># # cells in matrix</span>
+    <span class="n">test_size</span> <span class="o">=</span> <span class="n">N</span> <span class="o">/</span> <span class="n">percent_test</span>  <span class="c1"># use 10% of data as test set</span>
+    <span class="n">train_size</span> <span class="o">=</span> <span class="n">N</span> <span class="o">-</span> <span class="n">test_size</span>    <span class="c1"># and remainder for training</span>
 
-    # Prepare train/test ndarrays.
-    train = data.copy().values
-    test = np.ones(data.shape) * np.nan
+    <span class="c1"># Prepare train/test ndarrays.</span>
+    <span class="n">train</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
 
-    # Draw random sample of training data to use for testing.
-    tosample = np.where(~np.isnan(train))       # ignore nan values in data
-    idx_pairs = zip(tosample[0], tosample[1])   # tuples of row/col index pairs
-    indices = np.arange(len(idx_pairs))         # indices of index pairs
-    sample = np.random.choice(indices, replace=False, size=test_size)
+    <span class="c1"># Draw random sample of training data to use for testing.</span>
+    <span class="n">tosample</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">train</span><span class="p">))</span>       <span class="c1"># ignore nan values in data</span>
+    <span class="n">idx_pairs</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">tosample</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tosample</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>   <span class="c1"># tuples of row/col index pairs</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_pairs</span><span class="p">))</span>         <span class="c1"># indices of index pairs</span>
+    <span class="n">sample</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">test_size</span><span class="p">)</span>
 
-    # Transfer random sample from train set to test set.
-    for idx in sample:
-        idx_pair = idx_pairs[idx]
-        test[idx_pair] = train[idx_pair]  # transfer to test set
-        train[idx_pair] = np.nan          # remove from train set
+    <span class="c1"># Transfer random sample from train set to test set.</span>
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">sample</span><span class="p">:</span>
+        <span class="n">idx_pair</span> <span class="o">=</span> <span class="n">idx_pairs</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">test</span><span class="p">[</span><span class="n">idx_pair</span><span class="p">]</span> <span class="o">=</span> <span class="n">train</span><span class="p">[</span><span class="n">idx_pair</span><span class="p">]</span>  <span class="c1"># transfer to test set</span>
+        <span class="n">train</span><span class="p">[</span><span class="n">idx_pair</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>          <span class="c1"># remove from train set</span>
 
-    # Verify everything worked properly
-    assert(np.isnan(train).sum() == test_size)
-    assert(np.isnan(test).sum() == train_size)
+    <span class="c1"># Verify everything worked properly</span>
+    <span class="k">assert</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">train</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="n">test_size</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">test</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="n">train_size</span><span class="p">)</span>
 
-    # Finally, hash the indices and save the train/test sets.
-    index_string = &#39;&#39;.join(map(str, np.sort(sample)))
-    name = hashlib.sha1(index_string).hexdigest()
-    savedir = os.path.join(&#39;data&#39;, name)
-    save_np_vars({&#39;train&#39;: train, &#39;test&#39;: test}, savedir)
+    <span class="c1"># Finally, hash the indices and save the train/test sets.</span>
+    <span class="n">index_string</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">sample</span><span class="p">)))</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">index_string</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+    <span class="n">savedir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="n">save_np_vars</span><span class="p">({</span><span class="s1">&#39;train&#39;</span><span class="p">:</span> <span class="n">train</span><span class="p">,</span> <span class="s1">&#39;test&#39;</span><span class="p">:</span> <span class="n">test</span><span class="p">},</span> <span class="n">savedir</span><span class="p">)</span>
 
-    # Return train set, test set, and unique hash of indices.
-    return train, test, name
+    <span class="c1"># Return train set, test set, and unique hash of indices.</span>
+    <span class="k">return</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">name</span>
 
 
-def load_train_test(name):
-    &quot;&quot;&quot;Load the train/test sets.&quot;&quot;&quot;
-    savedir = os.path.join(&#39;data&#39;, name)
-    vars = load_np_vars(savedir)
-    return vars[&#39;train&#39;], vars[&#39;test&#39;]
+<span class="k">def</span> <span class="nf">load_train_test</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Load the train/test sets.&quot;&quot;&quot;</span>
+    <span class="n">savedir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="nb">vars</span> <span class="o">=</span> <span class="n">load_np_vars</span><span class="p">(</span><span class="n">savedir</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">vars</span><span class="p">[</span><span class="s1">&#39;train&#39;</span><span class="p">],</span> <span class="nb">vars</span><span class="p">[</span><span class="s1">&#39;test&#39;</span><span class="p">]</span>
 
-# train, test, name = split_train_test(data)
+<span class="c1"># train, test, name = split_train_test(data)</span>
 </pre></div>
 </div>
 </div>
@@ -1436,7 +1437,7 @@ using the code above which we&#8217;ll now use for all the evaluations below.</p
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>train, test = load_train_test(&#39;6bb8d06c69c0666e6da14c094d4320d115f1ffc8&#39;)
+<span></span><span class="n">train</span><span class="p">,</span> <span class="n">test</span> <span class="o">=</span> <span class="n">load_train_test</span><span class="p">(</span><span class="s1">&#39;6bb8d06c69c0666e6da14c094d4320d115f1ffc8&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1450,13 +1451,13 @@ using the code above which we&#8217;ll now use for all the evaluations below.</p
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Let&#39;s see the results:
-baselines = {}
-for name in baseline_methods:
-    Method = baseline_methods[name]
-    method = Method(train)
-    baselines[name] = method.rmse(test)
-    print &#39;%s RMSE:\t%.5f&#39; % (method, baselines[name])
+<span></span><span class="c1"># Let&#39;s see the results:</span>
+<span class="n">baselines</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">baseline_methods</span><span class="p">:</span>
+    <span class="n">Method</span> <span class="o">=</span> <span class="n">baseline_methods</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+    <span class="n">method</span> <span class="o">=</span> <span class="n">Method</span><span class="p">(</span><span class="n">train</span><span class="p">)</span>
+    <span class="n">baselines</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="n">rmse</span><span class="p">(</span><span class="n">test</span><span class="p">)</span>
+    <span class="k">print</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> RMSE:</span><span class="se">\t</span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">baselines</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
 
 </pre></div>
 </div>
@@ -1480,23 +1481,23 @@ baseline. Now let&#8217;s see how PMF stacks up.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># We use a fixed precision for the likelihood.
-# This reflects uncertainty in the dot product.
-# We choose 2 in the footsteps Salakhutdinov
-# Mnihof.
-ALPHA = 2
+<span></span><span class="c1"># We use a fixed precision for the likelihood.</span>
+<span class="c1"># This reflects uncertainty in the dot product.</span>
+<span class="c1"># We choose 2 in the footsteps Salakhutdinov</span>
+<span class="c1"># Mnihof.</span>
+<span class="n">ALPHA</span> <span class="o">=</span> <span class="mi">2</span>
 
-# The dimensionality D; the number of latent factors.
-# We can adjust this higher to try to capture more subtle
-# characteristics of each joke. However, the higher it is,
-# the more expensive our inference procedures will be.
-# Specifically, we have D(N + M) latent variables. For our
-# Jester dataset, this means we have D(1100), so for 5
-# dimensions, we are sampling 5500 latent variables.
-DIM = 5
+<span class="c1"># The dimensionality D; the number of latent factors.</span>
+<span class="c1"># We can adjust this higher to try to capture more subtle</span>
+<span class="c1"># characteristics of each joke. However, the higher it is,</span>
+<span class="c1"># the more expensive our inference procedures will be.</span>
+<span class="c1"># Specifically, we have D(N + M) latent variables. For our</span>
+<span class="c1"># Jester dataset, this means we have D(1100), so for 5</span>
+<span class="c1"># dimensions, we are sampling 5500 latent variables.</span>
+<span class="n">DIM</span> <span class="o">=</span> <span class="mi">5</span>
 
 
-pmf = PMF(train, DIM, ALPHA, std=0.05)
+<span class="n">pmf</span> <span class="o">=</span> <span class="n">PMF</span><span class="p">(</span><span class="n">train</span><span class="p">,</span> <span class="n">DIM</span><span class="p">,</span> <span class="n">ALPHA</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1517,9 +1518,9 @@ INFO:root:done building the PMF model
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Find MAP for PMF.
-pmf.find_map()
-# pmf.load_map()
+<span></span><span class="c1"># Find MAP for PMF.</span>
+<span class="n">pmf</span><span class="o">.</span><span class="n">find_map</span><span class="p">()</span>
+<span class="c1"># pmf.load_map()</span>
 </pre></div>
 </div>
 </div>
@@ -1560,26 +1561,26 @@ set with a high RMSE on the test set is a definite sign of overfitting.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def eval_map(pmf_model, train, test):
-    U = pmf_model.map[&#39;U&#39;]
-    V = pmf_model.map[&#39;V&#39;]
+<span></span><span class="k">def</span> <span class="nf">eval_map</span><span class="p">(</span><span class="n">pmf_model</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">):</span>
+    <span class="n">U</span> <span class="o">=</span> <span class="n">pmf_model</span><span class="o">.</span><span class="n">map</span><span class="p">[</span><span class="s1">&#39;U&#39;</span><span class="p">]</span>
+    <span class="n">V</span> <span class="o">=</span> <span class="n">pmf_model</span><span class="o">.</span><span class="n">map</span><span class="p">[</span><span class="s1">&#39;V&#39;</span><span class="p">]</span>
 
-    # Make predictions and calculate RMSE on train &amp; test sets.
-    predictions = pmf_model.predict(U, V)
-    train_rmse = rmse(train, predictions)
-    test_rmse = rmse(test, predictions)
-    overfit = test_rmse - train_rmse
+    <span class="c1"># Make predictions and calculate RMSE on train &amp; test sets.</span>
+    <span class="n">predictions</span> <span class="o">=</span> <span class="n">pmf_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">V</span><span class="p">)</span>
+    <span class="n">train_rmse</span> <span class="o">=</span> <span class="n">rmse</span><span class="p">(</span><span class="n">train</span><span class="p">,</span> <span class="n">predictions</span><span class="p">)</span>
+    <span class="n">test_rmse</span> <span class="o">=</span> <span class="n">rmse</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="n">predictions</span><span class="p">)</span>
+    <span class="n">overfit</span> <span class="o">=</span> <span class="n">test_rmse</span> <span class="o">-</span> <span class="n">train_rmse</span>
 
-    # Print report.
-    print &#39;PMF MAP training RMSE: %.5f&#39; % train_rmse
-    print &#39;PMF MAP testing RMSE:  %.5f&#39; % test_rmse
-    print &#39;Train/test difference: %.5f&#39; % overfit
+    <span class="c1"># Print report.</span>
+    <span class="k">print</span> <span class="s1">&#39;PMF MAP training RMSE: </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">train_rmse</span>
+    <span class="k">print</span> <span class="s1">&#39;PMF MAP testing RMSE:  </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">test_rmse</span>
+    <span class="k">print</span> <span class="s1">&#39;Train/test difference: </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">overfit</span>
 
-    return test_rmse
+    <span class="k">return</span> <span class="n">test_rmse</span>
 
 
-# Add eval function to PMF class.
-PMF.eval_map = eval_map
+<span class="c1"># Add eval function to PMF class.</span>
+<span class="n">PMF</span><span class="o">.</span><span class="n">eval_map</span> <span class="o">=</span> <span class="n">eval_map</span>
 </pre></div>
 </div>
 </div>
@@ -1589,10 +1590,10 @@ PMF.eval_map = eval_map
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Evaluate PMF MAP estimates.
-pmf_map_rmse = pmf.eval_map(train, test)
-pmf_improvement = baselines[&#39;mom&#39;] - pmf_map_rmse
-print &#39;PMF MAP Improvement:   %.5f&#39; % pmf_improvement
+<span></span><span class="c1"># Evaluate PMF MAP estimates.</span>
+<span class="n">pmf_map_rmse</span> <span class="o">=</span> <span class="n">pmf</span><span class="o">.</span><span class="n">eval_map</span><span class="p">(</span><span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">)</span>
+<span class="n">pmf_improvement</span> <span class="o">=</span> <span class="n">baselines</span><span class="p">[</span><span class="s1">&#39;mom&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">pmf_map_rmse</span>
+<span class="k">print</span> <span class="s1">&#39;PMF MAP Improvement:   </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">pmf_improvement</span>
 </pre></div>
 </div>
 </div>
@@ -1625,11 +1626,11 @@ sampling. We&#8217;ll draw 1000 samples and back them up using the
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Draw MCMC samples.
-pmf.draw_samples(5000, njobs=3)
+<span></span><span class="c1"># Draw MCMC samples.</span>
+<span class="n">pmf</span><span class="o">.</span><span class="n">draw_samples</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 
-# uncomment to load previous trace rather than drawing new samples.
-# pmf.load_trace()
+<span class="c1"># uncomment to load previous trace rather than drawing new samples.</span>
+<span class="c1"># pmf.load_trace()</span>
 </pre></div>
 </div>
 </div>
@@ -1674,35 +1675,35 @@ below. We will use <code class="docutils literal"><span class="pre">numpy</span>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def _norms(pmf_model, monitor=(&#39;U&#39;, &#39;V&#39;), ord=&#39;fro&#39;):
-    &quot;&quot;&quot;Return norms of latent variables at each step in the
-    sample trace. These can be used to monitor convergence
-    of the sampler.
-    &quot;&quot;&quot;
-    monitor = (&#39;U&#39;, &#39;V&#39;)
-    norms = {var: [] for var in monitor}
-    for sample in pmf_model.trace:
-        for var in monitor:
-            norms[var].append(np.linalg.norm(sample[var], ord))
-    return norms
+<span></span><span class="k">def</span> <span class="nf">_norms</span><span class="p">(</span><span class="n">pmf_model</span><span class="p">,</span> <span class="n">monitor</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;U&#39;</span><span class="p">,</span> <span class="s1">&#39;V&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="o">=</span><span class="s1">&#39;fro&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return norms of latent variables at each step in the</span>
+<span class="sd">    sample trace. These can be used to monitor convergence</span>
+<span class="sd">    of the sampler.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">monitor</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;U&#39;</span><span class="p">,</span> <span class="s1">&#39;V&#39;</span><span class="p">)</span>
+    <span class="n">norms</span> <span class="o">=</span> <span class="p">{</span><span class="n">var</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">monitor</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="n">pmf_model</span><span class="o">.</span><span class="n">trace</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">monitor</span><span class="p">:</span>
+            <span class="n">norms</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">sample</span><span class="p">[</span><span class="n">var</span><span class="p">],</span> <span class="nb">ord</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">norms</span>
 
 
-def _traceplot(pmf_model):
-    &quot;&quot;&quot;Plot Frobenius norms of U and V as a function of sample #.&quot;&quot;&quot;
-    trace_norms = pmf_model.norms()
-    u_series = pd.Series(trace_norms[&#39;U&#39;])
-    v_series = pd.Series(trace_norms[&#39;V&#39;])
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 7))
-    u_series.plot(kind=&#39;line&#39;, ax=ax1, grid=False,
-                  title=&quot;$\|U\|_{Fro}^2$ at Each Sample&quot;)
-    v_series.plot(kind=&#39;line&#39;, ax=ax2, grid=False,
-                  title=&quot;$\|V\|_{Fro}^2$ at Each Sample&quot;)
-    ax1.set_xlabel(&quot;Sample Number&quot;)
-    ax2.set_xlabel(&quot;Sample Number&quot;)
+<span class="k">def</span> <span class="nf">_traceplot</span><span class="p">(</span><span class="n">pmf_model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Plot Frobenius norms of U and V as a function of sample #.&quot;&quot;&quot;</span>
+    <span class="n">trace_norms</span> <span class="o">=</span> <span class="n">pmf_model</span><span class="o">.</span><span class="n">norms</span><span class="p">()</span>
+    <span class="n">u_series</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">trace_norms</span><span class="p">[</span><span class="s1">&#39;U&#39;</span><span class="p">])</span>
+    <span class="n">v_series</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">trace_norms</span><span class="p">[</span><span class="s1">&#39;V&#39;</span><span class="p">])</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax1</span><span class="p">,</span> <span class="n">ax2</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+    <span class="n">u_series</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s1">&#39;line&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                  <span class="n">title</span><span class="o">=</span><span class="s2">&quot;$\|U\|_{Fro}^2$ at Each Sample&quot;</span><span class="p">)</span>
+    <span class="n">v_series</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s1">&#39;line&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax2</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                  <span class="n">title</span><span class="o">=</span><span class="s2">&quot;$\|V\|_{Fro}^2$ at Each Sample&quot;</span><span class="p">)</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Sample Number&quot;</span><span class="p">)</span>
+    <span class="n">ax2</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Sample Number&quot;</span><span class="p">)</span>
 
 
-PMF.norms = _norms
-PMF.traceplot = _traceplot
+<span class="n">PMF</span><span class="o">.</span><span class="n">norms</span> <span class="o">=</span> <span class="n">_norms</span>
+<span class="n">PMF</span><span class="o">.</span><span class="n">traceplot</span> <span class="o">=</span> <span class="n">_traceplot</span>
 </pre></div>
 </div>
 </div>
@@ -1712,7 +1713,7 @@ PMF.traceplot = _traceplot
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>pmf.traceplot()
+<span></span><span class="n">pmf</span><span class="o">.</span><span class="n">traceplot</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -1720,7 +1721,7 @@ PMF.traceplot = _traceplot
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_pmf-pymc_44_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_pmf-pymc_44_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_pmf-pymc_44_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_pmf-pymc_44_0.png" />
 </div>
 </div>
 <p>It appears we get convergence of <span class="math">\(U\)</span> and <span class="math">\(V\)</span> after about 200
@@ -1738,34 +1739,34 @@ as we continue to sample.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def _running_rmse(pmf_model, test_data, train_data, burn_in=0, plot=True):
-    &quot;&quot;&quot;Calculate RMSE for each step of the trace to monitor convergence.
-    &quot;&quot;&quot;
-    burn_in = burn_in if len(pmf_model.trace) &gt;= burn_in else 0
-    results = {&#39;per-step-train&#39;: [], &#39;running-train&#39;: [],
-               &#39;per-step-test&#39;: [], &#39;running-test&#39;: []}
-    R = np.zeros(test_data.shape)
-    for cnt, sample in enumerate(pmf_model.trace[burn_in:]):
-        sample_R = pmf_model.predict(sample[&#39;U&#39;], sample[&#39;V&#39;])
-        R += sample_R
-        running_R = R / (cnt + 1)
-        results[&#39;per-step-train&#39;].append(rmse(train_data, sample_R))
-        results[&#39;running-train&#39;].append(rmse(train_data, running_R))
-        results[&#39;per-step-test&#39;].append(rmse(test_data, sample_R))
-        results[&#39;running-test&#39;].append(rmse(test_data, running_R))
+<span></span><span class="k">def</span> <span class="nf">_running_rmse</span><span class="p">(</span><span class="n">pmf_model</span><span class="p">,</span> <span class="n">test_data</span><span class="p">,</span> <span class="n">train_data</span><span class="p">,</span> <span class="n">burn_in</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate RMSE for each step of the trace to monitor convergence.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">burn_in</span> <span class="o">=</span> <span class="n">burn_in</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pmf_model</span><span class="o">.</span><span class="n">trace</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">burn_in</span> <span class="k">else</span> <span class="mi">0</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;per-step-train&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;running-train&#39;</span><span class="p">:</span> <span class="p">[],</span>
+               <span class="s1">&#39;per-step-test&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;running-test&#39;</span><span class="p">:</span> <span class="p">[]}</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">test_data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">cnt</span><span class="p">,</span> <span class="n">sample</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pmf_model</span><span class="o">.</span><span class="n">trace</span><span class="p">[</span><span class="n">burn_in</span><span class="p">:]):</span>
+        <span class="n">sample_R</span> <span class="o">=</span> <span class="n">pmf_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">sample</span><span class="p">[</span><span class="s1">&#39;U&#39;</span><span class="p">],</span> <span class="n">sample</span><span class="p">[</span><span class="s1">&#39;V&#39;</span><span class="p">])</span>
+        <span class="n">R</span> <span class="o">+=</span> <span class="n">sample_R</span>
+        <span class="n">running_R</span> <span class="o">=</span> <span class="n">R</span> <span class="o">/</span> <span class="p">(</span><span class="n">cnt</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;per-step-train&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rmse</span><span class="p">(</span><span class="n">train_data</span><span class="p">,</span> <span class="n">sample_R</span><span class="p">))</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;running-train&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rmse</span><span class="p">(</span><span class="n">train_data</span><span class="p">,</span> <span class="n">running_R</span><span class="p">))</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;per-step-test&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rmse</span><span class="p">(</span><span class="n">test_data</span><span class="p">,</span> <span class="n">sample_R</span><span class="p">))</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;running-test&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rmse</span><span class="p">(</span><span class="n">test_data</span><span class="p">,</span> <span class="n">running_R</span><span class="p">))</span>
 
-    results = pd.DataFrame(results)
+    <span class="n">results</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
 
-    if plot:
-        results.plot(
-            kind=&#39;line&#39;, grid=False, figsize=(15, 7),
-            title=&#39;Per-step and Running RMSE From Posterior Predictive&#39;)
+    <span class="k">if</span> <span class="n">plot</span><span class="p">:</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;line&#39;</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span>
+            <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Per-step and Running RMSE From Posterior Predictive&#39;</span><span class="p">)</span>
 
-    # Return the final predictions, and the RMSE calculations
-    return running_R, results
+    <span class="c1"># Return the final predictions, and the RMSE calculations</span>
+    <span class="k">return</span> <span class="n">running_R</span><span class="p">,</span> <span class="n">results</span>
 
 
-PMF.running_rmse = _running_rmse
+<span class="n">PMF</span><span class="o">.</span><span class="n">running_rmse</span> <span class="o">=</span> <span class="n">_running_rmse</span>
 </pre></div>
 </div>
 </div>
@@ -1775,7 +1776,7 @@ PMF.running_rmse = _running_rmse
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>predicted, results = pmf.running_rmse(test, train, burn_in=200)
+<span></span><span class="n">predicted</span><span class="p">,</span> <span class="n">results</span> <span class="o">=</span> <span class="n">pmf</span><span class="o">.</span><span class="n">running_rmse</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">burn_in</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1783,7 +1784,7 @@ PMF.running_rmse = _running_rmse
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_pmf-pymc_47_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_pmf-pymc_47_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_pmf-pymc_47_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_pmf-pymc_47_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -1792,14 +1793,14 @@ PMF.running_rmse = _running_rmse
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># And our final RMSE?
-final_test_rmse = results[&#39;running-test&#39;].values[-1]
-final_train_rmse = results[&#39;running-train&#39;].values[-1]
-print &#39;Posterior predictive train RMSE: %.5f&#39; % final_train_rmse
-print &#39;Posterior predictive test RMSE:  %.5f&#39; % final_test_rmse
-print &#39;Train/test difference:           %.5f&#39; % (final_test_rmse - final_train_rmse)
-print &#39;Improvement from MAP:            %.5f&#39; % (pmf_map_rmse - final_test_rmse)
-print &#39;Improvement from Mean of Means:  %.5f&#39; % (baselines[&#39;mom&#39;] - final_test_rmse)
+<span></span><span class="c1"># And our final RMSE?</span>
+<span class="n">final_test_rmse</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;running-test&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">final_train_rmse</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;running-train&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="k">print</span> <span class="s1">&#39;Posterior predictive train RMSE: </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">final_train_rmse</span>
+<span class="k">print</span> <span class="s1">&#39;Posterior predictive test RMSE:  </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">final_test_rmse</span>
+<span class="k">print</span> <span class="s1">&#39;Train/test difference:           </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">final_test_rmse</span> <span class="o">-</span> <span class="n">final_train_rmse</span><span class="p">)</span>
+<span class="k">print</span> <span class="s1">&#39;Improvement from MAP:            </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pmf_map_rmse</span> <span class="o">-</span> <span class="n">final_test_rmse</span><span class="p">)</span>
+<span class="k">print</span> <span class="s1">&#39;Improvement from Mean of Means:  </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">baselines</span><span class="p">[</span><span class="s1">&#39;mom&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">final_test_rmse</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1837,19 +1838,19 @@ precision <span class="math">\(\alpha\)</span> is likely different as well.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>size = 100  # RMSE doesn&#39;t really change after 100th sample anyway.
-all_results = pd.DataFrame({
-    &#39;uniform random&#39;: np.repeat(baselines[&#39;ur&#39;], size),
-    &#39;global means&#39;: np.repeat(baselines[&#39;gm&#39;], size),
-    &#39;mean of means&#39;: np.repeat(baselines[&#39;mom&#39;], size),
-    &#39;PMF MAP&#39;: np.repeat(pmf_map_rmse, size),
-    &#39;PMF MCMC&#39;: results[&#39;running-test&#39;][:size],
-})
-fig, ax = plt.subplots(figsize=(10, 5))
-all_results.plot(kind=&#39;line&#39;, grid=False, ax=ax,
-                 title=&#39;RMSE for all methods&#39;)
-ax.set_xlabel(&quot;Number of Samples&quot;)
-ax.set_ylabel(&quot;RMSE&quot;)
+<span></span><span class="n">size</span> <span class="o">=</span> <span class="mi">100</span>  <span class="c1"># RMSE doesn&#39;t really change after 100th sample anyway.</span>
+<span class="n">all_results</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s1">&#39;uniform random&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">baselines</span><span class="p">[</span><span class="s1">&#39;ur&#39;</span><span class="p">],</span> <span class="n">size</span><span class="p">),</span>
+    <span class="s1">&#39;global means&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">baselines</span><span class="p">[</span><span class="s1">&#39;gm&#39;</span><span class="p">],</span> <span class="n">size</span><span class="p">),</span>
+    <span class="s1">&#39;mean of means&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">baselines</span><span class="p">[</span><span class="s1">&#39;mom&#39;</span><span class="p">],</span> <span class="n">size</span><span class="p">),</span>
+    <span class="s1">&#39;PMF MAP&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">pmf_map_rmse</span><span class="p">,</span> <span class="n">size</span><span class="p">),</span>
+    <span class="s1">&#39;PMF MCMC&#39;</span><span class="p">:</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;running-test&#39;</span><span class="p">][:</span><span class="n">size</span><span class="p">],</span>
+<span class="p">})</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">all_results</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s1">&#39;line&#39;</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                 <span class="n">title</span><span class="o">=</span><span class="s1">&#39;RMSE for all methods&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Number of Samples&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;RMSE&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1867,7 +1868,7 @@ ax.set_ylabel(&quot;RMSE&quot;)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_pmf-pymc_51_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_pmf-pymc_51_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_pmf-pymc_51_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_pmf-pymc_51_1.png" />
 </div>
 </div>
 </div>
@@ -1958,7 +1959,7 @@ Factorization Using Markov Chain Monte Carlo,” in Proceedings of the
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Inference of Gaussian mixture model with ADVI &mdash; pymc3 3.0 documentation</title>
+  <title>Inference of Gaussian mixture model with ADVI &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -48,7 +48,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -80,6 +80,7 @@
             
             
                 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
@@ -95,7 +96,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -306,31 +307,31 @@ components.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>%matplotlib inline
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 
-import pymc3 as pm
-from pymc3 import Normal, Metropolis, sample, MvNormal, Dirichlet, \
-    DensityDist, find_MAP, NUTS, Slice
-import theano.tensor as tt
-from theano.tensor.nlinalg import det
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Normal</span><span class="p">,</span> <span class="n">Metropolis</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">MvNormal</span><span class="p">,</span> <span class="n">Dirichlet</span><span class="p">,</span> \
+    <span class="n">DensityDist</span><span class="p">,</span> <span class="n">find_MAP</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">,</span> <span class="n">Slice</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
+<span class="kn">from</span> <span class="nn">theano.tensor.nlinalg</span> <span class="kn">import</span> <span class="n">det</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
 
-n_samples = 100
-rng = np.random.RandomState(123)
-ms = np.array([[-1, -1.5], [1, 1]])
-ps = np.array([0.2, 0.8])
+<span class="n">n_samples</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">123</span><span class="p">)</span>
+<span class="n">ms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.5</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+<span class="n">ps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">])</span>
 
-zs = np.array([rng.multinomial(1, ps) for _ in range(n_samples)]).T
-xs = [z[:, np.newaxis] * rng.multivariate_normal(m, np.eye(2), size=n_samples)
-      for z, m in zip(zs, ms)]
-data = np.sum(np.dstack(xs), axis=2)
+<span class="n">zs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">rng</span><span class="o">.</span><span class="n">multinomial</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">ps</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
+<span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">z</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="n">n_samples</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">z</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">zs</span><span class="p">,</span> <span class="n">ms</span><span class="p">)]</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dstack</span><span class="p">(</span><span class="n">xs</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
-plt.figure(figsize=(5, 5))
-plt.scatter(data[:, 0], data[:, 1], c=&#39;g&#39;, alpha=0.5)
-plt.scatter(ms[0, 0], ms[0, 1], c=&#39;r&#39;, s=100)
-plt.scatter(ms[1, 0], ms[1, 1], c=&#39;b&#39;, s=100)
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">ms</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">ms</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">ms</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">ms</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -348,7 +349,7 @@ plt.scatter(ms[1, 0], ms[1, 1], c=&#39;b&#39;, s=100)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_2_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_2_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_2_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_2_1.png" />
 </div>
 </div>
 <p>Gaussian mixture models are usually constructed with categorical random
@@ -367,31 +368,31 @@ representation of the log-likelihood.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>from pymc3.math import LogSumExp
+<span></span><span class="kn">from</span> <span class="nn">pymc3.math</span> <span class="kn">import</span> <span class="n">LogSumExp</span>
 
-# Log likelihood of normal distribution
-def logp_normal(mu, tau, value):
-    # log probability of individual samples
-    k = tau.shape[0]
-    delta = lambda mu: value - mu
-    return (-1 / 2.) * (k * tt.log(2 * np.pi) + tt.log(1./det(tau)) +
-                         (delta(mu).dot(tau) * delta(mu)).sum(axis=1))
+<span class="c1"># Log likelihood of normal distribution</span>
+<span class="k">def</span> <span class="nf">logp_normal</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="c1"># log probability of individual samples</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="n">tau</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">mu</span><span class="p">:</span> <span class="n">value</span> <span class="o">-</span> <span class="n">mu</span>
+    <span class="k">return</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">k</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">+</span> <span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">det</span><span class="p">(</span><span class="n">tau</span><span class="p">))</span> <span class="o">+</span>
+                         <span class="p">(</span><span class="n">delta</span><span class="p">(</span><span class="n">mu</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="n">delta</span><span class="p">(</span><span class="n">mu</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
 
-# Log likelihood of Gaussian mixture distribution
-def logp_gmix(mus, pi, tau):
-    def logp_(value):
-        logps = [tt.log(pi[i]) + logp_normal(mu, tau, value)
-                 for i, mu in enumerate(mus)]
+<span class="c1"># Log likelihood of Gaussian mixture distribution</span>
+<span class="k">def</span> <span class="nf">logp_gmix</span><span class="p">(</span><span class="n">mus</span><span class="p">,</span> <span class="n">pi</span><span class="p">,</span> <span class="n">tau</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">logp_</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="n">logps</span> <span class="o">=</span> <span class="p">[</span><span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">pi</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">+</span> <span class="n">logp_normal</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">mu</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mus</span><span class="p">)]</span>
 
-        return tt.sum(LogSumExp(tt.stacklists(logps)[:, :n_samples], axis=0))
+        <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">LogSumExp</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">stacklists</span><span class="p">(</span><span class="n">logps</span><span class="p">)[:,</span> <span class="p">:</span><span class="n">n_samples</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
 
-    return logp_
+    <span class="k">return</span> <span class="n">logp_</span>
 
-with pm.Model() as model:
-    mus = [MvNormal(&#39;mu_%d&#39; % i, mu=np.zeros(2), tau=0.1 * np.eye(2), shape=(2,))
-           for i in range(2)]
-    pi = Dirichlet(&#39;pi&#39;, a=0.1 * np.ones(2), shape=(2,))
-    xs = DensityDist(&#39;x&#39;, logp_gmix(mus, pi, np.eye(2)), observed=data)
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">mus</span> <span class="o">=</span> <span class="p">[</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;mu_</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">i</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">tau</span><span class="o">=</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+           <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+    <span class="n">pi</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;pi&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+    <span class="n">xs</span> <span class="o">=</span> <span class="n">DensityDist</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">logp_gmix</span><span class="p">(</span><span class="n">mus</span><span class="p">,</span> <span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -410,10 +411,10 @@ Applied stickbreaking-transform to pi and added transformed pi_stickbreaking to 
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>with model:
-    start = find_MAP()
-    step = Metropolis()
-    trace = sample(1000, step, start=start)
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">()</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">Metropolis</span><span class="p">()</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -435,13 +436,13 @@ clusters.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>plt.figure(figsize=(5, 5))
-plt.scatter(data[:, 0], data[:, 1], alpha=0.5, c=&#39;g&#39;)
-mu_0, mu_1 = trace[&#39;mu_0&#39;], trace[&#39;mu_1&#39;]
-plt.scatter(mu_0[-500:, 0], mu_0[-500:, 1], c=&quot;r&quot;, s=10)
-plt.scatter(mu_1[-500:, 0], mu_1[-500:, 1], c=&quot;b&quot;, s=10)
-plt.xlim(-6, 6)
-plt.ylim(-6, 6)
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">)</span>
+<span class="n">mu_0</span><span class="p">,</span> <span class="n">mu_1</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu_0&#39;</span><span class="p">],</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu_1&#39;</span><span class="p">]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">mu_0</span><span class="p">[</span><span class="o">-</span><span class="mi">500</span><span class="p">:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">mu_0</span><span class="p">[</span><span class="o">-</span><span class="mi">500</span><span class="p">:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">mu_1</span><span class="p">[</span><span class="o">-</span><span class="mi">500</span><span class="p">:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">mu_1</span><span class="p">[</span><span class="o">-</span><span class="mi">500</span><span class="p">:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -459,7 +460,7 @@ plt.ylim(-6, 6)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_8_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_8_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_8_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_8_1.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -468,8 +469,8 @@ plt.ylim(-6, 6)
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>sns.barplot([1, 2], np.mean(trace[&#39;pi&#39;][-5000:], axis=0),
-            palette=[&#39;red&#39;, &#39;blue&#39;])
+<span></span><span class="n">sns</span><span class="o">.</span><span class="n">barplot</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;pi&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">5000</span><span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+            <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="s1">&#39;blue&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
@@ -487,7 +488,7 @@ plt.ylim(-6, 6)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_9_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_9_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_9_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_9_1.png" />
 </div>
 </div>
 <p>We can use the same model with ADVI as follows.</p>
@@ -497,14 +498,14 @@ plt.ylim(-6, 6)
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>with pm.Model() as model:
-    mus = [MvNormal(&#39;mu_%d&#39; % i, mu=np.zeros(2), tau=0.1 * np.eye(2), shape=(2,))
-           for i in range(2)]
-    pi = Dirichlet(&#39;pi&#39;, a=0.1 * np.ones(2), shape=(2,))
-    xs = DensityDist(&#39;x&#39;, logp_gmix(mus, pi, np.eye(2)), observed=data)
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">mus</span> <span class="o">=</span> <span class="p">[</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;mu_</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">i</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">tau</span><span class="o">=</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+           <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+    <span class="n">pi</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;pi&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+    <span class="n">xs</span> <span class="o">=</span> <span class="n">DensityDist</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">logp_gmix</span><span class="p">(</span><span class="n">mus</span><span class="p">,</span> <span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
 
-%time means, sds, elbos = pm.variational.advi( \
-    model=model, n=1000, learning_rate=1e-1)
+<span class="o">%</span><span class="k">time</span> means, sds, elbos = pm.variational.advi( \
+    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-1</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -541,36 +542,36 @@ the original space.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>from copy import deepcopy
+<span></span><span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
 
-mu_0, sd_0 = means[&#39;mu_0&#39;], sds[&#39;mu_0&#39;]
-mu_1, sd_1 = means[&#39;mu_1&#39;], sds[&#39;mu_1&#39;]
+<span class="n">mu_0</span><span class="p">,</span> <span class="n">sd_0</span> <span class="o">=</span> <span class="n">means</span><span class="p">[</span><span class="s1">&#39;mu_0&#39;</span><span class="p">],</span> <span class="n">sds</span><span class="p">[</span><span class="s1">&#39;mu_0&#39;</span><span class="p">]</span>
+<span class="n">mu_1</span><span class="p">,</span> <span class="n">sd_1</span> <span class="o">=</span> <span class="n">means</span><span class="p">[</span><span class="s1">&#39;mu_1&#39;</span><span class="p">],</span> <span class="n">sds</span><span class="p">[</span><span class="s1">&#39;mu_1&#39;</span><span class="p">]</span>
 
-def logp_normal_np(mu, tau, value):
-    # log probability of individual samples
-    k = tau.shape[0]
-    delta = lambda mu: value - mu
-    return (-1 / 2.) * (k * np.log(2 * np.pi) + np.log(1./np.linalg.det(tau)) +
-                         (delta(mu).dot(tau) * delta(mu)).sum(axis=1))
+<span class="k">def</span> <span class="nf">logp_normal_np</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="c1"># log probability of individual samples</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="n">tau</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">mu</span><span class="p">:</span> <span class="n">value</span> <span class="o">-</span> <span class="n">mu</span>
+    <span class="k">return</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">k</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="n">tau</span><span class="p">))</span> <span class="o">+</span>
+                         <span class="p">(</span><span class="n">delta</span><span class="p">(</span><span class="n">mu</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="n">delta</span><span class="p">(</span><span class="n">mu</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
 
-def threshold(zz):
-    zz_ = deepcopy(zz)
-    zz_[zz &lt; np.max(zz) * 1e-2] = None
-    return zz_
+<span class="k">def</span> <span class="nf">threshold</span><span class="p">(</span><span class="n">zz</span><span class="p">):</span>
+    <span class="n">zz_</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">zz</span><span class="p">)</span>
+    <span class="n">zz_</span><span class="p">[</span><span class="n">zz</span> <span class="o">&lt;</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">zz</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e-2</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="n">zz_</span>
 
-def plot_logp_normal(ax, mu, sd, cmap):
-    f = lambda value: np.exp(logp_normal_np(mu, np.diag(1 / sd**2), value))
-    g = lambda mu, sd: np.arange(mu - 3, mu + 3, .1)
-    xx, yy = np.meshgrid(g(mu[0], sd[0]), g(mu[1], sd[1]))
-    zz = f(np.vstack((xx.reshape(-1), yy.reshape(-1))).T).reshape(xx.shape)
-    ax.contourf(xx, yy, threshold(zz), cmap=cmap, alpha=0.9)
+<span class="k">def</span> <span class="nf">plot_logp_normal</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">sd</span><span class="p">,</span> <span class="n">cmap</span><span class="p">):</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">value</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">logp_normal_np</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">sd</span><span class="o">**</span><span class="mi">2</span><span class="p">),</span> <span class="n">value</span><span class="p">))</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">mu</span><span class="p">,</span> <span class="n">sd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">mu</span> <span class="o">-</span> <span class="mi">3</span><span class="p">,</span> <span class="n">mu</span> <span class="o">+</span> <span class="mi">3</span><span class="p">,</span> <span class="o">.</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">xx</span><span class="p">,</span> <span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">g</span><span class="p">(</span><span class="n">mu</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sd</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">g</span><span class="p">(</span><span class="n">mu</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">sd</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">zz</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">xx</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">yy</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)))</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">xx</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="n">xx</span><span class="p">,</span> <span class="n">yy</span><span class="p">,</span> <span class="n">threshold</span><span class="p">(</span><span class="n">zz</span><span class="p">),</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.9</span><span class="p">)</span>
 
-fig, ax = plt.subplots(figsize=(5, 5))
-plt.scatter(data[:, 0], data[:, 1], alpha=0.5, c=&#39;g&#39;)
-plot_logp_normal(ax, mu_0, sd_0, cmap=&#39;Reds&#39;)
-plot_logp_normal(ax, mu_1, sd_1, cmap=&#39;Blues&#39;)
-plt.xlim(-6, 6)
-plt.ylim(-6, 6)
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">)</span>
+<span class="n">plot_logp_normal</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">mu_0</span><span class="p">,</span> <span class="n">sd_0</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;Reds&#39;</span><span class="p">)</span>
+<span class="n">plot_logp_normal</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">mu_1</span><span class="p">,</span> <span class="n">sd_1</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;Blues&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -588,7 +589,7 @@ plt.ylim(-6, 6)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_13_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_13_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_13_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_13_1.png" />
 </div>
 </div>
 <p>TODO: We need to backward-transform &#8216;pi&#8217;, which is transformed by
@@ -601,7 +602,7 @@ the algorithm.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>plt.plot(elbos)
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">elbos</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -619,7 +620,7 @@ the algorithm.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_16_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_16_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_16_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_16_1.png" />
 </div>
 </div>
 <p>To demonstrate that ADVI works for large dataset with mini-batch, let&#8217;s
@@ -630,19 +631,19 @@ create 100,000 samples from the same mixture distribution.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>n_samples = 100000
+<span></span><span class="n">n_samples</span> <span class="o">=</span> <span class="mi">100000</span>
 
-zs = np.array([rng.multinomial(1, ps) for _ in range(n_samples)]).T
-xs = [z[:, np.newaxis] * rng.multivariate_normal(m, np.eye(2), size=n_samples)
-      for z, m in zip(zs, ms)]
-data = np.sum(np.dstack(xs), axis=2)
+<span class="n">zs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">rng</span><span class="o">.</span><span class="n">multinomial</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">ps</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
+<span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">z</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="n">n_samples</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">z</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">zs</span><span class="p">,</span> <span class="n">ms</span><span class="p">)]</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dstack</span><span class="p">(</span><span class="n">xs</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
-plt.figure(figsize=(5, 5))
-plt.scatter(data[:, 0], data[:, 1], c=&#39;g&#39;, alpha=0.5)
-plt.scatter(ms[0, 0], ms[0, 1], c=&#39;r&#39;, s=100)
-plt.scatter(ms[1, 0], ms[1, 1], c=&#39;b&#39;, s=100)
-plt.xlim(-6, 6)
-plt.ylim(-6, 6)
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">ms</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">ms</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">ms</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">ms</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -660,7 +661,7 @@ plt.ylim(-6, 6)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_18_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_18_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_18_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_18_1.png" />
 </div>
 </div>
 <p>MCMC took 55 seconds, 20 times longer than the small dataset.</p>
@@ -670,15 +671,15 @@ plt.ylim(-6, 6)
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>with pm.Model() as model:
-    mus = [MvNormal(&#39;mu_%d&#39; % i, mu=np.zeros(2), tau=0.1 * np.eye(2), shape=(2,))
-           for i in range(2)]
-    pi = Dirichlet(&#39;pi&#39;, a=0.1 * np.ones(2), shape=(2,))
-    xs = DensityDist(&#39;x&#39;, logp_gmix(mus, pi, np.eye(2)), observed=data)
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">mus</span> <span class="o">=</span> <span class="p">[</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;mu_</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">i</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">tau</span><span class="o">=</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+           <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+    <span class="n">pi</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;pi&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+    <span class="n">xs</span> <span class="o">=</span> <span class="n">DensityDist</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">logp_gmix</span><span class="p">(</span><span class="n">mus</span><span class="p">,</span> <span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
 
-    start = find_MAP()
-    step = Metropolis()
-    trace = sample(1000, step, start=start)
+    <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">()</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">Metropolis</span><span class="p">()</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -699,13 +700,13 @@ single point for each component.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>plt.figure(figsize=(5, 5))
-plt.scatter(data[:, 0], data[:, 1], alpha=0.5, c=&#39;g&#39;)
-mu_0, mu_1 = trace[&#39;mu_0&#39;], trace[&#39;mu_1&#39;]
-plt.scatter(mu_0[-500:, 0], mu_0[-500:, 1], c=&quot;r&quot;, s=50)
-plt.scatter(mu_1[-500:, 0], mu_1[-500:, 1], c=&quot;b&quot;, s=50)
-plt.xlim(-6, 6)
-plt.ylim(-6, 6)
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">)</span>
+<span class="n">mu_0</span><span class="p">,</span> <span class="n">mu_1</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu_0&#39;</span><span class="p">],</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu_1&#39;</span><span class="p">]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">mu_0</span><span class="p">[</span><span class="o">-</span><span class="mi">500</span><span class="p">:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">mu_0</span><span class="p">[</span><span class="o">-</span><span class="mi">500</span><span class="p">:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">mu_1</span><span class="p">[</span><span class="o">-</span><span class="mi">500</span><span class="p">:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">mu_1</span><span class="p">[</span><span class="o">-</span><span class="mi">500</span><span class="p">:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -723,7 +724,7 @@ plt.ylim(-6, 6)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_22_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_22_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_22_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_22_1.png" />
 </div>
 </div>
 <p>For ADVI with mini-batch, put theano tensor on the observed variable of
@@ -739,17 +740,17 @@ the tensor (&#8216;minibatch_tensors&#8217;).</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>data_t = tt.matrix()
-data_t.tag.test_value = np.zeros((1, 2)).astype(float)
+<span></span><span class="n">data_t</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">matrix</span><span class="p">()</span>
+<span class="n">data_t</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
 
-with pm.Model() as model:
-    mus = [MvNormal(&#39;mu_%d&#39; % i, mu=np.zeros(2), tau=0.1 * np.eye(2), shape=(2,))
-           for i in range(2)]
-    pi = Dirichlet(&#39;pi&#39;, a=0.1 * np.ones(2), shape=(2,))
-    xs = DensityDist(&#39;x&#39;, logp_gmix(mus, pi, np.eye(2)), observed=data_t)
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">mus</span> <span class="o">=</span> <span class="p">[</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;mu_</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">i</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">tau</span><span class="o">=</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+           <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+    <span class="n">pi</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;pi&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+    <span class="n">xs</span> <span class="o">=</span> <span class="n">DensityDist</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">logp_gmix</span><span class="p">(</span><span class="n">mus</span><span class="p">,</span> <span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span> <span class="n">observed</span><span class="o">=</span><span class="n">data_t</span><span class="p">)</span>
 
-minibatch_tensors = [data_t]
-minibatch_RVs = [xs]
+<span class="n">minibatch_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_t</span><span class="p">]</span>
+<span class="n">minibatch_RVs</span> <span class="o">=</span> <span class="p">[</span><span class="n">xs</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -769,15 +770,15 @@ sampling strategy to make mini-batches.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>def create_minibatch(data):
-    rng = np.random.RandomState(0)
+<span></span><span class="k">def</span> <span class="nf">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
-    while True:
-        ixs = rng.randint(len(data), size=200)
-        yield data[ixs]
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">ixs</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="n">data</span><span class="p">[</span><span class="n">ixs</span><span class="p">]</span>
 
-minibatches = [create_minibatch(data)]
-total_size = len(data)
+<span class="n">minibatches</span> <span class="o">=</span> <span class="p">[</span><span class="n">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="p">)]</span>
+<span class="n">total_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -789,15 +790,15 @@ and it&#8217;s not a fair comparison.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span># Used only to write the function call in single line for using %time
-# is there more smart way?
-def f():
-    return pm.variational.advi_minibatch(
-    model=model, n=1000, minibatch_tensors=minibatch_tensors,
-    minibatch_RVs=minibatch_RVs, minibatches=minibatches,
-    total_size=total_size, learning_rate=1e-1)
+<span></span><span class="c1"># Used only to write the function call in single line for using %time</span>
+<span class="c1"># is there more smart way?</span>
+<span class="k">def</span> <span class="nf">f</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi_minibatch</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">minibatch_tensors</span><span class="o">=</span><span class="n">minibatch_tensors</span><span class="p">,</span>
+    <span class="n">minibatch_RVs</span><span class="o">=</span><span class="n">minibatch_RVs</span><span class="p">,</span> <span class="n">minibatches</span><span class="o">=</span><span class="n">minibatches</span><span class="p">,</span>
+    <span class="n">total_size</span><span class="o">=</span><span class="n">total_size</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-1</span><span class="p">)</span>
 
-%time means, sds, elbos = f()
+<span class="o">%</span><span class="k">time</span> means, sds, elbos = f()
 </pre></div>
 </div>
 </div>
@@ -828,17 +829,17 @@ Wall time: 2.72 s
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>from copy import deepcopy
+<span></span><span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
 
-mu_0, sd_0 = means[&#39;mu_0&#39;], sds[&#39;mu_0&#39;]
-mu_1, sd_1 = means[&#39;mu_1&#39;], sds[&#39;mu_1&#39;]
+<span class="n">mu_0</span><span class="p">,</span> <span class="n">sd_0</span> <span class="o">=</span> <span class="n">means</span><span class="p">[</span><span class="s1">&#39;mu_0&#39;</span><span class="p">],</span> <span class="n">sds</span><span class="p">[</span><span class="s1">&#39;mu_0&#39;</span><span class="p">]</span>
+<span class="n">mu_1</span><span class="p">,</span> <span class="n">sd_1</span> <span class="o">=</span> <span class="n">means</span><span class="p">[</span><span class="s1">&#39;mu_1&#39;</span><span class="p">],</span> <span class="n">sds</span><span class="p">[</span><span class="s1">&#39;mu_1&#39;</span><span class="p">]</span>
 
-fig, ax = plt.subplots(figsize=(5, 5))
-plt.scatter(data[:, 0], data[:, 1], alpha=0.5, c=&#39;g&#39;)
-plt.scatter(mu_0[0], mu_0[1], c=&quot;r&quot;, s=50)
-plt.scatter(mu_1[0], mu_1[1], c=&quot;b&quot;, s=50)
-plt.xlim(-6, 6)
-plt.ylim(-6, 6)
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">mu_0</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">mu_0</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">mu_1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">mu_1</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -856,7 +857,7 @@ plt.ylim(-6, 6)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_30_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_30_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_30_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_30_1.png" />
 </div>
 </div>
 <p>The variance of the trace of ELBO is larger than without mini-batch
@@ -867,7 +868,7 @@ because of the subsampling from the whole samples.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>plt.plot(elbos)
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">elbos</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -885,7 +886,7 @@ because of the subsampling from the whole samples.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_32_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_32_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_32_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_32_1.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
@@ -910,7 +911,7 @@ because of the subsampling from the whole samples.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

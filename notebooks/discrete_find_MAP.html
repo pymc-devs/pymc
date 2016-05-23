@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Using find_MAP on models with discrete variables &mdash; pymc3 3.0 documentation</title>
+  <title>Using find_MAP on models with discrete variables &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -48,7 +48,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -80,6 +80,7 @@
             
             
                 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
@@ -95,7 +96,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -302,7 +303,7 @@ a simple model, and present a few possible work arounds.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import pymc3 as mc
+<span></span><span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">mc</span>
 </pre></div>
 </div>
 </div>
@@ -316,15 +317,15 @@ predictive posterior distribution over the survey parameter.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>alpha = 4
-beta = 4
-n = 20
-yes = 15
+<span></span><span class="n">alpha</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">beta</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">n</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">yes</span> <span class="o">=</span> <span class="mi">15</span>
 
-with mc.Model() as model:
-    p = mc.Beta(&#39;p&#39;, alpha, beta)
-    surv_sim = mc.Binomial(&#39;surv_sim&#39;, n=n, p=p)
-    surv = mc.Binomial(&#39;surv&#39;, n=n, p=p, observed=yes)
+<span class="k">with</span> <span class="n">mc</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Beta</span><span class="p">(</span><span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span>
+    <span class="n">surv_sim</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Binomial</span><span class="p">(</span><span class="s1">&#39;surv_sim&#39;</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">)</span>
+    <span class="n">surv</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Binomial</span><span class="p">(</span><span class="s1">&#39;surv&#39;</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">yes</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -335,8 +336,8 @@ with mc.Model() as model:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    print(mc.find_MAP())
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">mc</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
@@ -356,8 +357,8 @@ we have to specify if we would like to use the discrete variables.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    print(mc.find_MAP(vars=model.vars, disp=True))
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">mc</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">,</span> <span class="n">disp</span><span class="o">=</span><span class="bp">True</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -385,15 +386,15 @@ that the map does not converge.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    for i in range(n+1):
-        s = {&#39;p&#39;:0.5, &#39;surv_sim&#39;:i}
-        map_est = mc.find_MAP(start=s, vars=model.vars, fmin=mc.starting.optimize.fmin_bfgs)
-        print(&#39;surv_sim: %i-&gt;%i, p: %f-&gt;%f, LogP:%f&#39;%(s[&#39;surv_sim&#39;],
-                                                      map_est[&#39;surv_sim&#39;],
-                                                      s[&#39;p&#39;],
-                                                      map_est[&#39;p&#39;],
-                                                      model.logpc(map_est)))
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;p&#39;</span><span class="p">:</span><span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;surv_sim&#39;</span><span class="p">:</span><span class="n">i</span><span class="p">}</span>
+        <span class="n">map_est</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">s</span><span class="p">,</span> <span class="nb">vars</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">,</span> <span class="n">fmin</span><span class="o">=</span><span class="n">mc</span><span class="o">.</span><span class="n">starting</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_bfgs</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;surv_sim: </span><span class="si">%i</span><span class="s1">-&gt;</span><span class="si">%i</span><span class="s1">, p: </span><span class="si">%f</span><span class="s1">-&gt;</span><span class="si">%f</span><span class="s1">, LogP:</span><span class="si">%f</span><span class="s1">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s1">&#39;surv_sim&#39;</span><span class="p">],</span>
+                                                      <span class="n">map_est</span><span class="p">[</span><span class="s1">&#39;surv_sim&#39;</span><span class="p">],</span>
+                                                      <span class="n">s</span><span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">],</span>
+                                                      <span class="n">map_est</span><span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">],</span>
+                                                      <span class="n">model</span><span class="o">.</span><span class="n">logpc</span><span class="p">(</span><span class="n">map_est</span><span class="p">)))</span>
 </pre></div>
 </div>
 </div>
@@ -438,15 +439,15 @@ might be able to get a better estimate.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    for i in range(n+1):
-        s = {&#39;p&#39;:0.5, &#39;surv_sim&#39;:i}
-        map_est = mc.find_MAP(start=s, vars=model.vars)
-        print(&#39;surv_sim: %i-&gt;%i, p: %f-&gt;%f, LogP:%f&#39;%(s[&#39;surv_sim&#39;],
-                                                      map_est[&#39;surv_sim&#39;],
-                                                      s[&#39;p&#39;],
-                                                      map_est[&#39;p&#39;],
-                                                      model.logpc(map_est)))
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;p&#39;</span><span class="p">:</span><span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;surv_sim&#39;</span><span class="p">:</span><span class="n">i</span><span class="p">}</span>
+        <span class="n">map_est</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">s</span><span class="p">,</span> <span class="nb">vars</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;surv_sim: </span><span class="si">%i</span><span class="s1">-&gt;</span><span class="si">%i</span><span class="s1">, p: </span><span class="si">%f</span><span class="s1">-&gt;</span><span class="si">%f</span><span class="s1">, LogP:</span><span class="si">%f</span><span class="s1">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s1">&#39;surv_sim&#39;</span><span class="p">],</span>
+                                                      <span class="n">map_est</span><span class="p">[</span><span class="s1">&#39;surv_sim&#39;</span><span class="p">],</span>
+                                                      <span class="n">s</span><span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">],</span>
+                                                      <span class="n">map_est</span><span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">],</span>
+                                                      <span class="n">model</span><span class="o">.</span><span class="n">logpc</span><span class="p">(</span><span class="n">map_est</span><span class="p">)))</span>
 </pre></div>
 </div>
 </div>
@@ -492,20 +493,20 @@ minimization schemes we have to define a wrapper function.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def bh(*args,**kwargs):
-    result = mc.starting.optimize.basinhopping(*args, **kwargs)
-    # A `Result` object is returned, the argmin value can be in `x`
-    return result[&#39;x&#39;]
+<span></span><span class="k">def</span> <span class="nf">bh</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">starting</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">basinhopping</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="c1"># A `Result` object is returned, the argmin value can be in `x`</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
 
-with model:
-    for i in range(n+1):
-        s = {&#39;p&#39;:0.5, &#39;surv_sim&#39;:i}
-        map_est = mc.find_MAP(start=s, vars=model.vars, fmin=bh)
-        print(&#39;surv_sim: %i-&gt;%i, p: %f-&gt;%f, LogP:%f&#39;%(s[&#39;surv_sim&#39;],
-                                                      floor(map_est[&#39;surv_sim&#39;]),
-                                                      s[&#39;p&#39;],
-                                                      map_est[&#39;p&#39;],
-                                                      model.logpc(map_est)))
+<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;p&#39;</span><span class="p">:</span><span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;surv_sim&#39;</span><span class="p">:</span><span class="n">i</span><span class="p">}</span>
+        <span class="n">map_est</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">s</span><span class="p">,</span> <span class="nb">vars</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">,</span> <span class="n">fmin</span><span class="o">=</span><span class="n">bh</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;surv_sim: </span><span class="si">%i</span><span class="s1">-&gt;</span><span class="si">%i</span><span class="s1">, p: </span><span class="si">%f</span><span class="s1">-&gt;</span><span class="si">%f</span><span class="s1">, LogP:</span><span class="si">%f</span><span class="s1">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s1">&#39;surv_sim&#39;</span><span class="p">],</span>
+                                                      <span class="n">floor</span><span class="p">(</span><span class="n">map_est</span><span class="p">[</span><span class="s1">&#39;surv_sim&#39;</span><span class="p">]),</span>
+                                                      <span class="n">s</span><span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">],</span>
+                                                      <span class="n">map_est</span><span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">],</span>
+                                                      <span class="n">model</span><span class="o">.</span><span class="n">logpc</span><span class="p">(</span><span class="n">map_est</span><span class="p">)))</span>
 </pre></div>
 </div>
 </div>
@@ -547,15 +548,15 @@ results</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    for i in range(n+1):
-        s = {&#39;p&#39;:0.5, &#39;surv_sim&#39;:i}
-        map_est = mc.find_MAP(start=s, vars=model.vars, fmin=bh, minimizer_kwargs={&quot;method&quot;: /&quot;Powell&quot;})
-        print(&#39;surv_sim: %i-&gt;%i, p: %f-&gt;%f, LogP:%f&#39;%(s[&#39;surv_sim&#39;],
-                                                      map_est[&#39;surv_sim&#39;],
-                                                      s[&#39;p&#39;],
-                                                      map_est[&#39;p&#39;],
-                                                      model.logpc(map_est)))
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;p&#39;</span><span class="p">:</span><span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;surv_sim&#39;</span><span class="p">:</span><span class="n">i</span><span class="p">}</span>
+        <span class="n">map_est</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">s</span><span class="p">,</span> <span class="nb">vars</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">,</span> <span class="n">fmin</span><span class="o">=</span><span class="n">bh</span><span class="p">,</span> <span class="n">minimizer_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="o">/</span><span class="s2">&quot;Powell&quot;</span><span class="p">})</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;surv_sim: </span><span class="si">%i</span><span class="s1">-&gt;</span><span class="si">%i</span><span class="s1">, p: </span><span class="si">%f</span><span class="s1">-&gt;</span><span class="si">%f</span><span class="s1">, LogP:</span><span class="si">%f</span><span class="s1">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s1">&#39;surv_sim&#39;</span><span class="p">],</span>
+                                                      <span class="n">map_est</span><span class="p">[</span><span class="s1">&#39;surv_sim&#39;</span><span class="p">],</span>
+                                                      <span class="n">s</span><span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">],</span>
+                                                      <span class="n">map_est</span><span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">],</span>
+                                                      <span class="n">model</span><span class="o">.</span><span class="n">logpc</span><span class="p">(</span><span class="n">map_est</span><span class="p">)))</span>
 </pre></div>
 </div>
 </div>
@@ -595,9 +596,9 @@ sure we use the <code class="docutils literal"><span class="pre">Metropolis</spa
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    step1 = mc.step_methods.HamiltonianMC(vars=[p])
-    step2 = mc.step_methods.Metropolis(vars=[surv_sim])
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">step1</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">step_methods</span><span class="o">.</span><span class="n">HamiltonianMC</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">p</span><span class="p">])</span>
+    <span class="n">step2</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">step_methods</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">surv_sim</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
@@ -607,8 +608,8 @@ sure we use the <code class="docutils literal"><span class="pre">Metropolis</spa
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    trace = mc.sample(25000,[step1,step2],start=map_est)
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">25000</span><span class="p">,[</span><span class="n">step1</span><span class="p">,</span><span class="n">step2</span><span class="p">],</span><span class="n">start</span><span class="o">=</span><span class="n">map_est</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -626,7 +627,7 @@ sure we use the <code class="docutils literal"><span class="pre">Metropolis</spa
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>mc.traceplot(trace);
+<span></span><span class="n">mc</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -634,7 +635,7 @@ sure we use the <code class="docutils literal"><span class="pre">Metropolis</spa
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_discrete_find_MAP_20_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_discrete_find_MAP_20_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_discrete_find_MAP_20_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_discrete_find_MAP_20_0.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
@@ -659,7 +660,7 @@ sure we use the <code class="docutils literal"><span class="pre">Metropolis</spa
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

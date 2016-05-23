@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>API Reference &mdash; pymc3 3.0 documentation</title>
+  <title>API Reference &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="index.html"/>
         <link rel="prev" title="Dirichlet process mixtures for density estimation" href="notebooks/dp_mix.html"/> 
 
   
@@ -49,7 +49,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home"> pymc3
+            <a href="index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -81,6 +81,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#distributions">Distributions</a><ul>
@@ -90,6 +91,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#plots">Plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stats">Stats</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#inference">Inference</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#samplers">Samplers</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#nuts">NUTS</a></li>
@@ -120,7 +122,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="index.html">pymc3</a>
+        <a href="index.html">PyMC3</a>
       </nav>
 
 
@@ -1787,7 +1789,7 @@ extended onion method.&#8221; Journal of multivariate analysis,
 <h2>Plots<a class="headerlink" href="#plots" title="Permalink to this headline">¶</a></h2>
 <span class="target" id="module-pymc3.plots"></span><dl class="function">
 <dt id="pymc3.plots.traceplot">
-<code class="descclassname">pymc3.plots.</code><code class="descname">traceplot</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>figsize=None</em>, <em>lines=None</em>, <em>combined=False</em>, <em>grid=True</em>, <em>alpha=0.35</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.traceplot" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.plots.</code><code class="descname">traceplot</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>figsize=None</em>, <em>lines=None</em>, <em>combined=False</em>, <em>grid=False</em>, <em>alpha=0.35</em>, <em>priors=None</em>, <em>prior_alpha=1</em>, <em>prior_style='--'</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.traceplot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot samples histograms and values</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1816,6 +1818,23 @@ e.g. mean of posteriors, true values of a simulation</p>
 <p><strong>grid</strong> : bool</p>
 <blockquote>
 <div><p>Flag for adding gridlines to histogram. Defaults to True.</p>
+</div></blockquote>
+<p><strong>alpha</strong> : float</p>
+<blockquote>
+<div><p>Alpha value for plot line. Defaults to 0.35.</p>
+</div></blockquote>
+<p><strong>priors</strong> : iterable of PyMC distributions</p>
+<blockquote>
+<div><p>PyMC prior distribution(s) to be plotted alongside poterior. Defaults 
+to None (no prior plots).</p>
+</div></blockquote>
+<p><strong>prior_alpha</strong> : float</p>
+<blockquote>
+<div><p>Alpha value for prior plot. Defaults to 1.</p>
+</div></blockquote>
+<p><strong>prior_style</strong> : str</p>
+<blockquote>
+<div><p>Line style for prior plot. Defaults to &#8216;&#8211;&#8217; (dashed line).</p>
 </div></blockquote>
 <p><strong>ax</strong> : axes</p>
 <blockquote>
@@ -1997,6 +2016,251 @@ color=&#8217;#87ceeb&#8217; will match the style in the book</p>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+</div>
+<div class="section" id="stats">
+<h2>Stats<a class="headerlink" href="#stats" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-pymc3.stats"></span><p>Statistical utility functions for PyMC</p>
+<dl class="function">
+<dt id="pymc3.stats.autocorr">
+<code class="descclassname">pymc3.stats.</code><code class="descname">autocorr</code><span class="sig-paren">(</span><em>pymc3_obj</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.autocorr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sample autocorrelation at specified lag.
+The autocorrelation is the correlation of x_i with x_{i+lag}.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.stats.autocov">
+<code class="descclassname">pymc3.stats.</code><code class="descname">autocov</code><span class="sig-paren">(</span><em>pymc3_obj</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.autocov" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sample autocovariance at specified lag.
+The autocovariance is a 2x2 matrix with the variances of
+x[:-lag] and x[lag:] in the diagonal and the autocovariance
+on the off-diagonal.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.stats.dic">
+<code class="descclassname">pymc3.stats.</code><code class="descname">dic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.dic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the deviance information criterion of the samples in trace from model
+Read more theory here - in a paper by some of the leading authorities on Model Selection - <a class="reference external" href="http://bit.ly/1W2YJ7c">http://bit.ly/1W2YJ7c</a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.stats.bpic">
+<code class="descclassname">pymc3.stats.</code><code class="descname">bpic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.bpic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates Bayesian predictive information criterion n of the samples in trace from model
+Read more theory here - in a paper by some of the leading authorities on Model Selection - <a class="reference external" href="http://bit.ly/1W2YJ7c">http://bit.ly/1W2YJ7c</a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.stats.waic">
+<code class="descclassname">pymc3.stats.</code><code class="descname">waic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.waic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the widely available information criterion of the samples in trace from model.
+Read more theory here - in a paper by some of the leading authorities on Model Selection - <a class="reference external" href="http://bit.ly/1W2YJ7c">http://bit.ly/1W2YJ7c</a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.stats.loo">
+<code class="descclassname">pymc3.stats.</code><code class="descname">loo</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.loo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates leave-one-out (LOO) cross-validation for out of sample predictive
+model fit, following Vehtari et al. (2015). Cross-validation is computed using
+Pareto-smoothed importance sampling (PSIS).</p>
+<p>Returns log pointwise predictive density calculated via approximated LOO cross-validation.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.stats.hpd">
+<code class="descclassname">pymc3.stats.</code><code class="descname">hpd</code><span class="sig-paren">(</span><em>pymc3_obj</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.hpd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate highest posterior density (HPD) of array for given alpha. The HPD is the
+minimum width Bayesian credible interval (BCI).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><dl class="first last docutils">
+<dt>x</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">Numpy array</span><dd><p class="first last">An array containing MCMC samples</p>
+</dd>
+<dt>alpha</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">float</span><dd><p class="first last">Desired probability of type I error (defaults to 0.05)</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.stats.quantiles">
+<code class="descclassname">pymc3.stats.</code><code class="descname">quantiles</code><span class="sig-paren">(</span><em>pymc3_obj</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.quantiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dictionary of requested quantiles from array</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><dl class="first last docutils">
+<dt>x</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">Numpy array</span><dd><p class="first last">An array containing MCMC samples</p>
+</dd>
+<dt>qlist</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">tuple or list</span><dd><p class="first last">A list of desired quantiles (defaults to (2.5, 25, 50, 75, 97.5))</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.stats.mc_error">
+<code class="descclassname">pymc3.stats.</code><code class="descname">mc_error</code><span class="sig-paren">(</span><em>pymc3_obj</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.mc_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the simulation standard error, accounting for non-independent
+samples. The trace is divided into batches, and the standard deviation of
+the batch means is calculated.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><dl class="first last docutils">
+<dt>x</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">Numpy array</span><dd><p class="first last">An array containing MCMC samples</p>
+</dd>
+<dt>batches</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">integer</span><dd><p class="first last">Number of batchas</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.stats.summary">
+<code class="descclassname">pymc3.stats.</code><code class="descname">summary</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>alpha=0.05</em>, <em>start=0</em>, <em>batches=100</em>, <em>roundto=3</em>, <em>to_file=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a pretty-printed summary of the node.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+<dl class="docutils">
+<dt>trace</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">Trace object</span><dd>Trace containing MCMC sample</dd>
+<dt>varnames</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">list of strings</span><dd>List of variables to summarize. Defaults to None, which results
+in all variables summarized.</dd>
+<dt>alpha</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">float</span><dd>The alpha level for generating posterior intervals. Defaults to
+0.05.</dd>
+<dt>start</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">int</span><dd>The starting index from which to summarize (each) chain. Defaults
+to zero.</dd>
+<dt>batches</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">int</span><dd>Batch size for calculating standard deviation for non-independent
+samples. Defaults to 100.</dd>
+<dt>roundto</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">int</span><dd>The number of digits to round posterior statistics.</dd>
+<dt>tofile</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">None or string</span><dd>File to write results to. If not given, print to stdout.</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.stats.df_summary">
+<code class="descclassname">pymc3.stats.</code><code class="descname">df_summary</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>stat_funcs=None</em>, <em>extend=False</em>, <em>alpha=0.05</em>, <em>batches=100</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.df_summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a data frame with summary statistics.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>trace</strong> : MultiTrace instance</p>
+<p><strong>varnames</strong> : list</p>
+<blockquote>
+<div><p>Names of variables to include in summary</p>
+</div></blockquote>
+<p><strong>stat_funcs</strong> : None or list</p>
+<blockquote>
+<div><p>A list of functions used to calculate statistics. By default,
+the mean, standard deviation, simulation standard error, and
+highest posterior density intervals are included.</p>
+<p>The functions will be given one argument, the samples for a
+variable as a 2 dimensional array, where the first axis
+corresponds to sampling iterations and the second axis
+represents the flattened variable (e.g., x__0, x__1,...). Each
+function should return either
+1) A <cite>pandas.Series</cite> instance containing the result of</p>
+<blockquote>
+<div><p>calculating the statistic along the first axis. The name
+attribute will be taken as the name of the statistic.</p>
+</div></blockquote>
+<ol class="arabic simple" start="2">
+<li>A <cite>pandas.DataFrame</cite> where each column contains the
+result of calculating the statistic along the first axis.
+The column names will be taken as the names of the
+statistics.</li>
+</ol>
+</div></blockquote>
+<p><strong>extend</strong> : boolean</p>
+<blockquote>
+<div><p>If True, use the statistics returned by <cite>stat_funcs</cite> in
+addition to, rather than in place of, the default statistics.
+This is only meaningful when <cite>stat_funcs</cite> is not None.</p>
+</div></blockquote>
+<p><strong>alpha</strong> : float</p>
+<blockquote>
+<div><p>The alpha level for generating posterior intervals. Defaults
+to 0.05. This is only meaningful when <cite>stat_funcs</cite> is None.</p>
+</div></blockquote>
+<p><strong>batches</strong> : int</p>
+<blockquote>
+<div><p>Batch size for calculating standard deviation for
+non-independent samples. Defaults to 100. This is only
+meaningful when <cite>stat_funcs</cite> is None.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><cite>pandas.DataFrame</cite> with summary statistics for each variable</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt><a class="reference internal" href="#pymc3.stats.summary" title="pymc3.stats.summary"><code class="xref py py-obj docutils literal"><span class="pre">summary</span></code></a></dt>
+<dd>Generate a pretty-printed summary of a trace.</dd>
+</dl>
+</div>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pymc3</span> <span class="k">as</span> <span class="nn">pm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span><span class="o">.</span><span class="n">mu</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">(1000, 2)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">])</span>
+<span class="go">           mean        sd  mc_error     hpd_5    hpd_95</span>
+<span class="go">mu__0  0.106897  0.066473  0.001818 -0.020612  0.231626</span>
+<span class="go">mu__1 -0.046597  0.067513  0.002048 -0.174753  0.081924</span>
+</pre></div>
+</div>
+<p>Other statistics can be calculated by passing a list of functions.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">trace_sd</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;sd&#39;</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">trace_quantiles</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">quantiles</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">95</span><span class="p">]))</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">],</span> <span class="n">stat_funcs</span><span class="o">=</span><span class="p">[</span><span class="n">trace_sd</span><span class="p">,</span> <span class="n">trace_quantiles</span><span class="p">])</span>
+<span class="go">             sd         5        50        95</span>
+<span class="go">mu__0  0.066473  0.000312  0.105039  0.214242</span>
+<span class="go">mu__1  0.067513 -0.159097 -0.045637  0.062912</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </div>
@@ -2431,7 +2695,7 @@ model likelihood</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

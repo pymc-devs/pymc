@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>&lt;no title&gt; &mdash; pymc3 3.0 documentation</title>
+  <title>&lt;no title&gt; &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -48,7 +48,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -80,6 +80,7 @@
             
             
                 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
@@ -95,7 +96,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -297,8 +298,8 @@ div.nboutput  > :nth-child(2).stderr {
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%pylab inline
-from pymc3 import *
+<span></span><span class="o">%</span><span class="k">pylab</span> inline
+<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="o">*</span>
 </pre></div>
 </div>
 </div>
@@ -316,21 +317,21 @@ Populating the interactive namespace from numpy and matplotlib
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as model:
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
 
-    a = np.array([1,1,1,1,1])*10
-    k=10
-    a = np.ones(k)*3
-    #p = Dirichlet(&#39;p&#39;, a, shape=k, transform=simplexarrtransform)
-    p = Dirichlet(&#39;p&#39;, a, shape=k)
-    #c = Categorical(&#39;c&#39;, p, observed=[0,0,1,1,0,2])
+    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="mi">10</span>
+    <span class="n">k</span><span class="o">=</span><span class="mi">10</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">*</span><span class="mi">3</span>
+    <span class="c1">#p = Dirichlet(&#39;p&#39;, a, shape=k, transform=simplexarrtransform)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">k</span><span class="p">)</span>
+    <span class="c1">#c = Categorical(&#39;c&#39;, p, observed=[0,0,1,1,0,2])</span>
 
 
-    print (model.test_point)
-    step = Metropolis(model.vars)
-    trace = sample(20000, step)
+    <span class="k">print</span> <span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">Metropolis</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
 
-a = traceplot(trace)
+<span class="n">a</span> <span class="o">=</span> <span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -351,7 +352,7 @@ a = traceplot(trace)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_categorical_1_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_categorical_1_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_categorical_1_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_categorical_1_1.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -360,7 +361,7 @@ a = traceplot(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>summary(trace)
+<span></span><span class="n">summary</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -439,20 +440,20 @@ p:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as model:
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
 
-    a = np.array([1,1,1,1,1])*10
-    k=10
-    a = np.ones(k)*3
-    p = Dirichlet(&#39;p&#39;, a, shape=k, transform=simplexarrtransform)
-    #c = Categorical(&#39;c&#39;, p, observed=[0,0,1,1,0,2])
+    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="mi">10</span>
+    <span class="n">k</span><span class="o">=</span><span class="mi">10</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">*</span><span class="mi">3</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">simplexarrtransform</span><span class="p">)</span>
+    <span class="c1">#c = Categorical(&#39;c&#39;, p, observed=[0,0,1,1,0,2])</span>
 
 
-    print (model.test_point)
-    step = Metropolis(model.vars)
-    trace2 = sample(20000, step)
+    <span class="k">print</span> <span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">Metropolis</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">)</span>
+    <span class="n">trace2</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
 
-a = traceplot(trace2)
+<span class="n">a</span> <span class="o">=</span> <span class="n">traceplot</span><span class="p">(</span><span class="n">trace2</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -469,7 +470,7 @@ a = traceplot(trace2)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_categorical_3_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_categorical_3_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_categorical_3_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_categorical_3_1.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -478,7 +479,7 @@ a = traceplot(trace2)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>summary(trace2)
+<span></span><span class="n">summary</span><span class="p">(</span><span class="n">trace2</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -557,7 +558,7 @@ p:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>trace[-1]
+<span></span><span class="n">trace</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -580,19 +581,19 @@ p:
 <div class="highlight-ipython3"><div class="highlight"><pre>
 
 
-<span></span>with Model() as model:
-    k=3
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">k</span><span class="o">=</span><span class="mi">3</span>
 
-    a = np.ones(k)*.5
+    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">*.</span><span class="mi">5</span>
 
-    p = Dirichlet(&#39;p&#39;, a, shape=k, testval=&#39;mean&#39;)
-    #c = Categorical(&#39;c&#39;, p, observed=[0,0,1,1,0,2])
+    <span class="n">p</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="s1">&#39;mean&#39;</span><span class="p">)</span>
+    <span class="c1">#c = Categorical(&#39;c&#39;, p, observed=[0,0,1,1,0,2])</span>
 
-    start = find_MAP()
-    step = NUTS(model.vars, scaling=guess_scaling(start)*10)
-    trace = sample(5000, step, start=start)
+    <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">()</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">,</span> <span class="n">scaling</span><span class="o">=</span><span class="n">guess_scaling</span><span class="p">(</span><span class="n">start</span><span class="p">)</span><span class="o">*</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
 
-a = traceplot(trace)
+<span class="n">a</span> <span class="o">=</span> <span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -602,7 +603,7 @@ a = traceplot(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>guess_scaling(trace[-1], model=model)
+<span></span><span class="n">guess_scaling</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -612,7 +613,7 @@ a = traceplot(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>step.Hbar
+<span></span><span class="n">step</span><span class="o">.</span><span class="n">Hbar</span>
 </pre></div>
 </div>
 </div>
@@ -622,7 +623,7 @@ a = traceplot(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>start
+<span></span><span class="n">start</span>
 </pre></div>
 </div>
 </div>
@@ -632,7 +633,7 @@ a = traceplot(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>np.exp(-.097)
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-.</span><span class="mi">097</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -642,10 +643,10 @@ a = traceplot(trace)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    dlp = model.dlogp()
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">dlp</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">dlogp</span><span class="p">()</span>
 
-dlp(model.test_point)
+<span class="n">dlp</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -655,7 +656,7 @@ dlp(model.test_point)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>model.test_point
+<span></span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span>
 </pre></div>
 </div>
 </div>
@@ -665,7 +666,7 @@ dlp(model.test_point)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>find_hessian(model.test_point, model=model)
+<span></span><span class="n">find_hessian</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -675,7 +676,7 @@ dlp(model.test_point)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>model.test_point
+<span></span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span>
 </pre></div>
 </div>
 </div>
@@ -686,21 +687,21 @@ dlp(model.test_point)
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 
-<span></span>def conditional_pdf(variable, index=None, start=None, model=None):
-    model = modelcontext(model)
-    if start is None:
-        start = model.test_point
-    variable, = inputvars(variable)
-    replace = {model[varname] : theano.tensor.as_tensor_variable(value) for varname, value in start.items() }
-    x = theano.tensor.scalar(&#39;x0&#39;, dtype=variable.dtype)
-    x.tag.test_value = start[str(variable)][index]
-    replace[variable] = theano.tensor.set_subtensor(replace[variable][index], x)
+<span></span><span class="k">def</span> <span class="nf">conditional_pdf</span><span class="p">(</span><span class="n">variable</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">modelcontext</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">test_point</span>
+    <span class="n">variable</span><span class="p">,</span> <span class="o">=</span> <span class="n">inputvars</span><span class="p">(</span><span class="n">variable</span><span class="p">)</span>
+    <span class="n">replace</span> <span class="o">=</span> <span class="p">{</span><span class="n">model</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span> <span class="p">:</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">as_tensor_variable</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">varname</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">start</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="p">}</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">scalar</span><span class="p">(</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">variable</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">x</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">start</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">variable</span><span class="p">)][</span><span class="n">index</span><span class="p">]</span>
+    <span class="n">replace</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">set_subtensor</span><span class="p">(</span><span class="n">replace</span><span class="p">[</span><span class="n">variable</span><span class="p">][</span><span class="n">index</span><span class="p">],</span> <span class="n">x</span><span class="p">)</span>
 
-    print (replace)
+    <span class="k">print</span> <span class="p">(</span><span class="n">replace</span><span class="p">)</span>
 
-    logpt = theano.clone(model.logpt, replace, strict=False)
-    print (inputvars(logpt))
-    return theano.function([x], logpt)
+    <span class="n">logpt</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">clone</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">logpt</span><span class="p">,</span> <span class="n">replace</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="k">print</span> <span class="p">(</span><span class="n">inputvars</span><span class="p">(</span><span class="n">logpt</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">theano</span><span class="o">.</span><span class="n">function</span><span class="p">([</span><span class="n">x</span><span class="p">],</span> <span class="n">logpt</span><span class="p">)</span>
 
 
 
@@ -713,8 +714,8 @@ dlp(model.test_point)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    f = conditional_pdf(p, 1, start=start)
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">conditional_pdf</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -733,7 +734,7 @@ dlp(model.test_point)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>start
+<span></span><span class="n">start</span>
 </pre></div>
 </div>
 </div>
@@ -753,9 +754,9 @@ dlp(model.test_point)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>x = np.linspace(-10,10)
-y = [f(v) for v in x]
-plot(x,y)
+<span></span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">x</span><span class="p">]</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -773,7 +774,7 @@ plot(x,y)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_categorical_18_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_categorical_18_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_categorical_18_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_categorical_18_1.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
@@ -782,9 +783,9 @@ plot(x,y)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def logistic(x):
-    return 1.0/(1+np.exp(-x))
-logistic(np.array([0.08588418, -0.74669407]))
+<span></span><span class="k">def</span> <span class="nf">logistic</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span><span class="p">))</span>
+<span class="n">logistic</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.08588418</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.74669407</span><span class="p">]))</span>
 </pre></div>
 </div>
 </div>
@@ -794,7 +795,7 @@ logistic(np.array([0.08588418, -0.74669407]))
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>theano.tensor.extra_ops.cumprod([2,3,4,5]).tag.test_value
+<span></span><span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">extra_ops</span><span class="o">.</span><span class="n">cumprod</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">])</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span>
 </pre></div>
 </div>
 </div>
@@ -829,7 +830,7 @@ logistic(np.array([0.08588418, -0.74669407]))
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

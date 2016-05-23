@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Stochastic Volatility model &mdash; pymc3 3.0 documentation</title>
+  <title>Stochastic Volatility model &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="GLM: Linear regression" href="GLM-linear.html"/>
         <link rel="prev" title="Bayesian Estimation Supersedes the T-Test" href="BEST.html"/> 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -83,6 +83,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Stochastic Volatility model</a><ul>
@@ -119,7 +120,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -325,14 +326,14 @@ div.nboutput  > :nth-child(2).stderr {
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import numpy as np
-import pymc3 as pm
-from pymc3.distributions.timeseries import GaussianRandomWalk
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">from</span> <span class="nn">pymc3.distributions.timeseries</span> <span class="kn">import</span> <span class="n">GaussianRandomWalk</span>
 
-from scipy.sparse import csc_matrix
-from scipy import optimize
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="kn">import</span> <span class="n">csc_matrix</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
 
-%pylab inline
+<span class="o">%</span><span class="k">pylab</span> inline
 </pre></div>
 </div>
 </div>
@@ -377,9 +378,9 @@ log volatility process.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>n = 400
-returns = np.genfromtxt(&quot;../data/SP500.csv&quot;)[-n:]
-returns[:5]
+<span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">400</span>
+<span class="n">returns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="s2">&quot;../data/SP500.csv&quot;</span><span class="p">)[</span><span class="o">-</span><span class="n">n</span><span class="p">:]</span>
+<span class="n">returns</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -399,7 +400,7 @@ returns[:5]
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>plt.plot(returns)
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -417,7 +418,7 @@ returns[:5]
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_stochastic_volatility_6_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_stochastic_volatility_6_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_6_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_6_1.png" />
 </div>
 </div>
 <p>Specifying the model in pymc3 mirrors its statistical specification.</p>
@@ -427,14 +428,14 @@ returns[:5]
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>model = pm.Model()
-with model:
-    sigma = pm.Exponential(&#39;sigma&#39;, 1./.02, testval=.1)
+<span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="o">/.</span><span class="mo">02</span><span class="p">,</span> <span class="n">testval</span><span class="o">=.</span><span class="mi">1</span><span class="p">)</span>
 
-    nu = pm.Exponential(&#39;nu&#39;, 1./10)
-    s = GaussianRandomWalk(&#39;s&#39;, sigma**-2, shape=n)
+    <span class="n">nu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;nu&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">GaussianRandomWalk</span><span class="p">(</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">sigma</span><span class="o">**-</span><span class="mi">2</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n</span><span class="p">)</span>
 
-    r = pm.StudentT(&#39;r&#39;, nu, lam=pm.exp(-2*s), observed=returns)
+    <span class="n">r</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">StudentT</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">s</span><span class="p">),</span> <span class="n">observed</span><span class="o">=</span><span class="n">returns</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -454,8 +455,8 @@ functions (<code class="docutils literal"><span class="pre">s</span></code> has 
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    start = pm.find_MAP(vars=[s], fmin=optimize.fmin_l_bfgs_b)
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">s</span><span class="p">],</span> <span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -469,13 +470,13 @@ example.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model:
-    step = pm.NUTS(vars=[s, nu,sigma],scaling=start, gamma=.25)
-    start2 = pm.sample(100, step, start=start)[-1]
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span><span class="n">sigma</span><span class="p">],</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=.</span><span class="mi">25</span><span class="p">)</span>
+    <span class="n">start2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 
-    # Start next run at the last sampled position.
-    step = pm.NUTS(vars=[s, nu,sigma],scaling=start2, gamma=.55)
-    trace = pm.sample(2000, step, start=start2)
+    <span class="c1"># Start next run at the last sampled position.</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span><span class="n">sigma</span><span class="p">],</span><span class="n">scaling</span><span class="o">=</span><span class="n">start2</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=.</span><span class="mi">55</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start2</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -502,8 +503,8 @@ example.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>figsize(12,6)
-pm.traceplot(trace, model.vars[:-1]);
+<span></span><span class="n">figsize</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span>
+<span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -511,7 +512,7 @@ pm.traceplot(trace, model.vars[:-1]);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_stochastic_volatility_14_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_stochastic_volatility_14_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_14_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_14_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -520,11 +521,11 @@ pm.traceplot(trace, model.vars[:-1]);
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>figsize(12,6)
-title(str(s))
-plot(trace[s][::10].T,&#39;b&#39;, alpha=.03);
-xlabel(&#39;time&#39;)
-ylabel(&#39;log volatility&#39;)
+<span></span><span class="n">figsize</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span>
+<span class="n">title</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">][::</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">03</span><span class="p">);</span>
+<span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">)</span>
+<span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;log volatility&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -542,7 +543,7 @@ ylabel(&#39;log volatility&#39;)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_stochastic_volatility_15_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_stochastic_volatility_15_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_15_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_15_1.png" />
 </div>
 </div>
 <p>Looking at the returns over time and overlaying the estimated standard
@@ -553,12 +554,12 @@ deviation we can see how the model tracks the volatility over time.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>plot(returns)
-plot(np.exp(trace[s][::10].T), &#39;r&#39;, alpha=.03);
-sd = np.exp(trace[s].T)
-plot(-np.exp(trace[s][::10].T), &#39;r&#39;, alpha=.03);
-xlabel(&#39;time&#39;)
-ylabel(&#39;returns&#39;)
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">][::</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">03</span><span class="p">);</span>
+<span class="n">sd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+<span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">][::</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">03</span><span class="p">);</span>
+<span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">)</span>
+<span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;returns&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -576,7 +577,7 @@ ylabel(&#39;returns&#39;)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_stochastic_volatility_17_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_stochastic_volatility_17_1.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_17_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_stochastic_volatility_17_1.png" />
 </div>
 </div>
 </div>
@@ -609,7 +610,7 @@ Carlo</a>.</li>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

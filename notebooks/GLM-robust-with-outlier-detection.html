@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>GLM Robust Regression with Outlier Detection &mdash; pymc3 3.0 documentation</title>
+  <title>GLM Robust Regression with Outlier Detection &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="GLM Model Selection" href="GLM-model-selection.html"/>
         <link rel="prev" title="GLM: Robust Linear Regression" href="GLM-robust.html"/> 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -83,6 +83,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
@@ -127,7 +128,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -395,11 +396,11 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%matplotlib inline
-%qtconsole --colors=linux
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="o">%</span><span class="k">qtconsole</span> --colors=linux
 
-import warnings
-warnings.filterwarnings(&#39;ignore&#39;)
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -409,21 +410,21 @@ warnings.filterwarnings(&#39;ignore&#39;)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
 
-from scipy import optimize
-import pymc3 as pm
-import theano as thno
-import theano.tensor as T
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">theano</span> <span class="kn">as</span> <span class="nn">thno</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
 
-# configure some basic options
-sns.set(style=&quot;darkgrid&quot;, palette=&quot;muted&quot;)
-pd.set_option(&#39;display.notebook_repr_html&#39;, True)
-plt.rcParams[&#39;figure.figsize&#39;] = 12, 8
-np.random.seed(0)
+<span class="c1"># configure some basic options</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">style</span><span class="o">=</span><span class="s2">&quot;darkgrid&quot;</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;muted&quot;</span><span class="p">)</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.notebook_repr_html&#39;</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">8</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -438,55 +439,55 @@ np.random.seed(0)
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>#### cut &amp; pasted directly from the fetch_hogg2010test() function
-## identical to the original dataset as hardcoded in the Hogg 2010 paper
+<span></span><span class="c1">#### cut &amp; pasted directly from the fetch_hogg2010test() function</span>
+<span class="c1">## identical to the original dataset as hardcoded in the Hogg 2010 paper</span>
 
-dfhogg = pd.DataFrame(np.array([[1, 201, 592, 61, 9, -0.84],
-                                 [2, 244, 401, 25, 4, 0.31],
-                                 [3, 47, 583, 38, 11, 0.64],
-                                 [4, 287, 402, 15, 7, -0.27],
-                                 [5, 203, 495, 21, 5, -0.33],
-                                 [6, 58, 173, 15, 9, 0.67],
-                                 [7, 210, 479, 27, 4, -0.02],
-                                 [8, 202, 504, 14, 4, -0.05],
-                                 [9, 198, 510, 30, 11, -0.84],
-                                 [10, 158, 416, 16, 7, -0.69],
-                                 [11, 165, 393, 14, 5, 0.30],
-                                 [12, 201, 442, 25, 5, -0.46],
-                                 [13, 157, 317, 52, 5, -0.03],
-                                 [14, 131, 311, 16, 6, 0.50],
-                                 [15, 166, 400, 34, 6, 0.73],
-                                 [16, 160, 337, 31, 5, -0.52],
-                                 [17, 186, 423, 42, 9, 0.90],
-                                 [18, 125, 334, 26, 8, 0.40],
-                                 [19, 218, 533, 16, 6, -0.78],
-                                 [20, 146, 344, 22, 5, -0.56]]),
-                   columns=[&#39;id&#39;,&#39;x&#39;,&#39;y&#39;,&#39;sigma_y&#39;,&#39;sigma_x&#39;,&#39;rho_xy&#39;])
+<span class="n">dfhogg</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">201</span><span class="p">,</span> <span class="mi">592</span><span class="p">,</span> <span class="mi">61</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.84</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">244</span><span class="p">,</span> <span class="mi">401</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mf">0.31</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">47</span><span class="p">,</span> <span class="mi">583</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mf">0.64</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">287</span><span class="p">,</span> <span class="mi">402</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.27</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">203</span><span class="p">,</span> <span class="mi">495</span><span class="p">,</span> <span class="mi">21</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.33</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">58</span><span class="p">,</span> <span class="mi">173</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mf">0.67</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">210</span><span class="p">,</span> <span class="mi">479</span><span class="p">,</span> <span class="mi">27</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.02</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">202</span><span class="p">,</span> <span class="mi">504</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.05</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">198</span><span class="p">,</span> <span class="mi">510</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.84</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">158</span><span class="p">,</span> <span class="mi">416</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.69</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="mi">165</span><span class="p">,</span> <span class="mi">393</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mf">0.30</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">12</span><span class="p">,</span> <span class="mi">201</span><span class="p">,</span> <span class="mi">442</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.46</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">13</span><span class="p">,</span> <span class="mi">157</span><span class="p">,</span> <span class="mi">317</span><span class="p">,</span> <span class="mi">52</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.03</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">14</span><span class="p">,</span> <span class="mi">131</span><span class="p">,</span> <span class="mi">311</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mf">0.50</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="mi">166</span><span class="p">,</span> <span class="mi">400</span><span class="p">,</span> <span class="mi">34</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mf">0.73</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">160</span><span class="p">,</span> <span class="mi">337</span><span class="p">,</span> <span class="mi">31</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.52</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">17</span><span class="p">,</span> <span class="mi">186</span><span class="p">,</span> <span class="mi">423</span><span class="p">,</span> <span class="mi">42</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mf">0.90</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">18</span><span class="p">,</span> <span class="mi">125</span><span class="p">,</span> <span class="mi">334</span><span class="p">,</span> <span class="mi">26</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mf">0.40</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">19</span><span class="p">,</span> <span class="mi">218</span><span class="p">,</span> <span class="mi">533</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.78</span><span class="p">],</span>
+                                 <span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">146</span><span class="p">,</span> <span class="mi">344</span><span class="p">,</span> <span class="mi">22</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.56</span><span class="p">]]),</span>
+                   <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">,</span><span class="s1">&#39;x&#39;</span><span class="p">,</span><span class="s1">&#39;y&#39;</span><span class="p">,</span><span class="s1">&#39;sigma_y&#39;</span><span class="p">,</span><span class="s1">&#39;sigma_x&#39;</span><span class="p">,</span><span class="s1">&#39;rho_xy&#39;</span><span class="p">])</span>
 
 
-## for convenience zero-base the &#39;id&#39; and use as index
-dfhogg[&#39;id&#39;] = dfhogg[&#39;id&#39;] - 1
-dfhogg.set_index(&#39;id&#39;, inplace=True)
+<span class="c1">## for convenience zero-base the &#39;id&#39; and use as index</span>
+<span class="n">dfhogg</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dfhogg</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+<span class="n">dfhogg</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-## standardize (mean center and divide by 1 sd)
-dfhoggs = (dfhogg[[&#39;x&#39;,&#39;y&#39;]] - dfhogg[[&#39;x&#39;,&#39;y&#39;]].mean(0)) / dfhogg[[&#39;x&#39;,&#39;y&#39;]].std(0)
-dfhoggs[&#39;sigma_y&#39;] = dfhogg[&#39;sigma_y&#39;] / dfhogg[&#39;y&#39;].std(0)
-dfhoggs[&#39;sigma_x&#39;] = dfhogg[&#39;sigma_x&#39;] / dfhogg[&#39;x&#39;].std(0)
+<span class="c1">## standardize (mean center and divide by 1 sd)</span>
+<span class="n">dfhoggs</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfhogg</span><span class="p">[[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span><span class="s1">&#39;y&#39;</span><span class="p">]]</span> <span class="o">-</span> <span class="n">dfhogg</span><span class="p">[[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span><span class="s1">&#39;y&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span> <span class="n">dfhogg</span><span class="p">[[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span><span class="s1">&#39;y&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;sigma_y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dfhogg</span><span class="p">[</span><span class="s1">&#39;sigma_y&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">dfhogg</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;sigma_x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dfhogg</span><span class="p">[</span><span class="s1">&#39;sigma_x&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">dfhogg</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
-## create xlims ylims for plotting
-xlims = (dfhoggs[&#39;x&#39;].min() - np.ptp(dfhoggs[&#39;x&#39;])/5
-                 ,dfhoggs[&#39;x&#39;].max() + np.ptp(dfhoggs[&#39;x&#39;])/5)
-ylims = (dfhoggs[&#39;y&#39;].min() - np.ptp(dfhoggs[&#39;y&#39;])/5
-                 ,dfhoggs[&#39;y&#39;].max() + np.ptp(dfhoggs[&#39;y&#39;])/5)
+<span class="c1">## create xlims ylims for plotting</span>
+<span class="n">xlims</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">5</span>
+                 <span class="p">,</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">ylims</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">5</span>
+                 <span class="p">,</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">5</span><span class="p">)</span>
 
-## scatterplot the standardized data
-g = sns.FacetGrid(dfhoggs, size=8)
-_ = g.map(plt.errorbar, &#39;x&#39;, &#39;y&#39;, &#39;sigma_y&#39;, &#39;sigma_x&#39;, marker=&quot;o&quot;, ls=&#39;&#39;)
-_ = g.axes[0][0].set_ylim(ylims)
-_ = g.axes[0][0].set_xlim(xlims)
+<span class="c1">## scatterplot the standardized data</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">FacetGrid</span><span class="p">(</span><span class="n">dfhoggs</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;sigma_y&#39;</span><span class="p">,</span> <span class="s1">&#39;sigma_x&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;o&quot;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">ylims</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">xlims</span><span class="p">)</span>
 
-plt.subplots_adjust(top=0.92)
-_ = g.fig.suptitle(&#39;Scatterplot of Hogg 2010 dataset after standardization&#39;, fontsize=16)
+<span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">top</span><span class="o">=</span><span class="mf">0.92</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s1">&#39;Scatterplot of Hogg 2010 dataset after standardization&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -494,7 +495,7 @@ _ = g.fig.suptitle(&#39;Scatterplot of Hogg 2010 dataset after standardization&#
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_6_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_6_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_6_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_6_0.png" />
 </div>
 </div>
 <p><strong>Observe</strong>:</p>
@@ -525,21 +526,21 @@ distributed priors so that it behaves like a ridge regression</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as mdl_ols:
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_ols</span><span class="p">:</span>
 
-    ## Define weakly informative Normal priors to give Ridge regression
-    b0 = pm.Normal(&#39;b0_intercept&#39;, mu=0, sd=100)
-    b1 = pm.Normal(&#39;b1_slope&#39;, mu=0, sd=100)
+    <span class="c1">## Define weakly informative Normal priors to give Ridge regression</span>
+    <span class="n">b0</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b0_intercept&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">b1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b1_slope&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-    ## Define linear model
-    yest = b0 + b1 * dfhoggs[&#39;x&#39;]
+    <span class="c1">## Define linear model</span>
+    <span class="n">yest</span> <span class="o">=</span> <span class="n">b0</span> <span class="o">+</span> <span class="n">b1</span> <span class="o">*</span> <span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
 
-    ## Use y error from dataset, convert into theano variable
-    sigma_y = thno.shared(np.asarray(dfhoggs[&#39;sigma_y&#39;],
-                            dtype=thno.config.floatX), name=&#39;sigma_y&#39;)
+    <span class="c1">## Use y error from dataset, convert into theano variable</span>
+    <span class="n">sigma_y</span> <span class="o">=</span> <span class="n">thno</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;sigma_y&#39;</span><span class="p">],</span>
+                            <span class="n">dtype</span><span class="o">=</span><span class="n">thno</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;sigma_y&#39;</span><span class="p">)</span>
 
-    ## Define Normal likelihood
-    likelihood = pm.Normal(&#39;likelihood&#39;, mu=yest, sd=sigma_y, observed=dfhoggs[&#39;y&#39;])
+    <span class="c1">## Define Normal likelihood</span>
+    <span class="n">likelihood</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;likelihood&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">yest</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma_y</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span>
 
 </pre></div>
 </div>
@@ -550,13 +551,13 @@ distributed priors so that it behaves like a ridge regression</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with mdl_ols:
+<span></span><span class="k">with</span> <span class="n">mdl_ols</span><span class="p">:</span>
 
-    ## find MAP using Powell, seems to be more robust
-    start_MAP = pm.find_MAP(fmin=optimize.fmin_powell, disp=True)
+    <span class="c1">## find MAP using Powell, seems to be more robust</span>
+    <span class="n">start_MAP</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_powell</span><span class="p">,</span> <span class="n">disp</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-    ## take samples
-    traces_ols = pm.sample(2000, start=start_MAP, step=pm.NUTS(), progressbar=True)
+    <span class="c1">## take samples</span>
+    <span class="n">traces_ols</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start_MAP</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -579,8 +580,8 @@ Optimization terminated successfully.
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>_ = pm.traceplot(traces_ols[-1000:], figsize=(12,len(traces_ols.varnames)*1.5),
-                lines={k: v[&#39;mean&#39;] for k, v in pm.df_summary(traces_ols[-1000:]).iterrows()})
+<span></span><span class="n">_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">traces_ols</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">traces_ols</span><span class="o">.</span><span class="n">varnames</span><span class="p">)</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span>
+                <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces_ols</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:])</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()})</span>
 </pre></div>
 </div>
 </div>
@@ -588,7 +589,7 @@ Optimization terminated successfully.
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_15_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_15_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_15_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_15_0.png" />
 </div>
 </div>
 <p><strong>NOTE:</strong> We&#8217;ll illustrate this OLS fit and compare to the datapoints in
@@ -616,25 +617,25 @@ stochastic to be inferred: no need for prior knowledge.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as mdl_studentt:
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_studentt</span><span class="p">:</span>
 
-    ## Define weakly informative Normal priors to give Ridge regression
-    b0 = pm.Normal(&#39;b0_intercept&#39;, mu=0, sd=100)
-    b1 = pm.Normal(&#39;b1_slope&#39;, mu=0, sd=100)
+    <span class="c1">## Define weakly informative Normal priors to give Ridge regression</span>
+    <span class="n">b0</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b0_intercept&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">b1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b1_slope&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-    ## Define linear model
-    yest = b0 + b1 * dfhoggs[&#39;x&#39;]
+    <span class="c1">## Define linear model</span>
+    <span class="n">yest</span> <span class="o">=</span> <span class="n">b0</span> <span class="o">+</span> <span class="n">b1</span> <span class="o">*</span> <span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
 
-    ## Use y error from dataset, convert into theano variable
-    sigma_y = thno.shared(np.asarray(dfhoggs[&#39;sigma_y&#39;],
-                            dtype=thno.config.floatX), name=&#39;sigma_y&#39;)
+    <span class="c1">## Use y error from dataset, convert into theano variable</span>
+    <span class="n">sigma_y</span> <span class="o">=</span> <span class="n">thno</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;sigma_y&#39;</span><span class="p">],</span>
+                            <span class="n">dtype</span><span class="o">=</span><span class="n">thno</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;sigma_y&#39;</span><span class="p">)</span>
 
-    ## define prior for Student T degrees of freedom
-    nu = pm.DiscreteUniform(&#39;nu&#39;, lower=1, upper=100)
+    <span class="c1">## define prior for Student T degrees of freedom</span>
+    <span class="n">nu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">DiscreteUniform</span><span class="p">(</span><span class="s1">&#39;nu&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-    ## Define Student T likelihood
-    likelihood = pm.StudentT(&#39;likelihood&#39;, mu=yest, sd=sigma_y, nu=nu
-                           ,observed=dfhoggs[&#39;y&#39;])
+    <span class="c1">## Define Student T likelihood</span>
+    <span class="n">likelihood</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">StudentT</span><span class="p">(</span><span class="s1">&#39;likelihood&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">yest</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma_y</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="n">nu</span>
+                           <span class="p">,</span><span class="n">observed</span><span class="o">=</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span>
 
 </pre></div>
 </div>
@@ -645,17 +646,17 @@ stochastic to be inferred: no need for prior knowledge.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with mdl_studentt:
+<span></span><span class="k">with</span> <span class="n">mdl_studentt</span><span class="p">:</span>
 
-    ## find MAP using Powell, seems to be more robust
-    start_MAP = pm.find_MAP(fmin=optimize.fmin_powell, disp=True)
+    <span class="c1">## find MAP using Powell, seems to be more robust</span>
+    <span class="n">start_MAP</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_powell</span><span class="p">,</span> <span class="n">disp</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-    ## two-step sampling to allow Metropolis for nu (which is discrete)
-    step1 = pm.NUTS([b0, b1])
-    step2 = pm.Metropolis([nu])
+    <span class="c1">## two-step sampling to allow Metropolis for nu (which is discrete)</span>
+    <span class="n">step1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">([</span><span class="n">b0</span><span class="p">,</span> <span class="n">b1</span><span class="p">])</span>
+    <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">([</span><span class="n">nu</span><span class="p">])</span>
 
-    ## take samples
-    traces_studentt = pm.sample(2000, start=start_MAP, step=[step1, step2], progressbar=True)
+    <span class="c1">## take samples</span>
+    <span class="n">traces_studentt</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start_MAP</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="p">[</span><span class="n">step1</span><span class="p">,</span> <span class="n">step2</span><span class="p">],</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -677,9 +678,9 @@ Optimization terminated successfully.
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>_ = pm.traceplot(traces_studentt[-1000:]
-            ,figsize=(12,len(traces_studentt.varnames)*1.5)
-            ,lines={k: v[&#39;mean&#39;] for k, v in pm.df_summary(traces_studentt[-1000:]).iterrows()})
+<span></span><span class="n">_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">traces_studentt</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:]</span>
+            <span class="p">,</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">traces_studentt</span><span class="o">.</span><span class="n">varnames</span><span class="p">)</span><span class="o">*</span><span class="mf">1.5</span><span class="p">)</span>
+            <span class="p">,</span><span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces_studentt</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:])</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()})</span>
 </pre></div>
 </div>
 </div>
@@ -687,7 +688,7 @@ Optimization terminated successfully.
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_25_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_25_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_25_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_25_0.png" />
 </div>
 </div>
 <p><strong>Observe:</strong></p>
@@ -730,26 +731,26 @@ inlier / outlier flags:</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>def logp_signoise(yobs, is_outlier, yest_in, sigma_y_in, yest_out, sigma_y_out):
-    &#39;&#39;&#39;
-    Define custom loglikelihood for inliers vs outliers.
-    NOTE: in this particular case we don&#39;t need to use theano&#39;s @as_op
-    decorator because (as stated by Twiecki in conversation) that&#39;s only
-    required if the likelihood cannot be expressed as a theano expression.
-    We also now get the gradient computation for free.
-    &#39;&#39;&#39;
+<span></span><span class="k">def</span> <span class="nf">logp_signoise</span><span class="p">(</span><span class="n">yobs</span><span class="p">,</span> <span class="n">is_outlier</span><span class="p">,</span> <span class="n">yest_in</span><span class="p">,</span> <span class="n">sigma_y_in</span><span class="p">,</span> <span class="n">yest_out</span><span class="p">,</span> <span class="n">sigma_y_out</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Define custom loglikelihood for inliers vs outliers.</span>
+<span class="sd">    NOTE: in this particular case we don&#39;t need to use theano&#39;s @as_op</span>
+<span class="sd">    decorator because (as stated by Twiecki in conversation) that&#39;s only</span>
+<span class="sd">    required if the likelihood cannot be expressed as a theano expression.</span>
+<span class="sd">    We also now get the gradient computation for free.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
 
-    # likelihood for inliers
-    pdfs_in = T.exp(-(yobs - yest_in + 1e-4)**2 / (2 * sigma_y_in**2))
-    pdfs_in /= T.sqrt(2 * np.pi * sigma_y_in**2)
-    logL_in = T.sum(T.log(pdfs_in) * (1 - is_outlier))
+    <span class="c1"># likelihood for inliers</span>
+    <span class="n">pdfs_in</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">yobs</span> <span class="o">-</span> <span class="n">yest_in</span> <span class="o">+</span> <span class="mf">1e-4</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma_y_in</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">pdfs_in</span> <span class="o">/=</span> <span class="n">T</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">sigma_y_in</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">logL_in</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">pdfs_in</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">is_outlier</span><span class="p">))</span>
 
-    # likelihood for outliers
-    pdfs_out = T.exp(-(yobs - yest_out + 1e-4)**2 / (2 * (sigma_y_in**2 + sigma_y_out**2)))
-    pdfs_out /= T.sqrt(2 * np.pi * (sigma_y_in**2 + sigma_y_out**2))
-    logL_out = T.sum(T.log(pdfs_out) * is_outlier)
+    <span class="c1"># likelihood for outliers</span>
+    <span class="n">pdfs_out</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">yobs</span> <span class="o">-</span> <span class="n">yest_out</span> <span class="o">+</span> <span class="mf">1e-4</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">sigma_y_in</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">sigma_y_out</span><span class="o">**</span><span class="mi">2</span><span class="p">)))</span>
+    <span class="n">pdfs_out</span> <span class="o">/=</span> <span class="n">T</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="p">(</span><span class="n">sigma_y_in</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">sigma_y_out</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">logL_out</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">pdfs_out</span><span class="p">)</span> <span class="o">*</span> <span class="n">is_outlier</span><span class="p">)</span>
 
-    return logL_in + logL_out
+    <span class="k">return</span> <span class="n">logL_in</span> <span class="o">+</span> <span class="n">logL_out</span>
 
 </pre></div>
 </div>
@@ -760,34 +761,34 @@ inlier / outlier flags:</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as mdl_signoise:
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_signoise</span><span class="p">:</span>
 
-    ## Define weakly informative Normal priors to give Ridge regression
-    b0 = pm.Normal(&#39;b0_intercept&#39;, mu=0, sd=100)
-    b1 = pm.Normal(&#39;b1_slope&#39;, mu=0, sd=100)
+    <span class="c1">## Define weakly informative Normal priors to give Ridge regression</span>
+    <span class="n">b0</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b0_intercept&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">b1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b1_slope&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-    ## Define linear model
-    yest_in = b0 + b1 * dfhoggs[&#39;x&#39;]
+    <span class="c1">## Define linear model</span>
+    <span class="n">yest_in</span> <span class="o">=</span> <span class="n">b0</span> <span class="o">+</span> <span class="n">b1</span> <span class="o">*</span> <span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
 
-    ## Define weakly informative priors for the mean and variance of outliers
-    yest_out = pm.Normal(&#39;yest_out&#39;, mu=0, sd=100)
-    sigma_y_out = pm.HalfNormal(&#39;sigma_y_out&#39;, sd=100)
+    <span class="c1">## Define weakly informative priors for the mean and variance of outliers</span>
+    <span class="n">yest_out</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;yest_out&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">sigma_y_out</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfNormal</span><span class="p">(</span><span class="s1">&#39;sigma_y_out&#39;</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-    ## Define Bernoulli inlier / outlier flags according to a hyperprior
-    ## fraction of outliers, itself constrained to [0,.5] for symmetry
-    frac_outliers = pm.Uniform(&#39;frac_outliers&#39;, lower=0., upper=.5)
-    is_outlier = pm.Bernoulli(&#39;is_outlier&#39;, p=frac_outliers, shape=dfhoggs.shape[0])
+    <span class="c1">## Define Bernoulli inlier / outlier flags according to a hyperprior</span>
+    <span class="c1">## fraction of outliers, itself constrained to [0,.5] for symmetry</span>
+    <span class="n">frac_outliers</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;frac_outliers&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">upper</span><span class="o">=.</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">is_outlier</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Bernoulli</span><span class="p">(</span><span class="s1">&#39;is_outlier&#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">frac_outliers</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">dfhoggs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
-    ## Extract observed y and sigma_y from dataset, encode as theano objects
-    yobs = thno.shared(np.asarray(dfhoggs[&#39;y&#39;], dtype=thno.config.floatX), name=&#39;yobs&#39;)
-    sigma_y_in = thno.shared(np.asarray(dfhoggs[&#39;sigma_y&#39;]
-                                , dtype=thno.config.floatX), name=&#39;sigma_y_in&#39;)
+    <span class="c1">## Extract observed y and sigma_y from dataset, encode as theano objects</span>
+    <span class="n">yobs</span> <span class="o">=</span> <span class="n">thno</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">thno</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;yobs&#39;</span><span class="p">)</span>
+    <span class="n">sigma_y_in</span> <span class="o">=</span> <span class="n">thno</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;sigma_y&#39;</span><span class="p">]</span>
+                                <span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">thno</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;sigma_y_in&#39;</span><span class="p">)</span>
 
-    ## Use custom likelihood using DensityDist
-    likelihood = pm.DensityDist(&#39;likelihood&#39;, logp_signoise,
-                        observed={&#39;yobs&#39;:yobs, &#39;is_outlier&#39;:is_outlier,
-                                  &#39;yest_in&#39;:yest_in, &#39;sigma_y_in&#39;:sigma_y_in,
-                                  &#39;yest_out&#39;:yest_out, &#39;sigma_y_out&#39;:sigma_y_out})
+    <span class="c1">## Use custom likelihood using DensityDist</span>
+    <span class="n">likelihood</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">DensityDist</span><span class="p">(</span><span class="s1">&#39;likelihood&#39;</span><span class="p">,</span> <span class="n">logp_signoise</span><span class="p">,</span>
+                        <span class="n">observed</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;yobs&#39;</span><span class="p">:</span><span class="n">yobs</span><span class="p">,</span> <span class="s1">&#39;is_outlier&#39;</span><span class="p">:</span><span class="n">is_outlier</span><span class="p">,</span>
+                                  <span class="s1">&#39;yest_in&#39;</span><span class="p">:</span><span class="n">yest_in</span><span class="p">,</span> <span class="s1">&#39;sigma_y_in&#39;</span><span class="p">:</span><span class="n">sigma_y_in</span><span class="p">,</span>
+                                  <span class="s1">&#39;yest_out&#39;</span><span class="p">:</span><span class="n">yest_out</span><span class="p">,</span> <span class="s1">&#39;sigma_y_out&#39;</span><span class="p">:</span><span class="n">sigma_y_out</span><span class="p">})</span>
 
 </pre></div>
 </div>
@@ -798,17 +799,17 @@ inlier / outlier flags:</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with mdl_signoise:
+<span></span><span class="k">with</span> <span class="n">mdl_signoise</span><span class="p">:</span>
 
-    ## two-step sampling to create Bernoulli inlier/outlier flags
-    step1 = pm.NUTS([frac_outliers, yest_out, sigma_y_out, b0, b1])
-    step2 = pm.BinaryMetropolis([is_outlier], tune_interval=100)
+    <span class="c1">## two-step sampling to create Bernoulli inlier/outlier flags</span>
+    <span class="n">step1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">([</span><span class="n">frac_outliers</span><span class="p">,</span> <span class="n">yest_out</span><span class="p">,</span> <span class="n">sigma_y_out</span><span class="p">,</span> <span class="n">b0</span><span class="p">,</span> <span class="n">b1</span><span class="p">])</span>
+    <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">BinaryMetropolis</span><span class="p">([</span><span class="n">is_outlier</span><span class="p">],</span> <span class="n">tune_interval</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-    ## find MAP using Powell, seems to be more robust
-    start_MAP = pm.find_MAP(fmin=optimize.fmin_powell, disp=True)
+    <span class="c1">## find MAP using Powell, seems to be more robust</span>
+    <span class="n">start_MAP</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_powell</span><span class="p">,</span> <span class="n">disp</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-    ## take samples
-    traces_signoise = pm.sample(2000, start=start_MAP, step=[step1,step2], progressbar=True)
+    <span class="c1">## take samples</span>
+    <span class="n">traces_signoise</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start_MAP</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="p">[</span><span class="n">step1</span><span class="p">,</span><span class="n">step2</span><span class="p">],</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -830,8 +831,8 @@ Optimization terminated successfully.
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>_ = pm.traceplot(traces_signoise[-1000:], figsize=(12,len(traces_signoise.varnames)*1.5),
-            lines={k: v[&#39;mean&#39;] for k, v in pm.df_summary(traces_signoise[-1000:]).iterrows()})
+<span></span><span class="n">_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">traces_signoise</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">traces_signoise</span><span class="o">.</span><span class="n">varnames</span><span class="p">)</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span>
+            <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces_signoise</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:])</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()})</span>
 </pre></div>
 </div>
 </div>
@@ -839,7 +840,7 @@ Optimization terminated successfully.
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_36_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_36_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_36_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_36_0.png" />
 </div>
 </div>
 <p><strong>NOTE:</strong></p>
@@ -871,21 +872,21 @@ for each of the 20 datapoints.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>outlier_melt = pd.melt(pd.DataFrame(traces_signoise[&#39;is_outlier&#39;, -1000:],
-                                   columns=[&#39;[{}]&#39;.format(int(d)) for d in dfhoggs.index]),
-                      var_name=&#39;datapoint_id&#39;, value_name=&#39;is_outlier&#39;)
-ax0 = sns.pointplot(y=&#39;datapoint_id&#39;, x=&#39;is_outlier&#39;, data=outlier_melt,
-                   kind=&#39;point&#39;, join=False, ci=None, size=4, aspect=2)
+<span></span><span class="n">outlier_melt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">melt</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">traces_signoise</span><span class="p">[</span><span class="s1">&#39;is_outlier&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1000</span><span class="p">:],</span>
+                                   <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;[{}]&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">d</span><span class="p">))</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dfhoggs</span><span class="o">.</span><span class="n">index</span><span class="p">]),</span>
+                      <span class="n">var_name</span><span class="o">=</span><span class="s1">&#39;datapoint_id&#39;</span><span class="p">,</span> <span class="n">value_name</span><span class="o">=</span><span class="s1">&#39;is_outlier&#39;</span><span class="p">)</span>
+<span class="n">ax0</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">pointplot</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="s1">&#39;datapoint_id&#39;</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">&#39;is_outlier&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">outlier_melt</span><span class="p">,</span>
+                   <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;point&#39;</span><span class="p">,</span> <span class="n">join</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">ci</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
-_ = ax0.vlines([0,1], 0, 19, [&#39;b&#39;,&#39;r&#39;], &#39;--&#39;)
+<span class="n">_</span> <span class="o">=</span> <span class="n">ax0</span><span class="o">.</span><span class="n">vlines</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">],</span> <span class="s1">&#39;--&#39;</span><span class="p">)</span>
 
-_ = ax0.set_xlim((-0.1,1.1))
-_ = ax0.set_xticks(np.arange(0, 1.1, 0.1))
-_ = ax0.set_xticklabels([&#39;{:.0%}&#39;.format(t) for t in np.arange(0,1.1,0.1)])
+<span class="n">_</span> <span class="o">=</span> <span class="n">ax0</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">((</span><span class="o">-</span><span class="mf">0.1</span><span class="p">,</span><span class="mf">1.1</span><span class="p">))</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">ax0</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">ax0</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([</span><span class="s1">&#39;{:.0%}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mf">1.1</span><span class="p">,</span><span class="mf">0.1</span><span class="p">)])</span>
 
-_ = ax0.yaxis.grid(True, linestyle=&#39;-&#39;, which=&#39;major&#39;, color=&#39;w&#39;, alpha=0.4)
-_ = ax0.set_title(&#39;Prop. of the trace where datapoint is an outlier&#39;)
-_ = ax0.set_xlabel(&#39;Prop. of the trace where is_outlier == 1&#39;)
+<span class="n">_</span> <span class="o">=</span> <span class="n">ax0</span><span class="o">.</span><span class="n">yaxis</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;major&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">ax0</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Prop. of the trace where datapoint is an outlier&#39;</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">ax0</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Prop. of the trace where is_outlier == 1&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -893,7 +894,7 @@ _ = ax0.set_xlabel(&#39;Prop. of the trace where is_outlier == 1&#39;)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_42_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_42_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_42_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_42_0.png" />
 </div>
 </div>
 <p><strong>Observe</strong>:</p>
@@ -925,9 +926,9 @@ which leads to an objective ranking of outlier-hood.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>cutoff = 5
-dfhoggs[&#39;outlier&#39;] = np.percentile(traces_signoise[-1000:][&#39;is_outlier&#39;],cutoff, axis=0)
-dfhoggs[&#39;outlier&#39;].value_counts()
+<span></span><span class="n">cutoff</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;outlier&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">traces_signoise</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:][</span><span class="s1">&#39;is_outlier&#39;</span><span class="p">],</span><span class="n">cutoff</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">dfhoggs</span><span class="p">[</span><span class="s1">&#39;outlier&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -951,27 +952,27 @@ Name: outlier, dtype: int64
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>g = sns.FacetGrid(dfhoggs, size=8, hue=&#39;outlier&#39;, hue_order=[True,False],
-                  palette=&#39;Set1&#39;, legend_out=False)
+<span></span><span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">FacetGrid</span><span class="p">(</span><span class="n">dfhoggs</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;outlier&#39;</span><span class="p">,</span> <span class="n">hue_order</span><span class="o">=</span><span class="p">[</span><span class="bp">True</span><span class="p">,</span><span class="bp">False</span><span class="p">],</span>
+                  <span class="n">palette</span><span class="o">=</span><span class="s1">&#39;Set1&#39;</span><span class="p">,</span> <span class="n">legend_out</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
-lm = lambda x, samp: samp[&#39;b0_intercept&#39;] + samp[&#39;b1_slope&#39;] * x
+<span class="n">lm</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">samp</span><span class="p">:</span> <span class="n">samp</span><span class="p">[</span><span class="s1">&#39;b0_intercept&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">samp</span><span class="p">[</span><span class="s1">&#39;b1_slope&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">x</span>
 
-pm.glm.plot_posterior_predictive(traces_ols[-1000:],
-        eval=np.linspace(-3, 3, 10), lm=lm, samples=200, color=&#39;#22CC00&#39;, alpha=.2)
+<span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">traces_ols</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span>
+        <span class="nb">eval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">lm</span><span class="o">=</span><span class="n">lm</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#22CC00&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">2</span><span class="p">)</span>
 
-pm.glm.plot_posterior_predictive(traces_studentt[-1000:], lm=lm,
-        eval=np.linspace(-3, 3, 10), samples=200, color=&#39;#FFA500&#39;, alpha=.5)
+<span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">traces_studentt</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">lm</span><span class="o">=</span><span class="n">lm</span><span class="p">,</span>
+        <span class="nb">eval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">samples</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#FFA500&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">5</span><span class="p">)</span>
 
-pm.glm.plot_posterior_predictive(traces_signoise[-1000:], lm=lm,
-        eval=np.linspace(-3, 3, 10), samples=200, color=&#39;#357EC7&#39;, alpha=.3)
+<span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">traces_signoise</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">lm</span><span class="o">=</span><span class="n">lm</span><span class="p">,</span>
+        <span class="nb">eval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">samples</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#357EC7&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">3</span><span class="p">)</span>
 
-_ = g.map(plt.errorbar, &#39;x&#39;, &#39;y&#39;, &#39;sigma_y&#39;, &#39;sigma_x&#39;, marker=&quot;o&quot;, ls=&#39;&#39;).add_legend()
+<span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;sigma_y&#39;</span><span class="p">,</span> <span class="s1">&#39;sigma_x&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;o&quot;</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">add_legend</span><span class="p">()</span>
 
-_ = g.axes[0][0].annotate(&#39;OLS Fit: Green\nStudent-T Fit: Orange\nSignal Vs Noise Fit: Blue&#39;,
-                          size=&#39;x-large&#39;, xy=(1,0), xycoords=&#39;axes fraction&#39;,
-                          xytext=(-160,10), textcoords=&#39;offset points&#39;)
-_ = g.axes[0][0].set_ylim(ylims)
-_ = g.axes[0][0].set_xlim(xlims)
+<span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;OLS Fit: Green</span><span class="se">\n</span><span class="s1">Student-T Fit: Orange</span><span class="se">\n</span><span class="s1">Signal Vs Noise Fit: Blue&#39;</span><span class="p">,</span>
+                          <span class="n">size</span><span class="o">=</span><span class="s1">&#39;x-large&#39;</span><span class="p">,</span> <span class="n">xy</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="n">xycoords</span><span class="o">=</span><span class="s1">&#39;axes fraction&#39;</span><span class="p">,</span>
+                          <span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">160</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span> <span class="n">textcoords</span><span class="o">=</span><span class="s1">&#39;offset points&#39;</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">ylims</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">xlims</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -979,7 +980,7 @@ _ = g.axes[0][0].set_xlim(xlims)
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_47_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_47_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_47_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-robust-with-outlier-detection_47_0.png" />
 </div>
 </div>
 <p><strong>Observe</strong>:</p>
@@ -1044,7 +1045,7 @@ estimate.</li>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

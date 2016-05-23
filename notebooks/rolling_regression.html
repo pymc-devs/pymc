@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Rolling Regression &mdash; pymc3 3.0 documentation</title>
+  <title>Rolling Regression &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Hierarchical Linear Regression" href="GLM-hierarchical.html"/>
         <link rel="prev" title="GLM Model Selection" href="GLM-model-selection.html"/> 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -83,6 +83,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
@@ -118,7 +119,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -334,12 +335,12 @@ mining operations (GDX).</li>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%matplotlib inline
-import pandas as pd
-from pandas_datareader import data
-import numpy as np
-import pymc3 as pm
-import matplotlib.pyplot as plt
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">pandas_datareader</span> <span class="kn">import</span> <span class="n">data</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 </pre></div>
 </div>
 </div>
@@ -350,8 +351,8 @@ import matplotlib.pyplot as plt
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>prices = data.YahooDailyReader(symbols=[&#39;GLD&#39;, &#39;GDX&#39;], end=&#39;2014-8-1&#39;).read().loc[&#39;Adj Close&#39;, :, :].iloc[:1000]
-prices.head()
+<span></span><span class="n">prices</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">YahooDailyReader</span><span class="p">(</span><span class="n">symbols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GLD&#39;</span><span class="p">,</span> <span class="s1">&#39;GDX&#39;</span><span class="p">],</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;2014-8-1&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="s1">&#39;Adj Close&#39;</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:</span><span class="mi">1000</span><span class="p">]</span>
+<span class="n">prices</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -413,13 +414,13 @@ the correlation seems to change over time.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig = plt.figure(figsize=(9, 6))
-ax = fig.add_subplot(111, xlabel=&#39;Price GDX in \$&#39;, ylabel=&#39;Price GLD in \$&#39;)
-colors = np.linspace(0.1, 1, len(prices))
-mymap = plt.get_cmap(&quot;winter&quot;)
-sc = ax.scatter(prices.GDX, prices.GLD, c=colors, cmap=mymap, lw=0)
-cb = plt.colorbar(sc)
-cb.ax.set_yticklabels([str(p.date()) for p in prices[::len(prices)//10].index]);
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;Price GDX in \$&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Price GLD in \$&#39;</span><span class="p">)</span>
+<span class="n">colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">prices</span><span class="p">))</span>
+<span class="n">mymap</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s2">&quot;winter&quot;</span><span class="p">)</span>
+<span class="n">sc</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">prices</span><span class="o">.</span><span class="n">GDX</span><span class="p">,</span> <span class="n">prices</span><span class="o">.</span><span class="n">GLD</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">colors</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">mymap</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">cb</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+<span class="n">cb</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">date</span><span class="p">())</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">prices</span><span class="p">[::</span><span class="nb">len</span><span class="p">(</span><span class="n">prices</span><span class="p">)</span><span class="o">//</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -427,7 +428,7 @@ cb.ax.set_yticklabels([str(p.date()) for p in prices[::len(prices)//10].index]);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_rolling_regression_5_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_rolling_regression_5_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_rolling_regression_5_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_rolling_regression_5_0.png" />
 </div>
 </div>
 <p>A naive approach would be to estimate a linear model and ignore the time
@@ -438,9 +439,9 @@ domain.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as model_reg:
-    pm.glm.glm(&#39;GLD ~ GDX&#39;, prices)
-    trace_reg = pm.sample(2000)
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_reg</span><span class="p">:</span>
+    <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;GLD ~ GDX&#39;</span><span class="p">,</span> <span class="n">prices</span><span class="p">)</span>
+    <span class="n">trace_reg</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -462,17 +463,17 @@ Assigned NUTS to sd_log
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig = plt.figure(figsize=(9, 6))
-ax = fig.add_subplot(111, xlabel=&#39;Price GDX in \$&#39;, ylabel=&#39;Price GLD in \$&#39;,
-            title=&#39;Posterior predictive regression lines&#39;)
-sc = ax.scatter(prices.GDX, prices.GLD, c=colors, cmap=mymap, lw=0)
-pm.glm.plot_posterior_predictive(trace_reg[100:], samples=100,
-                              label=&#39;posterior predictive regression lines&#39;,
-                              lm=lambda x, sample: sample[&#39;Intercept&#39;] + sample[&#39;GDX&#39;] * x,
-                              eval=np.linspace(prices.GDX.min(), prices.GDX.max(), 100))
-cb = plt.colorbar(sc)
-cb.ax.set_yticklabels([str(p.date()) for p in prices[::len(prices)//10].index]);
-ax.legend(loc=0);
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;Price GDX in \$&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Price GLD in \$&#39;</span><span class="p">,</span>
+            <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Posterior predictive regression lines&#39;</span><span class="p">)</span>
+<span class="n">sc</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">prices</span><span class="o">.</span><span class="n">GDX</span><span class="p">,</span> <span class="n">prices</span><span class="o">.</span><span class="n">GLD</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">colors</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">mymap</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace_reg</span><span class="p">[</span><span class="mi">100</span><span class="p">:],</span> <span class="n">samples</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                              <span class="n">label</span><span class="o">=</span><span class="s1">&#39;posterior predictive regression lines&#39;</span><span class="p">,</span>
+                              <span class="n">lm</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">sample</span><span class="p">:</span> <span class="n">sample</span><span class="p">[</span><span class="s1">&#39;Intercept&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">sample</span><span class="p">[</span><span class="s1">&#39;GDX&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">x</span><span class="p">,</span>
+                              <span class="nb">eval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">prices</span><span class="o">.</span><span class="n">GDX</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">prices</span><span class="o">.</span><span class="n">GDX</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="mi">100</span><span class="p">))</span>
+<span class="n">cb</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+<span class="n">cb</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">date</span><span class="p">())</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">prices</span><span class="p">[::</span><span class="nb">len</span><span class="p">(</span><span class="n">prices</span><span class="p">)</span><span class="o">//</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">]);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -480,7 +481,7 @@ ax.legend(loc=0);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_rolling_regression_9_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_rolling_regression_9_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_rolling_regression_9_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_rolling_regression_9_0.png" />
 </div>
 </div>
 <div class="section" id="Rolling-regression">
@@ -503,11 +504,11 @@ volatility in the regression coefficients.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>model_randomwalk = pm.Model()
-with model_randomwalk:
-    # std of random walk, best sampled in log space.
-    sigma_alpha = pm.Exponential(&#39;sigma_alpha&#39;, 1./.02, testval = .1)
-    sigma_beta = pm.Exponential(&#39;sigma_beta&#39;, 1./.02, testval = .1)
+<span></span><span class="n">model_randomwalk</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">model_randomwalk</span><span class="p">:</span>
+    <span class="c1"># std of random walk, best sampled in log space.</span>
+    <span class="n">sigma_alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;sigma_alpha&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="o">/.</span><span class="mo">02</span><span class="p">,</span> <span class="n">testval</span> <span class="o">=</span> <span class="o">.</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">sigma_beta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;sigma_beta&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="o">/.</span><span class="mo">02</span><span class="p">,</span> <span class="n">testval</span> <span class="o">=</span> <span class="o">.</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -522,20 +523,20 @@ all data points in a single bin.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>import theano.tensor as T
+<span></span><span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
 
-# To make the model simpler, we will apply the same coefficient for 50 data points at a time
-subsample_alpha = 50
-subsample_beta = 50
-with model_randomwalk:
-    alpha = pm.GaussianRandomWalk(&#39;alpha&#39;, sigma_alpha**-2,
-                                  shape=len(prices) // subsample_alpha)
-    beta = pm.GaussianRandomWalk(&#39;beta&#39;, sigma_beta**-2,
-                                 shape=len(prices) // subsample_beta)
+<span class="c1"># To make the model simpler, we will apply the same coefficient for 50 data points at a time</span>
+<span class="n">subsample_alpha</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="n">subsample_beta</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="k">with</span> <span class="n">model_randomwalk</span><span class="p">:</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">GaussianRandomWalk</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="n">sigma_alpha</span><span class="o">**-</span><span class="mi">2</span><span class="p">,</span>
+                                  <span class="n">shape</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">prices</span><span class="p">)</span> <span class="o">//</span> <span class="n">subsample_alpha</span><span class="p">)</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">GaussianRandomWalk</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">sigma_beta</span><span class="o">**-</span><span class="mi">2</span><span class="p">,</span>
+                                 <span class="n">shape</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">prices</span><span class="p">)</span> <span class="o">//</span> <span class="n">subsample_beta</span><span class="p">)</span>
 
-    # Make coefficients have the same length as prices
-    alpha_r = T.repeat(alpha, subsample_alpha)
-    beta_r = T.repeat(beta, subsample_beta)
+    <span class="c1"># Make coefficients have the same length as prices</span>
+    <span class="n">alpha_r</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">subsample_alpha</span><span class="p">)</span>
+    <span class="n">beta_r</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">subsample_beta</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -547,16 +548,16 @@ via the likelihood.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with model_randomwalk:
-    # Define regression
-    regression = alpha_r + beta_r * prices.GDX.values
+<span></span><span class="k">with</span> <span class="n">model_randomwalk</span><span class="p">:</span>
+    <span class="c1"># Define regression</span>
+    <span class="n">regression</span> <span class="o">=</span> <span class="n">alpha_r</span> <span class="o">+</span> <span class="n">beta_r</span> <span class="o">*</span> <span class="n">prices</span><span class="o">.</span><span class="n">GDX</span><span class="o">.</span><span class="n">values</span>
 
-    # Assume prices are Normally distributed, the mean comes from the regression.
-    sd = pm.Uniform(&#39;sd&#39;, 0, 20)
-    likelihood = pm.Normal(&#39;y&#39;,
-                           mu=regression,
-                           sd=sd,
-                           observed=prices.GLD.values)
+    <span class="c1"># Assume prices are Normally distributed, the mean comes from the regression.</span>
+    <span class="n">sd</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;sd&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+    <span class="n">likelihood</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span>
+                           <span class="n">mu</span><span class="o">=</span><span class="n">regression</span><span class="p">,</span>
+                           <span class="n">sd</span><span class="o">=</span><span class="n">sd</span><span class="p">,</span>
+                           <span class="n">observed</span><span class="o">=</span><span class="n">prices</span><span class="o">.</span><span class="n">GLD</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -568,14 +569,14 @@ wells.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>from scipy import optimize
-with model_randomwalk:
-    # First optimize random walk
-    start = pm.find_MAP(vars=[alpha, beta], fmin=optimize.fmin_l_bfgs_b)
+<span></span><span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
+<span class="k">with</span> <span class="n">model_randomwalk</span><span class="p">:</span>
+    <span class="c1"># First optimize random walk</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">],</span> <span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
 
-    # Sample
-    step = pm.NUTS(scaling=start)
-    trace_rw = pm.sample(2000, step, start=start)
+    <span class="c1"># Sample</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+    <span class="n">trace_rw</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -589,10 +590,10 @@ with model_randomwalk:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig = plt.figure(figsize=(8, 6))
-ax = plt.subplot(111, xlabel=&#39;time&#39;, ylabel=&#39;alpha&#39;, title=&#39;Change of alpha over time.&#39;)
-ax.plot(trace_rw[-1000:][alpha].T, &#39;r&#39;, alpha=.05);
-ax.set_xticklabels([str(p.date()) for p in prices[::len(prices)//5].index]);
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Change of alpha over time.&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">trace_rw</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:][</span><span class="n">alpha</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">05</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">date</span><span class="p">())</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">prices</span><span class="p">[::</span><span class="nb">len</span><span class="p">(</span><span class="n">prices</span><span class="p">)</span><span class="o">//</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -600,7 +601,7 @@ ax.set_xticklabels([str(p.date()) for p in prices[::len(prices)//5].index]);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_rolling_regression_21_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_rolling_regression_21_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_rolling_regression_21_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_rolling_regression_21_0.png" />
 </div>
 </div>
 <p>However, the slope does.</p>
@@ -610,10 +611,10 @@ ax.set_xticklabels([str(p.date()) for p in prices[::len(prices)//5].index]);
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig = plt.figure(figsize=(8, 6))
-ax = fig.add_subplot(111, xlabel=&#39;time&#39;, ylabel=&#39;beta&#39;, title=&#39;Change of beta over time&#39;)
-ax.plot(trace_rw[-1000:][beta].T, &#39;b&#39;, alpha=.05);
-ax.set_xticklabels([str(p.date()) for p in prices[::len(prices)//5].index]);
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Change of beta over time&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">trace_rw</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:][</span><span class="n">beta</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">05</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">date</span><span class="p">())</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">prices</span><span class="p">[::</span><span class="nb">len</span><span class="p">(</span><span class="n">prices</span><span class="p">)</span><span class="o">//</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -621,7 +622,7 @@ ax.set_xticklabels([str(p.date()) for p in prices[::len(prices)//5].index]);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_rolling_regression_23_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_rolling_regression_23_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_rolling_regression_23_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_rolling_regression_23_0.png" />
 </div>
 </div>
 <p>The posterior predictive plot shows that we capture the change in
@@ -634,23 +635,23 @@ visualisations would not be quite as clear.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig = plt.figure(figsize=(8, 6))
-ax = fig.add_subplot(111, xlabel=&#39;Price GDX in \$&#39;, ylabel=&#39;Price GLD in \$&#39;,
-            title=&#39;Posterior predictive regression lines&#39;)
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;Price GDX in \$&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Price GLD in \$&#39;</span><span class="p">,</span>
+            <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Posterior predictive regression lines&#39;</span><span class="p">)</span>
 
-colors = np.linspace(0.1, 1, len(prices))
-colors_sc = np.linspace(0.1, 1, len(trace_rw[-500::10][&#39;alpha&#39;].T))
-mymap = plt.get_cmap(&#39;winter&#39;)
-mymap_sc = plt.get_cmap(&#39;winter&#39;)
+<span class="n">colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">prices</span><span class="p">))</span>
+<span class="n">colors_sc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">trace_rw</span><span class="p">[</span><span class="o">-</span><span class="mi">500</span><span class="p">::</span><span class="mi">10</span><span class="p">][</span><span class="s1">&#39;alpha&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+<span class="n">mymap</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s1">&#39;winter&#39;</span><span class="p">)</span>
+<span class="n">mymap_sc</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s1">&#39;winter&#39;</span><span class="p">)</span>
 
-xi = np.linspace(prices.GDX.min(), prices.GDX.max(), 50)
-for i, (alpha, beta) in enumerate(zip(trace_rw[-500::10][&#39;alpha&#39;].T, trace_rw[-500::10][&#39;beta&#39;].T)):
-    for a, b in zip(alpha, beta):
-        ax.plot(xi, a + b*xi, alpha=.05, lw=1, c=mymap_sc(colors_sc[i]))
+<span class="n">xi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">prices</span><span class="o">.</span><span class="n">GDX</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">prices</span><span class="o">.</span><span class="n">GDX</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="mi">50</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">trace_rw</span><span class="p">[</span><span class="o">-</span><span class="mi">500</span><span class="p">::</span><span class="mi">10</span><span class="p">][</span><span class="s1">&#39;alpha&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">trace_rw</span><span class="p">[</span><span class="o">-</span><span class="mi">500</span><span class="p">::</span><span class="mi">10</span><span class="p">][</span><span class="s1">&#39;beta&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">)):</span>
+    <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">):</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">*</span><span class="n">xi</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">05</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">mymap_sc</span><span class="p">(</span><span class="n">colors_sc</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
 
-sc = ax.scatter(prices.GDX, prices.GLD, label=&#39;data&#39;, cmap=mymap, c=colors)
-cb = plt.colorbar(sc)
-cb.ax.set_yticklabels([str(p.date()) for p in prices[::len(prices)//10].index]);
+<span class="n">sc</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">prices</span><span class="o">.</span><span class="n">GDX</span><span class="p">,</span> <span class="n">prices</span><span class="o">.</span><span class="n">GLD</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">mymap</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">colors</span><span class="p">)</span>
+<span class="n">cb</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+<span class="n">cb</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">date</span><span class="p">())</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">prices</span><span class="p">[::</span><span class="nb">len</span><span class="p">(</span><span class="n">prices</span><span class="p">)</span><span class="o">//</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -658,7 +659,7 @@ cb.ax.set_yticklabels([str(p.date()) for p in prices[::len(prices)//10].index]);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_rolling_regression_25_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_rolling_regression_25_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_rolling_regression_25_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_rolling_regression_25_0.png" />
 </div>
 </div>
 </div>
@@ -683,7 +684,7 @@ cb.ax.set_yticklabels([str(p.date()) for p in prices[::len(prices)//10].index]);
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

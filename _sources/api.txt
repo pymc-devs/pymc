@@ -80,6 +80,16 @@ Plots
 .. automodule:: pymc3.plots
    :members:
 
+Stats
+-----
+
+.. currentmodule:: pymc3.stats
+   :members:
+
+.. automodule:: pymc3.stats
+   :members:
+
+
 Inference
 ---------
 

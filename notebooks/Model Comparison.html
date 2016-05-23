@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Model comparison &mdash; pymc3 3.0 documentation</title>
+  <title>Model comparison &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -48,7 +48,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -80,6 +80,7 @@
             
             
                 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
@@ -95,7 +96,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -305,13 +306,13 @@ that allows for a random effect that partially pools the data.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%matplotlib inline
-from pymc3 import (Normal, HalfCauchy, sample, Model, waic, dic, loo, forestplot,
-                   traceplot, NUTS, find_MAP, Deterministic, HalfCauchy)
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-sns.set_context(&#39;notebook&#39;)
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="p">(</span><span class="n">Normal</span><span class="p">,</span> <span class="n">HalfCauchy</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">Model</span><span class="p">,</span> <span class="n">waic</span><span class="p">,</span> <span class="n">dic</span><span class="p">,</span> <span class="n">loo</span><span class="p">,</span> <span class="n">forestplot</span><span class="p">,</span>
+                   <span class="n">traceplot</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">,</span> <span class="n">find_MAP</span><span class="p">,</span> <span class="n">Deterministic</span><span class="p">,</span> <span class="n">HalfCauchy</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set_context</span><span class="p">(</span><span class="s1">&#39;notebook&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -323,9 +324,9 @@ deviations in the 8 schools.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>J = 8
-y = np.array([28,  8, -3,  7, -1,  1, 18, 12])
-sigma = np.array([15, 10, 16, 11,  9, 11, 10, 18])
+<span></span><span class="n">J</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">28</span><span class="p">,</span>  <span class="mi">8</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span>  <span class="mi">7</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">12</span><span class="p">])</span>
+<span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span>  <span class="mi">9</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">18</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
@@ -337,11 +338,11 @@ sigma = np.array([15, 10, 16, 11,  9, 11, 10, 18])
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as pooled:
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">pooled</span><span class="p">:</span>
 
-    mu = Normal(&#39;mu&#39;, 0, sd=1e6)
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mf">1e6</span><span class="p">)</span>
 
-    obs = Normal(&#39;obs&#39;, mu, sd=sigma, observed=y)
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -351,8 +352,8 @@ sigma = np.array([15, 10, 16, 11,  9, 11, 10, 18])
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pooled:
-    trace_p = sample(2000)
+<span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
+    <span class="n">trace_p</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -371,7 +372,7 @@ Assigned NUTS to mu
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>traceplot(trace_p, varnames=[&#39;mu&#39;]);
+<span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace_p</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -379,7 +380,7 @@ Assigned NUTS to mu
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_ModelComparison_7_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_ModelComparison_7_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_7_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_7_0.png" />
 </div>
 </div>
 </div>
@@ -391,15 +392,15 @@ Assigned NUTS to mu
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with Model() as hierarchical:
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">hierarchical</span><span class="p">:</span>
 
-    eta = Normal(&#39;eta&#39;, 0, 1, shape=J)
-    mu = Normal(&#39;mu&#39;, 0, sd=1e6)
-    tau = HalfCauchy(&#39;tau&#39;, 5)
+    <span class="n">eta</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;eta&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">J</span><span class="p">)</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mf">1e6</span><span class="p">)</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
 
-    theta = Deterministic(&#39;theta&#39;, mu + tau*eta)
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">tau</span><span class="o">*</span><span class="n">eta</span><span class="p">)</span>
 
-    obs = Normal(&#39;obs&#39;, theta, sd=sigma, observed=y)
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -417,8 +418,8 @@ Applied log-transform to tau and added transformed tau_log to model.
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with hierarchical:
-    trace_h = sample(2000)
+<span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
+    <span class="n">trace_h</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -439,7 +440,7 @@ Assigned NUTS to tau_log
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>traceplot(trace_h, varnames=[&#39;mu&#39;]);
+<span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -447,7 +448,7 @@ Assigned NUTS to tau_log
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_ModelComparison_11_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_ModelComparison_11_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_11_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_11_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -456,7 +457,7 @@ Assigned NUTS to tau_log
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>forestplot(trace_h, varnames=[&#39;theta&#39;]);
+<span></span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace_h</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -464,7 +465,7 @@ Assigned NUTS to tau_log
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_ModelComparison_12_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_ModelComparison_12_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_12_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_12_0.png" />
 </div>
 </div>
 </div>
@@ -482,10 +483,10 @@ parameters to correct for bias.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pooled:
-    pooled_dic = dic(trace_p)
+<span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
+    <span class="n">pooled_dic</span> <span class="o">=</span> <span class="n">dic</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
 
-pooled_dic
+<span class="n">pooled_dic</span>
 </pre></div>
 </div>
 </div>
@@ -505,10 +506,10 @@ pooled_dic
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with hierarchical:
-    hierarchical_dic = dic(trace_h)
+<span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
+    <span class="n">hierarchical_dic</span> <span class="o">=</span> <span class="n">dic</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
 
-hierarchical_dic
+<span class="n">hierarchical_dic</span>
 </pre></div>
 </div>
 </div>
@@ -549,10 +550,10 @@ parameters to adjust for overfitting.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pooled:
-    pooled_waic = waic(trace_p)
+<span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
+    <span class="n">pooled_waic</span> <span class="o">=</span> <span class="n">waic</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
 
-pooled_waic
+<span class="n">pooled_waic</span>
 </pre></div>
 </div>
 </div>
@@ -572,10 +573,10 @@ pooled_waic
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with hierarchical:
-    hierarchical_waic = waic(trace_h)
+<span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
+    <span class="n">hierarchical_waic</span> <span class="o">=</span> <span class="n">waic</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
 
-hierarchical_waic
+<span class="n">hierarchical_waic</span>
 </pre></div>
 </div>
 </div>
@@ -619,10 +620,10 @@ estimate of pointwise out-of-sample prediction accuracy.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pooled:
-    pooled_loo = loo(trace_p)
+<span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
+    <span class="n">pooled_loo</span> <span class="o">=</span> <span class="n">loo</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
 
-pooled_loo
+<span class="n">pooled_loo</span>
 </pre></div>
 </div>
 </div>
@@ -654,10 +655,10 @@ pooled_loo
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with hierarchical:
-    hierarchical_loo = loo(trace_h)
+<span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
+    <span class="n">hierarchical_loo</span> <span class="o">=</span> <span class="n">loo</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
 
-hierarchical_loo
+<span class="n">hierarchical_loo</span>
 </pre></div>
 </div>
 </div>
@@ -709,7 +710,7 @@ information criteria for Bayesian models. Statistics and Computing,
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>

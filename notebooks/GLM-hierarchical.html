@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Hierarchical Linear Regression &mdash; pymc3 3.0 documentation</title>
+  <title>Hierarchical Linear Regression &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Probabilistic Matrix Factorization for Making Personalized Recommendations" href="pmf-pymc.html"/>
         <link rel="prev" title="Rolling Regression" href="rolling_regression.html"/> 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pymc3
+            <a href="../index.html" class="icon icon-home"> PyMC3
           
 
           
@@ -83,6 +83,7 @@
             
             
                 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
@@ -141,7 +142,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">pymc3</a>
+        <a href="../index.html">PyMC3</a>
       </nav>
 
 
@@ -415,18 +416,18 @@ measurements are taken, ranging from 2 to 116 measurements per county.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>%matplotlib inline
-import matplotlib.pyplot as plt
-import numpy as np
-import pymc3 as pm
-import pandas as pd
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 
-data = pd.read_csv(&#39;../data/radon.csv&#39;)
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/radon.csv&#39;</span><span class="p">)</span>
 
-county_names = data.county.unique()
-county_idx = data.county_code.values
+<span class="n">county_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">county</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+<span class="n">county_idx</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">county_code</span><span class="o">.</span><span class="n">values</span>
 
-n_counties = len(data.county.unique())
+<span class="n">n_counties</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">county</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
@@ -437,7 +438,7 @@ n_counties = len(data.county.unique())
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>data[[&#39;county&#39;, &#39;log_radon&#39;, &#39;floor&#39;]].head()
+<span></span><span class="n">data</span><span class="p">[[</span><span class="s1">&#39;county&#39;</span><span class="p">,</span> <span class="s1">&#39;log_radon&#39;</span><span class="p">,</span> <span class="s1">&#39;floor&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -590,23 +591,23 @@ uniform distribution.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as unpooled_model:
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">unpooled_model</span><span class="p">:</span>
 
-    # Independent parameters for each county
-    a = pm.Normal(&#39;a&#39;, 0, sd=100, shape=n_counties)
-    b = pm.Normal(&#39;b&#39;, 0, sd=100, shape=n_counties)
+    <span class="c1"># Independent parameters for each county</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_counties</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_counties</span><span class="p">)</span>
 
-    # Model error
-    eps = pm.HalfCauchy(&#39;eps&#39;, 5)
+    <span class="c1"># Model error</span>
+    <span class="n">eps</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;eps&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
 
-    # Model prediction of radon level
-    # a[county_idx] translates to a[0, 0, 0, 1, 1, ...],
-    # we thus link multiple household measures of a county
-    # to its coefficients.
-    radon_est = a[county_idx] + b[county_idx]*data.floor.values
+    <span class="c1"># Model prediction of radon level</span>
+    <span class="c1"># a[county_idx] translates to a[0, 0, 0, 1, 1, ...],</span>
+    <span class="c1"># we thus link multiple household measures of a county</span>
+    <span class="c1"># to its coefficients.</span>
+    <span class="n">radon_est</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">county_idx</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">county_idx</span><span class="p">]</span><span class="o">*</span><span class="n">data</span><span class="o">.</span><span class="n">floor</span><span class="o">.</span><span class="n">values</span>
 
-    # Data likelihood
-    y = pm.Normal(&#39;y&#39;, radon_est, sd=eps, observed=data.log_radon)
+    <span class="c1"># Data likelihood</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">radon_est</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">eps</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">log_radon</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -624,8 +625,8 @@ Applied log-transform to eps and added transformed eps_log to model.
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with unpooled_model:
-    unpooled_trace = pm.sample(2000)
+<span></span><span class="k">with</span> <span class="n">unpooled_model</span><span class="p">:</span>
+    <span class="n">unpooled_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -654,28 +655,28 @@ subsequently used to influence the distribution of each county&#8217;s
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>with pm.Model() as hierarchical_model:
-    # Hyperpriors for group nodes
-    mu_a = pm.Normal(&#39;mu_a&#39;, mu=0., sd=100**2)
-    sigma_a = pm.HalfCauchy(&#39;sigma_a&#39;, 5)
-    mu_b = pm.Normal(&#39;mu_b&#39;, mu=0., sd=100**2)
-    sigma_b = pm.HalfCauchy(&#39;sigma_b&#39;, 5)
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">hierarchical_model</span><span class="p">:</span>
+    <span class="c1"># Hyperpriors for group nodes</span>
+    <span class="n">mu_a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_a&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">sigma_a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;sigma_a&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">mu_b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_b&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">sigma_b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
 
-    # Intercept for each county, distributed around group mean mu_a
-    # Above we just set mu and sd to a fixed value while here we
-    # plug in a common group distribution for all a and b (which are
-    # vectors of length n_counties).
-    a = pm.Normal(&#39;a&#39;, mu=mu_a, sd=sigma_a, shape=n_counties)
-    # Intercept for each county, distributed around group mean mu_a
-    b = pm.Normal(&#39;b&#39;, mu=mu_b, sd=sigma_b, shape=n_counties)
+    <span class="c1"># Intercept for each county, distributed around group mean mu_a</span>
+    <span class="c1"># Above we just set mu and sd to a fixed value while here we</span>
+    <span class="c1"># plug in a common group distribution for all a and b (which are</span>
+    <span class="c1"># vectors of length n_counties).</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_a</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma_a</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_counties</span><span class="p">)</span>
+    <span class="c1"># Intercept for each county, distributed around group mean mu_a</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_b</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma_b</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_counties</span><span class="p">)</span>
 
-    # Model error
-    eps = pm.HalfCauchy(&#39;eps&#39;, 5)
+    <span class="c1"># Model error</span>
+    <span class="n">eps</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;eps&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
 
-    radon_est = a[county_idx] + b[county_idx] * data.floor.values
+    <span class="n">radon_est</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">county_idx</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">county_idx</span><span class="p">]</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">floor</span><span class="o">.</span><span class="n">values</span>
 
-    # Data likelihood
-    radon_like = pm.Normal(&#39;radon_like&#39;, mu=radon_est, sd=eps, observed=data.log_radon)
+    <span class="c1"># Data likelihood</span>
+    <span class="n">radon_like</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;radon_like&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">radon_est</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">eps</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">log_radon</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -695,9 +696,9 @@ Applied log-transform to eps and added transformed eps_log to model.
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Inference button (TM)!
-with hierarchical_model:
-    hierarchical_trace = pm.sample(2000)
+<span></span><span class="c1"># Inference button (TM)!</span>
+<span class="k">with</span> <span class="n">hierarchical_model</span><span class="p">:</span>
+    <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -722,9 +723,9 @@ Assigned NUTS to eps_log
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span># Plotting the hierarchical model trace -its found values- from 500 iterations onwards (right side plot)
-# and its accumulated marginal values (left side plot)
-pm.traceplot(hierarchical_trace[1000:]);
+<span></span><span class="c1"># Plotting the hierarchical model trace -its found values- from 500 iterations onwards (right side plot)</span>
+<span class="c1"># and its accumulated marginal values (left side plot)</span>
+<span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">hierarchical_trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:]);</span>
 </pre></div>
 </div>
 </div>
@@ -732,7 +733,7 @@ pm.traceplot(hierarchical_trace[1000:]);
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-hierarchical_14_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-hierarchical_14_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical_14_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical_14_0.png" />
 </div>
 </div>
 <p>The marginal posteriors in the left column are highly informative.
@@ -772,33 +773,33 @@ predictions.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>selection = [&#39;CASS&#39;, &#39;CROW WING&#39;, &#39;FREEBORN&#39;]
-fig, axis = plt.subplots(1, 3, figsize=(12, 6), sharey=True, sharex=True)
-axis = axis.ravel()
-for i, c in enumerate(selection):
-    c_data = data.ix[data.county == c]
-    c_data = c_data.reset_index(drop = True)
-    c_index = np.where(county_names==c)[0][0]
-    z = list(c_data[&#39;county_code&#39;])[0]
+<span></span><span class="n">selection</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;CASS&#39;</span><span class="p">,</span> <span class="s1">&#39;CROW WING&#39;</span><span class="p">,</span> <span class="s1">&#39;FREEBORN&#39;</span><span class="p">]</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">sharey</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">axis</span> <span class="o">=</span> <span class="n">axis</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">selection</span><span class="p">):</span>
+    <span class="n">c_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">ix</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">county</span> <span class="o">==</span> <span class="n">c</span><span class="p">]</span>
+    <span class="n">c_data</span> <span class="o">=</span> <span class="n">c_data</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
+    <span class="n">c_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">county_names</span><span class="o">==</span><span class="n">c</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">c_data</span><span class="p">[</span><span class="s1">&#39;county_code&#39;</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
 
-    xvals = np.linspace(-0.2, 1.2)
-    for a_val, b_val in zip(unpooled_trace[&#39;a&#39;][1000:, c_index], unpooled_trace[&#39;b&#39;][1000:, c_index]):
-        axis[i].plot(xvals, a_val + b_val * xvals, &#39;b&#39;, alpha=.1)
-    axis[i].plot(xvals, unpooled_trace[&#39;a&#39;][1000:, c_index].mean() + unpooled_trace[&#39;b&#39;][1000:, c_index].mean() * xvals,
-                 &#39;b&#39;, alpha=1, lw=2., label=&#39;individual&#39;)
-    for a_val, b_val in zip(hierarchical_trace[&#39;a&#39;][1000:][z], hierarchical_trace[&#39;b&#39;][1000:][z]):
-        axis[i].plot(xvals, a_val + b_val * xvals, &#39;g&#39;, alpha=.1)
-    axis[i].plot(xvals, hierarchical_trace[&#39;a&#39;][1000:][z].mean() + hierarchical_trace[&#39;b&#39;][1000:][z].mean() * xvals,
-                 &#39;g&#39;, alpha=1, lw=2., label=&#39;hierarchical&#39;)
-    axis[i].scatter(c_data.floor + np.random.randn(len(c_data))*0.01, c_data.log_radon,
-                    alpha=1, color=&#39;k&#39;, marker=&#39;.&#39;, s=80, label=&#39;original data&#39;)
-    axis[i].set_xticks([0,1])
-    axis[i].set_xticklabels([&#39;basement&#39;, &#39;no basement&#39;])
-    axis[i].set_ylim(-1, 4)
-    axis[i].set_title(c)
-    if not i%3:
-        axis[i].legend()
-        axis[i].set_ylabel(&#39;log radon level&#39;)
+    <span class="n">xvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">a_val</span><span class="p">,</span> <span class="n">b_val</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">unpooled_trace</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:,</span> <span class="n">c_index</span><span class="p">],</span> <span class="n">unpooled_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:,</span> <span class="n">c_index</span><span class="p">]):</span>
+        <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span> <span class="n">a_val</span> <span class="o">+</span> <span class="n">b_val</span> <span class="o">*</span> <span class="n">xvals</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span> <span class="n">unpooled_trace</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:,</span> <span class="n">c_index</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">unpooled_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:,</span> <span class="n">c_index</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="n">xvals</span><span class="p">,</span>
+                 <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;individual&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">a_val</span><span class="p">,</span> <span class="n">b_val</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">hierarchical_trace</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:][</span><span class="n">z</span><span class="p">],</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:][</span><span class="n">z</span><span class="p">]):</span>
+        <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span> <span class="n">a_val</span> <span class="o">+</span> <span class="n">b_val</span> <span class="o">*</span> <span class="n">xvals</span><span class="p">,</span> <span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:][</span><span class="n">z</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:][</span><span class="n">z</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="n">xvals</span><span class="p">,</span>
+                 <span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;hierarchical&#39;</span><span class="p">)</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">c_data</span><span class="o">.</span><span class="n">floor</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">c_data</span><span class="p">))</span><span class="o">*</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">c_data</span><span class="o">.</span><span class="n">log_radon</span><span class="p">,</span>
+                    <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;original data&#39;</span><span class="p">)</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([</span><span class="s1">&#39;basement&#39;</span><span class="p">,</span> <span class="s1">&#39;no basement&#39;</span><span class="p">])</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">i</span><span class="o">%</span><span class="k">3</span>:
+        <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;log radon level&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -806,7 +807,7 @@ for i, c in enumerate(selection):
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-hierarchical_17_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-hierarchical_17_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical_17_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical_17_0.png" />
 </div>
 </div>
 <p>In the above plot we have the data points in black of three selected
@@ -846,10 +847,10 @@ using each county&#8217;s data, resulting in a model more prone to outliers
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>hier_a = hierarchical_trace[&#39;a&#39;][500:].mean(axis=0)
-hier_b = hierarchical_trace[&#39;b&#39;][500:].mean(axis=0)
-indv_a = [unpooled_trace[&#39;a&#39;][500:, np.where(county_names==c)[0][0]].mean() for c in county_names]
-indv_b = [unpooled_trace[&#39;b&#39;][500:, np.where(county_names==c)[0][0]].mean() for c in county_names]
+<span></span><span class="n">hier_a</span> <span class="o">=</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">][</span><span class="mi">500</span><span class="p">:]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">hier_b</span> <span class="o">=</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][</span><span class="mi">500</span><span class="p">:]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">indv_a</span> <span class="o">=</span> <span class="p">[</span><span class="n">unpooled_trace</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">][</span><span class="mi">500</span><span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">county_names</span><span class="o">==</span><span class="n">c</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">county_names</span><span class="p">]</span>
+<span class="n">indv_b</span> <span class="o">=</span> <span class="p">[</span><span class="n">unpooled_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][</span><span class="mi">500</span><span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">county_names</span><span class="o">==</span><span class="n">c</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">county_names</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -859,17 +860,17 @@ indv_b = [unpooled_trace[&#39;b&#39;][500:, np.where(county_names==c)[0][0]].mea
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>fig = plt.figure(figsize=(10, 10))
-ax = fig.add_subplot(111, xlabel=&#39;Intercept&#39;, ylabel=&#39;Floor Measure&#39;,
-                     title=&#39;Hierarchical vs. Non-hierarchical Bayes&#39;,
-                     xlim=(0, 3), ylim=(-3, 3))
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;Intercept&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Floor Measure&#39;</span><span class="p">,</span>
+                     <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Hierarchical vs. Non-hierarchical Bayes&#39;</span><span class="p">,</span>
+                     <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
 
-ax.scatter(indv_a, indv_b, s=26, alpha=0.4, label = &#39;non-hierarchical&#39;)
-ax.scatter(hier_a,hier_b, c=&#39;red&#39;, s=26, alpha=0.4, label = &#39;hierarchical&#39;)
-for i in range(len(indv_b)):
-    ax.arrow(indv_a[i], indv_b[i], hier_a[i] - indv_a[i], hier_b[i] - indv_b[i],
-             fc=&quot;k&quot;, ec=&quot;k&quot;, length_includes_head=True, alpha=0.4, head_width=.04)
-ax.legend();
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">indv_a</span><span class="p">,</span> <span class="n">indv_b</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">26</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;non-hierarchical&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">hier_a</span><span class="p">,</span><span class="n">hier_b</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">26</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;hierarchical&#39;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">indv_b</span><span class="p">)):</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">arrow</span><span class="p">(</span><span class="n">indv_a</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">indv_b</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">hier_a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">indv_a</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">hier_b</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">indv_b</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+             <span class="n">fc</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">ec</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">length_includes_head</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">head_width</span><span class="o">=.</span><span class="mo">04</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">();</span>
 </pre></div>
 </div>
 </div>
@@ -877,7 +878,7 @@ ax.legend();
 <div class="container">
 </div>
 <div class="container">
-<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-hierarchical_21_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-hierarchical_21_0.png" />
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical_21_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-hierarchical_21_0.png" />
 </div>
 </div>
 <p>In the shrinkage plot above we show the coefficients of each county&#8217;s
@@ -987,7 +988,7 @@ for useful comments on an earlier draft.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
 
     </p>
   </div>
