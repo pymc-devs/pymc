@@ -4,4 +4,5 @@
 Getting started
 ***************
 
-..include:: notebooks/getting_started.ipynb
+.. toctree::
+   notebooks/getting_started.ipynb

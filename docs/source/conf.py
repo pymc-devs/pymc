@@ -91,6 +91,8 @@ language = None
 # directories to ignore when looking for source files.
 exclude_patterns = ['_build', '**.ipynb_checkpoints']
 
+nbsphinx_execute = 'never'
+
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
 #default_role = None
@@ -130,6 +132,7 @@ except ImportError:
 else:
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
     html_theme = 'sphinx_rtd_theme'
+
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

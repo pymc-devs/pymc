@@ -12,7 +12,8 @@ PyMC3 is Beta software. Users should consider using [PyMC 2 repository](https://
 ## Features
 
  * Intuitive model specification syntax, for example, `x ~ N(0,1)` translates to `x = Normal(0,1)`
- * Powerful sampling algorithms, such as the [No U-Turn Sampler](http://arxiv.org/abs/1111.4246), allow complex models with thousands of parameters with little specialized knowledge of fitting algorithms.
+ * **Powerful sampling algorithms**, such as the [No U-Turn Sampler](http://arxiv.org/abs/1111.4246), allow complex models with thousands of parameters with little specialized knowledge of fitting algorithms.
+ * **Variational inference**: [ADVI](http://arxiv.org/abs/1506.03431) for fast approximate posterior estimation as well as mini-batch ADVI for large data sets.
  * Easy optimization for finding the *maximum a posteriori*(MAP) point
  * [Theano](http://deeplearning.net/software/theano/) features
   * Numpy broadcasting and advanced indexing
@@ -59,12 +60,12 @@ Another option is to clone the repository and install PyMC3 using `python setup.
 ## Dependencies
 
 PyMC3 is tested on Python 2.7 and 3.3 and depends on Theano, NumPy,
-SciPy, Pandas, and Matplotlib (see setup.py for version information).
+SciPy, Pandas, and Matplotlib (see `requirements.txt` for version information).
 
 ### Optional
 
 In addtion to the above dependencies, the GLM submodule relies on
-Patsy.
+`Patsy`[http://patsy.readthedocs.io/en/latest/].
 
 [`scikits.sparse`](https://github.com/njsmith/scikits-sparse) enables sparse scaling matrices which are useful for large problems. Installation on Ubuntu is easy:
 
