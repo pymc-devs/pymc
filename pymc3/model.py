@@ -4,8 +4,9 @@ import theano.tensor as T
 from theano.tensor.var import TensorVariable
 
 from .memoize import memoize
-from .theanof import gradient, hessian
+from .theanof import gradient, hessian, inputvars
 from .vartypes import typefilter, discrete_types, continuous_types
+from .blocking import DictToArrayBijection, ArrayOrdering
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -186,6 +187,33 @@ class Model(Context, Factor):
         self.model = self
         self.verbose = verbose
 
+
+    @property
+    @memoize
+    def bijection(self):
+        vars = inputvars(self.cont_vars)
+
+        bij = DictToArrayBijection(ArrayOrdering(vars),
+                                   self.test_point)
+
+        return bij
+
+    @property
+    @memoize
+    def dict_to_array(self):
+        return self.bijection.map
+
+    @property
+    @memoize
+    def logp_array(self):
+        return self.bijection.mapf(self.fastlogp)
+
+    @property
+    @memoize
+    def dlogp_array(self):
+        vars = inputvars(self.cont_vars)
+        return self.bijection.mapf(self.fastdlogp(vars))
+
     @property
     @memoize
     def logpt(self):
@@ -195,7 +223,7 @@ class Model(Context, Factor):
 
     @property
     def varlogpt(self):
-        """Theano scalar of log-probability of the unobserved random variables 
+        """Theano scalar of log-probability of the unobserved random variables
            (excluding deterministic)."""
         factors = [var.logpt for var in self.vars]
         return T.add(*map(T.sum, factors))
@@ -566,12 +594,12 @@ class ObservedRV(Factor, TensorVariable):
                              inputs=[data], outputs=[self])
 
             self.tag.test_value = theano.compile.view_op(data).tag.test_value
-            
+
     @property
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
-        
+
 
 class MultiObservedRV(Factor):
     """Observed random variable that a model is specified in terms of.
@@ -669,7 +697,7 @@ class TransformedRV(TensorVariable):
     def init_value(self):
         """Convenience attribute to return tag.test_value"""
         return self.tag.test_value
-        
+
 def as_iterargs(data):
     if isinstance(data, tuple):
         return data
