@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Bayesian Logistic Regression with PyMC3 &mdash; PyMC3 3.0 documentation</title>
+  <title>GLM: Logistic Regression &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -113,7 +113,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="../index.html">Docs</a> &raquo;</li>
       
-    <li>Bayesian Logistic Regression with PyMC3</li>
+    <li>GLM: Logistic Regression</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -129,6 +129,137 @@
             
   
 <style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
@@ -161,17 +292,28 @@
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="bayesian-logistic-regression-with-pymc3">
-<span id="bayesian-logistic-regression-with-pymc3"></span><h1>Bayesian Logistic Regression with PyMC3<a class="headerlink" href="#bayesian-logistic-regression-with-pymc3" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="GLM:-Logistic-Regression">
+<h1>GLM: Logistic Regression<a class="headerlink" href="#GLM:-Logistic-Regression" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li>This is a reproduction with a few slight alterations of <a class="reference external" href="http://jbencook.github.io/portfolio/bayesian_logistic_regression.html">Bayesian Log Reg</a> by J. Benjamin Cook</li>
+<li>This is a reproduction with a few slight alterations of <a class="reference external" href="http://jbencook.github.io/portfolio/bayesian_logistic_regression.html">Bayesian Log
+Reg</a>
+by J. Benjamin Cook</li>
 <li>Author: Peadar Coyle and J. Benjamin Cook</li>
 <li>How likely am I to make more than $50,000 US Dollars?</li>
-<li>Exploration of model selection techniques too - I use DIC and WAIC to select the best model.</li>
+<li>Exploration of model selection techniques too - I use DIC and WAIC to
+select the best model.</li>
 <li>The convenience functions are all taken from Jon Sedars work.</li>
-<li>This example also has some explorations of the features so serves as a good example of Exploratory Data Analysis and how that can guide the model creation/ model selection process.</li>
+<li>This example also has some explorations of the features so serves as
+a good example of Exploratory Data Analysis and how that can guide
+the model creation/ model selection process.</li>
 </ul>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
@@ -190,17 +332,24 @@
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">integrate</span>
 
 <span class="kn">import</span> <span class="nn">theano</span> <span class="kn">as</span> <span class="nn">thno</span>
-<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span> 
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
 
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">run_models</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">upper_order</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39; </span>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">run_models</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">upper_order</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Convenience function:</span>
-<span class="sd">    Fit a range of pymc3 models of increasing polynomial complexity. </span>
+<span class="sd">    Fit a range of pymc3 models of increasing polynomial complexity.</span>
 <span class="sd">    Suggest limit to max order 5 since calculation time is exponential.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    
+
     <span class="n">models</span><span class="p">,</span> <span class="n">traces</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">(),</span> <span class="n">OrderedDict</span><span class="p">()</span>
 
     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">upper_order</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
@@ -214,16 +363,16 @@
             <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="n">fml</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Normal</span><span class="p">())</span>
 
             <span class="n">start_MAP</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">fmin_powell</span><span class="p">,</span> <span class="n">disp</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
-            <span class="n">traces</span><span class="p">[</span><span class="n">nm</span><span class="p">]</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start_MAP</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> 
-            
+            <span class="n">traces</span><span class="p">[</span><span class="n">nm</span><span class="p">]</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start_MAP</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
     <span class="k">return</span> <span class="n">models</span><span class="p">,</span> <span class="n">traces</span>
 
 <span class="k">def</span> <span class="nf">plot_traces</span><span class="p">(</span><span class="n">traces</span><span class="p">,</span> <span class="n">retain</span><span class="o">=</span><span class="mi">1000</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39; </span>
+    <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Convenience function:</span>
 <span class="sd">    Plot traces with overlaid means and values</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    
+
     <span class="n">ax</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">traces</span><span class="p">[</span><span class="o">-</span><span class="n">retain</span><span class="p">:],</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">traces</span><span class="o">.</span><span class="n">varnames</span><span class="p">)</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span>
         <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces</span><span class="p">[</span><span class="o">-</span><span class="n">retain</span><span class="p">:])</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()})</span>
 
@@ -231,30 +380,59 @@
         <span class="n">ax</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;{:.2f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mn</span><span class="p">),</span> <span class="n">xy</span><span class="o">=</span><span class="p">(</span><span class="n">mn</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="n">xycoords</span><span class="o">=</span><span class="s1">&#39;data&#39;</span>
                     <span class="p">,</span><span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span> <span class="n">textcoords</span><span class="o">=</span><span class="s1">&#39;offset points&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span>
                     <span class="p">,</span><span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;large&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#AA0022&#39;</span><span class="p">)</span>
-        
+
 <span class="k">def</span> <span class="nf">create_poly_modelspec</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39; </span>
+    <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Convenience function:</span>
 <span class="sd">    Create a polynomial modelspec string for patsy</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="k">return</span> <span class="p">(</span><span class="s1">&#39;income ~ educ + hours + age &#39;</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;+ np.power(age,{})&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> 
+    <span class="k">return</span> <span class="p">(</span><span class="s1">&#39;income ~ educ + hours + age &#39;</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;+ np.power(age,{})&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
                                      <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">)]))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>The <a class="reference external" href="http://archive.ics.uci.edu/ml/datasets/Adult">Adult Data Set</a> is commonly used to benchmark machine learning algorithms. The goal is to use demographic features, or variables, to predict whether an individual makes more than \$50,000 per year. The data set is almost 20 years old, and therefore, not perfect for determining the probability that I will make more than $50K, but it is a nice, simple dataset that can be used to showcase a few benefits of using Bayesian logistic regression over its frequentist counterpart.</p>
-<p>The motivation for myself to reproduce this piece of work was to learn how to use Odd Ratio in Bayesian Regression.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data&quot;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">,</span> <span class="s1">&#39;workclass&#39;</span><span class="p">,</span> <span class="s1">&#39;fnlwgt&#39;</span><span class="p">,</span> 
-                <span class="s1">&#39;education-categorical&#39;</span><span class="p">,</span> <span class="s1">&#39;educ&#39;</span><span class="p">,</span> 
+</div>
+<p>The <a class="reference external" href="http://archive.ics.uci.edu/ml/datasets/Adult">Adult Data Set</a> is
+commonly used to benchmark machine learning algorithms. The goal is to
+use demographic features, or variables, to predict whether an individual
+makes more than \$50,000 per year. The data set is almost 20 years old,
+and therefore, not perfect for determining the probability that I will
+make more than $50K, but it is a nice, simple dataset that can be used
+to showcase a few benefits of using Bayesian logistic regression over
+its frequentist counterpart.</p>
+<p>The motivation for myself to reproduce this piece of work was to learn
+how to use Odd Ratio in Bayesian Regression.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data&quot;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">,</span> <span class="s1">&#39;workclass&#39;</span><span class="p">,</span> <span class="s1">&#39;fnlwgt&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;education-categorical&#39;</span><span class="p">,</span> <span class="s1">&#39;educ&#39;</span><span class="p">,</span>
                 <span class="s1">&#39;marital-status&#39;</span><span class="p">,</span> <span class="s1">&#39;occupation&#39;</span><span class="p">,</span>
-                <span class="s1">&#39;relationship&#39;</span><span class="p">,</span> <span class="s1">&#39;race&#39;</span><span class="p">,</span> <span class="s1">&#39;sex&#39;</span><span class="p">,</span> 
-                <span class="s1">&#39;captial-gain&#39;</span><span class="p">,</span> <span class="s1">&#39;capital-loss&#39;</span><span class="p">,</span> 
-                <span class="s1">&#39;hours&#39;</span><span class="p">,</span> <span class="s1">&#39;native-country&#39;</span><span class="p">,</span> 
+                <span class="s1">&#39;relationship&#39;</span><span class="p">,</span> <span class="s1">&#39;race&#39;</span><span class="p">,</span> <span class="s1">&#39;sex&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;captial-gain&#39;</span><span class="p">,</span> <span class="s1">&#39;capital-loss&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;hours&#39;</span><span class="p">,</span> <span class="s1">&#39;native-country&#39;</span><span class="p">,</span>
                 <span class="s1">&#39;income&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">data</span>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
 </pre></div>
 </div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">data</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[8]:
+</pre></div>
+</div>
+<div class="container">
 <div>
 <table border="1" class="dataframe">
   <thead>
@@ -1380,17 +1558,38 @@
 </table>
 <p>32561 rows × 15 columns</p>
 </div></div>
-<div class="section" id="scrubbing-and-cleaning">
-<span id="scrubbing-and-cleaning"></span><h1>Scrubbing and cleaning<a class="headerlink" href="#scrubbing-and-cleaning" title="Permalink to this headline">¶</a></h1>
-<p>We need to remove any null entries in Income.
-And we also want to restrict this study to the United States.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="o">~</span><span class="n">pd</span><span class="o">.</span><span class="n">isnull</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;income&#39;</span><span class="p">])]</span>
+</div>
+<div class="section" id="Scrubbing-and-cleaning">
+<h2>Scrubbing and cleaning<a class="headerlink" href="#Scrubbing-and-cleaning" title="Permalink to this headline">¶</a></h2>
+<p>We need to remove any null entries in Income. And we also want to
+restrict this study to the United States.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="o">~</span><span class="n">pd</span><span class="o">.</span><span class="n">isnull</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;income&#39;</span><span class="p">])]</span>
 
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">data</span><span class="p">[</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;native-country&#39;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot; United-States&quot;</span><span class="p">]</span>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
 </pre></div>
 </div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">data</span><span class="p">[</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;native-country&#39;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot; United-States&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[10]:
+</pre></div>
+</div>
+<div class="container">
 <div>
 <table border="1" class="dataframe">
   <thead>
@@ -2515,38 +2714,86 @@ And we also want to restrict this study to the United States.</p>
   </tbody>
 </table>
 <p>29170 rows × 15 columns</p>
-</div><div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">income</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">*</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;income&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot; &gt;50K&quot;</span><span class="p">)</span>
+</div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">income</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">*</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;income&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot; &gt;50K&quot;</span><span class="p">)</span>
 <span class="n">age2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[[</span><span class="s1">&#39;age&#39;</span><span class="p">,</span> <span class="s1">&#39;educ&#39;</span><span class="p">,</span> <span class="s1">&#39;hours&#39;</span><span class="p">]]</span>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[[</span><span class="s1">&#39;age&#39;</span><span class="p">,</span> <span class="s1">&#39;educ&#39;</span><span class="p">,</span> <span class="s1">&#39;hours&#39;</span><span class="p">]]</span>
 <span class="n">data</span><span class="p">[</span><span class="s1">&#39;age2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">age2</span>
 <span class="n">data</span><span class="p">[</span><span class="s1">&#39;income&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">income</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">income</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mi">0</span>    <span class="mi">24720</span>
-<span class="mi">1</span>     <span class="mi">7841</span>
-<span class="n">dtype</span><span class="p">:</span> <span class="n">int64</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">income</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-<div class="section" id="exploring-the-data">
-<span id="exploring-the-data"></span><h1>Exploring the data<a class="headerlink" href="#exploring-the-data" title="Permalink to this headline">¶</a></h1>
-<p>Let us get a feel for the parameters.</p>
-<ul class="simple">
-<li>We see that age is a tailed distribution. Certainly not Gaussian!</li>
-<li>We don&#8217;t see much of a correlation between many of the features, with the exception of Age and Age2.</li>
-<li>Hours worked has some interesting behaviour. How would one describe this distribution?</li>
-</ul>
-<div class="highlight-python"><div class="highlight"><pre><span></span>
-<span class="n">g</span> <span class="o">=</span> <span class="n">seaborn</span><span class="o">.</span><span class="n">pairplot</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[13]:
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-logistic_13_0.png" /></p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># Compute the correlation matrix</span>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>0    24720
+1     7841
+dtype: int64
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Exploring-the-data">
+<h2>Exploring the data<a class="headerlink" href="#Exploring-the-data" title="Permalink to this headline">¶</a></h2>
+<p>Let us get a feel for the parameters. * We see that age is a tailed
+distribution. Certainly not Gaussian! * We don&#8217;t see much of a
+correlation between many of the features, with the exception of Age and
+Age2. * Hours worked has some interesting behaviour. How would one
+describe this distribution?</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+
+<span></span><span class="n">g</span> <span class="o">=</span> <span class="n">seaborn</span><span class="o">.</span><span class="n">pairplot</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-logistic_13_0.png" src="../_images/notebooks_GLM-logistic_13_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Compute the correlation matrix</span>
 <span class="n">corr</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">corr</span><span class="p">()</span>
 
 <span class="c1"># Generate a mask for the upper triangle</span>
@@ -2564,47 +2811,121 @@ And we also want to restrict this study to the United States.</p>
             <span class="n">linewidths</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span> <span class="n">cbar_kws</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;shrink&quot;</span><span class="p">:</span> <span class="o">.</span><span class="mi">5</span><span class="p">},</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">_subplots</span><span class="o">.</span><span class="n">AxesSubplot</span> <span class="n">at</span> <span class="mh">0x111f04990</span><span class="o">&gt;</span>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[16]:
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-logistic_14_1.png" /></p>
-<p>We see here not many strong correlations. The highest is 0.30 according to this plot. We see a weak-correlation between hours and income
-(which is logical), we see a slighty stronger correlation between education and income (which is the kind of question we are answering).</p>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x111f04990&gt;
+</pre></div>
 </div>
-<div class="section" id="the-model">
-<span id="the-model"></span><h1>The model<a class="headerlink" href="#the-model" title="Permalink to this headline">¶</a></h1>
-<p>We will use a simple model, which assumes that the probability of making more than $50K
-is a function of age, years of education and hours worked per week. We will use PyMC3
-do inference.</p>
-<p>In Bayesian statistics, we treat everything as a random variable and we want to know the posterior probability distribution of the parameters
-(in this case the regression coefficients)
-The posterior is equal to the likelihood $$p(\theta | D) = \frac{p(D|\theta)p(\theta)}{p(D)}$$</p>
-<p>Because the denominator is a notoriously difficult integral, $p(D) = \int p(D | \theta) p(\theta) d \theta $ we would prefer to skip computing it. Fortunately, if we draw examples from the parameter space, with probability proportional to the height of the posterior at any given point, we end up with an empirical distribution that converges to the posterior as the number of samples approaches infinity.</p>
-<p>What this means in practice is that we only need to worry about the numerator.</p>
-<p>Getting back to logistic regression, we need to specify a prior and a likelihood in order to draw samples from the posterior. We could use sociological knowledge about the effects of age and education on income, but instead, let&#8217;s use the default prior specification for GLM coefficients that PyMC3 gives us, which is $p(θ)=N(0,10^{12}I)$. This is a very vague prior that will let the data speak for themselves.</p>
-<p>The likelihood is the product of n Bernoulli trials, $\prod^{n}<em>{i=1} p</em>{i}^{y} (1 - p_{i})^{1-y_{i}}$,
-where $p_i = \frac{1}{1 + e^{-z_i}}$,</p>
-<p>$z_{i} = \beta_{0} + \beta_{1}(age)<em>{i} + \beta_2(age)^{2}</em>{i} + \beta_{3}(educ)<em>{i} + \beta</em>{4}(hours)<em>{i}$ and $y</em>{i} = 1$ if income is greater than 50K and $y_{i} = 0$ otherwise.</p>
-<p>With the math out of the way we can get back to the data. Here I use PyMC3 to draw samples from the posterior. The sampling algorithm used is NUTS, which is a form of Hamiltonian Monte Carlo, in which parameteres are tuned automatically. Notice, that we get to borrow the syntax of specifying GLM&#8217;s from R, very convenient! I use a convenience function from above to plot the trace infromation from the first 1000 parameters.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">logistic_model</span><span class="p">:</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-logistic_14_1.png" src="../_images/notebooks_GLM-logistic_14_1.png" />
+</div>
+</div>
+<p>We see here not many strong correlations. The highest is 0.30 according
+to this plot. We see a weak-correlation between hours and income (which
+is logical), we see a slighty stronger correlation between education and
+income (which is the kind of question we are answering).</p>
+</div>
+<div class="section" id="The-model">
+<h2>The model<a class="headerlink" href="#The-model" title="Permalink to this headline">¶</a></h2>
+<p>We will use a simple model, which assumes that the probability of making
+more than $50K is a function of age, years of education and hours worked
+per week. We will use PyMC3 do inference.</p>
+<p>In Bayesian statistics, we treat everything as a random variable and we
+want to know the posterior probability distribution of the parameters
+(in this case the regression coefficients) The posterior is equal to the
+likelihood</p>
+<div class="math">
+\[p(\theta | D) = \frac{p(D|\theta)p(\theta)}{p(D)}\]</div>
+<p>Because the denominator is a notoriously difficult integral, $p(D) =
+<a href="#id1"><span class="problematic" id="id2">:raw-latex:`\int `p(D \| :raw-latex:`</span></a>theta`) p(<a href="#id3"><span class="problematic" id="id4">:raw-latex:`\theta`</span></a>) d
+:raw-latex:<a href="#id5"><span class="problematic" id="id6">`</span></a>theta <a href="#id7"><span class="problematic" id="id8">`</span></a>$ we would prefer to skip computing it. Fortunately,
+if we draw examples from the parameter space, with probability
+proportional to the height of the posterior at any given point, we end
+up with an empirical distribution that converges to the posterior as the
+number of samples approaches infinity.</p>
+<p>What this means in practice is that we only need to worry about the
+numerator.</p>
+<p>Getting back to logistic regression, we need to specify a prior and a
+likelihood in order to draw samples from the posterior. We could use
+sociological knowledge about the effects of age and education on income,
+but instead, let&#8217;s use the default prior specification for GLM
+coefficients that PyMC3 gives us, which is <span class="math">\(p(θ)=N(0,10^{12}I)\)</span>.
+This is a very vague prior that will let the data speak for themselves.</p>
+<p>The likelihood is the product of n Bernoulli trials,
+<span class="math">\(\prod^{n}_{i=1} p_{i}^{y} (1 - p_{i})^{1-y_{i}}\)</span>, where
+<span class="math">\(p_i = \frac{1}{1 + e^{-z_i}}\)</span>,</p>
+<p><span class="math">\(z_{i} = \beta_{0} + \beta_{1}(age)_{i} + \beta_2(age)^{2}_{i} + \beta_{3}(educ)_{i} + \beta_{4}(hours)_{i}\)</span>
+and <span class="math">\(y_{i} = 1\)</span> if income is greater than 50K and
+<span class="math">\(y_{i} = 0\)</span> otherwise.</p>
+<p>With the math out of the way we can get back to the data. Here I use
+PyMC3 to draw samples from the posterior. The sampling algorithm used is
+NUTS, which is a form of Hamiltonian Monte Carlo, in which parameteres
+are tuned automatically. Notice, that we get to borrow the syntax of
+specifying GLM&#8217;s from R, very convenient! I use a convenience function
+from above to plot the trace infromation from the first 1000 parameters.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">logistic_model</span><span class="p">:</span>
     <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;income ~ age + age2 + educ + hours&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">())</span>
     <span class="n">trace_logistic_model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span> <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">583.6</span> <span class="n">sec</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+ [-----------------100%-----------------] 2000 of 2000 complete in 583.6 sec
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">plot_traces</span><span class="p">(</span><span class="n">trace_logistic_model</span><span class="p">,</span> <span class="n">retain</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plot_traces</span><span class="p">(</span><span class="n">trace_logistic_model</span><span class="p">,</span> <span class="n">retain</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-logistic_18_0.png" /></p>
 </div>
-<div class="section" id="some-results">
-<span id="some-results"></span><h1>Some results<a class="headerlink" href="#some-results" title="Permalink to this headline">¶</a></h1>
-<p>One of the major benefits that makes Bayesian data analysis worth the extra computational effort in many circumstances is that we can be explicit about our uncertainty. Maximum likelihood returns a number, but how certain can we be that we found the right number? Instead, Bayesian inference returns a distribution over parameter values.</p>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-logistic_18_0.png" src="../_images/notebooks_GLM-logistic_18_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Some-results">
+<h2>Some results<a class="headerlink" href="#Some-results" title="Permalink to this headline">¶</a></h2>
+<p>One of the major benefits that makes Bayesian data analysis worth the
+extra computational effort in many circumstances is that we can be
+explicit about our uncertainty. Maximum likelihood returns a number, but
+how certain can we be that we found the right number? Instead, Bayesian
+inference returns a distribution over parameter values.</p>
 <p>I&#8217;ll use seaborn to look at the distribution of some of these factors.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [27]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span><span class="mi">7</span><span class="p">))</span>
 <span class="n">trace</span> <span class="o">=</span> <span class="n">trace_logistic_model</span><span class="p">[</span><span class="mi">1000</span><span class="p">:]</span>
 <span class="n">seaborn</span><span class="o">.</span><span class="n">jointplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">],</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;educ&#39;</span><span class="p">],</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;hex&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#4CB391&quot;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;beta_age&quot;</span><span class="p">)</span>
@@ -2612,35 +2933,80 @@ where $p_i = \frac{1}{1 + e^{-z_i}}$,</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">Figure</span> <span class="n">at</span> <span class="mh">0x17f6efd50</span><span class="o">&gt;</span>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.figure.Figure at 0x17f6efd50&gt;
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-logistic_20_1.png" /></p>
-<p>So how do age and education affect the probability of making more than $$50K?$ To answer this question, we can show how the probability of making more than $50K changes with age for a few different education levels. Here, we assume that the number of hours worked per week is fixed at 50. PyMC3 gives us a convenient way to plot the posterior predictive distribution. We need to give the function a linear model and a set of points to evaluate. We will pass in three different linear models: one with educ == 12 (finished high school), one with educ == 16 (finished undergrad) and one with educ == 19 (three years of grad school).</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># Linear model with hours == 50 and educ == 12</span>
-<span class="n">lm</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">samples</span><span class="p">:</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">samples</span><span class="p">[</span><span class="s1">&#39;Intercept&#39;</span><span class="p">]</span> <span class="o">+</span> 
-                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span> 
-                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;age2&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> 
-                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;educ&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">12</span> <span class="o">+</span> 
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-logistic_20_1.png" src="../_images/notebooks_GLM-logistic_20_1.png" />
+</div>
+</div>
+<p>So how do age and education affect the probability of making more than
+<span class="math">\($50K?\)</span> To answer this question, we can show how the probability
+of making more than $50K changes with age for a few different education
+levels. Here, we assume that the number of hours worked per week is
+fixed at 50. PyMC3 gives us a convenient way to plot the posterior
+predictive distribution. We need to give the function a linear model and
+a set of points to evaluate. We will pass in three different linear
+models: one with educ == 12 (finished high school), one with educ == 16
+(finished undergrad) and one with educ == 19 (three years of grad
+school).</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Linear model with hours == 50 and educ == 12</span>
+<span class="n">lm</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">samples</span><span class="p">:</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">samples</span><span class="p">[</span><span class="s1">&#39;Intercept&#39;</span><span class="p">]</span> <span class="o">+</span>
+                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span>
+                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;age2&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span>
+                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;educ&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">12</span> <span class="o">+</span>
                                           <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;hours&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">50</span><span class="p">)))</span>
 
 <span class="c1"># Linear model with hours == 50 and educ == 16</span>
-<span class="n">lm2</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">samples</span><span class="p">:</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">samples</span><span class="p">[</span><span class="s1">&#39;Intercept&#39;</span><span class="p">]</span> <span class="o">+</span> 
-                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span> 
-                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;age2&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> 
-                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;educ&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">16</span> <span class="o">+</span> 
+<span class="n">lm2</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">samples</span><span class="p">:</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">samples</span><span class="p">[</span><span class="s1">&#39;Intercept&#39;</span><span class="p">]</span> <span class="o">+</span>
+                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span>
+                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;age2&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span>
+                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;educ&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">16</span> <span class="o">+</span>
                                           <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;hours&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">50</span><span class="p">)))</span>
 
 <span class="c1"># Linear model with hours == 50 and educ == 19</span>
-<span class="n">lm3</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">samples</span><span class="p">:</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">samples</span><span class="p">[</span><span class="s1">&#39;Intercept&#39;</span><span class="p">]</span> <span class="o">+</span> 
-                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span> 
-                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;age2&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> 
-                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;educ&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">19</span> <span class="o">+</span> 
+<span class="n">lm3</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">samples</span><span class="p">:</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">samples</span><span class="p">[</span><span class="s1">&#39;Intercept&#39;</span><span class="p">]</span> <span class="o">+</span>
+                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span>
+                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;age2&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span>
+                                          <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;educ&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">19</span> <span class="o">+</span>
                                           <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;hours&#39;</span><span class="p">]</span><span class="o">*</span><span class="mi">50</span><span class="p">)))</span>
 </pre></div>
 </div>
-<p>Each curve shows how the probability of earning more than $ 50K$ changes with age. The red curve represents 19 years of education, the green curve represents 16 years of education and the blue curve represents 12 years of education. For all three education levels, the probability of making more than $50K increases with age until approximately age 60, when the probability begins to drop off. Notice that each curve is a little blurry. This is because we are actually plotting 100 different curves for each level of education. Each curve is a draw from our posterior distribution. Because the curves are somewhat translucent, we can interpret dark, narrow portions of a curve as places where we have low uncertainty and light, spread out portions of the curve as places where we have somewhat higher uncertainty about our coefficient values.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># Plot the posterior predictive distributions of P(income &gt; $50K) vs. age</span>
+</div>
+<p>Each curve shows how the probability of earning more than $ 50K$ changes
+with age. The red curve represents 19 years of education, the green
+curve represents 16 years of education and the blue curve represents 12
+years of education. For all three education levels, the probability of
+making more than $50K increases with age until approximately age 60,
+when the probability begins to drop off. Notice that each curve is a
+little blurry. This is because we are actually plotting 100 different
+curves for each level of education. Each curve is a draw from our
+posterior distribution. Because the curves are somewhat translucent, we
+can interpret dark, narrow portions of a curve as places where we have
+low uncertainty and light, spread out portions of the curve as places
+where we have somewhat higher uncertainty about our coefficient values.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [57]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Plot the posterior predictive distributions of P(income &gt; $50K) vs. age</span>
 <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="nb">eval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">25</span><span class="p">,</span> <span class="mi">75</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span> <span class="n">lm</span><span class="o">=</span><span class="n">lm</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">15</span><span class="p">)</span>
 <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="nb">eval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">25</span><span class="p">,</span> <span class="mi">75</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span> <span class="n">lm</span><span class="o">=</span><span class="n">lm2</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;green&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">15</span><span class="p">)</span>
 <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="nb">eval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">25</span><span class="p">,</span> <span class="mi">75</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span> <span class="n">lm</span><span class="o">=</span><span class="n">lm3</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">15</span><span class="p">)</span>
@@ -2654,42 +3020,106 @@ where $p_i = \frac{1}{1 + e^{-z_i}}$,</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-logistic_24_0.png" /></p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">b</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;educ&#39;</span><span class="p">]</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-logistic_24_0.png" src="../_images/notebooks_GLM-logistic_24_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [29]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">b</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;educ&#39;</span><span class="p">]</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">b</span><span class="p">),</span> <span class="n">bins</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">normed</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Odds Ratio&quot;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-logistic_25_0.png" /></p>
-<p>Finally, we can find a credible interval (remember kids - credible intervals are Bayesian and confidence intervals are frequentist) for this quantity. This may be the best part about Bayesian statistics: we get to interpret credibility intervals the way we&#8217;ve always wanted to interpret them. We are 95% confident that the odds ratio lies within our interval!</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">lb</span><span class="p">,</span> <span class="n">ub</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="mf">97.5</span><span class="p">)</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-logistic_25_0.png" src="../_images/notebooks_GLM-logistic_25_0.png" />
+</div>
+</div>
+<p>Finally, we can find a credible interval (remember kids - credible
+intervals are Bayesian and confidence intervals are frequentist) for
+this quantity. This may be the best part about Bayesian statistics: we
+get to interpret credibility intervals the way we&#8217;ve always wanted to
+interpret them. We are 95% confident that the odds ratio lies within our
+interval!</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [30]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">lb</span><span class="p">,</span> <span class="n">ub</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="mf">97.5</span><span class="p">)</span>
 
 <span class="k">print</span><span class="p">(</span><span class="s2">&quot;P(</span><span class="si">%.3f</span><span class="s2"> &lt; O.R. &lt; </span><span class="si">%.3f</span><span class="s2">) = 0.95&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">3</span><span class="o">*</span><span class="n">lb</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">3</span><span class="o">*</span><span class="n">ub</span><span class="p">)))</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">P</span><span class="p">(</span><span class="mf">2.617</span> <span class="o">&lt;</span> <span class="n">O</span><span class="o">.</span><span class="n">R</span><span class="o">.</span> <span class="o">&lt;</span> <span class="mf">2.843</span><span class="p">)</span> <span class="o">=</span> <span class="mf">0.95</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+P(2.617 &lt; O.R. &lt; 2.843) = 0.95
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Model-selection">
+<h2>Model selection<a class="headerlink" href="#Model-selection" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference external" href="https://en.wikipedia.org/wiki/Deviance_information_criterion">Deviance Information Criterion
+(DIC)</a>
+is a fairly unsophisticated method for comparing the deviance of
+likelhood across the the sample traces of a model run. However, this
+simplicity apparently yields quite good results in a variety of cases.
+We&#8217;ll run the model with a few changes to see what effect higher order
+terms have on this model.</p>
+<p>One question that was immediately asked was what effect does age have on
+the model, and why should it be age^2 versus age? We&#8217;ll use the DIC to
+answer this question.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [24]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">models_lin</span><span class="p">,</span> <span class="n">traces_lin</span> <span class="o">=</span> <span class="n">run_models</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="section" id="model-selection">
-<span id="model-selection"></span><h1>Model selection<a class="headerlink" href="#model-selection" title="Permalink to this headline">¶</a></h1>
-<p>The <a class="reference external" href="https://en.wikipedia.org/wiki/Deviance_information_criterion">Deviance Information Criterion (DIC)</a> is a fairly unsophisticated method for comparing the deviance of likelhood across the the sample traces of a model run. However, this simplicity apparently yields quite good results in a variety of cases. We&#8217;ll run the model with a few changes to see what effect higher order terms have on this model.</p>
-<p>One question that was immediately asked was what effect does age have on the model, and why should it be age^2 versus age? We&#8217;ll use the DIC to answer this question.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">models_lin</span><span class="p">,</span> <span class="n">traces_lin</span> <span class="o">=</span> <span class="n">run_models</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
+Running: k1
+ [-----------------100%-----------------] 2000 of 2000 complete in 52.9 sec
+Running: k2
+ [-----------------100%-----------------] 2000 of 2000 complete in 112.5 sec
+Running: k3
+ [-----------------100%-----------------] 2000 of 2000 complete in 327.2 sec
+Running: k4
+ [-----------------100%-----------------] 2000 of 2000 complete in 1394.3 sec
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [25]:
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Running</span><span class="p">:</span> <span class="n">k1</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">52.9</span> <span class="n">sec</span>
-<span class="n">Running</span><span class="p">:</span> <span class="n">k2</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">112.5</span> <span class="n">sec</span>
-<span class="n">Running</span><span class="p">:</span> <span class="n">k3</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">327.2</span> <span class="n">sec</span>
-<span class="n">Running</span><span class="p">:</span> <span class="n">k4</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">1394.3</span> <span class="n">sec</span>
-</pre></div>
-</div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">dfdic</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">])</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dfdic</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">])</span>
 <span class="n">dfdic</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span>
 
 <span class="k">for</span> <span class="n">nm</span> <span class="ow">in</span> <span class="n">dfdic</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
@@ -2701,10 +3131,26 @@ where $p_i = \frac{1}{1 + e^{-z_i}}$,</p>
 <span class="n">g</span> <span class="o">=</span> <span class="n">seaborn</span><span class="o">.</span><span class="n">factorplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;dic&#39;</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">dfdic</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-logistic_30_0.png" /></p>
-<p>There isn&#8217;t a lot of difference between these models in terms of DIC. So our choice is fine in the model above, and there isn&#8217;t much to be gained for going up to age^3 for example.
-Next we look at <a class="reference external" href="http://watanabe-www.math.dis.titech.ac.jp/users/swatanab/dicwaic.html">WAIC</a>. Which is another model selection technique.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">dfdic</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">])</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-logistic_30_0.png" src="../_images/notebooks_GLM-logistic_30_0.png" />
+</div>
+</div>
+<p>There isn&#8217;t a lot of difference between these models in terms of DIC. So
+our choice is fine in the model above, and there isn&#8217;t much to be gained
+for going up to age^3 for example. Next we look at
+<a class="reference external" href="http://watanabe-www.math.dis.titech.ac.jp/users/swatanab/dicwaic.html">WAIC</a>.
+Which is another model selection technique.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [26]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dfdic</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">])</span>
 <span class="n">dfdic</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span>
 
 <span class="k">for</span> <span class="n">nm</span> <span class="ow">in</span> <span class="n">dfdic</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
@@ -2716,10 +3162,15 @@ Next we look at <a class="reference external" href="http://watanabe-www.math.dis
 <span class="n">g</span> <span class="o">=</span> <span class="n">seaborn</span><span class="o">.</span><span class="n">factorplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;waic&#39;</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">dfdic</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-logistic_32_0.png" /></p>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-logistic_32_0.png" src="../_images/notebooks_GLM-logistic_32_0.png" />
+</div>
+</div>
 <p>The WAIC confirms our decision to use age^2.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>
-</pre></div>
 </div>
 </div>
 

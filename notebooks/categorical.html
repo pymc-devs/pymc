@@ -129,6 +129,137 @@
             
   
 <style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
@@ -161,15 +292,33 @@
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">%</span><span class="n">pylab</span> <span class="n">inline</span> 
-<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="o">*</span> 
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Populating</span> <span class="n">the</span> <span class="n">interactive</span> <span class="n">namespace</span> <span class="kn">from</span> <span class="nn">numpy</span> <span class="ow">and</span> <span class="n">matplotlib</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">pylab</span> inline
+<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="o">*</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
-    
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Populating the interactive namespace from numpy and matplotlib
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+
     <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="mi">10</span>
     <span class="n">k</span><span class="o">=</span><span class="mi">10</span>
     <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">*</span><span class="mi">3</span>
@@ -181,86 +330,118 @@
     <span class="k">print</span> <span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span><span class="p">)</span>
     <span class="n">step</span> <span class="o">=</span> <span class="n">Metropolis</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">)</span>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
-    
+
 <span class="n">a</span> <span class="o">=</span> <span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[</span> <span class="mf">1.</span>          <span class="mf">0.9</span>         <span class="mf">0.8</span>         <span class="mf">0.7</span>         <span class="mf">0.59999999</span>  <span class="mf">0.49999999</span>
-  <span class="mf">0.39999999</span>  <span class="mf">0.29999999</span>  <span class="mf">0.19999999</span>  <span class="mf">0.1</span>       <span class="p">]</span>
-<span class="p">[</span> <span class="mf">1.</span>          <span class="mf">0.9</span>         <span class="mf">0.8</span>         <span class="mf">0.7</span>         <span class="mf">0.59999999</span>  <span class="mf">0.49999999</span>
-  <span class="mf">0.39999999</span>  <span class="mf">0.29999999</span>  <span class="mf">0.19999999</span>  <span class="mf">0.1</span>       <span class="p">]</span>
-<span class="p">{</span><span class="s1">&#39;p_simplex&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span> <span class="mf">0.</span><span class="p">,</span>  <span class="mf">0.</span><span class="p">,</span>  <span class="mf">0.</span><span class="p">,</span>  <span class="mf">0.</span><span class="p">,</span>  <span class="mf">0.</span><span class="p">,</span>  <span class="mf">0.</span><span class="p">,</span>  <span class="mf">0.</span><span class="p">,</span>  <span class="mf">0.</span><span class="p">,</span>  <span class="mf">0.</span><span class="p">])}</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">20000</span> <span class="n">of</span> <span class="mi">20000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">4.0</span> <span class="n">sec</span>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+[ 1.          0.9         0.8         0.7         0.59999999  0.49999999
+  0.39999999  0.29999999  0.19999999  0.1       ]
+[ 1.          0.9         0.8         0.7         0.59999999  0.49999999
+  0.39999999  0.29999999  0.19999999  0.1       ]
+{&#39;p_simplex&#39;: array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.])}
+ [-----------------100%-----------------] 20000 of 20000 complete in 4.0 sec
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_categorical_1_1.png" src="../_images/notebooks_categorical_1_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/categorical_1_1.png" /></p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">summary</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">summary</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">p_simplex</span><span class="p">:</span>
- 
-  <span class="n">Mean</span>             <span class="n">SD</span>               <span class="n">MC</span> <span class="n">Error</span>         <span class="mi">95</span><span class="o">%</span> <span class="n">HPD</span> <span class="n">interval</span>
-  <span class="o">-------------------------------------------------------------------</span>
-  
-  <span class="o">-</span><span class="mf">0.610</span>           <span class="mf">0.840</span>            <span class="mf">0.036</span>            <span class="p">[</span><span class="o">-</span><span class="mf">2.337</span><span class="p">,</span> <span class="mf">0.803</span><span class="p">]</span>
-  <span class="o">-</span><span class="mf">0.625</span>           <span class="mf">0.847</span>            <span class="mf">0.033</span>            <span class="p">[</span><span class="o">-</span><span class="mf">2.252</span><span class="p">,</span> <span class="mf">0.915</span><span class="p">]</span>
-  <span class="o">-</span><span class="mf">0.635</span>           <span class="mf">0.862</span>            <span class="mf">0.041</span>            <span class="p">[</span><span class="o">-</span><span class="mf">2.428</span><span class="p">,</span> <span class="mf">0.828</span><span class="p">]</span>
-  <span class="o">-</span><span class="mf">0.553</span>           <span class="mf">0.839</span>            <span class="mf">0.035</span>            <span class="p">[</span><span class="o">-</span><span class="mf">2.149</span><span class="p">,</span> <span class="mf">1.030</span><span class="p">]</span>
-  <span class="o">-</span><span class="mf">0.579</span>           <span class="mf">0.839</span>            <span class="mf">0.033</span>            <span class="p">[</span><span class="o">-</span><span class="mf">2.151</span><span class="p">,</span> <span class="mf">0.965</span><span class="p">]</span>
-  <span class="o">-</span><span class="mf">0.526</span>           <span class="mf">0.810</span>            <span class="mf">0.028</span>            <span class="p">[</span><span class="o">-</span><span class="mf">2.098</span><span class="p">,</span> <span class="mf">1.055</span><span class="p">]</span>
-  <span class="o">-</span><span class="mf">0.492</span>           <span class="mf">0.869</span>            <span class="mf">0.033</span>            <span class="p">[</span><span class="o">-</span><span class="mf">2.172</span><span class="p">,</span> <span class="mf">1.187</span><span class="p">]</span>
-  <span class="o">-</span><span class="mf">0.404</span>           <span class="mf">0.935</span>            <span class="mf">0.041</span>            <span class="p">[</span><span class="o">-</span><span class="mf">2.147</span><span class="p">,</span> <span class="mf">1.336</span><span class="p">]</span>
-  <span class="o">-</span><span class="mf">0.097</span>           <span class="mf">1.091</span>            <span class="mf">0.056</span>            <span class="p">[</span><span class="o">-</span><span class="mf">2.213</span><span class="p">,</span> <span class="mf">2.039</span><span class="p">]</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
 
-  <span class="n">Posterior</span> <span class="n">quantiles</span><span class="p">:</span>
-  <span class="mf">2.5</span>            <span class="mi">25</span>             <span class="mi">50</span>             <span class="mi">75</span>             <span class="mf">97.5</span>
-  <span class="o">|--------------|==============|==============|--------------|</span>
-  
-  <span class="o">-</span><span class="mf">2.512</span>         <span class="o">-</span><span class="mf">1.089</span>         <span class="o">-</span><span class="mf">0.493</span>         <span class="o">-</span><span class="mf">0.015</span>         <span class="mf">0.721</span>
-  <span class="o">-</span><span class="mf">2.497</span>         <span class="o">-</span><span class="mf">1.137</span>         <span class="o">-</span><span class="mf">0.529</span>         <span class="o">-</span><span class="mf">0.010</span>         <span class="mf">0.763</span>
-  <span class="o">-</span><span class="mf">2.547</span>         <span class="o">-</span><span class="mf">1.111</span>         <span class="o">-</span><span class="mf">0.548</span>         <span class="o">-</span><span class="mf">0.057</span>         <span class="mf">0.802</span>
-  <span class="o">-</span><span class="mf">2.513</span>         <span class="o">-</span><span class="mf">1.024</span>         <span class="o">-</span><span class="mf">0.462</span>         <span class="mf">0.029</span>          <span class="mf">0.826</span>
-  <span class="o">-</span><span class="mf">2.337</span>         <span class="o">-</span><span class="mf">1.059</span>         <span class="o">-</span><span class="mf">0.502</span>         <span class="mf">0.012</span>          <span class="mf">0.830</span>
-  <span class="o">-</span><span class="mf">2.322</span>         <span class="o">-</span><span class="mf">1.002</span>         <span class="o">-</span><span class="mf">0.458</span>         <span class="mf">0.020</span>          <span class="mf">0.885</span>
-  <span class="o">-</span><span class="mf">2.380</span>         <span class="o">-</span><span class="mf">1.033</span>         <span class="o">-</span><span class="mf">0.427</span>         <span class="mf">0.117</span>          <span class="mf">1.013</span>
-  <span class="o">-</span><span class="mf">2.353</span>         <span class="o">-</span><span class="mf">1.007</span>         <span class="o">-</span><span class="mf">0.341</span>         <span class="mf">0.243</span>          <span class="mf">1.239</span>
-  <span class="o">-</span><span class="mf">2.390</span>         <span class="o">-</span><span class="mf">0.783</span>         <span class="o">-</span><span class="mf">0.075</span>         <span class="mf">0.627</span>          <span class="mf">1.940</span>
+p_simplex:
+
+  Mean             SD               MC Error         95% HPD interval
+  -------------------------------------------------------------------
+
+  -0.610           0.840            0.036            [-2.337, 0.803]
+  -0.625           0.847            0.033            [-2.252, 0.915]
+  -0.635           0.862            0.041            [-2.428, 0.828]
+  -0.553           0.839            0.035            [-2.149, 1.030]
+  -0.579           0.839            0.033            [-2.151, 0.965]
+  -0.526           0.810            0.028            [-2.098, 1.055]
+  -0.492           0.869            0.033            [-2.172, 1.187]
+  -0.404           0.935            0.041            [-2.147, 1.336]
+  -0.097           1.091            0.056            [-2.213, 2.039]
+
+  Posterior quantiles:
+  2.5            25             50             75             97.5
+  |--------------|==============|==============|--------------|
+
+  -2.512         -1.089         -0.493         -0.015         0.721
+  -2.497         -1.137         -0.529         -0.010         0.763
+  -2.547         -1.111         -0.548         -0.057         0.802
+  -2.513         -1.024         -0.462         0.029          0.826
+  -2.337         -1.059         -0.502         0.012          0.830
+  -2.322         -1.002         -0.458         0.020          0.885
+  -2.380         -1.033         -0.427         0.117          1.013
+  -2.353         -1.007         -0.341         0.243          1.239
+  -2.390         -0.783         -0.075         0.627          1.940
 
 
-<span class="n">p</span><span class="p">:</span>
- 
-  <span class="n">Mean</span>             <span class="n">SD</span>               <span class="n">MC</span> <span class="n">Error</span>         <span class="mi">95</span><span class="o">%</span> <span class="n">HPD</span> <span class="n">interval</span>
-  <span class="o">-------------------------------------------------------------------</span>
-  
-  <span class="mf">0.072</span>            <span class="mf">0.047</span>            <span class="mf">0.002</span>            <span class="p">[</span><span class="mf">0.003</span><span class="p">,</span> <span class="mf">0.161</span><span class="p">]</span>
-  <span class="mf">0.074</span>            <span class="mf">0.050</span>            <span class="mf">0.002</span>            <span class="p">[</span><span class="mf">0.002</span><span class="p">,</span> <span class="mf">0.169</span><span class="p">]</span>
-  <span class="mf">0.076</span>            <span class="mf">0.052</span>            <span class="mf">0.002</span>            <span class="p">[</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.177</span><span class="p">]</span>
-  <span class="mf">0.084</span>            <span class="mf">0.054</span>            <span class="mf">0.002</span>            <span class="p">[</span><span class="mf">0.003</span><span class="p">,</span> <span class="mf">0.187</span><span class="p">]</span>
-  <span class="mf">0.086</span>            <span class="mf">0.055</span>            <span class="mf">0.002</span>            <span class="p">[</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.191</span><span class="p">]</span>
-  <span class="mf">0.093</span>            <span class="mf">0.059</span>            <span class="mf">0.002</span>            <span class="p">[</span><span class="mf">0.002</span><span class="p">,</span> <span class="mf">0.210</span><span class="p">]</span>
-  <span class="mf">0.103</span>            <span class="mf">0.067</span>            <span class="mf">0.002</span>            <span class="p">[</span><span class="mf">0.004</span><span class="p">,</span> <span class="mf">0.233</span><span class="p">]</span>
-  <span class="mf">0.117</span>            <span class="mf">0.074</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.004</span><span class="p">,</span> <span class="mf">0.262</span><span class="p">]</span>
-  <span class="mf">0.143</span>            <span class="mf">0.083</span>            <span class="mf">0.004</span>            <span class="p">[</span><span class="mf">0.005</span><span class="p">,</span> <span class="mf">0.296</span><span class="p">]</span>
-  <span class="mf">0.152</span>            <span class="mf">0.082</span>            <span class="mf">0.004</span>            <span class="p">[</span><span class="mf">0.012</span><span class="p">,</span> <span class="mf">0.306</span><span class="p">]</span>
+p:
 
-  <span class="n">Posterior</span> <span class="n">quantiles</span><span class="p">:</span>
-  <span class="mf">2.5</span>            <span class="mi">25</span>             <span class="mi">50</span>             <span class="mi">75</span>             <span class="mf">97.5</span>
-  <span class="o">|--------------|==============|==============|--------------|</span>
-  
-  <span class="mf">0.009</span>          <span class="mf">0.036</span>          <span class="mf">0.064</span>          <span class="mf">0.099</span>          <span class="mf">0.186</span>
-  <span class="mf">0.009</span>          <span class="mf">0.035</span>          <span class="mf">0.064</span>          <span class="mf">0.102</span>          <span class="mf">0.197</span>
-  <span class="mf">0.010</span>          <span class="mf">0.038</span>          <span class="mf">0.065</span>          <span class="mf">0.101</span>          <span class="mf">0.205</span>
-  <span class="mf">0.010</span>          <span class="mf">0.043</span>          <span class="mf">0.074</span>          <span class="mf">0.115</span>          <span class="mf">0.212</span>
-  <span class="mf">0.013</span>          <span class="mf">0.044</span>          <span class="mf">0.073</span>          <span class="mf">0.116</span>          <span class="mf">0.220</span>
-  <span class="mf">0.014</span>          <span class="mf">0.049</span>          <span class="mf">0.081</span>          <span class="mf">0.125</span>          <span class="mf">0.244</span>
-  <span class="mf">0.014</span>          <span class="mf">0.052</span>          <span class="mf">0.089</span>          <span class="mf">0.140</span>          <span class="mf">0.267</span>
-  <span class="mf">0.016</span>          <span class="mf">0.060</span>          <span class="mf">0.102</span>          <span class="mf">0.160</span>          <span class="mf">0.295</span>
-  <span class="mf">0.020</span>          <span class="mf">0.079</span>          <span class="mf">0.130</span>          <span class="mf">0.194</span>          <span class="mf">0.324</span>
-  <span class="mf">0.028</span>          <span class="mf">0.089</span>          <span class="mf">0.140</span>          <span class="mf">0.203</span>          <span class="mf">0.340</span>
+  Mean             SD               MC Error         95% HPD interval
+  -------------------------------------------------------------------
+
+  0.072            0.047            0.002            [0.003, 0.161]
+  0.074            0.050            0.002            [0.002, 0.169]
+  0.076            0.052            0.002            [0.001, 0.177]
+  0.084            0.054            0.002            [0.003, 0.187]
+  0.086            0.055            0.002            [0.001, 0.191]
+  0.093            0.059            0.002            [0.002, 0.210]
+  0.103            0.067            0.002            [0.004, 0.233]
+  0.117            0.074            0.003            [0.004, 0.262]
+  0.143            0.083            0.004            [0.005, 0.296]
+  0.152            0.082            0.004            [0.012, 0.306]
+
+  Posterior quantiles:
+  2.5            25             50             75             97.5
+  |--------------|==============|==============|--------------|
+
+  0.009          0.036          0.064          0.099          0.186
+  0.009          0.035          0.064          0.102          0.197
+  0.010          0.038          0.065          0.101          0.205
+  0.010          0.043          0.074          0.115          0.212
+  0.013          0.044          0.073          0.116          0.220
+  0.014          0.049          0.081          0.125          0.244
+  0.014          0.052          0.089          0.140          0.267
+  0.016          0.060          0.102          0.160          0.295
+  0.020          0.079          0.130          0.194          0.324
+  0.028          0.089          0.140          0.203          0.340
+
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
-    
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+
     <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="mi">10</span>
     <span class="n">k</span><span class="o">=</span><span class="mi">10</span>
     <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">*</span><span class="mi">3</span>
@@ -271,142 +452,251 @@
     <span class="k">print</span> <span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span><span class="p">)</span>
     <span class="n">step</span> <span class="o">=</span> <span class="n">Metropolis</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">)</span>
     <span class="n">trace2</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
-    
+
 <span class="n">a</span> <span class="o">=</span> <span class="n">traceplot</span><span class="p">(</span><span class="n">trace2</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s1">&#39;p_simplexarr&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span> <span class="mf">0.1</span><span class="p">,</span>  <span class="mf">0.1</span><span class="p">,</span>  <span class="mf">0.1</span><span class="p">,</span>  <span class="mf">0.1</span><span class="p">,</span>  <span class="mf">0.1</span><span class="p">,</span>  <span class="mf">0.1</span><span class="p">,</span>  <span class="mf">0.1</span><span class="p">,</span>  <span class="mf">0.1</span><span class="p">,</span>  <span class="mf">0.1</span><span class="p">])}</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">20000</span> <span class="n">of</span> <span class="mi">20000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">2.6</span> <span class="n">sec</span>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+{&#39;p_simplexarr&#39;: array([ 0.1,  0.1,  0.1,  0.1,  0.1,  0.1,  0.1,  0.1,  0.1])}
+ [-----------------100%-----------------] 20000 of 20000 complete in 2.6 sec
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_categorical_3_1.png" src="../_images/notebooks_categorical_3_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/categorical_3_1.png" /></p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">summary</span><span class="p">(</span><span class="n">trace2</span><span class="p">)</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">summary</span><span class="p">(</span><span class="n">trace2</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">p_simplexarr</span><span class="p">:</span>
- 
-  <span class="n">Mean</span>             <span class="n">SD</span>               <span class="n">MC</span> <span class="n">Error</span>         <span class="mi">95</span><span class="o">%</span> <span class="n">HPD</span> <span class="n">interval</span>
-  <span class="o">-------------------------------------------------------------------</span>
-  
-  <span class="mf">0.098</span>            <span class="mf">0.050</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.016</span><span class="p">,</span> <span class="mf">0.190</span><span class="p">]</span>
-  <span class="mf">0.097</span>            <span class="mf">0.051</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.012</span><span class="p">,</span> <span class="mf">0.193</span><span class="p">]</span>
-  <span class="mf">0.099</span>            <span class="mf">0.051</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.012</span><span class="p">,</span> <span class="mf">0.196</span><span class="p">]</span>
-  <span class="mf">0.107</span>            <span class="mf">0.057</span>            <span class="mf">0.004</span>            <span class="p">[</span><span class="mf">0.014</span><span class="p">,</span> <span class="mf">0.220</span><span class="p">]</span>
-  <span class="mf">0.105</span>            <span class="mf">0.054</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.016</span><span class="p">,</span> <span class="mf">0.210</span><span class="p">]</span>
-  <span class="mf">0.100</span>            <span class="mf">0.050</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.015</span><span class="p">,</span> <span class="mf">0.193</span><span class="p">]</span>
-  <span class="mf">0.102</span>            <span class="mf">0.053</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.019</span><span class="p">,</span> <span class="mf">0.213</span><span class="p">]</span>
-  <span class="mf">0.096</span>            <span class="mf">0.055</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.010</span><span class="p">,</span> <span class="mf">0.207</span><span class="p">]</span>
-  <span class="mf">0.096</span>            <span class="mf">0.047</span>            <span class="mf">0.002</span>            <span class="p">[</span><span class="mf">0.012</span><span class="p">,</span> <span class="mf">0.185</span><span class="p">]</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
 
-  <span class="n">Posterior</span> <span class="n">quantiles</span><span class="p">:</span>
-  <span class="mf">2.5</span>            <span class="mi">25</span>             <span class="mi">50</span>             <span class="mi">75</span>             <span class="mf">97.5</span>
-  <span class="o">|--------------|==============|==============|--------------|</span>
-  
-  <span class="mf">0.023</span>          <span class="mf">0.060</span>          <span class="mf">0.091</span>          <span class="mf">0.130</span>          <span class="mf">0.206</span>
-  <span class="mf">0.023</span>          <span class="mf">0.059</span>          <span class="mf">0.090</span>          <span class="mf">0.129</span>          <span class="mf">0.214</span>
-  <span class="mf">0.021</span>          <span class="mf">0.063</span>          <span class="mf">0.093</span>          <span class="mf">0.126</span>          <span class="mf">0.219</span>
-  <span class="mf">0.023</span>          <span class="mf">0.064</span>          <span class="mf">0.098</span>          <span class="mf">0.140</span>          <span class="mf">0.245</span>
-  <span class="mf">0.024</span>          <span class="mf">0.066</span>          <span class="mf">0.098</span>          <span class="mf">0.137</span>          <span class="mf">0.230</span>
-  <span class="mf">0.022</span>          <span class="mf">0.063</span>          <span class="mf">0.095</span>          <span class="mf">0.130</span>          <span class="mf">0.211</span>
-  <span class="mf">0.025</span>          <span class="mf">0.062</span>          <span class="mf">0.093</span>          <span class="mf">0.133</span>          <span class="mf">0.224</span>
-  <span class="mf">0.021</span>          <span class="mf">0.056</span>          <span class="mf">0.086</span>          <span class="mf">0.124</span>          <span class="mf">0.233</span>
-  <span class="mf">0.023</span>          <span class="mf">0.060</span>          <span class="mf">0.090</span>          <span class="mf">0.125</span>          <span class="mf">0.203</span>
+p_simplexarr:
+
+  Mean             SD               MC Error         95% HPD interval
+  -------------------------------------------------------------------
+
+  0.098            0.050            0.003            [0.016, 0.190]
+  0.097            0.051            0.003            [0.012, 0.193]
+  0.099            0.051            0.003            [0.012, 0.196]
+  0.107            0.057            0.004            [0.014, 0.220]
+  0.105            0.054            0.003            [0.016, 0.210]
+  0.100            0.050            0.003            [0.015, 0.193]
+  0.102            0.053            0.003            [0.019, 0.213]
+  0.096            0.055            0.003            [0.010, 0.207]
+  0.096            0.047            0.002            [0.012, 0.185]
+
+  Posterior quantiles:
+  2.5            25             50             75             97.5
+  |--------------|==============|==============|--------------|
+
+  0.023          0.060          0.091          0.130          0.206
+  0.023          0.059          0.090          0.129          0.214
+  0.021          0.063          0.093          0.126          0.219
+  0.023          0.064          0.098          0.140          0.245
+  0.024          0.066          0.098          0.137          0.230
+  0.022          0.063          0.095          0.130          0.211
+  0.025          0.062          0.093          0.133          0.224
+  0.021          0.056          0.086          0.124          0.233
+  0.023          0.060          0.090          0.125          0.203
 
 
-<span class="n">p</span><span class="p">:</span>
- 
-  <span class="n">Mean</span>             <span class="n">SD</span>               <span class="n">MC</span> <span class="n">Error</span>         <span class="mi">95</span><span class="o">%</span> <span class="n">HPD</span> <span class="n">interval</span>
-  <span class="o">-------------------------------------------------------------------</span>
-  
-  <span class="mf">0.098</span>            <span class="mf">0.050</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.016</span><span class="p">,</span> <span class="mf">0.190</span><span class="p">]</span>
-  <span class="mf">0.097</span>            <span class="mf">0.051</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.012</span><span class="p">,</span> <span class="mf">0.193</span><span class="p">]</span>
-  <span class="mf">0.099</span>            <span class="mf">0.051</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.012</span><span class="p">,</span> <span class="mf">0.196</span><span class="p">]</span>
-  <span class="mf">0.107</span>            <span class="mf">0.057</span>            <span class="mf">0.004</span>            <span class="p">[</span><span class="mf">0.014</span><span class="p">,</span> <span class="mf">0.220</span><span class="p">]</span>
-  <span class="mf">0.105</span>            <span class="mf">0.054</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.016</span><span class="p">,</span> <span class="mf">0.210</span><span class="p">]</span>
-  <span class="mf">0.100</span>            <span class="mf">0.050</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.015</span><span class="p">,</span> <span class="mf">0.193</span><span class="p">]</span>
-  <span class="mf">0.102</span>            <span class="mf">0.053</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.019</span><span class="p">,</span> <span class="mf">0.213</span><span class="p">]</span>
-  <span class="mf">0.096</span>            <span class="mf">0.055</span>            <span class="mf">0.003</span>            <span class="p">[</span><span class="mf">0.010</span><span class="p">,</span> <span class="mf">0.207</span><span class="p">]</span>
-  <span class="mf">0.096</span>            <span class="mf">0.047</span>            <span class="mf">0.002</span>            <span class="p">[</span><span class="mf">0.012</span><span class="p">,</span> <span class="mf">0.185</span><span class="p">]</span>
-  <span class="mf">0.099</span>            <span class="mf">0.053</span>            <span class="mf">0.001</span>            <span class="p">[</span><span class="mf">0.013</span><span class="p">,</span> <span class="mf">0.204</span><span class="p">]</span>
+p:
 
-  <span class="n">Posterior</span> <span class="n">quantiles</span><span class="p">:</span>
-  <span class="mf">2.5</span>            <span class="mi">25</span>             <span class="mi">50</span>             <span class="mi">75</span>             <span class="mf">97.5</span>
-  <span class="o">|--------------|==============|==============|--------------|</span>
-  
-  <span class="mf">0.023</span>          <span class="mf">0.060</span>          <span class="mf">0.091</span>          <span class="mf">0.130</span>          <span class="mf">0.206</span>
-  <span class="mf">0.023</span>          <span class="mf">0.059</span>          <span class="mf">0.090</span>          <span class="mf">0.129</span>          <span class="mf">0.214</span>
-  <span class="mf">0.021</span>          <span class="mf">0.063</span>          <span class="mf">0.093</span>          <span class="mf">0.126</span>          <span class="mf">0.219</span>
-  <span class="mf">0.023</span>          <span class="mf">0.064</span>          <span class="mf">0.098</span>          <span class="mf">0.140</span>          <span class="mf">0.245</span>
-  <span class="mf">0.024</span>          <span class="mf">0.066</span>          <span class="mf">0.098</span>          <span class="mf">0.137</span>          <span class="mf">0.230</span>
-  <span class="mf">0.022</span>          <span class="mf">0.063</span>          <span class="mf">0.095</span>          <span class="mf">0.130</span>          <span class="mf">0.211</span>
-  <span class="mf">0.025</span>          <span class="mf">0.062</span>          <span class="mf">0.093</span>          <span class="mf">0.133</span>          <span class="mf">0.224</span>
-  <span class="mf">0.021</span>          <span class="mf">0.056</span>          <span class="mf">0.086</span>          <span class="mf">0.124</span>          <span class="mf">0.233</span>
-  <span class="mf">0.023</span>          <span class="mf">0.060</span>          <span class="mf">0.090</span>          <span class="mf">0.125</span>          <span class="mf">0.203</span>
-  <span class="mf">0.020</span>          <span class="mf">0.059</span>          <span class="mf">0.090</span>          <span class="mf">0.130</span>          <span class="mf">0.228</span>
+  Mean             SD               MC Error         95% HPD interval
+  -------------------------------------------------------------------
+
+  0.098            0.050            0.003            [0.016, 0.190]
+  0.097            0.051            0.003            [0.012, 0.193]
+  0.099            0.051            0.003            [0.012, 0.196]
+  0.107            0.057            0.004            [0.014, 0.220]
+  0.105            0.054            0.003            [0.016, 0.210]
+  0.100            0.050            0.003            [0.015, 0.193]
+  0.102            0.053            0.003            [0.019, 0.213]
+  0.096            0.055            0.003            [0.010, 0.207]
+  0.096            0.047            0.002            [0.012, 0.185]
+  0.099            0.053            0.001            [0.013, 0.204]
+
+  Posterior quantiles:
+  2.5            25             50             75             97.5
+  |--------------|==============|==============|--------------|
+
+  0.023          0.060          0.091          0.130          0.206
+  0.023          0.059          0.090          0.129          0.214
+  0.021          0.063          0.093          0.126          0.219
+  0.023          0.064          0.098          0.140          0.245
+  0.024          0.066          0.098          0.137          0.230
+  0.022          0.063          0.095          0.130          0.211
+  0.025          0.062          0.093          0.133          0.224
+  0.021          0.056          0.086          0.124          0.233
+  0.023          0.060          0.090          0.125          0.203
+  0.020          0.059          0.090          0.130          0.228
+
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">trace</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">trace</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s1">&#39;p&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span> <span class="mf">0.</span><span class="p">,</span>  <span class="mf">0.</span><span class="p">,</span>  <span class="mf">1.</span><span class="p">]),</span>
- <span class="s1">&#39;p_simplex&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span> <span class="o">-</span><span class="mf">3.87234445e+23</span><span class="p">,</span>  <span class="o">-</span><span class="mf">1.38063818e+22</span><span class="p">])}</span>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[7]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>{&#39;p&#39;: array([ 0.,  0.,  1.]),
+ &#39;p_simplex&#39;: array([ -3.87234445e+23,  -1.38063818e+22])}
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 
-<span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">k</span><span class="o">=</span><span class="mi">3</span>
-    
+
     <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">*.</span><span class="mi">5</span>
-    
+
     <span class="n">p</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="s1">&#39;mean&#39;</span><span class="p">)</span>
     <span class="c1">#c = Categorical(&#39;c&#39;, p, observed=[0,0,1,1,0,2])</span>
 
     <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">()</span>
     <span class="n">step</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">,</span> <span class="n">scaling</span><span class="o">=</span><span class="n">guess_scaling</span><span class="p">(</span><span class="n">start</span><span class="p">)</span><span class="o">*</span><span class="mi">10</span><span class="p">)</span>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
-    
+
 <span class="n">a</span> <span class="o">=</span> <span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">guess_scaling</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">step</span><span class="o">.</span><span class="n">Hbar</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">guess_scaling</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">start</span>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-.</span><span class="mi">097</span><span class="p">)</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">step</span><span class="o">.</span><span class="n">Hbar</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">start</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-.</span><span class="mi">097</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">dlp</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">dlogp</span><span class="p">()</span>
-    
+
 <span class="n">dlp</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">find_hessian</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span>
-<span class="k">def</span> <span class="nf">conditional_pdf</span><span class="p">(</span><span class="n">variable</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">find_hessian</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+
+<span></span><span class="k">def</span> <span class="nf">conditional_pdf</span><span class="p">(</span><span class="n">variable</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">modelcontext</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> 
+    <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
         <span class="n">start</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">test_point</span>
     <span class="n">variable</span><span class="p">,</span> <span class="o">=</span> <span class="n">inputvars</span><span class="p">(</span><span class="n">variable</span><span class="p">)</span>
     <span class="n">replace</span> <span class="o">=</span> <span class="p">{</span><span class="n">model</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span> <span class="p">:</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">as_tensor_variable</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">varname</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">start</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="p">}</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">scalar</span><span class="p">(</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">variable</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
     <span class="n">x</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span> <span class="o">=</span> <span class="n">start</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">variable</span><span class="p">)][</span><span class="n">index</span><span class="p">]</span>
     <span class="n">replace</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">set_subtensor</span><span class="p">(</span><span class="n">replace</span><span class="p">[</span><span class="n">variable</span><span class="p">][</span><span class="n">index</span><span class="p">],</span> <span class="n">x</span><span class="p">)</span>
-    
+
     <span class="k">print</span> <span class="p">(</span><span class="n">replace</span><span class="p">)</span>
 
     <span class="n">logpt</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">clone</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">logpt</span><span class="p">,</span> <span class="n">replace</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
@@ -417,42 +707,117 @@
 
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">f</span> <span class="o">=</span> <span class="n">conditional_pdf</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span><span class="n">p_simplex</span><span class="p">:</span> <span class="n">IncSubtensor</span><span class="p">{</span><span class="n">Set</span><span class="p">;</span><span class="n">int64</span><span class="p">}</span><span class="o">.</span><span class="mi">0</span><span class="p">}</span>
-<span class="p">[</span><span class="n">x0</span><span class="p">]</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+{p_simplex: IncSubtensor{Set;int64}.0}
+[x0]
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">start</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">start</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s1">&#39;p_simplex&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mf">113.89917758</span><span class="p">,</span>  <span class="o">-</span><span class="mf">62.69917758</span><span class="p">])}</span>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[18]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">)</span>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>{&#39;p_simplex&#39;: array([-113.89917758,  -62.69917758])}
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">)</span>
 <span class="n">y</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">x</span><span class="p">]</span>
 <span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[</span><span class="o">&lt;</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">lines</span><span class="o">.</span><span class="n">Line2D</span> <span class="n">at</span> <span class="mh">0x10eaa3080</span><span class="o">&gt;</span><span class="p">]</span>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[7]:
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/categorical_18_1.png" /></p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">logistic</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>[&lt;matplotlib.lines.Line2D at 0x10eaa3080&gt;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_categorical_18_1.png" src="../_images/notebooks_categorical_18_1.png" />
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">logistic</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
     <span class="k">return</span> <span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span><span class="p">))</span>
 <span class="n">logistic</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.08588418</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.74669407</span><span class="p">]))</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">extra_ops</span><span class="o">.</span><span class="n">cumprod</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">])</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">array</span><span class="p">([</span>  <span class="mi">2</span><span class="p">,</span>   <span class="mi">6</span><span class="p">,</span>  <span class="mi">24</span><span class="p">,</span> <span class="mi">120</span><span class="p">])</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">extra_ops</span><span class="o">.</span><span class="n">cumprod</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">])</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[5]:
 </pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([  2,   6,  24, 120])
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
 </div>
 
 

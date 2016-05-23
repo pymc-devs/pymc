@@ -129,6 +129,137 @@
             
   
 <style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
@@ -161,9 +292,15 @@
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="bayesian-glms">
-<span id="bayesian-glms"></span><h1>Bayesian GLMs<a class="headerlink" href="#bayesian-glms" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<div class="section" id="Bayesian-GLMs">
+<h1>Bayesian GLMs<a class="headerlink" href="#Bayesian-GLMs" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span>  <span class="o">*</span>
 <span class="kn">import</span> <span class="nn">patsy</span>
@@ -176,10 +313,18 @@
 </pre></div>
 </div>
 </div>
-<div class="section" id="simple-example">
-<span id="simple-example"></span><h1>Simple example<a class="headerlink" href="#simple-example" title="Permalink to this headline">¶</a></h1>
-<p>Lets generate some data with known slope and intercept and fit a simple linear GLM.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">size</span> <span class="o">=</span> <span class="mi">50</span>
+</div>
+<div class="section" id="Simple-example">
+<h1>Simple example<a class="headerlink" href="#Simple-example" title="Permalink to this headline">¶</a></h1>
+<p>Lets generate some data with known slope and intercept and fit a simple
+linear GLM.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">size</span> <span class="o">=</span> <span class="mi">50</span>
 <span class="n">true_intercept</span> <span class="o">=</span> <span class="mi">1</span>
 <span class="n">true_slope</span> <span class="o">=</span> <span class="mi">2</span>
 
@@ -189,8 +334,16 @@
 <span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal"><span class="pre">glm.linear_component()</span></code> function can be used to generate the output variable y_est and coefficients of the specified linear model.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+</div>
+<p>The <code class="docutils literal"><span class="pre">glm.linear_component()</span></code> function can be used to generate the
+output variable y_est and coefficients of the specified linear model.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">y_est</span><span class="p">,</span> <span class="n">coeffs</span> <span class="o">=</span> <span class="n">glm</span><span class="o">.</span><span class="n">linear_component</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
     <span class="n">sigma</span> <span class="o">=</span> <span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
     <span class="n">y_obs</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y_obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">y_est</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
@@ -203,10 +356,30 @@
 <span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM_5_0.png" /></p>
-<p>Since there are a couple of general linear models that are being used over and over again (Normally distributed noise, logistic regression etc), the <code class="docutils literal"><span class="pre">glm.glm()</span></code> function simplifies the above step by creating the likelihood (y_obs) and its priors (sigma) for us. Since we are working in the model context, the random variables are all added to the model behind the scenes. This function also automatically finds a good starting point which it returns.</p>
-<p>Note that the below call to <code class="docutils literal"><span class="pre">glm()</span></code> is producing exactly the same model as above, just more succinctly.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM_5_0.png" src="../_images/notebooks_GLM_5_0.png" />
+</div>
+</div>
+<p>Since there are a couple of general linear models that are being used
+over and over again (Normally distributed noise, logistic regression
+etc), the <code class="docutils literal"><span class="pre">glm.glm()</span></code> function simplifies the above step by creating
+the likelihood (y_obs) and its priors (sigma) for us. Since we are
+working in the model context, the random variables are all added to the
+model behind the scenes. This function also automatically finds a good
+starting point which it returns.</p>
+<p>Note that the below call to <code class="docutils literal"><span class="pre">glm()</span></code> is producing exactly the same
+model as above, just more succinctly.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
@@ -215,17 +388,37 @@
 <span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM_7_0.png" /></p>
 </div>
-<div class="section" id="robust-glm">
-<span id="robust-glm"></span><h1>Robust GLM<a class="headerlink" href="#robust-glm" title="Permalink to this headline">¶</a></h1>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM_7_0.png" src="../_images/notebooks_GLM_7_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Robust-GLM">
+<h1>Robust GLM<a class="headerlink" href="#Robust-GLM" title="Permalink to this headline">¶</a></h1>
 <p>Lets try the same model but with a few outliers in the data.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">x_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">[</span><span class="o">.</span><span class="mi">1</span><span class="p">,</span> <span class="o">.</span><span class="mi">15</span><span class="p">,</span> <span class="o">.</span><span class="mi">2</span><span class="p">])</span>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">x_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">[</span><span class="o">.</span><span class="mi">1</span><span class="p">,</span> <span class="o">.</span><span class="mi">15</span><span class="p">,</span> <span class="o">.</span><span class="mi">2</span><span class="p">])</span>
 <span class="n">y_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">])</span>
 <span class="n">data_outlier</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x_out</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y_out</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data_outlier</span><span class="p">)</span>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
@@ -234,15 +427,38 @@
 <span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM_10_0.png" /></p>
-<p>Because the normal distribution does not have a lot of mass in the tails, an outlier will affect the fit strongly.</p>
-<p>Instead, we can replace the Normal likelihood with a student T distribution which has heavier tails and is more robust towards outliers. While this could be done with the <code class="docutils literal"><span class="pre">linear_compoment()</span></code> function and manually defining the T likelihood we can use the <code class="docutils literal"><span class="pre">glm()</span></code> function for more automation. By default this function uses a normal likelihood. To define the usage of a T distribution instead we can pass a family object that contains information on how to link the output to <code class="docutils literal"><span class="pre">y_est</span></code> (in this case we explicitly use the Identity link function which is also the default) and what the priors for the T distribution are. Here we fix the degrees of freedom <code class="docutils literal"><span class="pre">nu</span></code> to 1.5.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_robust</span><span class="p">:</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM_10_0.png" src="../_images/notebooks_GLM_10_0.png" />
+</div>
+</div>
+<p>Because the normal distribution does not have a lot of mass in the
+tails, an outlier will affect the fit strongly.</p>
+<p>Instead, we can replace the Normal likelihood with a student T
+distribution which has heavier tails and is more robust towards
+outliers. While this could be done with the <code class="docutils literal"><span class="pre">linear_compoment()</span></code>
+function and manually defining the T likelihood we can use the <code class="docutils literal"><span class="pre">glm()</span></code>
+function for more automation. By default this function uses a normal
+likelihood. To define the usage of a T distribution instead we can pass
+a family object that contains information on how to link the output to
+<code class="docutils literal"><span class="pre">y_est</span></code> (in this case we explicitly use the Identity link function
+which is also the default) and what the priors for the T distribution
+are. Here we fix the degrees of freedom <code class="docutils literal"><span class="pre">nu</span></code> to 1.5.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_robust</span><span class="p">:</span>
     <span class="n">family</span> <span class="o">=</span> <span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">StudentT</span><span class="p">(</span><span class="n">link</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">links</span><span class="o">.</span><span class="n">Identity</span><span class="p">,</span>
-                                         <span class="n">priors</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;nu&#39;</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">,</span>
-                                                   <span class="s1">&#39;lam&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="n">Uniform</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">))})</span>
+                                                 <span class="n">priors</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;nu&#39;</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">,</span>
+                                                               <span class="s1">&#39;lam&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="n">Uniform</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">))})</span>
     <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x&#39;</span><span class="p">,</span> <span class="n">data_outlier</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">family</span><span class="p">)</span>
-    
+
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">Slice</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
@@ -250,14 +466,34 @@
 <span class="n">glm</span><span class="o">.</span><span class="n">plot_posterior_predictive</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM_12_0.png" /></p>
 </div>
-<div class="section" id="hierarchical-glm">
-<span id="hierarchical-glm"></span><h1>Hierarchical GLM<a class="headerlink" href="#hierarchical-glm" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">sat_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/Guber1999data.txt&#39;</span><span class="p">)</span>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM_12_0.png" src="../_images/notebooks_GLM_12_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Hierarchical-GLM">
+<h1>Hierarchical GLM<a class="headerlink" href="#Hierarchical-GLM" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_sat</span><span class="p">:</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">sat_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/Guber1999data.txt&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_sat</span><span class="p">:</span>
     <span class="n">grp_mean</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;grp_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
     <span class="n">grp_sd</span> <span class="o">=</span> <span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;grp_sd&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
 
@@ -268,17 +504,37 @@
           <span class="s1">&#39;salary&#39;</span><span class="p">:</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">grp_sd</span><span class="p">),</span>
           <span class="s1">&#39;prcnt_take&#39;</span><span class="p">:</span> <span class="n">Normal</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">grp_sd</span><span class="p">)</span>
     <span class="p">}</span>
-    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;</span><span class="p">,</span> 
+    <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;</span><span class="p">,</span>
                     <span class="n">sat_data</span><span class="p">,</span>
                 <span class="n">priors</span><span class="o">=</span><span class="n">priors</span><span class="p">)</span>
     <span class="n">trace_sat</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_sat</span><span class="p">),</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">12</span><span class="p">));</span>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM_16_0.png" /></p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_sat</span><span class="p">:</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_sat</span><span class="p">),</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">12</span><span class="p">));</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM_16_0.png" src="../_images/notebooks_GLM_16_0.png" />
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [35]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_sat</span><span class="p">:</span>
     <span class="n">grp_mean</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;grp_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
     <span class="n">grp_prec</span> <span class="o">=</span> <span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;grp_prec&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=.</span><span class="mi">1</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
     <span class="n">slope</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">grp_mean</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">grp_prec</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -288,11 +544,31 @@
     <span class="n">trace_sat</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_sat</span><span class="p">),</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">12</span><span class="p">));</span>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [39]:
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM_18_0.png" /></p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">tdf_gain</span> <span class="o">=</span> <span class="mf">5.</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_sat</span><span class="p">),</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">12</span><span class="p">));</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM_18_0.png" src="../_images/notebooks_GLM_18_0.png" />
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [41]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">tdf_gain</span> <span class="o">=</span> <span class="mf">5.</span>
 <span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_sat</span><span class="p">:</span>
     <span class="n">grp_mean</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;grp_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
     <span class="n">grp_prec</span> <span class="o">=</span> <span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;grp_prec&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">beta</span><span class="o">=.</span><span class="mi">1</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
@@ -311,12 +587,26 @@
 </pre></div>
 </div>
 </div>
-<div class="section" id="logistic-regression">
-<span id="logistic-regression"></span><h1>Logistic Regression<a class="headerlink" href="#logistic-regression" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">htwt_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/HtWt.csv&#39;</span><span class="p">)</span>
+</div>
+<div class="section" id="Logistic-Regression">
+<h1>Logistic Regression<a class="headerlink" href="#Logistic-Regression" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">htwt_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/HtWt.csv&#39;</span><span class="p">)</span>
 <span class="n">htwt_data</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[4]:
+</pre></div>
+</div>
+<div class="container">
 <div style="max-height:1000px;max-width:1500px;overflow:auto;">
 <table border="1" class="dataframe">
   <thead>
@@ -360,58 +650,103 @@
     </tr>
   </tbody>
 </table>
-</div><div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">m</span> <span class="o">=</span> <span class="n">glm_sm</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">sm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">())</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+</div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">m</span> <span class="o">=</span> <span class="n">glm_sm</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">sm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">())</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
 <span class="k">print</span> <span class="n">m</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span>                 <span class="n">Generalized</span> <span class="n">Linear</span> <span class="n">Model</span> <span class="n">Regression</span> <span class="n">Results</span>                  
-<span class="o">==============================================================================</span>
-<span class="n">Dep</span><span class="o">.</span> <span class="n">Variable</span><span class="p">:</span>                   <span class="n">male</span>   <span class="n">No</span><span class="o">.</span> <span class="n">Observations</span><span class="p">:</span>                   <span class="mi">70</span>
-<span class="n">Model</span><span class="p">:</span>                            <span class="n">GLM</span>   <span class="n">Df</span> <span class="n">Residuals</span><span class="p">:</span>                       <span class="mi">67</span>
-<span class="n">Model</span> <span class="n">Family</span><span class="p">:</span>                <span class="n">Binomial</span>   <span class="n">Df</span> <span class="n">Model</span><span class="p">:</span>                            <span class="mi">2</span>
-<span class="n">Link</span> <span class="n">Function</span><span class="p">:</span>                  <span class="n">logit</span>   <span class="n">Scale</span><span class="p">:</span>                             <span class="mf">1.0</span>
-<span class="n">Method</span><span class="p">:</span>                          <span class="n">IRLS</span>   <span class="n">Log</span><span class="o">-</span><span class="n">Likelihood</span><span class="p">:</span>                <span class="o">-</span><span class="mf">28.298</span>
-<span class="n">Date</span><span class="p">:</span>                <span class="n">Mon</span><span class="p">,</span> <span class="mi">15</span> <span class="n">Jul</span> <span class="mi">2013</span>   <span class="n">Deviance</span><span class="p">:</span>                       <span class="mf">56.597</span>
-<span class="n">Time</span><span class="p">:</span>                        <span class="mi">09</span><span class="p">:</span><span class="mi">01</span><span class="p">:</span><span class="mi">52</span>   <span class="n">Pearson</span> <span class="n">chi2</span><span class="p">:</span>                     <span class="mf">62.8</span>
-<span class="n">No</span><span class="o">.</span> <span class="n">Iterations</span><span class="p">:</span>                     <span class="mi">7</span>                                         
-<span class="o">==============================================================================</span>
-                 <span class="n">coef</span>    <span class="n">std</span> <span class="n">err</span>          <span class="n">t</span>      <span class="n">P</span><span class="o">&gt;|</span><span class="n">t</span><span class="o">|</span>      <span class="p">[</span><span class="mf">95.0</span><span class="o">%</span> <span class="n">Conf</span><span class="o">.</span> <span class="n">Int</span><span class="o">.</span><span class="p">]</span>
-<span class="o">------------------------------------------------------------------------------</span>
-<span class="n">Intercept</span>    <span class="o">-</span><span class="mf">45.2059</span>     <span class="mf">10.887</span>     <span class="o">-</span><span class="mf">4.152</span>      <span class="mf">0.000</span>       <span class="o">-</span><span class="mf">66.545</span>   <span class="o">-</span><span class="mf">23.867</span>
-<span class="n">height</span>         <span class="mf">0.6571</span>      <span class="mf">0.164</span>      <span class="mf">4.018</span>      <span class="mf">0.000</span>         <span class="mf">0.337</span>     <span class="mf">0.978</span>
-<span class="n">weight</span>         <span class="mf">0.0096</span>      <span class="mf">0.011</span>      <span class="mf">0.892</span>      <span class="mf">0.376</span>        <span class="o">-</span><span class="mf">0.012</span>     <span class="mf">0.031</span>
-<span class="o">==============================================================================</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+                 Generalized Linear Model Regression Results
+==============================================================================
+Dep. Variable:                   male   No. Observations:                   70
+Model:                            GLM   Df Residuals:                       67
+Model Family:                Binomial   Df Model:                            2
+Link Function:                  logit   Scale:                             1.0
+Method:                          IRLS   Log-Likelihood:                -28.298
+Date:                Mon, 15 Jul 2013   Deviance:                       56.597
+Time:                        09:01:52   Pearson chi2:                     62.8
+No. Iterations:                     7
+==============================================================================
+                 coef    std err          t      P&gt;|t|      [95.0% Conf. Int.]
+------------------------------------------------------------------------------
+Intercept    -45.2059     10.887     -4.152      0.000       -66.545   -23.867
+height         0.6571      0.164      4.018      0.000         0.337     0.978
+weight         0.0096      0.011      0.892      0.376        -0.012     0.031
+==============================================================================
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_htwt</span><span class="p">:</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_htwt</span><span class="p">:</span>
     <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">())</span>
     <span class="n">trace_htwt</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">trace_df</span> <span class="o">=</span> <span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_htwt</span><span class="p">)</span>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">trace_df</span> <span class="o">=</span> <span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_htwt</span><span class="p">)</span>
 <span class="k">print</span> <span class="n">trace_df</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;count&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 <span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_df</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">));</span>
 <span class="k">print</span> <span class="s2">&quot;P(weight &lt; 0) = &quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">trace_df</span><span class="p">[</span><span class="s1">&#39;weight&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 <span class="k">print</span> <span class="s2">&quot;P(height &lt; 0) = &quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">trace_df</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span>                <span class="n">mean</span>        <span class="n">std</span>        <span class="nb">min</span>        <span class="mi">25</span><span class="o">%</span>        <span class="mi">50</span><span class="o">%</span>        <span class="mi">75</span><span class="o">%</span>  \
-<span class="n">Intercept</span> <span class="o">-</span><span class="mf">52.471967</span>  <span class="mf">11.956980</span> <span class="o">-</span><span class="mf">88.497183</span> <span class="o">-</span><span class="mf">59.442733</span> <span class="o">-</span><span class="mf">51.819902</span> <span class="o">-</span><span class="mf">43.486117</span>   
-<span class="n">height</span>      <span class="mf">0.763006</span>   <span class="mf">0.180745</span>   <span class="mf">0.359032</span>   <span class="mf">0.630974</span>   <span class="mf">0.750271</span>   <span class="mf">0.865600</span>   
-<span class="n">weight</span>      <span class="mf">0.010924</span>   <span class="mf">0.010590</span>  <span class="o">-</span><span class="mf">0.014231</span>   <span class="mf">0.003520</span>   <span class="mf">0.010437</span>   <span class="mf">0.018188</span>   
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+                mean        std        min        25%        50%        75%  \
+Intercept -52.471967  11.956980 -88.497183 -59.442733 -51.819902 -43.486117
+height      0.763006   0.180745   0.359032   0.630974   0.750271   0.865600
+weight      0.010924   0.010590  -0.014231   0.003520   0.010437   0.018188
 
-                 <span class="nb">max</span>  
-<span class="n">Intercept</span> <span class="o">-</span><span class="mf">25.443466</span>  
-<span class="n">height</span>      <span class="mf">1.298437</span>  
-<span class="n">weight</span>      <span class="mf">0.048876</span>  
-<span class="n">P</span><span class="p">(</span><span class="n">weight</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">=</span>  <span class="mf">0.154</span>
-<span class="n">P</span><span class="p">(</span><span class="n">height</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">=</span>  <span class="mf">0.0</span>
+                 max
+Intercept -25.443466
+height      1.298437
+weight      0.048876
+P(weight &lt; 0) =  0.154
+P(height &lt; 0) =  0.0
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM_24_1.png" src="../_images/notebooks_GLM_24_1.png" />
+</div>
+</div>
+<div class="section" id="Bayesian-Logistic-Lasso">
+<h2>Bayesian Logistic Lasso<a class="headerlink" href="#Bayesian-Logistic-Lasso" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM_24_1.png" /></p>
-<div class="section" id="bayesian-logistic-lasso">
-<span id="bayesian-logistic-lasso"></span><h2>Bayesian Logistic Lasso<a class="headerlink" href="#bayesian-logistic-lasso" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">lp</span> <span class="o">=</span> <span class="n">Laplace</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">lp</span> <span class="o">=</span> <span class="n">Laplace</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
 <span class="n">x_eval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-.</span><span class="mi">5</span><span class="p">,</span> <span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_eval</span><span class="p">,</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">lp</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">x_eval</span><span class="p">))</span><span class="o">.</span><span class="n">eval</span><span class="p">())</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
@@ -419,8 +754,21 @@
 <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Laplace distribution&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM_26_0.png" /></p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_lasso</span><span class="p">:</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM_26_0.png" src="../_images/notebooks_GLM_26_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_lasso</span><span class="p">:</span>
     <span class="c1">#grp_lambda = Uniform(&#39;grp_lambda&#39;, 0.00001, 10)</span>
 
     <span class="c1"># Define priors for intercept and regression coefficients.</span>
@@ -430,26 +778,38 @@
     <span class="p">}</span>
     <span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;male ~ height + weight&#39;</span><span class="p">,</span> <span class="n">htwt_data</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Binomial</span><span class="p">(),</span>
                     <span class="n">priors</span><span class="o">=</span><span class="n">priors</span><span class="p">)</span>
-    
+
     <span class="n">trace_lasso</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
-    
+
 <span class="n">trace_df</span> <span class="o">=</span> <span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">trace_lasso</span><span class="p">)</span>
 <span class="n">scatter_matrix</span><span class="p">(</span><span class="n">trace_df</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">));</span>
 <span class="k">print</span> <span class="n">trace_df</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;count&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span>                <span class="n">mean</span>       <span class="n">std</span>        <span class="nb">min</span>        <span class="mi">25</span><span class="o">%</span>        <span class="mi">50</span><span class="o">%</span>        <span class="mi">75</span><span class="o">%</span>  \
-<span class="n">Intercept</span> <span class="o">-</span><span class="mf">22.348449</span>  <span class="mf">7.145352</span> <span class="o">-</span><span class="mf">44.688989</span> <span class="o">-</span><span class="mf">27.898570</span> <span class="o">-</span><span class="mf">22.252590</span> <span class="o">-</span><span class="mf">16.166471</span>   
-<span class="n">height</span>      <span class="mf">0.308687</span>  <span class="mf">0.106537</span>   <span class="mf">0.096913</span>   <span class="mf">0.226177</span>   <span class="mf">0.310946</span>   <span class="mf">0.382381</span>   
-<span class="n">weight</span>      <span class="mf">0.011768</span>  <span class="mf">0.008298</span>  <span class="o">-</span><span class="mf">0.005977</span>   <span class="mf">0.005996</span>   <span class="mf">0.011636</span>   <span class="mf">0.016593</span>   
-
-                <span class="nb">max</span>  
-<span class="n">Intercept</span> <span class="o">-</span><span class="mf">9.122010</span>  
-<span class="n">height</span>     <span class="mf">0.650051</span>  
-<span class="n">weight</span>     <span class="mf">0.041575</span>  
-</pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM_27_1.png" /></p>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+                mean       std        min        25%        50%        75%  \
+Intercept -22.348449  7.145352 -44.688989 -27.898570 -22.252590 -16.166471
+height      0.308687  0.106537   0.096913   0.226177   0.310946   0.382381
+weight      0.011768  0.008298  -0.005977   0.005996   0.011636   0.016593
+
+                max
+Intercept -9.122010
+height     0.650051
+weight     0.041575
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM_27_1.png" src="../_images/notebooks_GLM_27_1.png" />
+</div>
+</div>
 </div>
 </div>
 

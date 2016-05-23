@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>PyMC3 Examples &mdash; PyMC3 3.0 documentation</title>
+  <title>GLM Model Selection &mdash; PyMC3 3.0 documentation</title>
   
 
   
@@ -32,8 +32,8 @@
   
     <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="Bayesian Rolling Regression in PyMC3" href="rolling_regression.html"/>
-        <link rel="prev" title="PyMC3 Examples" href="GLM-robust-with-outlier-detection.html"/> 
+        <link rel="next" title="Rolling Regression" href="rolling_regression.html"/>
+        <link rel="prev" title="GLM Robust Regression with Outlier Detection" href="GLM-robust-with-outlier-detection.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -87,98 +87,47 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">The Inference Button: Bayesian GLMs made easy with PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">This world is far from Normal(ly distributed): Bayesian Robust Regression in PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html#robust-regression">Robust Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">PyMC3 Examples</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html#glm-robust-regression-with-outlier-detection">GLM Robust Regression with Outlier Detection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html#setup">Setup</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html#create-conventional-ols-model">Create Conventional OLS Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html#create-robust-model-student-t-method">Create Robust Model: Student-T Method</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html#create-robust-model-with-outliers-hogg-method">Create Robust Model with Outliers: Hogg Method</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html#declare-outliers-and-compare-plots">Declare Outliers and Compare Plots</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">PyMC3 Examples</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#glm-model-selection">GLM Model Selection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#setup">Setup</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#local-functions">Local Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">GLM Model Selection</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Local-Functions">Local Functions</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#generate-toy-datasets">Generate Toy Datasets</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#interactively-draft-data">Interactively Draft Data</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#create-datasets-for-modelling">Create Datasets for Modelling</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#scatterplot-against-model-line">Scatterplot against model line</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#standardize">Standardize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Generate-Toy-Datasets">Generate Toy Datasets</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Interactively-Draft-Data">Interactively Draft Data</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Create-Datasets-for-Modelling">Create Datasets for Modelling</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Standardize">Standardize</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#Demonstrate-Simple-Linear-Model">Demonstrate Simple Linear Model</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Define-model-using-ordinary-pymc3-method">Define model using ordinary pymc3 method</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Define-model-using-pymc3-GLM-method">Define model using pymc3 GLM method</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#demonstrate-simple-linear-model">Demonstrate Simple Linear Model</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#define-model-using-ordinary-pymc3-method">Define model using ordinary pymc3 method</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#view-traces-after-burn-in">View Traces after burn-in</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Create-Higher-Order-Linear-Models">Create Higher-Order Linear Models</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Create-and-run-polynomial-models">Create and run polynomial models</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#define-model-using-pymc3-glm-method">Define model using pymc3 GLM method</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#view-traces-after-burn-in">View Traces after burn-in</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#A-really-bad-method-for-model-selection:-compare-likelihoods">A really bad method for model selection: compare likelihoods</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#View-posterior-predictive-fit">View posterior predictive fit</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#Compare-Deviance-Information-Criterion-[DIC]">Compare Deviance Information Criterion [DIC]</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Compare-Watanabe---Akaike-Information-Criterion-[WAIC]">Compare Watanabe - Akaike Information Criterion [WAIC]</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#TODO">TODO</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#K-Fold-Cross-Validation-and/or-Leave-One-Out-(LOO)">K-Fold Cross Validation and/or Leave-One-Out (LOO)</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#create-higher-order-linear-models">Create Higher-Order Linear Models</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#create-and-run-polynomial-models">Create and run polynomial models</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#a-really-bad-method-for-model-selection-compare-likelihoods">A really bad method for model selection: compare likelihoods</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#evaluate-log-likelihoods-straight-from-model-logp">Evaluate log likelihoods straight from model.logp</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#plot-log-likelihoods">Plot log-likelihoods</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Bayes-Factor">Bayes Factor</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#view-posterior-predictive-fit">View posterior predictive fit</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#compare-deviance-information-criterion-dic">Compare Deviance Information Criterion [DIC]</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#manual-calculation-probably-error-prone">Manual calculation, probably error-prone</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#or-we-could-use-the-newly-created-function-in-stats-py-much-better">Or we could use the newly created function in <code class="docutils literal"><span class="pre">stats.py</span></code>, much better!</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#now-loop-through-all-the-models-and-calculate-the-dic">Now loop through all the models and calculate the DIC</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#compare-watanabe-akaike-information-criterion-waic">Compare Watanabe - Akaike Information Criterion [WAIC]</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#this-time-go-straight-for-the-implementation-in-pymc3">This time go straight for the implementation in pymc3</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#now-loop-through-all-the-models-and-calculate-the-waic">Now loop through all the models and calculate the WAIC</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#todo">TODO</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#k-fold-cross-validation-and-or-leave-one-out-loo">K-Fold Cross Validation and/or Leave-One-Out (LOO)</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#left-for-future-development-should-be-easy-enough">Left for future development - should be easy enough</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#bayes-factor">Bayes Factor</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#will-be-left-for-future-development-scipy-only-useful-for-2d-and-3d-beyond-that-dragons">Will be left for future development - scipy only useful for 2D and 3D. Beyond that, dragons.</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Bayesian Rolling Regression in PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">The best of both worlds: Hierarchical Linear Regression in PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html#the-models">The Models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html#probabilistic-programming">Probabilistic Programming</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html#posterior-predictive-check">Posterior Predictive Check</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html#shrinkage">Shrinkage</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html#summary">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html#data">Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html#methods">Methods</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html#evaluation">Evaluation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html#results">Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html#summary">Summary</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#motivation">Motivation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#what-do-we-want-to-infer">What do we want to infer?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#what-do-we-want">What do we want?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#what-assumptions-do-we-know-for-our-generative-story">What assumptions do we know for our &#8216;generative story&#8217;?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#the-model">The model.</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#building-of-the-model">Building of the model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#results">Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#covariates">Covariates.</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks in PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html#prediction">Prediction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
@@ -217,7 +166,7 @@
       
           <li><a href="../examples.html">Examples</a> &raquo;</li>
       
-    <li>PyMC3 Examples</li>
+    <li>GLM Model Selection</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -233,6 +182,137 @@
             
   
 <style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
@@ -265,39 +345,63 @@
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="pymc3-examples">
-<span id="pymc3-examples"></span><h1>PyMC3 Examples<a class="headerlink" href="#pymc3-examples" title="Permalink to this headline">¶</a></h1>
-</div>
-<div class="section" id="glm-model-selection">
-<span id="glm-model-selection"></span><h1>GLM Model Selection<a class="headerlink" href="#glm-model-selection" title="Permalink to this headline">¶</a></h1>
-<p><strong>A fairly minimal reproducable example of Model Selection using DIC and WAIC.</strong></p>
+<div class="section" id="GLM-Model-Selection">
+<h1>GLM Model Selection<a class="headerlink" href="#GLM-Model-Selection" title="Permalink to this headline">¶</a></h1>
+<p><strong>A fairly minimal reproducable example of Model Selection using DIC and
+WAIC.</strong></p>
 <ul class="simple">
-<li>This example creates two toy datasets under linear and quadratic models, and then tests the fit of a range of polynomial linear models upon those datasets by using the Deviance Information Criterion (DIC) and Watanabe - Akaike (or Widest Available) Information Criterion (WAIC).</li>
-<li>DIC (<code class="docutils literal"><span class="pre">stats.dic</span></code>) and WAIC (<code class="docutils literal"><span class="pre">stats.waic</span></code>) are new additions to PyMC3, so this example shows their usage in a more concrete fashion, also usage of the new <code class="docutils literal"><span class="pre">glm</span></code> submodule.</li>
-<li>The example was inspired by Jake Vanderplas&#8217; <a class="reference external" href="https://jakevdp.github.io/blog/2015/08/07/frequentism-and-bayesianism-5-model-selection/">recent blogpost</a> on model selection, although in this first iteration, Cross-Validation and Bayes Factor comparison are not implemented.</li>
-<li>The datasets are tiny and generated within this Notebook. They contain errors in the measured value (y) only.</li>
+<li>This example creates two toy datasets under linear and quadratic
+models, and then tests the fit of a range of polynomial linear models
+upon those datasets by using the Deviance Information Criterion (DIC)
+and Watanabe - Akaike (or Widest Available) Information Criterion
+(WAIC).</li>
+<li>DIC (<code class="docutils literal"><span class="pre">stats.dic</span></code>) and WAIC (<code class="docutils literal"><span class="pre">stats.waic</span></code>) are new additions to
+PyMC3, so this example shows their usage in a more concrete fashion,
+also usage of the new <code class="docutils literal"><span class="pre">glm</span></code> submodule.</li>
+<li>The example was inspired by Jake Vanderplas&#8217; <a class="reference external" href="https://jakevdp.github.io/blog/2015/08/07/frequentism-and-bayesianism-5-model-selection/">recent
+blogpost</a>
+on model selection, although in this first iteration,
+Cross-Validation and Bayes Factor comparison are not implemented.</li>
+<li>The datasets are tiny and generated within this Notebook. They
+contain errors in the measured value (y) only.</li>
 </ul>
-<p>For more information on Model Selection in PyMC3, and about DIC and WAIC, you could start with:</p>
+<p>For more information on Model Selection in PyMC3, and about DIC and
+WAIC, you could start with:</p>
 <ul class="simple">
-<li>Thomas Wiecki&#8217;s <a class="reference external" href="https://stats.stackexchange.com/questions/161082/bayesian-model-selection-in-pymc3/166383#166383">detailed response</a> to a question on Cross Validated</li>
-<li>The Deviance Information Criterion: 12 Years On <a class="reference external" href="http://onlinelibrary.wiley.com/doi/10.1111/rssb.12062/abstract">(Speigelhalter et al 2014)</a></li>
-<li>A Widely Applicable Bayesian Information Criterion <a class="reference external" href="http://www.jmlr.org/papers/volume14/watanabe13a/watanabe13a.pdf">(Watanabe 2013)</a></li>
-<li>Efficient Implementation of Leave-One-Out Cross-Validation and WAIC for Evaluating Fitted Bayesian Models <a class="reference external" href="http://arxiv.org/abs/1507.04544">(Gelman et al 2015)</a></li>
+<li>Thomas Wiecki&#8217;s <a class="reference external" href="https://stats.stackexchange.com/questions/161082/bayesian-model-selection-in-pymc3/166383#166383">detailed
+response</a>
+to a question on Cross Validated</li>
+<li>The Deviance Information Criterion: 12 Years On <a class="reference external" href="http://onlinelibrary.wiley.com/doi/10.1111/rssb.12062/abstract">(Speigelhalter et al
+2014)</a></li>
+<li>A Widely Applicable Bayesian Information Criterion <a class="reference external" href="http://www.jmlr.org/papers/volume14/watanabe13a/watanabe13a.pdf">(Watanabe
+2013)</a></li>
+<li>Efficient Implementation of Leave-One-Out Cross-Validation and WAIC
+for Evaluating Fitted Bayesian Models <a class="reference external" href="http://arxiv.org/abs/1507.04544">(Gelman et al
+2015)</a></li>
 </ul>
 <p><strong>Contents</strong></p>
 <ul class="simple">
 <li><a class="reference external" href="#Setup">Setup</a></li>
 <li><a class="reference external" href="#Generate-Toy-Datasets">Generate Toy Datasets</a></li>
-<li><a class="reference external" href="#Demonstrate-Simple-Linear-Model">Demonstrate Simple Linear Model</a></li>
-<li><a class="reference external" href="#Create-Higher-Order-Linear-Models">Create Higher-Order Linear Models</a></li>
-<li><a class="reference external" href="#Compare-Deviance-Information-Criterion-[DIC]">Compare Deviance Information Criterion (DIC)</a></li>
-<li><a class="reference external" href="#Compare-Watanabe---Akaike-Information-Criterion-[WAIC]">Compare Watanabe-Akaike Information Criterion (WAIC)</a></li>
+<li><a class="reference external" href="#Demonstrate-Simple-Linear-Model">Demonstrate Simple Linear
+Model</a></li>
+<li><a class="reference external" href="#Create-Higher-Order-Linear-Models">Create Higher-Order Linear
+Models</a></li>
+<li><a class="reference external" href="#Compare-Deviance-Information-Criterion-%5BDIC%5D">Compare Deviance Information Criterion
+(DIC)</a></li>
+<li><a class="reference external" href="#Compare-Watanabe---Akaike-Information-Criterion-%5BWAIC%5D">Compare Watanabe-Akaike Information Criterion
+(WAIC)</a></li>
 </ul>
 <p><strong>Note:</strong></p>
 <ul class="simple">
-<li>Python 3.4 project using latest available <a class="reference external" href="https://github.com/pymc-devs/pymc3">PyMC3</a></li>
-<li>Developed using <a class="reference external" href="https://www.continuum.io/downloads">ContinuumIO Anaconda</a> distribution on a Macbook Pro 3GHz i7, 16GB RAM, OSX 10.10.5.</li>
-<li>Finally, if runs become unstable or Theano throws weird errors, try clearing the cache <code class="docutils literal"><span class="pre">$&gt;</span> <span class="pre">theano-cache</span> <span class="pre">clear</span></code> and rerunning the notebook.</li>
+<li>Python 3.4 project using latest available
+<a class="reference external" href="https://github.com/pymc-devs/pymc3">PyMC3</a></li>
+<li>Developed using <a class="reference external" href="https://www.continuum.io/downloads">ContinuumIO
+Anaconda</a> distribution on a
+Macbook Pro 3GHz i7, 16GB RAM, OSX 10.10.5.</li>
+<li>Finally, if runs become unstable or Theano throws weird errors, try
+clearing the cache <code class="docutils literal"><span class="pre">$&gt;</span> <span class="pre">theano-cache</span> <span class="pre">clear</span></code> and rerunning the
+notebook.</li>
 </ul>
 <p><strong>Package Requirements (shown as a conda-env YAML):</strong></p>
 <div class="highlight-default"><div class="highlight"><pre><span></span>$&gt; less conda_env_pymc3_examples.yml
@@ -315,7 +419,7 @@ name: pymc3_examples
       - matplotlib
       - pandas
       - seaborn
-      - patsy  
+      - patsy
       - pip
 
 $&gt; conda env create --file conda_env_pymc3_examples.yml
@@ -325,17 +429,29 @@ $&gt; source activate pymc3_examples
 $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/pymc3
 </pre></div>
 </div>
+<div class="section" id="Setup">
+<h2>Setup<a class="headerlink" href="#Setup" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
 </div>
-<div class="section" id="setup">
-<span id="setup"></span><h1>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
-<span class="o">%</span><span class="n">qtconsole</span> <span class="o">--</span><span class="n">colors</span><span class="o">=</span><span class="n">linux</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="o">%</span><span class="k">qtconsole</span> --colors=linux
 
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
 <span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
@@ -348,7 +464,7 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">import</span> <span class="nn">theano</span> <span class="kn">as</span> <span class="nn">thno</span>
-<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span> 
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
 
 <span class="kn">from</span> <span class="nn">IPython.html.widgets</span> <span class="kn">import</span> <span class="n">interactive</span><span class="p">,</span> <span class="n">fixed</span>
 
@@ -359,10 +475,17 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <span class="n">rndst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="section" id="local-functions">
-<span id="local-functions"></span><h2>Local Functions<a class="headerlink" href="#local-functions" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">generate_data</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39; </span>
+</div>
+<div class="section" id="Local-Functions">
+<h3>Local Functions<a class="headerlink" href="#Local-Functions" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">generate_data</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Create a toy dataset based on a very simple model that we might</span>
 <span class="sd">    imagine is a noisy physical process:</span>
 <span class="sd">        1. random x values within a range</span>
@@ -370,50 +493,50 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <span class="sd">        3. optionally create labelled outliers with larger noise</span>
 
 <span class="sd">    Model form: y ~ a + bx + cx^2 + e</span>
-<span class="sd">    </span>
+
 <span class="sd">    NOTE: latent_sigma_y is used to create a normally distributed,</span>
-<span class="sd">    &#39;latent error&#39; aka &#39;inherent noise&#39; in the &#39;physical process&#39; </span>
-<span class="sd">    generating thses values, rather than experimental measurement error. </span>
-<span class="sd">    Please don&#39;t use the returned `latent_error` values in inferential </span>
+<span class="sd">    &#39;latent error&#39; aka &#39;inherent noise&#39; in the &#39;physical process&#39;</span>
+<span class="sd">    generating thses values, rather than experimental measurement error.</span>
+<span class="sd">    Please don&#39;t use the returned `latent_error` values in inferential</span>
 <span class="sd">    models, it&#39;s returned in e dataframe for interest only.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    
+
     <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span><span class="n">rndst</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span><span class="n">n</span><span class="p">,</span><span class="n">replace</span><span class="o">=</span><span class="bp">False</span><span class="p">)})</span>
-                
+
     <span class="c1">## create linear or quadratic model</span>
-    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">*</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span> <span class="o">+</span> <span class="n">c</span><span class="o">*</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span> 
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">*</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span> <span class="o">+</span> <span class="n">c</span><span class="o">*</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span>
 
     <span class="c1">## create latent noise and marked outliers</span>
     <span class="n">df</span><span class="p">[</span><span class="s1">&#39;latent_error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rndst</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">latent_sigma_y</span><span class="p">,</span><span class="n">n</span><span class="p">)</span>
     <span class="n">df</span><span class="p">[</span><span class="s1">&#39;outlier_error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rndst</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">latent_sigma_y</span><span class="o">*</span><span class="mi">10</span><span class="p">,</span><span class="n">n</span><span class="p">)</span>
     <span class="n">df</span><span class="p">[</span><span class="s1">&#39;outlier&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rndst</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">p</span><span class="p">,</span><span class="n">n</span><span class="p">)</span>
-    
+
     <span class="c1">## add noise, with extreme noise for marked outliers</span>
     <span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="p">((</span><span class="mi">1</span><span class="o">-</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;outlier&#39;</span><span class="p">])</span> <span class="o">*</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;latent_error&#39;</span><span class="p">])</span>
     <span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;outlier&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;outlier_error&#39;</span><span class="p">])</span>
-   
+
     <span class="c1">## round</span>
     <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">,</span><span class="s1">&#39;latent_error&#39;</span><span class="p">,</span><span class="s1">&#39;outlier_error&#39;</span><span class="p">,</span><span class="s1">&#39;x&#39;</span><span class="p">]:</span>
         <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">],</span><span class="mi">3</span><span class="p">)</span>
-       
+
     <span class="c1">## add label</span>
     <span class="n">df</span><span class="p">[</span><span class="s1">&#39;source&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;linear&#39;</span> <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">&#39;quadratic&#39;</span>
-    
+
     <span class="c1">## create simple linspace for plotting true model</span>
     <span class="n">plotx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">*.</span><span class="mi">1</span>
                         <span class="p">,</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">*.</span><span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
     <span class="n">ploty</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">*</span><span class="n">plotx</span> <span class="o">+</span> <span class="n">c</span><span class="o">*</span><span class="n">plotx</span><span class="o">**</span><span class="mi">2</span>
     <span class="n">dfp</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span><span class="n">plotx</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span><span class="n">ploty</span><span class="p">})</span>
-    
+
     <span class="k">return</span> <span class="n">df</span><span class="p">,</span> <span class="n">dfp</span>
-    
+
 
 <span class="k">def</span> <span class="nf">interact_dataset</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a</span><span class="o">=-</span><span class="mi">30</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39; </span>
+    <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Convenience function:</span>
 <span class="sd">    Interactively generate dataset and plot</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    
+
     <span class="n">df</span><span class="p">,</span> <span class="n">dfp</span> <span class="o">=</span> <span class="n">generate_data</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="p">)</span>
 
     <span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">FacetGrid</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;outlier&#39;</span><span class="p">,</span> <span class="n">hue_order</span><span class="o">=</span><span class="p">[</span><span class="bp">True</span><span class="p">,</span><span class="bp">False</span><span class="p">]</span>
@@ -427,17 +550,17 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
     <span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">top</span><span class="o">=</span><span class="mf">0.92</span><span class="p">)</span>
     <span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s1">&#39;Sketch of Data Generation ({})&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;source&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
                        <span class="p">,</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
-        
+
 
 <span class="k">def</span> <span class="nf">plot_datasets</span><span class="p">(</span><span class="n">df_lin</span><span class="p">,</span> <span class="n">df_quad</span><span class="p">,</span> <span class="n">dfp_lin</span><span class="p">,</span> <span class="n">dfp_quad</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Convenience function:</span>
 <span class="sd">    Plot the two generated datasets in facets with generative model</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    
+
     <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">((</span><span class="n">df_lin</span><span class="p">,</span> <span class="n">df_quad</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">dfp_lin</span><span class="p">,</span> <span class="n">dfp_quad</span>
-   
+
     <span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">FacetGrid</span><span class="p">(</span><span class="n">col</span><span class="o">=</span><span class="s1">&#39;source&#39;</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;source&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">6</span>
                       <span class="p">,</span><span class="n">sharey</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">legend_out</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
@@ -445,14 +568,14 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 
     <span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">dfp_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">dfp_lin</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
     <span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">dfp_quad</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">dfp_quad</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
-                
-        
+
+
 <span class="k">def</span> <span class="nf">plot_traces</span><span class="p">(</span><span class="n">traces</span><span class="p">,</span> <span class="n">retain</span><span class="o">=</span><span class="mi">1000</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39; </span>
+    <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Convenience function:</span>
 <span class="sd">    Plot traces with overlaid means and values</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    
+
     <span class="n">ax</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">traces</span><span class="p">[</span><span class="o">-</span><span class="n">retain</span><span class="p">:],</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">traces</span><span class="o">.</span><span class="n">varnames</span><span class="p">)</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span>
         <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces</span><span class="p">[</span><span class="o">-</span><span class="n">retain</span><span class="p">:])</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()})</span>
 
@@ -460,24 +583,24 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
         <span class="n">ax</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;{:.2f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mn</span><span class="p">),</span> <span class="n">xy</span><span class="o">=</span><span class="p">(</span><span class="n">mn</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="n">xycoords</span><span class="o">=</span><span class="s1">&#39;data&#39;</span>
                     <span class="p">,</span><span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span> <span class="n">textcoords</span><span class="o">=</span><span class="s1">&#39;offset points&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span>
                     <span class="p">,</span><span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;large&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#AA0022&#39;</span><span class="p">)</span>
-    
-    
+
+
 <span class="k">def</span> <span class="nf">create_poly_modelspec</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39; </span>
+    <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Convenience function:</span>
 <span class="sd">    Create a polynomial modelspec string for patsy</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="k">return</span> <span class="p">(</span><span class="s1">&#39;y ~ 1 + x &#39;</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;+ np.power(x,{})&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> 
+    <span class="k">return</span> <span class="p">(</span><span class="s1">&#39;y ~ 1 + x &#39;</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;+ np.power(x,{})&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
                                      <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">)]))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
 
 <span class="k">def</span> <span class="nf">run_models</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">upper_order</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39; </span>
+    <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Convenience function:</span>
-<span class="sd">    Fit a range of pymc3 models of increasing polynomial complexity. </span>
+<span class="sd">    Fit a range of pymc3 models of increasing polynomial complexity.</span>
 <span class="sd">    Suggest limit to max order 5 since calculation time is exponential.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    
+
     <span class="n">models</span><span class="p">,</span> <span class="n">traces</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">(),</span> <span class="n">OrderedDict</span><span class="p">()</span>
 
     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">upper_order</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
@@ -491,8 +614,8 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
             <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="n">fml</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Normal</span><span class="p">())</span>
 
             <span class="n">start_MAP</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">fmin_powell</span><span class="p">,</span> <span class="n">disp</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
-            <span class="n">traces</span><span class="p">[</span><span class="n">nm</span><span class="p">]</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start_MAP</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> 
-            
+            <span class="n">traces</span><span class="p">[</span><span class="n">nm</span><span class="p">]</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start_MAP</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
     <span class="k">return</span> <span class="n">models</span><span class="p">,</span> <span class="n">traces</span>
 
 
@@ -502,7 +625,7 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <span class="sd">    Convenience function:</span>
 <span class="sd">    Plot posterior predictions with credible regions shown as filled areas.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
-    
+
     <span class="c1">## Get traces and calc posterior prediction for npoints in x</span>
     <span class="n">npoints</span> <span class="o">=</span> <span class="mi">100</span>
     <span class="n">mdl</span> <span class="o">=</span> <span class="n">models</span><span class="p">[</span><span class="n">modelnm</span><span class="p">]</span>
@@ -538,74 +661,140 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 
 </pre></div>
 </div>
-<hr class="docutils" />
 </div>
 </div>
-<hr class="docutils" />
-<div class="section" id="generate-toy-datasets">
-<span id="generate-toy-datasets"></span><h1>Generate Toy Datasets<a class="headerlink" href="#generate-toy-datasets" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="interactively-draft-data">
-<span id="interactively-draft-data"></span><h2>Interactively Draft Data<a class="headerlink" href="#interactively-draft-data" title="Permalink to this headline">¶</a></h2>
-<p>Throughout the rest of the Notebook, we&#8217;ll use two toy datasets created by a linear and a quadratic model respectively, so that we can better evaluate the fit of the model selection.</p>
-<p>Right now, lets use an interactive session to play around with the data generation function in this Notebook, and get a feel for the possibilities of data we could generate.</p>
-<p>$$y_{i} = a + bx_{i} + cx_{i}^{2} + \epsilon_{i}$$</p>
-<p>where:$i \in n$ datapoints
-$\epsilon \sim \mathcal{N}(0,latent_sigma_y)$</p>
+</div>
+<div class="section" id="Generate-Toy-Datasets">
+<h2>Generate Toy Datasets<a class="headerlink" href="#Generate-Toy-Datasets" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Interactively-Draft-Data">
+<h3>Interactively Draft Data<a class="headerlink" href="#Interactively-Draft-Data" title="Permalink to this headline">¶</a></h3>
+<p>Throughout the rest of the Notebook, we&#8217;ll use two toy datasets created
+by a linear and a quadratic model respectively, so that we can better
+evaluate the fit of the model selection.</p>
+<p>Right now, lets use an interactive session to play around with the data
+generation function in this Notebook, and get a feel for the
+possibilities of data we could generate.</p>
+<div class="math">
+\[y_{i} = a + bx_{i} + cx_{i}^{2} + \epsilon_{i}\]</div>
+<div class="line-block">
+<div class="line">where:</div>
+<div class="line"><span class="math">\(i \in n\)</span> datapoints
+<span class="math">\(\epsilon \sim \mathcal{N}(0,latent\_sigma\_y)\)</span></div>
+</div>
 <p><strong>NOTE on outliers:</strong></p>
 <ul class="simple">
-<li>We can use value <code class="docutils literal"><span class="pre">p</span></code> to set the (approximate) proportion of &#8216;outliers&#8217; under a bernoulli distribution.</li>
+<li>We can use value <code class="docutils literal"><span class="pre">p</span></code> to set the (approximate) proportion of
+&#8216;outliers&#8217; under a bernoulli distribution.</li>
 <li>These outliers have a 10x larger <code class="docutils literal"><span class="pre">latent_sigma_y</span></code></li>
-<li>These outliers are labelled in the returned datasets and may be useful for other modelling, see another example Notebook <code class="docutils literal"><span class="pre">GLM-robust-with-outlier-detection.ipynb</span></code></li>
+<li>These outliers are labelled in the returned datasets and may be
+useful for other modelling, see another example Notebook
+<code class="docutils literal"><span class="pre">GLM-robust-with-outlier-detection.ipynb</span></code></li>
 </ul>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">interactive</span><span class="p">(</span><span class="n">interact_dataset</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">5</span><span class="p">],</span> <span class="n">p</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="o">.</span><span class="mi">5</span><span class="p">,</span><span class="o">.</span><span class="mo">05</span><span class="p">],</span> <span class="n">a</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">50</span><span class="p">,</span><span class="mi">50</span><span class="p">]</span>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">interactive</span><span class="p">(</span><span class="n">interact_dataset</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">5</span><span class="p">],</span> <span class="n">p</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="o">.</span><span class="mi">5</span><span class="p">,</span><span class="o">.</span><span class="mo">05</span><span class="p">],</span> <span class="n">a</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">50</span><span class="p">,</span><span class="mi">50</span><span class="p">]</span>
             <span class="p">,</span><span class="n">b</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="n">latent_sigma_y</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1000</span><span class="p">,</span><span class="mi">50</span><span class="p">])</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-model-selection_10_0.png" /></p>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-model-selection_9_0.png" src="../_images/notebooks_GLM-model-selection_9_0.png" />
+</div>
+</div>
 <p><strong>Observe:</strong></p>
 <ul class="simple">
-<li>I&#8217;ve shown the <code class="docutils literal"><span class="pre">latent_error</span></code> in errorbars, but this is for interest only, since this shows the <em>inherent noise</em> in whatever &#8216;physical process&#8217; we imagine created the data.</li>
+<li>I&#8217;ve shown the <code class="docutils literal"><span class="pre">latent_error</span></code> in errorbars, but this is for
+interest only, since this shows the <em>inherent noise</em> in whatever
+&#8216;physical process&#8217; we imagine created the data.</li>
 <li>There is no <em>measurement error</em>.</li>
-<li>Datapoints created as outliers are shown in <strong>red</strong>, again for interest only.</li>
+<li>Datapoints created as outliers are shown in <strong>red</strong>, again for
+interest only.</li>
 </ul>
 </div>
-<div class="section" id="create-datasets-for-modelling">
-<span id="create-datasets-for-modelling"></span><h2>Create Datasets for Modelling<a class="headerlink" href="#create-datasets-for-modelling" title="Permalink to this headline">¶</a></h2>
-<p>We can use the above interactive plot to get a feel for the effect of the params. Now we&#8217;ll create 2 fixed datasets to use for the remainder of the Notebook.</p>
-<ol class="simple">
-<li>For a start, we&#8217;ll create a linear model with small noise. Keep it simple.</li>
+<div class="section" id="Create-Datasets-for-Modelling">
+<h3>Create Datasets for Modelling<a class="headerlink" href="#Create-Datasets-for-Modelling" title="Permalink to this headline">¶</a></h3>
+<p>We can use the above interactive plot to get a feel for the effect of
+the params. Now we&#8217;ll create 2 fixed datasets to use for the remainder
+of the Notebook.</p>
+<ol class="arabic simple">
+<li>For a start, we&#8217;ll create a linear model with small noise. Keep it
+simple.</li>
 <li>Secondly, a quadratic model with small noise</li>
 </ol>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">12</span>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">12</span>
 <span class="n">df_lin</span><span class="p">,</span> <span class="n">dfp_lin</span> <span class="o">=</span> <span class="n">generate_data</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a</span><span class="o">=-</span><span class="mi">30</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="o">=</span><span class="mi">40</span><span class="p">)</span>
 <span class="n">df_quad</span><span class="p">,</span> <span class="n">dfp_quad</span> <span class="o">=</span> <span class="n">generate_data</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a</span><span class="o">=-</span><span class="mi">200</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="section" id="scatterplot-against-model-line">
-<span id="scatterplot-against-model-line"></span><h3>Scatterplot against model line<a class="headerlink" href="#scatterplot-against-model-line" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">plot_datasets</span><span class="p">(</span><span class="n">df_lin</span><span class="p">,</span> <span class="n">df_quad</span><span class="p">,</span> <span class="n">dfp_lin</span><span class="p">,</span> <span class="n">dfp_quad</span><span class="p">)</span>
+</div>
+<div class="section" id="Scatterplot-against-model-line">
+<h4>Scatterplot against model line<a class="headerlink" href="#Scatterplot-against-model-line" title="Permalink to this headline">¶</a></h4>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-model-selection_16_0.png" /></p>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plot_datasets</span><span class="p">(</span><span class="n">df_lin</span><span class="p">,</span> <span class="n">df_quad</span><span class="p">,</span> <span class="n">dfp_lin</span><span class="p">,</span> <span class="n">dfp_quad</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-model-selection_15_0.png" src="../_images/notebooks_GLM-model-selection_15_0.png" />
+</div>
+</div>
 <p><strong>Observe:</strong></p>
 <ul class="simple">
-<li>We now have two datasets <code class="docutils literal"><span class="pre">df_lin</span></code> and <code class="docutils literal"><span class="pre">df_quad</span></code> created by a linear model and quadratic model respectively.</li>
-<li>You can see this raw data, the ideal model fit and the effect of the latent noise in the scatterplots above</li>
-<li>In the folowing plots in this Notebook, the linear-generated data will be shown in Blue and the quadratic in Green.</li>
+<li>We now have two datasets <code class="docutils literal"><span class="pre">df_lin</span></code> and <code class="docutils literal"><span class="pre">df_quad</span></code> created by a
+linear model and quadratic model respectively.</li>
+<li>You can see this raw data, the ideal model fit and the effect of the
+latent noise in the scatterplots above</li>
+<li>In the folowing plots in this Notebook, the linear-generated data
+will be shown in Blue and the quadratic in Green.</li>
 </ul>
 </div>
-<div class="section" id="standardize">
-<span id="standardize"></span><h3>Standardize<a class="headerlink" href="#standardize" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">dfs_lin</span> <span class="o">=</span> <span class="n">df_lin</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+</div>
+<div class="section" id="Standardize">
+<h3>Standardize<a class="headerlink" href="#Standardize" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dfs_lin</span> <span class="o">=</span> <span class="n">df_lin</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">df_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">df_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="n">df_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
 
 <span class="n">dfs_quad</span> <span class="o">=</span> <span class="n">df_quad</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="n">dfs_quad</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">df_quad</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">df_quad</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="n">df_quad</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
 </pre></div>
 </div>
-<div class="section" id="create-ranges-for-later-ylim-xim">
-<span id="create-ranges-for-later-ylim-xim"></span><h4>Create ranges for later ylim xim<a class="headerlink" href="#create-ranges-for-later-ylim-xim" title="Permalink to this headline">¶</a></h4>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">dfs_lin_xlims</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span>
+</div>
+<div class="section" id="Create-ranges-for-later-ylim-xim">
+<h4>Create ranges for later ylim xim<a class="headerlink" href="#Create-ranges-for-later-ylim-xim" title="Permalink to this headline">¶</a></h4>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dfs_lin_xlims</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span>
                  <span class="p">,</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span>
 
 <span class="n">dfs_lin_ylims</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span>
@@ -615,24 +804,30 @@ $\epsilon \sim \mathcal{N}(0,latent_sigma_y)$</p>
                  <span class="p">,</span><span class="n">dfs_quad</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_quad</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span>
 </pre></div>
 </div>
-<hr class="docutils" />
 </div>
 </div>
 </div>
 </div>
-<hr class="docutils" />
-<div class="section" id="demonstrate-simple-linear-model">
-<span id="demonstrate-simple-linear-model"></span><h1>Demonstrate Simple Linear Model<a class="headerlink" href="#demonstrate-simple-linear-model" title="Permalink to this headline">¶</a></h1>
-<p>This <em>linear model</em> is really simple and conventional, an OLS with L2 constraints (Ridge Regression):</p>
-<p>$$y = a + bx + \epsilon$$</p>
-<div class="section" id="define-model-using-ordinary-pymc3-method">
-<span id="define-model-using-ordinary-pymc3-method"></span><h2>Define model using ordinary pymc3 method<a class="headerlink" href="#define-model-using-ordinary-pymc3-method" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_ols</span><span class="p">:</span>
-        
+<div class="section" id="Demonstrate-Simple-Linear-Model">
+<h2>Demonstrate Simple Linear Model<a class="headerlink" href="#Demonstrate-Simple-Linear-Model" title="Permalink to this headline">¶</a></h2>
+<p>This <em>linear model</em> is really simple and conventional, an OLS with L2
+constraints (Ridge Regression):</p>
+<div class="math">
+\[y = a + bx + \epsilon\]</div>
+<div class="section" id="Define-model-using-ordinary-pymc3-method">
+<h3>Define model using ordinary pymc3 method<a class="headerlink" href="#Define-model-using-ordinary-pymc3-method" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_ols</span><span class="p">:</span>
+
     <span class="c1">## define Normal priors to give Ridge regression</span>
     <span class="n">b0</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b0&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
     <span class="n">b1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b1&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
- 
+
     <span class="c1">## define Linear model</span>
     <span class="n">yest</span> <span class="o">=</span> <span class="n">b0</span> <span class="o">+</span> <span class="n">b1</span> <span class="o">*</span> <span class="n">df_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
 
@@ -645,110 +840,204 @@ $\epsilon \sim \mathcal{N}(0,latent_sigma_y)$</p>
     <span class="n">traces_ols</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start_MAP</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Optimization</span> <span class="n">terminated</span> <span class="n">successfully</span><span class="o">.</span>
-         <span class="n">Current</span> <span class="n">function</span> <span class="n">value</span><span class="p">:</span> <span class="mf">75.099693</span>
-         <span class="n">Iterations</span><span class="p">:</span> <span class="mi">8</span>
-         <span class="n">Function</span> <span class="n">evaluations</span><span class="p">:</span> <span class="mi">303</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">2.5</span> <span class="n">sec</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Optimization terminated successfully.
+         Current function value: 75.099693
+         Iterations: 8
+         Function evaluations: 303
+ [-----------------100%-----------------] 2000 of 2000 complete in 2.5 sec
+</pre></div></div>
+</div>
+<div class="section" id="View-Traces-after-burn-in">
+<h4>View Traces after burn-in<a class="headerlink" href="#View-Traces-after-burn-in" title="Permalink to this headline">¶</a></h4>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
 </pre></div>
 </div>
-<div class="section" id="view-traces-after-burn-in">
-<span id="view-traces-after-burn-in"></span><h3>View Traces after burn-in<a class="headerlink" href="#view-traces-after-burn-in" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">plot_traces</span><span class="p">(</span><span class="n">traces_ols</span><span class="p">,</span> <span class="n">retain</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plot_traces</span><span class="p">(</span><span class="n">traces_ols</span><span class="p">,</span> <span class="n">retain</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-model-selection_28_0.png" /></p>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-model-selection_26_0.png" src="../_images/notebooks_GLM-model-selection_26_0.png" />
+</div>
+</div>
 <p><strong>Observe:</strong></p>
 <ul class="simple">
-<li>This simple OLS manages to make fairly good guesses on the model parameters - the data has been generated fairly simply after all - but it does appear to have been fooled slightly by the inherent noise.</li>
+<li>This simple OLS manages to make fairly good guesses on the model
+parameters - the data has been generated fairly simply after all -
+but it does appear to have been fooled slightly by the inherent
+noise.</li>
 </ul>
 </div>
 </div>
-<div class="section" id="define-model-using-pymc3-glm-method">
-<span id="define-model-using-pymc3-glm-method"></span><h2>Define model using pymc3 GLM method<a class="headerlink" href="#define-model-using-pymc3-glm-method" title="Permalink to this headline">¶</a></h2>
-<p>PyMC3 has a quite recently developed method - <code class="docutils literal"><span class="pre">glm</span></code> - for defining models using a <code class="docutils literal"><span class="pre">patsy</span></code>-style formula syntax. This seems really useful, especially for defining simple regression models in fewer lines of code.</p>
-<p>I couldn&#8217;t find a direct comparison in the the examples, so before I launch into using <code class="docutils literal"><span class="pre">glm</span></code> for the rest of the Notebook, here&#8217;s the same OLS model as above, defined using <code class="docutils literal"><span class="pre">glm</span></code>.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_ols_glm</span><span class="p">:</span>
+<div class="section" id="Define-model-using-pymc3-GLM-method">
+<h3>Define model using pymc3 GLM method<a class="headerlink" href="#Define-model-using-pymc3-GLM-method" title="Permalink to this headline">¶</a></h3>
+<p>PyMC3 has a quite recently developed method - <code class="docutils literal"><span class="pre">glm</span></code> - for defining
+models using a <code class="docutils literal"><span class="pre">patsy</span></code>-style formula syntax. This seems really useful,
+especially for defining simple regression models in fewer lines of code.</p>
+<p>I couldn&#8217;t find a direct comparison in the the examples, so before I
+launch into using <code class="docutils literal"><span class="pre">glm</span></code> for the rest of the Notebook, here&#8217;s the same
+OLS model as above, defined using <code class="docutils literal"><span class="pre">glm</span></code>.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_ols_glm</span><span class="p">:</span>
 
     <span class="c1"># setup model with Normal likelihood (which uses HalfCauchy for error prior)</span>
     <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ 1 + x&#39;</span><span class="p">,</span> <span class="n">df_lin</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Normal</span><span class="p">())</span>
-    
+
     <span class="c1">## sample using NUTS (starting from MAP found using powell)</span>
     <span class="n">start_MAP</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">fmin_powell</span><span class="p">,</span> <span class="n">disp</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
     <span class="n">traces_ols_glm</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start_MAP</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Optimization</span> <span class="n">terminated</span> <span class="n">successfully</span><span class="o">.</span>
-         <span class="n">Current</span> <span class="n">function</span> <span class="n">value</span><span class="p">:</span> <span class="mf">93.518364</span>
-         <span class="n">Iterations</span><span class="p">:</span> <span class="mi">7</span>
-         <span class="n">Function</span> <span class="n">evaluations</span><span class="p">:</span> <span class="mi">273</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">4.7</span> <span class="n">sec</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Optimization terminated successfully.
+         Current function value: 93.518364
+         Iterations: 7
+         Function evaluations: 273
+ [-----------------100%-----------------] 2000 of 2000 complete in 4.7 sec
+</pre></div></div>
+</div>
+<div class="section" id="View-Traces-after-burn-in">
+<h4>View Traces after burn-in<a class="headerlink" href="#View-Traces-after-burn-in" title="Permalink to this headline">¶</a></h4>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
 </pre></div>
 </div>
-<div class="section" id="view-traces-after-burn-in">
-<span id="id1"></span><h3>View Traces after burn-in<a class="headerlink" href="#view-traces-after-burn-in" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">plot_traces</span><span class="p">(</span><span class="n">traces_ols_glm</span><span class="p">,</span> <span class="n">retain</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plot_traces</span><span class="p">(</span><span class="n">traces_ols_glm</span><span class="p">,</span> <span class="n">retain</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-model-selection_34_0.png" /></p>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-model-selection_32_0.png" src="../_images/notebooks_GLM-model-selection_32_0.png" />
+</div>
+</div>
 <p><strong>Observe:</strong></p>
 <ul>
-<li><p class="first">The output parameters are of course named differently to the custom naming before. Now we have:</p>
-<p><code class="docutils literal"><span class="pre">b0</span> <span class="pre">==</span> <span class="pre">Intercept</span></code><code class="docutils literal"><span class="pre">b1</span> <span class="pre">==</span> <span class="pre">x</span></code><code class="docutils literal"><span class="pre">sigma_y_log</span> <span class="pre">==</span> <span class="pre">sd_log</span></code><code class="docutils literal"><span class="pre">sigma_y</span> <span class="pre">==</span> <span class="pre">sd</span></code></p>
+<li><p class="first">The output parameters are of course named differently to the custom
+naming before. Now we have:</p>
+<div class="line-block">
+<div class="line"><code class="docutils literal"><span class="pre">b0</span> <span class="pre">==</span> <span class="pre">Intercept</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">b1</span> <span class="pre">==</span> <span class="pre">x</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">sigma_y_log</span> <span class="pre">==</span> <span class="pre">sd_log</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">sigma_y</span> <span class="pre">==</span> <span class="pre">sd</span></code></div>
+</div>
+</li>
+<li><p class="first">However, naming aside, this <code class="docutils literal"><span class="pre">glm</span></code>-defined model appears to behave
+in a very similar way, and finds the same parameter values as the
+conventionally-defined model - any differences are due to the random
+nature of the sampling.</p>
+</li>
+<li><p class="first">We can quite happily use the <code class="docutils literal"><span class="pre">glm</span></code> syntax for further models below,
+since it allows us to create a small model factory very easily.</p>
 </li>
 </ul>
-<ul class="simple">
-<li>However, naming aside, this <code class="docutils literal"><span class="pre">glm</span></code>-defined model appears to behave in a very similar way, and finds the same parameter values as the conventionally-defined model - any differences are due to the random nature of the sampling.</li>
-<li>We can quite happily use the <code class="docutils literal"><span class="pre">glm</span></code> syntax for further models below, since it allows us to create a small model factory very easily.</li>
-</ul>
 <hr class="docutils" />
 </div>
 </div>
 </div>
 <hr class="docutils" />
-<div class="section" id="create-higher-order-linear-models">
-<span id="create-higher-order-linear-models"></span><h1>Create Higher-Order Linear Models<a class="headerlink" href="#create-higher-order-linear-models" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="Create-Higher-Order-Linear-Models">
+<h2>Create Higher-Order Linear Models<a class="headerlink" href="#Create-Higher-Order-Linear-Models" title="Permalink to this headline">¶</a></h2>
 <p>Back to the real purpose of this Notebook: demonstrate model selection.</p>
-<p>First, let&#8217;s create and run a set of polynomial models on each of our toy datasets. By default this is for models of order 1 to 5.</p>
-<div class="section" id="create-and-run-polynomial-models">
-<span id="create-and-run-polynomial-models"></span><h2>Create and run polynomial models<a class="headerlink" href="#create-and-run-polynomial-models" title="Permalink to this headline">¶</a></h2>
-<p>Please see <code class="docutils literal"><span class="pre">run_models()</span></code> above for details. Generally, we&#8217;re creating 5 polynomial models and fitting each to the chosen dataset</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">models_lin</span><span class="p">,</span> <span class="n">traces_lin</span> <span class="o">=</span> <span class="n">run_models</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<p>First, let&#8217;s create and run a set of polynomial models on each of our
+toy datasets. By default this is for models of order 1 to 5.</p>
+<div class="section" id="Create-and-run-polynomial-models">
+<h3>Create and run polynomial models<a class="headerlink" href="#Create-and-run-polynomial-models" title="Permalink to this headline">¶</a></h3>
+<p>Please see <code class="docutils literal"><span class="pre">run_models()</span></code> above for details. Generally, we&#8217;re creating
+5 polynomial models and fitting each to the chosen dataset</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Running</span><span class="p">:</span> <span class="n">k1</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">2.6</span> <span class="n">sec</span>
-<span class="n">Running</span><span class="p">:</span> <span class="n">k2</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">4.7</span> <span class="n">sec</span>
-<span class="n">Running</span><span class="p">:</span> <span class="n">k3</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">6.3</span> <span class="n">sec</span>
-<span class="n">Running</span><span class="p">:</span> <span class="n">k4</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">13.3</span> <span class="n">sec</span>
-<span class="n">Running</span><span class="p">:</span> <span class="n">k5</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">26.4</span> <span class="n">sec</span>
-</pre></div>
-</div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">models_quad</span><span class="p">,</span> <span class="n">traces_quad</span> <span class="o">=</span> <span class="n">run_models</span><span class="p">(</span><span class="n">dfs_quad</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Running</span><span class="p">:</span> <span class="n">k1</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">36.6</span> <span class="n">sec</span>
-<span class="n">Running</span><span class="p">:</span> <span class="n">k2</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">9.8</span> <span class="n">sec</span>
-<span class="n">Running</span><span class="p">:</span> <span class="n">k3</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">16.6</span> <span class="n">sec</span>
-<span class="n">Running</span><span class="p">:</span> <span class="n">k4</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">64.1</span> <span class="n">sec</span>
-<span class="n">Running</span><span class="p">:</span> <span class="n">k5</span>
- <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2000</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">74.4</span> <span class="n">sec</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">models_lin</span><span class="p">,</span> <span class="n">traces_lin</span> <span class="o">=</span> <span class="n">run_models</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="section" id="a-really-bad-method-for-model-selection-compare-likelihoods">
-<span id="a-really-bad-method-for-model-selection-compare-likelihoods"></span><h2>A really bad method for model selection: compare likelihoods<a class="headerlink" href="#a-really-bad-method-for-model-selection-compare-likelihoods" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="evaluate-log-likelihoods-straight-from-model-logp">
-<span id="evaluate-log-likelihoods-straight-from-model-logp"></span><h3>Evaluate log likelihoods straight from model.logp<a class="headerlink" href="#evaluate-log-likelihoods-straight-from-model-logp" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">dfll</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">,</span><span class="s1">&#39;k5&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">,</span><span class="s1">&#39;quad&#39;</span><span class="p">])</span>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
+Running: k1
+ [-----------------100%-----------------] 2000 of 2000 complete in 2.6 sec
+Running: k2
+ [-----------------100%-----------------] 2000 of 2000 complete in 4.7 sec
+Running: k3
+ [-----------------100%-----------------] 2000 of 2000 complete in 6.3 sec
+Running: k4
+ [-----------------100%-----------------] 2000 of 2000 complete in 13.3 sec
+Running: k5
+ [-----------------100%-----------------] 2000 of 2000 complete in 26.4 sec
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">models_quad</span><span class="p">,</span> <span class="n">traces_quad</span> <span class="o">=</span> <span class="n">run_models</span><span class="p">(</span><span class="n">dfs_quad</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
+Running: k1
+ [-----------------100%-----------------] 2000 of 2000 complete in 36.6 sec
+Running: k2
+ [-----------------100%-----------------] 2000 of 2000 complete in 9.8 sec
+Running: k3
+ [-----------------100%-----------------] 2000 of 2000 complete in 16.6 sec
+Running: k4
+ [-----------------100%-----------------] 2000 of 2000 complete in 64.1 sec
+Running: k5
+ [-----------------100%-----------------] 2000 of 2000 complete in 74.4 sec
+</pre></div></div>
+</div>
+</div>
+</div>
+<div class="section" id="A-really-bad-method-for-model-selection:-compare-likelihoods">
+<h2>A really bad method for model selection: compare likelihoods<a class="headerlink" href="#A-really-bad-method-for-model-selection:-compare-likelihoods" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dfll</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">,</span><span class="s1">&#39;k5&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">,</span><span class="s1">&#39;quad&#39;</span><span class="p">])</span>
 <span class="n">dfll</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span>
 
 <span class="k">for</span> <span class="n">nm</span> <span class="ow">in</span> <span class="n">dfll</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
@@ -760,81 +1049,170 @@ $\epsilon \sim \mathcal{N}(0,latent_sigma_y)$</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="plot-log-likelihoods">
-<span id="plot-log-likelihoods"></span><h3>Plot log-likelihoods<a class="headerlink" href="#plot-log-likelihoods" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">factorplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;log_likelihood&#39;</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">factorplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;log_likelihood&#39;</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span>
                    <span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="n">dfll</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-model-selection_46_0.png" /></p>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-model-selection_44_0.png" src="../_images/notebooks_GLM-model-selection_44_0.png" />
+</div>
+</div>
 <p><strong>Observe:</strong></p>
 <ul class="simple">
-<li>Again we&#8217;re showing the linear-generated data at left (Blue) and the quadratic-generated data on the right (Green)</li>
-<li>For both datasets, as the models get more complex, the likelhood increases monotonically</li>
-<li>This is expected, since the models are more flexible and thus able to (over)fit more easily.</li>
-<li>This overfitting makes it a terrible idea to simply use the likelihood to evaluate the model fits.</li>
+<li>Again we&#8217;re showing the linear-generated data at left (Blue) and the
+quadratic-generated data on the right (Green)</li>
+<li>For both datasets, as the models get more complex, the likelhood
+increases monotonically</li>
+<li>This is expected, since the models are more flexible and thus able to
+(over)fit more easily.</li>
+<li>This overfitting makes it a terrible idea to simply use the
+likelihood to evaluate the model fits.</li>
 </ul>
+<div class="section" id="View-posterior-predictive-fit">
+<h3>View posterior predictive fit<a class="headerlink" href="#View-posterior-predictive-fit" title="Permalink to this headline">¶</a></h3>
+<p>Just for the linear, generated data, lets take an interactive look at
+the posterior predictive fit for the models k1 through k5.</p>
+<p>As indicated by the likelhood plots above, the higher-order polynomial
+models exhibit some quite wild swings in the function in order to
+(over)fit the data</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
 </div>
-</div>
-<div class="section" id="view-posterior-predictive-fit">
-<span id="view-posterior-predictive-fit"></span><h2>View posterior predictive fit<a class="headerlink" href="#view-posterior-predictive-fit" title="Permalink to this headline">¶</a></h2>
-<p>Just for the linear, generated data, lets take an interactive look at the posterior predictive fit for the models k1 through k5.</p>
-<p>As indicated by the likelhood plots above, the higher-order polynomial models exhibit some quite wild swings in the function in order to (over)fit the data</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">interactive</span><span class="p">(</span><span class="n">plot_posterior_cr</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="n">fixed</span><span class="p">(</span><span class="n">models_lin</span><span class="p">),</span> <span class="n">traces</span><span class="o">=</span><span class="n">fixed</span><span class="p">(</span><span class="n">traces_lin</span><span class="p">)</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">interactive</span><span class="p">(</span><span class="n">plot_posterior_cr</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="n">fixed</span><span class="p">(</span><span class="n">models_lin</span><span class="p">),</span> <span class="n">traces</span><span class="o">=</span><span class="n">fixed</span><span class="p">(</span><span class="n">traces_lin</span><span class="p">)</span>
             <span class="p">,</span><span class="n">rawdata</span><span class="o">=</span><span class="n">fixed</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">),</span> <span class="n">xlims</span><span class="o">=</span><span class="n">fixed</span><span class="p">(</span><span class="n">dfs_lin_xlims</span><span class="p">),</span> <span class="n">datamodelnm</span><span class="o">=</span><span class="n">fixed</span><span class="p">(</span><span class="s1">&#39;linear&#39;</span><span class="p">)</span>
             <span class="p">,</span><span class="n">modelnm</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">,</span><span class="s1">&#39;k5&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-model-selection_49_0.png" /></p>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-model-selection_47_0.png" src="../_images/notebooks_GLM-model-selection_47_0.png" />
 </div>
 </div>
-<hr class="docutils" />
-<div class="section" id="compare-deviance-information-criterion-dic">
-<span id="compare-deviance-information-criterion-dic"></span><h1>Compare Deviance Information Criterion [DIC]<a class="headerlink" href="#compare-deviance-information-criterion-dic" title="Permalink to this headline">¶</a></h1>
-<p>The Deviance Information Criterion (DIC) is a fairly unsophisticated method for comparing the deviance of likelhood across the the sample traces of a model run. However, this simplicity apparently yields quite good results in a variety of cases, see the discussion worth reading in <a class="reference external" href="http://onlinelibrary.wiley.com/doi/10.1111/rssb.12062/abstract">(Speigelhalter et al 2014)</a></p>
-<p>DIC has recently been added to PyMC3, so lets see what it tells us about our model fits for both datasets.</p>
-<div class="section" id="manual-calculation-probably-error-prone">
-<span id="manual-calculation-probably-error-prone"></span><h2>Manual calculation, probably error-prone<a class="headerlink" href="#manual-calculation-probably-error-prone" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">dftrc_lin</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">traces_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">])</span>
+</div>
+</div>
+<div class="section" id="Compare-Deviance-Information-Criterion-[DIC]">
+<h2>Compare Deviance Information Criterion [DIC]<a class="headerlink" href="#Compare-Deviance-Information-Criterion-[DIC]" title="Permalink to this headline">¶</a></h2>
+<p>The Deviance Information Criterion (DIC) is a fairly unsophisticated
+method for comparing the deviance of likelhood across the the sample
+traces of a model run. However, this simplicity apparently yields quite
+good results in a variety of cases, see the discussion worth reading in
+<a class="reference external" href="http://onlinelibrary.wiley.com/doi/10.1111/rssb.12062/abstract">(Speigelhalter et al
+2014)</a></p>
+<p>DIC has recently been added to PyMC3, so lets see what it tells us about
+our model fits for both datasets.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dftrc_lin</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">traces_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">])</span>
 <span class="n">trc_lin_logp</span> <span class="o">=</span> <span class="n">dftrc_lin</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">models_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="n">mean_deviance</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">trc_lin_logp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 <span class="n">mean_deviance</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mf">191.16310801115768</span>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[18]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">deviance_at_mean</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">models_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">dftrc_lin</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>191.16310801115768
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">deviance_at_mean</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">models_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">dftrc_lin</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 <span class="n">deviance_at_mean</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mf">188.03386766667467</span>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[19]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">dic_k1</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">mean_deviance</span> <span class="o">-</span> <span class="n">deviance_at_mean</span>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>188.03386766667467
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dic_k1</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">mean_deviance</span> <span class="o">-</span> <span class="n">deviance_at_mean</span>
 <span class="n">dic_k1</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mf">194.29234835564068</span>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[20]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>194.29234835564068
 </pre></div>
 </div>
 </div>
-<div class="section" id="or-we-could-use-the-newly-created-function-in-stats-py-much-better">
-<span id="or-we-could-use-the-newly-created-function-in-stats-py-much-better"></span><h2>Or we could use the newly created function in <code class="docutils literal"><span class="pre">stats.py</span></code>, much better!<a class="headerlink" href="#or-we-could-use-the-newly-created-function-in-stats-py-much-better" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">pm</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">dic</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">models_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">],</span> <span class="n">trace</span><span class="o">=</span><span class="n">traces_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">])</span>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [21]:
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mf">194.29234835564063</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">dic</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">models_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">],</span> <span class="n">trace</span><span class="o">=</span><span class="n">traces_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">])</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[21]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>194.29234835564063
+</pre></div>
+</div>
 </div>
 <p><strong>Observe:</strong></p>
 <ul class="simple">
-<li>It&#8217;s good to see the manual method agrees with the implemented package method</li>
+<li>It&#8217;s good to see the manual method agrees with the implemented
+package method</li>
 </ul>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [22]:
+</pre></div>
 </div>
-<div class="section" id="now-loop-through-all-the-models-and-calculate-the-dic">
-<span id="now-loop-through-all-the-models-and-calculate-the-dic"></span><h2>Now loop through all the models and calculate the DIC<a class="headerlink" href="#now-loop-through-all-the-models-and-calculate-the-dic" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">dfdic</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">,</span><span class="s1">&#39;k5&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">,</span><span class="s1">&#39;quad&#39;</span><span class="p">])</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dfdic</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">,</span><span class="s1">&#39;k5&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">,</span><span class="s1">&#39;quad&#39;</span><span class="p">])</span>
 <span class="n">dfdic</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span>
 
 <span class="k">for</span> <span class="n">nm</span> <span class="ow">in</span> <span class="n">dfdic</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
@@ -846,49 +1224,74 @@ $\epsilon \sim \mathcal{N}(0,latent_sigma_y)$</p>
 <span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">factorplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;dic&#39;</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">dfdic</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-model-selection_61_0.png" /></p>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-model-selection_58_0.png" src="../_images/notebooks_GLM-model-selection_58_0.png" />
+</div>
+</div>
 <p><strong>Observe</strong></p>
 <ul class="simple">
-<li>We should prefer the model(s) with lower DIC, which (happily) directly opposes the increasing likelihood we see above.</li>
-</ul>
-<ul class="simple">
+<li>We should prefer the model(s) with lower DIC, which (happily)
+directly opposes the increasing likelihood we see above.</li>
 <li>Linear-generated data (lhs):<ul>
-<li>The DIC increases monotonically with model complexity, this is great too see!</li>
-<li>The more complicated the model, the more it would appear we are overfitting.</li>
+<li>The DIC increases monotonically with model complexity, this is
+great too see!</li>
+<li>The more complicated the model, the more it would appear we are
+overfitting.</li>
 </ul>
 </li>
-</ul>
-<ul class="simple">
 <li>Quadratic-generated data (rhs):<ul>
 <li>The DIC dips slightly for the correct model k2</li>
 <li>The difference is slight though!</li>
 </ul>
 </li>
 </ul>
-<hr class="docutils" />
 </div>
-</div>
-<hr class="docutils" />
-<div class="section" id="compare-watanabe-akaike-information-criterion-waic">
-<span id="compare-watanabe-akaike-information-criterion-waic"></span><h1>Compare Watanabe - Akaike Information Criterion [WAIC]<a class="headerlink" href="#compare-watanabe-akaike-information-criterion-waic" title="Permalink to this headline">¶</a></h1>
-<p>The Widely Applicable Bayesian Information Criterion (WBIC), a.k.a the Watanabe - Akaike Information Criterion (WAIC) is another simple option for calculating the goodness-of-fit of amodel using numerical techniques. See <a class="reference external" href="http://www.jmlr.org/papers/volume14/watanabe13a/watanabe13a.pdf">(Watanabe 2013)</a> for details.</p>
-<p>WAIC has also recently been added to PyMC3, so lets see what it tells us about our model fits for both datasets.</p>
-<div class="section" id="this-time-go-straight-for-the-implementation-in-pymc3">
-<span id="this-time-go-straight-for-the-implementation-in-pymc3"></span><h2>This time go straight for the implementation in pymc3<a class="headerlink" href="#this-time-go-straight-for-the-implementation-in-pymc3" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">pm</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">waic</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">models_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">],</span> <span class="n">trace</span><span class="o">=</span><span class="n">traces_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">])</span>
+<div class="section" id="Compare-Watanabe---Akaike-Information-Criterion-[WAIC]">
+<h2>Compare Watanabe - Akaike Information Criterion [WAIC]<a class="headerlink" href="#Compare-Watanabe---Akaike-Information-Criterion-[WAIC]" title="Permalink to this headline">¶</a></h2>
+<p>The Widely Applicable Bayesian Information Criterion (WBIC), a.k.a the
+Watanabe - Akaike Information Criterion (WAIC) is another simple option
+for calculating the goodness-of-fit of amodel using numerical
+techniques. See <a class="reference external" href="http://www.jmlr.org/papers/volume14/watanabe13a/watanabe13a.pdf">(Watanabe
+2013)</a>
+for details.</p>
+<p>WAIC has also recently been added to PyMC3, so lets see what it tells us
+about our model fits for both datasets.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [23]:
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mf">130.93585669884246</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">waic</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">models_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">],</span> <span class="n">trace</span><span class="o">=</span><span class="n">traces_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">])</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[23]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>130.93585669884246
+</pre></div>
+</div>
 </div>
 <p><strong>Observe:</strong></p>
 <ul class="simple">
-<li>Well, we get a number... not much to tell from just one though, so lets compare all models</li>
+<li>Well, we get a number... not much to tell from just one though, so
+lets compare all models</li>
 </ul>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [24]:
+</pre></div>
 </div>
-<div class="section" id="now-loop-through-all-the-models-and-calculate-the-waic">
-<span id="now-loop-through-all-the-models-and-calculate-the-waic"></span><h2>Now loop through all the models and calculate the WAIC<a class="headerlink" href="#now-loop-through-all-the-models-and-calculate-the-waic" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">dfwaic</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">,</span><span class="s1">&#39;k5&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">,</span><span class="s1">&#39;quad&#39;</span><span class="p">])</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dfwaic</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">,</span><span class="s1">&#39;k2&#39;</span><span class="p">,</span><span class="s1">&#39;k3&#39;</span><span class="p">,</span><span class="s1">&#39;k4&#39;</span><span class="p">,</span><span class="s1">&#39;k5&#39;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lin&#39;</span><span class="p">,</span><span class="s1">&#39;quad&#39;</span><span class="p">])</span>
 <span class="n">dfwaic</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span>
 
 <span class="k">for</span> <span class="n">nm</span> <span class="ow">in</span> <span class="n">dfwaic</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
@@ -900,53 +1303,68 @@ $\epsilon \sim \mathcal{N}(0,latent_sigma_y)$</p>
 <span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">factorplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;waic&#39;</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">hue</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">dfwaic</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/GLM-model-selection_69_0.png" /></p>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_GLM-model-selection_65_0.png" src="../_images/notebooks_GLM-model-selection_65_0.png" />
+</div>
+</div>
 <p><strong>Observe</strong></p>
 <ul class="simple">
 <li>We should prefer the model(s) with lower WAIC</li>
-</ul>
-<ul class="simple">
 <li>Linear-generated data (lhs):<ul>
 <li>The WAIC seems quite flat across models</li>
-<li>The WAIC seems best (lowest) for simpler models, but <strong>k1</strong> doesn&#8217;t stand out as much as it did when using DIC</li>
+<li>The WAIC seems best (lowest) for simpler models, but <strong>k1</strong>
+doesn&#8217;t stand out as much as it did when using DIC</li>
 </ul>
 </li>
-</ul>
-<ul class="simple">
 <li>Quadratic-generated data (rhs):<ul>
-<li>The WAIC is certainly wrong for <strong>k1</strong>, but otherwise also quite flat across the models</li>
+<li>The WAIC is certainly wrong for <strong>k1</strong>, but otherwise also quite
+flat across the models</li>
 <li>There does appear to be a slight dip in the right place at <strong>k2</strong></li>
 </ul>
 </li>
 </ul>
-<p>For these particular models and data, I would prefer to use the DIC scores in order to choose models.</p>
+<p>For these particular models and data, I would prefer to use the DIC
+scores in order to choose models.</p>
 <hr class="docutils" />
 </div>
-</div>
 <hr class="docutils" />
-<div class="section" id="todo">
-<span id="todo"></span><h1>TODO<a class="headerlink" href="#todo" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="k-fold-cross-validation-and-or-leave-one-out-loo">
-<span id="k-fold-cross-validation-and-or-leave-one-out-loo"></span><h2>K-Fold Cross Validation and/or Leave-One-Out (LOO)<a class="headerlink" href="#k-fold-cross-validation-and-or-leave-one-out-loo" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="left-for-future-development-should-be-easy-enough">
-<span id="left-for-future-development-should-be-easy-enough"></span><h3>Left for future development - should be easy enough<a class="headerlink" href="#left-for-future-development-should-be-easy-enough" title="Permalink to this headline">¶</a></h3>
-<p>http://www.stat.columbia.edu/~gelman/research/unpublished/waic_stan.pdf</p>
+<div class="section" id="TODO">
+<h2>TODO<a class="headerlink" href="#TODO" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="K-Fold-Cross-Validation-and/or-Leave-One-Out-(LOO)">
+<h3>K-Fold Cross Validation and/or Leave-One-Out (LOO)<a class="headerlink" href="#K-Fold-Cross-Validation-and/or-Leave-One-Out-(LOO)" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="Left-for-future-development---should-be-easy-enough">
+<h4>Left for future development - should be easy enough<a class="headerlink" href="#Left-for-future-development---should-be-easy-enough" title="Permalink to this headline">¶</a></h4>
+<p><a class="reference external" href="http://www.stat.columbia.edu/~gelman/research/unpublished/waic_stan.pdf">http://www.stat.columbia.edu/~gelman/research/unpublished/waic_stan.pdf</a></p>
 </div>
 </div>
-<div class="section" id="bayes-factor">
-<span id="bayes-factor"></span><h2>Bayes Factor<a class="headerlink" href="#bayes-factor" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="will-be-left-for-future-development-scipy-only-useful-for-2d-and-3d-beyond-that-dragons">
-<span id="will-be-left-for-future-development-scipy-only-useful-for-2d-and-3d-beyond-that-dragons"></span><h3>Will be left for future development - scipy only useful for 2D and 3D. Beyond that, dragons.<a class="headerlink" href="#will-be-left-for-future-development-scipy-only-useful-for-2d-and-3d-beyond-that-dragons" title="Permalink to this headline">¶</a></h3>
-<p>Following text lifted directly from <a class="reference external" href="https://jakevdp.github.io/blog/2015/08/07/frequentism-and-bayesianism-5-model-selection/">JakeVDP blogpost</a></p>
-<p>The Bayesian approach proceeds very differently. Recall that the Bayesian model involves computing the odds ratio between two models:</p>
-<p>$$O_{21}=\frac{P(M_{2} ;|; D)}{P(M_{1} ;|; D)}=\frac{P(D ;|; M_{2})}{P(D ;|; M_{1})}\frac{P(M_{2})}{P(M_{1})}$$</p>
-<p>Here the ratio $\frac{P(M2)}{P(M1)}$ is the prior odds ratio, and is often assumed to be equal to 1 if no compelling prior evidence favors one model over another. The ratio $\frac{P(D ;|; M2)}{P(D ;|; M1)}$ is the <strong>Bayes factor</strong>, and is the key to Bayesian model selection.</p>
-<p>The Bayes factor can be computed by evaluating the integral over the parameter likelihood:</p>
-<p>$$P(D ;|; M)=\int_{\Omega}P(D ;|; \theta,M) ; P(\theta ;|; M) ;d\theta$$</p>
-<p>This integral is over the entire parameter space of the model, and thus can be extremely computationally intensive, especially as the dimension of the model grows beyond a few.</p>
+</div>
+<div class="section" id="Bayes-Factor">
+<h2>Bayes Factor<a class="headerlink" href="#Bayes-Factor" title="Permalink to this headline">¶</a></h2>
+<p>Following text lifted directly from <a class="reference external" href="https://jakevdp.github.io/blog/2015/08/07/frequentism-and-bayesianism-5-model-selection/">JakeVDP
+blogpost</a></p>
+<p>The Bayesian approach proceeds very differently. Recall that the
+Bayesian model involves computing the odds ratio between two models:</p>
+<div class="math">
+\[O_{21}=\frac{P(M_{2} \;|\; D)}{P(M_{1} \;|\; D)}=\frac{P(D \;|\; M_{2})}{P(D \;|\; M_{1})}\frac{P(M_{2})}{P(M_{1})}\]</div>
+<p>Here the ratio <span class="math">\(\frac{P(M2)}{P(M1)}\)</span> is the prior odds ratio, and
+is often assumed to be equal to 1 if no compelling prior evidence favors
+one model over another. The ratio
+<span class="math">\(\frac{P(D \;|\; M2)}{P(D \;|\; M1)}\)</span> is the <strong>Bayes factor</strong>, and
+is the key to Bayesian model selection.</p>
+<p>The Bayes factor can be computed by evaluating the integral over the
+parameter likelihood:</p>
+<div class="math">
+\[P(D \;|\; M)=\int_{\Omega}P(D \;|\; \theta,M) \; P(\theta \;|\; M) \;d\theta\]</div>
+<p>This integral is over the entire parameter space of the model, and thus
+can be extremely computationally intensive, especially as the dimension
+of the model grows beyond a few.</p>
 <hr class="docutils" />
-<p>Example originally contributed by Jonathan Sedar 2016-01-09 <a class="reference external" href="https://github.com/jonsedar">github.com/jonsedar</a></p>
-</div>
+<p>Example originally contributed by Jonathan Sedar 2016-01-09
+<a class="reference external" href="https://github.com/jonsedar">github.com/jonsedar</a></p>
 </div>
 </div>
 
@@ -957,10 +1375,10 @@ $\epsilon \sim \mathcal{N}(0,latent_sigma_y)$</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="rolling_regression.html" class="btn btn-neutral float-right" title="Bayesian Rolling Regression in PyMC3" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="rolling_regression.html" class="btn btn-neutral float-right" title="Rolling Regression" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="GLM-robust-with-outlier-detection.html" class="btn btn-neutral" title="PyMC3 Examples" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="GLM-robust-with-outlier-detection.html" class="btn btn-neutral" title="GLM Robust Regression with Outlier Detection" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

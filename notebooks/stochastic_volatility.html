@@ -32,7 +32,7 @@
   
     <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="The Inference Button: Bayesian GLMs made easy with PyMC3" href="GLM-linear.html"/>
+        <link rel="next" title="GLM: Linear regression" href="GLM-linear.html"/>
         <link rel="prev" title="Bayesian Estimation Supersedes the T-Test" href="BEST.html"/> 
 
   
@@ -87,54 +87,20 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Stochastic Volatility model</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#build-model">Build Model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#fit-model">Fit Model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#references">References</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Build-Model">Build Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Fit-Model">Fit Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#References">References</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">The Inference Button: Bayesian GLMs made easy with PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">This world is far from Normal(ly distributed): Bayesian Robust Regression in PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html#robust-regression">Robust Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">PyMC3 Examples</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html#glm-robust-regression-with-outlier-detection">GLM Robust Regression with Outlier Detection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html#setup">Setup</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html#create-conventional-ols-model">Create Conventional OLS Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html#create-robust-model-student-t-method">Create Robust Model: Student-T Method</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html#create-robust-model-with-outliers-hogg-method">Create Robust Model with Outliers: Hogg Method</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html#declare-outliers-and-compare-plots">Declare Outliers and Compare Plots</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">PyMC3 Examples</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html#glm-model-selection">GLM Model Selection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html#setup">Setup</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html#generate-toy-datasets">Generate Toy Datasets</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html#demonstrate-simple-linear-model">Demonstrate Simple Linear Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html#create-higher-order-linear-models">Create Higher-Order Linear Models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html#compare-deviance-information-criterion-dic">Compare Deviance Information Criterion [DIC]</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html#compare-watanabe-akaike-information-criterion-waic">Compare Watanabe - Akaike Information Criterion [WAIC]</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html#todo">TODO</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Bayesian Rolling Regression in PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">The best of both worlds: Hierarchical Linear Regression in PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html#the-models">The Models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html#probabilistic-programming">Probabilistic Programming</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html#posterior-predictive-check">Posterior Predictive Check</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html#shrinkage">Shrinkage</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html#summary">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html#data">Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html#methods">Methods</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html#evaluation">Evaluation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html#results">Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html#summary">Summary</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#motivation">Motivation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#what-do-we-want-to-infer">What do we want to infer?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#what-do-we-want">What do we want?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#what-assumptions-do-we-know-for-our-generative-story">What assumptions do we know for our &#8216;generative story&#8217;?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#the-model">The model.</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#building-of-the-model">Building of the model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#results">Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html#covariates">Covariates.</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks in PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html#prediction">Prediction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
@@ -189,6 +155,137 @@
             
   
 <style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
@@ -221,50 +318,109 @@
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="stochastic-volatility-model">
-<span id="stochastic-volatility-model"></span><h1>Stochastic Volatility model<a class="headerlink" href="#stochastic-volatility-model" title="Permalink to this headline">¶</a></h1>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<div class="section" id="Stochastic-Volatility-model">
+<h1>Stochastic Volatility model<a class="headerlink" href="#Stochastic-Volatility-model" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">from</span> <span class="nn">pymc3.distributions.timeseries</span> <span class="kn">import</span> <span class="n">GaussianRandomWalk</span>
 
 <span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="kn">import</span> <span class="n">csc_matrix</span>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
 
-<span class="o">%</span><span class="n">pylab</span> <span class="n">inline</span>
+<span class="o">%</span><span class="k">pylab</span> inline
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Populating</span> <span class="n">the</span> <span class="n">interactive</span> <span class="n">namespace</span> <span class="kn">from</span> <span class="nn">numpy</span> <span class="ow">and</span> <span class="n">matplotlib</span>
-
-
-<span class="p">:</span><span class="mi">0</span><span class="p">:</span> <span class="ne">FutureWarning</span><span class="p">:</span> <span class="n">IPython</span> <span class="n">widgets</span> <span class="n">are</span> <span class="n">experimental</span> <span class="ow">and</span> <span class="n">may</span> <span class="n">change</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">future</span><span class="o">.</span>
-</pre></div>
 </div>
-<p>Asset prices have time-varying volatility (variance of day over day <code class="docutils literal"><span class="pre">returns</span></code>). In some periods, returns are highly variable, while in others very stable. Stochastic volatility models model this with a latent volatility variable, modeled as a stochastic process. The following model is similar to the one described in the No-U-Turn Sampler paper, Hoffman (2011) p21.</p>
-<p>$$ \sigma \sim Exponential(50) $$</p>
-<p>$$ \nu \sim Exponential(.1) $$</p>
-<p>$$ s_i \sim Normal(s_{i-1}, \sigma^{-2}) $$</p>
-<p>$$ log(\frac{y_i}{y_{i-1}}) \sim t(\nu, 0, exp(-2 s_i)) $$</p>
-<p>Here, $y$ is the daily return series and $s$ is the latent log volatility process.</p>
-<div class="section" id="build-model">
-<span id="build-model"></span><h2>Build Model<a class="headerlink" href="#build-model" title="Permalink to this headline">¶</a></h2>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Populating the interactive namespace from numpy and matplotlib
+</pre></div></div>
+</div>
+<p>Asset prices have time-varying volatility (variance of day over day
+<code class="docutils literal"><span class="pre">returns</span></code>). In some periods, returns are highly variable, while in
+others very stable. Stochastic volatility models model this with a
+latent volatility variable, modeled as a stochastic process. The
+following model is similar to the one described in the No-U-Turn Sampler
+paper, Hoffman (2011) p21.</p>
+<div class="math">
+\[\sigma \sim Exponential(50)\]</div>
+<div class="math">
+\[\nu \sim Exponential(.1)\]</div>
+<div class="math">
+\[s_i \sim Normal(s_{i-1}, \sigma^{-2})\]</div>
+<div class="math">
+\[log(\frac{y_i}{y_{i-1}}) \sim t(\nu, 0, exp(-2 s_i))\]</div>
+<p>Here, <span class="math">\(y\)</span> is the daily return series and <span class="math">\(s\)</span> is the latent
+log volatility process.</p>
+<div class="section" id="Build-Model">
+<h2>Build Model<a class="headerlink" href="#Build-Model" title="Permalink to this headline">¶</a></h2>
 <p>First we load some daily returns of the S&amp;P 500.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">400</span>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">400</span>
 <span class="n">returns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="s2">&quot;../data/SP500.csv&quot;</span><span class="p">)[</span><span class="o">-</span><span class="n">n</span><span class="p">:]</span>
 <span class="n">returns</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mf">0.00637</span> <span class="p">,</span> <span class="o">-</span><span class="mf">0.004045</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.02547</span> <span class="p">,</span>  <span class="mf">0.005102</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.047733</span><span class="p">])</span>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[2]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([-0.00637 , -0.004045, -0.02547 ,  0.005102, -0.047733])
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[</span><span class="o">&lt;</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">lines</span><span class="o">.</span><span class="n">Line2D</span> <span class="n">at</span> <span class="mh">0xaeaec1cc</span><span class="o">&gt;</span><span class="p">]</span>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/stochastic_volatility_6_1.png" /></p>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[3]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7ffac2e27b38&gt;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_stochastic_volatility_6_1.png" src="../_images/notebooks_stochastic_volatility_6_1.png" />
+</div>
+</div>
 <p>Specifying the model in pymc3 mirrors its statistical specification.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
 <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">sigma</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="o">/.</span><span class="mo">02</span><span class="p">,</span> <span class="n">testval</span><span class="o">=.</span><span class="mi">1</span><span class="p">)</span>
 
@@ -275,48 +431,164 @@
 </pre></div>
 </div>
 </div>
-<div class="section" id="fit-model">
-<span id="fit-model"></span><h2>Fit Model<a class="headerlink" href="#fit-model" title="Permalink to this headline">¶</a></h2>
-<p>For this model, the full maximum a posteriori (MAP) point is degenerate and has infinite density. However, if we fix <code class="docutils literal"><span class="pre">log_sigma</span></code> and <code class="docutils literal"><span class="pre">nu</span></code> it is no longer degenerate, so we find the MAP with respect to the volatility process, &#8216;s&#8217;, keeping <code class="docutils literal"><span class="pre">log_sigma</span></code> and <code class="docutils literal"><span class="pre">nu</span></code> constant at their default values.</p>
-<p>We use L-BFGS because it is more efficient for high dimensional functions (<code class="docutils literal"><span class="pre">s</span></code> has n elements).</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">s</span><span class="p">],</span> <span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied log-transform to sigma and added transformed sigma_log to model.
+Applied log-transform to nu and added transformed nu_log to model.
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Fit-Model">
+<h2>Fit Model<a class="headerlink" href="#Fit-Model" title="Permalink to this headline">¶</a></h2>
+<p>For this model, the full maximum a posteriori (MAP) point is degenerate
+and has infinite density. However, if we fix <code class="docutils literal"><span class="pre">log_sigma</span></code> and <code class="docutils literal"><span class="pre">nu</span></code> it
+is no longer degenerate, so we find the MAP with respect to the
+volatility process, &#8216;s&#8217;, keeping <code class="docutils literal"><span class="pre">log_sigma</span></code> and <code class="docutils literal"><span class="pre">nu</span></code> constant at
+their default values.</p>
+<p>We use L-BFGS because it is more efficient for high dimensional
+functions (<code class="docutils literal"><span class="pre">s</span></code> has n elements).</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
 </pre></div>
 </div>
-<p>We do a short initial run to get near the right area, then start again using a new Hessian at the new starting point to get faster sampling due to better scaling. We do a short run since this is an interactive example.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span><span class="n">sigma</span><span class="p">],</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=.</span><span class="mi">25</span><span class="p">)</span>
-    <span class="n">start2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">mu</span><span class="p">,</span> <span class="n">sds</span><span class="p">,</span> <span class="n">elbo</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">200000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Iteration 0 [0%]: ELBO = -3799.22
+Iteration 20000 [10%]: ELBO = -83.85
+Iteration 40000 [20%]: ELBO = 776.67
+Iteration 60000 [30%]: ELBO = 1100.54
+Iteration 80000 [40%]: ELBO = 1158.19
+Iteration 100000 [50%]: ELBO = 1164.0
+Iteration 120000 [60%]: ELBO = 1123.53
+Iteration 140000 [70%]: ELBO = 1135.75
+Iteration 160000 [80%]: ELBO = 1126.39
+Iteration 180000 [90%]: ELBO = 1145.2
+Finished [100%]: ELBO = 1169.83
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">elbo</span><span class="p">[</span><span class="mi">10000</span><span class="p">:])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[6]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7ffaa779b390&gt;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_stochastic_volatility_12_1.png" src="../_images/notebooks_stochastic_volatility_12_1.png" />
+</div>
+</div>
+<p>We do a short initial run to get near the right area, then start again
+using a new Hessian at the new starting point to get faster sampling due
+to better scaling. We do a short run since this is an interactive
+example.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [23]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="c1"># Start next run at the last sampled position.</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span><span class="n">sigma</span><span class="p">],</span><span class="n">scaling</span><span class="o">=</span><span class="n">start2</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=.</span><span class="mi">55</span><span class="p">)</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start2</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">sds</span><span class="p">),</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">mu</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span> <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2001</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">368.9</span> <span class="n">sec</span>
-
-<span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="o">.</span><span class="mi">4</span><span class="o">/</span><span class="n">importlib</span><span class="o">/</span><span class="n">_bootstrap</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">321</span><span class="p">:</span> <span class="ne">RuntimeWarning</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span> <span class="n">size</span> <span class="n">changed</span><span class="p">,</span> <span class="n">may</span> <span class="n">indicate</span> <span class="n">binary</span> <span class="n">incompatibility</span>
-  <span class="k">return</span> <span class="n">f</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+ [-----------------100%-----------------] 2000 of 2000 complete in 141.1 sec
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [24]:
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">figsize</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">figsize</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span>
 <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]);</span>
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/stochastic_volatility_14_0.png" /></p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">figsize</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_stochastic_volatility_15_0.png" src="../_images/notebooks_stochastic_volatility_15_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [22]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">figsize</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span>
 <span class="n">title</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
 <span class="n">plot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">][::</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">03</span><span class="p">);</span>
 <span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">)</span>
 <span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;log volatility&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">Text</span> <span class="n">at</span> <span class="mh">0xac04168c</span><span class="o">&gt;</span>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[22]:
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/stochastic_volatility_15_1.png" /></p>
-<p>Looking at the returns over time and overlaying the estimated standard deviation we can see how the model tracks the volatility over time.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">plot</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.text.Text at 0x7ffa97b7e7f0&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_stochastic_volatility_16_1.png" src="../_images/notebooks_stochastic_volatility_16_1.png" />
+</div>
+</div>
+<p>Looking at the returns over time and overlaying the estimated standard
+deviation we can see how the model tracks the volatility over time.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
 <span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">][::</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">03</span><span class="p">);</span>
 <span class="n">sd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
 <span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">][::</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">03</span><span class="p">);</span>
@@ -324,15 +596,31 @@
 <span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;returns&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">Text</span> <span class="n">at</span> <span class="mh">0xaab3854c</span><span class="o">&gt;</span>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[19]:
 </pre></div>
 </div>
-<p><img alt="png" src="../_images/stochastic_volatility_17_1.png" /></p>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.text.Text at 0x7ffa9fd664e0&gt;
+</pre></div>
 </div>
-<div class="section" id="references">
-<span id="references"></span><h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
-<ol class="simple">
-<li>Hoffman &amp; Gelman. (2011). <a class="reference external" href="http://arxiv.org/abs/1111.4246">The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo</a>.</li>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_stochastic_volatility_18_1.png" src="../_images/notebooks_stochastic_volatility_18_1.png" />
+</div>
+</div>
+</div>
+<div class="section" id="References">
+<h2>References<a class="headerlink" href="#References" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Hoffman &amp; Gelman. (2011). <a class="reference external" href="http://arxiv.org/abs/1111.4246">The No-U-Turn Sampler: Adaptively Setting
+Path Lengths in Hamiltonian Monte
+Carlo</a>.</li>
 </ol>
 </div>
 </div>
@@ -344,7 +632,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="GLM-linear.html" class="btn btn-neutral float-right" title="The Inference Button: Bayesian GLMs made easy with PyMC3" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="GLM-linear.html" class="btn btn-neutral float-right" title="GLM: Linear regression" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="BEST.html" class="btn btn-neutral" title="Bayesian Estimation Supersedes the T-Test" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
