@@ -129,137 +129,6 @@
             
   
 <style>
-/* CSS for nbsphinx extension */
-
-/* remove conflicting styling from Sphinx themes */
-div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
-div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
-    background: none;
-    border: none;
-    padding: 0 0;
-    margin: 0;
-    box-shadow: none;
-}
-
-/* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
-    line-height: normal;
-}
-
-/* input/output containers */
-div.nbinput,
-div.nboutput {
-    display: -webkit-flex;
-    display: flex;
-    align-items: flex-start;
-    margin: 0;
-}
-
-/* input container */
-div.nbinput {
-    padding-top: 5px;
-}
-
-/* last container */
-div.nblast {
-    padding-bottom: 5px;
-}
-
-/* input prompt */
-div.nbinput > :first-child pre {
-    color: #303F9F;
-}
-
-/* output prompt */
-div.nboutput > :first-child pre {
-    color: #D84315;
-}
-
-/* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
-    min-width: 11ex;
-    padding-top: 0.4em;
-    padding-right: 0.4em;
-    text-align: right;
-    flex: 0;
-}
-
-/* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
-    padding: 0.4em;
-    -webkit-flex: 1;
-    flex: 1;
-    overflow: auto;
-}
-
-/* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
-    border: 1px solid #cfcfcf;
-    border-radius: 2px;
-    background: #f7f7f7;
-}
-
-/* override MathJax center alignment in output cells */
-div.nboutput div[class*=MathJax] {
-    text-align: left !important;
-}
-
-/* override sphinx.ext.pngmath center alignment in output cells */
-div.nboutput div.math p {
-    text-align: left;
-}
-
-/* standard error */
-div.nboutput  > :nth-child(2).stderr {
-    background: #fdd;
-}
-
-/* ANSI colors */
-.ansi-black-fg { color: #3E424D; }
-.ansi-black-bg { background-color: #3E424D; }
-.ansi-black-intense-fg { color: #282C36; }
-.ansi-black-intense-bg { background-color: #282C36; }
-.ansi-red-fg { color: #E75C58; }
-.ansi-red-bg { background-color: #E75C58; }
-.ansi-red-intense-fg { color: #B22B31; }
-.ansi-red-intense-bg { background-color: #B22B31; }
-.ansi-green-fg { color: #00A250; }
-.ansi-green-bg { background-color: #00A250; }
-.ansi-green-intense-fg { color: #007427; }
-.ansi-green-intense-bg { background-color: #007427; }
-.ansi-yellow-fg { color: #DDB62B; }
-.ansi-yellow-bg { background-color: #DDB62B; }
-.ansi-yellow-intense-fg { color: #B27D12; }
-.ansi-yellow-intense-bg { background-color: #B27D12; }
-.ansi-blue-fg { color: #208FFB; }
-.ansi-blue-bg { background-color: #208FFB; }
-.ansi-blue-intense-fg { color: #0065CA; }
-.ansi-blue-intense-bg { background-color: #0065CA; }
-.ansi-magenta-fg { color: #D160C4; }
-.ansi-magenta-bg { background-color: #D160C4; }
-.ansi-magenta-intense-fg { color: #A03196; }
-.ansi-magenta-intense-bg { background-color: #A03196; }
-.ansi-cyan-fg { color: #60C6C8; }
-.ansi-cyan-bg { background-color: #60C6C8; }
-.ansi-cyan-intense-fg { color: #258F8F; }
-.ansi-cyan-intense-bg { background-color: #258F8F; }
-.ansi-white-fg { color: #C5C1B4; }
-.ansi-white-bg { background-color: #C5C1B4; }
-.ansi-white-intense-fg { color: #A1A6B2; }
-.ansi-white-intense-bg { background-color: #A1A6B2; }
-
-.ansi-bold { font-weight: bold; }
-
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
@@ -292,25 +161,13 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<p>Sometimes, it is very useful to update a set of parameters together. For
-example, variables that are highly correlated are often good to update
-together. In PyMC 3 block updating is simple, as example will
-demonstrate.</p>
-<p>Here we have a LASSO regression model where the two coefficients are
-strongly correlated. Normally, we would define the coefficient
-parameters as a single random variable, but here we define them
-separately to show how to do block updates.</p>
+<p>Sometimes, it is very useful to update a set of parameters together. For example, variables that are highly correlated are often good to update together. In PyMC 3 block updating is simple, as example will demonstrate.</p>
+<p>Here we have a LASSO regression model where the two coefficients are strongly correlated. Normally, we would define the coefficient parameters as a single random variable, but here we define them separately to show how to do block updates.</p>
 <p>First we generate some fake data.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
-</pre></div>
-</div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">pylab</span> inline
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">%</span><span class="n">pylab</span> <span class="n">inline</span>
 <span class="kn">from</span> <span class="nn">matplotlib.pylab</span> <span class="kn">import</span> <span class="o">*</span>
-<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="o">*</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="o">*</span> 
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span> 
 
 <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span>
 <span class="n">d1</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">4</span>
@@ -318,42 +175,18 @@ separately to show how to do block updates.</p>
 <span class="n">yd</span> <span class="o">=</span> <span class="o">.</span><span class="mi">2</span><span class="o">*</span><span class="n">d1</span> <span class="o">+.</span><span class="mi">3</span><span class="o">*</span><span class="n">d2</span> <span class="o">+</span> <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Populating the interactive namespace from numpy and matplotlib
-</pre></div></div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
+<div class="highlight-default"><div class="highlight"><pre><span></span>Populating the interactive namespace from numpy and matplotlib
+
+
 WARNING: pylab import has clobbered these variables: [&#39;prod&#39;, &#39;zeros_like&#39;, &#39;power&#39;, &#39;sinh&#39;, &#39;det&#39;, &#39;sample&#39;, &#39;minimum&#39;, &#39;tan&#39;, &#39;ones_like&#39;, &#39;sin&#39;, &#39;gradient&#39;, &#39;math&#39;, &#39;cosh&#39;, &#39;clip&#39;, &#39;linalg&#39;, &#39;trace&#39;, &#39;dot&#39;, &#39;random&#39;, &#39;ceil&#39;, &#39;where&#39;, &#39;maximum&#39;, &#39;concatenate&#39;, &#39;cos&#39;, &#39;tanh&#39;, &#39;sqrt&#39;, &#39;floor&#39;, &#39;test&#39;, &#39;fft&#39;, &#39;log&#39;, &#39;info&#39;, &#39;sum&#39;, &#39;flatten&#39;, &#39;exp&#39;]
 `%matplotlib` prevents importing * from pylab and numpy
-</pre></div></div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>
+<div class="highlight-python"><div class="highlight"><pre><span></span>
 </pre></div>
-</div>
 </div>
 <p>Then define the random variables.</p>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
-</pre></div>
-</div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="n">lam</span> <span class="o">=</span> <span class="mi">3</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">lam</span> <span class="o">=</span> <span class="mi">3</span>
 
 <span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">s</span> <span class="o">=</span> <span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
@@ -361,114 +194,52 @@ WARNING: pylab import has clobbered these variables: [&#39;prod&#39;, &#39;zeros
     <span class="n">b</span> <span class="o">=</span> <span class="n">lam</span> <span class="o">*</span> <span class="n">tau</span>
     <span class="n">m1</span> <span class="o">=</span> <span class="n">Laplace</span><span class="p">(</span><span class="s1">&#39;m1&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
     <span class="n">m2</span> <span class="o">=</span> <span class="n">Laplace</span><span class="p">(</span><span class="s1">&#39;m2&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
-
+    
     <span class="n">p</span> <span class="o">=</span> <span class="n">d1</span><span class="o">*</span><span class="n">m1</span> <span class="o">+</span> <span class="n">d2</span><span class="o">*</span><span class="n">m2</span>
-
-    <span class="n">y</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">s</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">yd</span><span class="p">)</span>
+    
+    <span class="n">y</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">s</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">yd</span><span class="p">)</span> 
 </pre></div>
 </div>
-</div>
-<p>For most samplers, including Metropolis and HamiltonianMC, simply pass a
-list of variables to sample as a block. This works with both scalar and
-array parameters.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
-</pre></div>
-</div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">pymc3</span>
+<p>For most samplers, including Metropolis and HamiltonianMC, simply pass a list of variables to sample as a block. This works with both scalar and array parameters.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pymc3</span> 
 <span class="n">pymc3</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[12]:
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">({</span><span class="s1">&#39;m1&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">(</span><span class="mf">0.48459033591027423</span><span class="p">),</span>
+  <span class="s1">&#39;m2&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">(</span><span class="mf">0.04708045902248652</span><span class="p">),</span>
+  <span class="s1">&#39;s_log&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">(</span><span class="mf">0.2646004713715775</span><span class="p">),</span>
+  <span class="s1">&#39;tau_interval&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">(</span><span class="o">-</span><span class="mf">8.314564627550315</span><span class="p">)},</span>
+ <span class="p">{</span><span class="s1">&#39;m1&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">(</span><span class="o">-</span><span class="mf">3.0429711203909964</span><span class="p">),</span>
+  <span class="s1">&#39;m2&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">(</span><span class="o">-</span><span class="mf">3.115115750655253</span><span class="p">),</span>
+  <span class="s1">&#39;s_log&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">(</span><span class="o">-</span><span class="mf">1.932210086480891</span><span class="p">),</span>
+  <span class="s1">&#39;tau_interval&#39;</span><span class="p">:</span> <span class="n">array</span><span class="p">(</span><span class="mf">0.21826592793700966</span><span class="p">)})</span>
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>({&#39;m1&#39;: array(0.48459033591027423),
-  &#39;m2&#39;: array(0.04708045902248652),
-  &#39;s_log&#39;: array(0.2646004713715775),
-  &#39;tau_interval&#39;: array(-8.314564627550315)},
- {&#39;m1&#39;: array(-3.0429711203909964),
-  &#39;m2&#39;: array(-3.115115750655253),
-  &#39;s_log&#39;: array(-1.932210086480891),
-  &#39;tau_interval&#39;: array(0.21826592793700966)})
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
-</pre></div>
-</div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span> 
     <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">()</span>
-
+    
     <span class="n">step1</span> <span class="o">=</span> <span class="n">Metropolis</span><span class="p">([</span><span class="n">m1</span><span class="p">,</span> <span class="n">m2</span><span class="p">])</span>
-
+    
     <span class="n">step2</span> <span class="o">=</span> <span class="n">Slice</span><span class="p">([</span><span class="n">s</span><span class="p">,</span> <span class="n">tau</span><span class="p">])</span>
-
+    
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="p">[</span><span class="n">step1</span><span class="p">,</span> <span class="n">step2</span><span class="p">],</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
- [-----------------100%-----------------] 10000 of 10000 complete in 29.6 sec
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<div class="highlight-default"><div class="highlight"><pre><span></span> <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">10000</span> <span class="n">of</span> <span class="mi">10000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">29.6</span> <span class="n">sec</span>
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-
-<span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span>
+<span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_lasso_block_update_8_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_lasso_block_update_8_0.png" />
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<p><img alt="png" src="../_images/lasso_block_update_8_0.png" /></p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">hexbin</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">m1</span><span class="p">],</span><span class="n">trace</span><span class="p">[</span><span class="n">m2</span><span class="p">],</span> <span class="n">gridsize</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="n">hexbin</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">m1</span><span class="p">],</span><span class="n">trace</span><span class="p">[</span><span class="n">m2</span><span class="p">],</span> <span class="n">gridsize</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">collections</span><span class="o">.</span><span class="n">PolyCollection</span> <span class="n">at</span> <span class="mh">0xcc8d64c</span><span class="o">&gt;</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[5]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.collections.PolyCollection at 0xcc8d64c&gt;
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_lasso_block_update_9_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_lasso_block_update_9_1.png" />
-</div>
-</div>
+<p><img alt="png" src="../_images/lasso_block_update_9_1.png" /></p>
 
 
            </div>

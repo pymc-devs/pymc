@@ -129,137 +129,6 @@
             
   
 <style>
-/* CSS for nbsphinx extension */
-
-/* remove conflicting styling from Sphinx themes */
-div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
-div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
-    background: none;
-    border: none;
-    padding: 0 0;
-    margin: 0;
-    box-shadow: none;
-}
-
-/* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
-    line-height: normal;
-}
-
-/* input/output containers */
-div.nbinput,
-div.nboutput {
-    display: -webkit-flex;
-    display: flex;
-    align-items: flex-start;
-    margin: 0;
-}
-
-/* input container */
-div.nbinput {
-    padding-top: 5px;
-}
-
-/* last container */
-div.nblast {
-    padding-bottom: 5px;
-}
-
-/* input prompt */
-div.nbinput > :first-child pre {
-    color: #303F9F;
-}
-
-/* output prompt */
-div.nboutput > :first-child pre {
-    color: #D84315;
-}
-
-/* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
-    min-width: 11ex;
-    padding-top: 0.4em;
-    padding-right: 0.4em;
-    text-align: right;
-    flex: 0;
-}
-
-/* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
-    padding: 0.4em;
-    -webkit-flex: 1;
-    flex: 1;
-    overflow: auto;
-}
-
-/* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
-    border: 1px solid #cfcfcf;
-    border-radius: 2px;
-    background: #f7f7f7;
-}
-
-/* override MathJax center alignment in output cells */
-div.nboutput div[class*=MathJax] {
-    text-align: left !important;
-}
-
-/* override sphinx.ext.pngmath center alignment in output cells */
-div.nboutput div.math p {
-    text-align: left;
-}
-
-/* standard error */
-div.nboutput  > :nth-child(2).stderr {
-    background: #fdd;
-}
-
-/* ANSI colors */
-.ansi-black-fg { color: #3E424D; }
-.ansi-black-bg { background-color: #3E424D; }
-.ansi-black-intense-fg { color: #282C36; }
-.ansi-black-intense-bg { background-color: #282C36; }
-.ansi-red-fg { color: #E75C58; }
-.ansi-red-bg { background-color: #E75C58; }
-.ansi-red-intense-fg { color: #B22B31; }
-.ansi-red-intense-bg { background-color: #B22B31; }
-.ansi-green-fg { color: #00A250; }
-.ansi-green-bg { background-color: #00A250; }
-.ansi-green-intense-fg { color: #007427; }
-.ansi-green-intense-bg { background-color: #007427; }
-.ansi-yellow-fg { color: #DDB62B; }
-.ansi-yellow-bg { background-color: #DDB62B; }
-.ansi-yellow-intense-fg { color: #B27D12; }
-.ansi-yellow-intense-bg { background-color: #B27D12; }
-.ansi-blue-fg { color: #208FFB; }
-.ansi-blue-bg { background-color: #208FFB; }
-.ansi-blue-intense-fg { color: #0065CA; }
-.ansi-blue-intense-bg { background-color: #0065CA; }
-.ansi-magenta-fg { color: #D160C4; }
-.ansi-magenta-bg { background-color: #D160C4; }
-.ansi-magenta-intense-fg { color: #A03196; }
-.ansi-magenta-intense-bg { background-color: #A03196; }
-.ansi-cyan-fg { color: #60C6C8; }
-.ansi-cyan-bg { background-color: #60C6C8; }
-.ansi-cyan-intense-fg { color: #258F8F; }
-.ansi-cyan-intense-bg { background-color: #258F8F; }
-.ansi-white-fg { color: #C5C1B4; }
-.ansi-white-bg { background-color: #C5C1B4; }
-.ansi-white-intense-fg { color: #A1A6B2; }
-.ansi-white-intense-bg { background-color: #A1A6B2; }
-
-.ansi-bold { font-weight: bold; }
-
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
@@ -292,13 +161,7 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
-</pre></div>
-</div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">pylab</span> --no-import-all inline
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">%</span><span class="n">pylab</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">import</span><span class="o">-</span><span class="nb">all</span> <span class="n">inline</span>
 
 <span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
@@ -351,219 +214,79 @@ div.nboutput  > :nth-child(2).stderr {
 
     <span class="c1">#start = find_MAP()</span>
     <span class="c1">#h = find_hessian(start)</span>
-
+    
 
     <span class="c1">#step = Metropolis()</span>
     <span class="c1">#step = Slice()</span>
     <span class="n">step</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Populating the interactive namespace from numpy and matplotlib
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [24]:
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Populating</span> <span class="n">the</span> <span class="n">interactive</span> <span class="n">namespace</span> <span class="kn">from</span> <span class="nn">numpy</span> <span class="ow">and</span> <span class="n">matplotlib</span>
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="n">n_predictors</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">n_predictors</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[24]:
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mi">3</span>
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>3
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">group</span>
 </pre></div>
 </div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+       <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="n">group</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">n_groups</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[12]:
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mi">1</span>
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-       0, 0, 0, 0, 0, 0, 0])
+<div class="highlight-python"><div class="highlight"><pre><span></span>import pymc3 as pm
+pm.debug.eval_univariate?
 </pre></div>
 </div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">free_RVs</span>
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="n">n_groups</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">group_effects</span><span class="p">,</span> <span class="n">sg</span><span class="p">,</span> <span class="n">effects</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[11]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>1
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
-</pre></div>
-</div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
-pm.debug.eval_univariate<span class="o">?</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
-</pre></div>
-</div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="n">model</span><span class="o">.</span><span class="n">free_RVs</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[18]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>[group_effects, sg, effects, s]
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [36]:
-</pre></div>
-</div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="n">lp</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">logp</span><span class="p">({</span><span class="s1">&#39;group_effects&#39;</span><span class="p">:</span> <span class="p">[[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]],</span> <span class="s1">&#39;sg&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="s1">&#39;effects&#39;</span><span class="p">:[[</span><span class="n">y</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">y</span><span class="p">]],</span> <span class="s1">&#39;s&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">.</span><span class="mo">05</span><span class="p">]})</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">lp</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">logp</span><span class="p">({</span><span class="s1">&#39;group_effects&#39;</span><span class="p">:</span> <span class="p">[[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]],</span> <span class="s1">&#39;sg&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="s1">&#39;effects&#39;</span><span class="p">:[[</span><span class="n">y</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">y</span><span class="p">]],</span> <span class="s1">&#39;s&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">.</span><span class="mo">05</span><span class="p">]})</span>
 <span class="n">lp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">lp</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [46]:
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [61]:
-</pre></div>
-</div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="mf">0.001</span><span class="p">:</span><span class="mf">0.1</span><span class="p">:</span><span class="o">.</span><span class="mo">001</span><span class="p">,</span> <span class="o">-.</span><span class="mo">05</span><span class="p">:</span><span class="o">.</span><span class="mo">05</span><span class="p">:</span><span class="o">.</span><span class="mo">001</span><span class="p">]</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="mf">0.001</span><span class="p">:</span><span class="mf">0.1</span><span class="p">:</span><span class="o">.</span><span class="mo">001</span><span class="p">,</span> <span class="o">-.</span><span class="mo">05</span><span class="p">:</span><span class="o">.</span><span class="mo">05</span><span class="p">:</span><span class="o">.</span><span class="mo">001</span><span class="p">]</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">lp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[61]:
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">contour</span><span class="o">.</span><span class="n">QuadContourSet</span> <span class="n">instance</span> <span class="n">at</span> <span class="mh">0x7ffe77d0ccf8</span><span class="o">&gt;</span>
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.contour.QuadContourSet instance at 0x7ffe77d0ccf8&gt;
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_hierarchical_8_1.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_hierarchical_8_1.png" />
-</div>
-</div>
+<p><img alt="png" src="../_images/hierarchical_8_1.png" /></p>
 <p>best of 3: 6.94 s per loop</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">%</span><span class="n">prun</span> <span class="o">-</span><span class="n">q</span> <span class="o">-</span><span class="n">D</span> <span class="n">sample_nuts</span><span class="o">.</span><span class="n">prof</span> <span class="n">sample</span><span class="p">(</span><span class="mf">3e3</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">prun</span> -q -D sample_nuts.prof sample(3e3, step, model=model)
+<div class="highlight-default"><div class="highlight"><pre><span></span> <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">3000</span> <span class="n">of</span> <span class="mi">3000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">74.1</span> <span class="n">sec</span> 
+<span class="o">***</span> <span class="n">Profile</span> <span class="n">stats</span> <span class="n">marshalled</span> <span class="n">to</span> <span class="n">file</span> <span class="s1">u&#39;sample_nuts.prof&#39;</span><span class="o">.</span> 
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
- [-----------------100%-----------------] 3000 of 3000 complete in 74.1 sec
-*** Profile stats marshalled to file u&#39;sample_nuts.prof&#39;.
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">%</span><span class="n">prun</span> <span class="o">-</span><span class="n">q</span> <span class="o">-</span><span class="n">D</span> <span class="n">sample</span><span class="o">.</span><span class="n">prof</span> <span class="n">sample</span><span class="p">(</span><span class="mf">3e3</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">prun</span> -q -D sample.prof sample(3e3, step, start, model=model)
+<div class="highlight-default"><div class="highlight"><pre><span></span> <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">3000</span> <span class="n">of</span> <span class="mi">3000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">80.0</span> <span class="n">sec</span> 
+<span class="o">***</span> <span class="n">Profile</span> <span class="n">stats</span> <span class="n">marshalled</span> <span class="n">to</span> <span class="n">file</span> <span class="s1">u&#39;sample.prof&#39;</span><span class="o">.</span> 
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
- [-----------------100%-----------------] 3000 of 3000 complete in 80.0 sec
-*** Profile stats marshalled to file u&#39;sample.prof&#39;.
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_hierarchical_12_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_hierarchical_12_0.png" />
-</div>
-</div>
+<p><img alt="png" src="../_images/hierarchical_12_0.png" /></p>
 
 
            </div>

@@ -129,137 +129,6 @@
             
   
 <style>
-/* CSS for nbsphinx extension */
-
-/* remove conflicting styling from Sphinx themes */
-div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
-div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
-    background: none;
-    border: none;
-    padding: 0 0;
-    margin: 0;
-    box-shadow: none;
-}
-
-/* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
-    line-height: normal;
-}
-
-/* input/output containers */
-div.nbinput,
-div.nboutput {
-    display: -webkit-flex;
-    display: flex;
-    align-items: flex-start;
-    margin: 0;
-}
-
-/* input container */
-div.nbinput {
-    padding-top: 5px;
-}
-
-/* last container */
-div.nblast {
-    padding-bottom: 5px;
-}
-
-/* input prompt */
-div.nbinput > :first-child pre {
-    color: #303F9F;
-}
-
-/* output prompt */
-div.nboutput > :first-child pre {
-    color: #D84315;
-}
-
-/* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
-    min-width: 11ex;
-    padding-top: 0.4em;
-    padding-right: 0.4em;
-    text-align: right;
-    flex: 0;
-}
-
-/* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
-    padding: 0.4em;
-    -webkit-flex: 1;
-    flex: 1;
-    overflow: auto;
-}
-
-/* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
-    border: 1px solid #cfcfcf;
-    border-radius: 2px;
-    background: #f7f7f7;
-}
-
-/* override MathJax center alignment in output cells */
-div.nboutput div[class*=MathJax] {
-    text-align: left !important;
-}
-
-/* override sphinx.ext.pngmath center alignment in output cells */
-div.nboutput div.math p {
-    text-align: left;
-}
-
-/* standard error */
-div.nboutput  > :nth-child(2).stderr {
-    background: #fdd;
-}
-
-/* ANSI colors */
-.ansi-black-fg { color: #3E424D; }
-.ansi-black-bg { background-color: #3E424D; }
-.ansi-black-intense-fg { color: #282C36; }
-.ansi-black-intense-bg { background-color: #282C36; }
-.ansi-red-fg { color: #E75C58; }
-.ansi-red-bg { background-color: #E75C58; }
-.ansi-red-intense-fg { color: #B22B31; }
-.ansi-red-intense-bg { background-color: #B22B31; }
-.ansi-green-fg { color: #00A250; }
-.ansi-green-bg { background-color: #00A250; }
-.ansi-green-intense-fg { color: #007427; }
-.ansi-green-intense-bg { background-color: #007427; }
-.ansi-yellow-fg { color: #DDB62B; }
-.ansi-yellow-bg { background-color: #DDB62B; }
-.ansi-yellow-intense-fg { color: #B27D12; }
-.ansi-yellow-intense-bg { background-color: #B27D12; }
-.ansi-blue-fg { color: #208FFB; }
-.ansi-blue-bg { background-color: #208FFB; }
-.ansi-blue-intense-fg { color: #0065CA; }
-.ansi-blue-intense-bg { background-color: #0065CA; }
-.ansi-magenta-fg { color: #D160C4; }
-.ansi-magenta-bg { background-color: #D160C4; }
-.ansi-magenta-intense-fg { color: #A03196; }
-.ansi-magenta-intense-bg { background-color: #A03196; }
-.ansi-cyan-fg { color: #60C6C8; }
-.ansi-cyan-bg { background-color: #60C6C8; }
-.ansi-cyan-intense-fg { color: #258F8F; }
-.ansi-cyan-intense-bg { background-color: #258F8F; }
-.ansi-white-fg { color: #C5C1B4; }
-.ansi-white-bg { background-color: #C5C1B4; }
-.ansi-white-intense-fg { color: #A1A6B2; }
-.ansi-white-intense-bg { background-color: #A1A6B2; }
-
-.ansi-bold { font-weight: bold; }
-
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
@@ -292,13 +161,7 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [1]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">A model for coal mining disasters data with a changepoint</span>
 
@@ -344,7 +207,7 @@ div.nboutput  > :nth-child(2).stderr {
 
     <span class="c1"># Data likelihood</span>
     <span class="n">disasters</span> <span class="o">=</span> <span class="n">Poisson</span><span class="p">(</span><span class="s1">&#39;disasters&#39;</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">disasters_data</span><span class="p">)</span>
-    <span class="n">b</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">set_subtensor</span><span class="p">(</span><span class="n">rate</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="mi">12</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">tensor</span><span class="o">.</span><span class="n">set_subtensor</span><span class="p">(</span><span class="n">rate</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="mi">12</span><span class="p">)</span> 
     <span class="n">a</span> <span class="o">=</span> <span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="n">disasters</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
 
 <span class="n">n</span> <span class="o">=</span><span class="mi">500</span>
@@ -356,7 +219,7 @@ div.nboutput  > :nth-child(2).stderr {
     <span class="c1"># Use slice sampler for means</span>
     <span class="n">step1</span> <span class="o">=</span> <span class="n">Slice</span><span class="p">([</span><span class="n">early_mean</span><span class="p">,</span> <span class="n">late_mean</span><span class="p">])</span>
     <span class="c1"># Use Metropolis for switchpoint, since it accomodates discrete variables</span>
-
+    
     <span class="n">step2</span> <span class="o">=</span> <span class="n">Metropolis</span><span class="p">([</span><span class="n">switchpoint</span><span class="p">]</span> <span class="o">+</span><span class="n">model</span><span class="o">.</span><span class="n">missing_values</span><span class="p">)</span>
 
     <span class="n">tr</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">tune</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="p">[</span><span class="n">step1</span><span class="p">,</span> <span class="n">step2</span><span class="p">])</span>
@@ -365,99 +228,32 @@ div.nboutput  > :nth-child(2).stderr {
 
 </pre></div>
 </div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
- [-----------------100%-----------------] 500 of 500 complete in 1.8 sec
-</pre></div></div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-:0: FutureWarning: IPython widgets are experimental and may change in the future.
-</pre></div></div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_disaster_model_0_2.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_disaster_model_0_2.png" />
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<div class="highlight-default"><div class="highlight"><pre><span></span> <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">500</span> <span class="n">of</span> <span class="mi">500</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">1.8</span> <span class="n">sec</span>
+
+<span class="p">:</span><span class="mi">0</span><span class="p">:</span> <span class="ne">FutureWarning</span><span class="p">:</span> <span class="n">IPython</span> <span class="n">widgets</span> <span class="n">are</span> <span class="n">experimental</span> <span class="ow">and</span> <span class="n">may</span> <span class="n">change</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">future</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span><span class="p">[</span><span class="s1">&#39;disasters_missing&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span>
+<p><img alt="png" src="../_images/disaster_model_0_2.png" /></p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">test_point</span><span class="p">[</span><span class="s1">&#39;disasters_missing&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[2]:
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">dtype</span><span class="p">(</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>dtype(&#39;int32&#39;)
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">dtype</span>
 </pre></div>
 </div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="s1">&#39;int64&#39;</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">a</span><span class="o">.</span><span class="n">dtype</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">disasters_data</span><span class="o">.</span><span class="n">dtype</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[3]:
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">dtype</span><span class="p">(</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>&#39;int64&#39;
+<div class="highlight-python"><div class="highlight"><pre><span></span>
 </pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">disasters_data</span><span class="o">.</span><span class="n">dtype</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[4]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>dtype(&#39;int32&#39;)
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>
-</pre></div>
-</div>
 </div>
 
 

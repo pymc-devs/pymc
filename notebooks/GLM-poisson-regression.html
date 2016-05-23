@@ -129,137 +129,6 @@
             
   
 <style>
-/* CSS for nbsphinx extension */
-
-/* remove conflicting styling from Sphinx themes */
-div.nbinput,
-div.nbinput > div,
-div.nbinput div[class^=highlight],
-div.nbinput div[class^=highlight] pre,
-div.nboutput,
-div.nboutput > div,
-div.nboutput div[class^=highlight],
-div.nboutput div[class^=highlight] pre {
-    background: none;
-    border: none;
-    padding: 0 0;
-    margin: 0;
-    box-shadow: none;
-}
-
-/* avoid gaps between output lines */
-div.nboutput div[class^=highlight] pre {
-    line-height: normal;
-}
-
-/* input/output containers */
-div.nbinput,
-div.nboutput {
-    display: -webkit-flex;
-    display: flex;
-    align-items: flex-start;
-    margin: 0;
-}
-
-/* input container */
-div.nbinput {
-    padding-top: 5px;
-}
-
-/* last container */
-div.nblast {
-    padding-bottom: 5px;
-}
-
-/* input prompt */
-div.nbinput > :first-child pre {
-    color: #303F9F;
-}
-
-/* output prompt */
-div.nboutput > :first-child pre {
-    color: #D84315;
-}
-
-/* all prompts */
-div.nbinput > :first-child[class^=highlight],
-div.nboutput > :first-child[class^=highlight],
-div.nboutput > :first-child {
-    min-width: 11ex;
-    padding-top: 0.4em;
-    padding-right: 0.4em;
-    text-align: right;
-    flex: 0;
-}
-
-/* input/output area */
-div.nbinput > :nth-child(2)[class^=highlight],
-div.nboutput > :nth-child(2),
-div.nboutput > :nth-child(2)[class^=highlight] {
-    padding: 0.4em;
-    -webkit-flex: 1;
-    flex: 1;
-    overflow: auto;
-}
-
-/* input area */
-div.nbinput > :nth-child(2)[class^=highlight] {
-    border: 1px solid #cfcfcf;
-    border-radius: 2px;
-    background: #f7f7f7;
-}
-
-/* override MathJax center alignment in output cells */
-div.nboutput div[class*=MathJax] {
-    text-align: left !important;
-}
-
-/* override sphinx.ext.pngmath center alignment in output cells */
-div.nboutput div.math p {
-    text-align: left;
-}
-
-/* standard error */
-div.nboutput  > :nth-child(2).stderr {
-    background: #fdd;
-}
-
-/* ANSI colors */
-.ansi-black-fg { color: #3E424D; }
-.ansi-black-bg { background-color: #3E424D; }
-.ansi-black-intense-fg { color: #282C36; }
-.ansi-black-intense-bg { background-color: #282C36; }
-.ansi-red-fg { color: #E75C58; }
-.ansi-red-bg { background-color: #E75C58; }
-.ansi-red-intense-fg { color: #B22B31; }
-.ansi-red-intense-bg { background-color: #B22B31; }
-.ansi-green-fg { color: #00A250; }
-.ansi-green-bg { background-color: #00A250; }
-.ansi-green-intense-fg { color: #007427; }
-.ansi-green-intense-bg { background-color: #007427; }
-.ansi-yellow-fg { color: #DDB62B; }
-.ansi-yellow-bg { background-color: #DDB62B; }
-.ansi-yellow-intense-fg { color: #B27D12; }
-.ansi-yellow-intense-bg { background-color: #B27D12; }
-.ansi-blue-fg { color: #208FFB; }
-.ansi-blue-bg { background-color: #208FFB; }
-.ansi-blue-intense-fg { color: #0065CA; }
-.ansi-blue-intense-bg { background-color: #0065CA; }
-.ansi-magenta-fg { color: #D160C4; }
-.ansi-magenta-bg { background-color: #D160C4; }
-.ansi-magenta-intense-fg { color: #A03196; }
-.ansi-magenta-intense-bg { background-color: #A03196; }
-.ansi-cyan-fg { color: #60C6C8; }
-.ansi-cyan-bg { background-color: #60C6C8; }
-.ansi-cyan-intense-fg { color: #258F8F; }
-.ansi-cyan-intense-bg { background-color: #258F8F; }
-.ansi-white-fg { color: #C5C1B4; }
-.ansi-white-bg { background-color: #C5C1B4; }
-.ansi-white-intense-fg { color: #A1A6B2; }
-.ansi-white-intense-bg { background-color: #A1A6B2; }
-
-.ansi-bold { font-weight: bold; }
-
 /* CSS overrides for sphinx_rtd_theme */
 
 /* 24px margin */
@@ -292,40 +161,32 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="PyMC3-Examples">
-<h1>PyMC3 Examples<a class="headerlink" href="#PyMC3-Examples" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="GLM-Poisson-Regression">
-<h2>GLM Poisson Regression<a class="headerlink" href="#GLM-Poisson-Regression" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="A-minimal-reproducable-example-of-poisson-regression-to-predict-counts-using-dummy-data.">
-<h3>A minimal reproducable example of poisson regression to predict counts using dummy data.<a class="headerlink" href="#A-minimal-reproducable-example-of-poisson-regression-to-predict-counts-using-dummy-data." title="Permalink to this headline">¶</a></h3>
-<p>This Notebook is basically an excuse to demo poisson regression using
-PyMC3, both manually and using the <code class="docutils literal"><span class="pre">glm</span></code> library to demo interactions
-using the <code class="docutils literal"><span class="pre">patsy</span></code> library. We will create some dummy data, poisson
-distributed according to a linear model, and try to recover the
-coefficients of that linear model through inference.</p>
+<div class="section" id="pymc3-examples">
+<span id="pymc3-examples"></span><h1>PyMC3 Examples<a class="headerlink" href="#pymc3-examples" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="glm-poisson-regression">
+<span id="glm-poisson-regression"></span><h1>GLM Poisson Regression<a class="headerlink" href="#glm-poisson-regression" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="a-minimal-reproducable-example-of-poisson-regression-to-predict-counts-using-dummy-data">
+<span id="a-minimal-reproducable-example-of-poisson-regression-to-predict-counts-using-dummy-data"></span><h2>A minimal reproducable example of poisson regression to predict counts using dummy data.<a class="headerlink" href="#a-minimal-reproducable-example-of-poisson-regression-to-predict-counts-using-dummy-data" title="Permalink to this headline">¶</a></h2>
+<p>This Notebook is basically an excuse to demo poisson regression using PyMC3, both manually and using the <code class="docutils literal"><span class="pre">glm</span></code> library to demo interactions using the <code class="docutils literal"><span class="pre">patsy</span></code> library. We will create some dummy data, poisson distributed according to a linear model, and try to recover the coefficients of that linear model through inference.</p>
 <p>For more statistical detail see:</p>
 <ul class="simple">
-<li>Basic info on
-<a class="reference external" href="https://en.wikipedia.org/wiki/Poisson_regression">Wikipedia</a></li>
-<li>GLMs: Poisson regression, exposure, and overdispersion in Chapter 6.2
-of <a class="reference external" href="http://www.stat.columbia.edu/%7Egelman/arm/">ARM, Gelmann &amp; Hill
-2006</a></li>
-<li>This worked example from ARM 6.2 by <a class="reference external" href="http://www.clayford.net/statistics/poisson-regression-ch-6-of-gelman-and-hill/">Clay
-Ford</a></li>
+<li>Basic info on <a class="reference external" href="https://en.wikipedia.org/wiki/Poisson_regression">Wikipedia</a></li>
+<li>GLMs: Poisson regression, exposure, and overdispersion in Chapter 6.2 of <a class="reference external" href="http://www.stat.columbia.edu/%7Egelman/arm/">ARM, Gelmann &amp; Hill 2006</a></li>
+<li>This worked example from ARM 6.2 by <a class="reference external" href="http://www.clayford.net/statistics/poisson-regression-ch-6-of-gelman-and-hill/">Clay Ford</a></li>
 </ul>
-<p>This very basic model is insipired by <a class="reference external" href="http://ianozsvald.com/2016/05/07/statistically-solving-sneezes-and-sniffles-a-work-in-progress-report-at-pydatalondon-2016/">a project by Ian
-Osvald</a>,
-which is concerend with understanding the various effects of external
-environmental factors upon the allergic sneezing of a test subject.</p>
+<p>This very basic model is insipired by <a class="reference external" href="http://ianozsvald.com/2016/05/07/statistically-solving-sneezes-and-sniffles-a-work-in-progress-report-at-pydatalondon-2016/">a project by Ian Osvald</a>, which is concerend with understanding the various effects of external environmental factors upon the allergic sneezing of a test subject.</p>
 </div>
-<div class="section" id="Contents">
-<h3>Contents<a class="headerlink" href="#Contents" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="contents">
+<span id="contents"></span><h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><a class="reference external" href="#Setup">Setup</a><ul>
 <li><a class="reference external" href="#Local-Functions">Local Functions</a></li>
 <li><a class="reference external" href="#Generate-Data">Generate Data</a></li>
 </ul>
 </li>
+</ul>
+<ul class="simple">
 <li><a class="reference external" href="#Poisson-Regression">Poisson Regression</a><ul>
 <li><a class="reference external" href="#Create-Design-Matrices">Create Design Matrices</a></li>
 <li><a class="reference external" href="#Create-Model">Create Model</a></li>
@@ -335,8 +196,8 @@ environmental factors upon the allergic sneezing of a test subject.</p>
 </li>
 </ul>
 </div>
-<div class="section" id="Package-Requirements-(shown-as-a-conda-env-YAML):">
-<h3>Package Requirements (shown as a conda-env YAML):<a class="headerlink" href="#Package-Requirements-(shown-as-a-conda-env-YAML):" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="package-requirements-shown-as-a-conda-env-yaml">
+<span id="package-requirements-shown-as-a-conda-env-yaml"></span><h2>Package Requirements (shown as a conda-env YAML):<a class="headerlink" href="#package-requirements-shown-as-a-conda-env-yaml" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-default"><div class="highlight"><pre><span></span>$&gt; less conda_env_pymc3_examples.yml
 
 name: pymc3_examples
@@ -358,7 +219,7 @@ dependencies:
     - requests
     - pip
     - pip:
-        - regex
+        - regex        
 
 $&gt; conda env create --file conda_env_pymc3_examples.yml
 $&gt; source activate pymc3_examples
@@ -367,27 +228,14 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 </div>
 </div>
 </div>
-<div class="section" id="Setup">
-<h2>Setup<a class="headerlink" href="#Setup" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [1]:
+<div class="section" id="setup">
+<span id="setup"></span><h1>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1">## Interactive magics</span>
+<span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
+<span class="o">%</span><span class="n">qtconsole</span> <span class="o">--</span><span class="n">colors</span><span class="o">=</span><span class="n">linux</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="c1">## Interactive magics</span>
-<span class="o">%</span><span class="k">matplotlib</span> inline
-<span class="o">%</span><span class="k">qtconsole</span> --colors=linux
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">sys</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
 
@@ -402,11 +250,11 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <span class="c1"># pymc3 libraries</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">import</span> <span class="nn">theano</span> <span class="kn">as</span> <span class="nn">thno</span>
-<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span> 
 <span class="c1"># import pystan</span>
 
 <span class="c1"># get watermark</span>
-<span class="o">%</span><span class="k">install_ext</span> https://raw.githubusercontent.com/rasbt/watermark/master/watermark.py
+<span class="o">%</span><span class="n">install_ext</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">raw</span><span class="o">.</span><span class="n">githubusercontent</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">rasbt</span><span class="o">/</span><span class="n">watermark</span><span class="o">/</span><span class="n">master</span><span class="o">/</span><span class="n">watermark</span><span class="o">.</span><span class="n">py</span>
 
 <span class="n">sns</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">style</span><span class="o">=</span><span class="s2">&quot;darkgrid&quot;</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;muted&quot;</span><span class="p">)</span>
 <span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.mpl_style&#39;</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">)</span>
@@ -414,72 +262,49 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Installed watermark.py. To use it, type:
-  %load_ext watermark
-</pre></div></div>
-</div>
-</div>
-</div>
-<div class="section" id="What-versions-are-we-running?">
-<h1>What versions are we running?<a class="headerlink" href="#What-versions-are-we-running?" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Installed</span> <span class="n">watermark</span><span class="o">.</span><span class="n">py</span><span class="o">.</span> <span class="n">To</span> <span class="n">use</span> <span class="n">it</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span>
+  <span class="o">%</span><span class="n">load_ext</span> <span class="n">watermark</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">load_ext</span> watermark
-<span class="o">%</span><span class="k">watermark</span> -dmvgp numpy,scipy,pandas,matplotlib,pymc3,theano
+<div class="section" id="what-versions-are-we-running">
+<span id="what-versions-are-we-running"></span><h2>What versions are we running?<a class="headerlink" href="#what-versions-are-we-running" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">%</span><span class="n">load_ext</span> <span class="n">watermark</span>
+<span class="o">%</span><span class="n">watermark</span> <span class="o">-</span><span class="n">dmvgp</span> <span class="n">numpy</span><span class="p">,</span><span class="n">scipy</span><span class="p">,</span><span class="n">pandas</span><span class="p">,</span><span class="n">matplotlib</span><span class="p">,</span><span class="n">pymc3</span><span class="p">,</span><span class="n">theano</span>
 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Recursion limit {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">getrecursionlimit</span><span class="p">()))</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-2016-05-15
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mi">2016</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">15</span> 
 
-CPython 3.5.1
-IPython 4.2.0
+<span class="n">CPython</span> <span class="mf">3.5</span><span class="o">.</span><span class="mi">1</span>
+<span class="n">IPython</span> <span class="mf">4.2</span><span class="o">.</span><span class="mi">0</span>
 
-numpy 1.11.0
-scipy 0.17.0
-pandas 0.18.1
-matplotlib 1.5.1
-pymc3 3.0
-theano 0.8.2
+<span class="n">numpy</span> <span class="mf">1.11</span><span class="o">.</span><span class="mi">0</span>
+<span class="n">scipy</span> <span class="mf">0.17</span><span class="o">.</span><span class="mi">0</span>
+<span class="n">pandas</span> <span class="mf">0.18</span><span class="o">.</span><span class="mi">1</span>
+<span class="n">matplotlib</span> <span class="mf">1.5</span><span class="o">.</span><span class="mi">1</span>
+<span class="n">pymc3</span> <span class="mf">3.0</span>
+<span class="n">theano</span> <span class="mf">0.8</span><span class="o">.</span><span class="mi">2</span>
 
-compiler   : GCC 4.2.1 (Apple Inc. build 5577)
-system     : Darwin
-release    : 14.5.0
-machine    : x86_64
-processor  : i386
-CPU cores  : 4
-interpreter: 64bit
-Git hash   : 687d17856f894aaa0c2b42d30b7ff151b9289856
-Recursion limit 10000
-</pre></div></div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span class="n">compiler</span>   <span class="p">:</span> <span class="n">GCC</span> <span class="mf">4.2</span><span class="o">.</span><span class="mi">1</span> <span class="p">(</span><span class="n">Apple</span> <span class="n">Inc</span><span class="o">.</span> <span class="n">build</span> <span class="mi">5577</span><span class="p">)</span>
+<span class="n">system</span>     <span class="p">:</span> <span class="n">Darwin</span>
+<span class="n">release</span>    <span class="p">:</span> <span class="mf">14.5</span><span class="o">.</span><span class="mi">0</span>
+<span class="n">machine</span>    <span class="p">:</span> <span class="n">x86_64</span>
+<span class="n">processor</span>  <span class="p">:</span> <span class="n">i386</span>
+<span class="n">CPU</span> <span class="n">cores</span>  <span class="p">:</span> <span class="mi">4</span>
+<span class="n">interpreter</span><span class="p">:</span> <span class="mi">64</span><span class="n">bit</span>
+<span class="n">Git</span> <span class="nb">hash</span>   <span class="p">:</span> <span class="mi">687</span><span class="n">d17856f894aaa0c2b42d30b7ff151b9289856</span>
+<span class="n">Recursion</span> <span class="n">limit</span> <span class="mi">10000</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">def</span> <span class="nf">strip_derived_rvs</span><span class="p">(</span><span class="n">rvs</span><span class="p">):</span>
+</div>
+<div class="section" id="local-functions">
+<span id="local-functions"></span><h2>Local Functions<a class="headerlink" href="#local-functions" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">strip_derived_rvs</span><span class="p">(</span><span class="n">rvs</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;Convenience fn: remove PyMC3-generated RVs from a list&#39;&#39;&#39;</span>
     <span class="n">ret_rvs</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">rv</span> <span class="ow">in</span> <span class="n">rvs</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">&#39;_log&#39;</span><span class="p">,</span><span class="n">rv</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">&#39;_interval&#39;</span><span class="p">,</span><span class="n">rv</span><span class="o">.</span><span class="n">name</span><span class="p">)):</span>
-            <span class="n">ret_rvs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rv</span><span class="p">)</span>
+            <span class="n">ret_rvs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rv</span><span class="p">)</span>     
     <span class="k">return</span> <span class="n">ret_rvs</span>
 
 
@@ -489,46 +314,33 @@ Recursion limit 10000
     <span class="n">nrows</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">trcs</span><span class="o">.</span><span class="n">varnames</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">varnames</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
         <span class="n">nrows</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">varnames</span><span class="p">)</span>
-
+        
     <span class="n">ax</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trcs</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="n">varnames</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="n">nrows</span><span class="o">*</span><span class="mf">1.4</span><span class="p">),</span>
-                      <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span>
+                      <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> 
                              <span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">trcs</span><span class="p">,</span><span class="n">varnames</span><span class="o">=</span><span class="n">varnames</span><span class="p">)</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()})</span>
 
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">mn</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">trcs</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="n">varnames</span><span class="p">)[</span><span class="s1">&#39;mean&#39;</span><span class="p">]):</span>
         <span class="n">ax</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;{:.2f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mn</span><span class="p">),</span> <span class="n">xy</span><span class="o">=</span><span class="p">(</span><span class="n">mn</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="n">xycoords</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">,</span>
                          <span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span> <span class="n">textcoords</span><span class="o">=</span><span class="s1">&#39;offset points&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span><span class="p">,</span>
-                         <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;large&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#AA0022&#39;</span><span class="p">)</span>
+                         <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;large&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#AA0022&#39;</span><span class="p">)</span> 
 </pre></div>
 </div>
 </div>
-<p>This dummy dataset is created to emulate some data created as part of a
-study into quantified self, and the real data is more complicated than
-this. Ask Ian Osvald if you&#8217;d like to know more
-<a class="reference external" href="https://twitter.com/ianozsvald">https://twitter.com/ianozsvald</a></p>
+<div class="section" id="generate-data">
+<span id="generate-data"></span><h2>Generate Data<a class="headerlink" href="#generate-data" title="Permalink to this headline">¶</a></h2>
+<p>This dummy dataset is created to emulate some data created as part of a study into quantified self, and the real data is more complicated than this. Ask Ian Osvald if you&#8217;d like to know more https://twitter.com/ianozsvald</p>
+<div class="section" id="assumptions">
+<span id="assumptions"></span><h3>Assumptions:<a class="headerlink" href="#assumptions" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
 <li>The subject sneezes N times per day, recorded as <code class="docutils literal"><span class="pre">nsneeze</span> <span class="pre">(int)</span></code></li>
-<li>The subject may or may not drink alcohol during that day, recorded as
-<code class="docutils literal"><span class="pre">alcohol</span> <span class="pre">(boolean)</span></code></li>
-<li>The subject may or may not take an antihistamine medication during
-that day, recorded as the negative action <code class="docutils literal"><span class="pre">nomeds</span> <span class="pre">(boolean)</span></code></li>
-<li>I postulate (probably incorrectly) that sneezing occurs at some
-baseline rate, which increases if an antihistamine is not taken, and
-further increased after alcohol is consumed.</li>
-<li>The data is aggegated per day, to yield a total count of sneezes on
-that day, with a boolean flag for alcohol and antihistamine usage,
-with the big assumption that nsneezes have a direct causal
-relationship.</li>
+<li>The subject may or may not drink alcohol during that day, recorded as <code class="docutils literal"><span class="pre">alcohol</span> <span class="pre">(boolean)</span></code></li>
+<li>The subject may or may not take an antihistamine medication during that day, recorded as the negative action <code class="docutils literal"><span class="pre">nomeds</span> <span class="pre">(boolean)</span></code></li>
+<li>I postulate (probably incorrectly) that sneezing occurs at some baseline rate, which increases if an antihistamine is not taken, and further increased after alcohol is consumed.</li>
+<li>The data is aggegated per day, to yield a total count of sneezes on that day, with a boolean flag for alcohol and antihistamine usage, with the big assumption that nsneezes have a direct causal relationship.</li>
 </ul>
-</div>
-<div class="section" id="Create-4000-days-of-data:-daily-counts-of-sneezes-which-are-poisson-distributed-w.r.t-alcohol-consumption-and-antihistamine-usage">
-<h1>Create 4000 days of data: daily counts of sneezes which are poisson distributed w.r.t alcohol consumption and antihistamine usage<a class="headerlink" href="#Create-4000-days-of-data:-daily-counts-of-sneezes-which-are-poisson-distributed-w.r.t-alcohol-consumption-and-antihistamine-usage" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="c1"># decide poisson theta values</span>
+<div class="section" id="create-4000-days-of-data-daily-counts-of-sneezes-which-are-poisson-distributed-w-r-t-alcohol-consumption-and-antihistamine-usage">
+<span id="create-4000-days-of-data-daily-counts-of-sneezes-which-are-poisson-distributed-w-r-t-alcohol-consumption-and-antihistamine-usage"></span><h4>Create 4000 days of data: daily counts of sneezes which are poisson distributed w.r.t alcohol consumption and antihistamine usage<a class="headerlink" href="#create-4000-days-of-data-daily-counts-of-sneezes-which-are-poisson-distributed-w-r-t-alcohol-consumption-and-antihistamine-usage" title="Permalink to this headline">¶</a></h4>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># decide poisson theta values</span>
 <span class="n">theta_noalcohol_meds</span> <span class="o">=</span> <span class="mi">1</span>    <span class="c1"># no alcohol, took an antihist</span>
 <span class="n">theta_alcohol_meds</span> <span class="o">=</span> <span class="mi">3</span>      <span class="c1"># alcohol, took an antihist</span>
 <span class="n">theta_noalcohol_nomeds</span> <span class="o">=</span> <span class="mi">6</span>  <span class="c1"># no alcohol, no antihist</span>
@@ -539,7 +351,7 @@ relationship.</li>
 <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
         <span class="s1">&#39;nsneeze&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">theta_noalcohol_meds</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
                                    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">theta_alcohol_meds</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
-                                   <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">theta_noalcohol_nomeds</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">theta_noalcohol_nomeds</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span> 
                                    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">theta_alcohol_nomeds</span><span class="p">,</span> <span class="n">q</span><span class="p">))),</span>
         <span class="s1">&#39;alcohol&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
                                    <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="n">q</span><span class="p">),</span>
@@ -551,23 +363,9 @@ relationship.</li>
                                       <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="n">q</span><span class="p">)))})</span>
 </pre></div>
 </div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">tail</span><span class="p">()</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">df</span><span class="o">.</span><span class="n">tail</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[6]:
-</pre></div>
-</div>
-<div class="container">
 <div>
 <table border="1" class="dataframe">
   <thead>
@@ -612,26 +410,11 @@ relationship.</li>
   </tbody>
 </table>
 </div></div>
-</div>
-</div>
-<div class="section" id="View-means-of-the-various-combinations-(poisson-mean-values)">
-<h1>View means of the various combinations (poisson mean values)<a class="headerlink" href="#View-means-of-the-various-combinations-(poisson-mean-values)" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<div class="section" id="view-means-of-the-various-combinations-poisson-mean-values">
+<span id="view-means-of-the-various-combinations-poisson-mean-values"></span><h4>View means of the various combinations (poisson mean values)<a class="headerlink" href="#view-means-of-the-various-combinations-poisson-mean-values" title="Permalink to this headline">¶</a></h4>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;alcohol&#39;</span><span class="p">,</span><span class="s1">&#39;nomeds&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">unstack</span><span class="p">()</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;alcohol&#39;</span><span class="p">,</span><span class="s1">&#39;nomeds&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">unstack</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[7]:
-</pre></div>
-</div>
-<div class="container">
 <div>
 <table border="1" class="dataframe">
   <thead>
@@ -665,100 +448,49 @@ relationship.</li>
 </table>
 </div></div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">factorplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;nsneeze&#39;</span><span class="p">,</span> <span class="n">row</span><span class="o">=</span><span class="s1">&#39;nomeds&#39;</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;alcohol&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+<div class="section" id="briefly-describe-dataset">
+<span id="briefly-describe-dataset"></span><h3>Briefly Describe Dataset<a class="headerlink" href="#briefly-describe-dataset" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">factorplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;nsneeze&#39;</span><span class="p">,</span> <span class="n">row</span><span class="o">=</span><span class="s1">&#39;nomeds&#39;</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s1">&#39;alcohol&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
                <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;count&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-poisson-regression_16_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-poisson-regression_16_0.png" />
-</div>
-</div>
+<p><img alt="png" src="../_images/GLM-poisson-regression_16_0.png" /></p>
 <p><strong>Observe:</strong></p>
 <ul class="simple">
 <li>This looks a lot like poisson-distributed count data (because it is)</li>
-<li>With <code class="docutils literal"><span class="pre">nomeds</span> <span class="pre">==</span> <span class="pre">False</span></code> and <code class="docutils literal"><span class="pre">alcohol</span> <span class="pre">==</span> <span class="pre">False</span></code> (top-left, akak
-antihistamines WERE used, alcohol was NOT drunk) the mean of the
-poisson distribution of sneeze counts is low.</li>
-<li>Changing <code class="docutils literal"><span class="pre">alcohol</span> <span class="pre">==</span> <span class="pre">True</span></code> (top-right) increases the sneeze count
-<code class="docutils literal"><span class="pre">nsneeze</span></code> slightly</li>
-<li>Changing <code class="docutils literal"><span class="pre">nomeds</span> <span class="pre">==</span> <span class="pre">True</span></code> (lower-left) increases the sneeze count
-<code class="docutils literal"><span class="pre">nsneeze</span></code> further</li>
-<li>Changing both <code class="docutils literal"><span class="pre">alcohol</span> <span class="pre">==</span> <span class="pre">True</span> <span class="pre">and</span> <span class="pre">nomeds</span> <span class="pre">==</span> <span class="pre">True</span></code> (lower-right)
-increases the sneeze count <code class="docutils literal"><span class="pre">nsneeze</span></code> a lot, increasing both the
-mean and variance.</li>
+<li>With <code class="docutils literal"><span class="pre">nomeds</span> <span class="pre">==</span> <span class="pre">False</span></code> and <code class="docutils literal"><span class="pre">alcohol</span> <span class="pre">==</span> <span class="pre">False</span></code> (top-left, akak antihistamines WERE used, alcohol was NOT drunk) the mean of the poisson distribution of sneeze counts is low.</li>
+<li>Changing <code class="docutils literal"><span class="pre">alcohol</span> <span class="pre">==</span> <span class="pre">True</span></code> (top-right) increases the sneeze count <code class="docutils literal"><span class="pre">nsneeze</span></code> slightly</li>
+<li>Changing <code class="docutils literal"><span class="pre">nomeds</span> <span class="pre">==</span> <span class="pre">True</span></code> (lower-left) increases the sneeze count <code class="docutils literal"><span class="pre">nsneeze</span></code> further</li>
+<li>Changing both <code class="docutils literal"><span class="pre">alcohol</span> <span class="pre">==</span> <span class="pre">True</span> <span class="pre">and</span> <span class="pre">nomeds</span> <span class="pre">==</span> <span class="pre">True</span></code> (lower-right) increases the sneeze count <code class="docutils literal"><span class="pre">nsneeze</span></code> a lot, increasing both the mean and variance.</li>
 </ul>
+</div>
+</div>
+</div>
 <hr class="docutils" />
-<div class="section" id="Poisson-Regression">
-<h2>Poisson Regression<a class="headerlink" href="#Poisson-Regression" title="Permalink to this headline">¶</a></h2>
-<p>Our model here is a very simple Poisson regression, allowing for
-interaction of terms:</p>
-<div class="math">
-\[\theta = exp(\beta X)\]</div>
-<div class="math">
-\[Y_{sneeze\_count} ~ Poisson(\theta)\]</div>
-</div>
-</div>
-<div class="section" id="Create-linear-model-for-interaction-of-terms">
-<h1>Create linear model for interaction of terms<a class="headerlink" href="#Create-linear-model-for-interaction-of-terms" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<div class="section" id="poisson-regression">
+<span id="poisson-regression"></span><h1>Poisson Regression<a class="headerlink" href="#poisson-regression" title="Permalink to this headline">¶</a></h1>
+<p>Our model here is a very simple Poisson regression, allowing for interaction of terms:</p>
+<p>$$ \theta = exp(\beta X)$$</p>
+<p>$$ Y_{sneeze_count} ~ Poisson(\theta)$$</p>
+<div class="section" id="create-linear-model-for-interaction-of-terms">
+<span id="create-linear-model-for-interaction-of-terms"></span><h2>Create linear model for interaction of terms<a class="headerlink" href="#create-linear-model-for-interaction-of-terms" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">fml</span> <span class="o">=</span> <span class="s1">&#39;nsneeze ~ alcohol + antihist + alcohol:antihist&#39;</span>  <span class="c1"># full patsy formulation</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">fml</span> <span class="o">=</span> <span class="s1">&#39;nsneeze ~ alcohol + antihist + alcohol:antihist&#39;</span>  <span class="c1"># full patsy formulation</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">fml</span> <span class="o">=</span> <span class="s1">&#39;nsneeze ~ alcohol * nomeds&#39;</span>  <span class="c1"># lazy, alternative patsy formulation</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<div class="section" id="manual-method-create-design-matrices-and-manually-specify-model">
+<span id="manual-method-create-design-matrices-and-manually-specify-model"></span><h2>1. Manual method, create design matrices and manually specify model<a class="headerlink" href="#manual-method-create-design-matrices-and-manually-specify-model" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="create-design-matrices">
+<span id="create-design-matrices"></span><h3>Create Design Matrices<a class="headerlink" href="#create-design-matrices" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">mx_en</span><span class="p">,</span> <span class="n">mx_ex</span><span class="p">)</span> <span class="o">=</span> <span class="n">pt</span><span class="o">.</span><span class="n">dmatrices</span><span class="p">(</span><span class="n">fml</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">return_type</span><span class="o">=</span><span class="s1">&#39;dataframe&#39;</span><span class="p">,</span> <span class="n">NA_action</span><span class="o">=</span><span class="s1">&#39;raise&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">fml</span> <span class="o">=</span> <span class="s1">&#39;nsneeze ~ alcohol * nomeds&#39;</span>  <span class="c1"># lazy, alternative patsy formulation</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">((</span><span class="n">mx_ex</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span><span class="n">mx_ex</span><span class="o">.</span><span class="n">tail</span><span class="p">(</span><span class="mi">3</span><span class="p">)))</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="Create-Design-Matrices">
-<h1>Create Design Matrices<a class="headerlink" href="#Create-Design-Matrices" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="p">(</span><span class="n">mx_en</span><span class="p">,</span> <span class="n">mx_ex</span><span class="p">)</span> <span class="o">=</span> <span class="n">pt</span><span class="o">.</span><span class="n">dmatrices</span><span class="p">(</span><span class="n">fml</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">return_type</span><span class="o">=</span><span class="s1">&#39;dataframe&#39;</span><span class="p">,</span> <span class="n">NA_action</span><span class="o">=</span><span class="s1">&#39;raise&#39;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">((</span><span class="n">mx_ex</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span><span class="n">mx_ex</span><span class="o">.</span><span class="n">tail</span><span class="p">(</span><span class="mi">3</span><span class="p">)))</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[12]:
-</pre></div>
-</div>
-<div class="container">
 <div>
 <table border="1" class="dataframe">
   <thead>
@@ -816,91 +548,58 @@ interaction of terms:</p>
   </tbody>
 </table>
 </div></div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_fish</span><span class="p">:</span>
-
+<div class="section" id="create-model">
+<span id="create-model"></span><h3>Create Model<a class="headerlink" href="#create-model" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_fish</span><span class="p">:</span>
+    
     <span class="c1"># define priors, weakly informative Normal</span>
     <span class="n">b0</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b0_intercept&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
     <span class="n">b1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b1_alcohol[T.True]&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
     <span class="n">b2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b2_nomeds[T.True]&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
     <span class="n">b3</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b3_alcohol[T.True]:nomeds[T.True]&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-
+    
     <span class="c1"># define linear model and exp link function</span>
     <span class="n">theta</span> <span class="o">=</span> <span class="p">(</span><span class="n">b0</span> <span class="o">+</span>
             <span class="n">b1</span> <span class="o">*</span> <span class="n">mx_ex</span><span class="p">[</span><span class="s1">&#39;alcohol[T.True]&#39;</span><span class="p">]</span> <span class="o">+</span>
             <span class="n">b2</span> <span class="o">*</span> <span class="n">mx_ex</span><span class="p">[</span><span class="s1">&#39;nomeds[T.True]&#39;</span><span class="p">]</span> <span class="o">+</span>
-            <span class="n">b3</span> <span class="o">*</span> <span class="n">mx_ex</span><span class="p">[</span><span class="s1">&#39;alcohol[T.True]:nomeds[T.True]&#39;</span><span class="p">])</span>
+            <span class="n">b3</span> <span class="o">*</span> <span class="n">mx_ex</span><span class="p">[</span><span class="s1">&#39;alcohol[T.True]:nomeds[T.True]&#39;</span><span class="p">])</span> 
 
-    <span class="c1">## Define Poisson likelihood</span>
+    <span class="c1">## Define Poisson likelihood </span>
     <span class="n">y</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Poisson</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">theta</span><span class="p">),</span> <span class="n">observed</span><span class="o">=</span><span class="n">mx_en</span><span class="p">[</span><span class="s1">&#39;nsneeze&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">mdl_fish</span><span class="p">:</span>
-
+<div class="section" id="sample-model">
+<span id="sample-model"></span><h3>Sample Model<a class="headerlink" href="#sample-model" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">mdl_fish</span><span class="p">:</span>
+    
     <span class="n">start_MAP</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_powell</span><span class="p">)</span>
     <span class="n">trc_fish</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start_MAP</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">())</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
- [-----------------100%-----------------] 2001 of 2000 complete in 34.7 sec
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<div class="highlight-default"><div class="highlight"><pre><span></span> <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">2001</span> <span class="n">of</span> <span class="mi">2000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">34.7</span> <span class="n">sec</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">rvs_fish</span> <span class="o">=</span> <span class="p">[</span><span class="n">rv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">rv</span> <span class="ow">in</span> <span class="n">strip_derived_rvs</span><span class="p">(</span><span class="n">mdl_fish</span><span class="o">.</span><span class="n">unobserved_RVs</span><span class="p">)]</span>
+</div>
+<div class="section" id="view-diagnostics">
+<span id="view-diagnostics"></span><h3>View Diagnostics<a class="headerlink" href="#view-diagnostics" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">rvs_fish</span> <span class="o">=</span> <span class="p">[</span><span class="n">rv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">rv</span> <span class="ow">in</span> <span class="n">strip_derived_rvs</span><span class="p">(</span><span class="n">mdl_fish</span><span class="o">.</span><span class="n">unobserved_RVs</span><span class="p">)]</span>
 <span class="n">plot_traces_pymc</span><span class="p">(</span><span class="n">trc_fish</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="n">rvs_fish</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-poisson-regression_33_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-poisson-regression_33_0.png" />
-</div>
-</div>
+<p><img alt="png" src="../_images/GLM-poisson-regression_33_0.png" /></p>
 <p><strong>Observe:</strong></p>
 <ul class="simple">
 <li>The model converges quickly and traceplots looks pretty well mixed</li>
 </ul>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+</div>
+</div>
+<div class="section" id="transform-coeffs-and-recover-theta-values">
+<span id="transform-coeffs-and-recover-theta-values"></span><h2>Transform coeffs and recover theta values<a class="headerlink" href="#transform-coeffs-and-recover-theta-values" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">trc_fish</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="n">rvs_fish</span><span class="p">)[[</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span><span class="s1">&#39;hpd_2.5&#39;</span><span class="p">,</span><span class="s1">&#39;hpd_97.5&#39;</span><span class="p">]])</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">trc_fish</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="n">rvs_fish</span><span class="p">)[[</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span><span class="s1">&#39;hpd_2.5&#39;</span><span class="p">,</span><span class="s1">&#39;hpd_97.5&#39;</span><span class="p">]])</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[16]:
-</pre></div>
-</div>
-<div class="container">
 <div>
 <table border="1" class="dataframe">
   <thead>
@@ -938,123 +637,95 @@ interaction of terms:</p>
     </tr>
   </tbody>
 </table>
-</div></div>
-</div>
-<p><strong>Observe:</strong></p>
-<ul>
-<li><p class="first">The contributions from each feature as a multiplier of the baseline
-sneezecount appear to be as per the data generation:</p>
-<ol class="arabic">
-<li><p class="first">exp(b0_intercept): mean=1.02 cr=[0.96, 1.08]</p>
-<p>Roughly linear baseline count when no alcohol and meds, as per the
-generated data:</p>
-<p>theta_noalcohol_meds = 1 (as set above) theta_noalcohol_meds =
-exp(b0_intercept) = 1</p>
-</li>
-<li><p class="first">exp(b1_alcohol): mean=2.88 cr=[2.69, 3.09]</p>
-<p>non-zero positive effect of adding alcohol, a ~3x multiplier of
-baseline sneeze count, as per the generated data:</p>
-<p>theta_alcohol_meds = 3 (as set above) theta_alcohol_meds =
-exp(b0_intercept + b1_alcohol) = exp(b0_intercept) *
-exp(b1_alcohol) = 1 * 3 = 3</p>
-</li>
-<li><p class="first">exp(b2_nomeds[T.True]): mean=5.76 cr=[5.40, 6.17]</p>
-<p>larger, non-zero positive effect of adding nomeds, a ~6x
-multiplier of baseline sneeze count, as per the generated data:</p>
-<p>theta_noalcohol_nomeds = 6 (as set above)
-theta_noalcohol_nomeds = exp(b0_intercept + b2_nomeds) =
-exp(b0_intercept) * exp(b2_nomeds) = 1 * 6 = 6</p>
-</li>
-<li><p class="first">exp(b3_alcohol[T.True]:nomeds[T.True]): mean=2.12 cr=[1.98, 2.30]</p>
-<p>small, positive interaction effect of alcohol and meds, a ~2x
-multiplier of baseline sneeze count, as per the generated data:</p>
-<p>theta_alcohol_nomeds = 36 (as set above) theta_alcohol_nomeds
-= exp(b0_intercept + b1_alcohol + b2_nomeds +
-b3_alcohol:nomeds) = exp(b0_intercept) * exp(b1_alcohol) *
-exp(b2_nomeds * b3_alcohol:nomeds) = 1 * 3 * 6 * 2 = 36</p>
-</li>
-</ol>
-</li>
+</div><p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>The contributions from each feature as a multiplier of the baseline sneezecount appear to be as per the data generation:</li>
 </ul>
-<hr class="docutils" />
-</div>
-<div class="section" id="Alternative-automatic-formulation-using-pmyc.glm">
-<h1>Alternative automatic formulation using <code class="docutils literal"><span class="pre">pmyc.glm</span></code><a class="headerlink" href="#Alternative-automatic-formulation-using-pmyc.glm" title="Permalink to this headline">¶</a></h1>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mf">1.</span> <span class="n">exp</span><span class="p">(</span><span class="n">b0_intercept</span><span class="p">):</span> <span class="n">mean</span><span class="o">=</span><span class="mf">1.02</span>  <span class="n">cr</span><span class="o">=</span><span class="p">[</span><span class="mf">0.96</span><span class="p">,</span> <span class="mf">1.08</span><span class="p">]</span>        
+
+    <span class="n">Roughly</span> <span class="n">linear</span> <span class="n">baseline</span> <span class="n">count</span> <span class="n">when</span> <span class="n">no</span> <span class="n">alcohol</span> <span class="ow">and</span> <span class="n">meds</span><span class="p">,</span> <span class="k">as</span> <span class="n">per</span> <span class="n">the</span> <span class="n">generated</span> <span class="n">data</span><span class="p">:</span> 
+
+    <span class="n">theta_noalcohol_meds</span> <span class="o">=</span> <span class="mi">1</span> <span class="p">(</span><span class="k">as</span> <span class="nb">set</span> <span class="n">above</span><span class="p">)</span>
+    <span class="n">theta_noalcohol_meds</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="n">b0_intercept</span><span class="p">)</span> 
+                         <span class="o">=</span> <span class="mi">1</span>
+
+
+<span class="mf">2.</span> <span class="n">exp</span><span class="p">(</span><span class="n">b1_alcohol</span><span class="p">):</span> <span class="n">mean</span><span class="o">=</span><span class="mf">2.88</span>  <span class="n">cr</span><span class="o">=</span><span class="p">[</span><span class="mf">2.69</span><span class="p">,</span> <span class="mf">3.09</span><span class="p">]</span>
+
+    <span class="n">non</span><span class="o">-</span><span class="n">zero</span> <span class="n">positive</span> <span class="n">effect</span> <span class="n">of</span> <span class="n">adding</span> <span class="n">alcohol</span><span class="p">,</span> <span class="n">a</span> <span class="o">~</span><span class="mi">3</span><span class="n">x</span> <span class="n">multiplier</span> <span class="n">of</span> 
+    <span class="n">baseline</span> <span class="n">sneeze</span> <span class="n">count</span><span class="p">,</span> <span class="k">as</span> <span class="n">per</span> <span class="n">the</span> <span class="n">generated</span> <span class="n">data</span><span class="p">:</span> 
+
+    <span class="n">theta_alcohol_meds</span> <span class="o">=</span> <span class="mi">3</span> <span class="p">(</span><span class="k">as</span> <span class="nb">set</span> <span class="n">above</span><span class="p">)</span>
+    <span class="n">theta_alcohol_meds</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="n">b0_intercept</span> <span class="o">+</span> <span class="n">b1_alcohol</span><span class="p">)</span> 
+                       <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="n">b0_intercept</span><span class="p">)</span> <span class="o">*</span> <span class="n">exp</span><span class="p">(</span><span class="n">b1_alcohol</span><span class="p">)</span> 
+                       <span class="o">=</span> <span class="mi">1</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">=</span> <span class="mi">3</span>
+
+
+<span class="mf">3.</span> <span class="n">exp</span><span class="p">(</span><span class="n">b2_nomeds</span><span class="p">[</span><span class="n">T</span><span class="o">.</span><span class="kc">True</span><span class="p">]):</span> <span class="n">mean</span><span class="o">=</span><span class="mf">5.76</span>  <span class="n">cr</span><span class="o">=</span><span class="p">[</span><span class="mf">5.40</span><span class="p">,</span> <span class="mf">6.17</span><span class="p">]</span>    
+
+    <span class="n">larger</span><span class="p">,</span> <span class="n">non</span><span class="o">-</span><span class="n">zero</span> <span class="n">positive</span> <span class="n">effect</span> <span class="n">of</span> <span class="n">adding</span> <span class="n">nomeds</span><span class="p">,</span> <span class="n">a</span> <span class="o">~</span><span class="mi">6</span><span class="n">x</span> <span class="n">multiplier</span> <span class="n">of</span> 
+    <span class="n">baseline</span> <span class="n">sneeze</span> <span class="n">count</span><span class="p">,</span> <span class="k">as</span> <span class="n">per</span> <span class="n">the</span> <span class="n">generated</span> <span class="n">data</span><span class="p">:</span> 
+
+    <span class="n">theta_noalcohol_nomeds</span> <span class="o">=</span> <span class="mi">6</span> <span class="p">(</span><span class="k">as</span> <span class="nb">set</span> <span class="n">above</span><span class="p">)</span>
+    <span class="n">theta_noalcohol_nomeds</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="n">b0_intercept</span> <span class="o">+</span> <span class="n">b2_nomeds</span><span class="p">)</span>
+                           <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="n">b0_intercept</span><span class="p">)</span> <span class="o">*</span> <span class="n">exp</span><span class="p">(</span><span class="n">b2_nomeds</span><span class="p">)</span> 
+                           <span class="o">=</span> <span class="mi">1</span> <span class="o">*</span> <span class="mi">6</span> <span class="o">=</span> <span class="mi">6</span>
+
+
+<span class="mf">4.</span> <span class="n">exp</span><span class="p">(</span><span class="n">b3_alcohol</span><span class="p">[</span><span class="n">T</span><span class="o">.</span><span class="kc">True</span><span class="p">]:</span><span class="n">nomeds</span><span class="p">[</span><span class="n">T</span><span class="o">.</span><span class="kc">True</span><span class="p">]):</span> <span class="n">mean</span><span class="o">=</span><span class="mf">2.12</span>  <span class="n">cr</span><span class="o">=</span><span class="p">[</span><span class="mf">1.98</span><span class="p">,</span> <span class="mf">2.30</span><span class="p">]</span>
+
+    <span class="n">small</span><span class="p">,</span> <span class="n">positive</span> <span class="n">interaction</span> <span class="n">effect</span> <span class="n">of</span> <span class="n">alcohol</span> <span class="ow">and</span> <span class="n">meds</span><span class="p">,</span> <span class="n">a</span> <span class="o">~</span><span class="mi">2</span><span class="n">x</span> <span class="n">multiplier</span> <span class="n">of</span> 
+    <span class="n">baseline</span> <span class="n">sneeze</span> <span class="n">count</span><span class="p">,</span> <span class="k">as</span> <span class="n">per</span> <span class="n">the</span> <span class="n">generated</span> <span class="n">data</span><span class="p">:</span> 
+
+    <span class="n">theta_alcohol_nomeds</span> <span class="o">=</span> <span class="mi">36</span> <span class="p">(</span><span class="k">as</span> <span class="nb">set</span> <span class="n">above</span><span class="p">)</span>
+    <span class="n">theta_alcohol_nomeds</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="n">b0_intercept</span> <span class="o">+</span> <span class="n">b1_alcohol</span> <span class="o">+</span> <span class="n">b2_nomeds</span> <span class="o">+</span> <span class="n">b3_alcohol</span><span class="p">:</span><span class="n">nomeds</span><span class="p">)</span>
+                         <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="n">b0_intercept</span><span class="p">)</span> <span class="o">*</span> <span class="n">exp</span><span class="p">(</span><span class="n">b1_alcohol</span><span class="p">)</span> <span class="o">*</span> <span class="n">exp</span><span class="p">(</span><span class="n">b2_nomeds</span> <span class="o">*</span> <span class="n">b3_alcohol</span><span class="p">:</span><span class="n">nomeds</span><span class="p">)</span>
+                         <span class="o">=</span> <span class="mi">1</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">*</span> <span class="mi">6</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">=</span> <span class="mi">36</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_fish_alt</span><span class="p">:</span>
-
+</div>
+<hr class="docutils" />
+<div class="section" id="alternative-method-using-pymc-glm">
+<span id="alternative-method-using-pymc-glm"></span><h2>2. Alternative method, using <code class="docutils literal"><span class="pre">pymc.glm</span></code><a class="headerlink" href="#alternative-method-using-pymc-glm" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="create-model">
+<span id="id1"></span><h3>Create Model<a class="headerlink" href="#create-model" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="alternative-automatic-formulation-using-pmyc-glm">
+<span id="alternative-automatic-formulation-using-pmyc-glm"></span><h4>Alternative automatic formulation using <code class="docutils literal"><span class="pre">pmyc.glm</span></code><a class="headerlink" href="#alternative-automatic-formulation-using-pmyc-glm" title="Permalink to this headline">¶</a></h4>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_fish_alt</span><span class="p">:</span>
+    
     <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="n">fml</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Poisson</span><span class="p">())</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied log-transform to mu and added transformed mu_log to model.
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Applied</span> <span class="n">log</span><span class="o">-</span><span class="n">transform</span> <span class="n">to</span> <span class="n">mu</span> <span class="ow">and</span> <span class="n">added</span> <span class="n">transformed</span> <span class="n">mu_log</span> <span class="n">to</span> <span class="n">model</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">mdl_fish_alt</span><span class="p">:</span>
-
+</div>
+</div>
+<div class="section" id="sample-model">
+<span id="id2"></span><h3>Sample Model<a class="headerlink" href="#sample-model" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">mdl_fish_alt</span><span class="p">:</span>
+    
     <span class="n">start_MAP_alt</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_powell</span><span class="p">)</span>
     <span class="n">trc_fish_alt</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">4000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start_MAP_alt</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">())</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
- [-----------------100%-----------------] 4000 of 4000 complete in 48.4 sec
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [19]:
+<div class="highlight-default"><div class="highlight"><pre><span></span> <span class="p">[</span><span class="o">-----------------</span><span class="mi">100</span><span class="o">%-----------------</span><span class="p">]</span> <span class="mi">4000</span> <span class="n">of</span> <span class="mi">4000</span> <span class="n">complete</span> <span class="ow">in</span> <span class="mf">48.4</span> <span class="n">sec</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">rvs_fish_alt</span> <span class="o">=</span> <span class="p">[</span><span class="n">rv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">rv</span> <span class="ow">in</span> <span class="n">strip_derived_rvs</span><span class="p">(</span><span class="n">mdl_fish_alt</span><span class="o">.</span><span class="n">unobserved_RVs</span><span class="p">)]</span>
+</div>
+<div class="section" id="view-traces">
+<span id="view-traces"></span><h3>View Traces<a class="headerlink" href="#view-traces" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">rvs_fish_alt</span> <span class="o">=</span> <span class="p">[</span><span class="n">rv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">rv</span> <span class="ow">in</span> <span class="n">strip_derived_rvs</span><span class="p">(</span><span class="n">mdl_fish_alt</span><span class="o">.</span><span class="n">unobserved_RVs</span><span class="p">)]</span>
 <span class="n">plot_traces_pymc</span><span class="p">(</span><span class="n">trc_fish_alt</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="n">rvs_fish_alt</span><span class="p">)</span>
 </pre></div>
 </div>
+<p><img alt="png" src="../_images/GLM-poisson-regression_46_0.png" /></p>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-poisson-regression_46_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GLM-poisson-regression_46_0.png" />
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [25]:
+<div class="section" id="transform-coeffs">
+<span id="transform-coeffs"></span><h3>Transform coeffs<a class="headerlink" href="#transform-coeffs" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">trc_fish_alt</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="n">rvs_fish_alt</span><span class="p">)[[</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span><span class="s1">&#39;hpd_2.5&#39;</span><span class="p">,</span><span class="s1">&#39;hpd_97.5&#39;</span><span class="p">]])</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">trc_fish_alt</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="n">rvs_fish_alt</span><span class="p">)[[</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span><span class="s1">&#39;hpd_2.5&#39;</span><span class="p">,</span><span class="s1">&#39;hpd_97.5&#39;</span><span class="p">]])</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[25]:
-</pre></div>
-</div>
-<div class="container">
 <div>
 <table border="1" class="dataframe">
   <thead>
@@ -1098,61 +769,29 @@ Applied log-transform to mu and added transformed mu_log to model.
     </tr>
   </tbody>
 </table>
-</div></div>
-</div>
-<p><strong>Observe:</strong></p>
+</div><p><strong>Observe:</strong></p>
 <ul class="simple">
 <li>The traceplots look well mixed</li>
-<li>The transformed model coeffs look moreorless the same as those
-generated by the manual model</li>
-<li>Note also that the <code class="docutils literal"><span class="pre">mu</span></code> coeff is for the overall mean of the
-dataset and has an extreme skew, if we look at the median value ...</li>
+<li>The transformed model coeffs look moreorless the same as those generated by the manual model</li>
+<li>Note also that the <code class="docutils literal"><span class="pre">mu</span></code> coeff is for the overall mean of the dataset and has an extreme skew, if we look at the median value ...</li>
 </ul>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [26]:
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">trc_fish_alt</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:][</span><span class="s1">&#39;mu&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">25</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">75</span><span class="p">])</span>
 </pre></div>
 </div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">trc_fish_alt</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:][</span><span class="s1">&#39;mu&#39;</span><span class="p">],</span> <span class="p">[</span><span class="mi">25</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">75</span><span class="p">])</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">array</span><span class="p">([</span>  <span class="mf">4.17219583</span><span class="p">,</span>   <span class="mf">9.44616465</span><span class="p">,</span>  <span class="mf">24.18060789</span><span class="p">])</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[26]:
+<p>... of 9.45 with a range [25%, 75%] of [4.17, 24.18], we see this is pretty close to the overall mean of:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;nsneeze&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([  4.17219583,   9.44616465,  24.18060789])
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="mf">11.42775</span>
 </pre></div>
-</div>
-</div>
-<p>... of 9.45 with a range [25%, 75%] of [4.17, 24.18], we see this is
-pretty close to the overall mean of:</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [27]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;nsneeze&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[27]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>11.42775
-</pre></div>
-</div>
 </div>
 <hr class="docutils" />
-<p>Example originally contributed by Jonathan Sedar 2016-05-15
-<a class="reference external" href="https://github.com/jonsedar">github.com/jonsedar</a></p>
+<p>Example originally contributed by Jonathan Sedar 2016-05-15 <a class="reference external" href="https://github.com/jonsedar">github.com/jonsedar</a></p>
+</div>
+</div>
 </div>
 
 
