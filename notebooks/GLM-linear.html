@@ -1,0 +1,747 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>GLM: Linear regression &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="GLM: Robust Linear Regression" href="GLM-robust.html"/>
+        <link rel="prev" title="Stochastic Volatility model" href="stochastic_volatility.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">GLM: Linear regression</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Linear-Regression">Linear Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Probabilistic-Reformulation">Probabilistic Reformulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Bayesian-GLMs-in-PyMC3">Bayesian GLMs in PyMC3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Generating-data">Generating data</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Estimating-the-model">Estimating the model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Analyzing-the-model">Analyzing the model</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Summary">Summary</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Further-reading">Further reading</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>GLM: Linear regression</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/GLM-linear.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="GLM:-Linear-regression">
+<h1>GLM: Linear regression<a class="headerlink" href="#GLM:-Linear-regression" title="Permalink to this headline">¶</a></h1>
+<p>Author: Thomas Wiecki</p>
+<p>This tutorial is adapted from a <a class="reference external" href="http://twiecki.github.io/blog/2013/08/12/bayesian-glms-1/">blog post by Thomas Wiecki called &#8220;The
+Inference Button: Bayesian GLMs made easy with
+PyMC3&#8221;</a>.</p>
+<p>This tutorial appeared as a post in a small series on Bayesian GLMs on
+my blog:</p>
+<ol class="arabic simple">
+<li><a class="reference external" href="http://twiecki.github.com/blog/2013/08/12/bayesian-glms-1/">The Inference Button: Bayesian GLMs made easy with
+PyMC3</a></li>
+<li><a class="reference external" href="http://twiecki.github.io/blog/2013/08/27/bayesian-glms-2/">This world is far from Normal(ly distributed): Robust Regression in
+PyMC3</a></li>
+<li><a class="reference external" href="http://twiecki.github.io/blog/2014/03/17/bayesian-glms-3/">The Best Of Both Worlds: Hierarchical Linear Regression in
+PyMC3</a></li>
+</ol>
+<p>In this blog post I will talk about:</p>
+<ul class="simple">
+<li>How the Bayesian Revolution in many scientific disciplines is
+hindered by poor usability of current Probabilistic Programming
+languages.</li>
+<li>A gentle introduction to Bayesian linear regression and how it
+differs from the frequentist approach.</li>
+<li>A preview of <a class="reference external" href="https://github.com/pymc-devs/pymc/tree/pymc3">PyMC3</a>
+(currently in alpha) and its new GLM submodule I wrote to allow
+creation and estimation of Bayesian GLMs as easy as frequentist GLMs
+in R.</li>
+</ul>
+<p>Ready? Lets get started!</p>
+<p>There is a huge paradigm shift underway in many scientific disciplines:
+The Bayesian Revolution.</p>
+<p>While the theoretical benefits of Bayesian over Frequentist stats have
+been discussed at length elsewhere (see <em>Further Reading</em> below), there
+is a major obstacle that hinders wider adoption &#8211; <em>usability</em> (this is
+one of the reasons DARPA wrote out a huge grant to <a class="reference external" href="http://www.darpa.mil/Our_Work/I2O/Programs/Probabilistic_Programming_for_Advanced_Machine_Learning_%28PPAML%29.aspx">improve
+Probabilistic
+Programming</a>).</p>
+<p>This is mildly ironic because the beauty of Bayesian statistics is their
+generality. Frequentist stats have a bazillion different tests for every
+different scenario. In Bayesian land you define your model exactly as
+you think is appropriate and hit the <em>Inference Button(TM)</em> (i.e.
+running the magical MCMC sampling algorithm).</p>
+<p>Yet when I ask my colleagues why they use frequentist stats (even though
+they would like to use Bayesian stats) the answer is that software
+packages like SPSS or R make it very easy to run all those individuals
+tests with a single command (and more often then not, they don&#8217;t know
+the exact model and inference method being used).</p>
+<p>While there are great Bayesian software packages like
+<a class="reference external" href="http://mcmc-jags.sourceforge.net/">JAGS</a>,
+<a class="reference external" href="http://www.mrc-bsu.cam.ac.uk/bugs/">BUGS</a>,
+<a class="reference external" href="http://mc-stan.org/">Stan</a> and
+<a class="reference external" href="http://pymc-devs.github.io/pymc/">PyMC</a>, they are written for
+Bayesians statisticians who know very well what model they want to
+build.</p>
+<p>Unfortunately, <a class="reference external" href="http://simplystatistics.org/2013/06/14/the-vast-majority-of-statistical-analysis-is-not-performed-by-statisticians/">&#8220;the vast majority of statistical analysis is not
+performed by
+statisticians&#8221;</a>
+&#8211; so what we really need are tools for <em>scientists</em> and not for
+statisticians.</p>
+<p>In the interest of putting my code where my mouth is I wrote a submodule
+for the upcoming
+<a class="reference external" href="https://github.com/pymc-devs/pymc/tree/pymc3">PyMC3</a> that makes
+construction of Bayesian Generalized Linear Models (GLMs) as easy as
+Frequentist ones in R.</p>
+<div class="section" id="Linear-Regression">
+<h2>Linear Regression<a class="headerlink" href="#Linear-Regression" title="Permalink to this headline">¶</a></h2>
+<p>While future blog posts will explore more complex models, I will start
+here with the simplest GLM &#8211; linear regression. In general,
+frequentists think about Linear Regression as follows:</p>
+<div class="math">
+\[Y = X\beta + \epsilon\]</div>
+<p>where <span class="math">\(Y\)</span> is the output we want to predict (or <em>dependent</em>
+variable), <span class="math">\(X\)</span> is our predictor (or <em>independent</em> variable), and
+<span class="math">\(\beta\)</span> are the coefficients (or parameters) of the model we want
+to estimate. <span class="math">\(\epsilon\)</span> is an error term which is assumed to be
+normally distributed.</p>
+<p>We can then use Ordinary Least Squares or Maximum Likelihood to find the
+best fitting <span class="math">\(\beta\)</span>.</p>
+</div>
+<div class="section" id="Probabilistic-Reformulation">
+<h2>Probabilistic Reformulation<a class="headerlink" href="#Probabilistic-Reformulation" title="Permalink to this headline">¶</a></h2>
+<p>Bayesians take a probabilistic view of the world and express this model
+in terms of probability distributions. Our above linear regression can
+be rewritten to yield:</p>
+<div class="math">
+\[Y \sim \mathcal{N}(X \beta, \sigma^2)\]</div>
+<p>In words, we view <span class="math">\(Y\)</span> as a random variable (or random vector) of
+which each element (data point) is distributed according to a Normal
+distribution. The mean of this normal distribution is provided by our
+linear predictor with variance <span class="math">\(\sigma^2\)</span>.</p>
+<p>While this is essentially the same model, there are two critical
+advantages of Bayesian estimation:</p>
+<ul class="simple">
+<li>Priors: We can quantify any prior knowledge we might have by placing
+priors on the paramters. For example, if we think that <span class="math">\(\sigma\)</span>
+is likely to be small we would choose a prior with more probability
+mass on low values.</li>
+<li>Quantifying uncertainty: We do not get a single estimate of
+<span class="math">\(\beta\)</span> as above but instead a complete posterior distribution
+about how likely different values of <span class="math">\(\beta\)</span> are. For example,
+with few data points our uncertainty in <span class="math">\(\beta\)</span> will be very
+high and we&#8217;d be getting very wide posteriors.</li>
+</ul>
+</div>
+<div class="section" id="Bayesian-GLMs-in-PyMC3">
+<h2>Bayesian GLMs in PyMC3<a class="headerlink" href="#Bayesian-GLMs-in-PyMC3" title="Permalink to this headline">¶</a></h2>
+<p>With the new GLM module in PyMC3 it is very easy to build this and much
+more complex models.</p>
+<p>First, lets import the required modules.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>%matplotlib inline
+
+from pymc3 import  *
+
+import numpy as np
+import matplotlib.pyplot as plt
+</pre></div>
+</div>
+</div>
+<div class="section" id="Generating-data">
+<h3>Generating data<a class="headerlink" href="#Generating-data" title="Permalink to this headline">¶</a></h3>
+<p>Create some toy data to play around with and scatter-plot it.</p>
+<p>Essentially we are creating a regression line defined by intercept and
+slope and add data points by sampling from a Normal with the mean set to
+the regression line.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>size = 200
+true_intercept = 1
+true_slope = 2
+
+x = np.linspace(0, 1, size)
+# y = a + b*x
+true_regression_line = true_intercept + true_slope * x
+# add noise
+y = true_regression_line + np.random.normal(scale=.5, size=size)
+
+data = dict(x=x, y=y)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>fig = plt.figure(figsize=(7, 7))
+ax = fig.add_subplot(111, xlabel=&#39;x&#39;, ylabel=&#39;y&#39;, title=&#39;Generated data and underlying model&#39;)
+ax.plot(x, y, &#39;x&#39;, label=&#39;sampled data&#39;)
+ax.plot(x, true_regression_line, label=&#39;true regression line&#39;, lw=2.)
+plt.legend(loc=0);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-linear_6_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-linear_6_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Estimating-the-model">
+<h3>Estimating the model<a class="headerlink" href="#Estimating-the-model" title="Permalink to this headline">¶</a></h3>
+<p>Lets fit a Bayesian linear regression model to this data. As you can
+see, model specifications in <code class="docutils literal"><span class="pre">PyMC3</span></code> are wrapped in a <code class="docutils literal"><span class="pre">with</span></code>
+statement.</p>
+<p>Here we use the awesome new <a class="reference external" href="http://arxiv.org/abs/1111.4246">NUTS
+sampler</a> (our Inference Button) to
+draw 2000 posterior samples.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with Model() as model: # model specifications in PyMC3 are wrapped in a with-statement
+    # Define priors
+    sigma = HalfCauchy(&#39;sigma&#39;, beta=10, testval=1.)
+    intercept = Normal(&#39;Intercept&#39;, 0, sd=20)
+    x_coeff = Normal(&#39;x&#39;, 0, sd=20)
+
+    # Define likelihood
+    likelihood = Normal(&#39;y&#39;, mu=intercept + x_coeff * x,
+                        sd=sigma, observed=y)
+
+    # Inference!
+    start = find_MAP() # Find starting value by optimization
+    step = NUTS(scaling=start) # Instantiate MCMC sampling algorithm
+    trace = sample(2000, step, start=start, progressbar=False) # draw 2000 posterior samples using NUTS sampling
+</pre></div>
+</div>
+</div>
+<p>This should be fairly readable for people who know probabilistic
+programming. However, would my non-statistican friend know what all this
+does? Moreover, recall that this is an extremely simple model that would
+be one line in R. Having multiple, potentially transformed regressors,
+interaction terms or link-functions would also make this much more
+complex and error prone.</p>
+<p>The new <code class="docutils literal"><span class="pre">glm()</span></code> function instead takes a
+<a class="reference external" href="http://patsy.readthedocs.org/en/latest/quickstart.html">Patsy</a>
+linear model specifier from which it creates a design matrix. <code class="docutils literal"><span class="pre">glm()</span></code>
+then adds random variables for each of the coefficients and an
+appopriate likelihood to the model.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with Model() as model:
+    # specify glm and pass in data. The resulting linear model, its likelihood and
+    # and all its parameters are automatically added to our model.
+    glm.glm(&#39;y ~ x&#39;, data)
+    start = find_MAP()
+    step = NUTS(scaling=start) # Instantiate MCMC sampling algorithm
+    trace = sample(2000, step, progressbar=False) # draw 2000 posterior samples using NUTS sampling
+</pre></div>
+</div>
+</div>
+<p>Much shorter, but this code does the exact same thing as the above model
+specification (you can change priors and everything else too if we
+wanted). <code class="docutils literal"><span class="pre">glm()</span></code> parses the <code class="docutils literal"><span class="pre">Patsy</span></code> model string, adds random
+variables for each regressor (<code class="docutils literal"><span class="pre">Intercept</span></code> and slope <code class="docutils literal"><span class="pre">x</span></code> in this
+case), adds a likelihood (by default, a Normal is chosen), and all other
+variables (<code class="docutils literal"><span class="pre">sigma</span></code>). Finally, <code class="docutils literal"><span class="pre">glm()</span></code> then initializes the
+parameters to a good starting point by estimating a frequentist linear
+model using <a class="reference external" href="http://statsmodels.sourceforge.net/devel/">statsmodels</a>.</p>
+<p>If you are not familiar with R&#8217;s syntax, <code class="docutils literal"><span class="pre">'y</span> <span class="pre">~</span> <span class="pre">x'</span></code> specifies that we
+have an output variable <code class="docutils literal"><span class="pre">y</span></code> that we want to estimate as a linear
+function of <code class="docutils literal"><span class="pre">x</span></code>.</p>
+</div>
+<div class="section" id="Analyzing-the-model">
+<h3>Analyzing the model<a class="headerlink" href="#Analyzing-the-model" title="Permalink to this headline">¶</a></h3>
+<p>Bayesian inference does not give us only one best fitting line (as
+maximum likelihood does) but rather a whole posterior distribution of
+likely parameters. Lets plot the posterior distribution of our
+parameters and the individual samples we drew.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>plt.figure(figsize=(7, 7))
+traceplot(trace[100:])
+plt.tight_layout();
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.figure.Figure at 0x7f574ca72b10&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-linear_15_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-linear_15_1.png" />
+</div>
+</div>
+<p>The left side shows our marginal posterior &#8211; for each parameter value
+on the x-axis we get a probability on the y-axis that tells us how
+likely that parameter value is.</p>
+<p>There are a couple of things to see here. The first is that our sampling
+chains for the individual parameters (left side) seem well converged and
+stationary (there are no large drifts or other odd patterns).</p>
+<p>Secondly, the maximum posterior estimate of each variable (the peak in
+the left side distributions) is very close to the true parameters used
+to generate the data (<code class="docutils literal"><span class="pre">x</span></code> is the regression coefficient and <code class="docutils literal"><span class="pre">sigma</span></code>
+is the standard deviation of our normal).</p>
+<p>In the GLM we thus do not only have one best fitting regression line,
+but many. A posterior predictive plot takes multiple samples from the
+posterior (intercepts and slopes) and plots a regression line for each
+of them. Here we are using the <code class="docutils literal"><span class="pre">glm.plot_posterior_predictive()</span></code>
+convenience function for this.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>plt.figure(figsize=(7, 7))
+plt.plot(x, y, &#39;x&#39;, label=&#39;data&#39;)
+glm.plot_posterior_predictive(trace, samples=100,
+                              label=&#39;posterior predictive regression lines&#39;)
+plt.plot(x, true_regression_line, label=&#39;true regression line&#39;, lw=3., c=&#39;y&#39;)
+
+plt.title(&#39;Posterior predictive regression lines&#39;)
+plt.legend(loc=0)
+plt.xlabel(&#39;x&#39;)
+plt.ylabel(&#39;y&#39;);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-linear_18_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-linear_18_0.png" />
+</div>
+</div>
+<p>As you can see, our estimated regression lines are very similar to the
+true regression line. But since we only have limited data we have
+<em>uncertainty</em> in our estimates, here expressed by the variability of the
+lines.</p>
+</div>
+</div>
+<div class="section" id="Summary">
+<h2>Summary<a class="headerlink" href="#Summary" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Usability is currently a huge hurdle for wider adoption of Bayesian
+statistics.</li>
+<li><code class="docutils literal"><span class="pre">PyMC3</span></code> allows GLM specification with convenient syntax borrowed
+from R.</li>
+<li>Posterior predictive plots allow us to evaluate fit and our
+uncertainty in it.</li>
+</ul>
+<div class="section" id="Further-reading">
+<h3>Further reading<a class="headerlink" href="#Further-reading" title="Permalink to this headline">¶</a></h3>
+<p>This is the first post of a small series on Bayesian GLMs I am
+preparing. Next week I will describe how the Student T distribution can
+be used to perform robust linear regression.</p>
+<p>Then there are also other good resources on Bayesian statistics:</p>
+<ul class="simple">
+<li>The excellent book <a class="reference external" href="http://www.indiana.edu/~kruschke/DoingBayesianDataAnalysis/">Doing Bayesian Data Analysis by John
+Kruschke</a>.</li>
+<li><a class="reference external" href="http://andrewgelman.com/">Andrew Gelman&#8217;s blog</a></li>
+<li><a class="reference external" href="https://plus.google.com/u/0/107971134877020469960/posts/KpeRdJKR6Z1">Baeu Cronins blog post on Probabilistic
+Programming</a></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="GLM-robust.html" class="btn btn-neutral float-right" title="GLM: Robust Linear Regression" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="stochastic_volatility.html" class="btn btn-neutral" title="Stochastic Volatility model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

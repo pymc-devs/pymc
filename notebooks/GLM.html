@@ -1,0 +1,875 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Bayesian GLMs &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>Bayesian GLMs</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/GLM.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Bayesian-GLMs">
+<h1>Bayesian GLMs<a class="headerlink" href="#Bayesian-GLMs" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>import matplotlib.pyplot as plt
+import numpy as np
+from pymc3 import  *
+import patsy
+import theano
+import pandas as pd
+from collections import defaultdict
+from statsmodels.formula.api import glm as glm_sm
+import statsmodels.api as sm
+from pandas.tools.plotting import scatter_matrix
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Simple-example">
+<h1>Simple example<a class="headerlink" href="#Simple-example" title="Permalink to this headline">¶</a></h1>
+<p>Lets generate some data with known slope and intercept and fit a simple
+linear GLM.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>size = 50
+true_intercept = 1
+true_slope = 2
+
+x = np.linspace(0, 1, size)
+y = true_intercept + x*true_slope + np.random.normal(scale=.5, size=size)
+
+data = dict(x=x, y=y)
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">glm.linear_component()</span></code> function can be used to generate the
+output variable y_est and coefficients of the specified linear model.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with Model() as model:
+    y_est, coeffs = glm.linear_component(&#39;y ~ x&#39;, data)
+    sigma = Uniform(&#39;sigma&#39;, 0, 20)
+    y_obs = Normal(&#39;y_obs&#39;, mu=y_est, sd=sigma, observed=y)
+    start = find_MAP(vars=[sigma])
+    step = Slice(model.vars)
+    trace = sample(2000, step, start, progressbar=False)
+
+plt.figure(figsize=(5, 5))
+plt.plot(x, y, &#39;x&#39;)
+glm.plot_posterior_predictive(trace)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_5_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_5_0.png" />
+</div>
+</div>
+<p>Since there are a couple of general linear models that are being used
+over and over again (Normally distributed noise, logistic regression
+etc), the <code class="docutils literal"><span class="pre">glm.glm()</span></code> function simplifies the above step by creating
+the likelihood (y_obs) and its priors (sigma) for us. Since we are
+working in the model context, the random variables are all added to the
+model behind the scenes. This function also automatically finds a good
+starting point which it returns.</p>
+<p>Note that the below call to <code class="docutils literal"><span class="pre">glm()</span></code> is producing exactly the same
+model as above, just more succinctly.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with Model() as model:
+    glm.glm(&#39;y ~ x&#39;, data)
+    trace = sample(2000, Slice(model.vars), progressbar=False)
+
+plt.figure(figsize=(5, 5))
+plt.plot(x, y, &#39;x&#39;)
+glm.plot_posterior_predictive(trace)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_7_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_7_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Robust-GLM">
+<h1>Robust GLM<a class="headerlink" href="#Robust-GLM" title="Permalink to this headline">¶</a></h1>
+<p>Lets try the same model but with a few outliers in the data.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>x_out = np.append(x, [.1, .15, .2])
+y_out = np.append(y, [8, 6, 9])
+data_outlier = dict(x=x_out, y=y_out)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with Model() as model:
+    glm.glm(&#39;y ~ x&#39;, data_outlier)
+    trace = sample(2000, Slice(model.vars), progressbar=False)
+
+plt.figure(figsize=(5, 5))
+plt.plot(x_out, y_out, &#39;x&#39;)
+glm.plot_posterior_predictive(trace)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_10_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_10_0.png" />
+</div>
+</div>
+<p>Because the normal distribution does not have a lot of mass in the
+tails, an outlier will affect the fit strongly.</p>
+<p>Instead, we can replace the Normal likelihood with a student T
+distribution which has heavier tails and is more robust towards
+outliers. While this could be done with the <code class="docutils literal"><span class="pre">linear_compoment()</span></code>
+function and manually defining the T likelihood we can use the <code class="docutils literal"><span class="pre">glm()</span></code>
+function for more automation. By default this function uses a normal
+likelihood. To define the usage of a T distribution instead we can pass
+a family object that contains information on how to link the output to
+<code class="docutils literal"><span class="pre">y_est</span></code> (in this case we explicitly use the Identity link function
+which is also the default) and what the priors for the T distribution
+are. Here we fix the degrees of freedom <code class="docutils literal"><span class="pre">nu</span></code> to 1.5.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with Model() as model_robust:
+    family = glm.families.StudentT(link=glm.links.Identity,
+                                                 priors={&#39;nu&#39;: 1.5,
+                                                               &#39;lam&#39;: (&#39;sigma&#39;, Uniform.dist(0, 20))})
+    glm.glm(&#39;y ~ x&#39;, data_outlier, family=family)
+
+    trace = sample(2000, Slice(model.vars), progressbar=False)
+
+plt.figure(figsize=(5, 5))
+plt.plot(x_out, y_out, &#39;x&#39;)
+glm.plot_posterior_predictive(trace)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_12_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_12_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Hierarchical-GLM">
+<h1>Hierarchical GLM<a class="headerlink" href="#Hierarchical-GLM" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>sat_data = pd.read_csv(&#39;../data/Guber1999data.txt&#39;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with Model() as model_sat:
+    grp_mean = Normal(&#39;grp_mean&#39;, mu=0, sd=10)
+    grp_sd = Uniform(&#39;grp_sd&#39;, 0, 200)
+
+    # Define priors for intercept and regression coefficients.
+    priors = {&#39;Intercept&#39;: Normal.dist(mu=sat_data.sat_t.mean(), sd=sat_data.sat_t.std()),
+          &#39;spend&#39;: Normal.dist(mu=grp_mean, sd=grp_sd),
+          &#39;stu_tea_rat&#39;: Normal.dist(mu=grp_mean, sd=grp_sd),
+          &#39;salary&#39;: Normal.dist(mu=grp_mean, sd=grp_sd),
+          &#39;prcnt_take&#39;: Normal.dist(mu=grp_mean, sd=grp_sd)
+    }
+    glm.glm(&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;,
+                    sat_data,
+                priors=priors)
+    trace_sat = sample(500, NUTS(), progressbar=False)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>scatter_matrix(trace_to_dataframe(trace_sat), figsize=(12,12));
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_16_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_16_0.png" />
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [35]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with Model() as model_sat:
+    grp_mean = Normal(&#39;grp_mean&#39;, mu=0, sd=10)
+    grp_prec = Gamma(&#39;grp_prec&#39;, alpha=1, beta=.1, testval=1.)
+    slope = T.dist(mu=grp_mean, lam=grp_prec, nu=1)
+    intercept = Normal.dist(mu=sat_data.sat_t.mean(), sd=sat_data.sat_t.std())
+    glm.glm(&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;, sat_data,
+        intercept_prior=intercept, regressor_prior=slope)
+    trace_sat = sample(500, NUTS(), progressbar=False)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [39]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>scatter_matrix(trace_to_dataframe(trace_sat), figsize=(12,12));
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_18_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_18_0.png" />
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [41]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>tdf_gain = 5.
+with Model() as model_sat:
+    grp_mean = Normal(&#39;grp_mean&#39;, mu=0, sd=10)
+    grp_prec = Gamma(&#39;grp_prec&#39;, alpha=1, beta=.1, testval=1.)
+    #grp_sd = Uniform(&#39;grp_sd&#39;, 0, 100, testval=5)
+    #grp_df_raw = Uniform(&#39;grp_df&#39;, 0, 1, testval=0.5)
+    #grp_df = 1 - tdf_gain * theano.tensor.log((1-grp_df_raw))
+    slope = T.dist(mu=grp_mean, lam=grp_prec, nu=1) #grp_df)
+    intercept = Normal.dist(mu=sat_data.sat_t.mean(), sd=sat_data.sat_t.std())
+    glm.glm(&#39;sat_t ~ spend + stu_tea_rat + salary + prcnt_take&#39;, sat_data,
+                intercept_prior=intercept, regressor_prior=slope)
+
+    trace_sat = sample(2000, NUTS(), progressbar=False)
+    #step = NUTS([grp_mean, grp_prec, sigma] + coeffs, start)
+    #step2 = Slice([grp_df_raw])
+    #trace_sat = sample(2000, [step, step2], start)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Logistic-Regression">
+<h1>Logistic Regression<a class="headerlink" href="#Logistic-Regression" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>htwt_data = pd.read_csv(&#39;../data/HtWt.csv&#39;)
+htwt_data.head()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[4]:
+</pre></div>
+</div>
+<div class="container">
+<div style="max-height:1000px;max-width:1500px;overflow:auto;">
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>male</th>
+      <th>height</th>
+      <th>weight</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td> 0</td>
+      <td> 63.2</td>
+      <td> 168.7</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td> 0</td>
+      <td> 68.7</td>
+      <td> 169.8</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td> 0</td>
+      <td> 64.8</td>
+      <td> 176.6</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td> 0</td>
+      <td> 67.9</td>
+      <td> 246.8</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td> 1</td>
+      <td> 68.9</td>
+      <td> 151.6</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>m = glm_sm(&#39;male ~ height + weight&#39;, htwt_data, family=sm.families.Binomial()).fit()
+print m.summary()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+                 Generalized Linear Model Regression Results
+==============================================================================
+Dep. Variable:                   male   No. Observations:                   70
+Model:                            GLM   Df Residuals:                       67
+Model Family:                Binomial   Df Model:                            2
+Link Function:                  logit   Scale:                             1.0
+Method:                          IRLS   Log-Likelihood:                -28.298
+Date:                Mon, 15 Jul 2013   Deviance:                       56.597
+Time:                        09:01:52   Pearson chi2:                     62.8
+No. Iterations:                     7
+==============================================================================
+                 coef    std err          t      P&gt;|t|      [95.0% Conf. Int.]
+------------------------------------------------------------------------------
+Intercept    -45.2059     10.887     -4.152      0.000       -66.545   -23.867
+height         0.6571      0.164      4.018      0.000         0.337     0.978
+weight         0.0096      0.011      0.892      0.376        -0.012     0.031
+==============================================================================
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with Model() as model_htwt:
+    glm.glm(&#39;male ~ height + weight&#39;, htwt_data, family=glm.families.Binomial())
+    trace_htwt = sample(1000, NUTS(), progressbar=False)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>trace_df = trace_to_dataframe(trace_htwt)
+print trace_df.describe().drop(&#39;count&#39;).T
+scatter_matrix(trace_df, figsize=(8, 8));
+print &quot;P(weight &lt; 0) = &quot;, (trace_df[&#39;weight&#39;] &lt; 0).mean()
+print &quot;P(height &lt; 0) = &quot;, (trace_df[&#39;height&#39;] &lt; 0).mean()
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+                mean        std        min        25%        50%        75%  \
+Intercept -52.471967  11.956980 -88.497183 -59.442733 -51.819902 -43.486117
+height      0.763006   0.180745   0.359032   0.630974   0.750271   0.865600
+weight      0.010924   0.010590  -0.014231   0.003520   0.010437   0.018188
+
+                 max
+Intercept -25.443466
+height      1.298437
+weight      0.048876
+P(weight &lt; 0) =  0.154
+P(height &lt; 0) =  0.0
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_24_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_24_1.png" />
+</div>
+</div>
+<div class="section" id="Bayesian-Logistic-Lasso">
+<h2>Bayesian Logistic Lasso<a class="headerlink" href="#Bayesian-Logistic-Lasso" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>lp = Laplace.dist(mu=0, b=0.05)
+x_eval = np.linspace(-.5, .5, 300)
+plt.plot(x_eval, theano.tensor.exp(lp.logp(x_eval)).eval())
+plt.xlabel(&#39;x&#39;)
+plt.ylabel(&#39;Probability&#39;)
+plt.title(&#39;Laplace distribution&#39;);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_26_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_26_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with Model() as model_lasso:
+    #grp_lambda = Uniform(&#39;grp_lambda&#39;, 0.00001, 10)
+
+    # Define priors for intercept and regression coefficients.
+    priors = {&#39;Intercept&#39;: Normal.dist(mu=0, sd=50),
+              &#39;height&#39;: Laplace.dist(mu=0, b=0.05),
+              &#39;weight&#39;: Laplace.dist(mu=0, b=0.05)
+    }
+    glm.glm(&#39;male ~ height + weight&#39;, htwt_data, family=glm.families.Binomial(),
+                    priors=priors)
+
+    trace_lasso = sample(500, NUTS(), progressbar=False)
+
+trace_df = trace_to_dataframe(trace_lasso)
+scatter_matrix(trace_df, figsize=(8, 8));
+print trace_df.describe().drop(&#39;count&#39;).T
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+                mean       std        min        25%        50%        75%  \
+Intercept -22.348449  7.145352 -44.688989 -27.898570 -22.252590 -16.166471
+height      0.308687  0.106537   0.096913   0.226177   0.310946   0.382381
+weight      0.011768  0.008298  -0.005977   0.005996   0.011636   0.016593
+
+                max
+Intercept -9.122010
+height     0.650051
+weight     0.041575
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_27_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM_27_1.png" />
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

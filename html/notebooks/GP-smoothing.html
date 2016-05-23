@@ -1,0 +1,732 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Gaussian Process (GP) smoothing &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="Dirichlet process mixtures for density estimation" href="dp_mix.html"/>
+        <link rel="prev" title="Bayesian Survival Analysis" href="survival_analysis.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Gaussian Process (GP) smoothing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Let's-try-a-linear-regression-first">Let&#8217;s try a linear regression first</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Linear-regression-model-recap">Linear regression model recap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Gaussian-Process-smoothing-model">Gaussian Process smoothing model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Let's-describe-the-above-GP-smoothing-model-in-PyMC3">Let&#8217;s describe the above GP-smoothing model in PyMC3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Exploring-different-levels-of-smoothing">Exploring different levels of smoothing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Smoothing-&quot;to-the-limits&quot;">Smoothing &#8220;to the limits&#8221;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Interactive-smoothing">Interactive smoothing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>Gaussian Process (GP) smoothing</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/GP-smoothing.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Gaussian-Process-(GP)-smoothing">
+<h1>Gaussian Process (GP) smoothing<a class="headerlink" href="#Gaussian-Process-(GP)-smoothing" title="Permalink to this headline">¶</a></h1>
+<p>This example deals with the case when we want to <strong>smooth</strong> the observed
+data points <span class="math">\((x_i, y_i)\)</span> of some 1-dimensional function
+<span class="math">\(y=f(x)\)</span>, by finding the new values <span class="math">\((x_i, y'_i)\)</span> such that
+the new data is more &#8220;smooth&#8221; (see more on the definition of smoothness
+through allocation of variance in the model description below) when
+moving along the <span class="math">\(x\)</span> axis.</p>
+<p>It is important to note that we are <strong>not</strong> dealing with the problem of
+interpolating the function <span class="math">\(y=f(x)\)</span> at the unknown values of
+<span class="math">\(x\)</span>. Such problem would be called &#8220;regression&#8221; not &#8220;smoothing&#8221;,
+and will be considered in other examples.</p>
+<p>If we assume the functional dependency between <span class="math">\(x\)</span> and <span class="math">\(y\)</span>
+is <strong>linear</strong> then, by making the independence and normality assumptions
+about the noise, we can infer a straight line that approximates the
+dependency between the variables, i.e. perform a linear regression. We
+can also fit more complex functional dependencies (like quadratic,
+cubic, etc), if we know the functional form of the dependency in
+advance.</p>
+<p>However, the <strong>functional form</strong> of <span class="math">\(y=f(x)\)</span> is <strong>not always known
+in advance</strong>, and it might be hard to choose which one to fit, given the
+data. For example, you wouldn&#8217;t necessarily know which function to use,
+given the following observed data. Assume you haven&#8217;t seen the formula
+that generated it:</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">pylab</span> inline
+<span class="n">figsize</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Populating the interactive namespace from numpy and matplotlib
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.stats</span> <span class="kn">as</span> <span class="nn">stats</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="o">/</span><span class="mf">15.0</span><span class="p">))</span> <span class="o">+</span>
+     <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>
+<span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">);</span>
+<span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">);</span>
+<span class="n">title</span><span class="p">(</span><span class="s2">&quot;Observed Data&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_2_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_2_0.png" />
+</div>
+</div>
+<div class="section" id="Let's-try-a-linear-regression-first">
+<h2>Let&#8217;s try a linear regression first<a class="headerlink" href="#Let's-try-a-linear-regression-first" title="Permalink to this headline">¶</a></h2>
+<p>As humans, we see that there is a non-linear dependency with some noise,
+and we would like to capture that dependency. If we perform a linear
+regression, we see that the &#8220;smoothed&#8221; data is less than satisfactory:</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>
+<span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">);</span>
+<span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">);</span>
+
+<span class="n">lin</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">linregress</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">lin</span><span class="o">.</span><span class="n">intercept</span> <span class="o">+</span> <span class="n">lin</span><span class="o">.</span><span class="n">slope</span> <span class="o">*</span> <span class="n">x</span><span class="p">);</span>
+<span class="n">title</span><span class="p">(</span><span class="s2">&quot;Linear Smoothing&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_4_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_4_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Linear-regression-model-recap">
+<h2>Linear regression model recap<a class="headerlink" href="#Linear-regression-model-recap" title="Permalink to this headline">¶</a></h2>
+<p>The linear regression assumes there is a linear dependency between the
+input <span class="math">\(x\)</span> and output <span class="math">\(y\)</span>, sprinkled with some noise around
+it so that for each observed data point we have:</p>
+<div class="math">
+\[y_i = a + b\, x_i + \epsilon_i\]</div>
+<p>where the observation errors at each data point satisfy:</p>
+<div class="math">
+\[\epsilon_i \sim N(0, \sigma^2)\]</div>
+<p>with the same <span class="math">\(\sigma\)</span>, and the errors are independent:</p>
+<div class="math">
+\[cov(\epsilon_i, \epsilon_j) = 0 \: \text{ for } i \neq j\]</div>
+<p>The parameters of this model are <span class="math">\(a\)</span>, <span class="math">\(b\)</span>, and
+<span class="math">\(\sigma\)</span>. It turns out that, under these assumptions, the maximum
+likelihood estimates of <span class="math">\(a\)</span> and <span class="math">\(b\)</span> don&#8217;t depend on
+<span class="math">\(\sigma\)</span>. Then <span class="math">\(\sigma\)</span> can be estimated separately, after
+finding the most likely values for <span class="math">\(a\)</span> and <span class="math">\(b\)</span>.</p>
+</div>
+<div class="section" id="Gaussian-Process-smoothing-model">
+<h2>Gaussian Process smoothing model<a class="headerlink" href="#Gaussian-Process-smoothing-model" title="Permalink to this headline">¶</a></h2>
+<p>This model allows departure from the linear dependency by assuming that
+the dependency between <span class="math">\(x\)</span> and <span class="math">\(y\)</span> is a Brownian motion over
+the domain of <span class="math">\(x\)</span>. This doesn&#8217;t go as far as assuming a particular
+functional dependency between the variables. Instead, by <strong>controlling
+the standard deviation of the unobserved Brownian motion</strong> we can
+achieve different levels of smoothness of the recovered functional
+dependency at the original data points.</p>
+<p>The particular model we are going to discuss assumes that the observed
+data points are <strong>evenly spaced</strong> across the domain of <span class="math">\(x\)</span>, and
+therefore can be indexed by <span class="math">\(i=1,\dots,N\)</span> without the loss of
+generality. The model is described as follows:</p>
+<div class="math">
+\[z_i \sim N(z_{i-1} + \mu, (1 - \alpha)\cdot\sigma^2) \: \text{ for } i=2,\dots,N\]</div>
+<div class="math">
+\[z_1 \sim ImproperFlat(-\infty,\infty)\]</div>
+<div class="math">
+\[y_i \sim N(z_i, \alpha\cdot\sigma^2)\]</div>
+<p>where <span class="math">\(z\)</span> is the hidden Brownian motion, <span class="math">\(y\)</span> is the observed
+data, and the total variance <span class="math">\(\sigma^2\)</span> of each ovservation is
+split between the hidden Brownian motion and the noise in proportions of
+<span class="math">\(1 - \alpha\)</span> and <span class="math">\(\alpha\)</span> respectively, with parameter
+<span class="math">\(0 &lt; \alpha &lt; 1\)</span> specifying the degree of smoothing.</p>
+<p>When we estimate the maximum likelihood values of the hidden process
+<span class="math">\(z_i\)</span> at each of the data points, <span class="math">\(i=1,\dots,N\)</span>, these
+values provide an approximation of the functional dependency
+<span class="math">\(y=f(x)\)</span> as <span class="math">\(\mathrm{E}\,[f(x_i)] = z_i\)</span> at the original
+data points <span class="math">\(x_i\)</span> only. Therefore, again, the method is called
+smoothing and not regression.</p>
+</div>
+<div class="section" id="Let's-describe-the-above-GP-smoothing-model-in-PyMC3">
+<h2>Let&#8217;s describe the above GP-smoothing model in PyMC3<a class="headerlink" href="#Let's-describe-the-above-GP-smoothing-model-in-PyMC3" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">shared</span>
+<span class="kn">from</span> <span class="nn">pymc3.distributions.timeseries</span> <span class="kn">import</span> <span class="n">GaussianRandomWalk</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
+</pre></div>
+</div>
+</div>
+<p>Let&#8217;s create a model with a shared parameter for specifying different
+levels of smoothing. We use very wide priors for the &#8220;mu&#8221; and &#8220;tau&#8221;
+parameters of the hidden Brownian motion, which you can adjust according
+to your application.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">LARGE_NUMBER</span> <span class="o">=</span> <span class="mf">1e5</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">smoothing_param</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="mf">0.9</span><span class="p">)</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s2">&quot;mu&quot;</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">LARGE_NUMBER</span><span class="p">)</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s2">&quot;tau&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">LARGE_NUMBER</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">GaussianRandomWalk</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">,</span>
+                           <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span>
+                           <span class="n">tau</span><span class="o">=</span><span class="n">tau</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">smoothing_param</span><span class="p">),</span>
+                           <span class="n">shape</span><span class="o">=</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s2">&quot;obs&quot;</span><span class="p">,</span>
+                    <span class="n">mu</span><span class="o">=</span><span class="n">z</span><span class="p">,</span>
+                    <span class="n">tau</span><span class="o">=</span><span class="n">tau</span> <span class="o">/</span> <span class="n">smoothing_param</span><span class="p">,</span>
+                    <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Let&#8217;s also make a helper function for inferring the most likely values
+of <span class="math">\(z\)</span>:</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">infer_z</span><span class="p">(</span><span class="n">smoothing</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+        <span class="n">smoothing_param</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">smoothing</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">z</span><span class="p">],</span> <span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span><span class="p">[</span><span class="s1">&#39;z&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<p>Please note that in this example, we are only looking at the MAP
+estimate of the unobserved variables. We are not really interested in
+inferring the posterior distributions. Instead, we have a control
+parameter <span class="math">\(\alpha\)</span> which lets us allocate the variance between the
+hidden Brownian motion and the noise. Other goals and/or different
+models may require sampling to obtain the posterior distributions, but
+for our goal a MAP estimate will suffice.</p>
+</div>
+<div class="section" id="Exploring-different-levels-of-smoothing">
+<h2>Exploring different levels of smoothing<a class="headerlink" href="#Exploring-different-levels-of-smoothing" title="Permalink to this headline">¶</a></h2>
+<p>Let&#8217;s try to allocate 50% variance to the noise, and see if the result
+matches our expectations.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">smoothing</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">z_val</span> <span class="o">=</span> <span class="n">infer_z</span><span class="p">(</span><span class="n">smoothing</span><span class="p">)</span>
+
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z_val</span><span class="p">);</span>
+<span class="n">title</span><span class="p">(</span><span class="s2">&quot;Smoothing={}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">smoothing</span><span class="p">));</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_14_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_14_0.png" />
+</div>
+</div>
+<p>It appears that the variance is split evenly between the noise and the
+hidden process, as expected.</p>
+<p>Let&#8217;s try gradually increasing the smoothness parameter to see if we can
+obtain smoother data:</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">smoothing</span> <span class="o">=</span> <span class="mf">0.9</span>
+<span class="n">z_val</span> <span class="o">=</span> <span class="n">infer_z</span><span class="p">(</span><span class="n">smoothing</span><span class="p">)</span>
+
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>
+<span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z_val</span><span class="p">);</span>
+<span class="n">title</span><span class="p">(</span><span class="s2">&quot;Smoothing={}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">smoothing</span><span class="p">));</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_16_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_16_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Smoothing-&quot;to-the-limits&quot;">
+<h2>Smoothing &#8220;to the limits&#8221;<a class="headerlink" href="#Smoothing-"to-the-limits"" title="Permalink to this headline">¶</a></h2>
+<p>By increading the smoothing parameter, we can gradually make the
+inferred values of the hidden Brownian motion approach the average value
+of the data. This is because as we increase the smoothing parameter, we
+allow less and less of the variance to be allocated to the Brownian
+motion, so eventually it aproaches the process which almost doesn&#8217;t
+change over the domain of <span class="math">\(x\)</span>:</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="n">smoothing</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="p">[</span><span class="mf">0.95</span><span class="p">,</span> <span class="mf">0.99</span><span class="p">,</span> <span class="mf">0.999</span><span class="p">,</span> <span class="mf">0.9999</span><span class="p">]):</span>
+
+    <span class="n">z_val</span> <span class="o">=</span> <span class="n">infer_z</span><span class="p">(</span><span class="n">smoothing</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z_val</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Smoothing={:05.4f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">smoothing</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_18_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_18_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Interactive-smoothing">
+<h2>Interactive smoothing<a class="headerlink" href="#Interactive-smoothing" title="Permalink to this headline">¶</a></h2>
+<p>Below you can interactively test different levels of smoothing. Notice,
+because we use a <strong>shared Theano variable</strong> to specify the smoothing
+above, the model doesn&#8217;t need to be recompiled every time you move the
+slider, and so the <strong>inference is fast</strong>!</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">IPython.html.widgets</span> <span class="kn">import</span> <span class="n">interact</span>
+<span class="nd">@interact</span><span class="p">(</span><span class="n">smoothing</span><span class="o">=</span><span class="p">[</span><span class="mf">0.01</span><span class="p">,</span><span class="mf">0.99</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">plot_smoothed</span><span class="p">(</span><span class="n">smoothing</span><span class="o">=</span><span class="mf">0.9</span><span class="p">):</span>
+    <span class="n">z_val</span> <span class="o">=</span> <span class="n">infer_z</span><span class="p">(</span><span class="n">smoothing</span><span class="p">)</span>
+
+    <span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">);</span>
+    <span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z_val</span><span class="p">);</span>
+    <span class="n">title</span><span class="p">(</span><span class="s2">&quot;Smoothing={}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">smoothing</span><span class="p">));</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_20_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_GP-smoothing_20_0.png" />
+</div>
+</div>
+<p>This example originally contributed by: Andrey Kuzmenko,
+<a class="reference external" href="http://github.com/akuz">http://github.com/akuz</a></p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="dp_mix.html" class="btn btn-neutral float-right" title="Dirichlet process mixtures for density estimation" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="survival_analysis.html" class="btn btn-neutral" title="Bayesian Survival Analysis" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -1,0 +1,882 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>&lt;no title&gt; &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>&lt;no title&gt;</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/categorical.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>%pylab inline
+from pymc3 import *
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Populating the interactive namespace from numpy and matplotlib
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with Model() as model:
+
+    a = np.array([1,1,1,1,1])*10
+    k=10
+    a = np.ones(k)*3
+    #p = Dirichlet(&#39;p&#39;, a, shape=k, transform=simplexarrtransform)
+    p = Dirichlet(&#39;p&#39;, a, shape=k)
+    #c = Categorical(&#39;c&#39;, p, observed=[0,0,1,1,0,2])
+
+
+    print (model.test_point)
+    step = Metropolis(model.vars)
+    trace = sample(20000, step)
+
+a = traceplot(trace)
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+[ 1.          0.9         0.8         0.7         0.59999999  0.49999999
+  0.39999999  0.29999999  0.19999999  0.1       ]
+[ 1.          0.9         0.8         0.7         0.59999999  0.49999999
+  0.39999999  0.29999999  0.19999999  0.1       ]
+{&#39;p_simplex&#39;: array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.])}
+ [-----------------100%-----------------] 20000 of 20000 complete in 4.0 sec
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_categorical_1_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_categorical_1_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>summary(trace)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
+p_simplex:
+
+  Mean             SD               MC Error         95% HPD interval
+  -------------------------------------------------------------------
+
+  -0.610           0.840            0.036            [-2.337, 0.803]
+  -0.625           0.847            0.033            [-2.252, 0.915]
+  -0.635           0.862            0.041            [-2.428, 0.828]
+  -0.553           0.839            0.035            [-2.149, 1.030]
+  -0.579           0.839            0.033            [-2.151, 0.965]
+  -0.526           0.810            0.028            [-2.098, 1.055]
+  -0.492           0.869            0.033            [-2.172, 1.187]
+  -0.404           0.935            0.041            [-2.147, 1.336]
+  -0.097           1.091            0.056            [-2.213, 2.039]
+
+  Posterior quantiles:
+  2.5            25             50             75             97.5
+  |--------------|==============|==============|--------------|
+
+  -2.512         -1.089         -0.493         -0.015         0.721
+  -2.497         -1.137         -0.529         -0.010         0.763
+  -2.547         -1.111         -0.548         -0.057         0.802
+  -2.513         -1.024         -0.462         0.029          0.826
+  -2.337         -1.059         -0.502         0.012          0.830
+  -2.322         -1.002         -0.458         0.020          0.885
+  -2.380         -1.033         -0.427         0.117          1.013
+  -2.353         -1.007         -0.341         0.243          1.239
+  -2.390         -0.783         -0.075         0.627          1.940
+
+
+p:
+
+  Mean             SD               MC Error         95% HPD interval
+  -------------------------------------------------------------------
+
+  0.072            0.047            0.002            [0.003, 0.161]
+  0.074            0.050            0.002            [0.002, 0.169]
+  0.076            0.052            0.002            [0.001, 0.177]
+  0.084            0.054            0.002            [0.003, 0.187]
+  0.086            0.055            0.002            [0.001, 0.191]
+  0.093            0.059            0.002            [0.002, 0.210]
+  0.103            0.067            0.002            [0.004, 0.233]
+  0.117            0.074            0.003            [0.004, 0.262]
+  0.143            0.083            0.004            [0.005, 0.296]
+  0.152            0.082            0.004            [0.012, 0.306]
+
+  Posterior quantiles:
+  2.5            25             50             75             97.5
+  |--------------|==============|==============|--------------|
+
+  0.009          0.036          0.064          0.099          0.186
+  0.009          0.035          0.064          0.102          0.197
+  0.010          0.038          0.065          0.101          0.205
+  0.010          0.043          0.074          0.115          0.212
+  0.013          0.044          0.073          0.116          0.220
+  0.014          0.049          0.081          0.125          0.244
+  0.014          0.052          0.089          0.140          0.267
+  0.016          0.060          0.102          0.160          0.295
+  0.020          0.079          0.130          0.194          0.324
+  0.028          0.089          0.140          0.203          0.340
+
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with Model() as model:
+
+    a = np.array([1,1,1,1,1])*10
+    k=10
+    a = np.ones(k)*3
+    p = Dirichlet(&#39;p&#39;, a, shape=k, transform=simplexarrtransform)
+    #c = Categorical(&#39;c&#39;, p, observed=[0,0,1,1,0,2])
+
+
+    print (model.test_point)
+    step = Metropolis(model.vars)
+    trace2 = sample(20000, step)
+
+a = traceplot(trace2)
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+{&#39;p_simplexarr&#39;: array([ 0.1,  0.1,  0.1,  0.1,  0.1,  0.1,  0.1,  0.1,  0.1])}
+ [-----------------100%-----------------] 20000 of 20000 complete in 2.6 sec
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_categorical_3_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_categorical_3_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>summary(trace2)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
+p_simplexarr:
+
+  Mean             SD               MC Error         95% HPD interval
+  -------------------------------------------------------------------
+
+  0.098            0.050            0.003            [0.016, 0.190]
+  0.097            0.051            0.003            [0.012, 0.193]
+  0.099            0.051            0.003            [0.012, 0.196]
+  0.107            0.057            0.004            [0.014, 0.220]
+  0.105            0.054            0.003            [0.016, 0.210]
+  0.100            0.050            0.003            [0.015, 0.193]
+  0.102            0.053            0.003            [0.019, 0.213]
+  0.096            0.055            0.003            [0.010, 0.207]
+  0.096            0.047            0.002            [0.012, 0.185]
+
+  Posterior quantiles:
+  2.5            25             50             75             97.5
+  |--------------|==============|==============|--------------|
+
+  0.023          0.060          0.091          0.130          0.206
+  0.023          0.059          0.090          0.129          0.214
+  0.021          0.063          0.093          0.126          0.219
+  0.023          0.064          0.098          0.140          0.245
+  0.024          0.066          0.098          0.137          0.230
+  0.022          0.063          0.095          0.130          0.211
+  0.025          0.062          0.093          0.133          0.224
+  0.021          0.056          0.086          0.124          0.233
+  0.023          0.060          0.090          0.125          0.203
+
+
+p:
+
+  Mean             SD               MC Error         95% HPD interval
+  -------------------------------------------------------------------
+
+  0.098            0.050            0.003            [0.016, 0.190]
+  0.097            0.051            0.003            [0.012, 0.193]
+  0.099            0.051            0.003            [0.012, 0.196]
+  0.107            0.057            0.004            [0.014, 0.220]
+  0.105            0.054            0.003            [0.016, 0.210]
+  0.100            0.050            0.003            [0.015, 0.193]
+  0.102            0.053            0.003            [0.019, 0.213]
+  0.096            0.055            0.003            [0.010, 0.207]
+  0.096            0.047            0.002            [0.012, 0.185]
+  0.099            0.053            0.001            [0.013, 0.204]
+
+  Posterior quantiles:
+  2.5            25             50             75             97.5
+  |--------------|==============|==============|--------------|
+
+  0.023          0.060          0.091          0.130          0.206
+  0.023          0.059          0.090          0.129          0.214
+  0.021          0.063          0.093          0.126          0.219
+  0.023          0.064          0.098          0.140          0.245
+  0.024          0.066          0.098          0.137          0.230
+  0.022          0.063          0.095          0.130          0.211
+  0.025          0.062          0.093          0.133          0.224
+  0.021          0.056          0.086          0.124          0.233
+  0.023          0.060          0.090          0.125          0.203
+  0.020          0.059          0.090          0.130          0.228
+
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>trace[-1]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[7]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>{&#39;p&#39;: array([ 0.,  0.,  1.]),
+ &#39;p_simplex&#39;: array([ -3.87234445e+23,  -1.38063818e+22])}
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+
+
+<span></span>with Model() as model:
+    k=3
+
+    a = np.ones(k)*.5
+
+    p = Dirichlet(&#39;p&#39;, a, shape=k, testval=&#39;mean&#39;)
+    #c = Categorical(&#39;c&#39;, p, observed=[0,0,1,1,0,2])
+
+    start = find_MAP()
+    step = NUTS(model.vars, scaling=guess_scaling(start)*10)
+    trace = sample(5000, step, start=start)
+
+a = traceplot(trace)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>guess_scaling(trace[-1], model=model)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>step.Hbar
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>start
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>np.exp(-.097)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with model:
+    dlp = model.dlogp()
+
+dlp(model.test_point)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>model.test_point
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>find_hessian(model.test_point, model=model)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>model.test_point
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+
+<span></span>def conditional_pdf(variable, index=None, start=None, model=None):
+    model = modelcontext(model)
+    if start is None:
+        start = model.test_point
+    variable, = inputvars(variable)
+    replace = {model[varname] : theano.tensor.as_tensor_variable(value) for varname, value in start.items() }
+    x = theano.tensor.scalar(&#39;x0&#39;, dtype=variable.dtype)
+    x.tag.test_value = start[str(variable)][index]
+    replace[variable] = theano.tensor.set_subtensor(replace[variable][index], x)
+
+    print (replace)
+
+    logpt = theano.clone(model.logpt, replace, strict=False)
+    print (inputvars(logpt))
+    return theano.function([x], logpt)
+
+
+
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with model:
+    f = conditional_pdf(p, 1, start=start)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+{p_simplex: IncSubtensor{Set;int64}.0}
+[x0]
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>start
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[18]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>{&#39;p_simplex&#39;: array([-113.89917758,  -62.69917758])}
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>x = np.linspace(-10,10)
+y = [f(v) for v in x]
+plot(x,y)
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[7]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>[&lt;matplotlib.lines.Line2D at 0x10eaa3080&gt;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_categorical_18_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_categorical_18_1.png" />
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>def logistic(x):
+    return 1.0/(1+np.exp(-x))
+logistic(np.array([0.08588418, -0.74669407]))
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>theano.tensor.extra_ops.cumprod([2,3,4,5]).tag.test_value
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[5]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([  2,   6,  24, 120])
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

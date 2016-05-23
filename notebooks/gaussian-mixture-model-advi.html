@@ -1,0 +1,963 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Inference of Gaussian mixture model with ADVI &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>Inference of Gaussian mixture model with ADVI</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/gaussian-mixture-model-advi.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Inference-of-Gaussian-mixture-model-with-ADVI">
+<h1>Inference of Gaussian mixture model with ADVI<a class="headerlink" href="#Inference-of-Gaussian-mixture-model-with-ADVI" title="Permalink to this headline">¶</a></h1>
+<p>Here, we describe how to use ADVI for inference of Gaussian mixture
+model. First, we will show that inference with ADVI does not need to
+modify the stochastic model, just call a function. Then, we will show
+how to use mini-batch, which is useful for large dataset. In this case,
+where the model should be slightly changed.</p>
+<p>First, create artificial data from a mixuture of two Gaussian
+components.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>%matplotlib inline
+
+import pymc3 as pm
+from pymc3 import Normal, Metropolis, sample, MvNormal, Dirichlet, \
+    DensityDist, find_MAP, NUTS, Slice
+import theano.tensor as tt
+from theano.tensor.nlinalg import det
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+n_samples = 100
+rng = np.random.RandomState(123)
+ms = np.array([[-1, -1.5], [1, 1]])
+ps = np.array([0.2, 0.8])
+
+zs = np.array([rng.multinomial(1, ps) for _ in range(n_samples)]).T
+xs = [z[:, np.newaxis] * rng.multivariate_normal(m, np.eye(2), size=n_samples)
+      for z, m in zip(zs, ms)]
+data = np.sum(np.dstack(xs), axis=2)
+
+plt.figure(figsize=(5, 5))
+plt.scatter(data[:, 0], data[:, 1], c=&#39;g&#39;, alpha=0.5)
+plt.scatter(ms[0, 0], ms[0, 1], c=&#39;r&#39;, s=100)
+plt.scatter(ms[1, 0], ms[1, 1], c=&#39;b&#39;, s=100)
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[10]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.collections.PathCollection at 0x12553ea50&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_2_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_2_1.png" />
+</div>
+</div>
+<p>Gaussian mixture models are usually constructed with categorical random
+variables. However, any discrete rvs does not fit ADVI. Here, class
+assignment variables are marginalized out, giving weighted sum of the
+probability for the gaussian components. The log likelihood of the total
+probability is calculated using logsumexp, which is a standard technique
+for making this kind of calculation stable.</p>
+<p>In the below code, DensityDist class is used as the likelihood term. The
+second argument, logp_gmix(mus, pi, np.eye(2)), is a python function
+which recieves observations (denoted by &#8216;value&#8217;) and returns the tensor
+representation of the log-likelihood.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>from pymc3.math import LogSumExp
+
+# Log likelihood of normal distribution
+def logp_normal(mu, tau, value):
+    # log probability of individual samples
+    k = tau.shape[0]
+    delta = lambda mu: value - mu
+    return (-1 / 2.) * (k * tt.log(2 * np.pi) + tt.log(1./det(tau)) +
+                         (delta(mu).dot(tau) * delta(mu)).sum(axis=1))
+
+# Log likelihood of Gaussian mixture distribution
+def logp_gmix(mus, pi, tau):
+    def logp_(value):
+        logps = [tt.log(pi[i]) + logp_normal(mu, tau, value)
+                 for i, mu in enumerate(mus)]
+
+        return tt.sum(LogSumExp(tt.stacklists(logps)[:, :n_samples], axis=0))
+
+    return logp_
+
+with pm.Model() as model:
+    mus = [MvNormal(&#39;mu_%d&#39; % i, mu=np.zeros(2), tau=0.1 * np.eye(2), shape=(2,))
+           for i in range(2)]
+    pi = Dirichlet(&#39;pi&#39;, a=0.1 * np.ones(2), shape=(2,))
+    xs = DensityDist(&#39;x&#39;, logp_gmix(mus, pi, np.eye(2)), observed=data)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied stickbreaking-transform to pi and added transformed pi_stickbreaking to model.
+</pre></div></div>
+</div>
+<p>For comparison with ADVI, run MCMC.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>with model:
+    start = find_MAP()
+    step = Metropolis()
+    trace = sample(1000, step, start=start)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+ [-----------------100%-----------------] 1000 of 1000 complete in 0.5 sec
+</pre></div></div>
+</div>
+<p>Check posterior of component means and weights. We can see that the MCMC
+samples of the component mean for the lower-left component varied more
+than the upper-right due to the difference of the sample size of these
+clusters.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>plt.figure(figsize=(5, 5))
+plt.scatter(data[:, 0], data[:, 1], alpha=0.5, c=&#39;g&#39;)
+mu_0, mu_1 = trace[&#39;mu_0&#39;], trace[&#39;mu_1&#39;]
+plt.scatter(mu_0[-500:, 0], mu_0[-500:, 1], c=&quot;r&quot;, s=10)
+plt.scatter(mu_1[-500:, 0], mu_1[-500:, 1], c=&quot;b&quot;, s=10)
+plt.xlim(-6, 6)
+plt.ylim(-6, 6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[13]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>(-6, 6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_8_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_8_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>sns.barplot([1, 2], np.mean(trace[&#39;pi&#39;][-5000:], axis=0),
+            palette=[&#39;red&#39;, &#39;blue&#39;])
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[14]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x127754f50&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_9_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_9_1.png" />
+</div>
+</div>
+<p>We can use the same model with ADVI as follows.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>with pm.Model() as model:
+    mus = [MvNormal(&#39;mu_%d&#39; % i, mu=np.zeros(2), tau=0.1 * np.eye(2), shape=(2,))
+           for i in range(2)]
+    pi = Dirichlet(&#39;pi&#39;, a=0.1 * np.ones(2), shape=(2,))
+    xs = DensityDist(&#39;x&#39;, logp_gmix(mus, pi, np.eye(2)), observed=data)
+
+%time means, sds, elbos = pm.variational.advi( \
+    model=model, n=1000, learning_rate=1e-1)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied stickbreaking-transform to pi and added transformed pi_stickbreaking to model.
+Iteration 0 [0%]: ELBO = -412.12
+Iteration 100 [10%]: ELBO = -357.93
+Iteration 200 [20%]: ELBO = -328.79
+Iteration 300 [30%]: ELBO = -324.32
+Iteration 400 [40%]: ELBO = -321.59
+Iteration 500 [50%]: ELBO = -322.9
+Iteration 600 [60%]: ELBO = -324.97
+Iteration 700 [70%]: ELBO = -323.26
+Iteration 800 [80%]: ELBO = -322.76
+Iteration 900 [90%]: ELBO = -322.89
+Finished [100%]: ELBO = -324.32
+CPU times: user 3.02 s, sys: 20.7 ms, total: 3.05 s
+Wall time: 3.05 s
+</pre></div></div>
+</div>
+<p>The function returns three variables. &#8216;means&#8217; and &#8216;sds&#8217; are the mean and
+standart deviations of the variational posterior. Note that these values
+are in the transformed space, not in the original space. For random
+variables in the real line, e.g., means of the Gaussian components, no
+transformation is applied. Then we can see the variational posterior in
+the original space.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>from copy import deepcopy
+
+mu_0, sd_0 = means[&#39;mu_0&#39;], sds[&#39;mu_0&#39;]
+mu_1, sd_1 = means[&#39;mu_1&#39;], sds[&#39;mu_1&#39;]
+
+def logp_normal_np(mu, tau, value):
+    # log probability of individual samples
+    k = tau.shape[0]
+    delta = lambda mu: value - mu
+    return (-1 / 2.) * (k * np.log(2 * np.pi) + np.log(1./np.linalg.det(tau)) +
+                         (delta(mu).dot(tau) * delta(mu)).sum(axis=1))
+
+def threshold(zz):
+    zz_ = deepcopy(zz)
+    zz_[zz &lt; np.max(zz) * 1e-2] = None
+    return zz_
+
+def plot_logp_normal(ax, mu, sd, cmap):
+    f = lambda value: np.exp(logp_normal_np(mu, np.diag(1 / sd**2), value))
+    g = lambda mu, sd: np.arange(mu - 3, mu + 3, .1)
+    xx, yy = np.meshgrid(g(mu[0], sd[0]), g(mu[1], sd[1]))
+    zz = f(np.vstack((xx.reshape(-1), yy.reshape(-1))).T).reshape(xx.shape)
+    ax.contourf(xx, yy, threshold(zz), cmap=cmap, alpha=0.9)
+
+fig, ax = plt.subplots(figsize=(5, 5))
+plt.scatter(data[:, 0], data[:, 1], alpha=0.5, c=&#39;g&#39;)
+plot_logp_normal(ax, mu_0, sd_0, cmap=&#39;Reds&#39;)
+plot_logp_normal(ax, mu_1, sd_1, cmap=&#39;Blues&#39;)
+plt.xlim(-6, 6)
+plt.ylim(-6, 6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[16]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>(-6, 6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_13_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_13_1.png" />
+</div>
+</div>
+<p>TODO: We need to backward-transform &#8216;pi&#8217;, which is transformed by
+&#8216;stick_breaking&#8217;.</p>
+<p>&#8216;elbos&#8217; contains the trace of ELBO, showing stochastic convergence of
+the algorithm.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>plt.plot(elbos)
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[8]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>[&lt;matplotlib.lines.Line2D at 0x124fff050&gt;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_16_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_16_1.png" />
+</div>
+</div>
+<p>To demonstrate that ADVI works for large dataset with mini-batch, let&#8217;s
+create 100,000 samples from the same mixture distribution.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [27]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>n_samples = 100000
+
+zs = np.array([rng.multinomial(1, ps) for _ in range(n_samples)]).T
+xs = [z[:, np.newaxis] * rng.multivariate_normal(m, np.eye(2), size=n_samples)
+      for z, m in zip(zs, ms)]
+data = np.sum(np.dstack(xs), axis=2)
+
+plt.figure(figsize=(5, 5))
+plt.scatter(data[:, 0], data[:, 1], c=&#39;g&#39;, alpha=0.5)
+plt.scatter(ms[0, 0], ms[0, 1], c=&#39;r&#39;, s=100)
+plt.scatter(ms[1, 0], ms[1, 1], c=&#39;b&#39;, s=100)
+plt.xlim(-6, 6)
+plt.ylim(-6, 6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[27]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>(-6, 6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_18_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_18_1.png" />
+</div>
+</div>
+<p>MCMC took 55 seconds, 20 times longer than the small dataset.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>with pm.Model() as model:
+    mus = [MvNormal(&#39;mu_%d&#39; % i, mu=np.zeros(2), tau=0.1 * np.eye(2), shape=(2,))
+           for i in range(2)]
+    pi = Dirichlet(&#39;pi&#39;, a=0.1 * np.ones(2), shape=(2,))
+    xs = DensityDist(&#39;x&#39;, logp_gmix(mus, pi, np.eye(2)), observed=data)
+
+    start = find_MAP()
+    step = Metropolis()
+    trace = sample(1000, step, start=start)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied stickbreaking-transform to pi and added transformed pi_stickbreaking to model.
+ [-----------------100%-----------------] 1000 of 1000 complete in 55.4 sec
+</pre></div></div>
+</div>
+<p>Posterior samples are concentrated on the true means, so looks like
+single point for each component.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>plt.figure(figsize=(5, 5))
+plt.scatter(data[:, 0], data[:, 1], alpha=0.5, c=&#39;g&#39;)
+mu_0, mu_1 = trace[&#39;mu_0&#39;], trace[&#39;mu_1&#39;]
+plt.scatter(mu_0[-500:, 0], mu_0[-500:, 1], c=&quot;r&quot;, s=50)
+plt.scatter(mu_1[-500:, 0], mu_1[-500:, 1], c=&quot;b&quot;, s=50)
+plt.xlim(-6, 6)
+plt.ylim(-6, 6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[13]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>(-6, 6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_22_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_22_1.png" />
+</div>
+</div>
+<p>For ADVI with mini-batch, put theano tensor on the observed variable of
+the ObservedRV. The tensor will be replaced with mini-batches. Because
+of the difference of the size of mini-batch and whole samples, the
+log-likelihood term should be appropriately scaled. To tell the
+log-likelihood term, we need to give ObservedRV objects
+(&#8216;minibatch_RVs&#8217; below) where mini-batch is put. Also we should keep
+the tensor (&#8216;minibatch_tensors&#8217;).</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>data_t = tt.matrix()
+data_t.tag.test_value = np.zeros((1, 2)).astype(float)
+
+with pm.Model() as model:
+    mus = [MvNormal(&#39;mu_%d&#39; % i, mu=np.zeros(2), tau=0.1 * np.eye(2), shape=(2,))
+           for i in range(2)]
+    pi = Dirichlet(&#39;pi&#39;, a=0.1 * np.ones(2), shape=(2,))
+    xs = DensityDist(&#39;x&#39;, logp_gmix(mus, pi, np.eye(2)), observed=data_t)
+
+minibatch_tensors = [data_t]
+minibatch_RVs = [xs]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied stickbreaking-transform to pi and added transformed pi_stickbreaking to model.
+</pre></div></div>
+</div>
+<p>Make a generator for mini-batches of size 200. Here, we take random
+sampling strategy to make mini-batches.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [21]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>def create_minibatch(data):
+    rng = np.random.RandomState(0)
+
+    while True:
+        ixs = rng.randint(len(data), size=200)
+        yield data[ixs]
+
+minibatches = [create_minibatch(data)]
+total_size = len(data)
+</pre></div>
+</div>
+</div>
+<p>Run ADVI. It&#8217;s much faster than MCMC, though the problem here is simple
+and it&#8217;s not a fair comparison.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [22]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span># Used only to write the function call in single line for using %time
+# is there more smart way?
+def f():
+    return pm.variational.advi_minibatch(
+    model=model, n=1000, minibatch_tensors=minibatch_tensors,
+    minibatch_RVs=minibatch_RVs, minibatches=minibatches,
+    total_size=total_size, learning_rate=1e-1)
+
+%time means, sds, elbos = f()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Iteration 0 [0%]: ELBO = -424201.48
+Iteration 100 [10%]: ELBO = -350008.63
+Iteration 200 [20%]: ELBO = -317598.75
+Iteration 300 [30%]: ELBO = -314518.88
+Iteration 400 [40%]: ELBO = -328082.93
+Iteration 500 [50%]: ELBO = -320686.56
+Iteration 600 [60%]: ELBO = -314541.02
+Iteration 700 [70%]: ELBO = -341864.92
+Iteration 800 [80%]: ELBO = -320904.08
+Iteration 900 [90%]: ELBO = -322863.3
+Finished [100%]: ELBO = -313688.76
+CPU times: user 2.7 s, sys: 34.4 ms, total: 2.74 s
+Wall time: 2.72 s
+</pre></div></div>
+</div>
+<p>The result is almost the same.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [25]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>from copy import deepcopy
+
+mu_0, sd_0 = means[&#39;mu_0&#39;], sds[&#39;mu_0&#39;]
+mu_1, sd_1 = means[&#39;mu_1&#39;], sds[&#39;mu_1&#39;]
+
+fig, ax = plt.subplots(figsize=(5, 5))
+plt.scatter(data[:, 0], data[:, 1], alpha=0.5, c=&#39;g&#39;)
+plt.scatter(mu_0[0], mu_0[1], c=&quot;r&quot;, s=50)
+plt.scatter(mu_1[0], mu_1[1], c=&quot;b&quot;, s=50)
+plt.xlim(-6, 6)
+plt.ylim(-6, 6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[25]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>(-6, 6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_30_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_30_1.png" />
+</div>
+</div>
+<p>The variance of the trace of ELBO is larger than without mini-batch
+because of the subsampling from the whole samples.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>plt.plot(elbos)
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[9]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>[&lt;matplotlib.lines.Line2D at 0x125263210&gt;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_32_1.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_gaussian-mixture-model-advi_32_1.png" />
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

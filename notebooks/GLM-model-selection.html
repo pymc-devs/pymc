@@ -1,0 +1,1439 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>GLM Model Selection &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="Rolling Regression" href="rolling_regression.html"/>
+        <link rel="prev" title="GLM Robust Regression with Outlier Detection" href="GLM-robust-with-outlier-detection.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">GLM Model Selection</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Setup">Setup</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Local-Functions">Local Functions</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Generate-Toy-Datasets">Generate Toy Datasets</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Interactively-Draft-Data">Interactively Draft Data</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Create-Datasets-for-Modelling">Create Datasets for Modelling</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Standardize">Standardize</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Demonstrate-Simple-Linear-Model">Demonstrate Simple Linear Model</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Define-model-using-ordinary-pymc3-method">Define model using ordinary pymc3 method</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Define-model-using-pymc3-GLM-method">Define model using pymc3 GLM method</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Create-Higher-Order-Linear-Models">Create Higher-Order Linear Models</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Create-and-run-polynomial-models">Create and run polynomial models</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#A-really-bad-method-for-model-selection:-compare-likelihoods">A really bad method for model selection: compare likelihoods</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#View-posterior-predictive-fit">View posterior predictive fit</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Compare-Deviance-Information-Criterion-[DIC]">Compare Deviance Information Criterion [DIC]</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Compare-Watanabe---Akaike-Information-Criterion-[WAIC]">Compare Watanabe - Akaike Information Criterion [WAIC]</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#TODO">TODO</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#K-Fold-Cross-Validation-and/or-Leave-One-Out-(LOO)">K-Fold Cross Validation and/or Leave-One-Out (LOO)</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Bayes-Factor">Bayes Factor</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>GLM Model Selection</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/GLM-model-selection.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="GLM-Model-Selection">
+<h1>GLM Model Selection<a class="headerlink" href="#GLM-Model-Selection" title="Permalink to this headline">¶</a></h1>
+<p><strong>A fairly minimal reproducable example of Model Selection using DIC and
+WAIC.</strong></p>
+<ul class="simple">
+<li>This example creates two toy datasets under linear and quadratic
+models, and then tests the fit of a range of polynomial linear models
+upon those datasets by using the Deviance Information Criterion (DIC)
+and Watanabe - Akaike (or Widest Available) Information Criterion
+(WAIC).</li>
+<li>DIC (<code class="docutils literal"><span class="pre">stats.dic</span></code>) and WAIC (<code class="docutils literal"><span class="pre">stats.waic</span></code>) are new additions to
+PyMC3, so this example shows their usage in a more concrete fashion,
+also usage of the new <code class="docutils literal"><span class="pre">glm</span></code> submodule.</li>
+<li>The example was inspired by Jake Vanderplas&#8217; <a class="reference external" href="https://jakevdp.github.io/blog/2015/08/07/frequentism-and-bayesianism-5-model-selection/">recent
+blogpost</a>
+on model selection, although in this first iteration,
+Cross-Validation and Bayes Factor comparison are not implemented.</li>
+<li>The datasets are tiny and generated within this Notebook. They
+contain errors in the measured value (y) only.</li>
+</ul>
+<p>For more information on Model Selection in PyMC3, and about DIC and
+WAIC, you could start with:</p>
+<ul class="simple">
+<li>Thomas Wiecki&#8217;s <a class="reference external" href="https://stats.stackexchange.com/questions/161082/bayesian-model-selection-in-pymc3/166383#166383">detailed
+response</a>
+to a question on Cross Validated</li>
+<li>The Deviance Information Criterion: 12 Years On <a class="reference external" href="http://onlinelibrary.wiley.com/doi/10.1111/rssb.12062/abstract">(Speigelhalter et al
+2014)</a></li>
+<li>A Widely Applicable Bayesian Information Criterion <a class="reference external" href="http://www.jmlr.org/papers/volume14/watanabe13a/watanabe13a.pdf">(Watanabe
+2013)</a></li>
+<li>Efficient Implementation of Leave-One-Out Cross-Validation and WAIC
+for Evaluating Fitted Bayesian Models <a class="reference external" href="http://arxiv.org/abs/1507.04544">(Gelman et al
+2015)</a></li>
+</ul>
+<p><strong>Contents</strong></p>
+<ul class="simple">
+<li><a class="reference external" href="#Setup">Setup</a></li>
+<li><a class="reference external" href="#Generate-Toy-Datasets">Generate Toy Datasets</a></li>
+<li><a class="reference external" href="#Demonstrate-Simple-Linear-Model">Demonstrate Simple Linear
+Model</a></li>
+<li><a class="reference external" href="#Create-Higher-Order-Linear-Models">Create Higher-Order Linear
+Models</a></li>
+<li><a class="reference external" href="#Compare-Deviance-Information-Criterion-%5BDIC%5D">Compare Deviance Information Criterion
+(DIC)</a></li>
+<li><a class="reference external" href="#Compare-Watanabe---Akaike-Information-Criterion-%5BWAIC%5D">Compare Watanabe-Akaike Information Criterion
+(WAIC)</a></li>
+</ul>
+<p><strong>Note:</strong></p>
+<ul class="simple">
+<li>Python 3.4 project using latest available
+<a class="reference external" href="https://github.com/pymc-devs/pymc3">PyMC3</a></li>
+<li>Developed using <a class="reference external" href="https://www.continuum.io/downloads">ContinuumIO
+Anaconda</a> distribution on a
+Macbook Pro 3GHz i7, 16GB RAM, OSX 10.10.5.</li>
+<li>Finally, if runs become unstable or Theano throws weird errors, try
+clearing the cache <code class="docutils literal"><span class="pre">$&gt;</span> <span class="pre">theano-cache</span> <span class="pre">clear</span></code> and rerunning the
+notebook.</li>
+</ul>
+<p><strong>Package Requirements (shown as a conda-env YAML):</strong></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$&gt; less conda_env_pymc3_examples.yml
+
+name: pymc3_examples
+    channels:
+      - defaults
+    dependencies:
+      - python=3.4
+      - ipython
+      - ipython-notebook
+      - ipython-qtconsole
+      - numpy
+      - scipy
+      - matplotlib
+      - pandas
+      - seaborn
+      - patsy
+      - pip
+
+$&gt; conda env create --file conda_env_pymc3_examples.yml
+
+$&gt; source activate pymc3_examples
+
+$&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/pymc3
+</pre></div>
+</div>
+<div class="section" id="Setup">
+<h2>Setup<a class="headerlink" href="#Setup" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>%matplotlib inline
+%qtconsole --colors=linux
+
+import warnings
+warnings.filterwarnings(&#39;ignore&#39;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>from collections import OrderedDict
+from time import time
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from scipy.optimize import fmin_powell
+from scipy import integrate
+
+import pymc3 as pm
+import theano as thno
+import theano.tensor as T
+
+from IPython.html.widgets import interactive, fixed
+
+# configure some basic options
+sns.set(style=&quot;darkgrid&quot;, palette=&quot;muted&quot;)
+pd.set_option(&#39;display.notebook_repr_html&#39;, True)
+plt.rcParams[&#39;figure.figsize&#39;] = 12, 8
+rndst = np.random.RandomState(0)
+</pre></div>
+</div>
+</div>
+<div class="section" id="Local-Functions">
+<h3>Local Functions<a class="headerlink" href="#Local-Functions" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>def generate_data(n=20, p=0, a=1, b=1, c=0, latent_sigma_y=20):
+    &#39;&#39;&#39;
+    Create a toy dataset based on a very simple model that we might
+    imagine is a noisy physical process:
+        1. random x values within a range
+        2. latent error aka inherent noise in y
+        3. optionally create labelled outliers with larger noise
+
+    Model form: y ~ a + bx + cx^2 + e
+
+    NOTE: latent_sigma_y is used to create a normally distributed,
+    &#39;latent error&#39; aka &#39;inherent noise&#39; in the &#39;physical process&#39;
+    generating thses values, rather than experimental measurement error.
+    Please don&#39;t use the returned `latent_error` values in inferential
+    models, it&#39;s returned in e dataframe for interest only.
+    &#39;&#39;&#39;
+
+    df = pd.DataFrame({&#39;x&#39;:rndst.choice(np.arange(100),n,replace=False)})
+
+    ## create linear or quadratic model
+    df[&#39;y&#39;] = a + b*(df[&#39;x&#39;]) + c*(df[&#39;x&#39;])**2
+
+    ## create latent noise and marked outliers
+    df[&#39;latent_error&#39;] = rndst.normal(0,latent_sigma_y,n)
+    df[&#39;outlier_error&#39;] = rndst.normal(0,latent_sigma_y*10,n)
+    df[&#39;outlier&#39;] = rndst.binomial(1,p,n)
+
+    ## add noise, with extreme noise for marked outliers
+    df[&#39;y&#39;] += ((1-df[&#39;outlier&#39;]) * df[&#39;latent_error&#39;])
+    df[&#39;y&#39;] += (df[&#39;outlier&#39;] * df[&#39;outlier_error&#39;])
+
+    ## round
+    for col in [&#39;y&#39;,&#39;latent_error&#39;,&#39;outlier_error&#39;,&#39;x&#39;]:
+        df[col] = np.round(df[col],3)
+
+    ## add label
+    df[&#39;source&#39;] = &#39;linear&#39; if c == 0 else &#39;quadratic&#39;
+
+    ## create simple linspace for plotting true model
+    plotx = np.linspace(df[&#39;x&#39;].min() - np.ptp(df[&#39;x&#39;])*.1
+                        ,df[&#39;x&#39;].max() + np.ptp(df[&#39;x&#39;])*.1, 100)
+    ploty = a + b*plotx + c*plotx**2
+    dfp = pd.DataFrame({&#39;x&#39;:plotx, &#39;y&#39;:ploty})
+
+    return df, dfp
+
+
+def interact_dataset(n=20, p=0, a=-30, b=5, c=0, latent_sigma_y=20):
+    &#39;&#39;&#39;
+    Convenience function:
+    Interactively generate dataset and plot
+    &#39;&#39;&#39;
+
+    df, dfp = generate_data(n, p, a, b, c, latent_sigma_y)
+
+    g = sns.FacetGrid(df, size=8, hue=&#39;outlier&#39;, hue_order=[True,False]
+                    ,palette=sns.color_palette(&#39;Set1&#39;), legend_out=False)
+
+    _ = g.map(plt.errorbar, &#39;x&#39;, &#39;y&#39;, &#39;latent_error&#39;, marker=&quot;o&quot;
+              ,ms=10, mec=&#39;w&#39;, mew=2, ls=&#39;&#39;, elinewidth=0.7).add_legend()
+
+    _ = plt.plot(dfp[&#39;x&#39;], dfp[&#39;y&#39;], &#39;--&#39;, alpha=0.8)
+
+    plt.subplots_adjust(top=0.92)
+    _ = g.fig.suptitle(&#39;Sketch of Data Generation ({})&#39;.format(df[&#39;source&#39;][0])
+                       ,fontsize=16)
+
+
+def plot_datasets(df_lin, df_quad, dfp_lin, dfp_quad):
+    &#39;&#39;&#39;
+    Convenience function:
+    Plot the two generated datasets in facets with generative model
+    &#39;&#39;&#39;
+
+    df = pd.concat((df_lin, df_quad), axis=0)
+    dfp_lin, dfp_quad
+
+    g = sns.FacetGrid(col=&#39;source&#39;, hue=&#39;source&#39;, data=df, size=6
+                      ,sharey=False, legend_out=False)
+
+    _ = g.map(plt.scatter, &#39;x&#39;, &#39;y&#39;, alpha=0.7, s=100, lw=2, edgecolor=&#39;w&#39;)
+
+    _ = g.axes[0][0].plot(dfp_lin[&#39;x&#39;], dfp_lin[&#39;y&#39;], &#39;--&#39;, alpha=0.6)
+    _ = g.axes[0][1].plot(dfp_quad[&#39;x&#39;], dfp_quad[&#39;y&#39;], &#39;--&#39;, alpha=0.6)
+
+
+def plot_traces(traces, retain=1000):
+    &#39;&#39;&#39;
+    Convenience function:
+    Plot traces with overlaid means and values
+    &#39;&#39;&#39;
+
+    ax = pm.traceplot(traces[-retain:], figsize=(12,len(traces.varnames)*1.5),
+        lines={k: v[&#39;mean&#39;] for k, v in pm.df_summary(traces[-retain:]).iterrows()})
+
+    for i, mn in enumerate(pm.df_summary(traces[-retain:])[&#39;mean&#39;]):
+        ax[i,0].annotate(&#39;{:.2f}&#39;.format(mn), xy=(mn,0), xycoords=&#39;data&#39;
+                    ,xytext=(5,10), textcoords=&#39;offset points&#39;, rotation=90
+                    ,va=&#39;bottom&#39;, fontsize=&#39;large&#39;, color=&#39;#AA0022&#39;)
+
+
+def create_poly_modelspec(k=1):
+    &#39;&#39;&#39;
+    Convenience function:
+    Create a polynomial modelspec string for patsy
+    &#39;&#39;&#39;
+    return (&#39;y ~ 1 + x &#39; + &#39; &#39;.join([&#39;+ np.power(x,{})&#39;.format(j)
+                                     for j in range(2,k+1)])).strip()
+
+
+def run_models(df, upper_order=5):
+    &#39;&#39;&#39;
+    Convenience function:
+    Fit a range of pymc3 models of increasing polynomial complexity.
+    Suggest limit to max order 5 since calculation time is exponential.
+    &#39;&#39;&#39;
+
+    models, traces = OrderedDict(), OrderedDict()
+
+    for k in range(1,upper_order+1):
+
+        nm = &#39;k{}&#39;.format(k)
+        fml = create_poly_modelspec(k)
+
+        with pm.Model() as models[nm]:
+
+            print(&#39;\nRunning: {}&#39;.format(nm))
+            pm.glm.glm(fml, df, family=pm.glm.families.Normal())
+
+            start_MAP = pm.find_MAP(fmin=fmin_powell, disp=False)
+            traces[nm] = pm.sample(2000, start=start_MAP, step=pm.NUTS(), progressbar=True)
+
+    return models, traces
+
+
+def plot_posterior_cr(models, traces, rawdata, xlims,
+                      datamodelnm=&#39;linear&#39;, modelnm=&#39;k1&#39;):
+    &#39;&#39;&#39;
+    Convenience function:
+    Plot posterior predictions with credible regions shown as filled areas.
+    &#39;&#39;&#39;
+
+    ## Get traces and calc posterior prediction for npoints in x
+    npoints = 100
+    mdl = models[modelnm]
+    trc = pm.trace_to_dataframe(traces[modelnm][-1000:])
+    trc = trc[[str(v) for v in mdl.cont_vars[:-1]]]
+
+    ordr = int(modelnm[-1:])
+    x = np.linspace(xlims[0], xlims[1], npoints).reshape((npoints,1))
+    pwrs = np.ones((npoints,ordr+1)) * np.arange(ordr+1)
+    X = x ** pwrs
+    cr = np.dot(X,trc.T)
+
+    ## Calculate credible regions and plot over the datapoints
+    dfp = pd.DataFrame(np.percentile(cr,[2.5, 25, 50, 75, 97.5], axis=1).T
+                         ,columns=[&#39;025&#39;,&#39;250&#39;,&#39;500&#39;,&#39;750&#39;,&#39;975&#39;])
+    dfp[&#39;x&#39;] = x
+
+    pal = sns.color_palette(&#39;Greens&#39;)
+    f, ax1d = plt.subplots(1,1, figsize=(7,7))
+    f.suptitle(&#39;Posterior Predictive Fit -- Data: {} -- Model: {}&#39;.format(
+                        datamodelnm, modelnm), fontsize=16)
+    plt.subplots_adjust(top=0.95)
+
+    ax1d.fill_between(dfp[&#39;x&#39;], dfp[&#39;025&#39;], dfp[&#39;975&#39;], alpha=0.5
+                      ,color=pal[1], label=&#39;CR 95%&#39;)
+    ax1d.fill_between(dfp[&#39;x&#39;], dfp[&#39;250&#39;], dfp[&#39;750&#39;], alpha=0.5
+                      ,color=pal[4], label=&#39;CR 50%&#39;)
+    ax1d.plot(dfp[&#39;x&#39;], dfp[&#39;500&#39;], alpha=0.6, color=pal[5], label=&#39;Median&#39;)
+    _ = plt.legend()
+    _ = ax1d.set_xlim(xlims)
+    _ = sns.regplot(x=&#39;x&#39;, y=&#39;y&#39;, data=rawdata, fit_reg=False
+                   ,scatter_kws={&#39;alpha&#39;:0.7,&#39;s&#39;:100, &#39;lw&#39;:2,&#39;edgecolor&#39;:&#39;w&#39;}, ax=ax1d)
+
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Generate-Toy-Datasets">
+<h2>Generate Toy Datasets<a class="headerlink" href="#Generate-Toy-Datasets" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Interactively-Draft-Data">
+<h3>Interactively Draft Data<a class="headerlink" href="#Interactively-Draft-Data" title="Permalink to this headline">¶</a></h3>
+<p>Throughout the rest of the Notebook, we&#8217;ll use two toy datasets created
+by a linear and a quadratic model respectively, so that we can better
+evaluate the fit of the model selection.</p>
+<p>Right now, lets use an interactive session to play around with the data
+generation function in this Notebook, and get a feel for the
+possibilities of data we could generate.</p>
+<div class="math">
+\[y_{i} = a + bx_{i} + cx_{i}^{2} + \epsilon_{i}\]</div>
+<div class="line-block">
+<div class="line">where:</div>
+<div class="line"><span class="math">\(i \in n\)</span> datapoints
+<span class="math">\(\epsilon \sim \mathcal{N}(0,latent\_sigma\_y)\)</span></div>
+</div>
+<p><strong>NOTE on outliers:</strong></p>
+<ul class="simple">
+<li>We can use value <code class="docutils literal"><span class="pre">p</span></code> to set the (approximate) proportion of
+&#8216;outliers&#8217; under a bernoulli distribution.</li>
+<li>These outliers have a 10x larger <code class="docutils literal"><span class="pre">latent_sigma_y</span></code></li>
+<li>These outliers are labelled in the returned datasets and may be
+useful for other modelling, see another example Notebook
+<code class="docutils literal"><span class="pre">GLM-robust-with-outlier-detection.ipynb</span></code></li>
+</ul>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>interactive(interact_dataset, n=[5,50,5], p=[0,.5,.05], a=[-50,50]
+            ,b=[-10,10], c=[-3,3], latent_sigma_y=[0,1000,50])
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_9_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_9_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>I&#8217;ve shown the <code class="docutils literal"><span class="pre">latent_error</span></code> in errorbars, but this is for
+interest only, since this shows the <em>inherent noise</em> in whatever
+&#8216;physical process&#8217; we imagine created the data.</li>
+<li>There is no <em>measurement error</em>.</li>
+<li>Datapoints created as outliers are shown in <strong>red</strong>, again for
+interest only.</li>
+</ul>
+</div>
+<div class="section" id="Create-Datasets-for-Modelling">
+<h3>Create Datasets for Modelling<a class="headerlink" href="#Create-Datasets-for-Modelling" title="Permalink to this headline">¶</a></h3>
+<p>We can use the above interactive plot to get a feel for the effect of
+the params. Now we&#8217;ll create 2 fixed datasets to use for the remainder
+of the Notebook.</p>
+<ol class="arabic simple">
+<li>For a start, we&#8217;ll create a linear model with small noise. Keep it
+simple.</li>
+<li>Secondly, a quadratic model with small noise</li>
+</ol>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>n = 12
+df_lin, dfp_lin = generate_data(n=n, p=0, a=-30, b=5, c=0, latent_sigma_y=40)
+df_quad, dfp_quad = generate_data(n=n, p=0, a=-200, b=2, c=3, latent_sigma_y=500)
+</pre></div>
+</div>
+</div>
+<div class="section" id="Scatterplot-against-model-line">
+<h4>Scatterplot against model line<a class="headerlink" href="#Scatterplot-against-model-line" title="Permalink to this headline">¶</a></h4>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>plot_datasets(df_lin, df_quad, dfp_lin, dfp_quad)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_15_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_15_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>We now have two datasets <code class="docutils literal"><span class="pre">df_lin</span></code> and <code class="docutils literal"><span class="pre">df_quad</span></code> created by a
+linear model and quadratic model respectively.</li>
+<li>You can see this raw data, the ideal model fit and the effect of the
+latent noise in the scatterplots above</li>
+<li>In the folowing plots in this Notebook, the linear-generated data
+will be shown in Blue and the quadratic in Green.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="Standardize">
+<h3>Standardize<a class="headerlink" href="#Standardize" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>dfs_lin = df_lin.copy()
+dfs_lin[&#39;x&#39;] = (df_lin[&#39;x&#39;] - df_lin[&#39;x&#39;].mean()) / df_lin[&#39;x&#39;].std()
+
+dfs_quad = df_quad.copy()
+dfs_quad[&#39;x&#39;] = (df_quad[&#39;x&#39;] - df_quad[&#39;x&#39;].mean()) / df_quad[&#39;x&#39;].std()
+</pre></div>
+</div>
+</div>
+<div class="section" id="Create-ranges-for-later-ylim-xim">
+<h4>Create ranges for later ylim xim<a class="headerlink" href="#Create-ranges-for-later-ylim-xim" title="Permalink to this headline">¶</a></h4>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>dfs_lin_xlims = (dfs_lin[&#39;x&#39;].min() - np.ptp(dfs_lin[&#39;x&#39;])/10
+                 ,dfs_lin[&#39;x&#39;].max() + np.ptp(dfs_lin[&#39;x&#39;])/10)
+
+dfs_lin_ylims = (dfs_lin[&#39;y&#39;].min() - np.ptp(dfs_lin[&#39;y&#39;])/10
+                 ,dfs_lin[&#39;y&#39;].max() + np.ptp(dfs_lin[&#39;y&#39;])/10)
+
+dfs_quad_ylims = (dfs_quad[&#39;y&#39;].min() - np.ptp(dfs_quad[&#39;y&#39;])/10
+                 ,dfs_quad[&#39;y&#39;].max() + np.ptp(dfs_quad[&#39;y&#39;])/10)
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Demonstrate-Simple-Linear-Model">
+<h2>Demonstrate Simple Linear Model<a class="headerlink" href="#Demonstrate-Simple-Linear-Model" title="Permalink to this headline">¶</a></h2>
+<p>This <em>linear model</em> is really simple and conventional, an OLS with L2
+constraints (Ridge Regression):</p>
+<div class="math">
+\[y = a + bx + \epsilon\]</div>
+<div class="section" id="Define-model-using-ordinary-pymc3-method">
+<h3>Define model using ordinary pymc3 method<a class="headerlink" href="#Define-model-using-ordinary-pymc3-method" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with pm.Model() as mdl_ols:
+
+    ## define Normal priors to give Ridge regression
+    b0 = pm.Normal(&#39;b0&#39;, mu=0, sd=100)
+    b1 = pm.Normal(&#39;b1&#39;, mu=0, sd=100)
+
+    ## define Linear model
+    yest = b0 + b1 * df_lin[&#39;x&#39;]
+
+    ## define Normal likelihood with HalfCauchy noise (fat tails, equiv to HalfT 1DoF)
+    sigma_y = pm.HalfCauchy(&#39;sigma_y&#39;, beta=10)
+    likelihood = pm.Normal(&#39;likelihood&#39;, mu=yest, sd=sigma_y, observed=df_lin[&#39;y&#39;])
+
+    ## sample using NUTS (starting from MAP found using powell)
+    start_MAP = pm.find_MAP(fmin=fmin_powell, disp=True)
+    traces_ols = pm.sample(2000, start=start_MAP, step=pm.NUTS(), progressbar=True)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Optimization terminated successfully.
+         Current function value: 75.099693
+         Iterations: 8
+         Function evaluations: 303
+ [-----------------100%-----------------] 2000 of 2000 complete in 2.5 sec
+</pre></div></div>
+</div>
+<div class="section" id="View-Traces-after-burn-in">
+<h4>View Traces after burn-in<a class="headerlink" href="#View-Traces-after-burn-in" title="Permalink to this headline">¶</a></h4>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>plot_traces(traces_ols, retain=1000)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_26_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_26_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>This simple OLS manages to make fairly good guesses on the model
+parameters - the data has been generated fairly simply after all -
+but it does appear to have been fooled slightly by the inherent
+noise.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="Define-model-using-pymc3-GLM-method">
+<h3>Define model using pymc3 GLM method<a class="headerlink" href="#Define-model-using-pymc3-GLM-method" title="Permalink to this headline">¶</a></h3>
+<p>PyMC3 has a quite recently developed method - <code class="docutils literal"><span class="pre">glm</span></code> - for defining
+models using a <code class="docutils literal"><span class="pre">patsy</span></code>-style formula syntax. This seems really useful,
+especially for defining simple regression models in fewer lines of code.</p>
+<p>I couldn&#8217;t find a direct comparison in the the examples, so before I
+launch into using <code class="docutils literal"><span class="pre">glm</span></code> for the rest of the Notebook, here&#8217;s the same
+OLS model as above, defined using <code class="docutils literal"><span class="pre">glm</span></code>.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with pm.Model() as mdl_ols_glm:
+
+    # setup model with Normal likelihood (which uses HalfCauchy for error prior)
+    pm.glm.glm(&#39;y ~ 1 + x&#39;, df_lin, family=pm.glm.families.Normal())
+
+    ## sample using NUTS (starting from MAP found using powell)
+    start_MAP = pm.find_MAP(fmin=fmin_powell, disp=True)
+    traces_ols_glm = pm.sample(2000, start=start_MAP, step=pm.NUTS(), progressbar=True)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Optimization terminated successfully.
+         Current function value: 93.518364
+         Iterations: 7
+         Function evaluations: 273
+ [-----------------100%-----------------] 2000 of 2000 complete in 4.7 sec
+</pre></div></div>
+</div>
+<div class="section" id="View-Traces-after-burn-in">
+<h4>View Traces after burn-in<a class="headerlink" href="#View-Traces-after-burn-in" title="Permalink to this headline">¶</a></h4>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>plot_traces(traces_ols_glm, retain=1000)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_32_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_32_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul>
+<li><p class="first">The output parameters are of course named differently to the custom
+naming before. Now we have:</p>
+<div class="line-block">
+<div class="line"><code class="docutils literal"><span class="pre">b0</span> <span class="pre">==</span> <span class="pre">Intercept</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">b1</span> <span class="pre">==</span> <span class="pre">x</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">sigma_y_log</span> <span class="pre">==</span> <span class="pre">sd_log</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">sigma_y</span> <span class="pre">==</span> <span class="pre">sd</span></code></div>
+</div>
+</li>
+<li><p class="first">However, naming aside, this <code class="docutils literal"><span class="pre">glm</span></code>-defined model appears to behave
+in a very similar way, and finds the same parameter values as the
+conventionally-defined model - any differences are due to the random
+nature of the sampling.</p>
+</li>
+<li><p class="first">We can quite happily use the <code class="docutils literal"><span class="pre">glm</span></code> syntax for further models below,
+since it allows us to create a small model factory very easily.</p>
+</li>
+</ul>
+<hr class="docutils" />
+</div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="Create-Higher-Order-Linear-Models">
+<h2>Create Higher-Order Linear Models<a class="headerlink" href="#Create-Higher-Order-Linear-Models" title="Permalink to this headline">¶</a></h2>
+<p>Back to the real purpose of this Notebook: demonstrate model selection.</p>
+<p>First, let&#8217;s create and run a set of polynomial models on each of our
+toy datasets. By default this is for models of order 1 to 5.</p>
+<div class="section" id="Create-and-run-polynomial-models">
+<h3>Create and run polynomial models<a class="headerlink" href="#Create-and-run-polynomial-models" title="Permalink to this headline">¶</a></h3>
+<p>Please see <code class="docutils literal"><span class="pre">run_models()</span></code> above for details. Generally, we&#8217;re creating
+5 polynomial models and fitting each to the chosen dataset</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>models_lin, traces_lin = run_models(dfs_lin, 5)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
+Running: k1
+ [-----------------100%-----------------] 2000 of 2000 complete in 2.6 sec
+Running: k2
+ [-----------------100%-----------------] 2000 of 2000 complete in 4.7 sec
+Running: k3
+ [-----------------100%-----------------] 2000 of 2000 complete in 6.3 sec
+Running: k4
+ [-----------------100%-----------------] 2000 of 2000 complete in 13.3 sec
+Running: k5
+ [-----------------100%-----------------] 2000 of 2000 complete in 26.4 sec
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>models_quad, traces_quad = run_models(dfs_quad, 5)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
+Running: k1
+ [-----------------100%-----------------] 2000 of 2000 complete in 36.6 sec
+Running: k2
+ [-----------------100%-----------------] 2000 of 2000 complete in 9.8 sec
+Running: k3
+ [-----------------100%-----------------] 2000 of 2000 complete in 16.6 sec
+Running: k4
+ [-----------------100%-----------------] 2000 of 2000 complete in 64.1 sec
+Running: k5
+ [-----------------100%-----------------] 2000 of 2000 complete in 74.4 sec
+</pre></div></div>
+</div>
+</div>
+</div>
+<div class="section" id="A-really-bad-method-for-model-selection:-compare-likelihoods">
+<h2>A really bad method for model selection: compare likelihoods<a class="headerlink" href="#A-really-bad-method-for-model-selection:-compare-likelihoods" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>dfll = pd.DataFrame(index=[&#39;k1&#39;,&#39;k2&#39;,&#39;k3&#39;,&#39;k4&#39;,&#39;k5&#39;], columns=[&#39;lin&#39;,&#39;quad&#39;])
+dfll.index.name = &#39;model&#39;
+
+for nm in dfll.index:
+    dfll.loc[nm,&#39;lin&#39;] =-models_lin[nm].logp(pm.df_summary(traces_lin[nm])[&#39;mean&#39;].to_dict())
+    dfll.loc[nm,&#39;quad&#39;] =-models_quad[nm].logp(pm.df_summary(traces_quad[nm])[&#39;mean&#39;].to_dict())
+
+dfll = pd.melt(dfll.reset_index(), id_vars=[&#39;model&#39;], var_name=&#39;poly&#39;
+               ,value_name=&#39;log_likelihood&#39;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>g = sns.factorplot(x=&#39;model&#39;, y=&#39;log_likelihood&#39;, col=&#39;poly&#39;, hue=&#39;poly&#39;
+                   ,data=dfll, kind=&#39;bar&#39;, size=6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_44_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_44_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>Again we&#8217;re showing the linear-generated data at left (Blue) and the
+quadratic-generated data on the right (Green)</li>
+<li>For both datasets, as the models get more complex, the likelhood
+increases monotonically</li>
+<li>This is expected, since the models are more flexible and thus able to
+(over)fit more easily.</li>
+<li>This overfitting makes it a terrible idea to simply use the
+likelihood to evaluate the model fits.</li>
+</ul>
+<div class="section" id="View-posterior-predictive-fit">
+<h3>View posterior predictive fit<a class="headerlink" href="#View-posterior-predictive-fit" title="Permalink to this headline">¶</a></h3>
+<p>Just for the linear, generated data, lets take an interactive look at
+the posterior predictive fit for the models k1 through k5.</p>
+<p>As indicated by the likelhood plots above, the higher-order polynomial
+models exhibit some quite wild swings in the function in order to
+(over)fit the data</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>interactive(plot_posterior_cr, models=fixed(models_lin), traces=fixed(traces_lin)
+            ,rawdata=fixed(dfs_lin), xlims=fixed(dfs_lin_xlims), datamodelnm=fixed(&#39;linear&#39;)
+            ,modelnm = [&#39;k1&#39;,&#39;k2&#39;,&#39;k3&#39;,&#39;k4&#39;,&#39;k5&#39;])
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_47_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_47_0.png" />
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Compare-Deviance-Information-Criterion-[DIC]">
+<h2>Compare Deviance Information Criterion [DIC]<a class="headerlink" href="#Compare-Deviance-Information-Criterion-[DIC]" title="Permalink to this headline">¶</a></h2>
+<p>The Deviance Information Criterion (DIC) is a fairly unsophisticated
+method for comparing the deviance of likelhood across the the sample
+traces of a model run. However, this simplicity apparently yields quite
+good results in a variety of cases, see the discussion worth reading in
+<a class="reference external" href="http://onlinelibrary.wiley.com/doi/10.1111/rssb.12062/abstract">(Speigelhalter et al
+2014)</a></p>
+<p>DIC has recently been added to PyMC3, so lets see what it tells us about
+our model fits for both datasets.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>dftrc_lin = pm.trace_to_dataframe(traces_lin[&#39;k1&#39;])
+trc_lin_logp = dftrc_lin.apply(lambda x: models_lin[&#39;k1&#39;].logp(x.to_dict()), axis=1)
+mean_deviance = -2 * trc_lin_logp.mean(0)
+mean_deviance
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[18]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>191.16310801115768
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>deviance_at_mean = -2 * models_lin[&#39;k1&#39;].logp(dftrc_lin.mean(0).to_dict())
+deviance_at_mean
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[19]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>188.03386766667467
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>dic_k1 = 2 * mean_deviance - deviance_at_mean
+dic_k1
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[20]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>194.29234835564068
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [21]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>pm.stats.dic(model=models_lin[&#39;k1&#39;], trace=traces_lin[&#39;k1&#39;])
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[21]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>194.29234835564063
+</pre></div>
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>It&#8217;s good to see the manual method agrees with the implemented
+package method</li>
+</ul>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [22]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>dfdic = pd.DataFrame(index=[&#39;k1&#39;,&#39;k2&#39;,&#39;k3&#39;,&#39;k4&#39;,&#39;k5&#39;], columns=[&#39;lin&#39;,&#39;quad&#39;])
+dfdic.index.name = &#39;model&#39;
+
+for nm in dfdic.index:
+    dfdic.loc[nm, &#39;lin&#39;] = pm.stats.dic(traces_lin[nm],models_lin[nm])
+    dfdic.loc[nm, &#39;quad&#39;] = pm.stats.dic(traces_quad[nm],models_quad[nm])
+
+dfdic = pd.melt(dfdic.reset_index(), id_vars=[&#39;model&#39;], var_name=&#39;poly&#39;, value_name=&#39;dic&#39;)
+
+g = sns.factorplot(x=&#39;model&#39;, y=&#39;dic&#39;, col=&#39;poly&#39;, hue=&#39;poly&#39;, data=dfdic, kind=&#39;bar&#39;, size=6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_58_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_58_0.png" />
+</div>
+</div>
+<p><strong>Observe</strong></p>
+<ul class="simple">
+<li>We should prefer the model(s) with lower DIC, which (happily)
+directly opposes the increasing likelihood we see above.</li>
+<li>Linear-generated data (lhs):<ul>
+<li>The DIC increases monotonically with model complexity, this is
+great too see!</li>
+<li>The more complicated the model, the more it would appear we are
+overfitting.</li>
+</ul>
+</li>
+<li>Quadratic-generated data (rhs):<ul>
+<li>The DIC dips slightly for the correct model k2</li>
+<li>The difference is slight though!</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="Compare-Watanabe---Akaike-Information-Criterion-[WAIC]">
+<h2>Compare Watanabe - Akaike Information Criterion [WAIC]<a class="headerlink" href="#Compare-Watanabe---Akaike-Information-Criterion-[WAIC]" title="Permalink to this headline">¶</a></h2>
+<p>The Widely Applicable Bayesian Information Criterion (WBIC), a.k.a the
+Watanabe - Akaike Information Criterion (WAIC) is another simple option
+for calculating the goodness-of-fit of amodel using numerical
+techniques. See <a class="reference external" href="http://www.jmlr.org/papers/volume14/watanabe13a/watanabe13a.pdf">(Watanabe
+2013)</a>
+for details.</p>
+<p>WAIC has also recently been added to PyMC3, so lets see what it tells us
+about our model fits for both datasets.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [23]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>pm.stats.waic(model=models_lin[&#39;k1&#39;], trace=traces_lin[&#39;k1&#39;])
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[23]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>130.93585669884246
+</pre></div>
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>Well, we get a number... not much to tell from just one though, so
+lets compare all models</li>
+</ul>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [24]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>dfwaic = pd.DataFrame(index=[&#39;k1&#39;,&#39;k2&#39;,&#39;k3&#39;,&#39;k4&#39;,&#39;k5&#39;], columns=[&#39;lin&#39;,&#39;quad&#39;])
+dfwaic.index.name = &#39;model&#39;
+
+for nm in dfwaic.index:
+    dfwaic.loc[nm, &#39;lin&#39;] = pm.stats.waic(traces_lin[nm],models_lin[nm])
+    dfwaic.loc[nm, &#39;quad&#39;] = pm.stats.waic(traces_quad[nm],models_quad[nm])
+
+dfwaic = pd.melt(dfwaic.reset_index(), id_vars=[&#39;model&#39;], var_name=&#39;poly&#39;, value_name=&#39;waic&#39;)
+
+g = sns.factorplot(x=&#39;model&#39;, y=&#39;waic&#39;, col=&#39;poly&#39;, hue=&#39;poly&#39;, data=dfwaic, kind=&#39;bar&#39;, size=6)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_65_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-model-selection_65_0.png" />
+</div>
+</div>
+<p><strong>Observe</strong></p>
+<ul class="simple">
+<li>We should prefer the model(s) with lower WAIC</li>
+<li>Linear-generated data (lhs):<ul>
+<li>The WAIC seems quite flat across models</li>
+<li>The WAIC seems best (lowest) for simpler models, but <strong>k1</strong>
+doesn&#8217;t stand out as much as it did when using DIC</li>
+</ul>
+</li>
+<li>Quadratic-generated data (rhs):<ul>
+<li>The WAIC is certainly wrong for <strong>k1</strong>, but otherwise also quite
+flat across the models</li>
+<li>There does appear to be a slight dip in the right place at <strong>k2</strong></li>
+</ul>
+</li>
+</ul>
+<p>For these particular models and data, I would prefer to use the DIC
+scores in order to choose models.</p>
+<hr class="docutils" />
+</div>
+<hr class="docutils" />
+<div class="section" id="TODO">
+<h2>TODO<a class="headerlink" href="#TODO" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="K-Fold-Cross-Validation-and/or-Leave-One-Out-(LOO)">
+<h3>K-Fold Cross Validation and/or Leave-One-Out (LOO)<a class="headerlink" href="#K-Fold-Cross-Validation-and/or-Leave-One-Out-(LOO)" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="Left-for-future-development---should-be-easy-enough">
+<h4>Left for future development - should be easy enough<a class="headerlink" href="#Left-for-future-development---should-be-easy-enough" title="Permalink to this headline">¶</a></h4>
+<p><a class="reference external" href="http://www.stat.columbia.edu/~gelman/research/unpublished/waic_stan.pdf">http://www.stat.columbia.edu/~gelman/research/unpublished/waic_stan.pdf</a></p>
+</div>
+</div>
+</div>
+<div class="section" id="Bayes-Factor">
+<h2>Bayes Factor<a class="headerlink" href="#Bayes-Factor" title="Permalink to this headline">¶</a></h2>
+<p>Following text lifted directly from <a class="reference external" href="https://jakevdp.github.io/blog/2015/08/07/frequentism-and-bayesianism-5-model-selection/">JakeVDP
+blogpost</a></p>
+<p>The Bayesian approach proceeds very differently. Recall that the
+Bayesian model involves computing the odds ratio between two models:</p>
+<div class="math">
+\[O_{21}=\frac{P(M_{2} \;|\; D)}{P(M_{1} \;|\; D)}=\frac{P(D \;|\; M_{2})}{P(D \;|\; M_{1})}\frac{P(M_{2})}{P(M_{1})}\]</div>
+<p>Here the ratio <span class="math">\(\frac{P(M2)}{P(M1)}\)</span> is the prior odds ratio, and
+is often assumed to be equal to 1 if no compelling prior evidence favors
+one model over another. The ratio
+<span class="math">\(\frac{P(D \;|\; M2)}{P(D \;|\; M1)}\)</span> is the <strong>Bayes factor</strong>, and
+is the key to Bayesian model selection.</p>
+<p>The Bayes factor can be computed by evaluating the integral over the
+parameter likelihood:</p>
+<div class="math">
+\[P(D \;|\; M)=\int_{\Omega}P(D \;|\; \theta,M) \; P(\theta \;|\; M) \;d\theta\]</div>
+<p>This integral is over the entire parameter space of the model, and thus
+can be extremely computationally intensive, especially as the dimension
+of the model grows beyond a few.</p>
+<hr class="docutils" />
+<p>Example originally contributed by Jonathan Sedar 2016-01-09
+<a class="reference external" href="https://github.com/jonsedar">github.com/jonsedar</a></p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="rolling_regression.html" class="btn btn-neutral float-right" title="Rolling Regression" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="GLM-robust-with-outlier-detection.html" class="btn btn-neutral" title="GLM Robust Regression with Outlier Detection" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

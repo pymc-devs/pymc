@@ -1,0 +1,1217 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>PyMC3 Examples &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>PyMC3 Examples</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/GLM-poisson-regression.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="PyMC3-Examples">
+<h1>PyMC3 Examples<a class="headerlink" href="#PyMC3-Examples" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="GLM-Poisson-Regression">
+<h2>GLM Poisson Regression<a class="headerlink" href="#GLM-Poisson-Regression" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="A-minimal-reproducable-example-of-poisson-regression-to-predict-counts-using-dummy-data.">
+<h3>A minimal reproducable example of poisson regression to predict counts using dummy data.<a class="headerlink" href="#A-minimal-reproducable-example-of-poisson-regression-to-predict-counts-using-dummy-data." title="Permalink to this headline">¶</a></h3>
+<p>This Notebook is basically an excuse to demo poisson regression using
+PyMC3, both manually and using the <code class="docutils literal"><span class="pre">glm</span></code> library to demo interactions
+using the <code class="docutils literal"><span class="pre">patsy</span></code> library. We will create some dummy data, poisson
+distributed according to a linear model, and try to recover the
+coefficients of that linear model through inference.</p>
+<p>For more statistical detail see:</p>
+<ul class="simple">
+<li>Basic info on
+<a class="reference external" href="https://en.wikipedia.org/wiki/Poisson_regression">Wikipedia</a></li>
+<li>GLMs: Poisson regression, exposure, and overdispersion in Chapter 6.2
+of <a class="reference external" href="http://www.stat.columbia.edu/%7Egelman/arm/">ARM, Gelmann &amp; Hill
+2006</a></li>
+<li>This worked example from ARM 6.2 by <a class="reference external" href="http://www.clayford.net/statistics/poisson-regression-ch-6-of-gelman-and-hill/">Clay
+Ford</a></li>
+</ul>
+<p>This very basic model is insipired by <a class="reference external" href="http://ianozsvald.com/2016/05/07/statistically-solving-sneezes-and-sniffles-a-work-in-progress-report-at-pydatalondon-2016/">a project by Ian
+Osvald</a>,
+which is concerend with understanding the various effects of external
+environmental factors upon the allergic sneezing of a test subject.</p>
+</div>
+<div class="section" id="Contents">
+<h3>Contents<a class="headerlink" href="#Contents" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><a class="reference external" href="#Setup">Setup</a><ul>
+<li><a class="reference external" href="#Local-Functions">Local Functions</a></li>
+<li><a class="reference external" href="#Generate-Data">Generate Data</a></li>
+</ul>
+</li>
+<li><a class="reference external" href="#Poisson-Regression">Poisson Regression</a><ul>
+<li><a class="reference external" href="#Create-Design-Matrices">Create Design Matrices</a></li>
+<li><a class="reference external" href="#Create-Model">Create Model</a></li>
+<li><a class="reference external" href="#Sample-Model">Sample Model</a></li>
+<li><a class="reference external" href="#View-Diagnostics-and-Outputs">View Diagnostics and Outputs</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="Package-Requirements-(shown-as-a-conda-env-YAML):">
+<h3>Package Requirements (shown as a conda-env YAML):<a class="headerlink" href="#Package-Requirements-(shown-as-a-conda-env-YAML):" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$&gt; less conda_env_pymc3_examples.yml
+
+name: pymc3_examples
+channels:
+  - defaults
+dependencies:
+    - python=3.5
+    - jupyter
+    - ipywidgets
+    - numpy
+    - scipy
+    - matplotlib
+    - pandas
+    - pytables
+    - scikit-learn
+    - statsmodels
+    - seaborn
+    - patsy
+    - requests
+    - pip
+    - pip:
+        - regex
+
+$&gt; conda env create --file conda_env_pymc3_examples.yml
+$&gt; source activate pymc3_examples
+$&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/pymc3
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Setup">
+<h2>Setup<a class="headerlink" href="#Setup" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>## Interactive magics
+%matplotlib inline
+%qtconsole --colors=linux
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>import sys
+import warnings
+warnings.filterwarnings(&#39;ignore&#39;)
+
+import regex as re
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import patsy as pt
+from scipy import optimize
+
+# pymc3 libraries
+import pymc3 as pm
+import theano as thno
+import theano.tensor as T
+# import pystan
+
+# get watermark
+%install_ext https://raw.githubusercontent.com/rasbt/watermark/master/watermark.py
+
+sns.set(style=&quot;darkgrid&quot;, palette=&quot;muted&quot;)
+pd.set_option(&#39;display.mpl_style&#39;, &#39;default&#39;)
+plt.rcParams[&#39;figure.figsize&#39;] = 14, 6
+np.random.seed(0)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Installed watermark.py. To use it, type:
+  %load_ext watermark
+</pre></div></div>
+</div>
+</div>
+</div>
+<div class="section" id="What-versions-are-we-running?">
+<h1>What versions are we running?<a class="headerlink" href="#What-versions-are-we-running?" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>%load_ext watermark
+%watermark -dmvgp numpy,scipy,pandas,matplotlib,pymc3,theano
+print(&#39;Recursion limit {}&#39;.format(sys.getrecursionlimit()))
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+2016-05-15
+
+CPython 3.5.1
+IPython 4.2.0
+
+numpy 1.11.0
+scipy 0.17.0
+pandas 0.18.1
+matplotlib 1.5.1
+pymc3 3.0
+theano 0.8.2
+
+compiler   : GCC 4.2.1 (Apple Inc. build 5577)
+system     : Darwin
+release    : 14.5.0
+machine    : x86_64
+processor  : i386
+CPU cores  : 4
+interpreter: 64bit
+Git hash   : 687d17856f894aaa0c2b42d30b7ff151b9289856
+Recursion limit 10000
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>def strip_derived_rvs(rvs):
+    &#39;&#39;&#39;Convenience fn: remove PyMC3-generated RVs from a list&#39;&#39;&#39;
+    ret_rvs = []
+    for rv in rvs:
+        if not (re.search(&#39;_log&#39;,rv.name) or re.search(&#39;_interval&#39;,rv.name)):
+            ret_rvs.append(rv)
+    return ret_rvs
+
+
+def plot_traces_pymc(trcs, varnames=None):
+    &#39;&#39;&#39; Convenience fn: plot traces with overlaid means and values &#39;&#39;&#39;
+
+    nrows = len(trcs.varnames)
+    if varnames is not None:
+        nrows = len(varnames)
+
+    ax = pm.traceplot(trcs, varnames=varnames, figsize=(12,nrows*1.4),
+                      lines={k: v[&#39;mean&#39;] for k, v in
+                             pm.df_summary(trcs,varnames=varnames).iterrows()})
+
+    for i, mn in enumerate(pm.df_summary(trcs, varnames=varnames)[&#39;mean&#39;]):
+        ax[i,0].annotate(&#39;{:.2f}&#39;.format(mn), xy=(mn,0), xycoords=&#39;data&#39;,
+                         xytext=(5,10), textcoords=&#39;offset points&#39;, rotation=90,
+                         va=&#39;bottom&#39;, fontsize=&#39;large&#39;, color=&#39;#AA0022&#39;)
+</pre></div>
+</div>
+</div>
+<p>This dummy dataset is created to emulate some data created as part of a
+study into quantified self, and the real data is more complicated than
+this. Ask Ian Osvald if you&#8217;d like to know more
+<a class="reference external" href="https://twitter.com/ianozsvald">https://twitter.com/ianozsvald</a></p>
+<ul class="simple">
+<li>The subject sneezes N times per day, recorded as <code class="docutils literal"><span class="pre">nsneeze</span> <span class="pre">(int)</span></code></li>
+<li>The subject may or may not drink alcohol during that day, recorded as
+<code class="docutils literal"><span class="pre">alcohol</span> <span class="pre">(boolean)</span></code></li>
+<li>The subject may or may not take an antihistamine medication during
+that day, recorded as the negative action <code class="docutils literal"><span class="pre">nomeds</span> <span class="pre">(boolean)</span></code></li>
+<li>I postulate (probably incorrectly) that sneezing occurs at some
+baseline rate, which increases if an antihistamine is not taken, and
+further increased after alcohol is consumed.</li>
+<li>The data is aggegated per day, to yield a total count of sneezes on
+that day, with a boolean flag for alcohol and antihistamine usage,
+with the big assumption that nsneezes have a direct causal
+relationship.</li>
+</ul>
+</div>
+<div class="section" id="Create-4000-days-of-data:-daily-counts-of-sneezes-which-are-poisson-distributed-w.r.t-alcohol-consumption-and-antihistamine-usage">
+<h1>Create 4000 days of data: daily counts of sneezes which are poisson distributed w.r.t alcohol consumption and antihistamine usage<a class="headerlink" href="#Create-4000-days-of-data:-daily-counts-of-sneezes-which-are-poisson-distributed-w.r.t-alcohol-consumption-and-antihistamine-usage" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span># decide poisson theta values
+theta_noalcohol_meds = 1    # no alcohol, took an antihist
+theta_alcohol_meds = 3      # alcohol, took an antihist
+theta_noalcohol_nomeds = 6  # no alcohol, no antihist
+theta_alcohol_nomeds = 36   # alcohol, no antihist
+
+# create samples
+q = 1000
+df = pd.DataFrame({
+        &#39;nsneeze&#39;: np.concatenate((np.random.poisson(theta_noalcohol_meds, q),
+                                   np.random.poisson(theta_alcohol_meds, q),
+                                   np.random.poisson(theta_noalcohol_nomeds, q),
+                                   np.random.poisson(theta_alcohol_nomeds, q))),
+        &#39;alcohol&#39;: np.concatenate((np.repeat(False, q),
+                                   np.repeat(True, q),
+                                   np.repeat(False, q),
+                                   np.repeat(True, q))),
+        &#39;nomeds&#39;: np.concatenate((np.repeat(False, q),
+                                      np.repeat(False, q),
+                                      np.repeat(True, q),
+                                      np.repeat(True, q)))})
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>df.tail()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[6]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>alcohol</th>
+      <th>nomeds</th>
+      <th>nsneeze</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>3995</th>
+      <td>True</td>
+      <td>True</td>
+      <td>38</td>
+    </tr>
+    <tr>
+      <th>3996</th>
+      <td>True</td>
+      <td>True</td>
+      <td>31</td>
+    </tr>
+    <tr>
+      <th>3997</th>
+      <td>True</td>
+      <td>True</td>
+      <td>30</td>
+    </tr>
+    <tr>
+      <th>3998</th>
+      <td>True</td>
+      <td>True</td>
+      <td>34</td>
+    </tr>
+    <tr>
+      <th>3999</th>
+      <td>True</td>
+      <td>True</td>
+      <td>36</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+</div>
+<div class="section" id="View-means-of-the-various-combinations-(poisson-mean-values)">
+<h1>View means of the various combinations (poisson mean values)<a class="headerlink" href="#View-means-of-the-various-combinations-(poisson-mean-values)" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>df.groupby([&#39;alcohol&#39;,&#39;nomeds&#39;]).mean().unstack()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[7]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th colspan="2" halign="left">nsneeze</th>
+    </tr>
+    <tr>
+      <th>nomeds</th>
+      <th>False</th>
+      <th>True</th>
+    </tr>
+    <tr>
+      <th>alcohol</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>False</th>
+      <td>1.018</td>
+      <td>5.866</td>
+    </tr>
+    <tr>
+      <th>True</th>
+      <td>2.938</td>
+      <td>35.889</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>g = sns.factorplot(x=&#39;nsneeze&#39;, row=&#39;nomeds&#39;, col=&#39;alcohol&#39;, data=df,
+               kind=&#39;count&#39;, size=4, aspect=1.5)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-poisson-regression_16_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-poisson-regression_16_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>This looks a lot like poisson-distributed count data (because it is)</li>
+<li>With <code class="docutils literal"><span class="pre">nomeds</span> <span class="pre">==</span> <span class="pre">False</span></code> and <code class="docutils literal"><span class="pre">alcohol</span> <span class="pre">==</span> <span class="pre">False</span></code> (top-left, akak
+antihistamines WERE used, alcohol was NOT drunk) the mean of the
+poisson distribution of sneeze counts is low.</li>
+<li>Changing <code class="docutils literal"><span class="pre">alcohol</span> <span class="pre">==</span> <span class="pre">True</span></code> (top-right) increases the sneeze count
+<code class="docutils literal"><span class="pre">nsneeze</span></code> slightly</li>
+<li>Changing <code class="docutils literal"><span class="pre">nomeds</span> <span class="pre">==</span> <span class="pre">True</span></code> (lower-left) increases the sneeze count
+<code class="docutils literal"><span class="pre">nsneeze</span></code> further</li>
+<li>Changing both <code class="docutils literal"><span class="pre">alcohol</span> <span class="pre">==</span> <span class="pre">True</span> <span class="pre">and</span> <span class="pre">nomeds</span> <span class="pre">==</span> <span class="pre">True</span></code> (lower-right)
+increases the sneeze count <code class="docutils literal"><span class="pre">nsneeze</span></code> a lot, increasing both the
+mean and variance.</li>
+</ul>
+<hr class="docutils" />
+<div class="section" id="Poisson-Regression">
+<h2>Poisson Regression<a class="headerlink" href="#Poisson-Regression" title="Permalink to this headline">¶</a></h2>
+<p>Our model here is a very simple Poisson regression, allowing for
+interaction of terms:</p>
+<div class="math">
+\[\theta = exp(\beta X)\]</div>
+<div class="math">
+\[Y_{sneeze\_count} ~ Poisson(\theta)\]</div>
+</div>
+</div>
+<div class="section" id="Create-linear-model-for-interaction-of-terms">
+<h1>Create linear model for interaction of terms<a class="headerlink" href="#Create-linear-model-for-interaction-of-terms" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>fml = &#39;nsneeze ~ alcohol + antihist + alcohol:antihist&#39;  # full patsy formulation
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>fml = &#39;nsneeze ~ alcohol * nomeds&#39;  # lazy, alternative patsy formulation
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Create-Design-Matrices">
+<h1>Create Design Matrices<a class="headerlink" href="#Create-Design-Matrices" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>(mx_en, mx_ex) = pt.dmatrices(fml, df, return_type=&#39;dataframe&#39;, NA_action=&#39;raise&#39;)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>pd.concat((mx_ex.head(3),mx_ex.tail(3)))
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[12]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Intercept</th>
+      <th>alcohol[T.True]</th>
+      <th>nomeds[T.True]</th>
+      <th>alcohol[T.True]:nomeds[T.True]</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>3997</th>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>3998</th>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>3999</th>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with pm.Model() as mdl_fish:
+
+    # define priors, weakly informative Normal
+    b0 = pm.Normal(&#39;b0_intercept&#39;, mu=0, sd=10)
+    b1 = pm.Normal(&#39;b1_alcohol[T.True]&#39;, mu=0, sd=10)
+    b2 = pm.Normal(&#39;b2_nomeds[T.True]&#39;, mu=0, sd=10)
+    b3 = pm.Normal(&#39;b3_alcohol[T.True]:nomeds[T.True]&#39;, mu=0, sd=10)
+
+    # define linear model and exp link function
+    theta = (b0 +
+            b1 * mx_ex[&#39;alcohol[T.True]&#39;] +
+            b2 * mx_ex[&#39;nomeds[T.True]&#39;] +
+            b3 * mx_ex[&#39;alcohol[T.True]:nomeds[T.True]&#39;])
+
+    ## Define Poisson likelihood
+    y = pm.Poisson(&#39;y&#39;, mu=np.exp(theta), observed=mx_en[&#39;nsneeze&#39;].values)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with mdl_fish:
+
+    start_MAP = pm.find_MAP(fmin=optimize.fmin_powell)
+    trc_fish = pm.sample(2000, start=start_MAP, njobs=2, step=pm.NUTS())
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+ [-----------------100%-----------------] 2001 of 2000 complete in 34.7 sec
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>rvs_fish = [rv.name for rv in strip_derived_rvs(mdl_fish.unobserved_RVs)]
+plot_traces_pymc(trc_fish[-1000:], varnames=rvs_fish)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-poisson-regression_33_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-poisson-regression_33_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>The model converges quickly and traceplots looks pretty well mixed</li>
+</ul>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>np.exp(pm.df_summary(trc_fish[-1000:], varnames=rvs_fish)[[&#39;mean&#39;,&#39;hpd_2.5&#39;,&#39;hpd_97.5&#39;]])
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[16]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>mean</th>
+      <th>hpd_2.5</th>
+      <th>hpd_97.5</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>b0_intercept</th>
+      <td>1.019033</td>
+      <td>0.957895</td>
+      <td>1.083158</td>
+    </tr>
+    <tr>
+      <th>b1_alcohol[T.True]</th>
+      <td>2.881882</td>
+      <td>2.687557</td>
+      <td>3.094581</td>
+    </tr>
+    <tr>
+      <th>b2_nomeds[T.True]</th>
+      <td>5.756029</td>
+      <td>5.408539</td>
+      <td>6.168330</td>
+    </tr>
+    <tr>
+      <th>b3_alcohol[T.True]:nomeds[T.True]</th>
+      <td>2.122779</td>
+      <td>1.978858</td>
+      <td>2.295429</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul>
+<li><p class="first">The contributions from each feature as a multiplier of the baseline
+sneezecount appear to be as per the data generation:</p>
+<ol class="arabic">
+<li><p class="first">exp(b0_intercept): mean=1.02 cr=[0.96, 1.08]</p>
+<p>Roughly linear baseline count when no alcohol and meds, as per the
+generated data:</p>
+<p>theta_noalcohol_meds = 1 (as set above) theta_noalcohol_meds =
+exp(b0_intercept) = 1</p>
+</li>
+<li><p class="first">exp(b1_alcohol): mean=2.88 cr=[2.69, 3.09]</p>
+<p>non-zero positive effect of adding alcohol, a ~3x multiplier of
+baseline sneeze count, as per the generated data:</p>
+<p>theta_alcohol_meds = 3 (as set above) theta_alcohol_meds =
+exp(b0_intercept + b1_alcohol) = exp(b0_intercept) *
+exp(b1_alcohol) = 1 * 3 = 3</p>
+</li>
+<li><p class="first">exp(b2_nomeds[T.True]): mean=5.76 cr=[5.40, 6.17]</p>
+<p>larger, non-zero positive effect of adding nomeds, a ~6x
+multiplier of baseline sneeze count, as per the generated data:</p>
+<p>theta_noalcohol_nomeds = 6 (as set above)
+theta_noalcohol_nomeds = exp(b0_intercept + b2_nomeds) =
+exp(b0_intercept) * exp(b2_nomeds) = 1 * 6 = 6</p>
+</li>
+<li><p class="first">exp(b3_alcohol[T.True]:nomeds[T.True]): mean=2.12 cr=[1.98, 2.30]</p>
+<p>small, positive interaction effect of alcohol and meds, a ~2x
+multiplier of baseline sneeze count, as per the generated data:</p>
+<p>theta_alcohol_nomeds = 36 (as set above) theta_alcohol_nomeds
+= exp(b0_intercept + b1_alcohol + b2_nomeds +
+b3_alcohol:nomeds) = exp(b0_intercept) * exp(b1_alcohol) *
+exp(b2_nomeds * b3_alcohol:nomeds) = 1 * 3 * 6 * 2 = 36</p>
+</li>
+</ol>
+</li>
+</ul>
+<hr class="docutils" />
+</div>
+<div class="section" id="Alternative-automatic-formulation-using-pmyc.glm">
+<h1>Alternative automatic formulation using <code class="docutils literal"><span class="pre">pmyc.glm</span></code><a class="headerlink" href="#Alternative-automatic-formulation-using-pmyc.glm" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with pm.Model() as mdl_fish_alt:
+
+    pm.glm.glm(fml, df, family=pm.glm.families.Poisson())
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied log-transform to mu and added transformed mu_log to model.
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>with mdl_fish_alt:
+
+    start_MAP_alt = pm.find_MAP(fmin=optimize.fmin_powell)
+    trc_fish_alt = pm.sample(4000, start=start_MAP_alt, njobs=1, step=pm.NUTS())
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+ [-----------------100%-----------------] 4000 of 4000 complete in 48.4 sec
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>rvs_fish_alt = [rv.name for rv in strip_derived_rvs(mdl_fish_alt.unobserved_RVs)]
+plot_traces_pymc(trc_fish_alt[-1000:], varnames=rvs_fish_alt)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-poisson-regression_46_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_GLM-poisson-regression_46_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [25]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>np.exp(pm.df_summary(trc_fish_alt[-1000:], varnames=rvs_fish_alt)[[&#39;mean&#39;,&#39;hpd_2.5&#39;,&#39;hpd_97.5&#39;]])
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[25]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>mean</th>
+      <th>hpd_2.5</th>
+      <th>hpd_97.5</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Intercept</th>
+      <td>1.016913e+00</td>
+      <td>0.958431</td>
+      <td>1.081468e+00</td>
+    </tr>
+    <tr>
+      <th>alcohol[T.True]</th>
+      <td>2.890336e+00</td>
+      <td>2.689204</td>
+      <td>3.104546e+00</td>
+    </tr>
+    <tr>
+      <th>nomeds[T.True]</th>
+      <td>5.768525e+00</td>
+      <td>5.427639</td>
+      <td>6.155485e+00</td>
+    </tr>
+    <tr>
+      <th>alcohol[T.True]:nomeds[T.True]</th>
+      <td>2.116617e+00</td>
+      <td>1.959358</td>
+      <td>2.264685e+00</td>
+    </tr>
+    <tr>
+      <th>mu</th>
+      <td>7.964644e+18</td>
+      <td>1.003069</td>
+      <td>8.049357e+50</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>The traceplots look well mixed</li>
+<li>The transformed model coeffs look moreorless the same as those
+generated by the manual model</li>
+<li>Note also that the <code class="docutils literal"><span class="pre">mu</span></code> coeff is for the overall mean of the
+dataset and has an extreme skew, if we look at the median value ...</li>
+</ul>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [26]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>np.percentile(trc_fish_alt[-1000:][&#39;mu&#39;], [25,50,75])
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[26]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([  4.17219583,   9.44616465,  24.18060789])
+</pre></div>
+</div>
+</div>
+<p>... of 9.45 with a range [25%, 75%] of [4.17, 24.18], we see this is
+pretty close to the overall mean of:</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [27]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>df[&#39;nsneeze&#39;].mean()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[27]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>11.42775
+</pre></div>
+</div>
+</div>
+<hr class="docutils" />
+<p>Example originally contributed by Jonathan Sedar 2016-05-15
+<a class="reference external" href="https://github.com/jonsedar">github.com/jonsedar</a></p>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

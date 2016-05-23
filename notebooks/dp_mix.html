@@ -1,0 +1,1460 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Dirichlet process mixtures for density estimation &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="API Reference" href="../api.html"/>
+        <link rel="prev" title="Gaussian Process (GP) smoothing" href="GP-smoothing.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Dirichlet process mixtures for density estimation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Dirichlet-processes">Dirichlet processes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Dirichlet-process-mixtures">Dirichlet process mixtures</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>Dirichlet process mixtures for density estimation</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/dp_mix.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Dirichlet-process-mixtures-for-density-estimation">
+<h1>Dirichlet process mixtures for density estimation<a class="headerlink" href="#Dirichlet-process-mixtures-for-density-estimation" title="Permalink to this headline">¶</a></h1>
+<p>Author: <a class="reference external" href="https://github.com/AustinRochford/">Austin Rochford</a></p>
+<div class="section" id="Dirichlet-processes">
+<h2>Dirichlet processes<a class="headerlink" href="#Dirichlet-processes" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference external" href="https://en.wikipedia.org/wiki/Dirichlet_process">Dirichlet
+process</a> is a
+flexible probability distribution over the space of distributions. Most
+generally, a probability distribution, <span class="math">\(P\)</span>, on a set
+<span class="math">\(\Omega\)</span> is a
+[measure](<a class="reference external" href="https://en.wikipedia.org/wiki/Measure_(mathematics%29">https://en.wikipedia.org/wiki/Measure_(mathematics%29</a>) that
+assigns measure one to the entire space (<span class="math">\(P(\Omega) = 1\)</span>). A
+Dirichlet process <span class="math">\(P \sim \textrm{DP}(\alpha, P_0)\)</span> is a measure
+that has the property that, for every finite
+<a class="reference external" href="https://en.wikipedia.org/wiki/Disjoint_sets">disjoint</a> partition
+<span class="math">\(S_1, \ldots, S_n\)</span> of <span class="math">\(\Omega\)</span>,</p>
+<div class="math">
+\[(P(S_1), \ldots, P(S_n)) \sim \textrm{Dir}(\alpha P_0(S_1), \ldots, \alpha P_0(S_n)).\]</div>
+<p>Here <span class="math">\(P_0\)</span> is the base probability measure on the space
+<span class="math">\(\Omega\)</span>. The precision parameter <span class="math">\(\alpha &gt; 0\)</span> controls how
+close samples from the Dirichlet process are to the base measure,
+<span class="math">\(P_0\)</span>. As <span class="math">\(\alpha \to \infty\)</span>, samples from the Dirichlet
+process approach the base measure <span class="math">\(P_0\)</span>.</p>
+<p>Dirichlet processes have several properties that make then quite
+suitable to
+<a class="reference external" href="https://en.wikipedia.org/wiki/Markov_chain_Monte_Carlo">MCMC</a>
+simulation.</p>
+<ol class="arabic">
+<li><p class="first">The posterior given
+<a class="reference external" href="https://en.wikipedia.org/wiki/Independent_and_identically_distributed_random_variables">i.i.d.</a>
+observations <span class="math">\(\omega_1, \ldots, \omega_n\)</span> from a Dirichlet
+process <span class="math">\(P \sim \textrm{DP}(\alpha, P_0)\)</span> is also a Dirichlet
+process with</p>
+<div class="math">
+\[P\ |\ \omega_1, \ldots, \omega_n \sim \textrm{DP}\left(\alpha + n, \frac{\alpha}{\alpha + n} P_0 + \frac{1}{\alpha + n} \sum_{i = 1}^n \delta_{\omega_i}\right),\]</div>
+</li>
+</ol>
+<p>where <span class="math">\(\delta\)</span> is the <a class="reference external" href="https://en.wikipedia.org/wiki/Dirac_delta_function">Dirac delta
+measure</a></p>
+<div class="math">
+\[\begin{align*}
+     \delta_{\omega}(S)
+         &amp; = \begin{cases}
+                 1 &amp; \textrm{if } \omega \in S \\
+                 0 &amp; \textrm{if } \omega \not \in S
+             \end{cases}
+ \end{align*}.\]</div><ol class="arabic" start="2">
+<li><p class="first">The posterior predictive distribution of a new observation is a
+compromise between the base measure and the observations,</p>
+<div class="math">
+\[\omega\ |\ \omega_1, \ldots, \omega_n \sim \frac{\alpha}{\alpha + n} P_0 + \frac{1}{\alpha + n} \sum_{i = 1}^n \delta_{\omega_i}.\]</div>
+</li>
+</ol>
+<p>We see that the prior precision <span class="math">\(\alpha\)</span> can naturally be
+interpreted as a prior sample size. The form of this posterior
+predictive distribution also lends itself to Gibbs sampling.</p>
+<ol class="arabic" start="2">
+<li><p class="first">Samples, <span class="math">\(P \sim \textrm{DP}(\alpha, P_0)\)</span>, from a Dirichlet
+process are discrete with probability one. That is, there are
+elements <span class="math">\(\omega_1, \omega_2, \ldots\)</span> in <span class="math">\(\Omega\)</span> and
+weights <span class="math">\(w_1, w_2, \ldots\)</span> with
+<span class="math">\(\sum_{i = 1}^{\infty} w_i = 1\)</span> such that</p>
+<div class="math">
+\[P = \sum_{i = 1}^\infty w_i \delta_{\omega_i}.\]</div>
+</li>
+<li><p class="first">The <a class="reference external" href="https://en.wikipedia.org/wiki/Dirichlet_process#The_stick-breaking_process">stick-breaking
+process</a>
+gives an explicit construction of the weights <span class="math">\(w_i\)</span> and samples
+<span class="math">\(\omega_i\)</span> above that is straightforward to sample from. If
+<span class="math">\(\beta_1, \beta_2, \ldots \sim \textrm{Beta}(1, \alpha)\)</span>, then
+<span class="math">\(w_i = \beta_i \prod_{j = 1}^{j - 1} (1 - \beta_j)\)</span>. The
+relationship between this representation and stick breaking may be
+illustrated as follows:</p>
+<ol class="arabic simple">
+<li>Start with a stick of length one.</li>
+<li>Break the stick into two portions, the first of proportion
+<span class="math">\(w_1 = \beta_1\)</span> and the second of proportion
+<span class="math">\(1 - w_1\)</span>.</li>
+<li>Further break the second portion into two portions, the first of
+proportion <span class="math">\(\beta_2\)</span> and the second of proportion
+<span class="math">\(1 - \beta_2\)</span>. The length of the first portion of this stick
+is <span class="math">\(\beta_2 (1 - \beta_1)\)</span>; the length of the second portion
+is <span class="math">\((1 - \beta_1) (1 - \beta_2)\)</span>.</li>
+<li>Continue breaking the second portion from the previous break in
+this manner forever. If
+<span class="math">\(\omega_1, \omega_2, \ldots \sim P_0\)</span>, then</li>
+</ol>
+<div class="math">
+\[P = \sum_{i = 1}^\infty w_i \delta_{\omega_i} \sim \textrm{DP}(\alpha, P_0).\]</div>
+</li>
+</ol>
+<p>We can use the stick-breaking process above to easily sample from a
+Dirichlet process in Python. For this example, <span class="math">\(\alpha = 2\)</span> and
+the base distribution is <span class="math">\(N(0, 1)\)</span>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>%matplotlib inline
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>from __future__ import division
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>from matplotlib import pyplot as plt
+import numpy as np
+import pymc3 as pm
+import scipy as sp
+import seaborn as sns
+from statsmodels.datasets import get_rdataset
+from theano import tensor as T
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Couldn&#39;t import dot_parser, loading of dot files will not be possible.
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>blue = sns.color_palette()[0]
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>np.random.seed(462233) # from random.org
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>N = 20
+K = 30
+
+alpha = 2.
+P0 = sp.stats.norm
+</pre></div>
+</div>
+</div>
+<p>We draw and plot samples from the stick-breaking process.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>beta = sp.stats.beta.rvs(1, alpha, size=(N, K))
+w = np.empty_like(beta)
+w[:, 0] = beta[:, 0]
+w[:, 1:] = beta[:, 1:] * (1 - beta[:, :-1]).cumprod(axis=1)
+
+omega = P0.rvs(size=(N, K))
+
+x_plot = np.linspace(-3, 3, 200)
+
+sample_cdfs = (w[..., np.newaxis] * np.less.outer(omega, x_plot)).sum(axis=1)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+
+ax.plot(x_plot, sample_cdfs[0], c=&#39;gray&#39;, alpha=0.75,
+        label=&#39;DP sample CDFs&#39;);
+ax.plot(x_plot, sample_cdfs[1:].T, c=&#39;gray&#39;, alpha=0.75);
+ax.plot(x_plot, P0.cdf(x_plot), c=&#39;k&#39;, label=&#39;Base CDF&#39;);
+
+ax.set_title(r&#39;$\alpha = {}$&#39;.format(alpha));
+ax.legend(loc=2);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_9_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_9_0.png" />
+</div>
+</div>
+<p>As stated above, as <span class="math">\(\alpha \to \infty\)</span>, samples from the
+Dirichlet process converge to the base distribution.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>fig, (l_ax, r_ax) = plt.subplots(ncols=2, sharex=True, sharey=True, figsize=(16, 6))
+
+K = 50
+alpha = 10.
+
+beta = sp.stats.beta.rvs(1, alpha, size=(N, K))
+w = np.empty_like(beta)
+w[:, 0] = beta[:, 0]
+w[:, 1:] = beta[:, 1:] * (1 - beta[:, :-1]).cumprod(axis=1)
+
+omega = P0.rvs(size=(N, K))
+
+sample_cdfs = (w[..., np.newaxis] * np.less.outer(omega, x_plot)).sum(axis=1)
+
+l_ax.plot(x_plot, sample_cdfs[0], c=&#39;gray&#39;, alpha=0.75,
+          label=&#39;DP sample CDFs&#39;);
+l_ax.plot(x_plot, sample_cdfs[1:].T, c=&#39;gray&#39;, alpha=0.75);
+l_ax.plot(x_plot, P0.cdf(x_plot), c=&#39;k&#39;, label=&#39;Base CDF&#39;);
+
+l_ax.set_title(r&#39;$\alpha = {}$&#39;.format(alpha));
+l_ax.legend(loc=2);
+
+K = 200
+alpha = 50.
+
+beta = sp.stats.beta.rvs(1, alpha, size=(N, K))
+w = np.empty_like(beta)
+w[:, 0] = beta[:, 0]
+w[:, 1:] = beta[:, 1:] * (1 - beta[:, :-1]).cumprod(axis=1)
+
+omega = P0.rvs(size=(N, K))
+
+sample_cdfs = (w[..., np.newaxis] * np.less.outer(omega, x_plot)).sum(axis=1)
+
+r_ax.plot(x_plot, sample_cdfs[0], c=&#39;gray&#39;, alpha=0.75,
+          label=&#39;DP sample CDFs&#39;);
+r_ax.plot(x_plot, sample_cdfs[1:].T, c=&#39;gray&#39;, alpha=0.75);
+r_ax.plot(x_plot, P0.cdf(x_plot), c=&#39;k&#39;, label=&#39;Base CDF&#39;);
+
+r_ax.set_title(r&#39;$\alpha = {}$&#39;.format(alpha));
+r_ax.legend(loc=2);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_11_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_11_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Dirichlet-process-mixtures">
+<h2>Dirichlet process mixtures<a class="headerlink" href="#Dirichlet-process-mixtures" title="Permalink to this headline">¶</a></h2>
+<p>For the task of density estimation, the (almost sure) discreteness of
+samples from the Dirichlet process is a significant drawback. This
+problem can be solved with another level of indirection by using
+Dirichlet process mixtures for density estimation. A Dirichlet process
+mixture uses component densities from a parametric family
+<span class="math">\(\mathcal{F} = \{f_{\theta}\ |\ \theta \in \Theta\}\)</span> and
+represents the mixture weights as a Dirichlet process. If <span class="math">\(P_0\)</span> is
+a probability measure on the parameter space <span class="math">\(\Theta\)</span>, a Dirichlet
+process mixture is the hierarchical model</p>
+<div class="math">
+\[\begin{align*}
+    x_i\ |\ \theta_i
+        &amp; \sim f_{\theta_i} \\
+    \theta_1, \ldots, \theta_n
+        &amp; \sim P \\
+    P
+        &amp; \sim \textrm{DP}(\alpha, P_0).
+\end{align*}\]</div><p>To illustrate this model, we simulate draws from a Dirichlet process
+mixture with <span class="math">\(\alpha = 2\)</span>, <span class="math">\(\theta \sim N(0, 1)\)</span>,
+<span class="math">\(x\ |\ \theta \sim N(\theta, (0.3)^2)\)</span>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>N = 5
+K = 30
+
+alpha = 2
+P0 = sp.stats.norm
+f = lambda x, theta: sp.stats.norm.pdf(x, theta, 0.3)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>beta = sp.stats.beta.rvs(1, alpha, size=(N, K))
+w = np.empty_like(beta)
+w[:, 0] = beta[:, 0]
+w[:, 1:] = beta[:, 1:] * (1 - beta[:, :-1]).cumprod(axis=1)
+
+theta = P0.rvs(size=(N, K))
+
+dpm_pdf_components = f(x_plot[np.newaxis, np.newaxis, :], theta[..., np.newaxis])
+dpm_pdfs = (w[..., np.newaxis] * dpm_pdf_components).sum(axis=1)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+
+ax.plot(x_plot, dpm_pdfs.T, c=&#39;gray&#39;);
+
+ax.set_yticklabels([]);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_15_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_15_0.png" />
+</div>
+</div>
+<p>We now focus on a single mixture and decompose it into its individual
+(weighted) mixture components.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+
+ix = 1
+
+ax.plot(x_plot, dpm_pdfs[ix], c=&#39;k&#39;, label=&#39;Density&#39;);
+ax.plot(x_plot, (w[..., np.newaxis] * dpm_pdf_components)[ix, 0],
+        &#39;--&#39;, c=&#39;k&#39;, label=&#39;Mixture components (weighted)&#39;);
+ax.plot(x_plot, (w[..., np.newaxis] * dpm_pdf_components)[ix].T,
+        &#39;--&#39;, c=&#39;k&#39;);
+
+ax.set_yticklabels([]);
+ax.legend(loc=1);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_17_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_17_0.png" />
+</div>
+</div>
+<p>Sampling from these stochastic processes is fun, but these ideas become
+truly useful when we fit them to data. The discreteness of samples and
+the stick-breaking representation of the Dirichlet process lend
+themselves nicely to Markov chain Monte Carlo simulation of posterior
+distributions. We will perform this sampling using
+<code class="docutils literal"><span class="pre">`pymc3</span></code> &lt;<a class="reference external" href="https://pymc-devs.github.io/pymc3/">https://pymc-devs.github.io/pymc3/</a>&gt;`__.</p>
+<p>Our first example uses a Dirichlet process mixture to estimate the
+density of waiting times between eruptions of the <a class="reference external" href="https://en.wikipedia.org/wiki/Old_Faithful">Old
+Faithful</a> geyser in
+<a class="reference external" href="https://en.wikipedia.org/wiki/Yellowstone_National_Park">Yellowstone National
+Park</a>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>old_faithful_df = get_rdataset(&#39;faithful&#39;, cache=True).data[[&#39;waiting&#39;]]
+</pre></div>
+</div>
+</div>
+<p>For convenience in specifying the prior, we standardize the waiting time
+between eruptions.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>old_faithful_df[&#39;std_waiting&#39;] = (old_faithful_df.waiting - old_faithful_df.waiting.mean()) / old_faithful_df.waiting.std()
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>old_faithful_df.head()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[16]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>waiting</th>
+      <th>std_waiting</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>79</td>
+      <td>0.596025</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>54</td>
+      <td>-1.242890</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>74</td>
+      <td>0.228242</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>62</td>
+      <td>-0.654437</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>85</td>
+      <td>1.037364</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+
+n_bins = 20
+ax.hist(old_faithful_df.std_waiting, bins=n_bins, color=blue, lw=0, alpha=0.5);
+
+ax.set_xlabel(&#39;Standardized waiting time between eruptions&#39;);
+ax.set_ylabel(&#39;Number of eruptions&#39;);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_23_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_23_0.png" />
+</div>
+</div>
+<p>Observant readers will have noted that we have not been continuing the
+stick-breaking process indefinitely as indicated by its definition, but
+rather have been truncating this process after a finite number of
+breaks. Obviously, when computing with Dirichlet processes, it is
+necessary to only store a finite number of its point masses and weights
+in memory. This restriction is not terribly onerous, since with a finite
+number of observations, it seems quite likely that the number of mixture
+components that contribute non-neglible mass to the mixture will grow
+slower than the number of samples. This intuition can be formalized to
+show that the (expected) number of components that contribute
+non-negligible mass to the mixture approaches <span class="math">\(\alpha \log N\)</span>,
+where <span class="math">\(N\)</span> is the sample size.</p>
+<p>There are various clever <a class="reference external" href="https://en.wikipedia.org/wiki/Gibbs_sampling">Gibbs
+sampling</a> techniques
+for Dirichlet processes that allow the number of components stored to
+grow as needed. <a class="reference external" href="http://danroy.org/papers/RoyManGooTen-ICMLNPB-2008.pdf">Stochastic
+memoization</a>
+is another powerful technique for simulating Dirichlet processes while
+only storing finitely many components in memory. In this introductory
+example, we take the much less sophistocated approach of simple
+truncating the Dirichlet process components that are stored after a
+fixed number, <span class="math">\(K\)</span>, of components. Importantly, this approach is
+compatible with some of <code class="docutils literal"><span class="pre">pymc3</span></code>&#8216;s (current) technical limitations.
+<a class="reference external" href="http://fisher.osu.edu/~schroeder.9/AMIS900/Ohlssen2006.pdf">Ohlssen, et
+al.</a>
+provide justification for truncation, showing that
+<span class="math">\(K &gt; 5 \alpha + 2\)</span> is most likely sufficient to capture almost all
+of the mixture weights (<span class="math">\(\sum_{i = 1}^{K} w_i &gt; 0.99\)</span>). We can
+practically verify the suitability of our truncated approximation to the
+Dirichlet process by checking the number of components that contribute
+non-negligible mass to the mixture. If, in our simulations, all
+components contribute non-negligible mass to the mixture, we have
+truncated our Dirichlet process too early.</p>
+<p>Our Dirichlet process mixture model for the standardized waiting times
+is</p>
+<div class="math">
+\[\begin{align*}
+    x_i\ |\ \mu_i, \lambda_i, \tau_i
+        &amp; \sim N\left(\mu, (\lambda_i \tau_i)^{-1}\right) \\
+    \mu_i\ |\ \lambda_i, \tau_i
+        &amp; \sim N\left(0, (\lambda_i \tau_i)^{-1}\right) \\
+    (\lambda_1, \tau_1), (\lambda_2, \tau_2), \ldots
+        &amp; \sim P \\
+    P
+        &amp; \sim \textrm{DP}(\alpha, U(0, 5) \times \textrm{Gamma}(1, 1)) \\
+    \alpha
+        &amp; \sim \textrm{Gamma}(1, 1).
+\end{align*}\]</div><p>Note that instead of fixing a value of <span class="math">\(\alpha\)</span>, as in our
+previous simulations, we specify a prior on <span class="math">\(\alpha\)</span>, so that we
+may learn its posterior distribution from the observations. This model
+is therefore actually a mixture of Dirichlet process mixtures, since
+each fixed value of <span class="math">\(\alpha\)</span> results in a Dirichlet process
+mixture.</p>
+<p>We now construct this model using <code class="docutils literal"><span class="pre">pymc3</span></code>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>N = old_faithful_df.shape[0]
+
+K = 30
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>with pm.Model() as model:
+    alpha = pm.Gamma(&#39;alpha&#39;, 1., 1.)
+    beta = pm.Beta(&#39;beta&#39;, 1., alpha, shape=K)
+    w = pm.Deterministic(&#39;w&#39;, beta * T.concatenate([[1], T.extra_ops.cumprod(1 - beta)[:-1]]))
+    component = pm.Categorical(&#39;component&#39;, w, shape=N)
+
+    tau = pm.Gamma(&#39;tau&#39;, 1., 1., shape=K)
+    lambda_ = pm.Uniform(&#39;lambda&#39;, 0, 5, shape=K)
+    mu = pm.Normal(&#39;mu&#39;, 0, lambda_ * tau, shape=K)
+    obs = pm.Normal(&#39;obs&#39;, mu[component], lambda_[component] * tau[component],
+                    observed=old_faithful_df.std_waiting.values)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied log-transform to alpha and added transformed alpha_log to model.
+Applied logodds-transform to beta and added transformed beta_logodds to model.
+Applied log-transform to tau and added transformed tau_log to model.
+Applied interval-transform to lambda and added transformed lambda_interval to model.
+</pre></div></div>
+</div>
+<p>We sample from the posterior distribution 20,000 times, burn the first
+10,000 samples, and thin to every tenth sample.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>with model:
+    step1 = pm.Metropolis(vars=[alpha, beta, w, lambda_, tau, mu, obs])
+    step2 = pm.ElemwiseCategoricalStep([component], np.arange(K))
+
+    trace_ = pm.sample(20000, [step1, step2])
+
+trace = trace_[10000::10]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+ [-----------------100%-----------------] 20000 of 20000 complete in 133.1 sec
+</pre></div></div>
+</div>
+<p>The posterior distribution of <span class="math">\(\alpha\)</span> is concentrated between 0.2
+and 1.2.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [21]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>pm.traceplot(trace, varnames=[&#39;alpha&#39;]);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_30_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_30_0.png" />
+</div>
+</div>
+<p>To verify that our truncation point is not biasing our results, we plot
+the distribution of the number of mixture components used.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [22]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>n_components_used = np.apply_along_axis(lambda x: np.unique(x).size, 1, trace[&#39;component&#39;])
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [23]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+
+bins = np.arange(n_components_used.min(), n_components_used.max() + 1)
+ax.hist(n_components_used + 1, bins=bins, normed=True, lw=0, alpha=0.75);
+
+ax.set_xticks(bins + 0.5);
+ax.set_xticklabels(bins);
+ax.set_xlim(bins.min(), bins.max() + 1);
+ax.set_xlabel(&#39;Number of mixture components used&#39;);
+
+ax.set_ylabel(&#39;Posterior probability&#39;);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_33_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_33_0.png" />
+</div>
+</div>
+<p>We see that the vast majority of samples use four mixture components,
+and the largest number of mixture components used by any sample is nine.
+Since we truncated our Dirichlet process mixture at thirty components,
+we can be quite sure that truncation did not bias our results.</p>
+<p>We now compute and plot our posterior density estimate.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [24]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>post_pdf_contribs = sp.stats.norm.pdf(np.atleast_3d(x_plot),
+                                      trace[&#39;mu&#39;][:, np.newaxis, :],
+                                      1. / np.sqrt(trace[&#39;lambda&#39;] * trace[&#39;tau&#39;])[:, np.newaxis, :])
+post_pdfs = (trace[&#39;w&#39;][:, np.newaxis, :] * post_pdf_contribs).sum(axis=-1)
+
+post_pdf_low, post_pdf_high = np.percentile(post_pdfs, [2.5, 97.5], axis=0)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [25]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+
+n_bins = 20
+ax.hist(old_faithful_df.std_waiting.values, bins=n_bins, normed=True,
+        color=blue, lw=0, alpha=0.5);
+
+ax.fill_between(x_plot, post_pdf_low, post_pdf_high,
+                color=&#39;gray&#39;, alpha=0.45);
+ax.plot(x_plot, post_pdfs[0],
+        c=&#39;gray&#39;, label=&#39;Posterior sample densities&#39;);
+ax.plot(x_plot, post_pdfs[::100].T, c=&#39;gray&#39;);
+ax.plot(x_plot, post_pdfs.mean(axis=0),
+        c=&#39;k&#39;, label=&#39;Posterior expected density&#39;);
+
+ax.set_xlabel(&#39;Standardized waiting time between eruptions&#39;);
+
+ax.set_yticklabels([]);
+ax.set_ylabel(&#39;Density&#39;);
+
+ax.legend(loc=2);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_36_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_36_0.png" />
+</div>
+</div>
+<p>As above, we can decompose this density estimate into its (weighted)
+mixture components.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [26]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+
+n_bins = 20
+ax.hist(old_faithful_df.std_waiting.values, bins=n_bins, normed=True,
+        color=blue, lw=0, alpha=0.5);
+
+ax.plot(x_plot, post_pdfs.mean(axis=0),
+        c=&#39;k&#39;, label=&#39;Posterior expected density&#39;);
+ax.plot(x_plot, (trace[&#39;w&#39;][:, np.newaxis, :] * post_pdf_contribs).mean(axis=0)[:, 0],
+        &#39;--&#39;, c=&#39;k&#39;, label=&#39;Posterior expected mixture\ncomponents\n(weighted)&#39;);
+ax.plot(x_plot, (trace[&#39;w&#39;][:, np.newaxis, :] * post_pdf_contribs).mean(axis=0),
+        &#39;--&#39;, c=&#39;k&#39;);
+
+ax.set_xlabel(&#39;Standardized waiting time between eruptions&#39;);
+
+ax.set_yticklabels([]);
+ax.set_ylabel(&#39;Density&#39;);
+
+ax.legend(loc=2);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_38_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_38_0.png" />
+</div>
+</div>
+<p>The Dirichlet process mixture model is incredibly flexible in terms of
+the family of parametric component distributions
+<span class="math">\(\{f_{\theta}\ |\ f_{\theta} \in \Theta\}\)</span>. We illustrate this
+flexibility below by using Poisson component distributions to estimate
+the density of sunspots per year.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [27]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>sunspot_df = get_rdataset(&#39;sunspot.year&#39;, cache=True).data
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [28]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>sunspot_df.head()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[28]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>time</th>
+      <th>sunspot.year</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1700</td>
+      <td>5</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1701</td>
+      <td>11</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1702</td>
+      <td>16</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1703</td>
+      <td>23</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1704</td>
+      <td>36</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>For this problem, the model is</p>
+<div class="math">
+\[\begin{align*}
+    x_i\ |\ \lambda_i
+        &amp; \sim \textrm{Poisson}(\lambda_i) \\
+    \lambda_1, \lambda_2, \ldots
+        &amp; \sim P \\
+    P
+        &amp; \sim \textrm{DP}(\alpha, U(0, 300)) \\
+    \alpha
+        &amp; \sim \textrm{Gamma}(1, 1).
+\end{align*}\]</div><div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [29]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>N = sunspot_df.shape[0]
+
+K = 30
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [30]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>with pm.Model() as model:
+    alpha = pm.Gamma(&#39;alpha&#39;, 1., 1.)
+    beta = pm.Beta(&#39;beta&#39;, 1, alpha, shape=K)
+    w = pm.Deterministic(&#39;beta&#39;, beta * T.concatenate([[1], T.extra_ops.cumprod(1 - beta[:-1])]))
+    component = pm.Categorical(&#39;component&#39;, w, shape=N)
+
+    mu = pm.Uniform(&#39;mu&#39;, 0., 300., shape=K)
+    obs = pm.Poisson(&#39;obs&#39;, mu[component], observed=sunspot_df[&#39;sunspot.year&#39;])
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied log-transform to alpha and added transformed alpha_log to model.
+Applied logodds-transform to beta and added transformed beta_logodds to model.
+Applied interval-transform to mu and added transformed mu_interval to model.
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [31]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>with model:
+    step1 = pm.Metropolis(vars=[alpha, beta, w, mu, obs])
+    step2 = pm.ElemwiseCategoricalStep([component], np.arange(K))
+
+    trace_ = pm.sample(20000, [step1, step2])
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+ [-----------------100%-----------------] 20000 of 20000 complete in 116.3 sec
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [32]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>trace = trace_[10000::10]
+</pre></div>
+</div>
+</div>
+<p>For the sunspot model, the posterior distribution of <span class="math">\(\alpha\)</span> is
+concentrated between one and three, indicating that we should expect
+more components to contribute non-negligible amounts to the mixture than
+for the Old Faithful waiting time model.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [33]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>pm.traceplot(trace, varnames=[&#39;alpha&#39;]);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_48_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_48_0.png" />
+</div>
+</div>
+<p>Indeed, we see that there are (on average) about ten to fifteen
+components used by this model.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [34]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>n_components_used = np.apply_along_axis(lambda x: np.unique(x).size, 1, trace[&#39;component&#39;])
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [35]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+
+bins = np.arange(n_components_used.min(), n_components_used.max() + 1)
+ax.hist(n_components_used + 1, bins=bins, normed=True, lw=0, alpha=0.75);
+
+ax.set_xticks(bins + 0.5);
+ax.set_xticklabels(bins);
+ax.set_xlim(bins.min(), bins.max() + 1);
+ax.set_xlabel(&#39;Number of mixture components used&#39;);
+
+ax.set_ylabel(&#39;Posterior probability&#39;);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_51_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_51_0.png" />
+</div>
+</div>
+<p>We now calculate and plot the fitted density estimate.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [36]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>x_plot = np.arange(250)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [37]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>post_pmf_contribs = sp.stats.poisson.pmf(np.atleast_3d(x_plot),
+                                         trace[&#39;mu&#39;][:, np.newaxis, :])
+post_pmfs = (trace[&#39;beta&#39;][:, np.newaxis, :] * post_pmf_contribs).sum(axis=-1)
+
+post_pmf_low, post_pmf_high = np.percentile(post_pmfs, [2.5, 97.5], axis=0)
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [38]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+
+ax.hist(sunspot_df[&#39;sunspot.year&#39;].values, bins=40, normed=True, lw=0, alpha=0.75);
+
+ax.fill_between(x_plot, post_pmf_low, post_pmf_high,
+                 color=&#39;gray&#39;, alpha=0.45)
+ax.plot(x_plot, post_pmfs[0],
+        c=&#39;gray&#39;, label=&#39;Posterior sample densities&#39;);
+ax.plot(x_plot, post_pmfs[::200].T, c=&#39;gray&#39;);
+ax.plot(x_plot, post_pmfs.mean(axis=0),
+        c=&#39;k&#39;, label=&#39;Posterior expected density&#39;);
+
+ax.set_xlabel(&#39;Yearly sunspot count&#39;);
+ax.set_yticklabels([]);
+ax.legend(loc=1);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_55_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_55_0.png" />
+</div>
+</div>
+<p>Again, we can decompose the posterior expected density into weighted
+mixture densities.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [39]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span>fig, ax = plt.subplots(figsize=(8, 6))
+
+ax.hist(sunspot_df[&#39;sunspot.year&#39;].values, bins=40, normed=True, lw=0, alpha=0.75);
+ax.plot(x_plot, post_pmfs.mean(axis=0),
+        c=&#39;k&#39;, label=&#39;Posterior expected density&#39;);
+ax.plot(x_plot, (trace[&#39;beta&#39;][:, np.newaxis, :] * post_pmf_contribs).mean(axis=0)[:, 0],
+        &#39;--&#39;, c=&#39;k&#39;, label=&#39;Posterior expected\nmixture components\n(weighted)&#39;);
+ax.plot(x_plot, (trace[&#39;beta&#39;][:, np.newaxis, :] * post_pmf_contribs).mean(axis=0),
+        &#39;--&#39;, c=&#39;k&#39;);
+
+ax.set_xlabel(&#39;Yearly sunspoit count&#39;);
+ax.set_yticklabels([]);
+ax.legend(loc=1);
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_57_0.png" src="notebooks/../_build/.doctrees/nbsphinx/notebooks_dp_mix_57_0.png" />
+</div>
+</div>
+<p>This example first appeared
+<a class="reference external" href="http://austinrochford.com/posts/2016-02-25-density-estimation-dpm.html">here</a>.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="GP-smoothing.html" class="btn btn-neutral" title="Gaussian Process (GP) smoothing" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, John Salvatier and Christopher Fonnesbeck.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

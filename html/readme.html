@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>PyMC3 &mdash; PyMC3 3.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/bootstrap-3.3.6/css/bootstrap.min.css" type="text/css" />
+    <link rel="stylesheet" href="_static/bootstrap-3.3.6/css/bootstrap-theme.min.css" type="text/css" />
+    <link rel="stylesheet" href="_static/bootstrap-sphinx.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '3.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="_static/js/jquery-1.11.0.min.js"></script>
+    <script type="text/javascript" src="_static/js/jquery-fix.js"></script>
+    <script type="text/javascript" src="_static/bootstrap-3.3.6/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="_static/bootstrap-sphinx.js"></script>
+    <link rel="top" title="PyMC3 3.0 documentation" href="index.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+  </head>
+  <body role="document">
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="index.html">
+          PyMC3</a>
+        <span class="navbar-text navbar-version pull-left"><b>3.0</b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">PyMC3</a><ul>
+<li><a class="reference internal" href="#features">Features</a></li>
+<li><a class="reference internal" href="#getting-started">Getting started</a></li>
+<li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#dependencies">Dependencies</a><ul>
+<li><a class="reference internal" href="#optional">Optional</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#citing-pymc3">Citing PyMC3</a></li>
+<li><a class="reference internal" href="#license">License</a></li>
+<li><a class="reference internal" href="#contributors">Contributors</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+              
+                
+              
+            
+            
+            
+            
+              <li class="hidden-sm">
+<div id="sourcelink">
+  <a href="_sources/readme.txt"
+     rel="nofollow">Source</a>
+</div></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-12 content">
+      
+  <div class="section" id="pymc3">
+<h1>PyMC3<a class="headerlink" href="#pymc3" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="https://gitter.im/pymc-devs/pymc?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge&amp;utm_content=badge"><img alt="Gitter" src="https://badges.gitter.im/Join%20Chat.svg" /></a></p>
+<p><a class="reference external" href="https://travis-ci.org/pymc-devs/pymc3"><img alt="Build Status" src="https://travis-ci.org/pymc-devs/pymc3.png?branch=master" /></a></p>
+<p>PyMC3 is a python module for Bayesian statistical modeling and model
+fitting which focuses on advanced Markov chain Monte Carlo fitting
+algorithms. Its flexibility and extensibility make it applicable to a
+large suite of problems.</p>
+<p>Check out the
+<a class="reference external" href="http://pymc-devs.github.io/pymc3/getting_started/">Tutorial</a>!</p>
+<p>PyMC3 is Beta software. Users should consider using <a class="reference external" href="https://github.com/pymc-devs/pymc">PyMC 2
+repository</a>.</p>
+<div class="section" id="features">
+<h2>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Intuitive model specification syntax, for example, <code class="docutils literal"><span class="pre">x</span> <span class="pre">~</span> <span class="pre">N(0,1)</span></code>
+translates to <code class="docutils literal"><span class="pre">x</span> <span class="pre">=</span> <span class="pre">Normal(0,1)</span></code></li>
+<li>Powerful sampling algorithms, such as the <a class="reference external" href="http://arxiv.org/abs/1111.4246">No U-Turn
+Sampler</a>, allow complex models
+with thousands of parameters with little specialized knowledge of
+fitting algorithms.</li>
+<li>Easy optimization for finding the <em>maximum a posteriori</em>(MAP) point</li>
+<li><a class="reference external" href="http://deeplearning.net/software/theano/">Theano</a> features</li>
+<li>Numpy broadcasting and advanced indexing</li>
+<li>Linear algebra operators</li>
+<li>Computation optimization and dynamic C compilation</li>
+<li>Simple extensibility</li>
+<li>Transparent support for missing value imputation</li>
+</ul>
+</div>
+<div class="section" id="getting-started">
+<h2>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="http://pymc-devs.github.io/pymc3/getting_started/">PyMC3
+Tutorial</a></li>
+<li><a class="reference external" href="https://peerj.com/articles/cs-55/">PyMC3 paper</a></li>
+<li><a class="reference external" href="https://github.com/markdregan/Bayesian-Modelling-in-Python">Bayesian Modelling in Python &#8211; tutorials on Bayesian statistics and
+PyMC3 as Jupyter Notebooks by Mark
+Dregan</a></li>
+<li>Coal Mining Disasters model in <a class="reference external" href="https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py">PyMC
+2</a>
+and <a class="reference external" href="https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py">PyMC
+3</a></li>
+<li><a class="reference external" href="http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/GHME%202013.ipynb">Global Health Metrics &amp; Evaluation
+model</a>
+case study for GHME 2013</li>
+<li><a class="reference external" href="http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/stochastic_volatility.ipynb">Stochastic Volatility
+model</a></li>
+<li><a class="reference external" href="http://twiecki.github.io/tag/bayesian-statistics.html">Several blog posts on linear
+regression</a></li>
+<li><a class="reference external" href="http://twiecki.github.io/blog/2013/12/12/bayesian-data-analysis-pymc3/">Talk at PyData NYC 2013 on
+PyMC3</a></li>
+<li><a class="reference external" href="https://github.com/aloctavodia/Doing_bayesian_data_analysis">PyMC3 port of the models presented in the book &#8220;Doing Bayesian Data
+Analysis&#8221; by John
+Kruschke</a></li>
+<li><a class="reference external" href="https://github.com/pymc-devs/pymc3/tree/master/pymc3/examples">The PyMC3 examples
+folder</a></li>
+<li><a class="reference external" href="http://pymc-devs.github.io/pymc3/manual/api.html#distributions">Manual of PyMC3
+distributions</a></li>
+</ul>
+</div>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>The latest version of PyMC3 can be installed from the master branch
+using pip:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">git</span><span class="o">+</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pymc</span><span class="o">-</span><span class="n">devs</span><span class="o">/</span><span class="n">pymc3</span>
+</pre></div>
+</div>
+<p>To ensure the development branch of Theano is installed alongside PyMC3
+(recommended), you can install PyMC3 using the <code class="docutils literal"><span class="pre">requirements.txt</span></code>
+file. This requires cloning the repository to your computer:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pymc</span><span class="o">-</span><span class="n">devs</span><span class="o">/</span><span class="n">pymc3</span>
+<span class="n">cd</span> <span class="n">pymc3</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
+</pre></div>
+</div>
+<p>However, if a recent version of Theano has already been installed on
+your system, you can install PyMC3 directly from GitHub.</p>
+<p>Another option is to clone the repository and install PyMC3 using
+<code class="docutils literal"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></code> or <code class="docutils literal"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">develop</span></code>.</p>
+<p><strong>Note:</strong> Running <code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pymc</span></code> will install PyMC 2.3, not PyMC3,
+from PyPI.</p>
+</div>
+<div class="section" id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
+<p>PyMC3 is tested on Python 2.7 and 3.3 and depends on Theano, NumPy,
+SciPy, Pandas, and Matplotlib (see setup.py for version information).</p>
+<div class="section" id="optional">
+<h3>Optional<a class="headerlink" href="#optional" title="Permalink to this headline">¶</a></h3>
+<p>In addtion to the above dependencies, the GLM submodule relies on Patsy.</p>
+<p><code class="docutils literal"><span class="pre">`scikits.sparse</span></code> &lt;<a class="reference external" href="https://github.com/njsmith/scikits-sparse">https://github.com/njsmith/scikits-sparse</a>&gt;`__
+enables sparse scaling matrices which are useful for large problems.
+Installation on Ubuntu is easy:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">sudo</span> <span class="n">apt</span><span class="o">-</span><span class="n">get</span> <span class="n">install</span> <span class="n">libsuitesparse</span><span class="o">-</span><span class="n">dev</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">git</span><span class="o">+</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">njsmith</span><span class="o">/</span><span class="n">scikits</span><span class="o">-</span><span class="n">sparse</span><span class="o">.</span><span class="n">git</span>
+</pre></div>
+</div>
+<p>On Mac OS X you can install libsuitesparse 4.2.1 via homebrew (see
+<a class="reference external" href="http://brew.sh/">http://brew.sh/</a> to install homebrew), manually add a link so the include
+files are where scikits-sparse expects them, and then install
+scikits-sparse:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">brew</span> <span class="n">install</span> <span class="n">suite</span><span class="o">-</span><span class="n">sparse</span>
+<span class="n">ln</span> <span class="o">-</span><span class="n">s</span> <span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">local</span><span class="o">/</span><span class="n">Cellar</span><span class="o">/</span><span class="n">suite</span><span class="o">-</span><span class="n">sparse</span><span class="o">/</span><span class="mf">4.2</span><span class="o">.</span><span class="mi">1</span><span class="o">/</span><span class="n">include</span><span class="o">/</span> <span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">local</span><span class="o">/</span><span class="n">include</span><span class="o">/</span><span class="n">suitesparse</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">git</span><span class="o">+</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">njsmith</span><span class="o">/</span><span class="n">scikits</span><span class="o">-</span><span class="n">sparse</span><span class="o">.</span><span class="n">git</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="citing-pymc3">
+<h2>Citing PyMC3<a class="headerlink" href="#citing-pymc3" title="Permalink to this headline">¶</a></h2>
+<p>Salvatier J, Wiecki TV, Fonnesbeck C. (2016) Probabilistic programming
+in Python using PyMC3. PeerJ Computer Science 2:e55
+<a class="reference external" href="https://doi.org/10.7717/peerj-cs.55">https://doi.org/10.7717/peerj-cs.55</a></p>
+</div>
+<div class="section" id="license">
+<h2>License<a class="headerlink" href="#license" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://github.com/pymc-devs/pymc3/blob/master/LICENSE">Apache License, Version
+2.0</a></p>
+</div>
+<div class="section" id="contributors">
+<h2>Contributors<a class="headerlink" href="#contributors" title="Permalink to this headline">¶</a></h2>
+<p>See the <a class="reference external" href="https://github.com/pymc-devs/pymc3/graphs/contributors">GitHub contributor
+page</a></p>
+</div>
+</div>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>
