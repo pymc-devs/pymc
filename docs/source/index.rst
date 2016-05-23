@@ -1,13 +1,13 @@
 Welcome to PyMC3's documentation!
 =================================
 
+.. include:: ../../readme.rst
 
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
-   readme
    examples
    api
 

@@ -61,7 +61,7 @@ source_suffix = ['.rst', '.md']
 master_doc = 'index'
 
 # General information about the project.
-project = 'pymc3'
+project = 'PyMC3'
 copyright = '2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki'
 author = 'John Salvatier, Christopher Fonnesbeck, Thomas Wiecki'
 
