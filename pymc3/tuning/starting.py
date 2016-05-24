@@ -78,9 +78,9 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     # Check to see if minimization function actually uses the gradient
     if 'fprime' in getargspec(fmin).args:
         r = fmin(logp_o, bij.map(
-            start), fprime=grad_logp_o, disp=disp, *args, **kwargs)
+            start), fprime=grad_logp_o, *args, **kwargs)
     else:
-        r = fmin(logp_o, bij.map(start), disp=disp, *args, **kwargs)
+        r = fmin(logp_o, bij.map(start), *args, **kwargs)
 
     if isinstance(r, tuple):
         mx0 = r[0]
