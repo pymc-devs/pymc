@@ -265,20 +265,26 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
     except KeyError:
         raise ValueError('Argument `trace` is invalid.')
 
+def _make_parallel(arg, njobs):
+    if not shape(arg):
+        return [arg]*njobs
+    return arg
 
 def _mp_sample(**kwargs):
     njobs = kwargs.pop('njobs')
     chain = kwargs.pop('chain')
     random_seed = kwargs.pop('random_seed')
-    if not shape(random_seed):
-        rseed = [random_seed]*njobs
-    else:
-        rseed = random_seed
+    start = kwargs.pop('start')
+    
+    rseed = _make_parallel(random_seed, njobs)
+    start_vals = _make_parallel(start, njobs)
+        
     chains = list(range(chain, chain + njobs))
     pbars = [kwargs.pop('progressbar')] + [False] * (njobs - 1)
     traces = Parallel(n_jobs=njobs)(delayed(_sample)(chain=chains[i],
                                                     progressbar=pbars[i],
                                                     random_seed=rseed[i],
+                                                    start=start_vals[i],
                                                     **kwargs) for i in range(njobs))
     return merge_traces(traces)
 
