@@ -45,7 +45,7 @@ class BlockedStep(object):
             vars = model.vars
 
         #get the actual inputs from the vars
-        vars = inputvars(vars) 
+        vars = inputvars(vars)
 
         if not blocked and len(vars) > 1:
             # In this case we create a separate sampler for each var
@@ -56,20 +56,29 @@ class BlockedStep(object):
                 # If we don't return the instance we have to manually
                 # call __init__
                 step.__init__([var], *args, **kwargs)
+                # Hack for creating the class correctly when unpickling.
+                step.__newargs = ([var], ) + args, kwargs
                 steps.append(step)
 
             return CompoundStep(steps)
         else:
-            return super(BlockedStep, cls).__new__(cls)
-            
+            step = super(BlockedStep, cls).__new__(cls)
+            # Hack for creating the class correctly when unpickling.
+            step.__newargs = (vars, ) + args, kwargs
+            return step
+
+    # Hack for creating the class correctly when unpickling.
+    def __getnewargs_ex__(self):
+        return self.__newargs
+
     @staticmethod
     def competence(var):
         return Competence.INCOMPATIBLE
-        
+
     @classmethod
     def _competence(cls, vars):
         return [cls.competence(var) for var in np.atleast_1d(vars)]
-        
+
 
 class ArrayStep(BlockedStep):
     def __init__(self, vars, fs, allvars=False, blocked=True):
@@ -93,7 +102,7 @@ class ArrayStep(BlockedStep):
 class ArrayStepShared(BlockedStep):
     """Faster version of ArrayStep that requires the substep method that does not wrap the functions the step method uses.
 
-    Works by setting shared variables before using the step. This eliminates the mapping and unmapping overhead as well 
+    Works by setting shared variables before using the step. This eliminates the mapping and unmapping overhead as well
     as moving fewer variables around.
     """
     def __init__(self, vars, shared, blocked=True):
@@ -141,7 +150,7 @@ class Constant(ArrayStep):
     """
     Dummy sampler that returns the current value at every iteration. Useful for
     fixing parameters at a particular value.
-    
+
     Parameters
     ----------
     vars : list
@@ -161,5 +170,5 @@ class Constant(ArrayStep):
         super(Constant, self).__init__(vars, [model.fastlogp], **kwargs)
 
     def astep(self, q0, logp):
-        
+
         return q0
