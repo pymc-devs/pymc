@@ -46,7 +46,7 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
 
     disc_vars = list(typefilter(vars, discrete_types))
     
-    disp = model.verbose > 1
+    kwargs["disp"] = model.verbose > 1
     
     if disc_vars and disp:
         print("Warning: vars contains discrete variables. MAP " +
