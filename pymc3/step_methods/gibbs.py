@@ -17,7 +17,7 @@ __all__ = ['ElemwiseCategoricalStep']
 
 class ElemwiseCategoricalStep(ArrayStep):
     """
-    Gibbs sampling for categorical variables that only have only have elementwise effects
+    Gibbs sampling for categorical variables that only have elementwise effects
     the variable can't be indexed into or transposed or anything otherwise that will mess things up
 
     """
