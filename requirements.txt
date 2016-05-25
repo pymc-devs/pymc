@@ -4,4 +4,9 @@ matplotlib>=1.2.1
 theano>=0.8.2
 pandas>=0.15.0
 patsy>=0.4.0
-joblib>=0.9         
+joblib>=0.9
+CommonMark==0.5.4
+recommonmark
+sphinx
+nbsphinx
+numpydoc
