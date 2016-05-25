@@ -168,6 +168,8 @@ class Multinomial(Discrete):
     def __init__(self, n, p, *args, **kwargs):
         super(Multinomial, self).__init__(*args, **kwargs)
         self.n = n
+        if abs(1 - sum(p)):
+            raise ValueError('Multinomial probabilities must sum to one.')
         self.p = p
         self.mean = n * p
         self.mode = T.cast(T.round(n * p), 'int32')
