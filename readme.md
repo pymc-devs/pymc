@@ -5,7 +5,7 @@
 
 PyMC3 is a python module for Bayesian statistical modeling and model fitting which focuses on advanced Markov chain Monte Carlo fitting algorithms. Its flexibility and extensibility make it applicable to a large suite of problems.
 
-Check out the [Tutorial](http://pymc-devs.github.io/pymc3/getting_started/)!
+Check out the [Tutorial](http://pymc-devs.github.io/pymc3/notebooks/getting_started.html)!
 
 PyMC3 is Beta software. Users should consider using [PyMC 2 repository](https://github.com/pymc-devs/pymc).
 
@@ -28,9 +28,9 @@ PyMC3 is Beta software. Users should consider using [PyMC 2 repository](https://
  * [Bayesian Modelling in Python -- tutorials on Bayesian statistics and PyMC3 as Jupyter Notebooks by Mark Dregan](https://github.com/markdregan/Bayesian-Modelling-in-Python)
  * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py)
  * [Global Health Metrics & Evaluation model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/GHME%202013.ipynb) case study for GHME 2013
- * [Stochastic Volatility model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/stochastic_volatility.ipynb)
+ * [Stochastic Volatility model](http://pymc-devs.github.io/pymc3/notebooks/stochastic_volatility.html)
  * [Several blog posts on linear regression](http://twiecki.github.io/tag/bayesian-statistics.html)
- * [Talk at PyData NYC 2013 on PyMC3](http://twiecki.github.io/blog/2013/12/12/bayesian-data-analysis-pymc3/)
+ * [Talk at PyData Londong 2016 on PyMC3](https://www.youtube.com/watch?v=coEVZNg_nlA)
  * [PyMC3 port of the models presented in the book "Doing Bayesian Data Analysis" by John Kruschke](https://github.com/aloctavodia/Doing_bayesian_data_analysis)
  * [The PyMC3 examples folder](https://github.com/pymc-devs/pymc3/tree/master/pymc3/examples)
  * [Manual of PyMC3 distributions](http://pymc-devs.github.io/pymc3/manual/api.html#distributions)
