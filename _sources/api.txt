@@ -141,7 +141,7 @@ ATMCMC
 .. automodule:: pymc3.step_methods.ATMCMC
    :members:
 
-Vartional
+Variational
 ^^^^^^^^^
 
 ADVI
