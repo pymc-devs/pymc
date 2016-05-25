@@ -15,14 +15,17 @@ def check_example(example_name):
         example.run("short")
 
 
-# def test_examples0():
-#     for t in itertools.islice(get_examples(), 0, 10):
-#         yield t
+def test_examples0():
+    pass
+    # for t in itertools.islice(get_examples(), 0, 10):
+    #     yield t
 
-# def test_examples1():
-#     for t in itertools.islice(get_examples(), 10, 20):
-#         yield t
-#
-# def test_examples2():
-#     for t in itertools.islice(get_examples(), 20, None):
-#         yield t
+def test_examples1():
+    pass
+    # for t in itertools.islice(get_examples(), 10, 20):
+    #     yield t
+
+def test_examples2():
+    pass
+    # for t in itertools.islice(get_examples(), 20, None):
+    #     yield t
