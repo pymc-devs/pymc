@@ -576,7 +576,7 @@ class StudentT(Continuous):
 
     Describes a normal variable whose precision is gamma distributed.
     If only nu parameter is passed, this specifies a standard (central)
-    Student's tt.
+    Student's T.
 
     .. math::
 
