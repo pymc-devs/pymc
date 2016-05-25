@@ -48,7 +48,7 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     
     kwargs["disp"] = model.verbose > 1
     
-    if disc_vars and disp:
+    if disc_vars and kwargs["disp"]:
         print("Warning: vars contains discrete variables. MAP " +
               "estimates may not be accurate for the default " +
               "parameters. Defaulting to non-gradient minimization " +
