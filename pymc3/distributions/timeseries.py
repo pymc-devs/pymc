@@ -1,4 +1,4 @@
-import theano.tensor as T
+import theano.tensor as tt
 from theano import scan
 
 from .continuous import Normal, Flat
@@ -34,7 +34,7 @@ class AR1(Continuous):
         boundary = Normal.dist(0, tau_e).logp
 
         innov_like = Normal.dist(k * x_im1, tau_e).logp(x_i)
-        return boundary(x[0]) + T.sum(innov_like) + boundary(x[-1])
+        return boundary(x[0]) + tt.sum(innov_like) + boundary(x[-1])
 
 
 class GaussianRandomWalk(Continuous):
@@ -71,7 +71,7 @@ class GaussianRandomWalk(Continuous):
         x_i = x[1:]
 
         innov_like = Normal.dist(mu=x_im1 + mu, tau=tau, sd=sd).logp(x_i)
-        return init.logp(x[0]) + T.sum(innov_like)
+        return init.logp(x[0]) + tt.sum(innov_like)
 
 
 class GARCH11(Continuous):
@@ -108,7 +108,7 @@ class GARCH11(Continuous):
     def _get_volatility(self, x):
 
         def volatility_update(x, vol, w, a, b):
-            return T.sqrt(w + a * T.square(x) + b * T.square(vol))
+            return tt.sqrt(w + a * tt.square(x) + b * tt.square(vol))
 
         vol, _ = scan(fn=volatility_update,
                       sequences=[x],
@@ -120,4 +120,4 @@ class GARCH11(Continuous):
     def logp(self, x):
         vol = self._get_volatility(x[:-1])
         return (Normal.dist(0., sd=self.initial_vol).logp(x[0]) +
-                T.sum(Normal.dist(0, sd=vol).logp(x[1:])))
+                tt.sum(Normal.dist(0, sd=vol).logp(x[1:])))

@@ -1,5 +1,5 @@
 from pymc3 import *
-import theano.tensor as T
+import theano.tensor as tt
 from numpy import random, sum as nsum, ones, concatenate, newaxis, dot, arange
 import numpy as np
 
@@ -42,7 +42,7 @@ with model:
 
     s = Uniform("s", .01, 10, shape=n_groups)
 
-    g = T.constant(group)
+    g = tt.constant(group)
 
     # y ~ Normal(m[g] * p, s)
     yd = Normal('y', sum(effects[g] * predictors, 1), s[g] ** -2, observed=y)

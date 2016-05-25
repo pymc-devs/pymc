@@ -1,4 +1,4 @@
-import theano.tensor as T
+import theano.tensor as tt
 
 from ..model import FreeRV
 from ..theanof import gradient
@@ -35,8 +35,8 @@ class Transform(object):
 
 class ElemwiseTransform(Transform):
     def jacobian_det(self, x):
-        grad = T.reshape(gradient(T.sum(self.backward(x)), [x]), x.shape)
-        return T.log(T.abs_(grad))
+        grad = tt.reshape(gradient(tt.sum(self.backward(x)), [x]), x.shape)
+        return tt.log(tt.abs_(grad))
 
 
 class TransformedDistribution(Distribution):
@@ -72,18 +72,18 @@ class Log(ElemwiseTransform):
     name = "log"
 
     def backward(self, x):
-        return T.exp(x)
+        return tt.exp(x)
 
     def forward(self, x):
-        return T.log(x)
+        return tt.log(x)
 
 log = Log()
 
-inverse_logit = T.nnet.sigmoid
+inverse_logit = tt.nnet.sigmoid
 
 
 def logit(x):
-    return T.log(x/(1-x))
+    return tt.log(x/(1-x))
 
 
 class LogOdds(ElemwiseTransform):
@@ -112,12 +112,12 @@ class Interval(ElemwiseTransform):
 
     def backward(self, x):
         a, b = self.a, self.b
-        r = (b - a) * T.exp(x) / (1 + T.exp(x)) + a
+        r = (b - a) * tt.exp(x) / (1 + tt.exp(x)) + a
         return r
 
     def forward(self, x):
         a, b = self.a, self.b
-        r = T.log((x - a) / (b - x))
+        r = tt.log((x - a) / (b - x))
         return r
 
 interval = Interval
@@ -129,7 +129,7 @@ class SumTo1(Transform):
     name = "sumto1"
 
     def backward(self, y):
-        return T.concatenate([y, 1 - T.sum(y, keepdims=True)])
+        return tt.concatenate([y, 1 - tt.sum(y, keepdims=True)])
 
     def forward(self, x):
         return x[:-1]
@@ -151,33 +151,33 @@ class StickBreaking(Transform):
     def forward(self, x):
         # reverse cumsum
         x0 = x[:-1]
-        s = T.extra_ops.cumsum(x0[::-1], 0)[::-1] + x[-1]
+        s = tt.extra_ops.cumsum(x0[::-1], 0)[::-1] + x[-1]
         z = x0/s
         Km1 = x.shape[0] - 1
-        k = T.arange(Km1)[(slice(None), ) + (None, ) * (x.ndim - 1)]
-        eq_share = - T.log(Km1 - k)   # logit(1./(Km1 + 1 - k))
+        k = tt.arange(Km1)[(slice(None), ) + (None, ) * (x.ndim - 1)]
+        eq_share = - tt.log(Km1 - k)   # logit(1./(Km1 + 1 - k))
         y = logit(z) - eq_share
         return y
 
     def backward(self, y):
         Km1 = y.shape[0]
-        k = T.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
-        eq_share = - T.log(Km1 - k)   # logit(1./(Km1 + 1 - k))
+        k = tt.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
+        eq_share = - tt.log(Km1 - k)   # logit(1./(Km1 + 1 - k))
         z = inverse_logit(y + eq_share)
-        yl = T.concatenate([z, T.ones(y[:1].shape)])
-        yu = T.concatenate([T.ones(y[:1].shape), 1-z])
-        S = T.extra_ops.cumprod(yu, 0)
+        yl = tt.concatenate([z, tt.ones(y[:1].shape)])
+        yu = tt.concatenate([tt.ones(y[:1].shape), 1-z])
+        S = tt.extra_ops.cumprod(yu, 0)
         x = S * yl
         return x
 
     def jacobian_det(self, y):
         Km1 = y.shape[0]
-        k = T.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
-        eq_share = -T.log(Km1 - k)  # logit(1./(Km1 + 1 - k))
+        k = tt.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
+        eq_share = -tt.log(Km1 - k)  # logit(1./(Km1 + 1 - k))
         yl = y + eq_share
-        yu = T.concatenate([T.ones(y[:1].shape), 1-inverse_logit(yl)])
-        S = T.extra_ops.cumprod(yu, 0)
-        return T.sum(T.log(S[:-1]) - T.log1p(T.exp(yl)) - T.log1p(T.exp(-yl)),
+        yu = tt.concatenate([tt.ones(y[:1].shape), 1-inverse_logit(yl)])
+        S = tt.extra_ops.cumprod(yu, 0)
+        return tt.sum(tt.log(S[:-1]) - tt.log1p(tt.exp(yl)) - tt.log1p(tt.exp(-yl)),
                      0)
 
 stick_breaking = StickBreaking()
@@ -189,7 +189,7 @@ class Circular(ElemwiseTransform):
     name = "circular"
 
     def backward(self, y):
-        return T.arctan2(T.sin(y), T.cos(y))
+        return tt.arctan2(tt.sin(y), tt.cos(y))
 
     def forward(self, x): 
         return x
