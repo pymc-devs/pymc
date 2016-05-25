@@ -366,8 +366,6 @@ class Categorical(Discrete):
             self.k = np.shape(p)[-1].tag.test_value
         except AttributeError:
             self.k = np.shape(p)[-1]
-        if np.any(abs(1 - np.sum(p, -1))):
-            raise ValueError('Categorical probabilities must sum to one.')
         self.p = T.as_tensor_variable(p)
         self.mode = T.argmax(p)
 
