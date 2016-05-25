@@ -34,3 +34,6 @@ env:
   - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples2"
 script:
   - THEANO_FLAGS='gcc.cxxflags="-march=core2"' nosetests $TESTCMD
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
