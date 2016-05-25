@@ -368,7 +368,7 @@ class Categorical(Discrete):
         except AttributeError:
             self.k = T.shape(p)[-1]
         #self.p = T.as_tensor_variable(p)
-        self.p = (p.T/T.sum(p,-1)).T    
+        self.p = (p.T/T.sum(p,-1)).T   
         self.mode = T.argmax(p)
 
 
