@@ -8,7 +8,7 @@ nodes in PyMC.
 from __future__ import division
 
 import numpy as np
-import theano.tensor as T
+import theano.tensor as tt
 from scipy import stats
 
 from . import transforms
@@ -120,7 +120,7 @@ class Uniform(Continuous):
     def logp(self, value):
         lower = self.lower
         upper = self.upper
-        return bound(-T.log(upper - lower),
+        return bound(-tt.log(upper - lower),
                      value >= lower, value <= upper)
 
 
@@ -137,7 +137,7 @@ class Flat(Continuous):
         raise ValueError('Cannot sample from Flat distribution')
 
     def logp(self, value):
-        return T.zeros_like(value)
+        return tt.zeros_like(value)
 
 
 class Normal(Continuous):
@@ -190,7 +190,7 @@ class Normal(Continuous):
         tau = self.tau
         sd = self.sd
         mu = self.mu
-        return bound((-tau * (value - mu)**2 + T.log(tau / np.pi / 2.)) / 2.,
+        return bound((-tau * (value - mu)**2 + tt.log(tau / np.pi / 2.)) / 2.,
                      tau > 0, sd > 0)
 
 
@@ -220,7 +220,7 @@ class HalfNormal(PositiveContinuous):
     def __init__(self, tau=None, sd=None, *args, **kwargs):
         super(HalfNormal, self).__init__(*args, **kwargs)
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
-        self.mean = T.sqrt(2 / (np.pi * self.tau))
+        self.mean = tt.sqrt(2 / (np.pi * self.tau))
         self.variance = (1. - 2/np.pi) / self.tau
 
     def random(self, point=None, size=None, repeat=None):
@@ -232,7 +232,7 @@ class HalfNormal(PositiveContinuous):
     def logp(self, value):
         tau = self.tau
         sd = self.sd
-        return bound(-0.5 * tau * value**2 + 0.5 * T.log(tau * 2. / np.pi),
+        return bound(-0.5 * tau * value**2 + 0.5 * tt.log(tau * 2. / np.pi),
                      value >= 0,
                      tau > 0, sd > 0)
 
@@ -297,7 +297,7 @@ class Wald(PositiveContinuous):
         self.mu, self.lam, self.phi = self.get_mu_lam_phi(mu, lam, phi)
         self.alpha = alpha
         self.mean = self.mu + alpha
-        self.mode = self.mu * (T.sqrt(1. + (1.5 * self.mu / self.lam)**2)
+        self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam)**2)
                                - 1.5 * self.mu / self.lam) + alpha
         self.variance = (self.mu**3) / self.lam
 
@@ -455,7 +455,7 @@ class Exponential(PositiveContinuous):
         super(Exponential, self).__init__(*args, **kwargs)
         self.lam = lam
         self.mean = 1. / lam
-        self.median = self.mean * T.log(2)
+        self.median = self.mean * tt.log(2)
         self.mode = 0
 
         self.variance = lam**-2
@@ -468,7 +468,7 @@ class Exponential(PositiveContinuous):
 
     def logp(self, value):
         lam = self.lam
-        return bound(T.log(lam) - lam * value, value > 0, lam > 0)
+        return bound(tt.log(lam) - lam * value, value > 0, lam > 0)
 
 
 class Laplace(Continuous):
@@ -510,7 +510,7 @@ class Laplace(Continuous):
         mu = self.mu
         b = self.b
 
-        return -T.log(2 * b) - abs(value - mu) / b
+        return -tt.log(2 * b) - abs(value - mu) / b
 
 
 class Lognormal(PositiveContinuous):
@@ -546,10 +546,10 @@ class Lognormal(PositiveContinuous):
 
         self.mu = mu
         self.tau = tau
-        self.mean = T.exp(mu + 1. / (2 * tau))
-        self.median = T.exp(mu)
-        self.mode = T.exp(mu - 1. / tau)
-        self.variance = (T.exp(1./tau) - 1) * T.exp(2 * mu + 1. / tau)
+        self.mean = tt.exp(mu + 1. / (2 * tau))
+        self.median = tt.exp(mu)
+        self.mode = tt.exp(mu - 1. / tau)
+        self.variance = (tt.exp(1./tau) - 1) * tt.exp(2 * mu + 1. / tau)
 
     def _random(self, mu, tau, size=None):
         samples = np.random.normal(size=size)
@@ -564,9 +564,9 @@ class Lognormal(PositiveContinuous):
     def logp(self, value):
         mu = self.mu
         tau = self.tau
-        return bound(-0.5 * tau * (T.log(value) - mu)**2
-                     + 0.5 * T.log(tau/(2. * np.pi))
-                     - T.log(value),
+        return bound(-0.5 * tau * (tt.log(value) - mu)**2
+                     + 0.5 * tt.log(tau/(2. * np.pi))
+                     - tt.log(value),
                      tau > 0)
 
 
@@ -600,11 +600,11 @@ class StudentT(Continuous):
     """
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
         super(StudentT, self).__init__(*args, **kwargs)
-        self.nu = nu = T.as_tensor_variable(nu)
+        self.nu = nu = tt.as_tensor_variable(nu)
         self.lam, self.sd = get_tau_sd(tau=lam, sd=sd)
         self.mean = self.median = self.mode = self.mu = mu
 
-        self.variance = T.switch((nu > 2) * 1,
+        self.variance = tt.switch((nu > 2) * 1,
                                  (1 / self.lam) * (nu / (nu - 2)),
                                  np.inf)
 
@@ -622,9 +622,9 @@ class StudentT(Continuous):
         sd = self.sd
 
         return bound(gammaln((nu + 1.0) / 2.0)
-                     + .5 * T.log(lam / (nu * np.pi))
+                     + .5 * tt.log(lam / (nu * np.pi))
                      - gammaln(nu / 2.0)
-                     - (nu + 1.0) / 2.0 * T.log1p(lam * (value - mu)**2 / nu),
+                     - (nu + 1.0) / 2.0 * tt.log1p(lam * (value - mu)**2 / nu),
                      lam > 0, nu > 0, sd > 0)
 
 
@@ -657,10 +657,10 @@ class Pareto(PositiveContinuous):
         super(Pareto, self).__init__(*args, **kwargs)
         self.alpha = alpha
         self.m = m
-        self.mean = T.switch(T.gt(alpha, 1), alpha * m / (alpha - 1.), np.inf)
+        self.mean = tt.switch(tt.gt(alpha, 1), alpha * m / (alpha - 1.), np.inf)
         self.median = m * 2.**(1./alpha)
-        self.variance = T.switch(
-            T.gt(alpha, 2),
+        self.variance = tt.switch(
+            tt.gt(alpha, 2),
             (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2),
             np.inf)
 
@@ -678,7 +678,7 @@ class Pareto(PositiveContinuous):
     def logp(self, value):
         alpha = self.alpha
         m = self.m
-        return bound(T.log(alpha) + logpow(m, alpha)
+        return bound(tt.log(alpha) + logpow(m, alpha)
                      - logpow(value, alpha + 1),
                      value >= m, alpha > 0, m > 0)
 
@@ -727,8 +727,8 @@ class Cauchy(Continuous):
     def logp(self, value):
         alpha = self.alpha
         beta = self.beta
-        return bound(- T.log(np.pi) - T.log(beta)
-                     - T.log1p(((value - alpha) / beta)**2),
+        return bound(- tt.log(np.pi) - tt.log(beta)
+                     - tt.log1p(((value - alpha) / beta)**2),
                      beta > 0)
 
 
@@ -770,8 +770,8 @@ class HalfCauchy(PositiveContinuous):
 
     def logp(self, value):
         beta = self.beta
-        return bound(T.log(2) - T.log(np.pi) - T.log(beta)
-                     - T.log1p((value / beta)**2),
+        return bound(tt.log(2) - tt.log(np.pi) - tt.log(beta)
+                     - tt.log1p((value / beta)**2),
                      value >= 0, beta > 0)
 
 
@@ -820,7 +820,7 @@ class Gamma(PositiveContinuous):
         self.alpha = alpha
         self.beta = beta
         self.mean = alpha / beta
-        self.mode = T.maximum((alpha - 1) / beta, 0)
+        self.mode = tt.maximum((alpha - 1) / beta, 0)
         self.variance = alpha / beta**2
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
@@ -885,7 +885,7 @@ class InverseGamma(PositiveContinuous):
         self.beta = beta
         self.mean = (alpha > 1) * beta / (alpha - 1.) or np.inf
         self.mode = beta / (alpha + 1.)
-        self.variance = T.switch(T.gt(alpha, 2),
+        self.variance = tt.switch(tt.gt(alpha, 2),
                                  (beta**2) / (alpha * (alpha - 1.)**2),
                                  np.inf)
 
@@ -956,9 +956,9 @@ class Weibull(PositiveContinuous):
         super(Weibull, self).__init__(*args, **kwargs)
         self.alpha = alpha
         self.beta = beta
-        self.mean = beta * T.exp(gammaln(1 + 1./alpha))
-        self.median = beta * T.exp(gammaln(T.log(2)))**(1./alpha)
-        self.variance = (beta**2) * T.exp(gammaln(1 + 2./alpha - self.mean**2))
+        self.mean = beta * tt.exp(gammaln(1 + 1./alpha))
+        self.median = beta * tt.exp(gammaln(tt.log(2)))**(1./alpha)
+        self.variance = (beta**2) * tt.exp(gammaln(1 + 2./alpha - self.mean**2))
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -974,8 +974,8 @@ class Weibull(PositiveContinuous):
     def logp(self, value):
         alpha = self.alpha
         beta = self.beta
-        return bound(T.log(alpha) - T.log(beta)
-                     + (alpha - 1) * T.log(value/beta)
+        return bound(tt.log(alpha) - tt.log(beta)
+                     + (alpha - 1) * tt.log(value/beta)
                      - (value/beta)**alpha,
                      value >= 0, alpha > 0, beta > 0)
 
@@ -1107,10 +1107,10 @@ class ExGaussian(Continuous):
         nu = self.nu
 
         # This condition suggested by exGAUS.R from gamlss
-        lp = T.switch(T.gt(nu,  0.05 * sigma),
-                      - T.log(nu) + (mu - value) / nu + 0.5 * (sigma / nu)**2
+        lp = tt.switch(tt.gt(nu,  0.05 * sigma),
+                      - tt.log(nu) + (mu - value) / nu + 0.5 * (sigma / nu)**2
                       + logpow(std_cdf((value - mu) / sigma - sigma / nu), 1.),
-                      - T.log(sigma * T.sqrt(2 * np.pi))
+                      - tt.log(sigma * tt.sqrt(2 * np.pi))
                       - 0.5 * ((value - mu) / sigma)**2)
         return bound(lp, sigma > 0., nu > 0.)
 
@@ -1156,4 +1156,4 @@ class VonMises(Continuous):
     def logp(self, value):
         mu = self.mu
         kappa = self.kappa
-        return bound(kappa * T.cos(mu - value) - T.log(2 * np.pi * i0(kappa)), value >= -np.pi, value <= np.pi, kappa >= 0)
+        return bound(kappa * tt.cos(mu - value) - tt.log(2 * np.pi * i0(kappa)), value >= -np.pi, value <= np.pi, kappa >= 0)

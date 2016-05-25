@@ -1,7 +1,7 @@
 import warnings
 
 import numpy as np
-import theano.tensor as T
+import theano.tensor as tt
 import theano
 
 from scipy import stats
@@ -65,7 +65,7 @@ class MvNormal(Continuous):
         delta = value - mu
         k = tau.shape[0]
 
-        result = k * T.log(2 * np.pi) + T.log(1./det(tau))
+        result = k * tt.log(2 * np.pi) + tt.log(1./det(tau))
         result += (delta.dot(tau) * delta).sum(axis=delta.ndim - 1)
         return -1/2. * result
 
@@ -107,10 +107,10 @@ class Dirichlet(Continuous):
 
         self.k = shape
         self.a = a
-        self.mean = a / T.sum(a)
+        self.mean = a / tt.sum(a)
 
-        self.mode = T.switch(T.all(a > 1),
-                             (a - 1) / T.sum(a - 1),
+        self.mode = tt.switch(tt.all(a > 1),
+                             (a - 1) / tt.sum(a - 1),
                              np.nan)
 
     def random(self, point=None, size=None):
@@ -129,10 +129,10 @@ class Dirichlet(Continuous):
         a = self.a
 
         # only defined for sum(value) == 1
-        return bound(T.sum(logpow(value, a - 1) - gammaln(a), axis=0)
-                     + gammaln(T.sum(a, axis=0)),
-                     T.all(value >= 0), T.all(value <= 1),
-                     k > 1, T.all(a > 0))
+        return bound(tt.sum(logpow(value, a - 1) - gammaln(a), axis=0)
+                     + gammaln(tt.sum(a, axis=0)),
+                     tt.all(value >= 0), tt.all(value <= 1),
+                     k > 1, tt.all(a > 0))
 
 
 class Multinomial(Discrete):
@@ -168,9 +168,9 @@ class Multinomial(Discrete):
     def __init__(self, n, p, *args, **kwargs):
         super(Multinomial, self).__init__(*args, **kwargs)
         self.n = n
-        self.p = p/T.sum(p)
+        self.p = p/tt.sum(p)
         self.mean = n * p
-        self.mode = T.cast(T.round(n * p), 'int32')
+        self.mode = tt.cast(tt.round(n * p), 'int32')
 
     def _random(self, n, p, size=None):
         if size == p.shape:
@@ -189,8 +189,8 @@ class Multinomial(Discrete):
         p = self.p
         # only defined for sum(p) == 1
         return bound(
-            factln(n) + T.sum(x * T.log(p) - factln(x)),
-            T.all(x >= 0), T.all(x <= n), T.eq(T.sum(x), n),
+            factln(n) + tt.sum(x * tt.log(p) - factln(x)),
+            tt.all(x >= 0), tt.all(x <= n), tt.eq(tt.sum(x), n),
             n >= 0)
 
 def posdef(AA):
@@ -216,7 +216,7 @@ class PosDefMatrix(theano.Op):
     def make_node(self, x):
         x = theano.tensor.as_tensor_variable(x)
         assert x.ndim == 2
-        o=T.TensorType(dtype='int8', broadcastable = [])()
+        o=tt.TensorType(dtype='int8', broadcastable = [])()
         return theano.Apply(self, [x], [o])
 
     # Python implementation:
@@ -289,7 +289,7 @@ class Wishart(Continuous):
         self.p = p = V.shape[0]
         self.V = V
         self.mean = n * V
-        self.mode = T.switch(1*(n >= p + 1),
+        self.mode = tt.switch(1*(n >= p + 1),
                              (n - p - 1) * V,
                              np.nan)
 
@@ -301,12 +301,12 @@ class Wishart(Continuous):
         IVI = det(V)
         IXI = det(X)
 
-        return bound(((n - p - 1) * T.log(IXI)
+        return bound(((n - p - 1) * tt.log(IXI)
                      - trace(matrix_inverse(V).dot(X))
-                     - n * p * T.log(2) - n * T.log(IVI)
+                     - n * p * tt.log(2) - n * tt.log(IVI)
                      - 2 * multigammaln(n / 2., p)) / 2,
                      matrix_pos_def(X),
-                     T.eq(X, X.T),
+                     tt.eq(X, X.T),
                      n > (p - 1))
 
 
@@ -363,19 +363,19 @@ class LKJCorr(Continuous):
 
     def _normalizing_constant(self, n, p):
         if n == 1:
-            result = gammaln(2. * T.arange(1, int((p-1) / 2) + 1)).sum()
+            result = gammaln(2. * tt.arange(1, int((p-1) / 2) + 1)).sum()
             if p % 2 == 1:
-                result += (0.25 * (p ** 2 - 1) * T.log(np.pi)
-                           - 0.25 * (p - 1) ** 2 * T.log(2.)
+                result += (0.25 * (p ** 2 - 1) * tt.log(np.pi)
+                           - 0.25 * (p - 1) ** 2 * tt.log(2.)
                            - (p - 1) * gammaln(int((p + 1) / 2)))
             else:
-                result += (0.25 * p * (p - 2) * T.log(np.pi)
-                           + 0.25 * (3 * p ** 2 - 4 * p) * T.log(2.)
+                result += (0.25 * p * (p - 2) * tt.log(np.pi)
+                           + 0.25 * (3 * p ** 2 - 4 * p) * tt.log(2.)
                            + p * gammaln(p / 2) - (p-1) * gammaln(p))
         else:
             result = -(p - 1) * gammaln(n + 0.5 * (p - 1))
-            k = T.arange(1, p)
-            result += (0.5 * k * T.log(np.pi)
+            k = tt.arange(1, p)
+            result += (0.5 * k * tt.log(np.pi)
                        + gammaln(n + 0.5 * (p - 1 - k))).sum()
         return result
 
@@ -384,11 +384,11 @@ class LKJCorr(Continuous):
         p = self.p
 
         X = x[self.tri_index]
-        X = T.fill_diagonal(X, 1)
+        X = tt.fill_diagonal(X, 1)
 
         result = self._normalizing_constant(n, p)
-        result += (n - 1.) * T.log(det(X))
+        result += (n - 1.) * tt.log(det(X))
         return bound(result,
-                     T.all(X <= 1), T.all(X >= -1),
+                     tt.all(X <= 1), tt.all(X >= -1),
                      matrix_pos_def(X),
                      n > 0)

@@ -1,5 +1,5 @@
 import numpy as np
-import theano.tensor as T
+import theano.tensor as tt
 from theano import function
 
 from ..memoize import memoize
@@ -68,14 +68,14 @@ class Distribution(object):
         if isinstance(val, str):
             val = getattr(self, val)
 
-        if isinstance(val, T.TensorVariable):
+        if isinstance(val, tt.TensorVariable):
             return val.tag.test_value
 
         return val
 
 
 def TensorType(dtype, shape):
-    return T.TensorType(str(dtype), np.atleast_1d(shape) == 1)
+    return tt.TensorType(str(dtype), np.atleast_1d(shape) == 1)
 
 class NoDistribution(Distribution):
     
@@ -146,8 +146,8 @@ def draw_values(params, point=None):
             if param.name in named_nodes:
                 named_nodes.pop(param.name)
             for name, node in named_nodes.items():
-                if not isinstance(node, (T.sharedvar.TensorSharedVariable,
-                                  T.TensorConstant)):
+                if not isinstance(node, (tt.sharedvar.TensorSharedVariable,
+                                  tt.TensorConstant)):
                     givens[name] = (node, draw_value(node, point=point))
     values = [None for _ in params]
     for i, param in enumerate(params):

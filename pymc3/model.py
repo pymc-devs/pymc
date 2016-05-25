@@ -1,6 +1,6 @@
 import numpy as np
 import theano
-import theano.tensor as T
+import theano.tensor as tt
 from theano.tensor.var import TensorVariable
 
 from .memoize import memoize
@@ -162,7 +162,7 @@ class Factor(object):
     @property
     def logpt(self):
         """Theano scalar of log-probability of the model"""
-        return T.sum(self.logp_elemwiset)
+        return tt.sum(self.logp_elemwiset)
 
 
 class Model(Context, Factor):
@@ -219,14 +219,14 @@ class Model(Context, Factor):
     def logpt(self):
         """Theano scalar of log-probability of the model"""
         factors = [var.logpt for var in self.basic_RVs] + self.potentials
-        return T.add(*map(T.sum, factors))
+        return tt.add(*map(tt.sum, factors))
 
     @property
     def varlogpt(self):
         """Theano scalar of log-probability of the unobserved random variables
            (excluding deterministic)."""
         factors = [var.logpt for var in self.vars]
-        return T.add(*map(T.sum, factors))
+        return tt.add(*map(tt.sum, factors))
 
     @property
     def vars(self):
@@ -546,14 +546,14 @@ def as_tensor(data, name, model, distribution):
                                        testval=testval, parent_dist=distribution)
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist,
                                 model=model)
-        constant = T.as_tensor_variable(data.filled())
+        constant = tt.as_tensor_variable(data.filled())
 
         dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()],
                                                  missing_values)
         dataTensor.missing_values = missing_values
         return dataTensor
     else:
-        data = T.as_tensor_variable(data, name=name)
+        data = tt.as_tensor_variable(data, name=name)
         data.missing_values = None
         return data
 

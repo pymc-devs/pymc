@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import pymc3
-import theano.tensor as T
+import theano.tensor as tt
 
 np.random.seed(42)
 theta_true = (25, 0.5)
@@ -27,8 +27,8 @@ data = {'x': xdata, 'y': ydata}
 with pymc3.Model() as model:
     alpha = pymc3.Uniform('intercept', -100, 100)
     # Create custom densities
-    beta = pymc3.DensityDist('slope', lambda value: -1.5 * T.log(1 + value**2), testval=0)
-    sigma = pymc3.DensityDist('sigma', lambda value: -T.log(T.abs_(value)), testval=1)
+    beta = pymc3.DensityDist('slope', lambda value: -1.5 * tt.log(1 + value**2), testval=0)
+    sigma = pymc3.DensityDist('sigma', lambda value: -tt.log(tt.abs_(value)), testval=1)
     # Create likelihood
     like = pymc3.Normal('y_est', mu=alpha + beta * xdata, sd=sigma, observed=ydata)
 

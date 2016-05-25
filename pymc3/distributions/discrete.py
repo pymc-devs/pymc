@@ -2,7 +2,7 @@ from functools import partial
 
 import numpy as np
 import theano
-import theano.tensor as T
+import theano.tensor as tt
 from scipy import stats
 
 from .dist_math import bound, factln, binomln, betaln, logpow
@@ -40,7 +40,7 @@ class Binomial(Discrete):
         super(Binomial, self).__init__(*args, **kwargs)
         self.n = n
         self.p = p
-        self.mode = T.cast(T.round(n * p), self.dtype)
+        self.mode = tt.cast(tt.round(n * p), self.dtype)
 
     def random(self, point=None, size=None, repeat=None):
         n, p = draw_values([self.n, self.p], point=point)
@@ -91,7 +91,7 @@ class BetaBinomial(Discrete):
         self.alpha = alpha
         self.beta = beta
         self.n = n
-        self.mode = T.cast(T.round(alpha / (alpha + beta)), 'int8')
+        self.mode = tt.cast(tt.round(alpha / (alpha + beta)), 'int8')
 
     def _random(self, alpha, beta, n, size=None):
         size = size or 1
@@ -144,7 +144,7 @@ class Bernoulli(Discrete):
     def __init__(self, p, *args, **kwargs):
         super(Bernoulli, self).__init__(*args, **kwargs)
         self.p = p
-        self.mode = T.cast(T.round(p), 'int8')
+        self.mode = tt.cast(tt.round(p), 'int8')
 
     def random(self, point=None, size=None, repeat=None):
         p = draw_values([self.p], point=point)
@@ -155,7 +155,7 @@ class Bernoulli(Discrete):
     def logp(self, value):
         p = self.p
         return bound(
-            T.switch(value, T.log(p), T.log(1 - p)),
+            tt.switch(value, tt.log(p), tt.log(1 - p)),
             value >= 0, value <= 1,
             p >= 0, p <= 1)
 
@@ -189,7 +189,7 @@ class Poisson(Discrete):
     def __init__(self, mu, *args, **kwargs):
         super(Poisson, self).__init__(*args, **kwargs)
         self.mu = mu
-        self.mode = T.floor(mu).astype('int32')
+        self.mode = tt.floor(mu).astype('int32')
 
     def random(self, point=None, size=None, repeat=None):
         mu = draw_values([self.mu], point=point)
@@ -203,7 +203,7 @@ class Poisson(Discrete):
             logpow(mu, value) - factln(value) - mu,
             mu >= 0, value >= 0)
         # Return zero when mu and value are both zero
-        return T.switch(1 * T.eq(mu, 0) * T.eq(value, 0),
+        return tt.switch(1 * tt.eq(mu, 0) * tt.eq(value, 0),
                         0, log_prob)
 
 
@@ -236,7 +236,7 @@ class NegativeBinomial(Discrete):
         super(NegativeBinomial, self).__init__(*args, **kwargs)
         self.mu = mu
         self.alpha = alpha
-        self.mode = T.floor(mu).astype('int32')
+        self.mode = tt.floor(mu).astype('int32')
 
     def random(self, point=None, size=None, repeat=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point)
@@ -255,7 +255,7 @@ class NegativeBinomial(Discrete):
                          value >= 0, mu > 0, alpha > 0)
 
         # Return Poisson when alpha gets very large.
-        return T.switch(1 * (alpha > 1e10),
+        return tt.switch(1 * (alpha > 1e10),
                         Poisson.dist(self.mu).logp(value),
                         negbinom)
 
@@ -293,7 +293,7 @@ class Geometric(Discrete):
 
     def logp(self, value):
         p = self.p
-        return bound(T.log(p) + logpow(1 - p, value - 1),
+        return bound(tt.log(p) + logpow(1 - p, value - 1),
                      0 <= p, p <= 1, value >= 1)
 
 
@@ -318,9 +318,9 @@ class DiscreteUniform(Discrete):
     """
     def __init__(self, lower, upper, *args, **kwargs):
         super(DiscreteUniform, self).__init__(*args, **kwargs)
-        self.lower = T.floor(lower).astype('int32')
-        self.upper = T.floor(upper).astype('int32')
-        self.mode = T.floor((upper - lower) / 2.).astype('int32')
+        self.lower = tt.floor(lower).astype('int32')
+        self.upper = tt.floor(upper).astype('int32')
+        self.mode = tt.floor((upper - lower) / 2.).astype('int32')
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
@@ -339,7 +339,7 @@ class DiscreteUniform(Discrete):
     def logp(self, value):
         upper = self.upper
         lower = self.lower
-        return bound(-T.log(upper - lower + 1),
+        return bound(-tt.log(upper - lower + 1),
                      lower <= value, value <= upper)
 
 
@@ -364,12 +364,12 @@ class Categorical(Discrete):
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
         try:
-            self.k = T.shape(p)[-1].tag.test_value
+            self.k = tt.shape(p)[-1].tag.test_value
         except AttributeError:
-            self.k = T.shape(p)[-1]
-        #self.p = T.as_tensor_variable(p)
-        self.p = (p.T/T.sum(p,-1)).T   
-        self.mode = T.argmax(p)
+            self.k = tt.shape(p)[-1]
+        self.p = tt.as_tensor_variable(p)
+        self.p = (p.T/tt.sum(p,-1)).T   
+        self.mode = tt.argmax(p)
 
 
     def random(self, point=None, size=None, repeat=None):
@@ -384,11 +384,11 @@ class Categorical(Discrete):
         p = self.p
         k = self.k
 
-        sumto1 = theano.gradient.zero_grad(T.le(abs(T.sum(p, axis=-1) - 1), 1e-5))
+        sumto1 = theano.gradient.zero_grad(tt.le(abs(tt.sum(p, axis=-1) - 1), 1e-5))
         if p.ndim > 1:
-            a = T.log(p[T.arange(p.shape[0]), value])
+            a = tt.log(p[tt.arange(p.shape[0]), value])
         else:
-            a = T.log(p[value])
+            a = tt.log(p[value])
         return bound(a,
                      value >= 0, value <= (k - 1),
                      sumto1)
@@ -419,7 +419,7 @@ class ConstantDist(Discrete):
 
     def logp(self, value):
         c = self.c
-        return bound(0, T.eq(value, c))
+        return bound(0, tt.eq(value, c))
 
 
 class ZeroInflatedPoisson(Discrete):
@@ -437,6 +437,6 @@ class ZeroInflatedPoisson(Discrete):
         return None
 
     def logp(self, value):
-        return T.switch(self.z,
+        return tt.switch(self.z,
                         self.pois.logp(value),
                         self.const.logp(value))
