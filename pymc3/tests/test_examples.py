@@ -1,6 +1,5 @@
 import matplotlib, pkgutil, itertools
 from pymc3 import examples 
-from nose.plugins.skip import SkipTest
 
 matplotlib.use('Agg', warn=False)
 
@@ -15,17 +14,14 @@ def check_example(example_name):
     if hasattr(example, 'run'):
         example.run("short")
 
-@SkipTest
 def test_examples0():
     for t in itertools.islice(get_examples(), 0, 10):
         yield t
         
-@SkipTest
 def test_examples1():
     for t in itertools.islice(get_examples(), 10, 20):
         yield t
 
-@SkipTest
 def test_examples2():
     for t in itertools.islice(get_examples(), 20, None):
         yield t
