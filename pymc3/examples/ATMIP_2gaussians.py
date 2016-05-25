@@ -28,10 +28,10 @@ w2 = (1 - stdev)
 def two_gaussians(x):
     log_like1 = - 0.5 * n * tt.log(2 * np.pi) \
                 - 0.5 * tt.log(dsigma) \
-                - 0.5 * (x - mu1).tt.dot(isigma).dot(x - mu1)
+                - 0.5 * (x - mu1).T.dot(isigma).dot(x - mu1)
     log_like2 = - 0.5 * n * tt.log(2 * np.pi) \
                 - 0.5 * tt.log(dsigma) \
-                - 0.5 * (x - mu2).tt.dot(isigma).dot(x - mu2)
+                - 0.5 * (x - mu2).T.dot(isigma).dot(x - mu2)
     return tt.log(w1 * tt.exp(log_like1) + w2 * tt.exp(log_like2))
 
 with pm.Model() as ATMIP_test:
