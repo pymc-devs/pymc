@@ -163,14 +163,12 @@ class Multinomial(Discrete):
         Number of trials (n > 0).
     p : array
         Probability of each one of the different outcomes. Elements must
-        be non-negative and sum to 1.
+        be non-negative and sum to 1. They will be automatically rescaled otherwise.
     """
     def __init__(self, n, p, *args, **kwargs):
         super(Multinomial, self).__init__(*args, **kwargs)
         self.n = n
-        if abs(1 - sum(p)):
-            raise ValueError('Multinomial probabilities must sum to one.')
-        self.p = p
+        self.p = p/T.sum(p)
         self.mean = n * p
         self.mode = T.cast(T.round(n * p), 'int32')
 

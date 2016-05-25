@@ -358,17 +358,17 @@ class Categorical(Discrete):
     Parameters
     ----------
     p : float
-        p > 0 and the elements of p must sum to 1.
+        p > 0 and the elements of p must sum to 1. They will be automatically
+        rescaled otherwise.
     """
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
         try:
-            self.k = np.shape(p)[-1].tag.test_value
+            self.k = T.shape(p)[-1].tag.test_value
         except AttributeError:
-            self.k = np.shape(p)[-1]
-        if np.any(abs(1 - np.sum(p, -1))):
-            raise ValueError('Categorical probabilities must sum to one.')
-        self.p = T.as_tensor_variable(p)
+            self.k = T.shape(p)[-1]
+        #self.p = T.as_tensor_variable(p)
+        self.p = (p.T/T.sum(p,-1)).T    
         self.mode = T.argmax(p)
 
 
