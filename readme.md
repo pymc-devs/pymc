@@ -5,9 +5,9 @@
 
 PyMC3 is a python module for Bayesian statistical modeling and model fitting which focuses on advanced Markov chain Monte Carlo fitting algorithms. Its flexibility and extensibility make it applicable to a large suite of problems.
 
-Check out the [Tutorial](http://pymc-devs.github.io/pymc3/notebooks/getting_started.html)!
+Check out the [getting started guide](http://pymc-devs.github.io/pymc3/notebooks/getting_started.html)!
 
-PyMC3 is Beta software. Users should consider using [PyMC 2 repository](https://github.com/pymc-devs/pymc).
+PyMC3 is beta software. Users should consider using [PyMC 2 repository](https://github.com/pymc-devs/pymc).
 
 ## Features
 
@@ -23,17 +23,12 @@ PyMC3 is Beta software. Users should consider using [PyMC 2 repository](https://
  * Transparent support for missing value imputation
 
 ## Getting started
- * [PyMC3 Tutorial](http://pymc-devs.github.io/pymc3/getting_started/)
- * [PyMC3 paper](https://peerj.com/articles/cs-55/)
+ * The [PyMC3 tutorial](http://pymc-devs.github.io/pymc3/getting_started/) or [journal publication](https://peerj.com/articles/cs-55/)
+ * [PyMC3 examples](http://pymc-devs.github.io/pymc3/examples.html) and the [API reference](http://pymc-devs.github.io/pymc3/api.html)
  * [Bayesian Modelling in Python -- tutorials on Bayesian statistics and PyMC3 as Jupyter Notebooks by Mark Dregan](https://github.com/markdregan/Bayesian-Modelling-in-Python)
- * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py)
- * [Global Health Metrics & Evaluation model](http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/GHME%202013.ipynb) case study for GHME 2013
- * [Stochastic Volatility model](http://pymc-devs.github.io/pymc3/notebooks/stochastic_volatility.html)
- * [Several blog posts on linear regression](http://twiecki.github.io/tag/bayesian-statistics.html)
- * [Talk at PyData Londong 2016 on PyMC3](https://www.youtube.com/watch?v=coEVZNg_nlA)
+ * [Talk at PyData London 2016 on PyMC3](https://www.youtube.com/watch?v=coEVZNg_nlA)
  * [PyMC3 port of the models presented in the book "Doing Bayesian Data Analysis" by John Kruschke](https://github.com/aloctavodia/Doing_bayesian_data_analysis)
- * [The PyMC3 examples folder](https://github.com/pymc-devs/pymc3/tree/master/pymc3/examples)
- * [Manual of PyMC3 distributions](http://pymc-devs.github.io/pymc3/manual/api.html#distributions)
+ * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py)
 
 ## Installation
 
