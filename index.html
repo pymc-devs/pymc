@@ -173,19 +173,22 @@
 fitting which focuses on advanced Markov chain Monte Carlo fitting
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.</p>
-<p>Check out the
-<a class="reference external" href="http://pymc-devs.github.io/pymc3/getting_started/">Tutorial</a>!</p>
-<p>PyMC3 is Beta software. Users should consider using <a class="reference external" href="https://github.com/pymc-devs/pymc">PyMC 2
+<p>Check out the <a class="reference external" href="http://pymc-devs.github.io/pymc3/notebooks/getting_started.html">getting started
+guide</a>!</p>
+<p>PyMC3 is beta software. Users should consider using <a class="reference external" href="https://github.com/pymc-devs/pymc">PyMC 2
 repository</a>.</p>
 <div class="section" id="features">
 <h2>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li>Intuitive model specification syntax, for example, <code class="docutils literal"><span class="pre">x</span> <span class="pre">~</span> <span class="pre">N(0,1)</span></code>
 translates to <code class="docutils literal"><span class="pre">x</span> <span class="pre">=</span> <span class="pre">Normal(0,1)</span></code></li>
-<li>Powerful sampling algorithms, such as the <a class="reference external" href="http://arxiv.org/abs/1111.4246">No U-Turn
+<li><strong>Powerful sampling algorithms</strong>, such as the <a class="reference external" href="http://arxiv.org/abs/1111.4246">No U-Turn
 Sampler</a>, allow complex models
 with thousands of parameters with little specialized knowledge of
 fitting algorithms.</li>
+<li><strong>Variational inference</strong>: <a class="reference external" href="http://arxiv.org/abs/1506.03431">ADVI</a>
+for fast approximate posterior estimation as well as mini-batch ADVI
+for large data sets.</li>
 <li>Easy optimization for finding the <em>maximum a posteriori</em>(MAP) point</li>
 <li><a class="reference external" href="http://deeplearning.net/software/theano/">Theano</a> features</li>
 <li>Numpy broadcasting and advanced indexing</li>
@@ -198,32 +201,23 @@ fitting algorithms.</li>
 <div class="section" id="getting-started">
 <h2>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li><a class="reference external" href="http://pymc-devs.github.io/pymc3/getting_started/">PyMC3
-Tutorial</a></li>
-<li><a class="reference external" href="https://peerj.com/articles/cs-55/">PyMC3 paper</a></li>
+<li>The <a class="reference external" href="http://pymc-devs.github.io/pymc3/getting_started/">PyMC3
+tutorial</a> or
+<a class="reference external" href="https://peerj.com/articles/cs-55/">journal publication</a></li>
+<li><a class="reference external" href="http://pymc-devs.github.io/pymc3/examples.html">PyMC3 examples</a>
+and the <a class="reference external" href="http://pymc-devs.github.io/pymc3/api.html">API reference</a></li>
 <li><a class="reference external" href="https://github.com/markdregan/Bayesian-Modelling-in-Python">Bayesian Modelling in Python &#8211; tutorials on Bayesian statistics and
 PyMC3 as Jupyter Notebooks by Mark
 Dregan</a></li>
-<li>Coal Mining Disasters model in <a class="reference external" href="https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py">PyMC
-2</a>
-and <a class="reference external" href="https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py">PyMC
-3</a></li>
-<li><a class="reference external" href="http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/GHME%202013.ipynb">Global Health Metrics &amp; Evaluation
-model</a>
-case study for GHME 2013</li>
-<li><a class="reference external" href="http://nbviewer.ipython.org/urls/raw.github.com/pymc-devs/pymc3/master/pymc3/examples/stochastic_volatility.ipynb">Stochastic Volatility
-model</a></li>
-<li><a class="reference external" href="http://twiecki.github.io/tag/bayesian-statistics.html">Several blog posts on linear
-regression</a></li>
-<li><a class="reference external" href="http://twiecki.github.io/blog/2013/12/12/bayesian-data-analysis-pymc3/">Talk at PyData NYC 2013 on
+<li><a class="reference external" href="https://www.youtube.com/watch?v=coEVZNg_nlA">Talk at PyData London 2016 on
 PyMC3</a></li>
 <li><a class="reference external" href="https://github.com/aloctavodia/Doing_bayesian_data_analysis">PyMC3 port of the models presented in the book &#8220;Doing Bayesian Data
 Analysis&#8221; by John
 Kruschke</a></li>
-<li><a class="reference external" href="https://github.com/pymc-devs/pymc3/tree/master/pymc3/examples">The PyMC3 examples
-folder</a></li>
-<li><a class="reference external" href="http://pymc-devs.github.io/pymc3/manual/api.html#distributions">Manual of PyMC3
-distributions</a></li>
+<li>Coal Mining Disasters model in <a class="reference external" href="https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py">PyMC
+2</a>
+and <a class="reference external" href="https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py">PyMC
+3</a></li>
 </ul>
 </div>
 <div class="section" id="installation">
@@ -251,10 +245,12 @@ from PyPI.</p>
 <div class="section" id="dependencies">
 <h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
 <p>PyMC3 is tested on Python 2.7 and 3.3 and depends on Theano, NumPy,
-SciPy, Pandas, and Matplotlib (see setup.py for version information).</p>
+SciPy, Pandas, and Matplotlib (see <code class="docutils literal"><span class="pre">requirements.txt</span></code> for version
+information).</p>
 <div class="section" id="optional">
 <h3>Optional<a class="headerlink" href="#optional" title="Permalink to this headline">¶</a></h3>
-<p>In addtion to the above dependencies, the GLM submodule relies on Patsy.</p>
+<p>In addtion to the above dependencies, the GLM submodule relies on
+<code class="docutils literal"><span class="pre">Patsy</span></code>[<a class="reference external" href="http://patsy.readthedocs.io/en/latest/">http://patsy.readthedocs.io/en/latest/</a>].</p>
 <p><code class="docutils literal"><span class="pre">`scikits.sparse</span></code> &lt;<a class="reference external" href="https://github.com/njsmith/scikits-sparse">https://github.com/njsmith/scikits-sparse</a>&gt;`__
 enables sparse scaling matrices which are useful for large problems.
 Installation on Ubuntu is easy:</p>
