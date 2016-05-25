@@ -29,9 +29,6 @@ env:
   - TESTCMD=" -vv --with-timer -e test_examples -e test_distributions"
   - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions"
   - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions_random"
-  - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples0"
-  - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples1"
-  - TESTCMD=" -vv --with-timer pymc3.tests.test_examples:test_examples2"
 script:
   - THEANO_FLAGS='gcc.cxxflags="-march=core2"' nosetests $TESTCMD
 
