@@ -19,6 +19,14 @@ data {
   real y[T];
 }
 parameters {
+    // assume err[0] == 0
+}
+nu[t] <- mu + phi * y[t-1] + theta * err[t-1];
+  err[t] <- y[t] - nu[t];
+}
+mu ~ normal(0,10);
+phi ~ normal(0,2);
+theta ~ normal(0,2);
   real mu;
   real phi;
   real theta;
@@ -37,19 +45,11 @@ parameters {
     // noise scale
     // prediction for time t
     // error for time t
-    // assume err[0] == 0
-}
-nu[t] <- mu + phi * y[t-1] + theta * err[t-1];
-  err[t] <- y[t] - nu[t];
-}
-mu ~ normal(0,10);
-phi ~ normal(0,2);
-theta ~ normal(0,2);
 sigma ~ cauchy(0,5);
 err ~ normal(0,sigma);
 // priors
 // likelihood
-Ported to PyMC3 by Peadar Coyle (c) 2016.
+Ported to PyMC3 by Peadar Coyle and Chris Fonnesbeck (c) 2016.
 """
 
 t = np.array([1, 2, 4,5,6,8, 19, 18, 12])
@@ -59,37 +59,26 @@ y = shared(np.array([15, 10, 16, 11, 9, 11, 10, 18], dtype=np.float32))
 
 with Model() as arma_model:
 
-    sigma = Cauchy('sigma', 0, 5)
+    sigma = HalfCauchy('sigma', 5)
     theta = Normal('theta', 0, sd=2)
     phi = Normal('phi', 0, sd=2)
     mu = Normal('mu', 0, sd=10)
 
-    nu0 = mu + phi*mu
-    err0 = y[0] - nu0
-
-    nu = T.vector('nu')
-    err = T.vector('err')
-
-
-    def calc_next(y, err, mu, phi, theta):
-        nu_t = mu + phi*y + theta*err
-
-        err_t = y - nu_t
-        return err_t
-
+    err0 = y[0] - (mu + phi*mu)
+                                 
+    def calc_next(last_y, this_y, err, mu, phi, theta):
+        nu_t = mu + phi*last_y + theta*err
+        return this_y - nu_t
+        
     err, _ = scan(fn=calc_next,
-                          sequences=dict(input=y, taps=[-1]),
-                          outputs_info=[dict(initial=err0, taps=[-1])],
-                          non_sequences=[mu, phi, theta])
+                  sequences=dict(input=y, taps=[-1,0]),
+                  outputs_info=[err0],
+                  non_sequences=[mu, phi, theta])
+                  
     like = Potential('like', Normal.dist(0, sd=sigma).logp(err))
 
 with arma_model:
     mu, sds, elbo = variational.advi(n=2000)
-
-with arma_model:
-        # Start next run at the last sampled position.
-        step = NUTS()
-
 
 
 def run(n=1000):
@@ -97,9 +86,7 @@ def run(n=1000):
         n = 50
     with arma_model:
 
-        start = find_MAP(fmin=optimize.fmin_powell)
-
-        trace = sample(n, Slice(), start=start)
+        trace = sample(2000)
 
     burn = n/10
 
