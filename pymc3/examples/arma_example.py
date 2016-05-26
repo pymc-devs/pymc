@@ -1,4 +1,4 @@
-from pymc3 import Normal, sample, Model, traceplot, plots, NUTS, Potential, variational, Cauchy, find_MAP, Slice
+from pymc3 import Normal, sample, Model, traceplot, plots, NUTS, Potential, variational, Cauchy, find_MAP, Slice, HalfCauchy
 from theano import scan, shared
 from scipy import optimize
 import theano.tensor as T
