@@ -14,7 +14,7 @@ PyMC3 is beta software. Users should consider using [PyMC 2 repository](https://
  * Intuitive model specification syntax, for example, `x ~ N(0,1)` translates to `x = Normal(0,1)`
  * **Powerful sampling algorithms**, such as the [No U-Turn Sampler](http://arxiv.org/abs/1111.4246), allow complex models with thousands of parameters with little specialized knowledge of fitting algorithms.
  * **Variational inference**: [ADVI](http://arxiv.org/abs/1506.03431) for fast approximate posterior estimation as well as mini-batch ADVI for large data sets.
- * Easy optimization for finding the *maximum a posteriori*(MAP) point
+ * Easy optimization for finding the *maximum a posteriori* (MAP) point
  * [Theano](http://deeplearning.net/software/theano/) features
   * Numpy broadcasting and advanced indexing
   * Linear algebra operators
@@ -26,7 +26,7 @@ PyMC3 is beta software. Users should consider using [PyMC 2 repository](https://
  * The [PyMC3 tutorial](http://pymc-devs.github.io/pymc3/getting_started/) or [journal publication](https://peerj.com/articles/cs-55/)
  * [PyMC3 examples](http://pymc-devs.github.io/pymc3/examples.html) and the [API reference](http://pymc-devs.github.io/pymc3/api.html)
  * [Bayesian Modelling in Python -- tutorials on Bayesian statistics and PyMC3 as Jupyter Notebooks by Mark Dregan](https://github.com/markdregan/Bayesian-Modelling-in-Python)
- * [Talk at PyData London 2016 on PyMC3](https://www.youtube.com/watch?v=coEVZNg_nlA)
+ * [Talk at PyData London 2016 on PyMC3](https://www.youtube.com/watch?v=LlzVlqVzeD8)
  * [PyMC3 port of the models presented in the book "Doing Bayesian Data Analysis" by John Kruschke](https://github.com/aloctavodia/Doing_bayesian_data_analysis)
  * Coal Mining Disasters model in [PyMC 2](https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py) and [PyMC 3](https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py)
 
