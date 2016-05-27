@@ -4,7 +4,7 @@ import theano.tensor as t
 import numpy as np
 
 
-def invlogit(x):
+def numpy_invlogit(x):
     import numpy as np
     return np.exp(x) / (1 + np.exp(x))
 
@@ -16,18 +16,14 @@ predictors = np.random.normal(size=(n, npred))
 
 
 outcomes = np.random.binomial(
-    1, invlogit(np.sum(effects_a[None, :] * predictors, 1)))
+    1, numpy_invlogit(np.sum(effects_a[None, :] * predictors, 1)))
 
-
-def tinvlogit(x):
-    import theano.tensor as t
-    return t.exp(x) / (1 + t.exp(x))
 
 model = Model()
 
 with model:
     effects = Normal('effects', mu=0, tau=2. ** -2, shape=(1, npred))
-    p = tinvlogit(sum(effects * predictors, 1))
+    p = invlogit(sum(effects * predictors, 1))
 
     o = Bernoulli('o', p, observed=outcomes)
 
