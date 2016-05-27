@@ -3,6 +3,7 @@ import theano.tensor as tt
 from ..model import FreeRV
 from ..theanof import gradient
 from .distribution import Distribution
+from ..math import logit
 import numpy as np
 
 __all__ = ['transform', 'stick_breaking', 'logodds', 'log']
@@ -80,10 +81,6 @@ class Log(ElemwiseTransform):
 log = Log()
 
 inverse_logit = tt.nnet.sigmoid
-
-
-def logit(x):
-    return tt.log(x/(1-x))
 
 
 class LogOdds(ElemwiseTransform):
