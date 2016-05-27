@@ -3,7 +3,7 @@ import theano.tensor as tt
 from ..model import FreeRV
 from ..theanof import gradient
 from .distribution import Distribution
-from math import logit
+from ..math import logit
 import numpy as np
 
 __all__ = ['transform', 'stick_breaking', 'logodds', 'log']
