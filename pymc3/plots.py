@@ -729,7 +729,7 @@ def plot_posterior(trace, varnames=None, figsize=None, alpha_level=0.05, round_t
             figsize = (6, 2)
         if ax is None:
             fig, ax = plt.subplots()
-            plot_posterior_op(trace, ax)
+        plot_posterior_op(trace, ax)
     else:
         if varnames is None:
             varnames = trace.original_varnames
@@ -742,5 +742,5 @@ def plot_posterior(trace, varnames=None, figsize=None, alpha_level=0.05, round_t
             plot_posterior_op(tr_values, ax=a)
             a.set_title(v)
 
-    fig.tight_layout()
+        fig.tight_layout()
     return ax
