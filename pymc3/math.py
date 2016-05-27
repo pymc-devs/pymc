@@ -10,12 +10,12 @@ import theano
 import theano.tensor as tt
 import sys
 
-__all__ = ['logit', 'invlogit']
-
 def invlogit(x):
     x_max = -tt.log(sys.float_info.epsilon)
-    if (x > x_max) return 1.0
-    if (x < 1-x_max) return 0.0
+    if (x > x_max): 
+        return 1.0
+    elif (x < 1-x_max): 
+        return 0.0
     return 1/(1 + tt.exp(-x))
     
 def logit(p):
