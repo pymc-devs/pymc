@@ -170,7 +170,9 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     updates = adagrad(grad, shared_inarray, learning_rate=learning_rate, epsilon=epsilon, n=10)
 
     # Create in-place update function
-    f = theano.function(minibatch_tensors, [shared_inarray, grad, elbo], updates=updates)
+    tensors, givens = replace_shared_minibatch_tensors(minibatch_tensors)
+    f = theano.function(tensors, [shared_inarray, grad, elbo], 
+                        updates=updates, givens=givens)
 
     # Run adagrad steps
     elbos = np.empty(n)
@@ -191,7 +193,23 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     for var in w.keys():
         w[var] = np.exp(w[var])
     return ADVIFit(u, w, elbos)
-    
+
+def replace_shared_minibatch_tensors(minibatch_tensors):
+    """Replace shared variables in minibatch tensors with normal tensors. 
+    """
+    givens = dict()
+    tensors = list()
+
+    for t in minibatch_tensors:
+        if isinstance(t, theano.compile.sharedvalue.SharedVariable):
+            t_ = t.type()
+            tensors.append(t_)
+            givens.update({t: t_})
+        else:
+            tensors.append(t)
+
+    return tensors, givens
+
 def run_adagrad(uw, grad, elbo, n, learning_rate=.001, epsilon=.1, verbose=1):
     """Run Adagrad parameter update. 
 

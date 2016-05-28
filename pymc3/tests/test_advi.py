@@ -2,7 +2,7 @@ import numpy as np
 from pymc3 import Model, Normal, DiscreteUniform, Poisson, switch, Exponential
 from pymc3.theanof import inputvars
 from pymc3.variational.advi import variational_gradient_estimate, advi, advi_minibatch, sample_vp
-from theano import function
+from theano import function, shared
 import theano.tensor as tt
 
 from nose.tools import assert_raises
@@ -132,6 +132,48 @@ def test_advi_minibatch():
 
     data_t = tt.vector()
     data_t.tag.test_value=np.zeros(1,)
+
+    with Model() as model:
+        mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
+        x = Normal('x', mu=mu_, sd=sd, observed=data_t)
+        
+    minibatch_RVs = [x]
+    minibatch_tensors = [data_t]
+
+    def create_minibatch(data):
+        while True:
+            data = np.roll(data, 100, axis=0)
+            yield data[:100]
+
+    minibatches = [create_minibatch(data)]
+
+    with model:
+        advi_fit = advi_minibatch(
+            n=1000, minibatch_tensors=minibatch_tensors, 
+            minibatch_RVs=minibatch_RVs, minibatches=minibatches, 
+            total_size=n, learning_rate=1e-1, random_seed=1
+        )
+
+        np.testing.assert_allclose(advi_fit.means['mu'], mu_post, rtol=0.1)
+
+        trace = sample_vp(advi_fit, 10000)
+
+    np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
+    np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+
+def test_advi_minibatch_shared():
+    n = 1000
+    sd0 = 2.
+    mu0 = 4.
+    sd = 3.
+    mu = -5.
+
+    data = sd * np.random.RandomState(0).randn(n) + mu
+
+    d = n / sd**2 + 1 / sd0**2
+    mu_post = (n * np.mean(data) / sd**2 + mu0 / sd0**2) / d
+
+    data_t = shared(np.zeros(1,))
 
     with Model() as model:
         mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
