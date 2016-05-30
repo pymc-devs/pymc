@@ -16,6 +16,32 @@ __all__ = ['DensityDist', 'Distribution',
 class _Unpickling(object):
     pass
 
+def _as_tensor_shape_variable(var):
+    """ Just a collection of useful shape stuff from
+    `_infer_ndim_bcast` """
+
+    if var is None:
+        return tt.constant([], dtype='int64')
+
+    res = var
+    if isinstance(res, (tuple, list)):
+        if len(res) == 0:
+            return tt.constant([], dtype='int64')
+        res = tt.as_tensor_variable(res, ndim=1)
+
+    else:
+        if res.ndim != 1:
+            raise TypeError("shape must be a vector or list of scalar, got\
+                            '%s'" % res)
+
+    if (not (res.dtype.startswith('int') or
+             res.dtype.startswith('uint'))):
+
+        raise TypeError('shape must be an integer vector or list',
+                        res.dtype)
+    return res
+
+
 class Distribution(object):
     """Statistical distribution"""
     def __new__(cls, name, *args, **kwargs):
@@ -44,7 +70,8 @@ class Distribution(object):
         dist.__init__(*args, **kwargs)
         return dist
 
-    def __init__(self, shape_supp, shape_ind, shape_reps, bcast, dtype, testval=None, defaults=[], transform=None):
+    def __init__(self, shape_supp, shape_ind, shape_reps, bcast, dtype,
+                 testval=None, defaults=None, transform=None):
         r"""
         Distributions are specified in terms of the shape of their support, the shape
         of the space of independent instances and the shape of the space of replications.
@@ -118,23 +145,29 @@ class Distribution(object):
             A transform function
         """
 
-        self.shape_supp = tt.cast(tt.as_tensor_variable(shape_supp, ndim=1), 'int64')
-        self.shape_ind = tt.cast(tt.as_tensor_variable(shape_ind, ndim=1), 'int64')
-        self.shape_reps = tt.cast(tt.as_tensor_variable(shape_reps, ndim=1), 'int64')
-        self.shape = tt.concatenate((self.shape_supp, self.shape_ind, self.shape_reps))
+        self.shape_supp = _as_tensor_shape_variable(shape_supp)
+        self.ndim_supp = tt.get_vector_length(self.shape_supp)
+        self.shape_ind = _as_tensor_shape_variable(shape_ind)
+        self.ndim_ind = tt.get_vector_length(self.shape_ind)
+        self.shape_reps = _as_tensor_shape_variable(shape_reps)
+        self.ndim_reps = tt.get_vector_length(self.shape_reps)
 
-        #
-        # Following Theano Op's handling of shape parameters (well, at least
-        # theano.tensor.raw_random.RandomFunction.make_node).
-        #
-        #if self.shape.type.ndim != 1 or \
-        #        not (self.shape.type.dtype == 'int64') and \
-        #        not (self.shape.type.dtype == 'int32'):
-        #    raise TypeError("Expected int elements in shape")
+        ndim_sum = self.ndim_supp + self.ndim_ind + self.ndim_reps
+        if ndim_sum == 0:
+            self.shape = tt.constant([], dtype='int64')
+        else:
+            self.shape = tuple(self.shape_reps) +\
+                tuple(self.shape_ind) +\
+                tuple(self.shape_supp)
 
-        #self.ndim = self.shape.ndim
-        #self.dtype = dtype
-        #self.bcast = bcast
+        if testval is None:
+            if ndim_sum == 0:
+                testval = tt.constant(0, dtype=dtype)
+            else:
+                testval = tt.zeros(self.shape)
+
+        self.ndim = tt.get_vector_length(self.shape)
+
         self.testval = testval
         self.defaults = defaults
         self.transform = transform
