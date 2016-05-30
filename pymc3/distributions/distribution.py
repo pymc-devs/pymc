@@ -42,6 +42,32 @@ def _as_tensor_shape_variable(var):
     return res
 
 
+def _as_tensor_shape_variable(var):
+    """ Just a collection of useful shape stuff from
+    `_infer_ndim_bcast` """
+
+    if var is None:
+        return T.constant([], dtype='int64')
+
+    res = var
+    if isinstance(res, (tuple, list)):
+        if len(res) == 0:
+            return T.constant([], dtype='int64')
+        res = T.as_tensor_variable(res, ndim=1)
+
+    else:
+        if res.ndim != 1:
+            raise TypeError("shape must be a vector or list of scalar, got\
+                            '%s'" % res)
+
+    if (not (res.dtype.startswith('int') or
+             res.dtype.startswith('uint'))):
+
+        raise TypeError('shape must be an integer vector or list',
+                        res.dtype)
+    return res
+
+
 class Distribution(object):
     """Statistical distribution"""
     def __new__(cls, name, *args, **kwargs):
