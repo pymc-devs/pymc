@@ -93,8 +93,18 @@ Stats
 Inference
 ---------
 
-Samplers
+Sampling
 ^^^^^^^^
+
+.. currentomdule:: pymc3.sampling
+   :members:
+
+.. automdule:: pymc3.sampling
+   :members:
+
+
+Step-methods
+^^^^^^^^^^^^
 
 NUTS
 """"
