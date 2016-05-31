@@ -2270,6 +2270,166 @@ meaningful when <cite>stat_funcs</cite> is None.</p>
 <h2>Inference<a class="headerlink" href="#inference" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="sampling">
 <h3>Sampling<a class="headerlink" href="#sampling" title="Permalink to this headline">¶</a></h3>
+<span class="target" id="module-pymc3.sampling"></span><dl class="function">
+<dt id="pymc3.sampling.sample">
+<code class="descclassname">pymc3.sampling.</code><code class="descname">sample</code><span class="sig-paren">(</span><em>draws</em>, <em>step=None</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>njobs=1</em>, <em>tune=None</em>, <em>progressbar=True</em>, <em>model=None</em>, <em>random_seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw a number of samples using the given step method.
+Multiple step methods supported via compound step method
+returns the amount of time taken.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>draws</strong> : int</p>
+<blockquote>
+<div><p>The number of samples to draw</p>
+</div></blockquote>
+<p><strong>step</strong> : function or iterable of functions</p>
+<blockquote>
+<div><p>A step function or collection of functions. If no step methods are
+specified, or are partially specified, they will be assigned
+automatically (defaults to None).</p>
+</div></blockquote>
+<p><strong>start</strong> : dict</p>
+<blockquote>
+<div><p>Starting point in parameter space (or partial point)
+Defaults to trace.point(-1)) if there is a trace provided and
+model.test_point if not (defaults to empty dict)</p>
+</div></blockquote>
+<p><strong>trace</strong> : backend, list, or MultiTrace</p>
+<blockquote>
+<div><p>This should be a backend instance, a list of variables to track,
+or a MultiTrace object with past values. If a MultiTrace object
+is given, it must contain samples for the chain number <cite>chain</cite>.
+If None or a list of variables, the NDArray backend is used.
+Passing either &#8220;text&#8221; or &#8220;sqlite&#8221; is taken as a shortcut to set
+up the corresponding backend (with &#8220;mcmc&#8221; used as the base
+name).</p>
+</div></blockquote>
+<p><strong>chain</strong> : int</p>
+<blockquote>
+<div><p>Chain number used to store sample in backend. If <cite>njobs</cite> is
+greater than one, chain numbers will start here.</p>
+</div></blockquote>
+<p><strong>njobs</strong> : int</p>
+<blockquote>
+<div><p>Number of parallel jobs to start. If None, set to number of cpus
+in the system - 2.</p>
+</div></blockquote>
+<p><strong>tune</strong> : int</p>
+<blockquote>
+<div><p>Number of iterations to tune, if applicable (defaults to None)</p>
+</div></blockquote>
+<p><strong>progressbar</strong> : bool</p>
+<blockquote>
+<div><p>Flag for progress bar</p>
+</div></blockquote>
+<p><strong>model</strong> : Model (optional if in <cite>with</cite> context)</p>
+<p><strong>random_seed</strong> : int or list of ints</p>
+<blockquote>
+<div><p>A list is accepted if more if <cite>njobs</cite> is greater than one.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">MultiTrace object with access to sampling values</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.sampling.iter_sample">
+<code class="descclassname">pymc3.sampling.</code><code class="descname">iter_sample</code><span class="sig-paren">(</span><em>draws</em>, <em>step</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>tune=None</em>, <em>model=None</em>, <em>random_seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.iter_sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generator that returns a trace on each iteration using the given
+step method.  Multiple step methods supported via compound step
+method returns the amount of time taken.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>draws</strong> : int</p>
+<blockquote>
+<div><p>The number of samples to draw</p>
+</div></blockquote>
+<p><strong>step</strong> : function</p>
+<blockquote>
+<div><p>Step function</p>
+</div></blockquote>
+<p><strong>start</strong> : dict</p>
+<blockquote>
+<div><p>Starting point in parameter space (or partial point)
+Defaults to trace.point(-1)) if there is a trace provided and
+model.test_point if not (defaults to empty dict)</p>
+</div></blockquote>
+<p><strong>trace</strong> : backend, list, or MultiTrace</p>
+<blockquote>
+<div><p>This should be a backend instance, a list of variables to track,
+or a MultiTrace object with past values. If a MultiTrace object
+is given, it must contain samples for the chain number <cite>chain</cite>.
+If None or a list of variables, the NDArray backend is used.</p>
+</div></blockquote>
+<p><strong>chain</strong> : int</p>
+<blockquote>
+<div><p>Chain number used to store sample in backend. If <cite>njobs</cite> is
+greater than one, chain numbers will start here.</p>
+</div></blockquote>
+<p><strong>tune</strong> : int</p>
+<blockquote>
+<div><p>Number of iterations to tune, if applicable (defaults to None)</p>
+</div></blockquote>
+<p><strong>model</strong> : Model (optional if in <cite>with</cite> context)</p>
+<p><strong>random_seed</strong> : int or list of ints</p>
+<blockquote class="last">
+<div><p>A list is accepted if more if <cite>njobs</cite> is greater than one.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.sampling.sample_ppc">
+<code class="descclassname">pymc3.sampling.</code><code class="descname">sample_ppc</code><span class="sig-paren">(</span><em>trace</em>, <em>samples=None</em>, <em>model=None</em>, <em>vars=None</em>, <em>size=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.sample_ppc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate posterior predictive samples from a model given a trace.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>trace</strong> : backend, list, or MultiTrace</p>
+<blockquote>
+<div><p>Trace generated from MCMC sampling</p>
+</div></blockquote>
+<p><strong>samples</strong> : int</p>
+<blockquote>
+<div><p>Number of posterior predictive samples to generate. Defaults to the
+length of <cite>trace</cite></p>
+</div></blockquote>
+<p><strong>model</strong> : Model (optional if in <cite>with</cite> context)</p>
+<blockquote>
+<div><p>Model used to generate <cite>trace</cite></p>
+</div></blockquote>
+<p><strong>vars</strong> : iterable</p>
+<blockquote>
+<div><p>Variables for which to compute the posterior predictive samples.
+Defaults to <cite>model.observed_RVs</cite>.</p>
+</div></blockquote>
+<p><strong>size</strong> : int</p>
+<blockquote>
+<div><p>The number of random draws from the distribution specified by the
+parameters in each sample of the trace.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Dictionary keyed by <cite>vars</cite>, where the values are the corresponding</p>
+<p class="last">posterior predictive samples.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 </div>
 <div class="section" id="step-methods">
 <h3>Step-methods<a class="headerlink" href="#step-methods" title="Permalink to this headline">¶</a></h3>

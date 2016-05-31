@@ -262,7 +262,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "Now that we trained our model, lets predict on the hold-out set. We use `sample_ppc`"
+    "Now that we trained our model, lets predict on the hold-out set. We use [`sample_ppc()`]()."
    ]
   },
   {

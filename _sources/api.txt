@@ -99,7 +99,7 @@ Sampling
 .. currentomdule:: pymc3.sampling
    :members:
 
-.. automdule:: pymc3.sampling
+.. automodule:: pymc3.sampling
    :members:
 
 
@@ -152,7 +152,7 @@ ATMCMC
    :members:
 
 Variational
-^^^^^^^^^
+^^^^^^^^^^^
 
 ADVI
 """"
