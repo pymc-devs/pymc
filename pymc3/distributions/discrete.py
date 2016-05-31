@@ -6,7 +6,7 @@ import theano.tensor as tt
 from scipy import stats
 
 from .dist_math import bound, factln, binomln, betaln, logpow
-from .distribution import UnivariateDiscrete, draw_values, generate_samples
+from .distribution import Univariate, Discrete, draw_values, generate_samples
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
            'NegativeBinomial', 'ConstantDist', 'Constant', 'ZeroInflatedPoisson',
@@ -14,7 +14,7 @@ __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
            'Categorical']
 
 
-class Binomial(UnivariateDiscrete):
+class Binomial(Univariate, Discrete):
     R"""
     Binomial log-likelihood.
 
@@ -63,7 +63,7 @@ class Binomial(UnivariateDiscrete):
             0 <= p, p <= 1)
 
 
-class BetaBinomial(UnivariateDiscrete):
+class BetaBinomial(Univariate, Discrete):
     R"""
     Beta-binomial log-likelihood.
 
@@ -132,7 +132,7 @@ class BetaBinomial(UnivariateDiscrete):
                      alpha > 0, beta > 0)
 
 
-class Bernoulli(UnivariateDiscrete):
+class Bernoulli(Univariate, Discrete):
     R"""Bernoulli log-likelihood
 
     The Bernoulli distribution describes the probability of successes
@@ -174,7 +174,7 @@ class Bernoulli(UnivariateDiscrete):
             p >= 0, p <= 1)
 
 
-class Poisson(UnivariateDiscrete):
+class Poisson(Univariate, Discrete):
     R"""
     Poisson log-likelihood.
 
@@ -225,7 +225,7 @@ class Poisson(UnivariateDiscrete):
                          0, log_prob)
 
 
-class NegativeBinomial(UnivariateDiscrete):
+class NegativeBinomial(Univariate, Discrete):
     R"""
     Negative binomial log-likelihood.
 
@@ -282,7 +282,7 @@ class NegativeBinomial(UnivariateDiscrete):
                          negbinom)
 
 
-class Geometric(UnivariateDiscrete):
+class Geometric(Univariate, Discrete):
     R"""
     Geometric log-likelihood.
 
@@ -322,7 +322,7 @@ class Geometric(UnivariateDiscrete):
                      0 <= p, p <= 1, value >= 1)
 
 
-class DiscreteUniform(UnivariateDiscrete):
+class DiscreteUniform(Univariate, Discrete):
     R"""
     Discrete uniform distribution.
 
@@ -373,7 +373,7 @@ class DiscreteUniform(UnivariateDiscrete):
                      lower <= value, value <= upper)
 
 
-class Categorical(UnivariateDiscrete):
+class Categorical(Univariate, Discrete):
     R"""
     Categorical log-likelihood.
 
@@ -437,7 +437,7 @@ class Categorical(UnivariateDiscrete):
                      sumto1)
 
 
-class ConstantDist(UnivariateDiscrete):
+class ConstantDist(Univariate, Discrete):
     """
     Constant log-likelihood.
 
@@ -472,8 +472,7 @@ def ConstantDist(*args, **kwargs):
                 DeprecationWarning)
     return Constant(*args, **kwargs)
 
-
-class ZeroInflatedPoisson(Discrete):
+class ZeroInflatedPoisson(Univariate, Discrete):
     R"""
     Zero-inflated Poisson log-likelihood.
 

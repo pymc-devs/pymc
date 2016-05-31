@@ -498,22 +498,34 @@ class FreeRV(Factor, TensorVariable):
         owner : theano owner (optional)
         name : str
         distribution : Distribution
-        model : Model"""
+        model : Model
+        """
         if type is None:
             type = distribution.type
         super(FreeRV, self).__init__(type, owner, index, name)
 
         if distribution is not None:
             self.dshape = distribution.shape
-            self.dsize = tt.prod(distribution.shape)
+
+            const_dsize = 1
+            const_shape = tuple()
+            for s in distribution.shape:
+                try:
+                    shape_val = tt.get_scalar_constant_value(s)
+                    const_dsize *= shape_val
+                    const_shape += shape_val
+                except tt.NotScalarConstantError:
+                    const_dsize = None
+                    const_shape = None
+                    break
+
+            if const_dsize is None:
+                self.dsize = tt.prod(distribution.shape)
+            else:
+                self.dsize = const_dsize
+
             self.distribution = distribution
-            # TODO: why should we do this?  shouldn't the default/test_val
-            # of the distribution be enough?
-            # dist_test_val = distribution.default()
-            # self.tag.test_value = np.ones(
-            #     distribution.shape.tag.test_value, distribution.dtype) *
-            #     dist_test_val
-            self.tag.test_value = distribution.default()
+            self.tag.test_value = distribution.testval
             self.logp_elemwiset = distribution.logp(self)
             self.model = model
 

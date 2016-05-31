@@ -14,7 +14,7 @@ import pymc3 as pm
 from . import transforms
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
-from .distribution import MultivariateContinuous, MultivariateDiscrete, draw_values, generate_samples
+from .distribution import Multivariate, Continuous, Discrete, draw_values, generate_samples
 from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln
 
@@ -58,7 +58,7 @@ def get_tau_cov(mu, tau=None, cov=None):
 
     return (tau, cov)
 
-class MvNormal(MultivariateContinuous):
+class MvNormal(Multivariate, Continuous):
     r"""
     Multivariate normal log-likelihood.
 
@@ -143,9 +143,10 @@ class MvNormal(MultivariateContinuous):
         return -1 / 2. * result
 
 
-class MvStudentT(MultivariateContinuous):
-    R"""
-    Multivariate Student-T log-likelihood.
+class MvStudentT(Multivariate, Continuous):
+    """
+    Multivariate Student T log-likelihood.
+>>>>>>> started splitting up dist. classes; some small testval test changes
 
     .. math::
         f(\mathbf{x}| \nu,\mu,\Sigma) =
@@ -220,7 +221,7 @@ class MvStudentT(MultivariateContinuous):
         return log_pdf
 
 
-class Dirichlet(MultivariateContinuous):
+class Dirichlet(Multivariate, Continuous):
     R"""
     Dirichlet log-likelihood.
 
@@ -299,7 +300,7 @@ class Dirichlet(MultivariateContinuous):
                      broadcast_conditions=False)
 
 
-class Multinomial(MultivariateDiscrete):
+class Multinomial(Multivariate, Discrete):
     R"""
     Multinomial log-likelihood.
 
@@ -446,7 +447,7 @@ class PosDefMatrix(theano.Op):
 matrix_pos_def = PosDefMatrix()
 
 
-class Wishart(MultivariateContinuous):
+class Wishart(Multivariate, Continuous):
     R"""
     Wishart log-likelihood.
 
@@ -616,7 +617,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         return Deterministic(name, tt.dot(tt.dot(tt.dot(L, A), A.T), L.T))
 
 
-class LKJCorr(MultivariateContinuous):
+class LKJCorr(Multivariate, Continuous):
     R"""
     The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.
 

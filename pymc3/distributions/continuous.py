@@ -9,12 +9,13 @@ from __future__ import division
 
 import numpy as np
 import theano.tensor as tt
+from theano.gof.op import get_test_value
 from scipy import stats
 import warnings
 
 from . import transforms
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
-from .distribution import UnivariateContinuous, draw_values, generate_samples
+from .distribution import Univariate, Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
@@ -23,16 +24,24 @@ __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'VonMises', 'SkewNormal']
 
 
-class PositiveUnivariateContinuous(UnivariateContinuous):
+class PositiveUnivariateContinuous(Univariate, Continuous):
     """Base class for positive univariate continuous distributions"""
 
     def __init__(self, *args, **kwargs):
         transform = kwargs.get('transform', transforms.log)
         super(PositiveUnivariateContinuous, self).__init__(transform=transform,
                                                            *args, **kwargs)
+        # TODO: is there a better way to use Theano's
+        # existing `...tag.test_value` mechanics?
+        ndim_sum = self.ndim_supp + self.ndim_ind + self.ndim_reps
+        if self.testval is None:
+            if ndim_sum == 0:
+                self.testval = 0.5
+            else:
+                self.testval = get_test_value(tt.alloc(*((0.5,) + self.shape)))
 
 
-class UnitUnivariateContinuous(UnivariateContinuous):
+class UnitUnivariateContinuous(Univariate, Continuous):
     """Base class for univariate continuous distributions in [0,1]"""
 
     def __init__(self, *args, **kwargs):
@@ -103,7 +112,7 @@ def get_tau_sd(tau=None, sd=None):
     return (tt.as_tensor_variable(tau), tt.as_tensor_variable(sd))
 
 
-class Uniform(UnivariateContinuous):
+class Uniform(Univariate, Continuous):
     R"""
     Continuous uniform log-likelihood.
 
@@ -157,7 +166,7 @@ class Uniform(UnivariateContinuous):
                               value >= lower, value <= upper)
 
 
-class Flat(UnivariateContinuous):
+class Flat(Univariate, Continuous):
     """
     Uninformative log-likelihood that returns 0 regardless of
     the passed value.
@@ -178,7 +187,7 @@ class Flat(UnivariateContinuous):
         return tt.zeros_like(value)
 
 
-class Normal(UnivariateContinuous):
+class Normal(Univariate, Continuous):
     R"""
     Univariate normal log-likelihood.
 
@@ -573,7 +582,7 @@ class Exponential(PositiveUnivariateContinuous):
         return bound(tt.log(lam) - lam * value, value > 0, lam > 0)
 
 
-class Laplace(UnivariateContinuous):
+class Laplace(Univariate, Continuous):
     R"""
     Laplace log-likelihood.
 
@@ -686,7 +695,7 @@ class Lognormal(PositiveUnivariateContinuous):
                      tau > 0)
 
 
-class StudentT(UnivariateContinuous):
+class StudentT(Univariate, Continuous):
     r"""
     Non-central Student's T log-likelihood.
 
@@ -812,7 +821,7 @@ class Pareto(PositiveUnivariateContinuous):
                      value >= m, alpha > 0, m > 0)
 
 
-class Cauchy(UnivariateContinuous):
+class Cauchy(Univariate, Continuous):
     R"""
     Cauchy log-likelihood.
 
@@ -1154,7 +1163,7 @@ class Weibull(PositiveUnivariateContinuous):
                      value >= 0, alpha > 0, beta > 0)
 
 
-class Bounded(UnivariateContinuous):
+class Bounded(Univariate, Continuous):
     R"""
     An upper, lower or upper+lower bounded distribution
 
@@ -1269,8 +1278,7 @@ def StudentTpos(*args, **kwargs):
 
 HalfStudentT = Bound(StudentT, lower=0)
 
-
-class ExGaussian(UnivariateContinuous):
+class ExGaussian(Univariate, Continuous):
     R"""
     Exponentially modified Gaussian log-likelihood.
 
@@ -1356,7 +1364,7 @@ class ExGaussian(UnivariateContinuous):
         return bound(lp, sigma > 0., nu > 0.)
 
 
-class VonMises(UnivariateContinuous):
+class VonMises(Univariate, Continuous):
     R"""
     Univariate VonMises log-likelihood.
 

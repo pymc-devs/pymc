@@ -42,32 +42,6 @@ def _as_tensor_shape_variable(var):
     return res
 
 
-def _as_tensor_shape_variable(var):
-    """ Just a collection of useful shape stuff from
-    `_infer_ndim_bcast` """
-
-    if var is None:
-        return T.constant([], dtype='int64')
-
-    res = var
-    if isinstance(res, (tuple, list)):
-        if len(res) == 0:
-            return T.constant([], dtype='int64')
-        res = T.as_tensor_variable(res, ndim=1)
-
-    else:
-        if res.ndim != 1:
-            raise TypeError("shape must be a vector or list of scalar, got\
-                            '%s'" % res)
-
-    if (not (res.dtype.startswith('int') or
-             res.dtype.startswith('uint'))):
-
-        raise TypeError('shape must be an integer vector or list',
-                        res.dtype)
-    return res
-
-
 class Distribution(object):
     """Statistical distribution"""
     def __new__(cls, name, *args, **kwargs):
@@ -186,23 +160,20 @@ class Distribution(object):
                 tuple(self.shape_ind) +\
                 tuple(self.shape_supp)
 
-        if testval is None:
-            if ndim_sum == 0:
-                testval = tt.constant(0, dtype=dtype)
-            else:
-                testval = tt.zeros(self.shape)
-
         self.ndim = tt.get_vector_length(self.shape)
-
-        self.testval = testval
         self.defaults = defaults
         self.transform = transform
+
+        if testval is None:
+            testval = self.get_test_value(defaults=self.defaults)
+
+        self.testval = testval
         self.type = tt.TensorType(str(dtype), bcast)
 
     def default(self):
-        return self.get_test_val(self.testval, self.defaults)
+        return self.get_test_value(self.testval, self.defaults)
 
-    def get_test_val(self, val, defaults):
+    def get_test_value(self, val=None, defaults=None):
         if val is None:
             for v in defaults:
                 the_attr = getattr(self, v, None)
@@ -216,9 +187,14 @@ class Distribution(object):
                              str(defaults) + " pass testval argument or adjust so value is finite.")
 
     def getattr_value(self, val):
+        """ Attempts to obtain a non-symbolic value for an attribute
+        (potentially given in str form)
+        """
         if isinstance(val, string_types):
             val = getattr(self, val)
 
+        # Could use Theano's:
+        # val = theano.gof.op.get_test_value(val)
         if isinstance(val, tt.sharedvar.SharedVariable):
             return val.get_value()
         elif isinstance(val, tt.TensorVariable):
@@ -290,7 +266,7 @@ class DensityDist(Distribution):
         self.logp = logp
 
 
-class UnivariateContinuous(Continuous):
+class Univariate(Distribution):
 
     def __init__(self, dist_params, ndim=None, size=None, dtype=None,
                  bcast=None, *args, **kwargs):
@@ -312,28 +288,13 @@ class UnivariateContinuous(Continuous):
             dtype = tt.scal.upcast(*(tt.config.floatX,) + tuple(x.dtype for x in dist_params))
 
         # We just assume
-        super(UnivariateContinuous, self).__init__(
+        super(Univariate, self).__init__(
             tuple(), tuple(), size, bcast, *args, **kwargs)
 
 
-class MultivariateContinuous(Continuous):
+class Multivariate(Distribution):
 
     pass
-
-
-
-class MultivariateDiscrete(Discrete):
-
-    pass
-
-
-class UnivariateDiscrete(Discrete):
-
-    def __init__(self, ndim, size, bcast, *args, **kwargs):
-        self.shape_supp = ()
-
-        super(UnivariateDiscrete, self).__init__(
-            0, ndim, size, bcast, *args, **kwargs)
 
 
 def draw_values(params, point=None):
