@@ -20,3 +20,4 @@ Examples
    notebooks/GP-smoothing.ipynb
    notebooks/Bayesian_LogReg.ipynb
    notebooks/dp_mix.ipynb
+   notebooks/bayesian_neural_network_advi.ipynb
