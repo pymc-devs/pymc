@@ -10,13 +10,15 @@ import theano
 import theano.tensor as tt
 import sys
 
+def logsumexp(x, axis=None):
+     # Adapted from https://github.com/Theano/Theano/issues/1563
+     x_max = tt.max(x, axis=axis, keepdims=True)
+     return tt.log(tt.sum(tt.exp(x - x_max), axis=axis, keepdims=True)) + x_max
+
 def invlogit(x):
-    x_max = -tt.log(sys.float_info.epsilon)
-    if (x > x_max): 
-        return 1.0
-    elif (x < 1-x_max): 
-        return 0.0
-    return 1/(1 + tt.exp(-x))
-    
+    p_min = sys.float_info.epsilon
+
+    return (1 - 2 * p_min) / (1 + tt.exp(-x)) + p_min
+
 def logit(p):
     return tt.log(p/(1-p))
