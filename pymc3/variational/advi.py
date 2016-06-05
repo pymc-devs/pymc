@@ -180,10 +180,15 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         uw_i, g, e = f(*[next(m) for m in minibatches])
         elbos[i] = e
         if verbose and not i % (n//10):
-            print('Iteration {0} [{1}%]: ELBO = {2}'.format(i, 100*i//n, e.round(2)))
-    
+            if not i:
+                print('Iteration {0} [{1}%]: ELBO = {2}'.format(i, 100*i//n, e.round(2)))
+            else:
+                avg_elbo = elbos[i-n//10:i].mean()
+                print('Iteration {0} [{1}%]: Average ELBO = {2}'.format(i, 100*i//n, avg_elbo.round(2)))
+                
     if verbose:
-        print('Finished [100%]: ELBO = {}'.format(elbos[-1].round(2)))
+        avg_elbo = elbos[i-n//10:i].mean()
+        print('Finished [100%]: Average ELBO = {}'.format(avg_elbo.round(2)))
 
     l = int(uw_i.size / 2)
 
@@ -230,10 +235,15 @@ def run_adagrad(uw, grad, elbo, n, learning_rate=.001, epsilon=.1, verbose=1):
         uw_i, g, e = f()
         elbos[i] = e
         if verbose and not i % (n//10):
-            print('Iteration {0} [{1}%]: ELBO = {2}'.format(i, 100*i//n, e.round(2)))
+            if not i:
+                print('Iteration {0} [{1}%]: ELBO = {2}'.format(i, 100*i//n, e.round(2)))
+            else:
+                avg_elbo = elbos[i-n//10:i].mean()
+                print('Iteration {0} [{1}%]: Average ELBO = {2}'.format(i, 100*i//n, avg_elbo.round(2)))
     
     if verbose:
-        print('Finished [100%]: ELBO = {}'.format(elbos[-1].round(2)))
+        avg_elbo = elbos[-n//10:].mean()
+        print('Finished [100%]: Average ELBO = {}'.format(avg_elbo.round(2)))
     return uw_i, elbos
 
 def variational_gradient_estimate(
