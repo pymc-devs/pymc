@@ -85,7 +85,14 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Bayesian Estimation Supersedes the T-Test</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#The-Problem">The Problem</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Example:-Drug-trial-evaluation">Example: Drug trial evaluation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#References">References</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
@@ -99,6 +106,7 @@
 <li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -320,7 +328,50 @@ div.nboutput  > :nth-child(2).stderr {
 Psychology</em>: General.</p>
 <p>The original pymc2 implementation was written by Andrew Straw and can be
 found here: <a class="reference external" href="https://github.com/strawlab/best">https://github.com/strawlab/best</a></p>
-<p>Ported to PyMC3 by Thomas Wiecki (c) 2015.</p>
+<p>Ported to PyMC3 by Thomas Wiecki (c) 2015, updated by Chris Fonnesbeck.</p>
+<div class="section" id="The-Problem">
+<h2>The Problem<a class="headerlink" href="#The-Problem" title="Permalink to this headline">¶</a></h2>
+<p>Several statistical inference procedures involve the comparison of two
+groups. We may be interested in whether one group is larger than
+another, or simply different from the other. We require a statistical
+model for this because true differences are usually accompanied by
+measurement or stochastic noise that prevent us from drawing conclusions
+simply from differences calculated from the observed data.</p>
+<p>The <em>de facto</em> standard for statistically comparing two (or more)
+samples is to use a statistical test. This involves expressing a null
+hypothesis, which typically claims that there is no difference between
+the groups, and using a chosen test statistic to determine whether the
+distribution of the observed data is plausible under the hypothesis.
+This rejection occurs when the calculated test statistic is higher than
+some pre-specified threshold value.</p>
+<p>Unfortunately, it is not easy to conduct hypothesis tests correctly, and
+their results are very easy to misinterpret. Setting up a statistical
+test involves several subjective choices (<em>e.g.</em> statistical test to
+use, null hypothesis to test, significance level) by the user that are
+rarely justified based on the problem or decision at hand, but rather,
+are usually based on traditional choices that are entirely arbitrary
+(Johnson 1999). The evidence that it provides to the user is indirect,
+incomplete, and typically overstates the evidence against the null
+hypothesis (Goodman 1999).</p>
+<p>A more informative and effective approach for comparing groups is one
+based on <strong>estimation</strong> rather than <strong>testing</strong>, and is driven by
+Bayesian probability rather than frequentist. That is, rather than
+testing whether two groups are different, we instead pursue an estimate
+of how different they are, which is fundamentally more informative.
+Moreover, we include an estimate of uncertainty associated with that
+difference which includes uncertainty due to our lack of knowledge of
+the model parameters (epistemic uncertainty) and uncertainty due to the
+inherent stochasticity of the system (aleatory uncertainty).</p>
+<div class="section" id="Example:-Drug-trial-evaluation">
+<h3>Example: Drug trial evaluation<a class="headerlink" href="#Example:-Drug-trial-evaluation" title="Permalink to this headline">¶</a></h3>
+<p>To illustrate how this Bayesian estimation approach works in practice,
+we will use a fictitious example from Kruschke (2012) concerning the
+evaluation of a clinical trial for drug evaluation. The trial aims to
+evaluate the efficacy of a &#8220;smart drug&#8221; that is supposed to increase
+intelligence by comparing IQ scores of individuals in a treatment arm
+(those receiving the drug) to those in a control arm (those recieving a
+placebo). There are 47 individuals and 42 individuals in the treatment
+and control arms, respectively.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
@@ -330,11 +381,15 @@ found here: <a class="reference external" href="https://github.com/strawlab/best
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">color_codes</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">20090425</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<p>Data from two experimental arms</p>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
@@ -346,53 +401,101 @@ found here: <a class="reference external" href="https://github.com/strawlab/best
 <span class="n">placebo</span> <span class="o">=</span> <span class="p">(</span><span class="mi">99</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">97</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">104</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">105</span><span class="p">,</span><span class="mi">88</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span>
            <span class="mi">104</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">103</span><span class="p">,</span><span class="mi">97</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">99</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span>
            <span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">99</span><span class="p">,</span><span class="mi">101</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">99</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">99</span><span class="p">)</span>
+
+<span class="n">y1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">drug</span><span class="p">)</span>
+<span class="n">y2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">placebo</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">y1</span><span class="p">,</span> <span class="n">y2</span><span class="p">],</span> <span class="n">group</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[[</span><span class="s1">&#39;drug&#39;</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">drug</span><span class="p">),</span> <span class="p">[</span><span class="s1">&#39;placebo&#39;</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">placebo</span><span class="p">)]))</span>
+
+<span class="n">y</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="s1">&#39;value&#39;</span><span class="p">,</span> <span class="n">by</span><span class="o">=</span><span class="s1">&#39;group&#39;</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
-<p>Create variables for model</p>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_BEST_5_0.png" src="../_images/notebooks_BEST_5_0.png" />
+</div>
+</div>
+<p>The first step in a Bayesian approach to inference is to specify the
+full probability model that corresponds to the problem. For this
+example, Kruschke chooses a Student-t distribution to describe the
+distributions of the scores in each group. This choice adds robustness
+to the analysis, as a T distribution is less sensitive to outlier
+observations, relative to a normal distribution. The three-parameter
+Student-t distribution allows for the specification of a mean
+<span class="math">\(\mu\)</span>, a precision (inverse-variance) <span class="math">\(\lambda\)</span> and a
+degrees-of-freedom parameter <span class="math">\(\nu\)</span>:</p>
+<div class="math">
+\[ f(x|\mu,\lambda,\nu) =
+           \frac{\Gamma(\frac{\nu + 1}{2})}{\Gamma(\frac{\nu}{2})}
+           \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}}
+           \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}\]</div><p>the degrees-of-freedom parameter essentially specifies the &#8220;normality&#8221;
+of the data, since larger values of <span class="math">\(\nu\)</span> make the distribution
+converge to a normal distribution, while small values (close to zero)
+result in heavier tails.</p>
+<p>Thus, the likelihood functions of our model are specified as follows:</p>
+<div class="math">
+\[y^{(treat)}_i \sim T(\nu, \mu_1, \sigma_1)\]</div>
+<div class="math">
+\[y^{(placebo)}_i \sim T(\nu, \mu_2, \sigma_2)\]</div>
+<p>As a simplifying assumption, we will assume that the degree of normality
+<span class="math">\(\nu\)</span> is the same for both groups. We will, of course, have
+separate parameters for the means <span class="math">\(\mu_k, k=1,2\)</span> and standard
+deviations <span class="math">\(\sigma_k\)</span>.</p>
+<p>Since the means are real-valued, we will apply normal priors on them,
+and arbitrarily set the hyperparameters to the pooled empirical mean of
+the data and twice the pooled empirical standard deviation, which
+applies very diffuse information to these quantities (and importantly,
+does not favor one or the other <em>a priori</em>).</p>
+<div class="math">
+\[\mu_k \sim N(\bar{x}, 2s)\]</div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">y1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">drug</span><span class="p">)</span>
-<span class="n">y2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">placebo</span><span class="p">)</span>
-<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">y1</span><span class="p">,</span> <span class="n">y2</span><span class="p">))</span>
+<span></span><span class="err">μ</span><span class="n">_m</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+<span class="err">μ</span><span class="n">_s</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="o">*</span> <span class="mi">2</span>
 
-<span class="n">mu_m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span> <span class="n">y</span> <span class="p">)</span>
-<span class="n">mu_p</span> <span class="o">=</span> <span class="mf">0.000001</span> <span class="o">*</span> <span class="mi">1</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
 
-<span class="n">sigma_low</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">/</span><span class="mi">1000</span>
-<span class="n">sigma_high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">*</span><span class="mi">1000</span>
+    <span class="n">group1_mean</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;group1_mean&#39;</span><span class="p">,</span> <span class="err">μ</span><span class="n">_m</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="err">μ</span><span class="n">_s</span><span class="p">)</span>
+    <span class="n">group2_mean</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;group2_mean&#39;</span><span class="p">,</span> <span class="err">μ</span><span class="n">_m</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="err">μ</span><span class="n">_s</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
+<p>The group standard deviations will be given a uniform prior over a
+plausible range of values for the variability of the outcome variable,
+IQ.</p>
+<p>In Kruschke&#8217;s original model, he uses a very wide uniform prior for the
+group standard deviations, from the pooled empirical standard deviation
+divided by 1000 to the pooled standard deviation multiplied by 1000.
+This is a poor choice of prior, because very basic prior knowledge about
+measures of human coginition dictate that the variation cannot ever be
+as high as this upper bound. IQ is a standardized measure, and hence
+this constrains how variable a given population&#8217;s IQ values can be. When
+you place such a wide uniform prior on these values, you are essentially
+giving a lot of prior weight on inadmissable values. In this example,
+there is little practical difference, but in general it is best to apply
+as much prior information that you have available to the
+parameterization of prior distributions.</p>
+<p>We will instead set the group standard deviations to have a
+<span class="math">\(\text{Uniform}(1,10)\)</span> prior:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+<span></span><span class="err">σ</span><span class="n">_low</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="err">σ</span><span class="n">_high</span> <span class="o">=</span> <span class="mi">10</span>
 
-    <span class="n">group1_mean</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;group1_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_m</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">mu_p</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">y1</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
-    <span class="n">group2_mean</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;group2_mean&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_m</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">mu_p</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">y2</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
-    <span class="n">group1_std</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;group1_std&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="n">sigma_low</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">sigma_high</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">y1</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
-    <span class="n">group2_std</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;group2_std&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="n">sigma_low</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">sigma_high</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">y2</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
-    <span class="n">nu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;nu_minus_one&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="mf">29.</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
 
-    <span class="n">lam1</span> <span class="o">=</span> <span class="n">group1_std</span><span class="o">**-</span><span class="mi">2</span>
-    <span class="n">lam2</span> <span class="o">=</span> <span class="n">group2_std</span><span class="o">**-</span><span class="mi">2</span>
-
-    <span class="n">group1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">StudentT</span><span class="p">(</span><span class="s1">&#39;drug&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="n">nu</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">group1_mean</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">lam1</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y1</span><span class="p">)</span>
-    <span class="n">group2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">StudentT</span><span class="p">(</span><span class="s1">&#39;placebo&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="n">nu</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">group2_mean</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">lam2</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y2</span><span class="p">)</span>
-
-    <span class="n">diff_of_means</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;difference of means&#39;</span><span class="p">,</span> <span class="n">group1_mean</span> <span class="o">-</span> <span class="n">group2_mean</span><span class="p">)</span>
-    <span class="n">diff_of_stds</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;difference of stds&#39;</span><span class="p">,</span> <span class="n">group1_std</span> <span class="o">-</span> <span class="n">group2_std</span><span class="p">)</span>
-    <span class="n">effect_size</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;effect size&#39;</span><span class="p">,</span> <span class="n">diff_of_means</span> <span class="o">/</span> <span class="n">pm</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">group1_std</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">group2_std</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
-
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">)</span>
+    <span class="n">group1_std</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;group1_std&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="err">σ</span><span class="n">_low</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="err">σ</span><span class="n">_high</span><span class="p">)</span>
+    <span class="n">group2_std</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;group2_std&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="err">σ</span><span class="n">_low</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="err">σ</span><span class="n">_high</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -403,22 +506,97 @@ found here: <a class="reference external" href="https://github.com/strawlab/best
 <div class="highlight"><pre>
 Applied interval-transform to group1_std and added transformed group1_std_interval to model.
 Applied interval-transform to group2_std and added transformed group2_std_interval to model.
-Applied log-transform to nu_minus_one and added transformed nu_minus_one_log to model.
-Assigned NUTS to group1_mean
-Assigned NUTS to group2_mean
-Assigned NUTS to group1_std_interval
-Assigned NUTS to group2_std_interval
-Assigned NUTS to nu_minus_one_log
- [-----------------100%-----------------] 5000 of 5000 complete in 48.0 sec
 </pre></div></div>
 </div>
+<p>We follow Kruschke by making the prior for <span class="math">\(\mu\)</span> exponentially
+distributed with a mean of 30; this allocates high prior probability
+over the regions of the parameter that describe the range from normal to
+heavy-tailed data under the Student-T distribution.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#87ceeb&#39;</span><span class="p">);</span>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+
+    <span class="err">ν</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;ν_minus_one&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="mf">29.</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+<span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">exponential</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">10000</span><span class="p">),</span> <span class="n">kde</span><span class="o">=</span><span class="bp">False</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied log-transform to ν_minus_one and added transformed ν_minus_one_log to model.
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_BEST_11_1.png" src="../_images/notebooks_BEST_11_1.png" />
+</div>
+</div>
+<p>Since PyMC3 parameterizes the Student-T in terms of precision, rather
+than standard deviation, we must transform the standard deviations
+before specifying our likelihoods.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+
+    <span class="err">λ</span><span class="mi">1</span> <span class="o">=</span> <span class="n">group1_std</span><span class="o">**-</span><span class="mi">2</span>
+    <span class="err">λ</span><span class="mi">2</span> <span class="o">=</span> <span class="n">group2_std</span><span class="o">**-</span><span class="mi">2</span>
+
+    <span class="n">group1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">StudentT</span><span class="p">(</span><span class="s1">&#39;drug&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="err">ν</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">group1_mean</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="err">λ</span><span class="mi">1</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y1</span><span class="p">)</span>
+    <span class="n">group2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">StudentT</span><span class="p">(</span><span class="s1">&#39;placebo&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="err">ν</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">group2_mean</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="err">λ</span><span class="mi">2</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y2</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Having fully specified our probabilistic model, we can turn our
+attention to calculating the comparisons of interest in order to
+evaluate the effect of the drug. To this end, we can specify
+deterministic nodes in our model for the difference between the group
+means and the difference between the group standard deviations. Wrapping
+them in named <code class="docutils literal"><span class="pre">Deterministic</span></code> objects signals to PyMC that we wish to
+record the sampled values as part of the output.</p>
+<p>As a joint measure of the groups, we will also estimate the &#8220;effect
+size&#8221;, which is the difference in means scaled by the pooled estimates
+of standard deviation. This quantity can be harder to interpret, since
+it is no longer in the same units as our data, but the quantity is a
+function of all four estimated parameters.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+
+    <span class="n">diff_of_means</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;difference of means&#39;</span><span class="p">,</span> <span class="n">group1_mean</span> <span class="o">-</span> <span class="n">group2_mean</span><span class="p">)</span>
+    <span class="n">diff_of_stds</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;difference of stds&#39;</span><span class="p">,</span> <span class="n">group1_std</span> <span class="o">-</span> <span class="n">group2_std</span><span class="p">)</span>
+    <span class="n">effect_size</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;effect size&#39;</span><span class="p">,</span>
+                                   <span class="n">diff_of_means</span> <span class="o">/</span> <span class="n">pm</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">group1_std</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">group2_std</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
+
+</pre></div>
+</div>
+</div>
+<p>Now, we can fit the model and evaluate its output.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -426,16 +604,112 @@ Assigned NUTS to nu_minus_one_log
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_BEST_8_0.png" src="../_images/notebooks_BEST_8_0.png" />
+<div class="highlight"><pre>
+Assigned NUTS to group1_mean
+Assigned NUTS to group2_mean
+Assigned NUTS to group1_std_interval
+Assigned NUTS to group2_std_interval
+Assigned NUTS to ν_minus_one_log
+ [-----------------100%-----------------] 2000 of 2000 complete in 22.8 sec
+</pre></div></div>
+</div>
+<p>We can plot the stochastic parameters of the model. PyMC&#8217;s
+<code class="docutils literal"><span class="pre">plot_posterior</span></code> function replicates the informative histograms
+portrayed in Kruschke (2012). These summarize the posterior
+distributions of the parameters, and present a 95% credible interval and
+the posterior mean. The plots below are constructed with the final 1000
+samples from each of the 2 chains, pooled together.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span>
+                  <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;group1_mean&#39;</span><span class="p">,</span> <span class="s1">&#39;group2_mean&#39;</span><span class="p">,</span> <span class="s1">&#39;group1_std&#39;</span><span class="p">,</span> <span class="s1">&#39;group2_std&#39;</span><span class="p">,</span> <span class="s1">&#39;ν_minus_one&#39;</span><span class="p">],</span>
+                  <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#87ceeb&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_BEST_19_0.png" src="../_images/notebooks_BEST_19_0.png" />
+</div>
+</div>
+<p>Looking at the group differences, we can conclude that there are
+meaningful differences between the two groups for all three measures.
+For these comparisons, it is useful to use zero as a reference value
+(<code class="docutils literal"><span class="pre">ref_val</span></code>); providing this reference value yields cumulative
+probabilities for the posterior distribution on either side of the
+value. Thus, for the difference in means, 98.9% of the posterior
+probability is greater than zero, which suggests the group means are
+credibly different. The effect size and differences in standard
+deviation are similarly positive.</p>
+<p>These estimates suggest that the &#8220;smart drug&#8221; increased both the
+expected scores, but also the variability in scores across the sample.
+So, this does not rule out the possibility that some recipients may be
+adversely affected by the drug at the same time others benefit.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span>
+                  <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;difference of means&#39;</span><span class="p">,</span> <span class="s1">&#39;difference of stds&#39;</span><span class="p">,</span> <span class="s1">&#39;effect size&#39;</span><span class="p">],</span>
+                  <span class="n">ref_val</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                  <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#87ceeb&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_BEST_21_0.png" src="../_images/notebooks_BEST_21_0.png" />
+</div>
+</div>
+<p>When <code class="docutils literal"><span class="pre">forestplot</span></code> is called on a trace with more than one chain, it
+also plots the potential scale reduction parameter, which is used to
+reveal evidence for lack of convergence; values near one, as we have
+here, suggest that the model has converged.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[11]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.gridspec.GridSpec at 0x129d48be0&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_BEST_23_1.png" src="../_images/notebooks_BEST_23_1.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plots</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:])</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plots</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span>
+                 <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;difference of means&#39;</span><span class="p">,</span> <span class="s1">&#39;difference of stds&#39;</span><span class="p">,</span> <span class="s1">&#39;effect size&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
@@ -445,88 +719,18 @@ Assigned NUTS to nu_minus_one_log
 <div class="container">
 <div class="highlight"><pre>
 
-group1_mean:
-
-  Mean             SD               MC Error         95% HPD interval
-  -------------------------------------------------------------------
-
-  101.548          0.369            0.005            [100.781, 102.235]
-
-  Posterior quantiles:
-  2.5            25             50             75             97.5
-  |--------------|==============|==============|--------------|
-
-  100.796        101.303        101.555        101.801        102.260
-
-
-group2_mean:
-
-  Mean             SD               MC Error         95% HPD interval
-  -------------------------------------------------------------------
-
-  100.524          0.213            0.003            [100.137, 100.966]
-
-  Posterior quantiles:
-  2.5            25             50             75             97.5
-  |--------------|==============|==============|--------------|
-
-  100.111        100.379        100.525        100.668        100.944
-
-
-group1_std:
-
-  Mean             SD               MC Error         95% HPD interval
-  -------------------------------------------------------------------
-
-  2.050            0.437            0.015            [1.261, 2.901]
-
-  Posterior quantiles:
-  2.5            25             50             75             97.5
-  |--------------|==============|==============|--------------|
-
-  1.307          1.746          2.016          2.306          3.015
-
-
-group2_std:
-
-  Mean             SD               MC Error         95% HPD interval
-  -------------------------------------------------------------------
-
-  1.061            0.209            0.006            [0.677, 1.469]
-
-  Posterior quantiles:
-  2.5            25             50             75             97.5
-  |--------------|==============|==============|--------------|
-
-  0.707          0.910          1.046          1.187          1.527
-
-
-nu_minus_one:
-
-  Mean             SD               MC Error         95% HPD interval
-  -------------------------------------------------------------------
-
-  0.850            0.463            0.026            [0.048, 1.722]
-
-  Posterior quantiles:
-  2.5            25             50             75             97.5
-  |--------------|==============|==============|--------------|
-
-  0.159          0.520          0.770          1.124          1.962
-
-
 difference of means:
 
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  1.023            0.427            0.005            [0.225, 1.910]
+  1.023            0.449            0.009            [0.188, 1.938]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.151          0.746          1.031          1.312          1.847
+  0.128          0.726          1.032          1.333          1.892
 
 
 difference of stds:
@@ -534,13 +738,13 @@ difference of stds:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.990            0.453            0.011            [0.119, 1.867]
+  0.897            0.453            0.019            [0.024, 1.775]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.189          0.685          0.955          1.270          1.961
+  0.097          0.586          0.868          1.195          1.859
 
 
 effect size:
@@ -548,15 +752,29 @@ effect size:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.646            0.295            0.005            [0.070, 1.233]
+  0.618            0.288            0.008            [0.024, 1.165]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.085          0.448          0.637          0.839          1.263
+  0.067          0.419          0.609          0.813          1.218
 
 </pre></div></div>
+</div>
+</div>
+<div class="section" id="References">
+<h3>References<a class="headerlink" href="#References" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li>Goodman SN. Toward evidence-based medical statistics. 1: The P value
+fallacy. Annals of Internal Medicine. 1999;130(12):995-1004.
+doi:10.7326/0003-4819-130-12-199906150-00008.</li>
+<li>Johnson D. The insignificance of statistical significance testing.
+Journal of Wildlife Management. 1999;63(3):763-772.</li>
+<li>Kruschke JK. Bayesian estimation supersedes the t test. J Exp Psychol
+Gen. 2013;142(2):573-603. doi:10.1037/a0029146.</li>
+</ol>
+</div>
 </div>
 </div>
 
