@@ -12,7 +12,7 @@ from scipy.stats.distributions import pareto
 from .backends import tracetab as ttab
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles', 
-            'mc_error', 'summary', 'df_summary']
+            'mc_error', 'summary', 'df_summary', 'effective_n']
 
 def statfunc(f):
     """
@@ -336,6 +336,108 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
         print("Too few elements for quantile calculation")
 
 
+def effective_n(mtrace, varnames=None):
+    """ Returns estimate of the effective sample size of a set of traces.
+
+    Parameters
+    ----------
+    mtrace : MultiTrace
+      A MultiTrace object containing parallel traces (minimum 2)
+      of one or more stochastic parameters.
+    varnames : list
+      List of variables in mtrace to calculate effective N for (defaults to
+      all variables).
+    
+    Returns
+    -------
+    n_eff : float
+      Return the effective sample size, :math:`\hat{n}_{eff}`
+
+    Notes
+    -----
+
+    The diagnostic is computed by:
+
+      .. math:: \hat{n}_{eff} = \frac{mn}}{1 + 2 \sum_{t=1}^T \hat{\rho}_t}
+
+    where :math:`\hat{\rho}_t` is the estimated autocorrelation at lag t, and T
+    is the first odd positive integer for which the sum :math:`\hat{\rho}_{T+1} + \hat{\rho}_{T+1}` 
+    is negative.
+
+    References
+    ----------
+    Gelman et al. (2014)"""
+    
+    if mtrace.nchains < 2:
+        raise ValueError(
+            'Calculation of effective sample size requires multiple chains of the same length.')
+
+    def calc_vhat(x):
+
+        try:
+            # When the variable is multidimensional, this assignment will fail, triggering
+            # a ValueError that will handle the multidimensional case
+            m, n = x.shape
+
+            # Calculate between-chain variance
+            B = n * np.var(np.mean(x, axis=1), ddof=1)
+
+            # Calculate within-chain variance
+            W = np.mean(np.var(x, axis=1, ddof=1))
+
+            # Estimate of marginal posterior variance
+            Vhat = W*(n - 1)/n + B/n
+
+            return Vhat
+
+        except ValueError:
+
+            # Tricky transpose here, shifting the last dimension to the first
+            rotated_indices = np.roll(np.arange(x.ndim), 1)
+            # Now iterate over the dimension of the variable
+            return np.squeeze([calc_vhat(xi) for xi in x.transpose(rotated_indices)])
+    
+    def calc_n_eff(x):
+        
+        m, n = x.shape
+        
+        negative_autocorr = False
+        t = 1
+        
+        Vhat = calc_vhat(x)
+        
+        variogram = lambda t: (sum(sum((x[j][i] - x[j][i-t])**2 
+                            for i in range(t,n)) for j in range(m)) / (m*(n - t)))
+        
+        rho = np.ones(n)
+        # Iterate until the sum of consecutive estimates of autocorrelation is negative
+        while not negative_autocorr and (t < n):
+        
+            rho[t] = 1. - variogram(t)/(2.*Vhat)
+        
+            if not t % 2:
+                negative_autocorr = sum(rho[t-1:t+1]) < 0
+        
+            t += 1
+            
+        return int(m*n / (1. + 2*rho[1:t].sum()))
+    
+    n_eff = {}
+    if varnames is None:
+        varnames = mtrace.varnames
+    for var in varnames:
+
+        # Get all traces for var
+        x = np.array(mtrace.get_values(var, combine=False))
+
+        try:
+            n_eff[var] = calc_n_eff(x)
+        except ValueError:
+            n_eff[var] = [calc_n_eff(y.transpose()) for y in x.transpose()]
+
+    return n_eff
+    
+
 def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
                alpha=0.05, batches=100):
     """Create a data frame with summary statistics.
@@ -440,7 +542,7 @@ def _hpd_df(x, alpha):
 
 
 def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
-            to_file=None):
+            to_file=None, n_eff=True):
     """
     Generate a pretty-printed summary of the node.
 
@@ -467,8 +569,12 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
     roundto : int
       The number of digits to round posterior statistics.
 
-    tofile : None or string
+    to_file : None or string
       File to write results to. If not given, print to stdout.
+            
+    n_eff : bool
+      Flag for reporting of effective sample size calculation. Defaults to
+      True. Requires at least 2 chains.
 
     """
     if varnames is None:
@@ -486,10 +592,12 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
         # Extract sampled values
         sample = trace.get_values(var, burn=start, combine=True)
 
-        fh.write('\n%s:\n\n' % var)
+        fh.write('\n{}:\n\n'.format(var))
 
         fh.write(stat_summ.output(sample))
         fh.write(pq_summ.output(sample))
+        if n_eff and (trace.nchains > 1):
+            fh.write('  Effective sample size: {}\n'.format(effective_n(trace, [var])[var]))
 
     if fh is not sys.stdout:
         fh.close()
