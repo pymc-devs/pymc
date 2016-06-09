@@ -61,11 +61,13 @@ class Metropolis(ArrayStepShared):
         Some measure of variance to parameterize proposal distribution
     proposal_dist : function
         Function that returns zero-mean deviates when parameterized with
-        S (and n). Defaults to quad_potential.
+        S (and n). Defaults to normal.
     scaling : scalar or array
         Initial scale factor for proposal. Defaults to 1.
     tune : bool
         Flag for tuning. Defaults to True.
+    tune_interval : int
+        The frequency of tuning. Defaults to 100 iterations.
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
 
@@ -178,7 +180,22 @@ def tune(scale, acc_rate):
 
 
 class BinaryMetropolis(ArrayStep):
-    """Metropolis-Hastings optimized for binary variables"""
+    """Metropolis-Hastings optimized for binary variables
+    
+    Parameters
+    ----------
+    vars : list
+        List of variables for sampler
+    scaling : scalar or array
+        Initial scale factor for proposal. Defaults to 1.
+    tune : bool
+        Flag for tuning. Defaults to True.
+    tune_interval : int
+        The frequency of tuning. Defaults to 100 iterations.
+    model : PyMC Model
+        Optional model for sampling step. Defaults to None (taken from context).
+    
+    """
 
     def __init__(self, vars, scaling=1., tune=True, tune_interval=100, model=None):
 
