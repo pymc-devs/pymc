@@ -97,7 +97,7 @@ def log_post_trace(trace, model):
 
 def waic(trace, model=None):
     """
-    Calculate the widely available information criterion of the samples in trace from model.
+    Calculate the widely available information criterion and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
     """
     model = modelcontext(model)
@@ -108,7 +108,7 @@ def waic(trace, model=None):
         
     p_waic = np.sum(np.var(log_py, axis=0))
     
-    return -2 * lppd + 2 * p_waic
+    return -2 * lppd + 2 * p_waic, p_waic
     
 def loo(trace, model=None):
     """
