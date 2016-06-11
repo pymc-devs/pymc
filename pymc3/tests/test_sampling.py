@@ -19,6 +19,7 @@ try:
 except:
     test_parallel = False
 
+RSEED = 20090425
 
 def test_sample():
 
@@ -44,7 +45,7 @@ def test_iter_sample():
 def test_parallel_start():
     model, _, _, _ = simple_init()
     with model:
-        tr = sample(5, njobs=2, start=[{'x': [10,10]}, {'x': [-10,-10]}])
+        tr = sample(5, njobs=2, start=[{'x': [10,10]}, {'x': [-10,-10]}], random_seed=RSEED)
     assert tr.get_values('x', chains=0)[0][0] > 0
     assert tr.get_values('x', chains=1)[0][0] < 0
 
