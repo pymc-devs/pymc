@@ -77,6 +77,10 @@ ln -s /usr/local/Cellar/suite-sparse/4.2.1/include/ /usr/local/include/suitespar
 pip install git+https://github.com/njsmith/scikits-sparse.git
 ```
 
+## Support
+
+The best places to ask general questions about PyMC3 is on [StackOverflow](http://stackoverflow.com/questions/tagged/pymc) with the `pymc` tag, or on our [Gitter channel](https://gitter.im/pymc-devs/pymc). If you have discovered a bug in PyMC3, please use our [issue tracker](https://github.com/pymc-devs/pymc3/issues).
+
 ## Citing PyMC3
 
 Salvatier J, Wiecki TV, Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC3. PeerJ Computer Science 2:e55 https://doi.org/10.7717/peerj-cs.55
