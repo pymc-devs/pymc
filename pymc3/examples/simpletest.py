@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 from pymc3 import *
 import numpy as np
-import theano
 
 # import pydevd
 # pydevd.set_pm_excepthook()

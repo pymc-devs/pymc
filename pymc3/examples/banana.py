@@ -4,10 +4,8 @@ Created on May 10, 2012
 @author: jsalvatier
 '''
 from pymc3 import *
-from numpy.random import normal
 import numpy as np
 import pylab as pl
-from itertools import product
 
 
 """
@@ -49,7 +47,6 @@ def run(n = 3000):
 
 
         # lets plot the samples vs. the actual distribution
-        from theano import function
         xn = 1500
         yn = 1000
 

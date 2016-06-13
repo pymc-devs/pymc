@@ -1,5 +1,4 @@
 from pymc3 import *
-import numpy as np
 import pandas as pd
 from numpy.ma import masked_values
 

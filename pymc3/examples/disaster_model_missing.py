@@ -10,9 +10,7 @@ disasters[t] ~ Po(early_mean if t <= switchpoint, late_mean otherwise)
 
 from pymc3 import *
 
-import theano.tensor as t
-from numpy import arange, array, ones, concatenate
-from numpy.random import randint
+from numpy import arange, array
 from numpy.ma import masked_values
 
 __all__ = ['disasters_data', 'switchpoint', 'early_mean', 'late_mean', 'rate',

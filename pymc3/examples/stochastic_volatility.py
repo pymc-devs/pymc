@@ -8,7 +8,6 @@ import numpy as np
 from pymc3 import *
 from pymc3.distributions.timeseries import *
 
-from scipy.sparse import csc_matrix
 from scipy import optimize
 
 # <markdowncell>

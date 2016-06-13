@@ -1,6 +1,5 @@
 from pymc3 import *
 from numpy import ones, array
-import theano.tensor as t
 
 # Samples for each dose level
 n = 5 * ones(4, dtype=int)
