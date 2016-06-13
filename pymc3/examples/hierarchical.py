@@ -1,6 +1,6 @@
 from pymc3 import *
 import theano.tensor as tt
-from numpy import random, sum as nsum, ones, concatenate, newaxis, dot, arange
+from numpy import random, sum as nsum, concatenate, newaxis, dot
 import numpy as np
 
 random.seed(1)

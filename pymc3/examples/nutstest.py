@@ -5,9 +5,7 @@
 
 from matplotlib.pylab import *
 from pymc3 import *
-import numpy as np 
-from numpy.random import normal, beta
-import theano 
+from numpy.random import normal
 
 
 

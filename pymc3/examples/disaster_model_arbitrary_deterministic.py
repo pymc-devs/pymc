@@ -7,8 +7,7 @@ Note that gradient based samplers will not work.
 
 from pymc3 import *
 import theano.tensor as t
-from numpy import arange, array, ones, concatenate, empty
-from numpy.random import randint
+from numpy import arange, array, empty
 
 __all__ = ['disasters_data', 'switchpoint', 'early_mean', 'late_mean', 'rate',
              'disasters']

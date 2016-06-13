@@ -5,7 +5,6 @@ Created on May 18, 2012
 '''
 import numpy as np
 from pymc3 import *
-import theano.tensor as t
 import pandas as pd
 
 wells = get_data_file('pymc3.examples', 'data/wells.dat')
