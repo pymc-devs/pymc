@@ -181,15 +181,7 @@ class MultiTrace(object):
 
         if isinstance(idx, tuple):
             var, vslice = idx
-            burn, thin = vslice.start, vslice.step
-            if burn is None:
-                burn = 0
-            if thin is None:
-                thin = 1
-        else:
-            var = idx
-            burn, thin = 0, 1
-        return self.get_values(var, burn=burn, thin=thin)
+            return self.get_values(var)[vslice]
 
     _attrs = set(['_straces', 'varnames', 'original_varnames', 'chains'])
 
