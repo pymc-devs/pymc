@@ -83,13 +83,13 @@ def test_check_discrete_minibatch():
 
     def create_minibatch():
         while True:
-            return disaster_data
+            return (disaster_data,)
 
     # This should raise ValueError
     assert_raises(
         ValueError, advi_minibatch, model=disaster_model, n=10, 
         minibatch_RVs=[disasters], minibatch_tensors=[disaster_data_t], 
-        minibatches=[create_minibatch()], verbose=False)
+        minibatches=create_minibatch(), verbose=False)
     
 def test_advi():
     n = 1000
@@ -143,9 +143,9 @@ def test_advi_minibatch():
     def create_minibatch(data):
         while True:
             data = np.roll(data, 100, axis=0)
-            yield data[:100]
+            yield (data[:100],)
 
-    minibatches = [create_minibatch(data)]
+    minibatches = create_minibatch(data)
 
     with model:
         advi_fit = advi_minibatch(
@@ -185,9 +185,9 @@ def test_advi_minibatch_shared():
     def create_minibatch(data):
         while True:
             data = np.roll(data, 100, axis=0)
-            yield data[:100]
+            yield (data[:100],)
 
-    minibatches = [create_minibatch(data)]
+    minibatches = create_minibatch(data)
 
     with model:
         advi_fit = advi_minibatch(
