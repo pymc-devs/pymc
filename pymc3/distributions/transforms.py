@@ -119,6 +119,47 @@ class Interval(ElemwiseTransform):
 
 interval = Interval
 
+class LowerBound(ElemwiseTransform):
+    """Transform from real line interval [a,inf] to whole real line."""
+
+    name = "lowerbound"
+
+    def __init__(self, a):
+        self.a = a
+
+    def backward(self, x):
+        a = self.a
+        r = tt.exp(x) + a
+        return r
+
+    def forward(self, x):
+        a = self.a
+        r = tt.log(x - a)
+        return r
+
+lowerbound = LowerBound
+
+
+class UpperBound(ElemwiseTransform):
+    """Transform from real line interval [-inf,b] to whole real line."""
+
+    name = "upperbound"
+
+    def __init__(self, b):
+        self.b = b
+
+    def backward(self, x):
+        b = self.b
+        r = b - tt.exp(x)
+        return r
+
+    def forward(self, x):
+        b = self.b
+        r = tt.log(b - x)
+        return r
+
+upperbound = UpperBound
+
 
 class SumTo1(Transform):
     """Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of values in [0,1]

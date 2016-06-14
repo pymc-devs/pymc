@@ -52,6 +52,7 @@ def product(domains):
 R = Domain([-inf, -2.1, -1, -.01, .0, .01, 1, 2.1, inf])
 Rplus = Domain([0, .01, .1, .9, .99, 1, 1.5, 2, 100, inf])
 Rplusbig = Domain([0, .5, .9, .99, 1, 1.5, 2, 20, inf])
+Rminusbig = Domain([-inf, -2, -1.5, -1, -.99, -.9, -.5, -0.01, 0])
 Unit = Domain([0, .001, .1, .5, .75, .99, 1])
 
 Runif = Domain([-1, -.4, 0, .4, 1])
@@ -147,6 +148,12 @@ def test_uniform():
             lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower)
             )
 
+def test_bound_normal():
+    PositiveNormal = Bound(Normal, lower=0.)
+    pymc3_matches_scipy(
+            PositiveNormal, Rplus, {'mu': Rplus, 'sd': Rplus},
+            lambda value, mu, sd: sp.norm.logpdf(value, mu, sd)
+            )
 
 def test_discrete_unif():
     pymc3_matches_scipy(
@@ -337,7 +344,6 @@ def test_student_tpos():
            lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5)
            )
 
-
 def test_binomial():
     pymc3_matches_scipy(
             Binomial, Nat, {'n': NatSmall, 'p': Unit},
@@ -525,16 +531,6 @@ def pymc3_matches_scipy(pymc3_dist, domain, paramdomains, scipy_dist, extra_args
 
     check_logp(model, value, domain, paramdomains, logp)
 
-
-
-def test_bound():
-    with Model() as model:
-        PositiveNormal = Bound(Normal, -.2)
-        value = PositiveNormal('value', 1, 1)
-
-        Rplus2 = Domain([-.2, -.19, -.1, 0, .5, 1, inf])
-
-        check_dlogp(model, value, Rplus2, {})
 
 def test_get_tau_sd():
     sd = np.array([2])

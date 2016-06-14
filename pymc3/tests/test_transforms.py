@@ -2,7 +2,7 @@ import pymc3 as pm
 import pymc3.distributions.transforms as tr
 import theano
 import theano.tensor as tt
-from .test_distributions import Simplex, Rplusbig, Unit, R, Vector, MultiSimplex
+from .test_distributions import Simplex, Rplusbig, Rminusbig, Unit, R, Vector, MultiSimplex
 
 from .checks import *
 from ..theanof import jacobian
@@ -60,7 +60,7 @@ def check_jacobian_det(transform, domain, constructor=tt.dscalar, test=0, make_c
     if not elemwise:
         jac = tt.log(tt.nlinalg.det(jacobian(x, [y])))
     else:
-        jac = tt.log(tt.diag(jacobian(x, [y])))
+        jac = tt.log(tt.abs_(tt.diag(jacobian(x, [y]))))
 
     #ljd = log jacobian det
     actual_ljd = theano.function([y], jac)
@@ -88,6 +88,24 @@ def test_logodds():
     vals = get_values(tr.logodds)
     close_to(vals > 0, True, tol)
     close_to(vals < 1, True, tol)
+
+def test_lowerbound():
+    trans = tr.lowerbound(0.0)
+    check_transform_identity(trans, Rplusbig)
+    check_jacobian_det(trans, Rplusbig, elemwise=True) 
+    check_jacobian_det(trans, Vector(Rplusbig,2), tt.dvector, [0,0], elemwise=True) 
+
+    vals = get_values(trans) 
+    close_to(vals > 0, True, tol)
+
+def test_upperbound():
+    trans = tr.upperbound(0.0)
+    check_transform_identity(trans, Rminusbig)
+    check_jacobian_det(trans, Rminusbig, elemwise=True) 
+    check_jacobian_det(trans, Vector(Rminusbig,2), tt.dvector, [-1,-1], elemwise=True) 
+
+    vals = get_values(trans) 
+    close_to(vals < 0, True, tol)
 
 def test_interval():
     for a, b in [(-4, 5.5), (.1, .7), (-10, 4.3)]:
