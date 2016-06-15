@@ -3,6 +3,7 @@ from theano import theano, scalar,  tensor as t
 from theano.gof.graph import inputs
 from .memoize import memoize
 from .blocking import ArrayOrdering
+import theano.tensor as tt
 
 __all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars', 'cont_inputs', 'jacobian', 'CallableTensor', 'join_nonshared_inputs', 'make_shared_replacements']
 
@@ -170,7 +171,7 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     tensors : list of same tensors but with inarray as input
     inarray : vector of inputs
     """
-    joined = theano.tensor.concatenate([var.ravel() for var in vars])
+    joined = tt.concatenate([var.ravel() for var in vars])
 
     if not make_shared:
         tensor_type = joined.type
