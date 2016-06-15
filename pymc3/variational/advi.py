@@ -177,7 +177,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     # Run adagrad steps
     elbos = np.empty(n)
     for i in range(n):
-        uw_i, g, e = f(*[next(m) for m in minibatches])
+        uw_i, g, e = f(*next(minibatches))
         elbos[i] = e
         if verbose and not i % (n//10):
             if not i:
