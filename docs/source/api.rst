@@ -64,6 +64,7 @@ Multivariate
 
    MvNormal
    Wishart
+   WishartBartlett
    LKJCorr
    Multinomial
    Dirichlet
