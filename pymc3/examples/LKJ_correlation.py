@@ -1,6 +1,6 @@
 from pymc3 import *
 
-import theano.tensor as t
+import theano.tensor as tt
 from theano.tensor.nlinalg import matrix_inverse as inv
 from numpy import array, diag, linspace
 from numpy.random import multivariate_normal
@@ -33,16 +33,16 @@ tri_index[np.triu_indices(n_var, k=1)] = np.arange(n_elem)
 tri_index[np.triu_indices(n_var, k=1)[::-1]] = np.arange(n_elem)
 
 with Model() as model:
-    
+
     mu = Normal('mu', mu=0, tau=1 ** -2, shape=n_var)
 
     # We can specify separate priors for sigma and the correlation matrix:
     sigma = Uniform('sigma', shape=n_var)
     corr_triangle = LKJCorr('corr', n=1, p=n_var)
     corr_matrix = corr_triangle[tri_index]
-    corr_matrix = t.fill_diagonal(corr_matrix, 1)
+    corr_matrix = tt.fill_diagonal(corr_matrix, 1)
 
-    cov_matrix = t.diag(sigma).dot(corr_matrix.dot(t.diag(sigma)))
+    cov_matrix = tt.diag(sigma).dot(corr_matrix.dot(tt.diag(sigma)))
 
     like = MvNormal('likelihood', mu=mu, tau=inv(cov_matrix), observed=dataset)
 

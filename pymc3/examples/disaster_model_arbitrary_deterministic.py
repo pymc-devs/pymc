@@ -1,12 +1,12 @@
 """
-Similar to disaster_model.py, but for arbitrary 
+Similar to disaster_model.py, but for arbitrary
 determinsitics which are not not working with Theano.
 Note that gradient based samplers will not work.
 """
 
 
 from pymc3 import *
-import theano.tensor as t
+import theano.tensor as tt
 from numpy import arange, array, empty
 
 __all__ = ['disasters_data', 'switchpoint', 'early_mean', 'late_mean', 'rate',
@@ -23,7 +23,7 @@ disasters_data = array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
 years = len(disasters_data)
 
 #here is the trick
-@theano.compile.ops.as_op(itypes=[t.lscalar, t.dscalar, t.dscalar],otypes=[t.dvector])
+@theano.compile.ops.as_op(itypes=[tt.lscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
 def rateFunc(switchpoint,early_mean, late_mean):
     ''' Concatenate Poisson means '''
     out = empty(years)

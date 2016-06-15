@@ -8,7 +8,7 @@ from ..distributions import *
 from ..tuning import guess_scaling
 import theano
 from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor
-import theano.tensor
+import theano.tensor as tt
 
 __all__ = ['NUTS']
 
@@ -195,15 +195,15 @@ def leapfrog1_dE(logp, vars, shared, pot, profile):
 
     H = Hamiltonian(logp, dlogp, pot)
 
-    p = theano.tensor.dvector('p')
+    p = tt.dvector('p')
     p.tag.test_value = q.tag.test_value
 
-    q0 = theano.tensor.dvector('q0')
+    q0 = tt.dvector('q0')
     q0.tag.test_value = q.tag.test_value
-    p0 = theano.tensor.dvector('p0')
+    p0 = tt.dvector('p0')
     p0.tag.test_value = p.tag.test_value
 
-    e = theano.tensor.dscalar('e')
+    e = tt.dscalar('e')
     e.tag.test_value = 1
 
     q1, p1 = leapfrog(H, q, p, 1, e)

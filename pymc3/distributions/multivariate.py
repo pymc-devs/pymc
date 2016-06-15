@@ -214,7 +214,7 @@ class PosDefMatrix(theano.Op):
     #Compulsory if itypes and otypes are not defined
 
     def make_node(self, x):
-        x = theano.tensor.as_tensor_variable(x)
+        x = tt.as_tensor_variable(x)
         assert x.ndim == 2
         o=tt.TensorType(dtype='int8', broadcastable = [])()
         return theano.Apply(self, [x], [o])
@@ -310,7 +310,7 @@ class Wishart(Continuous):
                      n > (p - 1))
 
 
-    
+
 class LKJCorr(Continuous):
     R"""
     The LKJ (Lewandowski, Kurowicka and Joe) log-likelihood.

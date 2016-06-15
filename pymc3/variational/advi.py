@@ -23,41 +23,41 @@ __all__ = ['advi']
 ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
 
 def check_discrete_rvs(vars):
-    """Check that vars not include discrete variables, excepting ObservedRVs. 
+    """Check that vars not include discrete variables, excepting ObservedRVs.
     """
     vars_ = [var for var in vars if not isinstance(var, ObservedRV)]
     if any([var.dtype in discrete_types for var in vars_]):
         raise ValueError('Model should not include discrete RVs for ADVI.')
 
-def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False, 
+def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     learning_rate=.001, epsilon=.1, random_seed=20090425, verbose=1):
-    """Run ADVI. 
+    """Run ADVI.
 
     Parameters
     ----------
     vars : object
-        Random variables. 
+        Random variables.
     start : Dict or None
-        Initial values of parameters (variational means). 
+        Initial values of parameters (variational means).
     model : Model
-        Probabilistic model. 
+        Probabilistic model.
     n : int
-        Number of interations updating parameters. 
+        Number of interations updating parameters.
     accurate_elbo : bool
-        If true, 100 MC samples are used for accurate calculation of ELBO. 
+        If true, 100 MC samples are used for accurate calculation of ELBO.
     learning_rate: float
-        Adagrad base learning rate. 
+        Adagrad base learning rate.
     epsilon : float
-        Offset in denominator of the scale of learning rate in Adagrad.  
+        Offset in denominator of the scale of learning rate in Adagrad.
     random_seed : int
-        Seed to initialize random state. 
+        Seed to initialize random state.
 
     Returns
     -------
     ADVIFit
-        Named tuple, which includes 'means', 'stds', and 'elbo_vals'. 
+        Named tuple, which includes 'means', 'stds', and 'elbo_vals'.
 
-    'means' and 'stds' include parameters of the variational posterior. 
+    'means' and 'stds' include parameters of the variational posterior.
     """
 
     model = modelcontext(model)
@@ -97,45 +97,45 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         w[var] = np.exp(w[var])
     return ADVIFit(u, w, elbos)
 
-def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1, 
-    minibatch_RVs=None, minibatch_tensors=None, minibatches=None, total_size=None, 
+def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
+    minibatch_RVs=None, minibatch_tensors=None, minibatches=None, total_size=None,
     learning_rate=.001, epsilon=.1, random_seed=20090425, verbose=1):
-    """Run mini-batch ADVI. 
+    """Run mini-batch ADVI.
 
-    minibatch_RVs, minibatch_tensors and minibatches should be in the 
-    same order. 
+    minibatch_RVs, minibatch_tensors and minibatches should be in the
+    same order.
 
     Parameters
     ----------
     vars : object
-        Random variables. 
+        Random variables.
     start : Dict or None
-        Initial values of parameters (variational means). 
+        Initial values of parameters (variational means).
     model : Model
-        Probabilistic model. 
+        Probabilistic model.
     n : int
-        Number of interations updating parameters. 
+        Number of interations updating parameters.
     n_mcsamples : int
-        Number of Monte Carlo samples to approximate ELBO. 
+        Number of Monte Carlo samples to approximate ELBO.
     minibatch_RVs : list of ObservedRVs
-        Random variables for mini-batch. 
+        Random variables for mini-batch.
     minibatch_tensors : list of tensors
-        Tensors used to create ObservedRVs in minibatch_RVs. 
+        Tensors used to create ObservedRVs in minibatch_RVs.
     minibatches : list of generators
-        Generates minibatches when calling next(). 
+        Generates minibatches when calling next().
     totalsize : int
-        Total size of training samples. 
+        Total size of training samples.
     learning_rate: float
-        Adagrad base learning rate. 
+        Adagrad base learning rate.
     epsilon : float
-        Offset in denominator of the scale of learning rate in Adagrad.  
+        Offset in denominator of the scale of learning rate in Adagrad.
     random_seed : int
-        Seed to initialize random state. 
+        Seed to initialize random state.
 
     Returns
     -------
     ADVIFit
-        Named tuple, which includes 'means', 'stds', and 'elbo_vals'. 
+        Named tuple, which includes 'means', 'stds', and 'elbo_vals'.
     """
 
     model = modelcontext(model)
@@ -151,7 +151,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
 
     # Create variational gradient tensor
     grad, elbo, shared, uw = variational_gradient_estimate(
-        vars, model, minibatch_RVs, minibatch_tensors, total_size, 
+        vars, model, minibatch_RVs, minibatch_tensors, total_size,
         n_mcsamples=n_mcsamples, random_seed=random_seed)
 
     # Set starting values
@@ -171,7 +171,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
 
     # Create in-place update function
     tensors, givens = replace_shared_minibatch_tensors(minibatch_tensors)
-    f = theano.function(tensors, [shared_inarray, grad, elbo], 
+    f = theano.function(tensors, [shared_inarray, grad, elbo],
                         updates=updates, givens=givens)
 
     # Run adagrad steps
@@ -185,7 +185,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
             else:
                 avg_elbo = elbos[i-n//10:i].mean()
                 print('Iteration {0} [{1}%]: Average ELBO = {2}'.format(i, 100*i//n, avg_elbo.round(2)))
-                
+
     if verbose:
         avg_elbo = elbos[i-n//10:i].mean()
         print('Finished [100%]: Average ELBO = {}'.format(avg_elbo.round(2)))
@@ -200,7 +200,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     return ADVIFit(u, w, elbos)
 
 def replace_shared_minibatch_tensors(minibatch_tensors):
-    """Replace shared variables in minibatch tensors with normal tensors. 
+    """Replace shared variables in minibatch tensors with normal tensors.
     """
     givens = dict()
     tensors = list()
@@ -216,9 +216,9 @@ def replace_shared_minibatch_tensors(minibatch_tensors):
     return tensors, givens
 
 def run_adagrad(uw, grad, elbo, n, learning_rate=.001, epsilon=.1, verbose=1):
-    """Run Adagrad parameter update. 
+    """Run Adagrad parameter update.
 
-    This function is only used in batch training. 
+    This function is only used in batch training.
     """
     shared_inarray = theano.shared(uw, 'uw_shared')
     grad = CallableTensor(grad)(shared_inarray)
@@ -240,22 +240,22 @@ def run_adagrad(uw, grad, elbo, n, learning_rate=.001, epsilon=.1, verbose=1):
             else:
                 avg_elbo = elbos[i-n//10:i].mean()
                 print('Iteration {0} [{1}%]: Average ELBO = {2}'.format(i, 100*i//n, avg_elbo.round(2)))
-    
+
     if verbose:
         avg_elbo = elbos[-n//10:].mean()
         print('Finished [100%]: Average ELBO = {}'.format(avg_elbo.round(2)))
     return uw_i, elbos
 
 def variational_gradient_estimate(
-    vars, model, minibatch_RVs=[], minibatch_tensors=[], total_size=None, 
+    vars, model, minibatch_RVs=[], minibatch_tensors=[], total_size=None,
     n_mcsamples=1, random_seed=20090425):
-    """Calculate approximate ELBO and its (stochastic) gradient. 
+    """Calculate approximate ELBO and its (stochastic) gradient.
     """
 
     theano.config.compute_test_value = 'ignore'
     shared = make_shared_replacements(vars, model)
 
-    # Correction sample size 
+    # Correction sample size
     r = 1 if total_size is None else \
         float(total_size) / minibatch_tensors[0].shape[0]
 
@@ -263,7 +263,7 @@ def variational_gradient_estimate(
     factors = [r * var.logpt for var in minibatch_RVs] + \
               [var.logpt for var in other_RVs] + model.potentials
     logpt = tt.add(*map(tt.sum, factors))
-    
+
     [logp], inarray = join_nonshared_inputs([logpt], vars, shared)
 
     uw = dvector('uw')
@@ -278,7 +278,7 @@ def variational_gradient_estimate(
     return grad, elbo, shared, uw
 
 def elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
-    """Create Theano tensor of approximate ELBO by Monte Carlo sampling. 
+    """Create Theano tensor of approximate ELBO by Monte Carlo sampling.
     """
     l = (uw.size/2).astype('int64')
     u = uw[:l]
@@ -305,7 +305,7 @@ def elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
     return elbo
 
 def adagrad(grad, param, learning_rate, epsilon, n):
-    """Create Theano parameter (tensor) updates by Adagrad. 
+    """Create Theano parameter (tensor) updates by Adagrad.
     """
     # Compute windowed adagrad using last n gradients
     i = theano.shared(np.array(0), 'i')
@@ -313,8 +313,8 @@ def adagrad(grad, param, learning_rate, epsilon, n):
     accu = theano.shared(np.zeros(value.shape+(n,), dtype=value.dtype))
 
     # Append squared gradient vector to accu_new
-    accu_new = theano.tensor.set_subtensor(accu[:,i], grad ** 2)
-    i_new = theano.tensor.switch((i + 1) < n, i + 1, 0)
+    accu_new = tt.set_subtensor(accu[:,i], grad ** 2)
+    i_new = tt.switch((i + 1) < n, i + 1, 0)
 
     updates = OrderedDict()
     updates[accu] = accu_new
@@ -322,33 +322,33 @@ def adagrad(grad, param, learning_rate, epsilon, n):
 
     accu_sum = accu_new.sum(axis=1)
     updates[param] = param - (-learning_rate * grad /
-                              theano.tensor.sqrt(accu_sum + epsilon))
+                              tt.sqrt(accu_sum + epsilon))
     return updates
 
 def sample_vp(vparams, draws=1000, model=None, random_seed=20090425):
-    """Draw samples from variational posterior. 
+    """Draw samples from variational posterior.
 
     Parameters
     ----------
     vparams : dict or pymc3.variational.ADVIFit
-        Estimated variational parameters of the model. 
+        Estimated variational parameters of the model.
     draws : int
-        Number of random samples. 
+        Number of random samples.
     model : pymc3.Model
-        Probabilistic model. 
+        Probabilistic model.
     random_seed : int
-        Seed of random number generator. 
+        Seed of random number generator.
 
     Returns
     -------
     trace : pymc3.backends.base.MultiTrace
-        Samples drawn from the variational posterior. 
+        Samples drawn from the variational posterior.
     """
     model = modelcontext(model)
 
     if isinstance(vparams, ADVIFit):
         vparams = {
-            'means': vparams.means, 
+            'means': vparams.means,
             'stds': vparams.stds
         }
 
@@ -361,7 +361,7 @@ def sample_vp(vparams, draws=1000, model=None, random_seed=20090425):
         n = r.normal(size=u.tag.test_value.shape)
         updates.update({var: (n * w + u).reshape(var.tag.test_value.shape)})
     vars = model.free_RVs
-        
+
     # Replace some nodes of the graph with variational distributions
     samples = theano.clone(vars, updates)
     f = theano.function([], samples)
