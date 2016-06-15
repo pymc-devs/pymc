@@ -14,6 +14,10 @@ def test_missing():
 
     model.logp(model.test_point)
 
+def test_no_missing():
+    data = ma.masked_values([[1, 2], [3, 4]], value=-1)
+    with Model() as model:
+        x = Normal('x', observed=data)
 
 def test_missing_pandas():
     data = pd.DataFrame([1,2,numpy.nan,4,numpy.nan])
