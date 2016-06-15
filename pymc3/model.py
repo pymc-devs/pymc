@@ -539,7 +539,7 @@ def as_tensor(data, name, model, distribution):
     dtype = distribution.dtype
     data = pandas_to_array(data).astype(dtype)
 
-    if hasattr(data, 'mask'):
+    if hasattr(data, 'mask') and data.mask.sum():
         from .distributions import NoDistribution
         testval = distribution.testval or data.mean().astype(dtype)
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
@@ -553,6 +553,8 @@ def as_tensor(data, name, model, distribution):
         dataTensor.missing_values = missing_values
         return dataTensor
     else:
+        if hasattr(data, 'mask'):
+            data = data.data
         data = tt.as_tensor_variable(data, name=name)
         data.missing_values = None
         return data
