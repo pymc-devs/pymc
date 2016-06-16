@@ -2,7 +2,7 @@
 from pymc3 import Normal, sample, Model, traceplot, plots, NUTS, Potential, variational, Cauchy, find_MAP, Slice, HalfCauchy
 from theano import scan, shared
 from scipy import optimize
-import theano.tensor as T
+import theano.tensor as tt
 
 
 import numpy as np
@@ -66,16 +66,16 @@ with Model() as arma_model:
     mu = Normal('mu', 0, sd=10)
 
     err0 = y[0] - (mu + phi*mu)
-                                 
+
     def calc_next(last_y, this_y, err, mu, phi, theta):
         nu_t = mu + phi*last_y + theta*err
         return this_y - nu_t
-        
+
     err, _ = scan(fn=calc_next,
                   sequences=dict(input=y, taps=[-1,0]),
                   outputs_info=[err0],
                   non_sequences=[mu, phi, theta])
-                  
+
     like = Potential('like', Normal.dist(0, sd=sigma).logp(err))
 
 with arma_model:

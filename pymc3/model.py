@@ -246,7 +246,7 @@ class Model(Context, Factor):
     def unobserved_RVs(self):
         """List of all random variable, including deterministic ones."""
         return self.vars + self.deterministics
-        
+
     @property
     def untransformed_RVs(self):
         """All variables except those transformed for MCMC"""
@@ -548,8 +548,7 @@ def as_tensor(data, name, model, distribution):
                                 model=model)
         constant = tt.as_tensor_variable(data.filled())
 
-        dataTensor = theano.tensor.set_subtensor(constant[data.mask.nonzero()],
-                                                 missing_values)
+        dataTensor = tt.set_subtensor(constant[data.mask.nonzero()], missing_values)
         dataTensor.missing_values = missing_values
         return dataTensor
     else:
@@ -682,7 +681,7 @@ class TransformedRV(TensorVariable):
             self.model = model
 
             self.transformed = model.Var(name + "_" + transform.name, transform.apply(distribution))
-            
+
             self.model.hidden_RVs.append(self.transformed)
 
             normalRV = transform.backward(self.transformed)

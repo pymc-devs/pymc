@@ -1,6 +1,6 @@
 from pymc3 import *
 
-import theano.tensor as t
+import theano.tensor as tt
 import numpy as np
 
 
