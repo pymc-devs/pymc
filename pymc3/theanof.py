@@ -1,5 +1,5 @@
 from .vartypes import typefilter, continuous_types
-from theano import theano, scalar,  tensor as t
+from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
 from .memoize import memoize
 from .blocking import ArrayOrdering
@@ -18,7 +18,7 @@ def inputvars(a):
     -------
         r : list of tensor variables that are inputs
     """
-    return [v for v in inputs(makeiter(a)) if isinstance(v, t.TensorVariable)]
+    return [v for v in inputs(makeiter(a)) if isinstance(v, tt.TensorVariable)]
 
 def cont_inputs(f):
     """
@@ -41,25 +41,25 @@ Theano derivative functions
 """
 def gradient1(f, v):
     """flat gradient of f wrt v"""
-    return t.flatten(t.grad(f, v, disconnected_inputs='warn'))
+    return tt.flatten(tt.grad(f, v, disconnected_inputs='warn'))
 
 
-empty_gradient = t.zeros(0, dtype='float32')
+empty_gradient = tt.zeros(0, dtype='float32')
 @memoize
 def gradient(f, vars=None):
     if vars is None:
         vars = cont_inputs(f)
 
-    if vars: 
-        return t.concatenate([gradient1(f, v) for v in vars], axis=0)
+    if vars:
+        return tt.concatenate([gradient1(f, v) for v in vars], axis=0)
     else:
         return empty_gradient
 
 
 def jacobian1(f, v):
     """jacobian of f wrt v"""
-    f = t.flatten(f)
-    idx = t.arange(f.shape[0])
+    f = tt.flatten(f)
+    idx = tt.arange(f.shape[0])
 
     def grad_i(i):
         return gradient1(f[i], v)
@@ -73,8 +73,8 @@ def jacobian(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return t.concatenate([jacobian1(f, v) for v in vars], axis=1)
-    else: 
+        return tt.concatenate([jacobian1(f, v) for v in vars], axis=1)
+    else:
         return empty_gradient
 
 
@@ -86,7 +86,7 @@ def hessian(f, vars=None):
 def hessian_diag1(f, v):
 
     g = gradient1(f, v)
-    idx = t.arange(g.shape[0])
+    idx = tt.arange(g.shape[0])
 
     def hess_ii(i):
         return gradient1(g[i], v)[i]
@@ -100,8 +100,8 @@ def hessian_diag(f, vars=None):
         vars = cont_inputs(f)
 
     if vars:
-        return -t.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
-    else: 
+        return -tt.concatenate([hessian_diag1(f, v) for v in vars], axis=0)
+    else:
         return empty_gradient
 
 
@@ -140,13 +140,13 @@ def make_shared_replacements(vars, model):
     """
     Makes shared replacements for all *other* variables than the ones passed.
 
-    This way functions can be called many times without setting unchanging variables. Allows us 
+    This way functions can be called many times without setting unchanging variables. Allows us
     to use func.trust_input by removing the need for DictToArrayBijection and kwargs.
 
     Parameters
     ----------
     vars : list of variables not to make shared
-    model : model 
+    model : model
 
     Returns
     -------
@@ -158,7 +158,7 @@ def make_shared_replacements(vars, model):
 def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     """
     Takes a list of theano Variables and joins their non shared inputs into a single input.
-    
+
     Parameters
     ----------
     xs : list of theano tensors
@@ -170,7 +170,7 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
     tensors : list of same tensors but with inarray as input
     inarray : vector of inputs
     """
-    joined = theano.tensor.concatenate([var.ravel() for var in vars])
+    joined = tt.concatenate([var.ravel() for var in vars])
 
     if not make_shared:
         tensor_type = joined.type
@@ -180,8 +180,8 @@ def join_nonshared_inputs(xs, vars, shared, make_shared=False):
 
     ordering = ArrayOrdering(vars)
     inarray.tag.test_value = joined.tag.test_value
-    
-    get_var = { var.name : var for var in vars} 
+
+    get_var = { var.name : var for var in vars}
     replace = {
         get_var[var] : reshape_t(inarray[slc], shp).astype(dtyp)
         for var, slc, shp, dtyp in ordering.vmap }
@@ -198,9 +198,9 @@ def reshape_t(x, shape):
 
 class CallableTensor(object):
     """Turns a symbolic variable with one input into a function that returns symbolic arguments with the one variable replaced with the input.
-    
+
     """
-    def __init__(self, tensor): 
+    def __init__(self, tensor):
         self.tensor = tensor
 
     def __call__(self, input):
@@ -208,10 +208,10 @@ class CallableTensor(object):
 
         Parameters
         ----------
-        input : TensorVariable  
+        input : TensorVariable
         """
         oldinput, = inputvars(self.tensor)
         return theano.clone(self.tensor, { oldinput : input }, strict=False)
 
 scalar_identity = IdentityOp(scalar.upgrade_to_float, name='scalar_identity')
-identity = t.Elemwise(scalar_identity, name='identity')
+identity = tt.Elemwise(scalar_identity, name='identity')

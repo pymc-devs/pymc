@@ -1,7 +1,7 @@
 import numbers
 from copy import copy
 
-import theano.tensor
+import theano.tensor as tt
 from ..model import modelcontext
 from .. import distributions as pm_dists
 
@@ -15,9 +15,9 @@ class Identity():
         return x
 
 identity = Identity()
-logit = theano.tensor.nnet.sigmoid
-inverse = theano.tensor.inv
-exp = theano.tensor.exp
+logit = tt.nnet.sigmoid
+inverse = tt.inv
+exp = tt.exp
 
 class Family(object):
     """Base class for Family of likelihood distribution and link functions.

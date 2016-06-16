@@ -1,5 +1,5 @@
 from theano import function
-import theano.tensor as t
+import theano.tensor as tt
 
 import pymc3.distributions.special as ps
 import scipy.special as ss
@@ -11,10 +11,10 @@ from .checks import close_to
 def test_functions():
     xvals = list(map(np.atleast_1d, [.01, .1, 2, 100, 10000]))
 
-    x = t.dvector('x')
+    x = tt.dvector('x')
     x.tag.test_value = xvals[0]
 
-    p = t.iscalar('p')
+    p = tt.iscalar('p')
     p.tag.test_value = 1
 
     gammaln = function([x], ps.gammaln(x))
@@ -40,10 +40,10 @@ In [14]:
 def t_multigamma():
     xvals = list(map(np.atleast_1d, [0, .1, 2, 100]))
 
-    x = t.dvector('x')
+    x = tt.dvector('x')
     x.tag.test_value = xvals[0]
 
-    p = t.iscalar('p')
+    p = tt.iscalar('p')
     p.tag.test_value = 1
 
     multigammaln = function([x, p], ps.multigammaln(x, p))

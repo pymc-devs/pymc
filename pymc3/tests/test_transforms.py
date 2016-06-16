@@ -1,7 +1,7 @@
 import pymc3 as pm
 import pymc3.distributions.transforms as tr
 import theano
-import theano.tensor as t 
+import theano.tensor as tt
 from .test_distributions import Simplex, Rplusbig, Unit, R, Vector, MultiSimplex
 
 from .checks import *
@@ -9,18 +9,18 @@ from ..theanof import jacobian
 
 tol = 1e-7
 
-def check_transform_identity(transform, domain, constructor=t.dscalar, test=0):
+def check_transform_identity(transform, domain, constructor=tt.dscalar, test=0):
     x = constructor('x')
     x.tag.test_value = test
     identity_f = theano.function([x], transform.backward(transform.forward(x)))
 
-    for val in domain.vals: 
+    for val in domain.vals:
         close_to(val, identity_f(val), tol)
 
 def check_vector_transform_identity(transform, domain):
-    return check_transform_identity(transform, domain, t.dvector, test=np.array([0,0]))
+    return check_transform_identity(transform, domain, tt.dvector, test=np.array([0,0]))
 
-def get_values(transform, domain=R, constructor=t.dscalar, test=0):
+def get_values(transform, domain=R, constructor=tt.dscalar, test=0):
     x = constructor('x')
     x.tag.test_value = test
     f = theano.function([x], transform.backward(x))
@@ -30,26 +30,26 @@ def get_values(transform, domain=R, constructor=t.dscalar, test=0):
 def test_simplex():
     check_vector_transform_identity(tr.stick_breaking, Simplex(2))
     check_vector_transform_identity(tr.stick_breaking, Simplex(4))
-    check_transform_identity(tr.stick_breaking, MultiSimplex(3, 2), constructor=t.dmatrix, test=np.zeros((2, 2)))
-    
+    check_transform_identity(tr.stick_breaking, MultiSimplex(3, 2), constructor=tt.dmatrix, test=np.zeros((2, 2)))
+
 def test_simplex_bounds():
-    vals = get_values(tr.stick_breaking, Vector(R, 2), t.dvector, np.array([0,0]))
+    vals = get_values(tr.stick_breaking, Vector(R, 2), tt.dvector, np.array([0,0]))
 
     close_to(vals.sum(axis=1), 1, tol)
     close_to(vals > 0, True, tol)
     close_to(vals < 1, True, tol)
 
 def test_simplex_jacobian_det():
-    check_jacobian_det(tr.stick_breaking, Vector(R, 2), t.dvector, np.array([0,0]), lambda x: x[:-1])
+    check_jacobian_det(tr.stick_breaking, Vector(R, 2), tt.dvector, np.array([0,0]), lambda x: x[:-1])
 
 def test_sum_to_1():
     check_vector_transform_identity(tr.sum_to_1, Simplex(2))
     check_vector_transform_identity(tr.sum_to_1, Simplex(4))
-    
-def test_sum_to_1_jacobian_det():
-    check_jacobian_det(tr.sum_to_1, Vector(Unit, 2), t.dvector, np.array([0,0]), lambda x: x[:-1])
 
-def check_jacobian_det(transform, domain, constructor=t.dscalar, test=0, make_comparable=None, elemwise=False):
+def test_sum_to_1_jacobian_det():
+    check_jacobian_det(tr.sum_to_1, Vector(Unit, 2), tt.dvector, np.array([0,0]), lambda x: x[:-1])
+
+def check_jacobian_det(transform, domain, constructor=tt.dscalar, test=0, make_comparable=None, elemwise=False):
     y = constructor('y')
     y.tag.test_value = test
 
@@ -57,35 +57,35 @@ def check_jacobian_det(transform, domain, constructor=t.dscalar, test=0, make_co
     if make_comparable:
         x = make_comparable(x)
 
-    if not elemwise: 
-        jac = t.log(t.nlinalg.det(jacobian(x, [y])))
+    if not elemwise:
+        jac = tt.log(tt.nlinalg.det(jacobian(x, [y])))
     else:
-        jac = t.log(t.diag(jacobian(x, [y])))
+        jac = tt.log(tt.diag(jacobian(x, [y])))
 
-    #ljd = log jacobian det 
+    #ljd = log jacobian det
     actual_ljd = theano.function([y], jac)
 
-    computed_ljd = theano.function([y], t.as_tensor_variable(transform.jacobian_det(y)), on_unused_input='ignore')
+    computed_ljd = theano.function([y], tt.as_tensor_variable(transform.jacobian_det(y)), on_unused_input='ignore')
 
     for yval in domain.vals:
         close_to(
-            actual_ljd(yval), 
+            actual_ljd(yval),
             computed_ljd(yval), tol)
 
 def test_log():
     check_transform_identity(tr.log, Rplusbig)
-    check_jacobian_det(tr.log, Rplusbig, elemwise=True) 
-    check_jacobian_det(tr.log, Vector(Rplusbig,2), t.dvector, [0,0], elemwise=True) 
+    check_jacobian_det(tr.log, Rplusbig, elemwise=True)
+    check_jacobian_det(tr.log, Vector(Rplusbig,2), tt.dvector, [0,0], elemwise=True)
 
-    vals = get_values(tr.log) 
+    vals = get_values(tr.log)
     close_to(vals > 0, True, tol)
 
 def test_logodds():
     check_transform_identity(tr.logodds, Unit)
     check_jacobian_det(tr.logodds, Unit, elemwise=True)
-    check_jacobian_det(tr.logodds, Vector(Unit,2), t.dvector, [.5,.5], elemwise=True) 
+    check_jacobian_det(tr.logodds, Vector(Unit,2), tt.dvector, [.5,.5], elemwise=True)
 
-    vals = get_values(tr.logodds) 
+    vals = get_values(tr.logodds)
     close_to(vals > 0, True, tol)
     close_to(vals < 1, True, tol)
 
@@ -95,7 +95,7 @@ def test_interval():
         trans = tr.interval(a,b)
         check_transform_identity(trans, domain)
         check_jacobian_det(trans, domain, elemwise=True)
-    
-        vals = get_values(trans) 
+
+        vals = get_values(trans)
         close_to(vals > a, True, tol)
         close_to(vals < b, True, tol)
