@@ -111,7 +111,7 @@ class QuadPotential(object):
         self.L = cholesky(A, lower=True)
 
     def velocity(self, x):
-        return x.tt.dot(self.A.T)
+        return x.T.dot(self.A.T)
 
     def random(self):
         n = normal(size=self.L.shape[0])
