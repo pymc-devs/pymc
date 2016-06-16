@@ -121,8 +121,13 @@ class MvStudentT(Continuous):
         nu = self.nu
         mu = self.mu
 
+<<<<<<< HEAD
         d = S.shape[0]
         n = value.shape[0]
+=======
+        d = len(S)
+        n = len(value)
+>>>>>>> 79e001268051b15eb1960056ff115c0b0d3e09b4
         X = value - mu
     
         Q = X.dot(matrix_inverse(S)).dot(X.T).sum()
