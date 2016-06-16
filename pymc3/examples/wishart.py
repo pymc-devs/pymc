@@ -28,7 +28,7 @@ with pm.Model() as model:
     prec = pm.WishartBartlett('prec', S, nu)
 
     # To be able to compare it to truth, convert precision to covariance
-    cov = pm.Deterministic('cov', T.nlinalg.matrix_inverse(prec))
+    cov = pm.Deterministic('cov', tt.nlinalg.matrix_inverse(prec))
 
     lp = pm.MvNormal('likelihood', mu=mu, tau=prec, observed=data)
 

@@ -358,20 +358,20 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False):
     tril_idx = np.tril_indices_from(S, k=-1)
     n_diag = len(diag_idx[0])
     n_tril = len(tril_idx[0])
-    c = T.sqrt(ChiSquared('c', nu - np.arange(2, 2+n_diag), shape=n_diag))
+    c = tt.sqrt(ChiSquared('c', nu - np.arange(2, 2+n_diag), shape=n_diag))
     print('Added new variable c to model diagonal of Wishart.')
     z = Normal('z', 0, 1, shape=n_tril)
     print('Added new variable z to model off-diagonals of Wishart.')
     # Construct A matrix
-    A = T.zeros(S.shape, dtype=np.float32)
-    A = T.set_subtensor(A[diag_idx], c)
-    A = T.set_subtensor(A[tril_idx], z)
+    A = tt.zeros(S.shape, dtype=np.float32)
+    A = tt.set_subtensor(A[diag_idx], c)
+    A = tt.set_subtensor(A[tril_idx], z)
 
     # L * A * A.T * L.T ~ Wishart(L*L.T, nu)
     if return_cholesky:
-        return Deterministic(name, T.dot(L, A))
+        return Deterministic(name, tt.dot(L, A))
     else:
-        return Deterministic(name, T.dot(T.dot(T.dot(L, A), A.T), L.T))
+        return Deterministic(name, tt.dot(tt.dot(tt.dot(L, A), A.T), L.T))
 
 
 class LKJCorr(Continuous):
