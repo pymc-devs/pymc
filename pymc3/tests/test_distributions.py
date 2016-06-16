@@ -393,7 +393,7 @@ def check_mvt(n):
             mvt_logpdf
             )
             
-def mvt_logpdf(x, nu, Sigma, mu=0): 
+def mvt_logpdf(value, nu, Sigma, mu=0): 
 
     d = len(Sigma)
     n = len(x)
