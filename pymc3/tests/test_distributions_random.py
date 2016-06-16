@@ -726,9 +726,10 @@ class ScalarParameterSamples(unittest.TestCase):
         for n in [2, 3]:
             pymc3_random(MvStudentT, {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu':Vector(R,n)}, size=100,
                      valuedomain=Vector(R,n),
-                     ref_rand=lambda nu=None, Sigma=None, mu=None, size=None: \
-                        mu + np.sqrt(nu) * st.multivariate_normal.rvs(cov=Sigma, size=size)) \
-                        st.chisquare.rvs(nu=nu)
+                     ref_rand=(lambda nu=None, Sigma=None, mu=None, size=None: 
+                        mu + np.sqrt(nu) 
+                        * st.multivariate_normal.rvs(cov=Sigma, size=size)) 
+                        / st.chi2.rvs(nu=nu))
     
 
     def test_dirichlet(self):
