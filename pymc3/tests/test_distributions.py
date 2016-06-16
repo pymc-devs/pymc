@@ -393,14 +393,14 @@ def check_mvt(n):
             mvt_logpdf
             )
             
-def mvt_logpdf(x, nu, S, mu=0): 
+def mvt_logpdf(x, nu, Sigma, mu=0): 
 
-    d = len(S)
+    d = len(Sigma)
     n = len(x)
     X = np.atleast_2d(x) - mu
     
-    Q = X.dot(np.linalg.inv(S)).dot(X.T).sum()
-    log_det = np.log(np.linalg.det(S))
+    Q = X.dot(np.linalg.invSigma).dot(X.T).sum()
+    log_det = np.log(np.linalg.detSigma)
     log_pdf = (scipy.special.gammaln((nu + d)/2.) 
             - 0.5 * (d*np.log(np.pi*nu) + log_det) 
             - scipy.special.gammaln(nu/2.))
