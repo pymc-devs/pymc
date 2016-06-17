@@ -729,7 +729,7 @@ class ScalarParameterSamples(unittest.TestCase):
                      ref_rand=(lambda nu=None, Sigma=None, mu=None, size=None: 
                         mu + np.sqrt(nu) 
                         * st.multivariate_normal.rvs(cov=Sigma, size=size)) 
-                        / st.chi2.rvs(nu=nu))
+                        / st.chi2.rvs(df=nu))
     
 
     def test_dirichlet(self):
