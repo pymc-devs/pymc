@@ -399,7 +399,7 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
     n = len(value)
     X = np.atleast_2d(value ) - mu
     
-    Q = X.dot(np.linalg.inv(Sigma).dot(X.T).sum()
+    Q = X.dot(np.linalg.inv(Sigma)).dot(X.T).sum()
     log_det = np.log(np.linalg.det(Sigma))
     log_pdf = (scipy.special.gammaln((nu + d)/2.) 
             - 0.5 * (d*np.log(np.pi*nu) + log_det) 
