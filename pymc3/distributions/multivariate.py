@@ -17,7 +17,7 @@ from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln
 
-__all__ = ['MvNormal', 'Dirichlet', 'Multinomial', 'Wishart', 'WishartBartlett', 'LKJCorr']
+__all__ = ['MvNormal', 'MvStudentT', 'Dirichlet', 'Multinomial', 'Wishart', 'WishartBartlett', 'LKJCorr']
 
 
 class MvNormal(Continuous):
@@ -73,6 +73,67 @@ class MvNormal(Continuous):
         result = k * tt.log(2 * np.pi) + tt.log(1./det(tau))
         result += (delta.dot(tau) * delta).sum(axis=delta.ndim - 1)
         return -1/2. * result
+
+
+class MvStudentT(Continuous):
+    """
+    Multivariate Student T log-likelihood.
+
+    .. math::
+    
+    f(\mathbf{x}| \nu,\mu,\Sigma) = \frac{\Gamma\left[(\nu+p)/2\right]}{\Gamma(\nu/2)\nu^{p/2}\pi^{p/2}\left|{\Sigma}\right|^{1/2}\left[1+\frac{1}{\nu}({\mathbf x}-{\mu})^T{\Sigma}^{-1}({\mathbf x}-{\mu})\right]^{(\nu+p)/2}}
+    
+    ========  ==========================
+    Support   :math:`x \in \mathbb{R}^k`
+    Mean      :math:`\mu` if :math:`\nu > 1`  else undefined
+    Variance  :math:`\frac{\nu}{\mu-2}\Sigma` if :math:`\nu>2` else undefined
+    ========  ==========================
+
+    Parameters
+    ----------
+    nu : int
+        Degrees of freedom.
+    Sigma : matrix
+        Covariance matrix.
+    mu : array
+        Vector of means.
+    """
+    def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
+        super(MvStudentT, self).__init__(*args, **kwargs)
+        self.nu = nu
+        self.mu = np.zeros(S.shape[0]) if mu is None else mu
+        self.Sigma = Sigma
+        
+        self.mean = self.median = self.mode = self.mu = mu
+        
+    def random(self, point=None, size=None):
+        chi2 = np.random.chisquare
+        mvn = np.random.multivariate_normal
+        
+        nu, S, mu = draw_values([self.nu, self.Sigma, self.mu], point=point)
+        
+        return (np.sqrt(nu) * (mvn(np.zeros(len(S)), S, size).T
+                                           / chi2(nu, size))).T + mu
+        
+    def logp(self, value): 
+        
+        S = self.Sigma
+        nu = self.nu
+        mu = self.mu
+
+        d = S.shape[0]
+        n = value.shape[0]
+        
+        X = value - mu
+    
+        Q = X.dot(matrix_inverse(S)).dot(X.T).sum()
+        log_det = tt.log(det(S))
+        log_pdf = gammaln((nu + d)/2.) - 0.5 * (d*tt.log(np.pi*nu) + log_det) - gammaln(nu/2.)
+        log_pdf -= 0.5*(nu + d)*tt.log(1 + Q/nu)
+    
+        return(tt.exp(log_pdf))
+    
+        
 
 
 class Dirichlet(Continuous):

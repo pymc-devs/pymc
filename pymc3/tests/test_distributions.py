@@ -383,6 +383,31 @@ def normal_logpdf(value, mu, tau):
     (k,) = value.shape
     return  (-k/2)* np.log(2*np.pi) + .5 * np.log(np.linalg.det(tau)) - .5*(value-mu).dot(tau).dot(value -mu)
 
+def test_mvt():
+    for n in [1, 2]:
+        yield check_mvt, n
+
+def check_mvt(n):
+    pymc3_matches_scipy(
+            MvStudentT, Vector(R,n), {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu':Vector(R,n)},
+            mvt_logpdf
+            )
+            
+def mvt_logpdf(value, nu, Sigma, mu=0): 
+
+    d = len(Sigma)
+    n = len(value)
+    X = np.atleast_2d(value ) - mu
+    
+    Q = X.dot(np.linalg.inv(Sigma)).dot(X.T).sum()
+    log_det = np.log(np.linalg.det(Sigma))
+    log_pdf = (scipy.special.gammaln((nu + d)/2.) 
+            - 0.5 * (d*np.log(np.pi*nu) + log_det) 
+            - scipy.special.gammaln(nu/2.))
+    log_pdf -= 0.5*(nu + d)*np.log(1 + Q/nu)
+    
+    return(np.exp(log_pdf))
+
 def test_wishart():
     # for n in [2,3]:
     #     yield check_wishart,n

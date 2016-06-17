@@ -179,7 +179,7 @@ class ScalarParameterShape(unittest.TestCase):
         self.check(VonMises, mu=0., kappa=1.)
 
     def test_binomial(self):
-        self.check(Binomial,  n=5., p=0.5)
+        self.check(Binomial,  n=5, p=0.5)
 
     def test_beta_binomial(self):
         self.check(BetaBinomial, alpha=1., beta=1., n=1)
@@ -275,7 +275,7 @@ class ScalarShape(unittest.TestCase):
         self.check(VonMises, mu=0., kappa=1.)
 
     def test_binomial(self):
-        self.check(Binomial,  n=5., p=0.5)
+        self.check(Binomial,  n=5, p=0.5)
 
     def test_beta_binomial(self):
         self.check(BetaBinomial, alpha=1., beta=1., n=1)
@@ -722,6 +722,17 @@ class ScalarParameterSamples(unittest.TestCase):
                      valuedomain=Vector(R,n),
                      ref_rand=lambda mu=None, tau=None, size=None: \
                         st.multivariate_normal.rvs(mean=mu, cov=tau, size=size))
+                        
+    def test_mv_t(self):
+        for n in [2, 3]:
+            pymc3_random(MvStudentT, {'nu': Domain([5, 10, 25, 50]), 'Sigma': PdMatrix(n),
+                                      'mu':Vector(R,n)}, size=100,
+                     valuedomain=Vector(R,n),
+                     ref_rand=(lambda nu=None, Sigma=None, mu=None, size=None: 
+                        mu + np.sqrt(nu) 
+                        * (st.multivariate_normal.rvs(cov=Sigma, size=size).T
+                        / st.chi2.rvs(df=nu, size=size)).T))
+    
 
     def test_dirichlet(self):
        for n in [2, 3]:
