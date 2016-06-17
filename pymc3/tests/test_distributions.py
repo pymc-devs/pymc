@@ -396,8 +396,8 @@ def check_mvt(n):
 def mvt_logpdf(value, nu, Sigma, mu=0): 
 
     d = len(Sigma)
-    n = len(x)
-    X = np.atleast_2d(x) - mu
+    n = len(value)
+    X = np.atleast_2d(value) - mu
     
     Q = X.dot(np.linalg.invSigma).dot(X.T).sum()
     log_det = np.log(np.linalg.detSigma)
