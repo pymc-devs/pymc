@@ -156,6 +156,6 @@ def trace_cov(trace, vars=None):
 
     def flat_t(var):
         x = trace[str(var)]
-        return x.reshape((x.shape[0], np.prod(x.shape[1:])))
+        return x.reshape((x.shape[0], np.prod(x.shape[1:], dtype=int)))
 
     return np.cov(np.concatenate(list(map(flat_t, vars)), 1).T)

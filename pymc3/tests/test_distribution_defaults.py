@@ -51,3 +51,8 @@ def test_default_b():
         y = DistTest('y', 7, 8, testval=94)
         x = DistTest('x', y, 2, defaults=['a', 'b'])
         assert x.tag.test_value == 94
+
+def test_default_discrete_uniform():
+    with Model():
+        x = pm.DiscreteUniform('x', lower=1, upper=2)
+        assert x.init_value == 1
