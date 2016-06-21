@@ -102,8 +102,8 @@ class MvNormal(Multivariate, Continuous):
 
         self.median = self.mode = self.mean = self.mu
         # TODO: How do we want to use ndim?
-        shape_supp = self.mu.shape[-1]
-        shape_ind = self.mu.shape[:-1]
+        shape_supp = (self.mu.shape[-1],)
+        shape_ind = tuple(self.mu.shape[:-1])
 
         if self.mu.ndim > 0:
             bcast = (False,) * (1 + tt.get_vector_length(shape_ind))
@@ -261,8 +261,8 @@ class Dirichlet(Multivariate, Continuous):
         self.dist_params = (self.a,)
 
         # TODO: How do we want to use ndim?
-        shape_supp = self.a.shape[-1]
-        shape_ind = self.a.shape[:-1]
+        shape_supp = (self.a.shape[-1],)
+        shape_ind = tuple(self.a.shape[:-1])
 
         # FIXME: this isn't correct/ideal
         if self.a.ndim > 0:
@@ -358,7 +358,7 @@ class Multinomial(Multivariate, Discrete):
 
         # TODO: check that n == len(p)?
         # TODO: How do we want to use ndim?
-        shape_supp = self.n
+        shape_supp = (self.n,)
         shape_ind = ()
 
         # FIXME: this isn't correct/ideal
@@ -500,12 +500,11 @@ class Wishart(Multivariate, Continuous):
         self.dist_params = (self.n, self.V)
 
         # TODO: How do we want to use ndim?
-        shape_supp = self.V.shape[-1]
+        shape_supp = (self.V.shape[-1],)
         shape_ind = ()
 
-        self.mode = tt.switch(1 * (self.n >= shape_supp + 1), (self.n -
-                                                               shape_supp - 1)
-                              * self.V, np.nan)
+        self.mode = tt.switch(1 * (self.n >= shape_supp + 1),
+                              (self.n - shape_supp - 1) * self.V, np.nan)
         self.mean = self.n * self.V
 
         # FIXME: this isn't correct/ideal
@@ -662,9 +661,11 @@ class LKJCorr(Multivariate, Continuous):
         self.n = tt.as_tensor_variable(n, ndim=0)
         self.p = tt.as_tensor_variable(p, ndim=0)
 
+        self.dist_params = (self.n, self.p)
+
         # TODO: How do we want to use ndim?
         n_elem = (self.p * (self.p - 1) / 2)
-        shape_supp = n_elem
+        shape_supp = (n_elem,)
         self.mean = tt.zeros(n_elem)
 
         # FIXME: triu, bcast, etc.
@@ -672,9 +673,6 @@ class LKJCorr(Multivariate, Continuous):
         self.tri_index[tt.triu(self.p, k=1)] = tt.arange(n_elem)
         self.tri_index[tt.triu(self.p, k=1)[::-1]] = tt.arange(n_elem)
 
-        self.dist_params = (self.n, self.p)
-
-        # TODO: do this correctly; what about replications?
         shape_ind = ()
 
         # FIXME: this isn't correct/ideal
