@@ -991,7 +991,7 @@ class Bounded(Continuous):
         if hasattr(self.dist, 'mode'):
             self.mode = self.dist.mode
 
-        if np.isinf(lower) and np.isinf(upper):
+        if not np.isinf(lower) and not np.isinf(upper):
             self.transform = transforms.interval(lower, upper)
 
         if not np.isinf(lower) and np.isinf(upper):
