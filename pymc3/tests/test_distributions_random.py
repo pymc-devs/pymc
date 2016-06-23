@@ -174,7 +174,7 @@ class ScalarParameterShape(unittest.TestCase):
 
     def test_ex_gaussian(self):
         self.check(ExGaussian, mu=0., sigma=1., nu=1.)
-        
+
     def test_vonmises(self):
         self.check(VonMises, mu=0., kappa=1.)
 
@@ -270,7 +270,7 @@ class ScalarShape(unittest.TestCase):
 
     def test_ex_gaussian(self):
         self.check(ExGaussian, mu=0., sigma=1., nu=1.)
-        
+
     def test_vonmises(self):
         self.check(VonMises, mu=0., kappa=1.)
 
@@ -374,7 +374,7 @@ class Parameters1dShape(unittest.TestCase):
 
     def test_ex_gaussian(self):
         self.check(ExGaussian, mu=self.zeros, sigma=self.ones, nu=self.ones)
-        
+
     def test_vonmises(self):
         self.check(VonMises, mu=self.zeros, kappa=self.ones)
 
@@ -413,9 +413,9 @@ class Parameters1dShape(unittest.TestCase):
 
     def test_categorical(self):
         # Categorical cannot be initialised with >1D probabilities
-        raise SkipTest(
-            'Categorical cannot be initialised with >1D probabilities')
-        self.check(Categorical, p=self.ones / n)
+        # raise SkipTest(
+        #     'Categorical cannot be initialised with >1D probabilities')
+        self.check(Categorical, p=self.ones / len(self.ones))
 
 
 @attr('broadcast_shape')
@@ -487,7 +487,7 @@ class BroadcastShape(unittest.TestCase):
 
     def test_ex_gaussian(self):
         self.check(ExGaussian, mu=self.zeros, sigma=self.ones, nu=self.ones)
-        
+
     def test_vonmises(self):
         self.check(VonMises, mu=self.zeros, kappa=self.ones)
 
@@ -554,7 +554,7 @@ class ScalarParameterSamples(unittest.TestCase):
     def test_beta(self):
         pymc3_random(
                 Beta, {'alpha': Rplus, 'beta': Rplus},
-                ref_rand=(lambda size, alpha=None, beta=None: 
+                ref_rand=(lambda size, alpha=None, beta=None:
                     st.beta.rvs(a=alpha, b=beta, size=size))
                 )
 
@@ -629,7 +629,7 @@ class ScalarParameterSamples(unittest.TestCase):
                 ref_rand=lambda size, mu=None, sigma=None, nu=None: \
                     nr.normal(mu, sigma, size=size) + nr.exponential(scale=nu, size=size)
                 )
-                
+
     def test_vonmises(self):
         pymc3_random(VonMises, {'mu':R, 'kappa':Rplus},
                      ref_rand=lambda size, mu=None, kappa=None: st.vonmises.rvs(size=size,loc=mu, kappa=kappa))
@@ -722,17 +722,17 @@ class ScalarParameterSamples(unittest.TestCase):
                      valuedomain=Vector(R,n),
                      ref_rand=lambda mu=None, tau=None, size=None: \
                         st.multivariate_normal.rvs(mean=mu, cov=tau, size=size))
-                        
+
     def test_mv_t(self):
         for n in [2, 3]:
             pymc3_random(MvStudentT, {'nu': Domain([5, 10, 25, 50]), 'Sigma': PdMatrix(n),
                                       'mu':Vector(R,n)}, size=100,
                      valuedomain=Vector(R,n),
-                     ref_rand=(lambda nu=None, Sigma=None, mu=None, size=None: 
-                        mu + np.sqrt(nu) 
+                     ref_rand=(lambda nu=None, Sigma=None, mu=None, size=None:
+                        mu + np.sqrt(nu)
                         * (st.multivariate_normal.rvs(cov=Sigma, size=size).T
                         / st.chi2.rvs(df=nu, size=size)).T))
-    
+
 
     def test_dirichlet(self):
        for n in [2, 3]:

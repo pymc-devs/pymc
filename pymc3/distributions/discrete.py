@@ -368,13 +368,22 @@ class Categorical(Discrete):
         except AttributeError:
             self.k = tt.shape(p)[-1]
         self.p = tt.as_tensor_variable(p)
-        self.p = (p.T/tt.sum(p,-1)).T   
+        self.p = (p.T/tt.sum(p,-1)).T
         self.mode = tt.argmax(p)
 
 
     def random(self, point=None, size=None, repeat=None):
+        def random_choice(k, *args, **kwargs):
+            if len(kwargs['p'].shape) > 1:
+                return np.asarray(
+                    [np.random.choice(k, p=p)
+                     for p in kwargs['p']]
+                )
+            else:
+                return np.random.choice(k, *args, **kwargs)
+
         p, k = draw_values([self.p, self.k], point=point)
-        return generate_samples(partial(np.random.choice, np.arange(k)),
+        return generate_samples(partial(random_choice, np.arange(k)),
                                 p=p,
                                 broadcast_shape=p.shape[:-1] or (1,),
                                 dist_shape=self.shape,
