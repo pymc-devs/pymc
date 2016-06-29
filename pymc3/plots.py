@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 __all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot','plot_posterior']
 
 
-def traceplot(trace, varnames=None, figsize=None,
+def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
               lines=None, combined=False, grid=False,
               alpha=0.35, priors=None, prior_alpha=1, prior_style='--',
               ax=None):
@@ -19,6 +19,8 @@ def traceplot(trace, varnames=None, figsize=None,
     trace : result of MCMC run
     varnames : list of variable names
         Variables to be plotted, if None all variable are plotted
+    transform : callable
+        Function to transform data (defaults to identity)
     figsize : figure size tuple
         If None, size is (12, num of variables * 2) inch
     lines : dict
@@ -68,7 +70,7 @@ def traceplot(trace, varnames=None, figsize=None,
         if priors is not None:
             prior = priors[i]
         for d in trace.get_values(v, combine=combined, squeeze=False):
-            d = np.squeeze(d)
+            d = np.squeeze(transform(d))
             d = make_2d(d)
             if d.dtype.kind == 'i':
                 histplot_op(ax[i, 0], d, alpha=alpha)
@@ -275,8 +277,8 @@ def var_str(name, shape):
     return names
 
 
-def forestplot(trace_obj, varnames=None, alpha=0.05, quartiles=True, rhat=True,
-               main=None, xtitle=None, xrange=None, ylabels=None,
+def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quartiles=True,
+               rhat=True, main=None, xtitle=None, xrange=None, ylabels=None,
                chain_spacing=0.05, vline=0, gs=None):
     """ Forest plot (model summary plot)
 
@@ -290,6 +292,9 @@ def forestplot(trace_obj, varnames=None, alpha=0.05, quartiles=True, rhat=True,
         varnames: list
             List of variables to plot (defaults to None, which results in all
             variables plotted).
+               
+        transform : callable
+            Function to transform data (defaults to identity)
 
         alpha (optional): float
             Alpha value for (1-alpha)*100% credible intervals (defaults to
@@ -379,8 +384,8 @@ def forestplot(trace_obj, varnames=None, alpha=0.05, quartiles=True, rhat=True,
         interval_plot = plt.subplot(gs[0])
 
 
-    trace_quantiles = quantiles(trace_obj, qlist, squeeze=False)
-    hpd_intervals = hpd(trace_obj, alpha, squeeze=False)
+    trace_quantiles = quantiles(trace_obj, qlist, transform=transform, squeeze=False)
+    hpd_intervals = hpd(trace_obj, alpha, transform=transform, squeeze=False)
 
     for j, chain in enumerate(trace_obj.chains):
         # Counter for current variable
@@ -580,8 +585,9 @@ def forestplot(trace_obj, varnames=None, alpha=0.05, quartiles=True, rhat=True,
     return gs
 
 
-def plot_posterior(trace, varnames=None, figsize=None, alpha_level=0.05, round_to=3,
-                   point_estimate='mean', rope=None, ref_val=None, kde_plot=False, ax=None, **kwargs):
+def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None, 
+                    alpha_level=0.05, round_to=3, point_estimate='mean', rope=None, 
+                    ref_val=None, kde_plot=False, ax=None, **kwargs):
     """Plot Posterior densities in style of John K. Kruschke book
 
     Parameters
@@ -590,6 +596,8 @@ def plot_posterior(trace, varnames=None, figsize=None, alpha_level=0.05, round_t
     trace : result of MCMC run
     varnames : list of variable names
         Variables to be plotted, if None all variable are plotted
+    transform : callable
+        Function to transform data (defaults to identity)
     figsize : figure size tuple
         If None, size is (12, num of variables * 2) inch
     alpha_level : float
@@ -729,7 +737,7 @@ def plot_posterior(trace, varnames=None, figsize=None, alpha_level=0.05, round_t
             figsize = (6, 2)
         if ax is None:
             fig, ax = plt.subplots()
-        plot_posterior_op(trace, ax)
+        plot_posterior_op(transform(trace), ax)
     else:
         if varnames is None:
             varnames = trace.original_varnames
@@ -738,7 +746,7 @@ def plot_posterior(trace, varnames=None, figsize=None, alpha_level=0.05, round_t
             ax, fig = create_axes_grid(figsize, varnames)
 
         for a, v in zip(ax, varnames):
-            tr_values = trace.get_values(v, combine=True, squeeze=True)
+            tr_values = transform(trace.get_values(v, combine=True, squeeze=True))
             plot_posterior_op(tr_values, ax=a)
             a.set_title(v)
 

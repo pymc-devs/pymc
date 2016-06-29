@@ -222,7 +222,7 @@ def calc_min_interval(x, alpha):
     return hdi_min, hdi_max
 
 @statfunc
-def hpd(x, alpha=0.05):
+def hpd(x, alpha=0.05, transform=lambda x: x):
     """Calculate highest posterior density (HPD) of array for given alpha. The HPD is the
     minimum width Bayesian credible interval (BCI).
 
@@ -231,11 +231,13 @@ def hpd(x, alpha=0.05):
           An array containing MCMC samples
       alpha : float
           Desired probability of type I error (defaults to 0.05)
+      transform : callable
+          Function to transform data (defaults to identity)
 
     """
 
     # Make a copy of trace
-    x = x.copy()
+    x = transform(x.copy())
 
     # For multivariate node
     if x.ndim > 1:
@@ -307,7 +309,7 @@ def mc_error(x, batches=5):
         return np.std(means)/np.sqrt(batches)
 
 @statfunc
-def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
+def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
     """Returns a dictionary of requested quantiles from array
 
     :Arguments:
@@ -315,11 +317,12 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5)):
           An array containing MCMC samples
       qlist : tuple or list
           A list of desired quantiles (defaults to (2.5, 25, 50, 75, 97.5))
-
+      transform : callable
+          Function to transform data (defaults to identity)
     """
 
     # Make a copy of trace
-    x = x.copy()
+    x = transform(x.copy())
 
     # For multivariate node
     if x.ndim > 1:
