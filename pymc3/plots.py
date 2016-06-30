@@ -172,7 +172,7 @@ def kde2plot(x, y, grid=200, ax=None):
     return ax
 
 
-def autocorrplot(trace, varnames=None, max_lag=100, burn=0,
+def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=False,
                  symmetric_plot=False, ax=None, figsize=None):
     """Bar plot of the autocorrelation function for a trace
 
@@ -187,6 +187,9 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0,
     burn : int
         Number of samples to discard from the beginning of the trace.
         Defaults to 0.
+    plot_transformed : bool
+        Flag for plotting automatically transformed variables in addition to 
+        original variables (defaults to False).
     symmetric_plot : boolean
         Plot from either [0, +lag] or [-lag, lag]. Defaults to False, [-, +lag].
     ax : axes
@@ -588,7 +591,7 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
 
 def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None, 
                     alpha_level=0.05, round_to=3, point_estimate='mean', rope=None, 
-                    ref_val=None, kde_plot=False, ax=None, **kwargs):
+                    ref_val=None, kde_plot=False, plot_transformed=False, ax=None, **kwargs):
     """Plot Posterior densities in style of John K. Kruschke book
 
     Parameters
@@ -613,6 +616,9 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
         display the percentage below and above ref_val
     kde_plot: bool
         if True plot a KDE instead of a histogram
+    plot_transformed : bool
+        Flag for plotting automatically transformed variables in addition to 
+        original variables (defaults to False).
     ax : axes
         Matplotlib axes. Defaults to None.
     **kwargs
