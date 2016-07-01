@@ -544,6 +544,7 @@ def as_tensor(data, name, model, distribution):
         testval = distribution.testval or data.mean().astype(dtype)
         fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
                                        testval=testval, parent_dist=distribution)
+        
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist,
                                 model=model)
         constant = tt.as_tensor_variable(data.filled())
