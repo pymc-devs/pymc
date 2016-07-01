@@ -2,7 +2,6 @@ import numpy as np
 import theano
 import theano.tensor as tt
 from theano.tensor.var import TensorVariable
-import warnings
 
 from .memoize import memoize
 from .theanof import gradient, hessian, inputvars
@@ -496,10 +495,6 @@ class FreeRV(Factor, TensorVariable):
         model : Model"""
         if type is None:
             type = distribution.type
-        if name.endswith('_'):
-            _warning = 'Variable names ending with underscore will be hidden from output '
-            _warning += 'processing functions by default. Consider renaming {}.'.format(name)
-            warnings.warn(_warning)
         super(FreeRV, self).__init__(type, owner, index, name)
 
         if distribution is not None:
