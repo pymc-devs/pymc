@@ -497,8 +497,8 @@ class FreeRV(Factor, TensorVariable):
         if type is None:
             type = distribution.type
         if name.endswith('_'):
-            warning = 'Variable names ending with underscore will be hidden from output '
-            warning += 'processing functions by default. Consider renaming {}.'.format(name)
+            _warning = 'Variable names ending with underscore will be hidden from output '
+            _warning += 'processing functions by default. Consider renaming {}.'.format(name)
             warnings.warn(_warning)
         super(FreeRV, self).__init__(type, owner, index, name)
 
