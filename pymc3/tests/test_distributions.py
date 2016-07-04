@@ -406,7 +406,7 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
             - scipy.special.gammaln(nu/2.))
     log_pdf -= 0.5*(nu + d)*np.log(1 + Q/nu)
     
-    return(np.exp(log_pdf))
+    return log_pdf
 
 def test_wishart():
     # for n in [2,3]:
