@@ -342,7 +342,7 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
         print("Too few elements for quantile calculation")
 
 
-def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
+def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_transformed=False,
                alpha=0.05, batches=100):
     """Create a data frame with summary statistics.
 
@@ -372,6 +372,9 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
         If True, use the statistics returned by `stat_funcs` in
         addition to, rather than in place of, the default statistics.
         This is only meaningful when `stat_funcs` is not None.
+    include_transformed : bool
+        Flag for reporting automatically transformed variables in addition to 
+        original variables (defaults to False).
     alpha : float
         The alpha level for generating posterior intervals. Defaults
         to 0.05. This is only meaningful when `stat_funcs` is None.
@@ -417,7 +420,7 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False,
     mu__1  0.067513 -0.159097 -0.045637  0.062912
     """
     if varnames is None:
-        varnames = trace.original_varnames
+        varnames = [name for name in trace.varnames if not name.endswith('_')]
 
     funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
              lambda x: pd.Series(np.std(x, 0), name='sd'),
@@ -446,7 +449,7 @@ def _hpd_df(x, alpha):
 
 
 def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
-            to_file=None):
+            include_transformed=False, to_file=None):
     """
     Generate a pretty-printed summary of the node.
 
@@ -472,13 +475,17 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
 
     roundto : int
       The number of digits to round posterior statistics.
+            
+    include_transformed : bool
+      Flag for summarizing automatically transformed variables in addition to 
+      original variables (defaults to False).
 
     tofile : None or string
       File to write results to. If not given, print to stdout.
 
     """
     if varnames is None:
-        varnames = trace.original_varnames
+        varnames = [name for name in trace.varnames if not name.endswith('_')]
 
     stat_summ = _StatSummary(roundto, batches, alpha)
     pq_summ = _PosteriorQuantileSummary(roundto, alpha)

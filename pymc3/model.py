@@ -180,7 +180,6 @@ class Model(Context, Factor):
         self.named_vars = {}
         self.free_RVs = []
         self.observed_RVs = []
-        self.hidden_RVs = []
         self.deterministics = []
         self.potentials = []
         self.missing_values = []
@@ -246,12 +245,7 @@ class Model(Context, Factor):
     def unobserved_RVs(self):
         """List of all random variable, including deterministic ones."""
         return self.vars + self.deterministics
-
-    @property
-    def untransformed_RVs(self):
-        """All variables except those transformed for MCMC"""
-        return [v for v in self.vars if v not in self.hidden_RVs] + self.deterministics
-
+        
     @property
     def test_point(self):
         """Test point used to check that the model doesn't generate errors"""
@@ -680,9 +674,8 @@ class TransformedRV(TensorVariable):
         if distribution is not None:
             self.model = model
 
-            self.transformed = model.Var(name + "_" + transform.name, transform.apply(distribution))
-
-            self.model.hidden_RVs.append(self.transformed)
+            transformed_name = "{}_{}_".format(name, transform.name)
+            self.transformed = model.Var(transformed_name, transform.apply(distribution))
 
             normalRV = transform.backward(self.transformed)
 
