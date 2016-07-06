@@ -101,7 +101,7 @@ def test_lowerbound():
     vals = get_values(trans) 
     close_to(vals > 0, True, tol)
 
-def test_upperbound():t
+def test_upperbound():
     trans = tr.upperbound(0.0)
     check_transform_identity(trans, Rminusbig)
     check_jacobian_det(trans, Rminusbig, elemwise=True) 
