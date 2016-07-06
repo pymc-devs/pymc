@@ -980,7 +980,7 @@ class Weibull(PositiveContinuous):
 
 class Bounded(Continuous):
     """A bounded distribution."""
-    def __init__(self, distribution, lower, upper, transform='interval', *args, **kwargs):
+    def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
         self.dist = distribution.dist(*args, **kwargs)
 
         self.__dict__.update(self.dist.__dict__)
