@@ -21,12 +21,11 @@ import numpy as np
 import scipy.stats as st
 import numpy.random as nr
 
-nr.seed(20090425)
-
 def pymc3_random(dist, paramdomains,
                  ref_rand=None, valuedomain=Domain([0]),
                  size=10000, alpha=0.05, fails=10):
     model = build_model(dist, valuedomain, paramdomains)
+
     domains = paramdomains.copy()
     for pt in product(domains):
         pt = Point(pt, model=model)
@@ -533,6 +532,12 @@ class BroadcastShape(unittest.TestCase):
 @attr('scalar_parameter_samples')
 class ScalarParameterSamples(unittest.TestCase):
 
+    def test_bounded(self):
+        # A bit crude...
+        BoundedNormal = Bound(Normal, upper=0)
+        pymc3_random(BoundedNormal, {'tau':Rplus},
+                     ref_rand=lambda size, tau=None: -st.halfnorm.rvs(size=size,loc=0, scale=tau ** -0.5))
+
     def test_uniform(self):
         pymc3_random(Uniform, {'lower': -Rplus, 'upper': Rplus},
                      ref_rand=lambda size, lower=None, upper=None: st.uniform.rvs(size=size,loc=lower, scale=upper-lower))
@@ -634,11 +639,11 @@ class ScalarParameterSamples(unittest.TestCase):
         pymc3_random(VonMises, {'mu':R, 'kappa':Rplus},
                      ref_rand=lambda size, mu=None, kappa=None: st.vonmises.rvs(size=size,loc=mu, kappa=kappa))
 
-    def test_bounded(self):
-        # A bit crude...
-        BoundedNormal = Bound(Normal, upper=0)
-        pymc3_random(BoundedNormal, {'tau':Rplus},
-                     ref_rand=lambda size, tau=None: -st.halfnorm.rvs(size=size,loc=0, scale=tau ** -0.5))
+    # def test_bounded(self):
+    #     # A bit crude...
+    #     BoundedNormal = Bound(Normal, lower=-10, upper=0)
+    #     pymc3_random(BoundedNormal, {'tau':Rplus},
+    #                  ref_rand=lambda size, tau=None: -st.halfnorm.rvs(size=size,loc=0, scale=tau ** -0.5))
 
     def test_flat(self):
         with Model():
@@ -649,11 +654,11 @@ class ScalarParameterSamples(unittest.TestCase):
             except ValueError:
                 pass
 
-    def test_bounded(self):
-        # A bit crude...
-        BoundedNormal = Bound(Normal, upper=0)
-        pymc3_random(BoundedNormal, {'tau':Rplus},
-                     ref_rand=lambda size, tau=None: -st.halfnorm.rvs(size=size,loc=0, scale=tau ** -0.5))
+    # def test_bounded(self):
+    #     # A bit crude...
+    #     BoundedNormal = Bound(Normal, upper=0)
+    #     pymc3_random(BoundedNormal, {'tau':Rplus},
+    #                  ref_rand=lambda size, tau=None: -st.halfnorm.rvs(size=size,loc=0, scale=tau ** -0.5))
 
     def test_binomial(self):
         pymc3_random_discrete(Binomial, {'n':Nat, 'p':Unit},

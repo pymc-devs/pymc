@@ -52,6 +52,7 @@ def product(domains):
 R = Domain([-inf, -2.1, -1, -.01, .0, .01, 1, 2.1, inf])
 Rplus = Domain([0, .01, .1, .9, .99, 1, 1.5, 2, 100, inf])
 Rplusbig = Domain([0, .5, .9, .99, 1, 1.5, 2, 20, inf])
+Rminusbig = Domain([-inf, -2, -1.5, -1, -.99, -.9, -.5, -0.01, 0])
 Unit = Domain([0, .001, .1, .5, .75, .99, 1])
 
 Runif = Domain([-1, -.4, 0, .4, 1])
@@ -146,7 +147,6 @@ def test_uniform():
             Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif},
             lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower)
             )
-
 
 def test_discrete_unif():
     pymc3_matches_scipy(
@@ -337,7 +337,6 @@ def test_student_tpos():
            lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5)
            )
 
-
 def test_binomial():
     pymc3_matches_scipy(
             Binomial, Nat, {'n': NatSmall, 'p': Unit},
@@ -518,6 +517,8 @@ def test_addpotential():
 
 def pymc3_matches_scipy(pymc3_dist, domain, paramdomains, scipy_dist, extra_args={}):
     model= build_model(pymc3_dist, domain, paramdomains, extra_args)
+    print(pymc3_dist)
+    print(model.named_vars.keys())
     value = model.named_vars['value']
 
     def logp(args):

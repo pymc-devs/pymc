@@ -71,6 +71,10 @@ class Distribution(object):
         if isinstance(val, tt.TensorVariable):
             return val.tag.test_value
 
+# CHECK IF test_value is inside the definition of the distribution for bounded distributions
+        # if hasattr(self, 'lower'))
+        # if (val.tag.test_value)
+
         return val
 
 

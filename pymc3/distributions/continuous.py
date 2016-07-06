@@ -14,26 +14,24 @@ from scipy import stats
 from . import transforms
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
 from .distribution import Continuous, draw_values, generate_samples
+from ipdb import set_trace as stop
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
            'Bound', 'StudentTpos', 'Lognormal', 'ChiSquared', 'HalfNormal',
            'Wald', 'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises']
 
-
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
     def __init__(self, transform=transforms.log, *args, **kwargs):
         super(PositiveContinuous, self).__init__(
             transform=transform, *args, **kwargs)
-
-
+        
 class UnitContinuous(Continuous):
     """Base class for continuous distributions on [0,1]"""
     def __init__(self, transform=transforms.logodds, *args, **kwargs):
         super(UnitContinuous, self).__init__(
             transform=transform, *args, **kwargs)
-
 
 def get_tau_sd(tau=None, sd=None):
     """
@@ -982,7 +980,7 @@ class Weibull(PositiveContinuous):
 
 class Bounded(Continuous):
     """A bounded distribution."""
-    def __init__(self, distribution, lower, upper, *args, **kwargs):
+    def __init__(self, distribution, lower, upper, transform='interval', *args, **kwargs):
         self.dist = distribution.dist(*args, **kwargs)
 
         self.__dict__.update(self.dist.__dict__)
@@ -991,14 +989,16 @@ class Bounded(Continuous):
         if hasattr(self.dist, 'mode'):
             self.mode = self.dist.mode
 
-        if not np.isinf(lower) and not np.isinf(upper):
-            self.transform = transforms.interval(lower, upper)
+        if hasattr(self, 'transform') and self.transform is not None:
 
-        if not np.isinf(lower) and np.isinf(upper):
-            self.transform = transforms.lowerbound(lower)
+            if not np.isinf(lower) and not np.isinf(upper):
+                self.transform = transforms.interval(lower, upper)
 
-        if np.isinf(lower) and not np.isinf(upper):
-            self.transform = transforms.upperbound(upper)
+            if not np.isinf(lower) and np.isinf(upper):
+                self.transform = transforms.lowerbound(lower)
+
+            if np.isinf(lower) and not np.isinf(upper):
+                self.transform = transforms.upperbound(upper)
 
     def _random(self, lower, upper, point=None, size=None):
         samples = np.zeros(size).flatten()
@@ -1043,8 +1043,7 @@ class Bound(object):
                             *args, **kwargs)
 
 
-StudentTpos = Bound(StudentT, 0)
-
+StudentTpos = Bound(StudentT, lower=0)
 
 class ExGaussian(Continuous):
     R"""
