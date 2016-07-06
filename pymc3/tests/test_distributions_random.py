@@ -639,11 +639,6 @@ class ScalarParameterSamples(unittest.TestCase):
         pymc3_random(VonMises, {'mu':R, 'kappa':Rplus},
                      ref_rand=lambda size, mu=None, kappa=None: st.vonmises.rvs(size=size,loc=mu, kappa=kappa))
 
-    # def test_bounded(self):
-    #     # A bit crude...
-    #     BoundedNormal = Bound(Normal, lower=-10, upper=0)
-    #     pymc3_random(BoundedNormal, {'tau':Rplus},
-    #                  ref_rand=lambda size, tau=None: -st.halfnorm.rvs(size=size,loc=0, scale=tau ** -0.5))
 
     def test_flat(self):
         with Model():
@@ -653,12 +648,6 @@ class ScalarParameterSamples(unittest.TestCase):
                 assert False, 'Flat distribution returned samples'
             except ValueError:
                 pass
-
-    # def test_bounded(self):
-    #     # A bit crude...
-    #     BoundedNormal = Bound(Normal, upper=0)
-    #     pymc3_random(BoundedNormal, {'tau':Rplus},
-    #                  ref_rand=lambda size, tau=None: -st.halfnorm.rvs(size=size,loc=0, scale=tau ** -0.5))
 
     def test_binomial(self):
         pymc3_random_discrete(Binomial, {'n':Nat, 'p':Unit},

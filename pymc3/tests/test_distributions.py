@@ -517,8 +517,6 @@ def test_addpotential():
 
 def pymc3_matches_scipy(pymc3_dist, domain, paramdomains, scipy_dist, extra_args={}):
     model= build_model(pymc3_dist, domain, paramdomains, extra_args)
-    print(pymc3_dist)
-    print(model.named_vars.keys())
     value = model.named_vars['value']
 
     def logp(args):
