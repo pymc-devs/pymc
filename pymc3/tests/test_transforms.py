@@ -96,7 +96,7 @@ def test_lowerbound():
     trans = tr.lowerbound(0.0)
     check_transform_identity(trans, Rplusbig)
     check_jacobian_det(trans, Rplusbig, elemwise=True) 
-    check_jacobian_det(trans, Vector(Rplusbig,2), t.dvector, [0,0], elemwise=True) 
+    check_jacobian_det(trans, Vector(Rplusbig,2), tt.dvector, [0,0], elemwise=True) 
 
     vals = get_values(trans) 
     close_to(vals > 0, True, tol)
@@ -105,7 +105,7 @@ def test_upperbound():
     trans = tr.upperbound(0.0)
     check_transform_identity(trans, Rminusbig)
     check_jacobian_det(trans, Rminusbig, elemwise=True) 
-    check_jacobian_det(trans, Vector(Rminusbig,2), t.dvector, [-1,-1], elemwise=True) 
+    check_jacobian_det(trans, Vector(Rminusbig,2), tt.dvector, [-1,-1], elemwise=True) 
 
     vals = get_values(trans) 
     close_to(vals < 0, True, tol)
