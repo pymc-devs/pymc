@@ -68,9 +68,6 @@ def check_jacobian_det(transform, domain, constructor=tt.dscalar, test=0, make_c
     computed_ljd = theano.function([y], tt.as_tensor_variable(transform.jacobian_det(y)), on_unused_input='ignore')
 
     for yval in domain.vals:
-        print('yval', yval)
-        print('actual', actual_ljd(yval))
-        print('computed', computed_ljd(yval))
         close_to(
             actual_ljd(yval),
             computed_ljd(yval), tol)
