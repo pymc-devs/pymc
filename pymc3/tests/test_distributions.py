@@ -532,15 +532,6 @@ def pymc3_matches_scipy(pymc3_dist, domain, paramdomains, scipy_dist, extra_args
     check_logp(model, value, domain, paramdomains, logp)
 
 
-# def test_bound():
-#     with Model() as model:
-#         PositiveNormal = Bound(Normal, lower=-.2)
-#         value = PositiveNormal('value', 1, 1, transform=None)
-
-#         Rplus2 = Domain([-.2, -.19, -.1, 0, .5, 1, inf])
-
-#         check_dlogp(model, value, Rplus2, {})
-
 def test_get_tau_sd():
     sd = np.array([2])
     assert_almost_equal(distributions.continuous.get_tau_sd(sd=sd), [1./sd**2, sd])

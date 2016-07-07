@@ -978,7 +978,9 @@ class Weibull(PositiveContinuous):
 
 
 class Bounded(Continuous):
-    """A bounded distribution."""
+    R"""
+    An upper, lower or upper+lower bounded distribution
+    """
     def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
         self.dist = distribution.dist(*args, **kwargs)
 
@@ -988,16 +990,24 @@ class Bounded(Continuous):
         if hasattr(self.dist, 'mode'):
             self.mode = self.dist.mode
 
-        if hasattr(self, 'transform') and self.transform is not None:
+        if transform == 'infer':
+
+            default = self.dist.default()
 
             if not np.isinf(lower) and not np.isinf(upper):
                 self.transform = transforms.interval(lower, upper)
+                if default <= lower or default >= upper:
+                    self.testval = 0.5*(upper+lower)
 
             if not np.isinf(lower) and np.isinf(upper):
                 self.transform = transforms.lowerbound(lower)
+                if default <= lower:
+                    self.testval = lower + 1
 
             if np.isinf(lower) and not np.isinf(upper):
                 self.transform = transforms.upperbound(upper)
+                if default >= upper:
+                    self.testval = upper - 1
 
     def _random(self, lower, upper, point=None, size=None):
         samples = np.zeros(size).flatten()
@@ -1025,7 +1035,22 @@ class Bounded(Continuous):
 
 
 class Bound(object):
-    """Creates a new bounded distribution"""
+    R"""
+    Creates a new upper, lower or upper+lower bounded distribution
+
+    Parameters
+    ----------
+    distribution : pymc3 distribution
+        Distribution to be transformed into a bounded distribution
+    lower : float (optional)
+        Lower bound of the distribution
+    upper : float (optional)
+
+    Example
+    -------
+    boundedNormal = pymc3.Bound(pymc3.Normal, lower=0.0)
+    par = boundedNormal(mu=0.0, sd=1.0, testval=1.0)
+    """
     def __init__(self, distribution, lower=-np.inf, upper=np.inf):
         self.distribution = distribution
         self.lower = lower

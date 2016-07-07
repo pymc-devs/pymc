@@ -21,6 +21,8 @@ import numpy as np
 import scipy.stats as st
 import numpy.random as nr
 
+nr.seed(20090425)
+
 def pymc3_random(dist, paramdomains,
                  ref_rand=None, valuedomain=Domain([0]),
                  size=10000, alpha=0.05, fails=10):
