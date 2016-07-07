@@ -148,6 +148,13 @@ def test_uniform():
             lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower)
             )
 
+def test_bound_normal():
+    PositiveNormal = Bound(Normal, lower=0.)
+    pymc3_matches_scipy(
+            PositiveNormal, Rplus, {'mu': Rplus, 'sd': Rplus},
+            lambda value, mu, sd: sp.norm.logpdf(value, mu, sd)
+            )
+
 def test_discrete_unif():
     pymc3_matches_scipy(
             DiscreteUniform, Rdunif,
@@ -525,15 +532,14 @@ def pymc3_matches_scipy(pymc3_dist, domain, paramdomains, scipy_dist, extra_args
     check_logp(model, value, domain, paramdomains, logp)
 
 
+# def test_bound():
+#     with Model() as model:
+#         PositiveNormal = Bound(Normal, lower=-.2)
+#         value = PositiveNormal('value', 1, 1, transform=None)
 
-def test_bound():
-    with Model() as model:
-        PositiveNormal = Bound(Normal, -.2)
-        value = PositiveNormal('value', 1, 1)
+#         Rplus2 = Domain([-.2, -.19, -.1, 0, .5, 1, inf])
 
-        Rplus2 = Domain([-.2, -.19, -.1, 0, .5, 1, inf])
-
-        check_dlogp(model, value, Rplus2, {})
+#         check_dlogp(model, value, Rplus2, {})
 
 def test_get_tau_sd():
     sd = np.array([2])
