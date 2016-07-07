@@ -20,20 +20,17 @@ __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'Bound', 'StudentTpos', 'Lognormal', 'ChiSquared', 'HalfNormal',
            'Wald', 'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises']
 
-
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
     def __init__(self, transform=transforms.log, *args, **kwargs):
         super(PositiveContinuous, self).__init__(
             transform=transform, *args, **kwargs)
-
-
+        
 class UnitContinuous(Continuous):
     """Base class for continuous distributions on [0,1]"""
     def __init__(self, transform=transforms.logodds, *args, **kwargs):
         super(UnitContinuous, self).__init__(
             transform=transform, *args, **kwargs)
-
 
 def get_tau_sd(tau=None, sd=None):
     """
@@ -981,8 +978,10 @@ class Weibull(PositiveContinuous):
 
 
 class Bounded(Continuous):
-    """A bounded distribution."""
-    def __init__(self, distribution, lower, upper, *args, **kwargs):
+    R"""
+    An upper, lower or upper+lower bounded distribution
+    """
+    def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
         self.dist = distribution.dist(*args, **kwargs)
 
         self.__dict__.update(self.dist.__dict__)
@@ -990,6 +989,25 @@ class Bounded(Continuous):
 
         if hasattr(self.dist, 'mode'):
             self.mode = self.dist.mode
+
+        if transform == 'infer':
+
+            default = self.dist.default()
+
+            if not np.isinf(lower) and not np.isinf(upper):
+                self.transform = transforms.interval(lower, upper)
+                if default <= lower or default >= upper:
+                    self.testval = 0.5*(upper+lower)
+
+            if not np.isinf(lower) and np.isinf(upper):
+                self.transform = transforms.lowerbound(lower)
+                if default <= lower:
+                    self.testval = lower + 1
+
+            if np.isinf(lower) and not np.isinf(upper):
+                self.transform = transforms.upperbound(upper)
+                if default >= upper:
+                    self.testval = upper - 1
 
     def _random(self, lower, upper, point=None, size=None):
         samples = np.zeros(size).flatten()
@@ -1017,7 +1035,22 @@ class Bounded(Continuous):
 
 
 class Bound(object):
-    """Creates a new bounded distribution"""
+    R"""
+    Creates a new upper, lower or upper+lower bounded distribution
+
+    Parameters
+    ----------
+    distribution : pymc3 distribution
+        Distribution to be transformed into a bounded distribution
+    lower : float (optional)
+        Lower bound of the distribution
+    upper : float (optional)
+
+    Example
+    -------
+    boundedNormal = pymc3.Bound(pymc3.Normal, lower=0.0)
+    par = boundedNormal(mu=0.0, sd=1.0, testval=1.0)
+    """
     def __init__(self, distribution, lower=-np.inf, upper=np.inf):
         self.distribution = distribution
         self.lower = lower
@@ -1034,8 +1067,7 @@ class Bound(object):
                             *args, **kwargs)
 
 
-StudentTpos = Bound(StudentT, 0)
-
+StudentTpos = Bound(StudentT, lower=0)
 
 class ExGaussian(Continuous):
     R"""
