@@ -1,4 +1,5 @@
 import numpy as np
+import pymc3 as pm
 from pymc3 import Model, Normal, DiscreteUniform, Poisson, switch, Exponential
 from pymc3.theanof import inputvars
 from pymc3.variational.advi import variational_gradient_estimate, advi, advi_minibatch, sample_vp
@@ -202,3 +203,22 @@ def test_advi_minibatch_shared():
 
     np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
     np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+
+def test_sample_vp():
+    n_samples = 100
+
+    rng = np.random.RandomState(0)
+    xs = rng.binomial(n=1, p=0.2, size=n_samples)
+
+    with pm.Model() as model:
+        p = pm.Beta('p', alpha=1, beta=1)
+        pm.Binomial('xs', n=1, p=p, observed=xs)
+        v_params = advi(n=1000)
+
+    with model:
+        trace = sample_vp(v_params, hide_transformed=True)
+    assert(set(trace.varnames) == set('p'))
+
+    with model:
+        trace = sample_vp(v_params, hide_transformed=False)
+    assert(set(trace.varnames) == set(('p', 'p_logodds_')))
