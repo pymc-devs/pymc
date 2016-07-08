@@ -12,6 +12,7 @@ Examples
    notebooks/GLM-robust-with-outlier-detection.ipynb
    notebooks/GLM-model-selection.ipynb
    notebooks/rolling_regression.ipynb
+   notebooks/GLM-logistic.ipynb
    notebooks/GLM-hierarchical.ipynb
    notebooks/pmf-pymc.ipynb
    notebooks/rugby_analytics.ipynb
