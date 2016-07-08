@@ -980,6 +980,19 @@ class Weibull(PositiveContinuous):
 class Bounded(Continuous):
     R"""
     An upper, lower or upper+lower bounded distribution
+
+    Parameters
+    ----------
+    distribution : pymc3 distribution
+        Distribution to be transformed into a bounded distribution
+    lower : float (optional)
+        Lower bound of the distribution, set to -inf to disable.
+    upper : float (optional)
+        Upper bound of the distribibution, set to inf to disable.
+    tranform : 'infer' or object
+        If 'infer', infers the right transform to apply from the supplied bounds.
+        If transform object, has to supply .forward() and .backward() methods.
+        See pymc3.distributions.transforms for more information.
     """
     def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
         self.dist = distribution.dist(*args, **kwargs)
