@@ -234,7 +234,7 @@
 <td>Weibull log-likelihood.</td>
 </tr>
 <tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">StudentTpos</span></code></td>
-<td>Creates a new bounded distribution</td>
+<td>Creates a new upper, lower or upper+lower bounded distribution</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Lognormal" title="pymc3.distributions.continuous.Lognormal"><code class="xref py py-obj docutils literal"><span class="pre">Lognormal</span></code></a>([mu,&nbsp;tau])</td>
 <td>Log-normal log-likelihood.</td>
@@ -735,7 +735,24 @@ parametrizations is given by</p>
 <dl class="class">
 <dt id="pymc3.distributions.continuous.Bound">
 <em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Bound</code><span class="sig-paren">(</span><em>distribution</em>, <em>lower=-inf</em>, <em>upper=inf</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Bound" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates a new bounded distribution</p>
+<dd><p>Creates a new upper, lower or upper+lower bounded distribution</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>distribution</strong> : pymc3 distribution</p>
+<blockquote>
+<div><p>Distribution to be transformed into a bounded distribution</p>
+</div></blockquote>
+<p><strong>lower</strong> : float (optional)</p>
+<blockquote>
+<div><p>Lower bound of the distribution</p>
+</div></blockquote>
+<p class="last"><strong>upper</strong> : float (optional)</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="class">
@@ -1583,6 +1600,61 @@ rescaled otherwise.</p>
 </dd></dl>
 
 <dl class="class">
+<dt id="pymc3.distributions.multivariate.MvStudentT">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">MvStudentT</code><span class="sig-paren">(</span><em>nu</em>, <em>Sigma</em>, <em>mu=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.MvStudentT" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div><p>Multivariate Student T log-likelihood.</p>
+<div class="math">
+\[\]</div>
+<p>f(mathbf{x}|</p>
+</div></blockquote>
+<p>u,mu,Sigma) = 
+rac{Gammaleft[(
+u+p)/2
+ight]}{Gamma(
+u/2)
+u^{p/2}pi^{p/2}left|{Sigma}
+ight|^{1/2}left[1+
+rac{1}{
+u}({mathbf x}-{mu})^T{Sigma}^{-1}({mathbf x}-{mu})
+ight]^{(
+u+p)/2}}</p>
+<blockquote>
+<div></div></blockquote>
+<dl class="docutils">
+<dt>u &gt; 1`  else undefined</dt>
+<dd>Variance  :math:<a href="#id5"><span class="problematic" id="id6">`</span></a></dd>
+</dl>
+<p>rac{
+u}{mu-2}Sigma` if :math:`
+u&gt;2` else undefined</p>
+<blockquote>
+<div></div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>nu</strong> : int</p>
+<blockquote class="last">
+<div><blockquote>
+<div><p>Degrees of freedom.</p>
+</div></blockquote>
+<dl class="docutils">
+<dt>Sigma</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">matrix</span><dd><p class="first last">Covariance matrix.</p>
+</dd>
+<dt>mu</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">array</span><dd><p class="first last">Vector of means.</p>
+</dd>
+</dl>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
 <dt id="pymc3.distributions.multivariate.Dirichlet">
 <em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">Dirichlet</code><span class="sig-paren">(</span><em>a</em>, <em>transform=&lt;pymc3.distributions.transforms.StickBreaking object&gt;</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.Dirichlet" title="Permalink to this definition">¶</a></dt>
 <dd><p>Dirichlet log-likelihood.</p>
@@ -1728,6 +1800,55 @@ is identical to the chi-square distribution with n degrees of freedom.</p>
 </table>
 </dd></dl>
 
+<dl class="function">
+<dt id="pymc3.distributions.multivariate.WishartBartlett">
+<code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">WishartBartlett</code><span class="sig-paren">(</span><em>name</em>, <em>S</em>, <em>nu</em>, <em>is_cholesky=False</em>, <em>return_cholesky=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.WishartBartlett" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bartlett decomposition of the Wishart distribution. As the Wishart
+distribution requires the matrix to be symmetric positive semi-definite
+it is impossible for MCMC to ever propose acceptable matrices.</p>
+<p>Instead, we can use the Barlett decomposition which samples a lower
+diagonal matrix. Specifically:</p>
+<dl class="docutils">
+<dt>If L ~ [[sqrt(c_1), 0, ...],</dt>
+<dd>[z_21, sqrt(c_1), 0, ...],
+[z_31, z32, sqrt(c3), ...]]</dd>
+</dl>
+<p>with c_i ~ Chi²(n-i+1) and n_ij ~ N(0, 1), then
+L * A * A.T * L.T ~ Wishart(L * L.T, nu)</p>
+<p>See <a class="reference external" href="http://en.wikipedia.org/wiki/Wishart_distribution#Bartlett_decomposition">http://en.wikipedia.org/wiki/Wishart_distribution#Bartlett_decomposition</a>
+for more information.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>S</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">ndarray</span><dd><p class="first last">p x p positive definite matrix
+Or:
+p x p lower-triangular matrix that is the Cholesky factor
+of the covariance matrix.</p>
+</dd>
+<dt>nu</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">int</span><dd><p class="first last">Degrees of freedom, &gt; dim(S).</p>
+</dd>
+<dt>is_cholesky</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">bool (default=False)</span><dd><p class="first last">Input matrix S is already Cholesky decomposed as S.T * S</p>
+</dd>
+<dt>return_cholesky</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">bool (default=False)</span><dd><p class="first last">Only return the Cholesky decomposed matrix.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Note:</th><td class="field-body"><p class="first last">This is not a standard Distribution class but follows a similar
+interface. Besides the Wishart distribution, it will add RVs
+c and z to your model which make up the matrix.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="class">
 <dt id="pymc3.distributions.multivariate.LKJCorr">
 <em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">LKJCorr</code><span class="sig-paren">(</span><em>n</em>, <em>p</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.LKJCorr" title="Permalink to this definition">¶</a></dt>
@@ -1777,7 +1898,7 @@ the indexes of the elements:</p>
 <table class="docutils citation" frame="void" id="lkj2009" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id5">[LKJ2009]</a></td><td>Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+<tr><td class="label"><a class="fn-backref" href="#id7">[LKJ2009]</a></td><td>Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
 &#8220;Generating random correlation matrices based on vines and
 extended onion method.&#8221; Journal of multivariate analysis,
 100(9), pp.1989-2001.</td></tr>
@@ -1791,7 +1912,7 @@ extended onion method.&#8221; Journal of multivariate analysis,
 <h2>Plots<a class="headerlink" href="#plots" title="Permalink to this headline">¶</a></h2>
 <span class="target" id="module-pymc3.plots"></span><dl class="function">
 <dt id="pymc3.plots.traceplot">
-<code class="descclassname">pymc3.plots.</code><code class="descname">traceplot</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>figsize=None</em>, <em>lines=None</em>, <em>combined=False</em>, <em>grid=False</em>, <em>alpha=0.35</em>, <em>priors=None</em>, <em>prior_alpha=1</em>, <em>prior_style='--'</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.traceplot" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.plots.</code><code class="descname">traceplot</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>transform=&lt;function &lt;lambda&gt;&gt;</em>, <em>figsize=None</em>, <em>lines=None</em>, <em>combined=False</em>, <em>plot_transformed=False</em>, <em>grid=False</em>, <em>alpha=0.35</em>, <em>priors=None</em>, <em>prior_alpha=1</em>, <em>prior_style='--'</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.traceplot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot samples histograms and values</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1801,6 +1922,10 @@ extended onion method.&#8221; Journal of multivariate analysis,
 <p><strong>varnames</strong> : list of variable names</p>
 <blockquote>
 <div><p>Variables to be plotted, if None all variable are plotted</p>
+</div></blockquote>
+<p><strong>transform</strong> : callable</p>
+<blockquote>
+<div><p>Function to transform data (defaults to identity)</p>
 </div></blockquote>
 <p><strong>figsize</strong> : figure size tuple</p>
 <blockquote>
@@ -1816,6 +1941,11 @@ e.g. mean of posteriors, true values of a simulation</p>
 <blockquote>
 <div><p>Flag for combining multiple chains into a single chain. If False
 (default), chains will be plotted separately.</p>
+</div></blockquote>
+<p><strong>plot_transformed</strong> : bool</p>
+<blockquote>
+<div><p>Flag for plotting automatically transformed variables in addition to 
+original variables (defaults to False).</p>
 </div></blockquote>
 <p><strong>grid</strong> : bool</p>
 <blockquote>
@@ -1853,7 +1983,7 @@ to None (no prior plots).</p>
 
 <dl class="function">
 <dt id="pymc3.plots.forestplot">
-<code class="descclassname">pymc3.plots.</code><code class="descname">forestplot</code><span class="sig-paren">(</span><em>trace_obj</em>, <em>varnames=None</em>, <em>alpha=0.05</em>, <em>quartiles=True</em>, <em>rhat=True</em>, <em>main=None</em>, <em>xtitle=None</em>, <em>xrange=None</em>, <em>ylabels=None</em>, <em>chain_spacing=0.05</em>, <em>vline=0</em>, <em>gs=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.forestplot" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.plots.</code><code class="descname">forestplot</code><span class="sig-paren">(</span><em>trace_obj</em>, <em>varnames=None</em>, <em>transform=&lt;function &lt;lambda&gt;&gt;</em>, <em>alpha=0.05</em>, <em>quartiles=True</em>, <em>rhat=True</em>, <em>main=None</em>, <em>xtitle=None</em>, <em>xrange=None</em>, <em>ylabels=None</em>, <em>chain_spacing=0.05</em>, <em>vline=0</em>, <em>gs=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.forestplot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Forest plot (model summary plot)</p>
 <p>Generates a &#8220;forest plot&#8221; of 100*(1-alpha)% credible intervals for either
 the set of variables in a given model, or a specified set of nodes.</p>
@@ -1868,6 +1998,9 @@ the set of variables in a given model, or a specified set of nodes.</p>
 <dt>varnames: list</dt>
 <dd><p class="first last">List of variables to plot (defaults to None, which results in all
 variables plotted).</p>
+</dd>
+<dt>transform</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">callable</span><dd><p class="first last">Function to transform data (defaults to identity)</p>
 </dd>
 <dt>alpha (optional): float</dt>
 <dd><p class="first last">Alpha value for (1-alpha)*100% credible intervals (defaults to
@@ -1916,7 +2049,7 @@ __name__ attributes are used.</p>
 
 <dl class="function">
 <dt id="pymc3.plots.autocorrplot">
-<code class="descclassname">pymc3.plots.</code><code class="descname">autocorrplot</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>max_lag=100</em>, <em>burn=0</em>, <em>symmetric_plot=False</em>, <em>ax=None</em>, <em>figsize=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.autocorrplot" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.plots.</code><code class="descname">autocorrplot</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>max_lag=100</em>, <em>burn=0</em>, <em>plot_transformed=False</em>, <em>symmetric_plot=False</em>, <em>ax=None</em>, <em>figsize=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.autocorrplot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bar plot of the autocorrelation function for a trace</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1936,6 +2069,11 @@ Vector-value stochastics are handled automatically.</p>
 <blockquote>
 <div><p>Number of samples to discard from the beginning of the trace.
 Defaults to 0.</p>
+</div></blockquote>
+<p><strong>plot_transformed</strong> : bool</p>
+<blockquote>
+<div><p>Flag for plotting automatically transformed variables in addition to 
+original variables (defaults to False).</p>
 </div></blockquote>
 <p><strong>symmetric_plot</strong> : boolean</p>
 <blockquote>
@@ -1961,7 +2099,7 @@ Note this is not used if ax is supplied.</p>
 
 <dl class="function">
 <dt id="pymc3.plots.plot_posterior">
-<code class="descclassname">pymc3.plots.</code><code class="descname">plot_posterior</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>figsize=None</em>, <em>alpha_level=0.05</em>, <em>round_to=3</em>, <em>point_estimate='mean'</em>, <em>rope=None</em>, <em>ref_val=None</em>, <em>kde_plot=False</em>, <em>ax=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.plot_posterior" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.plots.</code><code class="descname">plot_posterior</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>transform=&lt;function &lt;lambda&gt;&gt;</em>, <em>figsize=None</em>, <em>alpha_level=0.05</em>, <em>round_to=3</em>, <em>point_estimate='mean'</em>, <em>rope=None</em>, <em>ref_val=None</em>, <em>kde_plot=False</em>, <em>plot_transformed=False</em>, <em>ax=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.plots.plot_posterior" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot Posterior densities in style of John K. Kruschke book</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1971,6 +2109,10 @@ Note this is not used if ax is supplied.</p>
 <p><strong>varnames</strong> : list of variable names</p>
 <blockquote>
 <div><p>Variables to be plotted, if None all variable are plotted</p>
+</div></blockquote>
+<p><strong>transform</strong> : callable</p>
+<blockquote>
+<div><p>Function to transform data (defaults to identity)</p>
 </div></blockquote>
 <p><strong>figsize</strong> : figure size tuple</p>
 <blockquote>
@@ -1999,6 +2141,11 @@ Note this is not used if ax is supplied.</p>
 <p><strong>kde_plot: bool</strong></p>
 <blockquote>
 <div><p>if True plot a KDE instead of a histogram</p>
+</div></blockquote>
+<p><strong>plot_transformed</strong> : bool</p>
+<blockquote>
+<div><p>Flag for plotting automatically transformed variables in addition to 
+original variables (defaults to False).</p>
 </div></blockquote>
 <p><strong>ax</strong> : axes</p>
 <blockquote>
@@ -2056,8 +2203,8 @@ Read more theory here - in a paper by some of the leading authorities on Model S
 
 <dl class="function">
 <dt id="pymc3.stats.waic">
-<code class="descclassname">pymc3.stats.</code><code class="descname">waic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.waic" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate the widely available information criterion of the samples in trace from model.
+<code class="descclassname">pymc3.stats.</code><code class="descname">waic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em>, <em>n_eff=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.waic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the widely available information criterion and the effective number of parameters of the samples in trace from model.
 Read more theory here - in a paper by some of the leading authorities on Model Selection - <a class="reference external" href="http://bit.ly/1W2YJ7c">http://bit.ly/1W2YJ7c</a></p>
 </dd></dl>
 
@@ -2086,6 +2233,9 @@ minimum width Bayesian credible interval (BCI).</p>
 <dt>alpha</dt>
  <span class="classifier-delimiter">:</span> <span class="classifier">float</span><dd><p class="first last">Desired probability of type I error (defaults to 0.05)</p>
 </dd>
+<dt>transform</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">callable</span><dd><p class="first last">Function to transform data (defaults to identity)</p>
+</dd>
 </dl>
 </td>
 </tr>
@@ -2107,6 +2257,9 @@ minimum width Bayesian credible interval (BCI).</p>
 </dd>
 <dt>qlist</dt>
  <span class="classifier-delimiter">:</span> <span class="classifier">tuple or list</span><dd><p class="first last">A list of desired quantiles (defaults to (2.5, 25, 50, 75, 97.5))</p>
+</dd>
+<dt>transform</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">callable</span><dd><p class="first last">Function to transform data (defaults to identity)</p>
 </dd>
 </dl>
 </td>
@@ -2141,7 +2294,7 @@ the batch means is calculated.</p>
 
 <dl class="function">
 <dt id="pymc3.stats.summary">
-<code class="descclassname">pymc3.stats.</code><code class="descname">summary</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>alpha=0.05</em>, <em>start=0</em>, <em>batches=100</em>, <em>roundto=3</em>, <em>to_file=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.summary" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.stats.</code><code class="descname">summary</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>alpha=0.05</em>, <em>start=0</em>, <em>batches=100</em>, <em>roundto=3</em>, <em>include_transformed=False</em>, <em>to_file=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.summary" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate a pretty-printed summary of the node.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2168,6 +2321,9 @@ to zero.</dd>
 samples. Defaults to 100.</dd>
 <dt>roundto</dt>
  <span class="classifier-delimiter">:</span> <span class="classifier">int</span><dd>The number of digits to round posterior statistics.</dd>
+<dt>include_transformed</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">bool</span><dd>Flag for summarizing automatically transformed variables in addition to 
+original variables (defaults to False).</dd>
 <dt>tofile</dt>
  <span class="classifier-delimiter">:</span> <span class="classifier">None or string</span><dd>File to write results to. If not given, print to stdout.</dd>
 </dl>
@@ -2175,7 +2331,7 @@ samples. Defaults to 100.</dd>
 
 <dl class="function">
 <dt id="pymc3.stats.df_summary">
-<code class="descclassname">pymc3.stats.</code><code class="descname">df_summary</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>stat_funcs=None</em>, <em>extend=False</em>, <em>alpha=0.05</em>, <em>batches=100</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.df_summary" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.stats.</code><code class="descname">df_summary</code><span class="sig-paren">(</span><em>trace</em>, <em>varnames=None</em>, <em>stat_funcs=None</em>, <em>extend=False</em>, <em>include_transformed=False</em>, <em>alpha=0.05</em>, <em>batches=100</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.df_summary" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a data frame with summary statistics.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2213,6 +2369,11 @@ statistics.</li>
 <div><p>If True, use the statistics returned by <cite>stat_funcs</cite> in
 addition to, rather than in place of, the default statistics.
 This is only meaningful when <cite>stat_funcs</cite> is not None.</p>
+</div></blockquote>
+<p><strong>include_transformed</strong> : bool</p>
+<blockquote>
+<div><p>Flag for reporting automatically transformed variables in addition to 
+original variables (defaults to False).</p>
 </div></blockquote>
 <p><strong>alpha</strong> : float</p>
 <blockquote>
@@ -2466,7 +2627,7 @@ The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carl
 <p><strong>proposal_dist</strong> : function</p>
 <blockquote>
 <div><p>Function that returns zero-mean deviates when parameterized with
-S (and n). Defaults to quad_potential.</p>
+S (and n). Defaults to normal.</p>
 </div></blockquote>
 <p><strong>scaling</strong> : scalar or array</p>
 <blockquote>
@@ -2475,6 +2636,10 @@ S (and n). Defaults to quad_potential.</p>
 <p><strong>tune</strong> : bool</p>
 <blockquote>
 <div><p>Flag for tuning. Defaults to True.</p>
+</div></blockquote>
+<p><strong>tune_interval</strong> : int</p>
+<blockquote>
+<div><p>The frequency of tuning. Defaults to 100 iterations.</p>
 </div></blockquote>
 <p><strong>model</strong> : PyMC Model</p>
 <blockquote class="last">
@@ -2490,6 +2655,34 @@ S (and n). Defaults to quad_potential.</p>
 <dt id="pymc3.step_methods.metropolis.BinaryMetropolis">
 <em class="property">class </em><code class="descclassname">pymc3.step_methods.metropolis.</code><code class="descname">BinaryMetropolis</code><span class="sig-paren">(</span><em>vars</em>, <em>scaling=1.0</em>, <em>tune=True</em>, <em>tune_interval=100</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.metropolis.BinaryMetropolis" title="Permalink to this definition">¶</a></dt>
 <dd><p>Metropolis-Hastings optimized for binary variables</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>vars</strong> : list</p>
+<blockquote>
+<div><p>List of variables for sampler</p>
+</div></blockquote>
+<p><strong>scaling</strong> : scalar or array</p>
+<blockquote>
+<div><p>Initial scale factor for proposal. Defaults to 1.</p>
+</div></blockquote>
+<p><strong>tune</strong> : bool</p>
+<blockquote>
+<div><p>Flag for tuning. Defaults to True.</p>
+</div></blockquote>
+<p><strong>tune_interval</strong> : int</p>
+<blockquote>
+<div><p>The frequency of tuning. Defaults to 100 iterations.</p>
+</div></blockquote>
+<p><strong>model</strong> : PyMC Model</p>
+<blockquote class="last">
+<div><p>Optional model for sampling step. Defaults to None (taken from context).</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 <dl class="staticmethod">
 <dt id="pymc3.step_methods.metropolis.BinaryMetropolis.competence">
 <em class="property">static </em><code class="descname">competence</code><span class="sig-paren">(</span><em>var</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.metropolis.BinaryMetropolis.competence" title="Permalink to this definition">¶</a></dt>

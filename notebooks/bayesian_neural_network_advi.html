@@ -92,6 +92,7 @@
 <li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
@@ -489,7 +490,7 @@ hyper-parameter optimization and a lot of tribal knowledge.</p>
 problem that&#8217;s not linearly separable.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [1]:
+<span></span>In [20]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -554,7 +555,7 @@ layers. Here we will use 2 hidden layers with 5 neurons each which is
 sufficient for such a simple problem.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -622,7 +623,7 @@ faster and will scale better. Note, that this is a mean-field
 approximation so we ignore correlations in the posterior.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [34]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -639,19 +640,19 @@ with neural_network:
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -368.86
-Iteration 5000 [10%]: ELBO = -185.65
-Iteration 10000 [20%]: ELBO = -197.23
-Iteration 15000 [30%]: ELBO = -203.2
-Iteration 20000 [40%]: ELBO = -192.46
-Iteration 25000 [50%]: ELBO = -198.8
-Iteration 30000 [60%]: ELBO = -183.39
-Iteration 35000 [70%]: ELBO = -185.04
-Iteration 40000 [80%]: ELBO = -187.56
-Iteration 45000 [90%]: ELBO = -192.32
-Finished [100%]: ELBO = -225.56
-CPU times: user 36.3 s, sys: 60 ms, total: 36.4 s
-Wall time: 37.2 s
+Iteration 0 [0%]: ELBO = -234.43
+Iteration 5000 [10%]: Average ELBO = -431.23
+Iteration 10000 [20%]: Average ELBO = -279.25
+Iteration 15000 [30%]: Average ELBO = -238.32
+Iteration 20000 [40%]: Average ELBO = -217.37
+Iteration 25000 [50%]: Average ELBO = -188.57
+Iteration 30000 [60%]: Average ELBO = -158.14
+Iteration 35000 [70%]: Average ELBO = -140.24
+Iteration 40000 [80%]: Average ELBO = -132.38
+Iteration 45000 [90%]: Average ELBO = -129.07
+Finished [100%]: Average ELBO = -126.53
+CPU times: user 13 s, sys: 252 ms, total: 13.3 s
+Wall time: 12.2 s
 </pre></div></div>
 </div>
 <p>&lt; 40 seconds on my older laptop. That&#8217;s pretty good considering that
@@ -664,7 +665,7 @@ just sampling from Normal distributions, so not at all the same like
 MCMC):</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [35]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -677,7 +678,7 @@ MCMC):</p>
 slowly improves the fit over time.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [36]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -689,11 +690,11 @@ slowly improves the fit over time.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[36]:
+<span></span>Out[7]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x7fa5dae039b0&gt;
+<span></span>&lt;matplotlib.text.Text at 0x7f1f600ad4e0&gt;
 </pre></div>
 </div>
 </div>
@@ -711,7 +712,7 @@ to generate new data (in this case class predictions) from the posterior
 (sampled from the variational estimation).</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -729,7 +730,7 @@ to generate new data (in this case class predictions) from the posterior
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -750,7 +751,7 @@ to generate new data (in this case class predictions) from the posterior
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -763,7 +764,7 @@ to generate new data (in this case class predictions) from the posterior
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Accuracy = 94.19999999999999%
+Accuracy = 97.2%
 </pre></div></div>
 </div>
 <p>Hey, our neural network did all right!</p>
@@ -775,7 +776,7 @@ Accuracy = 94.19999999999999%
 the whole input space.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -787,7 +788,7 @@ the whole input space.</p>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -803,7 +804,7 @@ the whole input space.</p>
 <h3>Probability surface<a class="headerlink" href="#Probability-surface" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [26]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -836,7 +837,7 @@ predictive to get a sense for the uncertainty in our predictions. Here
 is what that looks like:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [27]:
+<span></span>In [14]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -876,7 +877,7 @@ and can lead to faster convergence.</p>
 some setting up:</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [43]:
+<span></span>In [15]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -897,10 +898,10 @@ some setting up:</p>
         <span class="n">ixs</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
         <span class="k">yield</span> <span class="n">data</span><span class="p">[</span><span class="n">ixs</span><span class="p">]</span>
 
-<span class="n">minibatches</span> <span class="o">=</span> <span class="p">[</span>
+<span class="n">minibatches</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span>
     <span class="n">create_minibatch</span><span class="p">(</span><span class="n">X_train</span><span class="p">),</span>
     <span class="n">create_minibatch</span><span class="p">(</span><span class="n">Y_train</span><span class="p">),</span>
-<span class="p">]</span>
+<span class="p">)</span>
 
 <span class="n">total_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Y_train</span><span class="p">)</span>
 </pre></div>
@@ -913,7 +914,7 @@ not have to keep all the data in RAM.</p>
 <p>Lets pass those to <code class="docutils literal"><span class="pre">advi_minibatch()</span></code>:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [48]:
+<span></span>In [16]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -934,24 +935,24 @@ with neural_network:
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -311.63
-Iteration 5000 [10%]: ELBO = -162.34
-Iteration 10000 [20%]: ELBO = -70.49
-Iteration 15000 [30%]: ELBO = -153.64
-Iteration 20000 [40%]: ELBO = -164.07
-Iteration 25000 [50%]: ELBO = -135.05
-Iteration 30000 [60%]: ELBO = -240.99
-Iteration 35000 [70%]: ELBO = -111.71
-Iteration 40000 [80%]: ELBO = -87.55
-Iteration 45000 [90%]: ELBO = -97.5
-Finished [100%]: ELBO = -75.31
-CPU times: user 17.4 s, sys: 56 ms, total: 17.5 s
-Wall time: 17.5 s
+Iteration 0 [0%]: ELBO = -293.85
+Iteration 5000 [10%]: Average ELBO = -212.06
+Iteration 10000 [20%]: Average ELBO = -124.48
+Iteration 15000 [30%]: Average ELBO = -123.01
+Iteration 20000 [40%]: Average ELBO = -123.54
+Iteration 25000 [50%]: Average ELBO = -122.92
+Iteration 30000 [60%]: Average ELBO = -122.51
+Iteration 35000 [70%]: Average ELBO = -123.11
+Iteration 40000 [80%]: Average ELBO = -122.96
+Iteration 45000 [90%]: Average ELBO = -123.66
+Finished [100%]: Average ELBO = -123.71
+CPU times: user 6.23 s, sys: 168 ms, total: 6.4 s
+Wall time: 5.4 s
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [49]:
+<span></span>In [17]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -962,7 +963,7 @@ Wall time: 17.5 s
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [50]:
+<span></span>In [18]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -986,7 +987,7 @@ seems to converge faster.</p>
 uncertainty of our Neural Network weights.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [51]:
+<span></span>In [19]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
