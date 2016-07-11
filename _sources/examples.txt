@@ -22,3 +22,4 @@ Examples
    notebooks/Bayesian_LogReg.ipynb
    notebooks/dp_mix.ipynb
    notebooks/bayesian_neural_network_advi.ipynb
+   notebooks/howto_debugging.ipynb
