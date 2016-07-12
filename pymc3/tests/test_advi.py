@@ -2,7 +2,8 @@ import numpy as np
 import pymc3 as pm
 from pymc3 import Model, Normal, DiscreteUniform, Poisson, switch, Exponential
 from pymc3.theanof import inputvars
-from pymc3.variational.advi import variational_gradient_estimate, advi, advi_minibatch, sample_vp
+from pymc3.variational import advi, advi_minibatch, sample_vp
+from pymc3.variational.advi import variational_gradient_estimate
 from theano import function, shared
 import theano.tensor as tt
 
