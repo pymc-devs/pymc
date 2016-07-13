@@ -290,7 +290,7 @@ class Model(Context, Factor):
                           ' and added transformed {orig_name} to model.'.format(
                               transform=dist.transform.name,
                               name=name,
-                              orig_name='{}_{}'.format(name, dist.transform.name)))
+                              orig_name='{}_{}_'.format(name, dist.transform.name)))
                 self.deterministics.append(var)
                 return var
         elif isinstance(data, dict):
