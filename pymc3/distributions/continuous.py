@@ -962,7 +962,7 @@ class Weibull(PositiveContinuous):
                                   point=point)
 
         def _random(a, b, size=None):
-            return b * (-np.log(np.random.uniform(size=size)))**a
+            return b * (-np.log(np.random.uniform(size=size)))**(1/a)
 
         return generate_samples(_random, alpha, beta,
                                 dist_shape=self.shape,
