@@ -329,7 +329,7 @@ before:
 <p>Let&#8217;s build a simple model with just two parameters:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [1]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -374,7 +374,7 @@ before:
 values getting proposed using the <code class="docutils literal"><span class="pre">Print</span></code> operator:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -398,23 +398,23 @@ values getting proposed using the <code class="docutils literal"><span class="pr
 <div class="highlight"><pre>
 mu __str__ = 0.0
 sd __str__ = 0.0
-sd __str__ = 0.2662291858833467
+sd __str__ = -1.4315792219864252
 mu __str__ = 0.0
 sd __str__ = 0.0
 sd __str__ = 0.0
-mu __str__ = -0.7736973710499496
+mu __str__ = 1.3615472322158946
 mu __str__ = 0.0
-sd __str__ = 1.4489400665295804
-mu __str__ = 0.0
-sd __str__ = 0.0
-sd __str__ = 0.0
-mu __str__ = -1.7251998913621451
-mu __str__ = 0.0
-sd __str__ = 1.3696102943590331
+sd __str__ = 0.5322478998286673
 mu __str__ = 0.0
 sd __str__ = 0.0
 sd __str__ = 0.0
-mu __str__ = 0.03656761850798784
+mu __str__ = -1.2753319093167306
+mu __str__ = 0.0
+sd __str__ = -0.4843153880482674
+mu __str__ = 0.0
+sd __str__ = 0.0
+sd __str__ = 0.0
+mu __str__ = -0.4478412022208693
 mu __str__ = 0.0
  [-----------------100%-----------------] 3 of 3 complete in 0.0 sec
 </pre></div></div>
@@ -422,6 +422,67 @@ mu __str__ = 0.0
 <p>Looks like <code class="docutils literal"><span class="pre">sd</span></code> is always <code class="docutils literal"><span class="pre">0</span></code> which will cause the logp to go to
 <code class="docutils literal"><span class="pre">-inf</span></code>. Of course, we should not have used a prior that has negative
 mass for <code class="docutils literal"><span class="pre">sd</span></code> but instead something like a <code class="docutils literal"><span class="pre">HalfNormal</span></code>.</p>
+<p>We can also redirect the output to a string buffer and access the
+proposed values later on (thanks to <a class="reference external" href="https://github.com/LindleyLentati">Lindley
+Lentati</a> for providing this
+example):</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">StringIO</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+
+<span class="n">old_stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">mystdout</span> <span class="o">=</span> <span class="n">StringIO</span><span class="p">()</span>
+
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">sd</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;sd&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">mu_print</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">printing</span><span class="o">.</span><span class="n">Print</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">)(</span><span class="n">mu</span><span class="p">)</span>
+    <span class="n">sd_print</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">printing</span><span class="o">.</span><span class="n">Print</span><span class="p">(</span><span class="s1">&#39;sd&#39;</span><span class="p">)(</span><span class="n">sd</span><span class="p">)</span>
+
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_print</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sd_print</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">()</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span> <span class="c1"># Make sure not to draw too many samples</span>
+
+
+<span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">old_stdout</span>
+
+<span class="n">output</span> <span class="o">=</span> <span class="n">mystdout</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="n">mulines</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">output</span> <span class="k">if</span> <span class="s1">&#39;mu&#39;</span> <span class="ow">in</span> <span class="n">s</span><span class="p">]</span>
+
+<span class="n">muvals</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">mulines</span><span class="p">]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">muvals</span><span class="p">)),</span> <span class="n">muvals</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;proposal iteration&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;mu value&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[9]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.text.Text at 0x7f3f1a9f5ba8&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_howto_debugging_5_1.png" src="../_images/notebooks_howto_debugging_5_1.png" />
+</div>
+</div>
 </div>
 
 
