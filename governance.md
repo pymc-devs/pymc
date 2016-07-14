@@ -1,8 +1,4 @@
-in Governance Document
-
-The official version of this document, along with a list of
-individuals and institutions in the roles defined in the governance
-section below.
+# Main Governance Document
 
 
 The Project
@@ -17,8 +13,7 @@ developed openly and hosted in public GitHub repositories under the
 [GitHub organization](https://github.com/pymc-devs/pymc3). Examples of
 Project Software include the PyMC3 code and the Documentation, etc. The Services run by the
 Project consist of public websites and web-services that are hosted
-under at ([http://pymc-devs.github.io/pymc3/](http://pymc-devs.github.io/pymc3/) 
-
+at [http://pymc-devs.github.io/pymc3/](http://pymc-devs.github.io/pymc3/) 
 The Project is developed by a team of distributed developers, called
 Contributors. Contributors are individuals who have contributed code,
 documentation, designs or other work to one or more Project repositories.
@@ -54,8 +49,7 @@ manage project donations and acts as a parent legal entity. NumFOCUS is the
 only legal entity that has a formal relationship with the project (see
 Institutional Partners section below).
 
-Governance
-==========
+### Governance
 
 This section describes the governance and leadership model of The Project.
 
@@ -244,8 +238,7 @@ interactions with NumFOCUS.
     max). This avoids effective majorities resting on one person.
 
 
-Institutional Partners and Funding
-==================================
+### Institutional Partners and Funding
 
 The BDFL and Steering Council are the primary leadership for the project. No
 outside institution, individual or legal entity has the ability to own,
