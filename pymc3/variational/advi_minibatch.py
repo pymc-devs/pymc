@@ -37,8 +37,8 @@ def _check_minibatches(minibatch_tensors, minibatches):
     _value_error(isinstance(minibatch_tensors, list), 
                  'minibatch_tensors must be a list.')
 
-    _value_error(isinstance(minibatches, types.GeneratorType), 
-                 'minibatches must be a generator.')
+    _value_error(hasattr(minibatches, "__iter__"), 
+                 'minibatches must be an iterator.')
 
 def _replace_shared_minibatch_tensors(minibatch_tensors):
     """Replace shared variables in minibatch tensors with normal tensors. 
