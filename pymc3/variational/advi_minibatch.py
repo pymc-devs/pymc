@@ -1,13 +1,6 @@
 
-'''
-Created on Mar 12, 2011
-
-@author: johnsalvatier
-'''
 import numpy as np
 from ..core import modelcontext, inputvars, ArrayOrdering, DictToArrayBijection
-# from ..model import ObservedRV
-# from ..vartypes import discrete_types
 
 import theano
 from ..theanof import reshape_t
@@ -46,10 +39,6 @@ def _check_minibatches(minibatch_tensors, minibatches):
 
     _value_error(isinstance(minibatches, types.GeneratorType), 
                  'minibatches must be a generator.')
-
-    # _value_error(len(minibatch_tensors) == len(minibatches), 
-    #              'len(minibatch_tensors) must be equal to ' +
-    #              'len(minibatches')
 
 def _replace_shared_minibatch_tensors(minibatch_tensors):
     """Replace shared variables in minibatch tensors with normal tensors. 
@@ -103,46 +92,6 @@ def _init_uw_global_shared(start, global_RVs, global_order):
 
     return uw_global_shared, bij
 
-# def _join_RVs(global_RVs, global_order, local_RVs, local_order):
-#     joined_global = tt.concatenate([v.ravel() for v in global_RVs])
-#     uw_global = tt.dvector('uw_global')
-#     uw_global.tag.test_value = np.concatenate([joined_global.tag.test_value, 
-#                                                joined_global.tag.test_value])
-
-#     if 0 < len(local_RVs):
-#         joined_local = tt.concatenate([v.ravel() for v in local_RVs])
-#         uw_local = tt.dvector('uw_local')
-#         uw_local.tag.test_value = np.concatenate([joined_local.tag.test_value, 
-#                                                   joined_local.tag.test_value])
-#         joined = tt.concatenate([joined_global, joined_local])
-#         rvs = [v for v in global_RVs] + [v for v in local_RVs]
-#     else:
-#         uw_local = None
-#         joined = joined_global
-#         rvs = [v for v in global_RVs]
-
-#     tensor_type = joined.type
-#     inarray = tensor_type('concat_1d_rvs')
-#     inarray.tag.test_value = joined.tag.test_value
-
-#     get_var = {var.name : var for var in rvs}
-
-#     replace = {
-#         get_var[var] : reshape_t(inarray[slc], shp).astype(dtyp)
-#         for var, slc, shp, dtyp in global_order.vmap 
-#     }
-
-#     if local_RVs is not None:
-#         assert(joined_global.ndim == 1)
-#         l = joined_global.tag.test_value.shape[0]
-#         inarray_local = inarray[l:]
-#         replace.update({
-#             get_var[var] : reshape_t(inarray_local[slc], shp).astype(dtyp)
-#             for var, slc, shp, dtyp in local_order.vmap 
-#         })
-
-#     return replace, inarray, uw_global, uw_local
-
 def _join_global_RVs(global_RVs, global_order):
     joined_global = tt.concatenate([v.ravel() for v in global_RVs])
     uw_global = tt.dvector('uw_global')
@@ -182,31 +131,6 @@ def _join_local_RVs(local_RVs, local_order):
 
     return inarray_local, uw_local, replace_local
 
-# def _make_1d_rvs(logpt, global_RVs, local_RVs, global_order, local_order):
-#     """Replace RVs in logp with concatenated RV. 
-#     """
-#     # replace, inarray, uw_global, uw_local = _join_RVs(
-#     #     global_RVs, global_order, local_RVs, local_order
-#     # )
-
-#     # logp = theano.clone(logpt, replace, strict=False)
-
-#     # return logp, inarray, uw_global, uw_local
-
-#     inarray_g, uw_g, replace_g = _join_global_RVs(global_RVs, global_order)
-#     inarray_l, uw_l, replace_l = _join_local_RVs(local_RVs, local_order)
-
-#     replace = replace_g
-#     if inarray_l is not None:
-#         inarray = tt.concatenate([inarray_g, inarray_l])
-#         replace.update(replace_l)
-#     else:
-#         inarray = inarray_g
-
-#     logp = theano.clone(logpt, replace, strict=False)
-
-#     return logp, inarray, uw_g, uw_l
-
 def _make_logpt(global_RVs, local_RVs, observed_RVs, model):
     """Return expression of log probability. 
     """
@@ -218,48 +142,6 @@ def _make_logpt(global_RVs, local_RVs, observed_RVs, model):
     logpt = tt.add(*map(tt.sum, factors))
 
     return logpt
-
-# def _concat_vp_vectors(uw_global, uw_local):
-#     """Concatenate variational parameter vectors (denoted by uw). 
-#     """
-#     if uw_local is None:
-#         uw = uw_global
-#     else:
-#         l_uw_global = (uw_global.size / 2).astype('int64')
-#         l_uw_local = (uw_local.size / 2).astype('int64')
-#         uw = tt.concatenate([uw_global[:l_uw_global], # variational mean, global
-#                              uw_local[:l_uw_local],   # variational mean, local
-#                              uw_global[l_uw_global:], # variational std, global
-#                              uw_local[l_uw_local:]])  # variational std, local
-
-#     return uw
-
-# def _elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
-#     """Return expression of approximate ELBO based on Monte Carlo sampling.
-#     """
-#     l = (uw.size/2).astype('int64')
-#     u = uw[:l]
-#     w = uw[l:]
-
-#     # Callable tensor
-#     logp_ = lambda input: theano.clone(logp, {inarray: input}, strict=False)
-
-#     # Naive Monte-Carlo
-#     r = MRG_RandomStreams(seed=random_seed)
-
-#     if n_mcsamples == 1:
-#         n = r.normal(size=inarray.tag.test_value.shape)
-#         z = n * tt.exp(w) + u
-#         elbo = logp_(z) + tt.sum(w) + 0.5 * l * (1 + np.log(2.0 * np.pi))
-#     else:
-#         n = r.normal(size=(n_mcsamples, u.tag.test_value.shape[0]))
-#         zs = n * tt.exp(w) + u
-#         logps, _ = theano.scan(fn=lambda q: logp_(q),
-#                                outputs_info=None,
-#                                sequences=[zs])
-#         elbo = tt.mean(logps) + tt.sum(w) + 0.5 * l * (1 + np.log(2.0 * np.pi))
-
-#     return elbo
 
 def _elbo_t_new(logp, uw_g, uw_l, inarray_g, inarray_l, 
                 n_mcsamples, random_seed):
@@ -391,17 +273,6 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     local_order = ArrayOrdering([v for v in local_RVs])
 
     # ELBO wrt variational parameters
-    # elbo, uw_global, uw_local = _make_elbo_t(
-    #     global_RVs, local_RVs, observed_RVs, global_order, local_order, 
-    #     model, minibatch_tensors, n_mcsamples, random_seed
-    # )
-    # logpt = _make_logpt(global_RVs, local_RVs, observed_RVs, model)    
-    # logp, concat_1d_rvs, uw_global, uw_local = _make_1d_rvs(
-    #     logpt, global_RVs, local_RVs, global_order, local_order
-    # )
-    # uw = _concat_vp_vectors(uw_global, uw_local)
-    # elbo = _elbo_t(logp, uw, concat_1d_rvs, n_mcsamples, random_seed)
-    # del concat_1d_rvs, uw, logp, logpt
     inarray_g, uw_g, replace_g = _join_global_RVs(global_RVs, global_order)
     inarray_l, uw_l, replace_l = _join_local_RVs(local_RVs, local_order)
     logpt = _make_logpt(global_RVs, local_RVs, observed_RVs, model)
