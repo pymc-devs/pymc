@@ -134,42 +134,6 @@ class MvStudentT(Continuous):
         return log_pdf
 
 
-class MyDirichlet(Continuous):
-    def __init__(self, a, transform=transforms.stick_breaking,
-                 *args, **kwargs):
-        shape = a.shape[-1]
-        kwargs.setdefault("shape", shape)
-        super(MyDirichlet, self).__init__(transform=transform, *args, **kwargs)
-
-        self.k = shape
-        self.a = a
-        self.mean = a / tt.sum(a)
-
-        self.mode = tt.switch(tt.all(a > 1),
-                             (a - 1) / tt.sum(a - 1),
-                             np.nan)
-
-    def random(self, point=None, size=None):
-        a = draw_values([self.a], point=point)
-
-        def _random(a, size=None):
-            return stats.dirichlet.rvs(a, None if size == a.shape else size)
-
-        samples = generate_samples(_random, a,
-                                   dist_shape=self.shape,
-                                   size=size)
-        return samples
-
-    def logp(self, value):
-        k = self.k
-        a = self.a
-
-        # only defined for sum(value) == 1
-        return bound(tt.sum(logpow(value, a - 1) - gammaln(a), axis=-1)
-                     + gammaln(tt.sum(a, axis=-1)),
-                     tt.all(value >= 0), tt.all(value <= 1),
-                     k > 1, tt.all(a > 0))
-
 class Dirichlet(Continuous):
     R"""
     Dirichlet log-likelihood.
