@@ -33,7 +33,6 @@ class BaseTrace(object):
             vars = model.unobserved_RVs
         self.vars = vars
         self.varnames = [str(var) for var in vars]
-        self.original_varnames = [str(var) for var in model.untransformed_RVs]
         self.fn = model.fastfn(vars)
 
 
@@ -191,7 +190,7 @@ class MultiTrace(object):
             burn, thin = 0, 1
         return self.get_values(var, burn=burn, thin=thin)
 
-    _attrs = set(['_straces', 'varnames', 'original_varnames', 'chains'])
+    _attrs = set(['_straces', 'varnames', 'chains'])
 
     def __getattr__(self, name):
         # Avoid infinite recursion when called before __init__
@@ -212,11 +211,6 @@ class MultiTrace(object):
     def varnames(self):
         chain = self.chains[-1]
         return self._straces[chain].varnames
-        
-    @property
-    def original_varnames(self):
-        chain = self.chains[-1]
-        return self._straces[chain].original_varnames
 
     def get_values(self, varname, burn=0, thin=1, combine=True, chains=None,
                    squeeze=True):

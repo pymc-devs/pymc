@@ -325,7 +325,8 @@ def adagrad(grad, param, learning_rate, epsilon, n):
                               tt.sqrt(accu_sum + epsilon))
     return updates
 
-def sample_vp(vparams, draws=1000, model=None, random_seed=20090425):
+def sample_vp(vparams, draws=1000, model=None, random_seed=20090425, 
+              hide_transformed=True):
     """Draw samples from variational posterior.
 
     Parameters
@@ -338,6 +339,8 @@ def sample_vp(vparams, draws=1000, model=None, random_seed=20090425):
         Probabilistic model.
     random_seed : int
         Seed of random number generator.
+    hide_transformed : bool
+        If False, transformed variables are also sampled. Default is True. 
 
     Returns
     -------
@@ -366,8 +369,13 @@ def sample_vp(vparams, draws=1000, model=None, random_seed=20090425):
     samples = theano.clone(vars, updates)
     f = theano.function([], samples)
 
+    # Random variables which will be sampled
+    vars_sampled = [v for v in model.unobserved_RVs if not str(v).endswith('_')] \
+                   if hide_transformed else \
+                   [v for v in model.unobserved_RVs]
+
     varnames = [str(var) for var in model.unobserved_RVs]
-    trace = NDArray(model=model, vars=model.unobserved_RVs)
+    trace = NDArray(model=model, vars=vars_sampled)
     trace.setup(draws=draws, chain=0)
 
     for i in range(draws):

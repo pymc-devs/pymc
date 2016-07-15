@@ -101,7 +101,7 @@ class MvStudentT(Continuous):
     def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
         super(MvStudentT, self).__init__(*args, **kwargs)
         self.nu = nu
-        self.mu = np.zeros(S.shape[0]) if mu is None else mu
+        self.mu = np.zeros(Sigma.shape[0]) if mu is None else mu
         self.Sigma = Sigma
         
         self.mean = self.median = self.mode = self.mu = mu
@@ -131,7 +131,7 @@ class MvStudentT(Continuous):
         log_pdf = gammaln((nu + d)/2.) - 0.5 * (d*tt.log(np.pi*nu) + log_det) - gammaln(nu/2.)
         log_pdf -= 0.5*(nu + d)*tt.log(1 + Q/nu)
     
-        return(tt.exp(log_pdf))
+        return log_pdf
     
         
 
