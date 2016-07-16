@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import kde
+from scipy.stats import kde, mode
 from .stats import *
 from numpy.linalg import LinAlgError
 import matplotlib.pyplot as plt
@@ -671,7 +671,7 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
                 point_value = trace_values.mean()
                 point_text = '{}={}'.format(point_estimate, point_value.round(round_to))
             elif point_estimate == 'mode':
-                point_value = stats.mode(trace_values.round(round_to))[0][0]
+                point_value = mode(trace_values.round(round_to))[0][0]
                 point_text = '{}={}'.format(point_estimate, point_value.round(round_to))
             elif point_estimate == 'median':
                 point_value = np.median(trace_values)
