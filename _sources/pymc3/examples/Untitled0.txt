@@ -1,0 +1,377 @@
+{
+ "metadata": {
+  "name": ""
+ },
+ "nbformat": 3,
+ "nbformat_minor": 0,
+ "worksheets": [
+  {
+   "cells": [
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "Multinomial?"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 3
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "Categorical?Categorical?"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 5
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "pm.step_methods.ElemwiseCategoricalStep?pm.step_methods.ElemwiseCategoricalStep?"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 14
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "%pylab --no-import-all inline"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "Populating the interactive namespace from numpy and matplotlib\n"
+       ]
+      }
+     ],
+     "prompt_number": 1
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "hist(data, bins=100);hist(data, bins=100);"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "display_data",
+       "png": "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\n",
+       "text": [
+        "<matplotlib.figure.Figure at 0x18e4ca8c>"
+       ]
+      }
+     ],
+     "prompt_number": 50
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "Multinomial?Multinomial?"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 65
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "tr[category][-1]"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 21,
+       "text": [
+        "array([0, 0, 2, 2, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 2, 0, 1, 1, 2, 0, 0, 2, 1,\n",
+        "       2, 0, 0, 2, 2, 2, 1, 1, 2, 1, 2, 2, 0, 0, 2, 1, 1, 1, 2, 0, 0, 1, 1,\n",
+        "       2, 1, 2, 2, 1, 0, 2, 0, 2, 2, 1, 1, 2, 1, 0, 0, 1, 2, 2, 2, 0, 0, 0,\n",
+        "       2, 0, 1, 2, 1, 2, 1, 1, 2, 0, 0, 0, 0, 2, 0, 0, 0, 2, 1, 1, 2, 2, 2,\n",
+        "       1, 1, 2, 0, 1, 0, 1, 1, 1, 0, 2, 2, 1, 1, 0, 1, 0, 2, 2, 2, 1, 1, 2,\n",
+        "       2, 0, 1, 1, 0, 0, 2, 2, 1, 2, 2, 1, 1, 1, 2, 2, 0, 1, 2, 0, 2, 2, 0,\n",
+        "       0, 2, 1, 1, 1, 2, 0, 0, 2, 0, 0, 0, 0, 2, 1, 0, 1, 2, 2, 1, 0, 0, 1,\n",
+        "       0, 1, 2, 2, 1, 0, 1, 1, 2, 0, 0, 2, 1, 0, 0, 2, 2, 1, 2, 1, 0, 2, 1,\n",
+        "       2, 0, 0, 2, 0, 0, 2, 2, 0, 2, 1, 2, 1, 1, 1, 2, 1, 2, 1, 2, 1, 1, 0,\n",
+        "       0, 2, 1, 0, 0, 1, 0, 0, 0, 2, 1, 2, 2, 1, 2, 1, 1, 1, 0, 1, 1, 0, 0,\n",
+        "       1, 1, 0, 0, 0, 2, 0, 2, 2, 2, 2, 2, 2, 1, 0, 0, 1, 0, 2, 0, 2, 0, 1,\n",
+        "       0, 0, 2, 1, 1, 0, 0, 2, 0, 2, 2, 1, 2, 1, 2, 0, 0, 0, 2, 2, 1, 2, 1,\n",
+        "       1, 2, 0, 0, 2, 0, 0, 0, 0, 2, 0, 1, 2, 1, 0, 0, 2, 0, 1, 2, 0, 2, 2,\n",
+        "       1, 1, 0, 2, 2, 1, 0, 2, 0, 2, 1, 0, 2, 0, 2, 2, 2, 0, 2, 0, 0, 2, 0,\n",
+        "       1, 1, 2, 2, 0, 0, 2, 0, 2, 0, 0, 1, 1, 1, 0, 2, 2, 0, 1, 0, 0, 1, 0,\n",
+        "       2, 0, 1, 2, 1, 0, 0, 1, 1, 1, 2, 1, 1, 0, 2, 2, 2, 2, 2, 1, 1, 0, 0,\n",
+        "       1, 2, 2, 1, 0, 1, 0, 2, 1, 1, 1, 2, 1, 0, 1, 2, 0, 1, 0, 1, 0, 0, 0,\n",
+        "       1, 0, 2, 1, 1, 2, 1, 0, 2, 2, 1, 0, 2, 0, 1, 0, 2, 1, 1, 0, 1, 0, 0,\n",
+        "       0, 0, 2, 2, 0, 1, 2, 1, 1, 1, 2, 1, 0, 2, 2, 1, 2, 2, 0, 0, 1, 0, 1,\n",
+        "       2, 1, 0, 2, 1, 1, 0, 1, 2, 0, 2, 1, 1, 1, 2, 1, 1, 2, 0, 1, 0, 0, 0,\n",
+        "       2, 2, 2, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 2, 0, 1, 0, 1, 1, 0, 2, 1, 2,\n",
+        "       0, 0, 0, 0, 2, 2, 0, 0, 1, 0, 0, 0, 1, 0, 2, 2, 1], dtype=int64)"
+       ]
+      }
+     ],
+     "prompt_number": 21
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "v"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 19,
+       "text": [
+        "array([1, 1, 0, 0, 2, 1, 2, 1, 2, 1, 1, 1, 1, 1, 0, 1, 2, 2, 0, 1, 1, 0, 2,\n",
+        "       0, 1, 1, 0, 0, 0, 2, 2, 0, 2, 0, 0, 1, 1, 0, 2, 2, 2, 0, 1, 1, 2, 2,\n",
+        "       0, 2, 0, 0, 2, 1, 0, 1, 0, 0, 2, 2, 0, 2, 1, 1, 2, 0, 0, 0, 1, 1, 1,\n",
+        "       0, 1, 2, 0, 2, 0, 2, 2, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 2, 2, 0, 0, 0,\n",
+        "       2, 2, 0, 1, 2, 1, 2, 2, 2, 1, 0, 0, 2, 2, 1, 2, 1, 0, 0, 0, 2, 2, 0,\n",
+        "       0, 1, 2, 2, 1, 1, 0, 0, 2, 0, 0, 2, 2, 2, 0, 0, 1, 2, 0, 1, 0, 0, 1,\n",
+        "       1, 0, 2, 2, 2, 0, 1, 1, 0, 1, 1, 1, 1, 0, 2, 1, 2, 0, 0, 2, 1, 1, 2,\n",
+        "       1, 2, 0, 0, 2, 1, 2, 2, 0, 1, 1, 0, 2, 1, 1, 0, 0, 2, 0, 2, 1, 0, 2,\n",
+        "       0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 2, 0, 2, 2, 2, 0, 2, 0, 2, 0, 2, 2, 1,\n",
+        "       1, 0, 2, 1, 1, 2, 1, 1, 1, 0, 2, 0, 0, 2, 0, 2, 2, 2, 1, 2, 2, 1, 1,\n",
+        "       2, 2, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 2, 1, 1, 2, 1, 0, 1, 0, 1, 2,\n",
+        "       1, 1, 0, 2, 2, 1, 1, 0, 1, 0, 0, 2, 0, 2, 0, 1, 1, 1, 0, 0, 2, 0, 2,\n",
+        "       2, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 2, 0, 2, 1, 1, 0, 1, 2, 0, 1, 0, 0,\n",
+        "       2, 2, 1, 0, 0, 2, 1, 0, 1, 0, 2, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1,\n",
+        "       2, 2, 0, 0, 1, 1, 0, 1, 0, 1, 1, 2, 2, 2, 1, 0, 0, 1, 2, 1, 1, 2, 1,\n",
+        "       0, 1, 2, 0, 2, 1, 1, 2, 2, 2, 0, 2, 2, 1, 0, 0, 0, 0, 0, 2, 2, 1, 1,\n",
+        "       2, 0, 0, 2, 1, 2, 1, 0, 2, 2, 2, 0, 2, 1, 2, 0, 1, 2, 1, 2, 1, 1, 1,\n",
+        "       2, 1, 0, 2, 2, 0, 2, 1, 0, 0, 2, 1, 0, 1, 2, 1, 0, 2, 2, 1, 2, 1, 1,\n",
+        "       1, 1, 0, 0, 1, 2, 0, 2, 2, 2, 0, 2, 1, 0, 0, 2, 0, 0, 1, 1, 2, 1, 2,\n",
+        "       0, 2, 1, 0, 2, 2, 1, 2, 0, 1, 0, 2, 2, 2, 0, 2, 2, 0, 1, 2, 1, 1, 1,\n",
+        "       0, 0, 0, 1, 2, 1, 1, 2, 2, 2, 1, 1, 1, 0, 1, 2, 1, 2, 2, 1, 0, 2, 0,\n",
+        "       1, 1, 1, 1, 0, 0, 1, 1, 2, 1, 1, 1, 2, 1, 0, 0, 2])"
+       ]
+      }
+     ],
+     "prompt_number": 19
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "model.free_RVsmodel.free_RVs"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 3,
+       "text": [
+        "[dd, precs, means, category]"
+       ]
+      }
+     ],
+     "prompt_number": 3
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "import numpy as np\n",
+      "import pymc3 as pm\n",
+      "from pymc3 import Model, Gamma, Normal, Dirichlet\n",
+      "from pymc3 import Categorical\n",
+      "from pymc3 import sample, Metropolis, ElemwiseCategoricalStep\n",
+      "\n",
+      "k = 3\n",
+      "ndata = 500\n",
+      "\n",
+      "v = np.random.randint(0, k, ndata)\n",
+      "data = ((v == 0)*(50 + np.random.randn(ndata))\n",
+      "        + (v == 1)*(-50 + np.random.randn(ndata))\n",
+      "        + (v == 2)*np.random.randn(ndata))\n",
+      "\n",
+      "with Model() as model:\n",
+      "    dd = Dirichlet('dd', a=np.array([1., 1., 1.]), shape=k)\n",
+      "    sd = pm.Uniform('sd', lower=0, upper=20, shape=k)\n",
+      "    means = Normal('means', [-50, 0, 50], sd=15, shape=k)\n",
+      "    category = Categorical('category',\n",
+      "                           p=dd,\n",
+      "                           shape=ndata)\n",
+      "\n",
+      "    points = Normal('obs',\n",
+      "                     means[category],\n",
+      "                     sd=sd[category],\n",
+      "                     observed=data)\n",
+      "    #start = pm.find_MAP(vars=[dd, sd, means])\n",
+      "    steps = [pm.Metropolis(vars=[node]) for node in [dd, sd, means]]\n",
+      "    step2 = ElemwiseCategoricalStep(var=category, values=[0, 1, 2])\n",
+      "    tr = sample(3000, step=steps + [step2])"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "html": [
+        "\n",
+        "<style media=\"screen\" type=\"text/css\">\n",
+        "progress {\n",
+        "  font-size: .6em;\n",
+        "  line-height: 2em;\n",
+        "  text-indent: .5em;\n",
+        "  width: 60em;\n",
+        "  height: 2em;\n",
+        "}\n",
+        "</style>\n",
+        "\n",
+        "<progress id=\"1a191f8b-5236-44d0-baa2-2d6e82c245c4\" max=\"100\"/>\n",
+        "<label id=\"942e68dc-fed7-48fd-a15d-b091081fdc63\" text=\"Loading...\"/>\n"
+       ],
+       "metadata": {},
+       "output_type": "display_data",
+       "text": [
+        "<IPython.core.display.HTML at 0xbecba6c>"
+       ]
+      }
+     ],
+     "prompt_number": 1
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "step1.step()"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "ename": "TypeError",
+       "evalue": "step() takes exactly 2 arguments (1 given)",
+       "output_type": "pyerr",
+       "traceback": [
+        "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m\n\u001b[1;31mTypeError\u001b[0m                                 Traceback (most recent call last)",
+        "\u001b[1;32m<ipython-input-3-108bb18c3c53>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m\n\u001b[1;32m----> 1\u001b[1;33m \u001b[0mstep1\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mstep\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m",
+        "\u001b[1;31mTypeError\u001b[0m: step() takes exactly 2 arguments (1 given)"
+       ]
+      }
+     ],
+     "prompt_number": 3
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "tr[category]"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 7,
+       "text": [
+        "array([[1, 0, 2, ..., 0, 0, 2],\n",
+        "       [1, 0, 2, ..., 0, 0, 2],\n",
+        "       [1, 0, 2, ..., 0, 0, 2],\n",
+        "       ..., \n",
+        "       [1, 0, 2, ..., 0, 0, 2],\n",
+        "       [1, 0, 2, ..., 0, 0, 2],\n",
+        "       [1, 0, 2, ..., 0, 0, 2]], dtype=int64)"
+       ]
+      }
+     ],
+     "prompt_number": 7
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "tr[means]"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 3,
+       "text": [
+        "array([[ -4.91383795e+01,  -5.20775702e-01,   5.07896049e+01],\n",
+        "       [ -4.91383795e+01,  -5.20775702e-01,   5.07896049e+01],\n",
+        "       [ -4.83975261e+01,  -7.65717379e-01,   5.11769564e+01],\n",
+        "       ..., \n",
+        "       [ -5.00133736e+01,   3.67965318e-02,   5.00090926e+01],\n",
+        "       [ -5.00133736e+01,   3.67965318e-02,   5.00090926e+01],\n",
+        "       [ -5.00133736e+01,   3.67965318e-02,   5.00090926e+01]])"
+       ]
+      }
+     ],
+     "prompt_number": 3
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "np.unique(tr[category])"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 7,
+       "text": [
+        "array([0, 1, 2], dtype=int64)"
+       ]
+      }
+     ],
+     "prompt_number": 7
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "import pymc3 as pm\n",
+      "pm.traceplot(tr)"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 6,
+       "text": [
+        "<matplotlib.figure.Figure at 0x149cc32c>"
+       ]
+      }
+     ],
+     "prompt_number": 6
+    }
+   ],
+   "metadata": {}
+  }
+ ]
+}

@@ -1,0 +1,1096 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>&lt;no title&gt; &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../docs/source/index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../docs/source/index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../docs/source/index.html">Docs</a> &raquo;</li>
+      
+    <li>&lt;no title&gt;</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../_sources/pymc3/glm/EmbedRegression.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<p><a class="reference external" href="https://gist.github.com/dartdog/9008026">https://gist.github.com/dartdog/9008026</a></p>
+<p><a class="reference external" href="http://nbviewer.ipython.org/gist/dartdog/9008026">http://nbviewer.ipython.org/gist/dartdog/9008026</a></p>
+<p>While a bit of a &#8220;toy&#8221; example the below is real data which uses the
+last quarter (already shifted) of the prior year to &#8220;project&#8221; the
+upcomming year by using a regression line of prior observations.
+Actually works surprisingly well..</p>
+<p>Since it is something I know and have the data for, I&#8217;m trying to use it
+as a learning base for the various Python Stats capabilities, including
+a recent foray into PYMC3 and Statsmodels, along with Pandas. This
+Notebook can be freely downloaded and modified and redistibuted.
+(attribution appreciated) The PYMC3 code here was largely copied with
+small mods, from
+<a class="reference external" href="http://www.databozo.com/2014/01/17/Exploring_PyMC3.html">http://www.databozo.com/2014/01/17/Exploring_PyMC3.html</a> and
+<a class="reference external" href="http://twiecki.github.io/blog/2013/08/12/bayesian-glms-1/">http://twiecki.github.io/blog/2013/08/12/bayesian-glms-1/</a> and
+<a class="reference external" href="http://nbviewer.ipython.org/github/twiecki/pymc3_talk/blob/master/bayesian_pymc3.ipynb">http://nbviewer.ipython.org/github/twiecki/pymc3_talk/blob/master/bayesian_pymc3.ipynb</a></p>
+<p>This is also quite helpful for OLS analysis
+<a class="reference external" href="http://www.datarobot.com/blog/ordinary-least-squares-in-python/">http://www.datarobot.com/blog/ordinary-least-squares-in-python/</a></p>
+<p>Questions:</p>
+<p>Any comments to help interpet the Partial regression graph in cell # 6
+How to better use the PYMC3 models questions above cell # 10 Any other
+comment as to how to improve this for others?</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>import pandas as pd
+import io
+import statsmodels.api as sm
+%matplotlib inline
+import matplotlib.pyplot as plt
+content2 = &#39;&#39;&#39;\
+Units       lastqu
+2000-12-31   19391   NaN
+2001-12-31   35068   5925
+2002-12-31   39279   8063
+2003-12-31   47517   9473
+2004-12-31   51439   11226
+2005-12-31   59674   11667
+2006-12-31   58664   14016
+2007-12-31   55698   13186
+2008-12-31   42235   11343
+2009-12-31   40478   7867
+2010-12-31   38722   8114
+2011-12-31   36965   8361
+2012-12-31   39132   8608
+2013-12-31   43160   9016
+2014-12-31   NaN     9785
+&#39;&#39;&#39;
+df2 = pd.read_table(io.BytesIO(content2))
+#make sure that the columns are int
+df2[&#39;Units&#39;]=df2[&#39;Units&#39;][:-1].astype(&#39;int&#39;)
+df2[&#39;lastqu&#39;]=df2[&#39;lastqu&#39;][1:].astype(&#39;int&#39;)
+df2 #note sample data is from Statewide
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[1]:
+</pre></div>
+</div>
+<div class="container">
+<div style="max-height:1000px;max-width:1500px;overflow:auto;">
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Units</th>
+      <th>lastqu</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2000-12-31</th>
+      <td> 19391</td>
+      <td>   NaN</td>
+    </tr>
+    <tr>
+      <th>2001-12-31</th>
+      <td> 35068</td>
+      <td>  5925</td>
+    </tr>
+    <tr>
+      <th>2002-12-31</th>
+      <td> 39279</td>
+      <td>  8063</td>
+    </tr>
+    <tr>
+      <th>2003-12-31</th>
+      <td> 47517</td>
+      <td>  9473</td>
+    </tr>
+    <tr>
+      <th>2004-12-31</th>
+      <td> 51439</td>
+      <td> 11226</td>
+    </tr>
+    <tr>
+      <th>2005-12-31</th>
+      <td> 59674</td>
+      <td> 11667</td>
+    </tr>
+    <tr>
+      <th>2006-12-31</th>
+      <td> 58664</td>
+      <td> 14016</td>
+    </tr>
+    <tr>
+      <th>2007-12-31</th>
+      <td> 55698</td>
+      <td> 13186</td>
+    </tr>
+    <tr>
+      <th>2008-12-31</th>
+      <td> 42235</td>
+      <td> 11343</td>
+    </tr>
+    <tr>
+      <th>2009-12-31</th>
+      <td> 40478</td>
+      <td>  7867</td>
+    </tr>
+    <tr>
+      <th>2010-12-31</th>
+      <td> 38722</td>
+      <td>  8114</td>
+    </tr>
+    <tr>
+      <th>2011-12-31</th>
+      <td> 36965</td>
+      <td>  8361</td>
+    </tr>
+    <tr>
+      <th>2012-12-31</th>
+      <td> 39132</td>
+      <td>  8608</td>
+    </tr>
+    <tr>
+      <th>2013-12-31</th>
+      <td> 43160</td>
+      <td>  9016</td>
+    </tr>
+    <tr>
+      <th>2014-12-31</th>
+      <td>   NaN</td>
+      <td>  9785</td>
+    </tr>
+  </tbody>
+</table>
+<p>15 rows × 2 columns</p>
+</div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>def fit_line2(x, y):
+    X = sm.add_constant(x, prepend=True) #Add a column of ones to allow the calculation of the intercept
+    ols_test = sm.OLS(y, X,missing=&#39;drop&#39;).fit()
+    &quot;&quot;&quot;Return slope, intercept of best fit line.&quot;&quot;&quot;
+    X = sm.add_constant(x)
+    return ols_test
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>ols_test=fit_line2(df2[&#39;lastqu&#39;][1:-1], df2[&#39;Units&#39;][1:-1]) #Use the lastqu to fit to Units (so can forecast future)
+ols_test.summary()
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/usr/local/lib/python2.7/dist-packages/scipy/stats/stats.py:1293: UserWarning: kurtosistest only valid for n&gt;=20 ... continuing anyway, n=13
+  int(n))
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[3]:
+</pre></div>
+</div>
+<div class="container">
+<table class="simpletable">
+<caption>OLS Regression Results</caption>
+<tr>
+  <th>Dep. Variable:</th>          <td>Units</td>      <th>  R-squared:         </th> <td>   0.797</td>
+</tr>
+<tr>
+  <th>Model:</th>                   <td>OLS</td>       <th>  Adj. R-squared:    </th> <td>   0.779</td>
+</tr>
+<tr>
+  <th>Method:</th>             <td>Least Squares</td>  <th>  F-statistic:       </th> <td>   43.18</td>
+</tr>
+<tr>
+  <th>Date:</th>             <td>Fri, 14 Feb 2014</td> <th>  Prob (F-statistic):</th> <td>4.02e-05</td>
+</tr>
+<tr>
+  <th>Time:</th>                 <td>17:24:05</td>     <th>  Log-Likelihood:    </th> <td> -125.17</td>
+</tr>
+<tr>
+  <th>No. Observations:</th>      <td>    13</td>      <th>  AIC:               </th> <td>   254.3</td>
+</tr>
+<tr>
+  <th>Df Residuals:</th>          <td>    11</td>      <th>  BIC:               </th> <td>   255.5</td>
+</tr>
+<tr>
+  <th>Df Model:</th>              <td>     1</td>      <th>                     </th>     <td> </td>
+</tr>
+<tr>
+  <th>Covariance Type:</th>      <td>nonrobust</td>    <th>                     </th>     <td> </td>
+</tr>
+</table>
+<table class="simpletable">
+<tr>
+     <td></td>       <th>coef</th>     <th>std err</th>      <th>t</th>      <th>P>|t|</th> <th>[95.0% Conf. Int.]</th>
+</tr>
+<tr>
+  <th>const</th>  <td> 1.368e+04</td> <td> 4927.353</td> <td>    2.777</td> <td> 0.018</td> <td> 2837.631  2.45e+04</td>
+</tr>
+<tr>
+  <th>lastqu</th> <td>    3.2330</td> <td>    0.492</td> <td>    6.571</td> <td> 0.000</td> <td>    2.150     4.316</td>
+</tr>
+</table>
+<table class="simpletable">
+<tr>
+  <th>Omnibus:</th>       <td> 2.563</td> <th>  Durbin-Watson:     </th> <td>   1.782</td>
+</tr>
+<tr>
+  <th>Prob(Omnibus):</th> <td> 0.278</td> <th>  Jarque-Bera (JB):  </th> <td>   0.504</td>
+</tr>
+<tr>
+  <th>Skew:</th>          <td> 0.019</td> <th>  Prob(JB):          </th> <td>   0.777</td>
+</tr>
+<tr>
+  <th>Kurtosis:</th>      <td> 3.964</td> <th>  Cond. No.          </th> <td>4.45e+04</td>
+</tr>
+</table></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>nextq=ols_test.predict(sm.add_constant(df2[&#39;lastqu&#39;][-1:], prepend=True)) # the prediction for 2014
+nextq
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[4]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([ 45317.70961059])
+</pre></div>
+</div>
+</div>
+<p>Assigning the plot to fig fixes the duplicate plot issue</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>fig = plt.figure(figsize=(12,8))
+fig=sm.graphics.plot_regress_exog(ols_test,&#39;lastqu&#39;,fig=fig)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_glm_EmbedRegression_7_0.png" src="../../_images/pymc3_glm_EmbedRegression_7_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>fig.clf() #clears the fig!
+sm.graphics.plot_partregress_grid(ols_test, fig=fig)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[6]:
+</pre></div>
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_glm_EmbedRegression_8_0.png" src="../../_images/pymc3_glm_EmbedRegression_8_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>#fig.clf() #clears the fig!
+result=ols_test.model.fit()
+result.summary()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[7]:
+</pre></div>
+</div>
+<div class="container">
+<table class="simpletable">
+<caption>OLS Regression Results</caption>
+<tr>
+  <th>Dep. Variable:</th>          <td>Units</td>      <th>  R-squared:         </th> <td>   0.797</td>
+</tr>
+<tr>
+  <th>Model:</th>                   <td>OLS</td>       <th>  Adj. R-squared:    </th> <td>   0.779</td>
+</tr>
+<tr>
+  <th>Method:</th>             <td>Least Squares</td>  <th>  F-statistic:       </th> <td>   43.18</td>
+</tr>
+<tr>
+  <th>Date:</th>             <td>Fri, 14 Feb 2014</td> <th>  Prob (F-statistic):</th> <td>4.02e-05</td>
+</tr>
+<tr>
+  <th>Time:</th>                 <td>17:24:06</td>     <th>  Log-Likelihood:    </th> <td> -125.17</td>
+</tr>
+<tr>
+  <th>No. Observations:</th>      <td>    13</td>      <th>  AIC:               </th> <td>   254.3</td>
+</tr>
+<tr>
+  <th>Df Residuals:</th>          <td>    11</td>      <th>  BIC:               </th> <td>   255.5</td>
+</tr>
+<tr>
+  <th>Df Model:</th>              <td>     1</td>      <th>                     </th>     <td> </td>
+</tr>
+<tr>
+  <th>Covariance Type:</th>      <td>nonrobust</td>    <th>                     </th>     <td> </td>
+</tr>
+</table>
+<table class="simpletable">
+<tr>
+     <td></td>       <th>coef</th>     <th>std err</th>      <th>t</th>      <th>P>|t|</th> <th>[95.0% Conf. Int.]</th>
+</tr>
+<tr>
+  <th>const</th>  <td> 1.368e+04</td> <td> 4927.353</td> <td>    2.777</td> <td> 0.018</td> <td> 2837.631  2.45e+04</td>
+</tr>
+<tr>
+  <th>lastqu</th> <td>    3.2330</td> <td>    0.492</td> <td>    6.571</td> <td> 0.000</td> <td>    2.150     4.316</td>
+</tr>
+</table>
+<table class="simpletable">
+<tr>
+  <th>Omnibus:</th>       <td> 2.563</td> <th>  Durbin-Watson:     </th> <td>   1.782</td>
+</tr>
+<tr>
+  <th>Prob(Omnibus):</th> <td> 0.278</td> <th>  Jarque-Bera (JB):  </th> <td>   0.504</td>
+</tr>
+<tr>
+  <th>Skew:</th>          <td> 0.019</td> <th>  Prob(JB):          </th> <td>   0.777</td>
+</tr>
+<tr>
+  <th>Kurtosis:</th>      <td> 3.964</td> <th>  Cond. No.          </th> <td>4.45e+04</td>
+</tr>
+</table></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span># this uses the statsmodels formula API (same results
+# import formula api as alias smf
+import statsmodels.formula.api as smf
+# formula: response ~ predictors
+est = smf.ols(formula=&#39;Units ~ lastqu&#39;, data=df2).fit()
+est.summary()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[8]:
+</pre></div>
+</div>
+<div class="container">
+<table class="simpletable">
+<caption>OLS Regression Results</caption>
+<tr>
+  <th>Dep. Variable:</th>          <td>Units</td>      <th>  R-squared:         </th> <td>   0.797</td>
+</tr>
+<tr>
+  <th>Model:</th>                   <td>OLS</td>       <th>  Adj. R-squared:    </th> <td>   0.779</td>
+</tr>
+<tr>
+  <th>Method:</th>             <td>Least Squares</td>  <th>  F-statistic:       </th> <td>   43.18</td>
+</tr>
+<tr>
+  <th>Date:</th>             <td>Fri, 14 Feb 2014</td> <th>  Prob (F-statistic):</th> <td>4.02e-05</td>
+</tr>
+<tr>
+  <th>Time:</th>                 <td>17:24:06</td>     <th>  Log-Likelihood:    </th> <td> -125.17</td>
+</tr>
+<tr>
+  <th>No. Observations:</th>      <td>    13</td>      <th>  AIC:               </th> <td>   254.3</td>
+</tr>
+<tr>
+  <th>Df Residuals:</th>          <td>    11</td>      <th>  BIC:               </th> <td>   255.5</td>
+</tr>
+<tr>
+  <th>Df Model:</th>              <td>     1</td>      <th>                     </th>     <td> </td>
+</tr>
+<tr>
+  <th>Covariance Type:</th>      <td>nonrobust</td>    <th>                     </th>     <td> </td>
+</tr>
+</table>
+<table class="simpletable">
+<tr>
+      <td></td>         <th>coef</th>     <th>std err</th>      <th>t</th>      <th>P>|t|</th> <th>[95.0% Conf. Int.]</th>
+</tr>
+<tr>
+  <th>Intercept</th> <td> 1.368e+04</td> <td> 4927.353</td> <td>    2.777</td> <td> 0.018</td> <td> 2837.631  2.45e+04</td>
+</tr>
+<tr>
+  <th>lastqu</th>    <td>    3.2330</td> <td>    0.492</td> <td>    6.571</td> <td> 0.000</td> <td>    2.150     4.316</td>
+</tr>
+</table>
+<table class="simpletable">
+<tr>
+  <th>Omnibus:</th>       <td> 2.563</td> <th>  Durbin-Watson:     </th> <td>   1.782</td>
+</tr>
+<tr>
+  <th>Prob(Omnibus):</th> <td> 0.278</td> <th>  Jarque-Bera (JB):  </th> <td>   0.504</td>
+</tr>
+<tr>
+  <th>Skew:</th>          <td> 0.019</td> <th>  Prob(JB):          </th> <td>   0.777</td>
+</tr>
+<tr>
+  <th>Kurtosis:</th>      <td> 3.964</td> <th>  Cond. No.          </th> <td>4.45e+04</td>
+</tr>
+</table></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>fig = plt.figure(figsize=(12,8))
+fig=sm.graphics.plot_regress_exog(est,&#39;lastqu&#39;,fig=fig)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_glm_EmbedRegression_11_0.png" src="../../_images/pymc3_glm_EmbedRegression_11_0.png" />
+</div>
+</div>
+<p>Using Pymc3 with same data (excluding the rows with NaN) First with the
+Model directly specified I found I needed to set the upper bounds on
+Sigma to 12000 for good results. Using the GLM method below (next) I got
+unintelligible results.</p>
+<p>Questions:</p>
+<p>How can I determine the best regression line using the generated Bayes
+data? Shouldn&#8217;t I be able to find the max liklihood for two points on
+the line,, ie be able to find the standatd parameters for the regression
+line and thereby also be able to perform a prediction with a new value
+of x? (and idealy say something about its probability?)</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>#Remove NaN&#39;s
+df2=df2[1:-1]
+import pymc3 as pm
+import numpy as np
+x=df2[&#39;lastqu&#39;]
+y=df2[&#39;Units&#39;]
+trace = None
+with pm.Model() as model:
+    alpha = pm.Normal(&#39;alpha&#39;, mu=0, sd=20)
+    beta = pm.Normal(&#39;beta&#39;, mu=0, sd=20)
+    sigma = pm.Uniform(&#39;sigma&#39;, lower=0, upper=12000)
+
+    y_est = alpha + beta * x
+
+    likelihood = pm.Normal(&#39;y&#39;, mu=y_est, sd=sigma, observed=y)
+
+    start = pm.find_MAP()
+    step = pm.NUTS(state=start)
+    trace = pm.sample(2000, step, start=start, progressbar=False)
+
+    pm.traceplot(trace);
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/usr/local/lib/python2.7/dist-packages/theano/scan_module/scan_perform_ext.py:85: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
+  from scan_perform.scan_perform import *
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_glm_EmbedRegression_13_1.png" src="../../_images/pymc3_glm_EmbedRegression_13_1.png" />
+</div>
+</div>
+<p>I&#8217;d like to draw the most likely regression line via the MCMC process
+rather than the standard frequentist formula (as mentioned above)</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>def graph(formula, x_range, color=&#39;black&#39;, alpha=1):
+    x = np.array(x_range)
+    y = eval(formula)
+    plt.plot(x, y, color=color, alpha=alpha)
+
+plt.scatter(x,y)
+
+for i in xrange(0,2000):
+    point = trace.point(i)
+    graph(&#39;{0} + {1}*x&#39;.format(point[&#39;alpha&#39;], point[&#39;beta&#39;]), range(6000,15000), color=&#39;black&#39;, alpha=.0098035)
+
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_glm_EmbedRegression_15_0.png" src="../../_images/pymc3_glm_EmbedRegression_15_0.png" />
+</div>
+</div>
+<p>The process below uses the new GLM function but seems to have issues
+since I could not specify sigma max,, one would hope that the formula
+could find it?</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>x=df2[&#39;lastqu&#39;]
+y=df2[&#39;Units&#39;]
+data = dict(x=x, y=y)
+data
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[12]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>{&#39;x&#39;: 2001-12-31     5925
+ 2002-12-31     8063
+ 2003-12-31     9473
+ 2004-12-31    11226
+ 2005-12-31    11667
+ 2006-12-31    14016
+ 2007-12-31    13186
+ 2008-12-31    11343
+ 2009-12-31     7867
+ 2010-12-31     8114
+ 2011-12-31     8361
+ 2012-12-31     8608
+ 2013-12-31     9016
+ Name: lastqu, dtype: float64, &#39;y&#39;: 2001-12-31    35068
+ 2002-12-31    39279
+ 2003-12-31    47517
+ 2004-12-31    51439
+ 2005-12-31    59674
+ 2006-12-31    58664
+ 2007-12-31    55698
+ 2008-12-31    42235
+ 2009-12-31    40478
+ 2010-12-31    38722
+ 2011-12-31    36965
+ 2012-12-31    39132
+ 2013-12-31    43160
+ Name: Units, dtype: float64}
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>with pm.Model() as model:
+    # specify glm and pass in data. The resulting linear model, its likelihood and
+    # and all its parameters are automatically added to our model.
+    pm.glm.glm(&#39;y ~ x&#39;, data)
+    step = pm.NUTS() # Instantiate MCMC sampling algorithm
+    trace = pm.sample(2000, step, progressbar=False) # draw 2000 posterior samples using NUTS sampling
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>plt.figure(figsize=(7, 7))
+pm.traceplot(trace)
+plt.tight_layout();
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.figure.Figure at 0x2686ff10&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_glm_EmbedRegression_19_1.png" src="../../_images/pymc3_glm_EmbedRegression_19_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>point[&#39;sigma&#39;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[15]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>7436.1618154575099
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>point[&#39;beta&#39;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[16]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>4.2154869439146863
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>point[&#39;alpha&#39;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[17]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>4.6985952299713603
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>#!pip list
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

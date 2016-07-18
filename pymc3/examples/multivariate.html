@@ -1,0 +1,817 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>&lt;no title&gt; &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../docs/source/index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../docs/source/index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../docs/source/index.html">Docs</a> &raquo;</li>
+      
+    <li>&lt;no title&gt;</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../_sources/pymc3/examples/multivariate.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.stats</span> <span class="kn">as</span> <span class="nn">stats</span>
+<span class="n">cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+                  <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+                  <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+
+<span class="n">rand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">cov</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tile</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">)])</span>
+    <span class="n">like</span> <span class="o">=</span> <span class="p">[</span><span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;like</span><span class="si">%i</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:],</span> <span class="n">observed</span><span class="o">=</span><span class="n">rand</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">KeyboardInterrupt</span>                         Traceback (most recent call last)
+<span class="ansi-green-intense-fg ansi-bold">&lt;ipython-input-1-addeab3e8b18&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
+<span class="ansi-green-fg">      1</span> get_ipython<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">.</span>magic<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-blue-intense-fg ansi-bold">&#39;matplotlib inline&#39;</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 2</span><span class="ansi-yellow-intense-fg ansi-bold"> </span><span class="ansi-green-intense-fg ansi-bold">import</span> pymc3 <span class="ansi-green-intense-fg ansi-bold">as</span> pm
+<span class="ansi-green-fg">      3</span> <span class="ansi-green-intense-fg ansi-bold">import</span> numpy <span class="ansi-green-intense-fg ansi-bold">as</span> np
+<span class="ansi-green-fg">      4</span> <span class="ansi-green-intense-fg ansi-bold">import</span> scipy<span class="ansi-yellow-intense-fg ansi-bold">.</span>stats <span class="ansi-green-intense-fg ansi-bold">as</span> stats
+<span class="ansi-green-fg">      5</span> cov = np.asarray([[1, 0, 0],
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/working/projects/pymc/pymc3/__init__.py</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
+<span class="ansi-green-fg">      1</span> __version__ <span class="ansi-yellow-intense-fg ansi-bold">=</span> <span class="ansi-blue-intense-fg ansi-bold">&#34;3.0&#34;</span>
+<span class="ansi-green-fg">      2</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 3</span><span class="ansi-yellow-intense-fg ansi-bold"> </span><span class="ansi-green-intense-fg ansi-bold">from</span> <span class="ansi-yellow-intense-fg ansi-bold">.</span>core <span class="ansi-green-intense-fg ansi-bold">import</span> <span class="ansi-yellow-intense-fg ansi-bold">*</span>
+<span class="ansi-green-fg">      4</span> <span class="ansi-green-intense-fg ansi-bold">from</span> <span class="ansi-yellow-intense-fg ansi-bold">.</span>distributions <span class="ansi-green-intense-fg ansi-bold">import</span> <span class="ansi-yellow-intense-fg ansi-bold">*</span>
+<span class="ansi-green-fg">      5</span> <span class="ansi-green-intense-fg ansi-bold">from</span> <span class="ansi-yellow-intense-fg ansi-bold">.</span>math <span class="ansi-green-intense-fg ansi-bold">import</span> <span class="ansi-yellow-intense-fg ansi-bold">*</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/working/projects/pymc/pymc3/core.py</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
+<span class="ansi-green-fg">      1</span> <span class="ansi-green-intense-fg ansi-bold">from</span> <span class="ansi-yellow-intense-fg ansi-bold">.</span>vartypes <span class="ansi-green-intense-fg ansi-bold">import</span> <span class="ansi-yellow-intense-fg ansi-bold">*</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 2</span><span class="ansi-yellow-intense-fg ansi-bold"> </span><span class="ansi-green-intense-fg ansi-bold">from</span> <span class="ansi-yellow-intense-fg ansi-bold">.</span>model <span class="ansi-green-intense-fg ansi-bold">import</span> <span class="ansi-yellow-intense-fg ansi-bold">*</span>
+<span class="ansi-green-fg">      3</span> <span class="ansi-green-intense-fg ansi-bold">from</span> <span class="ansi-yellow-intense-fg ansi-bold">.</span>theanof <span class="ansi-green-intense-fg ansi-bold">import</span> <span class="ansi-yellow-intense-fg ansi-bold">*</span>
+<span class="ansi-green-fg">      4</span> <span class="ansi-green-intense-fg ansi-bold">from</span> <span class="ansi-yellow-intense-fg ansi-bold">.</span>blocking <span class="ansi-green-intense-fg ansi-bold">import</span> <span class="ansi-yellow-intense-fg ansi-bold">*</span>
+<span class="ansi-green-fg">      5</span> <span class="ansi-green-intense-fg ansi-bold">import</span> numpy <span class="ansi-green-intense-fg ansi-bold">as</span> np
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/working/projects/pymc/pymc3/model.py</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
+<span class="ansi-green-fg">      1</span> <span class="ansi-green-intense-fg ansi-bold">from</span> <span class="ansi-yellow-intense-fg ansi-bold">.</span>vartypes <span class="ansi-green-intense-fg ansi-bold">import</span> <span class="ansi-yellow-intense-fg ansi-bold">*</span>
+<span class="ansi-green-fg">      2</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 3</span><span class="ansi-yellow-intense-fg ansi-bold"> </span><span class="ansi-green-intense-fg ansi-bold">from</span> theano <span class="ansi-green-intense-fg ansi-bold">import</span> theano<span class="ansi-yellow-intense-fg ansi-bold">,</span> tensor <span class="ansi-green-intense-fg ansi-bold">as</span> t<span class="ansi-yellow-intense-fg ansi-bold">,</span> function
+<span class="ansi-green-fg">      4</span> <span class="ansi-green-intense-fg ansi-bold">from</span> theano<span class="ansi-yellow-intense-fg ansi-bold">.</span>tensor<span class="ansi-yellow-intense-fg ansi-bold">.</span>var <span class="ansi-green-intense-fg ansi-bold">import</span> TensorVariable
+<span class="ansi-green-fg">      5</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/tools/theano_fork/theano/__init__.py</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
+<span class="ansi-green-fg">     74</span> <span class="ansi-green-intense-fg ansi-bold">from</span> theano<span class="ansi-yellow-intense-fg ansi-bold">.</span>printing <span class="ansi-green-intense-fg ansi-bold">import</span> pprint<span class="ansi-yellow-intense-fg ansi-bold">,</span> pp
+<span class="ansi-green-fg">     75</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 76</span><span class="ansi-yellow-intense-fg ansi-bold"> </span><span class="ansi-green-intense-fg ansi-bold">from</span> theano<span class="ansi-yellow-intense-fg ansi-bold">.</span>scan_module <span class="ansi-green-intense-fg ansi-bold">import</span> scan<span class="ansi-yellow-intense-fg ansi-bold">,</span> map<span class="ansi-yellow-intense-fg ansi-bold">,</span> reduce<span class="ansi-yellow-intense-fg ansi-bold">,</span> foldl<span class="ansi-yellow-intense-fg ansi-bold">,</span> foldr<span class="ansi-yellow-intense-fg ansi-bold">,</span> clone
+<span class="ansi-green-fg">     77</span>
+<span class="ansi-green-fg">     78</span> <span class="ansi-green-intense-fg ansi-bold">from</span> theano<span class="ansi-yellow-intense-fg ansi-bold">.</span>updates <span class="ansi-green-intense-fg ansi-bold">import</span> OrderedUpdates
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/tools/theano_fork/theano/scan_module/__init__.py</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
+<span class="ansi-green-fg">     38</span> __contact__ <span class="ansi-yellow-intense-fg ansi-bold">=</span> <span class="ansi-blue-intense-fg ansi-bold">&#34;Razvan Pascanu &lt;r.pascanu@gmail&gt;&#34;</span>
+<span class="ansi-green-fg">     39</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 40</span><span class="ansi-yellow-intense-fg ansi-bold"> </span><span class="ansi-green-intense-fg ansi-bold">from</span> theano<span class="ansi-yellow-intense-fg ansi-bold">.</span>scan_module <span class="ansi-green-intense-fg ansi-bold">import</span> scan_opt
+<span class="ansi-green-fg">     41</span> <span class="ansi-green-intense-fg ansi-bold">from</span> theano<span class="ansi-yellow-intense-fg ansi-bold">.</span>scan_module<span class="ansi-yellow-intense-fg ansi-bold">.</span>scan <span class="ansi-green-intense-fg ansi-bold">import</span> scan
+<span class="ansi-green-fg">     42</span> <span class="ansi-green-intense-fg ansi-bold">from</span> theano<span class="ansi-yellow-intense-fg ansi-bold">.</span>scan_module<span class="ansi-yellow-intense-fg ansi-bold">.</span>scan_views <span class="ansi-green-intense-fg ansi-bold">import</span> map<span class="ansi-yellow-intense-fg ansi-bold">,</span> reduce<span class="ansi-yellow-intense-fg ansi-bold">,</span> foldl<span class="ansi-yellow-intense-fg ansi-bold">,</span> foldr
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/tools/theano_fork/theano/scan_module/scan_opt.py</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
+<span class="ansi-green-fg">     57</span>
+<span class="ansi-green-fg">     58</span> <span class="ansi-green-intense-fg ansi-bold">import</span> theano
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 59</span><span class="ansi-yellow-intense-fg ansi-bold"> </span><span class="ansi-green-intense-fg ansi-bold">from</span> theano <span class="ansi-green-intense-fg ansi-bold">import</span> tensor
+<span class="ansi-green-fg">     60</span> <span class="ansi-green-intense-fg ansi-bold">from</span> theano<span class="ansi-yellow-intense-fg ansi-bold">.</span>tensor <span class="ansi-green-intense-fg ansi-bold">import</span> opt<span class="ansi-yellow-intense-fg ansi-bold">,</span> get_scalar_constant_value<span class="ansi-yellow-intense-fg ansi-bold">,</span> Alloc<span class="ansi-yellow-intense-fg ansi-bold">,</span> AllocEmpty
+<span class="ansi-green-fg">     61</span> <span class="ansi-green-intense-fg ansi-bold">from</span> theano <span class="ansi-green-intense-fg ansi-bold">import</span> gof
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/tools/theano_fork/theano/tensor/__init__.py</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
+<span class="ansi-green-fg">     11</span>     TensorConstantSignature, TensorConstant)
+<span class="ansi-green-fg">     12</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 13</span><span class="ansi-yellow-intense-fg ansi-bold"> </span><span class="ansi-green-intense-fg ansi-bold">from</span> theano<span class="ansi-yellow-intense-fg ansi-bold">.</span>tensor <span class="ansi-green-intense-fg ansi-bold">import</span> opt
+<span class="ansi-green-fg">     14</span> <span class="ansi-green-intense-fg ansi-bold">from</span> theano<span class="ansi-yellow-intense-fg ansi-bold">.</span>tensor <span class="ansi-green-intense-fg ansi-bold">import</span> opt_uncanonicalize
+<span class="ansi-green-fg">     15</span> <span class="ansi-green-intense-fg ansi-bold">from</span> theano<span class="ansi-yellow-intense-fg ansi-bold">.</span>tensor <span class="ansi-green-intense-fg ansi-bold">import</span> blas
+
+<span class="ansi-red-intense-fg ansi-bold">KeyboardInterrupt</span>:
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">pdb</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Automatic pdb calling has been turned ON
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">pdb</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Automatic pdb calling has been turned ON
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">hess</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[4]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([[  2.32095607e+34,  -3.47008414e+32,   3.87032186e+18],
+       [ -3.47008414e+32,   2.36333167e+34,   6.90887910e+17],
+       [  3.87032186e+18,   6.90887910e+17,   1.16320097e+03]])
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">X</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">X</span><span class="p">,</span><span class="n">y</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;X&quot;</span><span class="p">,</span><span class="s2">&quot;y&quot;</span><span class="p">])</span>
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model_glm</span><span class="p">:</span>
+    <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s2">&quot;y~X&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Finished GLM&quot;</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">()</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Finished MAP&quot;</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+    <span class="c1">#hess = pm.find_hessian(start)</span>
+    <span class="n">start</span><span class="p">[</span><span class="s1">&#39;sd_log&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mf">0.</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">step_scale</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied log-transform to sd and added transformed sd_log to model.
+Finished GLM
+Finished MAP
+{&#39;sd_log&#39;: array(-36.41287986748853), &#39;X&#39;: array(2.0), &#39;Intercept&#39;: array(1.0)}
+ [-----------------100%-----------------] 1000 of 1000 complete in 2.5 sec
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">X</span> <span class="o">+</span> <span class="mi">1</span>
+
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">():</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">sd</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;sd&#39;</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">alpha</span> <span class="o">+</span> <span class="n">beta</span><span class="o">*</span><span class="n">X</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Finished GLM&quot;</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">()</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Finished MAP&quot;</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+    <span class="c1">#hess = pm.find_hessian(start)</span>
+    <span class="c1">#start[&#39;sd_log&#39;] = np.array(0.)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">step_scale</span><span class="o">=.</span><span class="mi">25</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied log-transform to sd and added transformed sd_log to model.
+Finished GLM
+Finished MAP
+{&#39;beta&#39;: array(1.998033627895745), &#39;sd_log&#39;: array(2.302585124905634), &#39;alpha&#39;: array(0.9990590679277936)}
+ [-----------------100%-----------------] 1000 of 1000 complete in 0.5 sec
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[12]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>0.0
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">35</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[11]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>6.3051167601469892e-16
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [21]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_examples_multivariate_9_0.png" src="../../_images/pymc3_examples_multivariate_9_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">trace</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[6]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;MultiTrace: 1 chains, 8 iterations, 4 variables&gt;
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tile</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">)])</span>
+    <span class="n">like</span> <span class="o">=</span> <span class="p">[</span><span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;like</span><span class="si">%i</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:],</span> <span class="n">observed</span><span class="o">=</span><span class="n">rand</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Assigned NUTS to mu
+ [-----------------100%-----------------] 500 of 500 complete in 0.3 sec
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[7]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x7fbcc5405cc0&gt;,
+        &lt;matplotlib.axes._subplots.AxesSubplot object at 0x7fbcc614c550&gt;]], dtype=object)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_examples_multivariate_12_1.png" src="../../_images/pymc3_examples_multivariate_12_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">tile</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">)])</span>
+    <span class="n">like</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;like&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau</span><span class="p">,</span> <span class="n">tile</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">rand</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">TypeError</span>                                 Traceback (most recent call last)
+<span class="ansi-green-intense-fg ansi-bold">&lt;ipython-input-2-d9db4a43778f&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
+<span class="ansi-green-fg">      2</span>     mu <span class="ansi-yellow-intense-fg ansi-bold">=</span> pm<span class="ansi-yellow-intense-fg ansi-bold">.</span>Normal<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-blue-intense-fg ansi-bold">&#39;mu&#39;</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> mu<span class="ansi-yellow-intense-fg ansi-bold">=</span><span class="ansi-cyan-intense-fg ansi-bold">1</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> sd<span class="ansi-yellow-intense-fg ansi-bold">=</span><span class="ansi-cyan-intense-fg ansi-bold">2</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> tile<span class="ansi-yellow-intense-fg ansi-bold">=</span><span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-cyan-intense-fg ansi-bold">2</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> <span class="ansi-cyan-intense-fg ansi-bold">3</span><span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">      3</span>     tau <span class="ansi-yellow-intense-fg ansi-bold">=</span> np<span class="ansi-yellow-intense-fg ansi-bold">.</span>stack<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-yellow-intense-fg ansi-bold">[</span>np<span class="ansi-yellow-intense-fg ansi-bold">.</span>eye<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-cyan-intense-fg ansi-bold">3</span><span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> np<span class="ansi-yellow-intense-fg ansi-bold">.</span>eye<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-cyan-intense-fg ansi-bold">3</span><span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">]</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 4</span><span class="ansi-yellow-intense-fg ansi-bold">     </span>like <span class="ansi-yellow-intense-fg ansi-bold">=</span> pm<span class="ansi-yellow-intense-fg ansi-bold">.</span>MvNormal<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-blue-intense-fg ansi-bold">&#39;like&#39;</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> mu<span class="ansi-yellow-intense-fg ansi-bold">=</span>mu<span class="ansi-yellow-intense-fg ansi-bold">,</span> tau<span class="ansi-yellow-intense-fg ansi-bold">=</span>tau<span class="ansi-yellow-intense-fg ansi-bold">,</span> tile<span class="ansi-yellow-intense-fg ansi-bold">=</span><span class="ansi-cyan-intense-fg ansi-bold">2</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> observed<span class="ansi-yellow-intense-fg ansi-bold">=</span>rand<span class="ansi-yellow-intense-fg ansi-bold">.</span>reshape<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-cyan-intense-fg ansi-bold">100</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> <span class="ansi-cyan-intense-fg ansi-bold">2</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> <span class="ansi-cyan-intense-fg ansi-bold">3</span><span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">      5</span>
+<span class="ansi-green-fg">      6</span>     trace <span class="ansi-yellow-intense-fg ansi-bold">=</span> pm<span class="ansi-yellow-intense-fg ansi-bold">.</span>sample<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-cyan-intense-fg ansi-bold">500</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py</span> in <span class="ansi-cyan-fg">__new__</span><span class="ansi-blue-intense-fg ansi-bold">(cls, name, *args, **kwargs)</span>
+<span class="ansi-green-fg">     22</span>             data <span class="ansi-yellow-intense-fg ansi-bold">=</span> kwargs<span class="ansi-yellow-intense-fg ansi-bold">.</span>pop<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-blue-intense-fg ansi-bold">&#39;observed&#39;</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> <span class="ansi-green-intense-fg ansi-bold">None</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">     23</span>             dist <span class="ansi-yellow-intense-fg ansi-bold">=</span> cls<span class="ansi-yellow-intense-fg ansi-bold">.</span>dist<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-yellow-intense-fg ansi-bold">*</span>args<span class="ansi-yellow-intense-fg ansi-bold">,</span> <span class="ansi-yellow-intense-fg ansi-bold">**</span>kwargs<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 24</span><span class="ansi-yellow-intense-fg ansi-bold">             </span><span class="ansi-green-intense-fg ansi-bold">return</span> model<span class="ansi-yellow-intense-fg ansi-bold">.</span>Var<span class="ansi-yellow-intense-fg ansi-bold">(</span>name<span class="ansi-yellow-intense-fg ansi-bold">,</span> dist<span class="ansi-yellow-intense-fg ansi-bold">,</span> data<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">     25</span>         <span class="ansi-green-intense-fg ansi-bold">elif</span> name <span class="ansi-green-intense-fg ansi-bold">is</span> <span class="ansi-green-intense-fg ansi-bold">None</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-fg">     26</span>             <span class="ansi-green-intense-fg ansi-bold">return</span> object<span class="ansi-yellow-intense-fg ansi-bold">.</span>__new__<span class="ansi-yellow-intense-fg ansi-bold">(</span>cls<span class="ansi-yellow-intense-fg ansi-bold">)</span> <span class="ansi-red-intense-fg ansi-bold">#for pickle</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/working/projects/pymc/pymc3/model.py</span> in <span class="ansi-cyan-fg">Var</span><span class="ansi-blue-intense-fg ansi-bold">(self, name, dist, data)</span>
+<span class="ansi-green-fg">    244</span>                     self<span class="ansi-yellow-intense-fg ansi-bold">.</span>named_vars<span class="ansi-yellow-intense-fg ansi-bold">[</span>v<span class="ansi-yellow-intense-fg ansi-bold">.</span>name<span class="ansi-yellow-intense-fg ansi-bold">]</span> <span class="ansi-yellow-intense-fg ansi-bold">=</span> v
+<span class="ansi-green-fg">    245</span>         <span class="ansi-green-intense-fg ansi-bold">else</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 246</span><span class="ansi-yellow-intense-fg ansi-bold">             </span>var <span class="ansi-yellow-intense-fg ansi-bold">=</span> ObservedRV<span class="ansi-yellow-intense-fg ansi-bold">(</span>name<span class="ansi-yellow-intense-fg ansi-bold">=</span>name<span class="ansi-yellow-intense-fg ansi-bold">,</span> data<span class="ansi-yellow-intense-fg ansi-bold">=</span>data<span class="ansi-yellow-intense-fg ansi-bold">,</span> distribution<span class="ansi-yellow-intense-fg ansi-bold">=</span>dist<span class="ansi-yellow-intense-fg ansi-bold">,</span> model<span class="ansi-yellow-intense-fg ansi-bold">=</span>self<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">    247</span>             self<span class="ansi-yellow-intense-fg ansi-bold">.</span>observed_RVs<span class="ansi-yellow-intense-fg ansi-bold">.</span>append<span class="ansi-yellow-intense-fg ansi-bold">(</span>var<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">    248</span>             <span class="ansi-green-intense-fg ansi-bold">if</span> var<span class="ansi-yellow-intense-fg ansi-bold">.</span>missing_values<span class="ansi-yellow-intense-fg ansi-bold">:</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/working/projects/pymc/pymc3/model.py</span> in <span class="ansi-cyan-fg">__init__</span><span class="ansi-blue-intense-fg ansi-bold">(self, type, owner, index, name, data, distribution, model)</span>
+<span class="ansi-green-fg">    508</span>             self<span class="ansi-yellow-intense-fg ansi-bold">.</span>missing_values <span class="ansi-yellow-intense-fg ansi-bold">=</span> data<span class="ansi-yellow-intense-fg ansi-bold">.</span>missing_values
+<span class="ansi-green-fg">    509</span>
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 510</span><span class="ansi-yellow-intense-fg ansi-bold">             </span>self<span class="ansi-yellow-intense-fg ansi-bold">.</span>logp_elemwiset <span class="ansi-yellow-intense-fg ansi-bold">=</span> distribution<span class="ansi-yellow-intense-fg ansi-bold">.</span>logp<span class="ansi-yellow-intense-fg ansi-bold">(</span>data<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">    511</span>             self<span class="ansi-yellow-intense-fg ansi-bold">.</span>model <span class="ansi-yellow-intense-fg ansi-bold">=</span> model
+<span class="ansi-green-fg">    512</span>             self<span class="ansi-yellow-intense-fg ansi-bold">.</span>distribution <span class="ansi-yellow-intense-fg ansi-bold">=</span> distribution
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/working/projects/pymc/pymc3/distributions/multivariate.py</span> in <span class="ansi-cyan-fg">logp</span><span class="ansi-blue-intense-fg ansi-bold">(self, value)</span>
+<span class="ansi-green-fg">     82</span>         k <span class="ansi-yellow-intense-fg ansi-bold">=</span> tau<span class="ansi-yellow-intense-fg ansi-bold">.</span>shape<span class="ansi-yellow-intense-fg ansi-bold">[</span><span class="ansi-cyan-intense-fg ansi-bold">0</span><span class="ansi-yellow-intense-fg ansi-bold">]</span>
+<span class="ansi-green-fg">     83</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 84</span><span class="ansi-yellow-intense-fg ansi-bold">         </span>result <span class="ansi-yellow-intense-fg ansi-bold">=</span> k <span class="ansi-yellow-intense-fg ansi-bold">*</span> log<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-cyan-intense-fg ansi-bold">2</span><span class="ansi-yellow-intense-fg ansi-bold">*</span>pi<span class="ansi-yellow-intense-fg ansi-bold">)</span> <span class="ansi-yellow-intense-fg ansi-bold">+</span> log<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-cyan-intense-fg ansi-bold">1.</span><span class="ansi-yellow-intense-fg ansi-bold">/</span>det<span class="ansi-yellow-intense-fg ansi-bold">(</span>tau<span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">     85</span>         result <span class="ansi-yellow-intense-fg ansi-bold">+=</span> <span class="ansi-yellow-intense-fg ansi-bold">(</span>delta<span class="ansi-yellow-intense-fg ansi-bold">.</span>dot<span class="ansi-yellow-intense-fg ansi-bold">(</span>tau<span class="ansi-yellow-intense-fg ansi-bold">)</span> <span class="ansi-yellow-intense-fg ansi-bold">*</span> delta<span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">.</span>sum<span class="ansi-yellow-intense-fg ansi-bold">(</span>axis<span class="ansi-yellow-intense-fg ansi-bold">=</span>delta<span class="ansi-yellow-intense-fg ansi-bold">.</span>ndim <span class="ansi-yellow-intense-fg ansi-bold">-</span> <span class="ansi-cyan-intense-fg ansi-bold">1</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">     86</span>         <span class="ansi-green-intense-fg ansi-bold">return</span> <span class="ansi-yellow-intense-fg ansi-bold">-</span><span class="ansi-cyan-intense-fg ansi-bold">1</span><span class="ansi-yellow-intense-fg ansi-bold">/</span><span class="ansi-cyan-intense-fg ansi-bold">2.</span> <span class="ansi-yellow-intense-fg ansi-bold">*</span> result
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/tools/theano_fork/theano/tensor/var.py</span> in <span class="ansi-cyan-fg">__rtruediv__</span><span class="ansi-blue-intense-fg ansi-bold">(self, other)</span>
+<span class="ansi-green-fg">    207</span>
+<span class="ansi-green-fg">    208</span>     <span class="ansi-green-intense-fg ansi-bold">def</span> __rtruediv__<span class="ansi-yellow-intense-fg ansi-bold">(</span>self<span class="ansi-yellow-intense-fg ansi-bold">,</span> other<span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 209</span><span class="ansi-yellow-intense-fg ansi-bold">         </span><span class="ansi-green-intense-fg ansi-bold">return</span> theano<span class="ansi-yellow-intense-fg ansi-bold">.</span>tensor<span class="ansi-yellow-intense-fg ansi-bold">.</span>basic<span class="ansi-yellow-intense-fg ansi-bold">.</span>true_div<span class="ansi-yellow-intense-fg ansi-bold">(</span>other<span class="ansi-yellow-intense-fg ansi-bold">,</span> self<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">    210</span>
+<span class="ansi-green-fg">    211</span>     <span class="ansi-green-intense-fg ansi-bold">def</span> __rfloordiv__<span class="ansi-yellow-intense-fg ansi-bold">(</span>self<span class="ansi-yellow-intense-fg ansi-bold">,</span> other<span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/tools/theano_fork/theano/gof/op.py</span> in <span class="ansi-cyan-fg">__call__</span><span class="ansi-blue-intense-fg ansi-bold">(self, *inputs, **kwargs)</span>
+<span class="ansi-green-fg">    608</span>             <span class="ansi-green-intense-fg ansi-bold">for</span> i<span class="ansi-yellow-intense-fg ansi-bold">,</span> ins <span class="ansi-green-intense-fg ansi-bold">in</span> enumerate<span class="ansi-yellow-intense-fg ansi-bold">(</span>node<span class="ansi-yellow-intense-fg ansi-bold">.</span>inputs<span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-fg">    609</span>                 <span class="ansi-green-intense-fg ansi-bold">try</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 610</span><span class="ansi-yellow-intense-fg ansi-bold">                     </span>storage_map<span class="ansi-yellow-intense-fg ansi-bold">[</span>ins<span class="ansi-yellow-intense-fg ansi-bold">]</span> <span class="ansi-yellow-intense-fg ansi-bold">=</span> <span class="ansi-yellow-intense-fg ansi-bold">[</span>self<span class="ansi-yellow-intense-fg ansi-bold">.</span>_get_test_value<span class="ansi-yellow-intense-fg ansi-bold">(</span>ins<span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">]</span>
+<span class="ansi-green-fg">    611</span>                     compute_map<span class="ansi-yellow-intense-fg ansi-bold">[</span>ins<span class="ansi-yellow-intense-fg ansi-bold">]</span> <span class="ansi-yellow-intense-fg ansi-bold">=</span> <span class="ansi-yellow-intense-fg ansi-bold">[</span><span class="ansi-green-intense-fg ansi-bold">True</span><span class="ansi-yellow-intense-fg ansi-bold">]</span>
+<span class="ansi-green-fg">    612</span>                 <span class="ansi-green-intense-fg ansi-bold">except</span> AttributeError<span class="ansi-yellow-intense-fg ansi-bold">:</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/tools/theano_fork/theano/gof/op.py</span> in <span class="ansi-cyan-fg">_get_test_value</span><span class="ansi-blue-intense-fg ansi-bold">(cls, v)</span>
+<span class="ansi-green-fg">    536</span>             <span class="ansi-red-intense-fg ansi-bold"># ensure that the test value is correct</span>
+<span class="ansi-green-fg">    537</span>             <span class="ansi-green-intense-fg ansi-bold">try</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 538</span><span class="ansi-yellow-intense-fg ansi-bold">                 </span>ret <span class="ansi-yellow-intense-fg ansi-bold">=</span> v<span class="ansi-yellow-intense-fg ansi-bold">.</span>type<span class="ansi-yellow-intense-fg ansi-bold">.</span>filter<span class="ansi-yellow-intense-fg ansi-bold">(</span>v<span class="ansi-yellow-intense-fg ansi-bold">.</span>tag<span class="ansi-yellow-intense-fg ansi-bold">.</span>test_value<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">    539</span>             <span class="ansi-green-intense-fg ansi-bold">except</span> Exception <span class="ansi-green-intense-fg ansi-bold">as</span> e<span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-fg">    540</span>                 <span class="ansi-red-intense-fg ansi-bold"># Better error message.</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/tools/theano_fork/theano/tensor/type.py</span> in <span class="ansi-cyan-fg">filter</span><span class="ansi-blue-intense-fg ansi-bold">(self, data, strict, allow_downcast)</span>
+<span class="ansi-green-fg">    175</span>             raise TypeError(&#34;Wrong number of dimensions: expected %s,&#34;
+<span class="ansi-green-fg">    176</span>                             &#34; got %s with shape %s.&#34; % (self.ndim, data.ndim,
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 177</span><span class="ansi-yellow-intense-fg ansi-bold">                                                         data.shape))
+</span><span class="ansi-green-fg">    178</span>         <span class="ansi-green-intense-fg ansi-bold">if</span> <span class="ansi-green-intense-fg ansi-bold">not</span> data<span class="ansi-yellow-intense-fg ansi-bold">.</span>flags<span class="ansi-yellow-intense-fg ansi-bold">.</span>aligned<span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-fg">    179</span>             <span class="ansi-green-intense-fg ansi-bold">try</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+
+<span class="ansi-red-intense-fg ansi-bold">TypeError</span>: For compute_test_value, one input test value does not have the requested type.
+
+Backtrace when that variable is created:
+  File &#34;/home/wiecki/working/projects/pymc/pymc3/distributions/multivariate.py&#34;, line 84, in logp
+    result = k * log(2*pi) + log(1./det(tau))
+
+The error when converting the test value to that variable type:
+Wrong number of dimensions: expected 0, got 1 with shape (2,).
+</pre></div></div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -1,0 +1,794 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>&lt;no title&gt; &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../docs/source/index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../docs/source/index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../docs/source/index.html">Docs</a> &raquo;</li>
+      
+    <li>&lt;no title&gt;</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../_sources/pymc3/examples/Simple%2520GP.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<p>Example of simple GP fit, adapted from Stan&#8217;s <a class="reference external" href="https://github.com/stan-dev/example-models/blob/master/misc/gaussian-process/gp-fit.stan">example-models
+repository</a>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [24]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.9</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.7</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.6</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.1</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">3.9</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.7</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.6</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.1</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.9</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">2.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.7</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.6</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.9</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.8</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">1.7</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.6</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.9</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.7</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">0.6</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.3</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span>
+<span class="mf">0.6</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">,</span> <span class="mf">1.3</span><span class="p">,</span> <span class="mf">1.4</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mf">1.6</span><span class="p">,</span> <span class="mf">1.7</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">,</span>
+<span class="mf">1.9</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">2.1</span><span class="p">,</span> <span class="mf">2.2</span><span class="p">,</span> <span class="mf">2.3</span><span class="p">,</span> <span class="mf">2.4</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="mf">2.6</span><span class="p">,</span> <span class="mf">2.7</span><span class="p">,</span> <span class="mf">2.8</span><span class="p">,</span> <span class="mf">2.9</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mf">3.1</span><span class="p">,</span>
+<span class="mf">3.2</span><span class="p">,</span> <span class="mf">3.3</span><span class="p">,</span> <span class="mf">3.4</span><span class="p">,</span> <span class="mf">3.5</span><span class="p">,</span> <span class="mf">3.6</span><span class="p">,</span> <span class="mf">3.7</span><span class="p">,</span> <span class="mf">3.8</span><span class="p">,</span> <span class="mf">3.9</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mf">4.1</span><span class="p">,</span> <span class="mf">4.2</span><span class="p">,</span> <span class="mf">4.3</span><span class="p">,</span> <span class="mf">4.4</span><span class="p">,</span>
+<span class="mf">4.5</span><span class="p">,</span> <span class="mf">4.6</span><span class="p">,</span> <span class="mf">4.7</span><span class="p">,</span> <span class="mf">4.8</span><span class="p">,</span> <span class="mf">4.9</span><span class="p">,</span> <span class="mi">5</span><span class="p">])</span>
+
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.04442478194401</span><span class="p">,</span> <span class="mf">0.948306088493654</span><span class="p">,</span> <span class="mf">0.357037759697332</span><span class="p">,</span> <span class="mf">0.492336514646604</span><span class="p">,</span>
+<span class="mf">0.520651364364746</span><span class="p">,</span> <span class="mf">0.112629866592809</span><span class="p">,</span> <span class="mf">0.470995468454158</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.168442254267804</span><span class="p">,</span>
+<span class="mf">0.0720344402575861</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.188108980535916</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0160163306512027</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">0.0388792158617705</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0600673630622568</span><span class="p">,</span> <span class="mf">0.113568725264636</span><span class="p">,</span>
+<span class="mf">0.447160403837629</span><span class="p">,</span> <span class="mf">0.664421188556779</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.139510743820276</span><span class="p">,</span> <span class="mf">0.458823971660986</span><span class="p">,</span>
+<span class="mf">0.141214654640904</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.286957663528091</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.466537724021695</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.308185884317105</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">1.57664872694079</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.44463024170082</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.51206214603847</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.49393593601901</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">2.02292464164487</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.57047488853653</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.22973445533419</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.51502367058357</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">1.41493587255224</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.10140254663611</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.591866485375275</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.08781838696462</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">0.800375653733931</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.00764767602679</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0471028950122742</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.536820626879737</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">0.151688056391446</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.176771681318393</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.240094952335518</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.16827876746502</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">0.493597351974992</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.831683011472805</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.152347043914137</span><span class="p">,</span> <span class="mf">0.0190364158178343</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">1.09355955218051</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.328157917911376</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.585575679802941</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.472837120425201</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">0.503633622750049</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0124446353828312</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.465529814250314</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">0.101621725887347</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.26988462590405</span><span class="p">,</span> <span class="mf">0.398726664193302</span><span class="p">,</span> <span class="mf">0.113805181040188</span><span class="p">,</span>
+<span class="mf">0.331353802465398</span><span class="p">,</span> <span class="mf">0.383592361618461</span><span class="p">,</span> <span class="mf">0.431647298655434</span><span class="p">,</span> <span class="mf">0.580036473774238</span><span class="p">,</span>
+<span class="mf">0.830404669466897</span><span class="p">,</span> <span class="mf">1.17919105883462</span><span class="p">,</span> <span class="mf">0.871037583886711</span><span class="p">,</span> <span class="mf">1.12290553424174</span><span class="p">,</span>
+<span class="mf">0.752564860804382</span><span class="p">,</span> <span class="mf">0.76897960270623</span><span class="p">,</span> <span class="mf">1.14738839410786</span><span class="p">,</span> <span class="mf">0.773151715269892</span><span class="p">,</span>
+<span class="mf">0.700611498974798</span><span class="p">,</span> <span class="mf">0.0412951045437818</span><span class="p">,</span> <span class="mf">0.303526087747629</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.139399513324585</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">0.862987735433697</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.23399179134008</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.58924289116396</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.35105117911049</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">0.990144529089174</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.91175364127672</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.31836236129543</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.65955735224704</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">1.83516148300526</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.03817062501248</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.66764011409214</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.552154350554687</span><span class="p">,</span>
+<span class="o">-</span><span class="mf">0.547807883952654</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.905389222477036</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.737156477425302</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.40211249920415</span><span class="p">,</span>
+<span class="mf">0.129669958952991</span><span class="p">,</span> <span class="mf">0.271142753510592</span><span class="p">,</span> <span class="mf">0.176311762529962</span><span class="p">,</span> <span class="mf">0.283580281859344</span><span class="p">,</span>
+<span class="mf">0.635808289696458</span><span class="p">,</span> <span class="mf">1.69976647982837</span><span class="p">,</span> <span class="mf">1.10748978734239</span><span class="p">,</span> <span class="mf">0.365412229181044</span><span class="p">,</span>
+<span class="mf">0.788821368082444</span><span class="p">,</span> <span class="mf">0.879731888124867</span><span class="p">,</span> <span class="mf">1.02180766619069</span><span class="p">,</span> <span class="mf">0.551526067300283</span><span class="p">])</span>
+
+<span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">gp_code</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">// Fit a Gaussian process&#39;s hyperparameters</span>
+<span class="s2">// for squared exponential prior</span>
+
+<span class="s2">data {</span>
+<span class="s2">  int&lt;lower=1&gt; N;</span>
+<span class="s2">  vector[N] x;</span>
+<span class="s2">  vector[N] y;</span>
+<span class="s2">}</span>
+<span class="s2">transformed data {</span>
+<span class="s2">  vector[N] mu;</span>
+<span class="s2">  for (i in 1:N)</span>
+<span class="s2">    mu[i] &lt;- 0;</span>
+<span class="s2">}</span>
+<span class="s2">parameters {</span>
+<span class="s2">  real&lt;lower=0&gt; eta_sq;</span>
+<span class="s2">  real&lt;lower=0&gt; rho_sq;</span>
+<span class="s2">  real&lt;lower=0&gt; sigma_sq;</span>
+<span class="s2">}</span>
+<span class="s2">model {</span>
+<span class="s2">  matrix[N,N] Sigma;</span>
+
+<span class="s2">  // off-diagonal elements</span>
+<span class="s2">  for (i in 1:(N-1)) {</span>
+<span class="s2">    for (j in (i+1):N) {</span>
+<span class="s2">      Sigma[i,j] &lt;- eta_sq * exp(-rho_sq * pow(x[i] - x[j],2));</span>
+<span class="s2">      Sigma[j,i] &lt;- Sigma[i,j];</span>
+<span class="s2">    }</span>
+<span class="s2">  }</span>
+
+<span class="s2">  // diagonal elements</span>
+<span class="s2">  for (k in 1:N)</span>
+<span class="s2">    Sigma[k,k] &lt;- eta_sq + sigma_sq; // + jitter</span>
+
+<span class="s2">  eta_sq ~ cauchy(0,5);</span>
+<span class="s2">  rho_sq ~ cauchy(0,5);</span>
+<span class="s2">  sigma_sq ~ cauchy(0,5);</span>
+
+<span class="s2">  y ~ multi_normal(mu,Sigma);</span>
+<span class="s2">}</span>
+<span class="s2">&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Model</span><span class="p">,</span> <span class="n">MvNormal</span><span class="p">,</span> <span class="n">HalfCauchy</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">traceplot</span><span class="p">,</span> <span class="n">summary</span><span class="p">,</span> <span class="n">find_MAP</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">,</span> <span class="n">Deterministic</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
+<span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">shared</span>
+<span class="kn">from</span> <span class="nn">theano.tensor.nlinalg</span> <span class="kn">import</span> <span class="n">matrix_inverse</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">squared_distance</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="n">j</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">))])</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">gp_fit</span><span class="p">:</span>
+
+    <span class="err">μ</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+
+    <span class="err">η</span><span class="n">_sq</span> <span class="o">=</span> <span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;η_sq&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="err">ρ</span><span class="n">_sq</span> <span class="o">=</span> <span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;ρ_sq&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="err">σ</span><span class="n">_sq</span> <span class="o">=</span> <span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;σ_sq&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+    <span class="n">D</span> <span class="o">=</span> <span class="n">squared_distance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+
+    <span class="c1"># Squared exponential</span>
+    <span class="err">Σ</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="err">η</span><span class="n">_sq</span> <span class="o">*</span> <span class="n">T</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="err">ρ</span><span class="n">_sq</span> <span class="o">*</span> <span class="n">D</span><span class="p">),</span> <span class="err">η</span><span class="n">_sq</span> <span class="o">+</span> <span class="err">σ</span><span class="n">_sq</span><span class="p">)</span>
+
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;obs&#39;</span><span class="p">,</span> <span class="err">μ</span><span class="p">,</span> <span class="n">matrix_inverse</span><span class="p">(</span><span class="err">Σ</span><span class="p">),</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied log-transform to η_sq and added transformed η_sq_log to model.
+Applied log-transform to ρ_sq and added transformed ρ_sq_log to model.
+Applied log-transform to σ_sq and added transformed σ_sq_log to model.
+</pre></div></div>
+</div>
+<p>The following generates predictions from the GP model in a grid of
+values:</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">gp_fit</span><span class="p">:</span>
+
+    <span class="c1"># Prediction over grid</span>
+    <span class="n">xgrid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+    <span class="n">D_pred</span> <span class="o">=</span> <span class="n">squared_distance</span><span class="p">(</span><span class="n">xgrid</span><span class="p">,</span> <span class="n">xgrid</span><span class="p">)</span>
+    <span class="n">D_off_diag</span> <span class="o">=</span> <span class="n">squared_distance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">xgrid</span><span class="p">)</span>
+
+    <span class="c1"># Covariance matrices for prediction</span>
+    <span class="err">Σ</span><span class="n">_pred</span> <span class="o">=</span> <span class="err">η</span><span class="n">_sq</span> <span class="o">*</span> <span class="n">T</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="err">ρ</span><span class="n">_sq</span> <span class="o">*</span> <span class="n">D_pred</span><span class="p">)</span>
+    <span class="err">Σ</span><span class="n">_off_diag</span> <span class="o">=</span> <span class="err">η</span><span class="n">_sq</span> <span class="o">*</span> <span class="n">T</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="err">ρ</span><span class="n">_sq</span> <span class="o">*</span> <span class="n">D_off_diag</span><span class="p">)</span>
+
+    <span class="c1"># Posterior mean</span>
+    <span class="err">μ</span><span class="n">_post</span> <span class="o">=</span> <span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;μ_post&#39;</span><span class="p">,</span> <span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="err">Σ</span><span class="n">_off_diag</span><span class="p">,</span> <span class="n">matrix_inverse</span><span class="p">(</span><span class="err">Σ</span><span class="p">)),</span> <span class="n">y</span><span class="p">))</span>
+    <span class="c1"># Posterior covariance</span>
+    <span class="err">Σ</span><span class="n">_post</span> <span class="o">=</span> <span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;Σ_post&#39;</span><span class="p">,</span> <span class="err">Σ</span><span class="n">_pred</span> <span class="o">-</span> <span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="err">Σ</span><span class="n">_off_diag</span><span class="p">,</span> <span class="n">matrix_inverse</span><span class="p">(</span><span class="err">Σ</span><span class="p">)),</span> <span class="err">Σ</span><span class="n">_off_diag</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">n_iter</span> <span class="o">=</span> <span class="mi">1000</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">gp_fit</span><span class="p">:</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">()</span>
+    <span class="n">gp_trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="n">n_iter</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Assigned NUTS to η_sq_log
+Assigned NUTS to ρ_sq_log
+Assigned NUTS to σ_sq_log
+ [-----------------100%-----------------] 1000 of 1000 complete in 98.4 sec
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">means</span><span class="p">,</span> <span class="n">sds</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">gp_fit</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">means</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[12]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>{&#39;η_sq_log&#39;: array(0.015762946382433148),
+ &#39;ρ_sq_log&#39;: array(0.03222838179919826),
+ &#39;σ_sq_log&#39;: array(-2.309298060198815)}
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">start</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[18]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>{&#39;η_sq_log&#39;: array(-0.03681039025501476),
+ &#39;ρ_sq_log&#39;: array(-0.006985379415401715),
+ &#39;σ_sq_log&#39;: array(-2.3256870552375988)}
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [30]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">gp_fit</span><span class="p">:</span>
+    <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">DictToArrayBijection</span><span class="p">([</span><span class="s1">&#39;η_sq_log&#39;</span><span class="p">,</span> <span class="s1">&#39;ρ_sq_log&#39;</span><span class="p">,</span> <span class="s1">&#39;σ_sq_log&#39;</span><span class="p">],</span> <span class="n">sds</span><span class="p">),</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">AttributeError</span>                            Traceback (most recent call last)
+<span class="ansi-green-intense-fg ansi-bold">&lt;ipython-input-30-85865a8fc8f2&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
+<span class="ansi-green-fg">      1</span> <span class="ansi-green-intense-fg ansi-bold">with</span> gp_fit<span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 2</span><span class="ansi-yellow-intense-fg ansi-bold">     </span>pm<span class="ansi-yellow-intense-fg ansi-bold">.</span>NUTS<span class="ansi-yellow-intense-fg ansi-bold">(</span>scaling<span class="ansi-yellow-intense-fg ansi-bold">=</span>pm<span class="ansi-yellow-intense-fg ansi-bold">.</span>DictToArrayBijection<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-yellow-intense-fg ansi-bold">[</span><span class="ansi-blue-intense-fg ansi-bold">&#39;η_sq_log&#39;</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> <span class="ansi-blue-intense-fg ansi-bold">&#39;ρ_sq_log&#39;</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> <span class="ansi-blue-intense-fg ansi-bold">&#39;σ_sq_log&#39;</span><span class="ansi-yellow-intense-fg ansi-bold">]</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> sds<span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> is_cov<span class="ansi-yellow-intense-fg ansi-bold">=</span><span class="ansi-green-intense-fg ansi-bold">True</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/working/projects/pymc/pymc3/step_methods/nuts.py</span> in <span class="ansi-cyan-fg">__init__</span><span class="ansi-blue-intense-fg ansi-bold">(self, vars, scaling, step_scale, is_cov, state, Emax, target_accept, gamma, k, t0, model, profile, **kwargs)</span>
+<span class="ansi-green-fg">     71</span>
+<span class="ansi-green-fg">     72</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 73</span><span class="ansi-yellow-intense-fg ansi-bold">         </span>n <span class="ansi-yellow-intense-fg ansi-bold">=</span> scaling<span class="ansi-yellow-intense-fg ansi-bold">.</span>shape<span class="ansi-yellow-intense-fg ansi-bold">[</span><span class="ansi-cyan-intense-fg ansi-bold">0</span><span class="ansi-yellow-intense-fg ansi-bold">]</span>
+<span class="ansi-green-fg">     74</span>
+<span class="ansi-green-fg">     75</span>         self<span class="ansi-yellow-intense-fg ansi-bold">.</span>step_size <span class="ansi-yellow-intense-fg ansi-bold">=</span> step_scale <span class="ansi-yellow-intense-fg ansi-bold">/</span> n<span class="ansi-yellow-intense-fg ansi-bold">**</span><span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-cyan-intense-fg ansi-bold">1</span><span class="ansi-yellow-intense-fg ansi-bold">/</span><span class="ansi-cyan-intense-fg ansi-bold">4.</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+
+<span class="ansi-red-intense-fg ansi-bold">AttributeError</span>: &#39;DictToArrayBijection&#39; object has no attribute &#39;shape&#39;
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">gp_fit</span><span class="p">:</span>
+    <span class="n">gp_trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="n">n_iter</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">means</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Assigned NUTS to η_sq_log
+Assigned NUTS to ρ_sq_log
+Assigned NUTS to σ_sq_log
+ [-----------------100%-----------------] 1000 of 1000 complete in 17.7 sec
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">stats</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="n">varnames</span> <span class="o">=</span> <span class="n">means</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">nrows</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">varnames</span><span class="p">),</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">18</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">var</span><span class="p">,</span> <span class="n">ax</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">varnames</span><span class="p">,</span> <span class="n">axs</span><span class="p">):</span>
+    <span class="n">mu_arr</span> <span class="o">=</span> <span class="n">means</span><span class="p">[</span><span class="n">var</span><span class="p">]</span>
+    <span class="n">sigma_arr</span> <span class="o">=</span> <span class="n">sds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">mu_arr</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">sigma_arr</span><span class="o">.</span><span class="n">flatten</span><span class="p">())):</span>
+        <span class="n">sd3</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="o">*</span><span class="n">sigma</span> <span class="o">+</span> <span class="n">mu</span><span class="p">,</span> <span class="mi">4</span><span class="o">*</span><span class="n">sigma</span> <span class="o">+</span> <span class="n">mu</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">sd3</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sd3</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">300</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">)</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">gp_trace</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">gp_trace</span><span class="p">[</span><span class="n">var</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">gp_trace</span><span class="p">[</span><span class="n">var</span><span class="p">]</span>
+        <span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">norm_hist</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_examples_Simple%2520GP_17_0.png" src="../../_images/pymc3_examples_Simple%2520GP_17_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [21]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">gp_trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;η_sq&#39;</span><span class="p">,</span> <span class="s1">&#39;ρ_sq&#39;</span><span class="p">,</span> <span class="s1">&#39;σ_sq&#39;</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_examples_Simple%2520GP_18_0.png" src="../../_images/pymc3_examples_Simple%2520GP_18_0.png" />
+</div>
+</div>
+<p>Sample from the posterior GP</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [22]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">y_pred</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span><span class="p">,</span><span class="n">S</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">gp_trace</span><span class="p">[</span><span class="s1">&#39;μ_post&#39;</span><span class="p">][</span><span class="mi">50</span><span class="p">:],</span> <span class="n">gp_trace</span><span class="p">[</span><span class="s1">&#39;Σ_post&#39;</span><span class="p">][</span><span class="mi">50</span><span class="p">:])]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/home/wiecki/miniconda3/lib/python3.4/site-packages/ipykernel/__main__.py:1: RuntimeWarning: covariance is not positive-semidefinite.
+  if __name__ == &#39;__main__&#39;:
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [25]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;r.&#39;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">yp</span> <span class="ow">in</span> <span class="n">y_pred</span><span class="p">:</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">yp</span><span class="p">,</span> <span class="s1">&#39;c-&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.01</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_examples_Simple%2520GP_21_0.png" src="../../_images/pymc3_examples_Simple%2520GP_21_0.png" />
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

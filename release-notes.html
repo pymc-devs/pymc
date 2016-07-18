@@ -1,0 +1,272 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Release Notes &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="docs/source/index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="docs/source/getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docs/source/examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docs/source/api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="docs/source/index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="docs/source/index.html">Docs</a> &raquo;</li>
+      
+    <li>Release Notes</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/release-notes.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="release-notes">
+<span id="release-notes"></span><h1>Release Notes<a class="headerlink" href="#release-notes" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="pymc3-3-0b-june-16th-2015">
+<span id="pymc3-3-0b-june-16th-2015"></span><h2>PyMC3 3.0b (June 16th, 2015)<a class="headerlink" href="#pymc3-3-0b-june-16th-2015" title="Permalink to this headline">¶</a></h2>
+<p>Probabilistic programming allows for flexible specification of Bayesian statistical models in code. PyMC3 is a new, open-source probabilistic programmer framework with an intuitive, readable and concise, yet powerful, syntax that is close to the natural notation statisticians use to describe models. It features next-generation fitting techniques, such as the No U-Turn Sampler, that allow fitting complex models with thousands of parameters without specialized knowledge of fitting algorithms.</p>
+<p>PyMC3 has recently seen rapid development. With the addition of two new major features: automatic transforms and missing value imputation, PyMC3 has become ready for wider use. PyMC3 is now refined enough that adding features is easy, so we don&#8217;t expect adding features in the future will require drastic changes. It has also become user friendly enough for a broader audience. Automatic transformations mean NUTS and find_MAP work with less effort, and friendly error messages mean its easy to diagnose problems with your model.</p>
+<p>Thus, Thomas, Chris and I are pleased to announce that PyMC3 is now in Beta.</p>
+<div class="section" id="highlights">
+<span id="highlights"></span><h3>Highlights<a class="headerlink" href="#highlights" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Transforms now automatically applied to constrained distributions</li>
+<li>Transforms now specified with a <code class="docutils literal"><span class="pre">transform=</span></code> argument on Distributions. <code class="docutils literal"><span class="pre">model.TransformedVar</span></code> is gone.</li>
+<li>Transparent missing value imputation support added with MaskedArrays or pandas.DataFrame NaNs.</li>
+<li>Bad default values now ignored</li>
+<li>Profile theano functions using <code class="docutils literal"><span class="pre">model.profile(model.logpt)</span></code></li>
+</ul>
+</div>
+<div class="section" id="contributors-since-3-0a">
+<span id="contributors-since-3-0a"></span><h3>Contributors since 3.0a<a class="headerlink" href="#contributors-since-3-0a" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>A. Flaxman <a class="reference external" href="mailto:abie&#37;&#52;&#48;alum&#46;mit&#46;edu">abie<span>&#64;</span>alum<span>&#46;</span>mit<span>&#46;</span>edu</a></li>
+<li>Andrea Zonca <a class="reference external" href="mailto:code&#37;&#52;&#48;andreazonca&#46;com">code<span>&#64;</span>andreazonca<span>&#46;</span>com</a></li>
+<li>Andreas Klostermann <a class="reference external" href="mailto:andreasklostermann&#37;&#52;&#48;googlemail&#46;com">andreasklostermann<span>&#64;</span>googlemail<span>&#46;</span>com</a></li>
+<li>Andrew Clegg <a class="reference external" href="mailto:andrew&#46;clegg&#37;&#52;&#48;pearson&#46;com">andrew<span>&#46;</span>clegg<span>&#64;</span>pearson<span>&#46;</span>com</a></li>
+<li>AustinRochford <a class="reference external" href="mailto:arochford&#37;&#52;&#48;monetate&#46;com">arochford<span>&#64;</span>monetate<span>&#46;</span>com</a></li>
+<li>Benjamin Edwards <a class="reference external" href="mailto:bedwards&#37;&#52;&#48;cs&#46;unm&#46;edu">bedwards<span>&#64;</span>cs<span>&#46;</span>unm<span>&#46;</span>edu</a></li>
+<li>Brian Naughton <a class="reference external" href="mailto:briannaughton&#37;&#52;&#48;gmail&#46;com">briannaughton<span>&#64;</span>gmail<span>&#46;</span>com</a></li>
+<li>Chad Heyne <a class="reference external" href="mailto:chadheyne&#37;&#52;&#48;gmail&#46;com">chadheyne<span>&#64;</span>gmail<span>&#46;</span>com</a></li>
+<li>Chris Fonnesbeck <a class="reference external" href="mailto:chris&#46;fonnesbeck&#37;&#52;&#48;vanderbilt&#46;edu">chris<span>&#46;</span>fonnesbeck<span>&#64;</span>vanderbilt<span>&#46;</span>edu</a></li>
+<li>Corey Farwell <a class="reference external" href="mailto:coreyf&#37;&#52;&#48;rwell&#46;org">coreyf<span>&#64;</span>rwell<span>&#46;</span>org</a></li>
+<li>John Salvatier <a class="reference external" href="mailto:jsalvatier&#37;&#52;&#48;gmail&#46;com">jsalvatier<span>&#64;</span>gmail<span>&#46;</span>com</a></li>
+<li>Karlson Pfannschmidt <a class="reference external" href="mailto:quietdeath&#37;&#52;&#48;gmail&#46;com">quietdeath<span>&#64;</span>gmail<span>&#46;</span>com</a></li>
+<li>Kyle Bishop <a class="reference external" href="mailto:citizenphnix&#37;&#52;&#48;gmail&#46;com">citizenphnix<span>&#64;</span>gmail<span>&#46;</span>com</a></li>
+<li>Kyle Meyer <a class="reference external" href="mailto:kyle&#37;&#52;&#48;kyleam&#46;com">kyle<span>&#64;</span>kyleam<span>&#46;</span>com</a></li>
+<li>Mack Sweeney <a class="reference external" href="mailto:mackenzie&#46;sweeney&#37;&#52;&#48;gmail&#46;com">mackenzie<span>&#46;</span>sweeney<span>&#64;</span>gmail<span>&#46;</span>com</a></li>
+<li>Osvaldo Martin <a class="reference external" href="mailto:aloctavodia&#37;&#52;&#48;gmail&#46;com">aloctavodia<span>&#64;</span>gmail<span>&#46;</span>com</a></li>
+<li>Raymond Roberts <a class="reference external" href="mailto:rayvroberts&#37;&#52;&#48;gmail&#46;com">rayvroberts<span>&#64;</span>gmail<span>&#46;</span>com</a></li>
+<li>Rodrigo Benenson <a class="reference external" href="mailto:rodrigo&#46;benenson&#37;&#52;&#48;gmail&#46;com">rodrigo<span>&#46;</span>benenson<span>&#64;</span>gmail<span>&#46;</span>com</a></li>
+<li>Thomas Wiecki <a class="reference external" href="mailto:thomas&#46;wiecki&#37;&#52;&#48;gmail&#46;com">thomas<span>&#46;</span>wiecki<span>&#64;</span>gmail<span>&#46;</span>com</a></li>
+<li>Zach Ploskey <a class="reference external" href="mailto:zploskey&#37;&#52;&#48;gmail&#46;com">zploskey<span>&#64;</span>gmail<span>&#46;</span>com</a></li>
+<li>maahnman <a class="reference external" href="mailto:github&#37;&#52;&#48;mm&#46;maahn&#46;de">github<span>&#64;</span>mm<span>&#46;</span>maahn<span>&#46;</span>de</a></li>
+<li>paul sorenson <a class="reference external" href="mailto:paul&#37;&#52;&#48;metrak&#46;com">paul<span>&#64;</span>metrak<span>&#46;</span>com</a></li>
+<li>zenourn <a class="reference external" href="mailto:daniel&#37;&#52;&#48;zeno&#46;co&#46;nz">daniel<span>&#64;</span>zeno<span>&#46;</span>co<span>&#46;</span>nz</a></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

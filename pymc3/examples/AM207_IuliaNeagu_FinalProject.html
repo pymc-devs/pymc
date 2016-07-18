@@ -1,0 +1,721 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Hierarchical Bayesian model for the time-varying volatility of asset prices &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../docs/source/index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../docs/source/index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../docs/source/index.html">Docs</a> &raquo;</li>
+      
+    <li>Hierarchical Bayesian model for the time-varying volatility of asset prices</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../_sources/pymc3/examples/AM207_IuliaNeagu_FinalProject.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Hierarchical-Bayesian-model-for-the-time-varying-volatility-of-asset-prices">
+<h1>Hierarchical Bayesian model for the time-varying volatility of asset prices<a class="headerlink" href="#Hierarchical-Bayesian-model-for-the-time-varying-volatility-of-asset-prices" title="Permalink to this headline">¶</a></h1>
+<p><span class="math">\({\bf Author:}\)</span> Iulia A. Neagu</p>
+</div>
+<div class="section" id="">
+<h1><span class="math">\(\underline{Abstract}\)</span><a class="headerlink" href="#" title="Permalink to this headline">¶</a></h1>
+<p>In this project, we will model the volatility of asset prices in the
+S&amp;P500 index. We use a stochastic volatility model to estimate the
+conditional distributions of the daily returns, as well as the latent
+log volatility of the index. Effective modelling of volatility is
+essential in estimating asset prices for trading purposes</p>
+</div>
+<div class="section" id="">
+<h1><span class="math">\(\underline{Introduction}\)</span><a class="headerlink" href="#" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [64]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="c1">### Importing all the necessary libraries</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">pandas.io.data</span> <span class="kn">as</span> <span class="nn">web</span>
+<span class="kn">from</span> <span class="nn">pymc3.distributions.timeseries</span> <span class="kn">import</span> <span class="n">GaussianRandomWalk</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">scipy</span>
+
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">norm</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
+<span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+
+<span class="c1"># you don&#39;t have to use seaborn if you prefer plain matplotlib</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set_style</span><span class="p">(</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set_context</span><span class="p">(</span><span class="s1">&#39;paper&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The Standard &amp; Poor&#8217;s (S&amp;P) 500 index is one of the main American stock
+market indeces; it is computed based on the market caps of 500 large
+companies, weighted accordingly to the Dow Jones Indices. Since the
+companies presented in the index span a variety of different industries,
+the index is considered an accurate performance of the U.S. stock market
+on average, and of the U.S economy as a whole.</p>
+<p>Yahoo Finance gives us access to historical trading data for the US
+marktets. We can simply import the data by calling the ticker of the
+stock. Below we import historical data for the S&amp;P500 index, and plot
+the price of the index, as well as the daily returns of the index
+(percent change in the price of an index).</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [177]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="c1">### Import trading data for the S&amp;P500 index</span>
+<span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2013</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">end</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2014</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">)</span>
+<span class="n">SPY</span> <span class="o">=</span> <span class="n">web</span><span class="o">.</span><span class="n">DataReader</span><span class="p">(</span><span class="s2">&quot;SPY&quot;</span><span class="p">,</span> <span class="s1">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+<span class="n">SPY_price</span> <span class="o">=</span> <span class="n">SPY</span><span class="p">[</span><span class="s1">&#39;Close&#39;</span><span class="p">]</span>
+<span class="n">SPY_returns</span> <span class="o">=</span> <span class="n">SPY</span><span class="p">[</span><span class="s1">&#39;Close&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">pct_change</span><span class="p">()[</span><span class="mi">1</span><span class="p">:</span><span class="mi">501</span><span class="p">]</span>
+<span class="n">SPY_vol</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">rolling_std</span><span class="p">(</span><span class="n">SPY_returns</span><span class="p">,</span> <span class="mi">10</span><span class="p">)[</span><span class="mi">10</span><span class="p">:</span><span class="mi">501</span><span class="p">]</span>
+
+<span class="n">stock_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;MSFT&quot;</span><span class="p">,</span><span class="s2">&quot;INTC&quot;</span><span class="p">,</span><span class="s2">&quot;YHOO&quot;</span><span class="p">,</span><span class="s2">&quot;GOOGL&quot;</span><span class="p">,</span><span class="s2">&quot;FB&quot;</span><span class="p">]</span>
+<span class="n">nStocks</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">stock_names</span><span class="p">)</span>
+<span class="n">nDays</span> <span class="o">=</span> <span class="mi">500</span>
+
+<span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="n">data_price</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">nStocks</span><span class="p">,</span><span class="n">nDays</span><span class="p">])</span>
+<span class="n">data_returns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">nStocks</span><span class="p">,</span><span class="n">nDays</span><span class="p">])</span>
+<span class="n">data_vol</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">nStocks</span><span class="p">,</span><span class="n">nDays</span><span class="o">-</span><span class="mi">10</span><span class="p">])</span>
+
+<span class="k">for</span> <span class="n">ticker</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;MSFT&quot;</span><span class="p">,</span><span class="s2">&quot;INTC&quot;</span><span class="p">,</span><span class="s2">&quot;YHOO&quot;</span><span class="p">,</span><span class="s2">&quot;GOOGL&quot;</span><span class="p">]:</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">web</span><span class="o">.</span><span class="n">DataReader</span><span class="p">(</span><span class="n">ticker</span><span class="p">,</span> <span class="s1">&#39;yahoo&#39;</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+    <span class="n">data_price</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;Close&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">:</span><span class="n">nDays</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">data_returns</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;Close&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">pct_change</span><span class="p">()[</span><span class="mi">1</span><span class="p">:</span><span class="n">nDays</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">data_vol</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">rolling_std</span><span class="p">(</span><span class="n">data_returns</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="mi">10</span><span class="p">)[</span><span class="mi">10</span><span class="p">:]</span>
+    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [41]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="c1">### Plot the S&amp;P500 price and returns</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">12</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">SPY_price</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">500</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Time (days)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;SP500 price ($)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">SPY_returns</span><span class="p">[</span><span class="mi">10</span><span class="p">:],</span><span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;Returns&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">SPY_vol</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span><span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;Volatility&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper left&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">242</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Time (days)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Returns ($)&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[41]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.text.Text at 0x111283250&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_examples_AM207_IuliaNeagu_FinalProject_7_1.png" src="../../_images/pymc3_examples_AM207_IuliaNeagu_FinalProject_7_1.png" />
+</div>
+</div>
+<p>Ideally, we would want to predict the movement of this index with as
+high accuracy as possibe. In practice, this would allow us to gain
+insight into the average moment of the markets, and make favorable
+trades. From a policy perspective, predicting the movements of the
+S&amp;P500 index can potentially predict large fluctuations in the markets,
+which have a high impact on the national and international economy.
+Finally, the S&amp;P500 index can and will be treated as a regular stock,
+which means that any intuition gained in this implementation can be
+readily extrapolated to calculating the movements of other stocks.</p>
+<p>An essential parameter of stock movements is volatility.</p>
+<div class="math">
+\[\sigma\sim \text{Exponential}(50)\]</div>
+<div class="math">
+\[\mu\sim \text{Exponential}(.1)\]</div>
+<div class="math">
+\[s_i\sim \text{Normal}\left(s_{i-1},\sigma^{-2}\right)\]</div>
+<div class="math">
+\[\log \left(\frac{y_i}{y_{i-1}}\right) \sim t\left(\mu,0,\exp(-2s_i)\right)\]</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [204]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">500</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">sigma</span><span class="p">,</span> <span class="n">log_sigma</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">TransformedVar</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="n">testval</span><span class="o">=.</span><span class="mi">1</span><span class="p">),</span>
+                                            <span class="n">pm</span><span class="o">.</span><span class="n">logtransform</span><span class="p">)</span>
+
+    <span class="n">nu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;nu&#39;</span><span class="p">,</span> <span class="o">.</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">s</span> <span class="o">=</span> <span class="n">GaussianRandomWalk</span><span class="p">(</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">sigma</span><span class="o">**-</span><span class="mi">2</span><span class="p">,</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">n</span><span class="p">)</span>
+
+    <span class="n">r</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">T</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">s</span><span class="p">),</span> <span class="n">observed</span> <span class="o">=</span> <span class="n">SPY_returns</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [205]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="nb">vars</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="p">],</span> <span class="n">fmin</span> <span class="o">=</span> <span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [47]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+    <span class="n">start2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># Start next run at the last sampled position.</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start2</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start2</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/Users/ineagu/anaconda/lib/python2.7/site-packages/theano/gof/cmodule.py:293: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
+  rval = __import__(module_name, {}, {}, [module_name])
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">NameError</span>                                 Traceback (most recent call last)
+<span class="ansi-green-fg">&lt;ipython-input-47-92a98ac097f8&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-intense-fg ansi-bold">      8</span>
+<span class="ansi-green-intense-fg ansi-bold">      9</span>
+<span class="ansi-green-fg">---&gt; 10</span><span class="ansi-red-fg"> </span>figsize<span class="ansi-blue-fg">(</span><span class="ansi-cyan-fg">12</span><span class="ansi-blue-fg">,</span><span class="ansi-cyan-fg">6</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     11</span> pm<span class="ansi-blue-fg">.</span>traceplot<span class="ansi-blue-fg">(</span>trace<span class="ansi-blue-fg">,</span> model<span class="ansi-blue-fg">.</span>vars<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">:</span><span class="ansi-blue-fg">-</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">;</span>
+
+<span class="ansi-red-fg">NameError</span>: name &#39;figsize&#39; is not defined
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [51]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_examples_AM207_IuliaNeagu_FinalProject_13_0.png" src="../../_images/pymc3_examples_AM207_IuliaNeagu_FinalProject_13_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [58]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">SPY_returns</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">][::</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">02</span><span class="p">);</span>
+<span class="n">sd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">][::</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">02</span><span class="p">);</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Time (days)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Returns ($)&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[58]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.text.Text at 0x11766e4d0&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_examples_AM207_IuliaNeagu_FinalProject_14_1.png" src="../../_images/pymc3_examples_AM207_IuliaNeagu_FinalProject_14_1.png" />
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [273]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">nStocks</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">model_hierarchical</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">model_hierarchical</span><span class="p">:</span>
+    <span class="n">sigma_sigma</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;sigma_sigma&#39;</span><span class="p">,</span> <span class="n">mu</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span> <span class="n">sd</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="n">sigma_nu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;sigma_nu&#39;</span><span class="p">,</span> <span class="n">mu</span> <span class="o">=</span> <span class="o">.</span><span class="mi">1</span><span class="p">,</span> <span class="n">sd</span> <span class="o">=</span> <span class="o">.</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">sigma</span><span class="p">,</span> <span class="n">log_sigma</span> <span class="o">=</span> <span class="n">model_hierarchical</span><span class="o">.</span><span class="n">TransformedVar</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="o">.</span><span class="n">dist</span><span class="p">(</span><span class="n">sigma_sigma</span><span class="p">,</span> <span class="n">testval</span><span class="o">=.</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">nStocks</span><span class="p">),</span>
+                                            <span class="n">pm</span><span class="o">.</span><span class="n">logtransform</span><span class="p">)</span>
+
+    <span class="n">nu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;nu&#39;</span><span class="p">,</span> <span class="n">sigma_nu</span><span class="p">,</span> <span class="n">shape</span> <span class="o">=</span> <span class="n">nStocks</span><span class="p">)</span>
+
+    <span class="n">s</span> <span class="o">=</span> <span class="n">GaussianRandomWalk</span><span class="p">(</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">sigma</span><span class="o">**-</span><span class="mi">2</span><span class="p">,</span> <span class="n">shape</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span><span class="p">,</span><span class="n">nStocks</span><span class="p">])</span>
+
+    <span class="n">r</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">T</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">s</span><span class="p">),</span> <span class="n">observed</span> <span class="o">=</span> <span class="n">data_returns</span><span class="p">[:</span><span class="n">nStocks</span><span class="p">,:]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [274]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model_hierarchical</span><span class="p">:</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="nb">vars</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="p">],</span> <span class="n">fmin</span> <span class="o">=</span> <span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">model_hierarchical</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+    <span class="n">start2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="c1"># Start next run at the last sampled position.</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start2</span><span class="p">)</span>
+    <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start2</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [226]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">hierarchical_trace</span><span class="p">[</span><span class="mi">500</span><span class="p">:]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_examples_AM207_IuliaNeagu_FinalProject_18_0.png" src="../../_images/pymc3_examples_AM207_IuliaNeagu_FinalProject_18_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [261]:
+</pre></div>
+</div>
+<div class="highlight-ipython2"><div class="highlight"><pre>
+<span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nStocks</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">6</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data_returns</span><span class="p">[</span><span class="n">i</span><span class="p">,:])</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">hierarchical_trace</span><span class="p">[</span><span class="n">s</span><span class="p">][::</span><span class="mi">10</span><span class="p">,</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">02</span><span class="p">);</span>
+    <span class="n">sd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">s</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">hierarchical_trace</span><span class="p">[</span><span class="n">s</span><span class="p">][::</span><span class="mi">10</span><span class="p">,</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">02</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_examples_AM207_IuliaNeagu_FinalProject_19_0.png" src="../../_images/pymc3_examples_AM207_IuliaNeagu_FinalProject_19_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="">
+<h1><span class="math">\(\underline{Bibliography}\)</span><a class="headerlink" href="#" title="Permalink to this headline">¶</a></h1>
+<p><span class="math">\({\bf 1.\ Stochastic\ Volatility\ model}\)</span>, PyMC3 library,
+<a class="reference external" href="http://pymc-devs.github.io/pymc3/stochastic_volatility/">http://pymc-devs.github.io/pymc3/stochastic_volatility/</a></p>
+<p><span class="math">\({\bf 2.\ Probabilistic\ Programming\ in\ Quantitative\ Finance}\)</span>,
+Thomas Wiecki,
+<a class="reference external" href="http://blog.quantopian.com/probabilistic-programming-quant-finance/">http://blog.quantopian.com/probabilistic-programming-quant-finance/</a></p>
+<p><span class="math">\({\bf 3.\ Python\ for\ in\ Finance}\)</span>, Yves Hilpisch, O&#8217;Reilly
+Media, 2014</p>
+<p><span class="math">\({\bf 4.\ The\ No-U-Turn\ Sampler:\ Adaptively\ Setting\ Path\ Lengths\ in\ Hamiltonian\ Monte\ Carlo}\)</span>,
+Matthew D. Hoffman, Andrew Gelman, 2011</p>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

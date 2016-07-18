@@ -1,0 +1,757 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Couldn't import dot_parser, loading of dot files will not be possible.\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "Using gpu device 0: NVS 5200M\n"
+     ]
+    }
+   ],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt \n",
+    "import pandas as  pd  \n",
+    "import numpy as np\n",
+    "import pymc3\n",
+    "import theano\n",
+    "from theano.tensor import eq\n",
+    "from theano.ifelse import ifelse\n",
+    "\n",
+    "theano.config.optimizer = 'None'\n",
+    "theano.config.exception_verbosity = 'high'\n",
+    "theano.config.mode = 'DebugMode'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[0 0 1 0 0 0 0 1 0 1]\n"
+     ]
+    }
+   ],
+   "source": [
+    "num_states = 3 \n",
+    "num_times = 10\n",
+    "num_emissions = 2\n",
+    "example_observation = np.random.randint(0, num_emissions, size = num_times)\n",
+    "print example_observation"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([ 1.,  1.])"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "ValueError",
+     "evalue": "Input dimension mis-match. (input[0].shape[0] = 6, input[1].shape[0] = 3)",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[1;31mValueError\u001b[0m                                Traceback (most recent call last)",
+      "\u001b[1;32m<ipython-input-18-51a8d2b0066b>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m\n\u001b[0;32m      2\u001b[0m     \u001b[1;31m# Transition \"matrix\"\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m      3\u001b[0m     \u001b[0ma_t\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mnp\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mones\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mnum_states\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mnum_states\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m----> 4\u001b[1;33m     \u001b[0mT\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mpymc3\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mDirichlet\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'T{0}'\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mformat\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mi\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0ma\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0ma_t\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mshape\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0ma_t\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mshape\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m      5\u001b[0m     \u001b[1;31m# Emission \"matrix\"\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m      6\u001b[0m     \u001b[0ma_e\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mnp\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mones\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mnum_emissions\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mnum_emissions\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36m__new__\u001b[1;34m(cls, name, *args, **kwargs)\u001b[0m\n\u001b[0;32m     17\u001b[0m             \u001b[0mdata\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mkwargs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mpop\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'observed'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     18\u001b[0m             \u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mcls\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 19\u001b[1;33m             \u001b[1;32mreturn\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdata\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     20\u001b[0m         \u001b[1;32melif\u001b[0m \u001b[0mname\u001b[0m \u001b[1;32mis\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     21\u001b[0m             \u001b[1;32mreturn\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;31m#for pickle\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36mVar\u001b[1;34m(self, name, dist, data)\u001b[0m\n\u001b[0;32m    151\u001b[0m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mfree_RVs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvar\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    152\u001b[0m             \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 153\u001b[1;33m                 \u001b[0mvar\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mTransformedRV\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    154\u001b[0m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdeterministics\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvar\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    155\u001b[0m                 \u001b[1;32mreturn\u001b[0m \u001b[0mvar\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, type, owner, index, name, distribution, model, transform)\u001b[0m\n\u001b[0;32m    506\u001b[0m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mmodel\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    507\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 508\u001b[1;33m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransformed\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m \u001b[1;33m+\u001b[0m \u001b[1;34m\"_\"\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mapply\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdistribution\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    509\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    510\u001b[0m             \u001b[0mnormalRV\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mbackward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransformed\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36mapply\u001b[1;34m(self, dist)\u001b[0m\n\u001b[0;32m     23\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     24\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mapply\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 25\u001b[1;33m         \u001b[1;32mreturn\u001b[0m \u001b[0mTransformedDistribution\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     26\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     27\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0m__str__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36mdist\u001b[1;34m(cls, *args, **kwargs)\u001b[0m\n\u001b[0;32m     29\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     30\u001b[0m         \u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 31\u001b[1;33m         \u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__init__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     32\u001b[0m         \u001b[1;32mreturn\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     33\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, dist, transform, *args, **kwargs)\u001b[0m\n\u001b[0;32m     46\u001b[0m             arguments to Distribution\"\"\"\n\u001b[0;32m     47\u001b[0m         \u001b[0mforward\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mforward\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 48\u001b[1;33m         \u001b[0mtestval\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mforward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdefault\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     49\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     50\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36mforward\u001b[1;34m(self, x)\u001b[0m\n\u001b[0;32m    151\u001b[0m         \u001b[1;31m#reverse cumsum\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    152\u001b[0m         \u001b[0mx0\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mx\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 153\u001b[1;33m         \u001b[0ms\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mt\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mextra_ops\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mcumsum\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx0\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mx\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    154\u001b[0m         \u001b[0mz\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mx0\u001b[0m\u001b[1;33m/\u001b[0m\u001b[0ms\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    155\u001b[0m         \u001b[0mKm1\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mx\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mshape\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;36m0\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m-\u001b[0m \u001b[1;36m1\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/var.py\u001b[0m in \u001b[0;36m__add__\u001b[1;34m(self, other)\u001b[0m\n\u001b[0;32m    126\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0m__add__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mother\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    127\u001b[0m         \u001b[1;32mtry\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 128\u001b[1;33m             \u001b[1;32mreturn\u001b[0m \u001b[0mtheano\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtensor\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mbasic\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0madd\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mother\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    129\u001b[0m         \u001b[1;31m# We should catch the minimum number of exception here.\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    130\u001b[0m         \u001b[1;31m# Otherwise this will convert error when Theano flags\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/op.py\u001b[0m in \u001b[0;36m__call__\u001b[1;34m(self, *inputs, **kwargs)\u001b[0m\n\u001b[0;32m    556\u001b[0m                 \u001b[0mthunk\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0moutputs\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;33m[\u001b[0m\u001b[0mstorage_map\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mv\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;32mfor\u001b[0m \u001b[0mv\u001b[0m \u001b[1;32min\u001b[0m \u001b[0mnode\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0moutputs\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    557\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 558\u001b[1;33m                 \u001b[0mrequired\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mthunk\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    559\u001b[0m                 \u001b[1;32massert\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[0mrequired\u001b[0m  \u001b[1;31m# We provided all inputs\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    560\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/op.py\u001b[0m in \u001b[0;36mrval\u001b[1;34m()\u001b[0m\n\u001b[0;32m    733\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    734\u001b[0m         \u001b[1;32mdef\u001b[0m \u001b[0mrval\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 735\u001b[1;33m             \u001b[0mfill_storage\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    736\u001b[0m             \u001b[1;32mfor\u001b[0m \u001b[0mo\u001b[0m \u001b[1;32min\u001b[0m \u001b[0mnode\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0moutputs\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    737\u001b[0m                 \u001b[0mcompute_map\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mo\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;36m0\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mTrue\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/cc.py\u001b[0m in \u001b[0;36m__call__\u001b[1;34m(self)\u001b[0m\n\u001b[0;32m   1538\u001b[0m                 \u001b[1;32mraise\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1539\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m-> 1540\u001b[1;33m             \u001b[1;32mraise\u001b[0m \u001b[0mexc_type\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mexc_value\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mexc_trace\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m   1541\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1542\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;31mValueError\u001b[0m: Input dimension mis-match. (input[0].shape[0] = 6, input[1].shape[0] = 3)"
+     ]
+    }
+   ],
+   "source": [
+    "with pymc3.Model() as hmm:\n",
+    "    # Transition \"matrix\"\n",
+    "    a_t = np.ones((num_states, num_states))\n",
+    "    T = pymc3.Dirichlet('T{0}'.format(i), a=a_t)\n",
+    "    # Emission \"matrix\"\n",
+    "    a_e = np.ones((num_emissions, num_emissions))\n",
+    "    E = pymc3.Dirichlet('E{0}'.format(i), a=a_e)\n",
+    "    # State models\n",
+    "    p0 = np.ones(num_states) / num_states\n",
+    "    # No shape, so each state is a scalar tensor\n",
+    "    states = pymc3.Categorical('s0', p=p0)\n",
+    "    emissions = pymc3.Categorical('z0',\n",
+    "                                  p=ifelse(eq(states[0], 0), E[0], ifelse(eq(states[0], 1), E[1], E[2])),\n",
+    "                                  observed=example_observation[0])\n",
+    "    for i in xrange(1, num_times):\n",
+    "        states.append(pymc3.Categorical('s{0}'.format(i),\n",
+    "                                        p = ifelse(eq(states[i-1], 0), T[0], ifelse(eq(states[i-1], 1), T[1], T[2]))))\n",
+    "        emissions.append(pymc3.Categorical('z{0}'.format(i),\n",
+    "                                        p=ifelse(eq(states[i], 0), E[0], ifelse(eq(states[i], 1), E[1], E[2])),\n",
+    "                                        observed=example_observation[i]))\n",
+    "    \n",
+    "    #print(hmm.test_point)\n",
+    "    #print(hmm)\n",
+    "    steps = pymc3.Metropolis()\n",
+    "    #steps += [pymc3.ElemwiseCategoricalStep(var = states[i], values = range(num_states)) for i in xrange(num_times)]\n",
+    "    trace = pymc3.sample(1000, steps)\n",
+    "    \n",
+    "    pymc3.traceplot(trace)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "ImportError",
+     "evalue": "No module named transform",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[1;31mImportError\u001b[0m                               Traceback (most recent call last)",
+      "\u001b[1;32m<ipython-input-32-cfd1cc9f29ef>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m\n\u001b[1;32m----> 1\u001b[1;33m \u001b[1;32mimport\u001b[0m \u001b[0mpymc3\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[1;31mImportError\u001b[0m: No module named transform"
+     ]
+    }
+   ],
+   "source": [
+    "import pymc3.distributions.transforms."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "Elemwise{mul,no_inplace}.0"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "a1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "ValueError",
+     "evalue": "Input dimension mis-match. (input[0].shape[0] = 6, input[1].shape[0] = 3)",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[1;31mValueError\u001b[0m                                Traceback (most recent call last)",
+      "\u001b[1;32m<ipython-input-15-059ef57ab101>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m\n\u001b[0;32m      1\u001b[0m \u001b[1;32mfrom\u001b[0m \u001b[0mpymc3\u001b[0m \u001b[1;32mimport\u001b[0m \u001b[0mDirichlet\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mModel\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m      2\u001b[0m \u001b[1;32mwith\u001b[0m \u001b[0mModel\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m----> 3\u001b[1;33m     \u001b[0mDirichlet\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'beta'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mnp\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mones\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;36m3\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m3\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36m__new__\u001b[1;34m(cls, name, *args, **kwargs)\u001b[0m\n\u001b[0;32m     17\u001b[0m             \u001b[0mdata\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mkwargs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mpop\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'observed'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     18\u001b[0m             \u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mcls\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 19\u001b[1;33m             \u001b[1;32mreturn\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdata\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     20\u001b[0m         \u001b[1;32melif\u001b[0m \u001b[0mname\u001b[0m \u001b[1;32mis\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     21\u001b[0m             \u001b[1;32mreturn\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;31m#for pickle\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36mVar\u001b[1;34m(self, name, dist, data)\u001b[0m\n\u001b[0;32m    151\u001b[0m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mfree_RVs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvar\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    152\u001b[0m             \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 153\u001b[1;33m                 \u001b[0mvar\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mTransformedRV\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    154\u001b[0m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdeterministics\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvar\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    155\u001b[0m                 \u001b[1;32mreturn\u001b[0m \u001b[0mvar\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, type, owner, index, name, distribution, model, transform)\u001b[0m\n\u001b[0;32m    506\u001b[0m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mmodel\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    507\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 508\u001b[1;33m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransformed\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m \u001b[1;33m+\u001b[0m \u001b[1;34m\"_\"\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mapply\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdistribution\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    509\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    510\u001b[0m             \u001b[0mnormalRV\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mbackward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransformed\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36mapply\u001b[1;34m(self, dist)\u001b[0m\n\u001b[0;32m     23\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     24\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mapply\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 25\u001b[1;33m         \u001b[1;32mreturn\u001b[0m \u001b[0mTransformedDistribution\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     26\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     27\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0m__str__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36mdist\u001b[1;34m(cls, *args, **kwargs)\u001b[0m\n\u001b[0;32m     29\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     30\u001b[0m         \u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 31\u001b[1;33m         \u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__init__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     32\u001b[0m         \u001b[1;32mreturn\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     33\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, dist, transform, *args, **kwargs)\u001b[0m\n\u001b[0;32m     46\u001b[0m             arguments to Distribution\"\"\"\n\u001b[0;32m     47\u001b[0m         \u001b[0mforward\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mforward\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 48\u001b[1;33m         \u001b[0mtestval\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mforward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdefault\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     49\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     50\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36mforward\u001b[1;34m(self, x)\u001b[0m\n\u001b[0;32m    151\u001b[0m         \u001b[1;31m#reverse cumsum\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    152\u001b[0m         \u001b[0mx0\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mx\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 153\u001b[1;33m         \u001b[0ms\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mt\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mextra_ops\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mcumsum\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx0\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mx\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    154\u001b[0m         \u001b[0mz\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mx0\u001b[0m\u001b[1;33m/\u001b[0m\u001b[0ms\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    155\u001b[0m         \u001b[0mKm1\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mx\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mshape\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;36m0\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m-\u001b[0m \u001b[1;36m1\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/var.py\u001b[0m in \u001b[0;36m__add__\u001b[1;34m(self, other)\u001b[0m\n\u001b[0;32m    126\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0m__add__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mother\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    127\u001b[0m         \u001b[1;32mtry\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 128\u001b[1;33m             \u001b[1;32mreturn\u001b[0m \u001b[0mtheano\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtensor\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mbasic\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0madd\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mother\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    129\u001b[0m         \u001b[1;31m# We should catch the minimum number of exception here.\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    130\u001b[0m         \u001b[1;31m# Otherwise this will convert error when Theano flags\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/op.py\u001b[0m in \u001b[0;36m__call__\u001b[1;34m(self, *inputs, **kwargs)\u001b[0m\n\u001b[0;32m    556\u001b[0m                 \u001b[0mthunk\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0moutputs\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;33m[\u001b[0m\u001b[0mstorage_map\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mv\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;32mfor\u001b[0m \u001b[0mv\u001b[0m \u001b[1;32min\u001b[0m \u001b[0mnode\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0moutputs\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    557\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 558\u001b[1;33m                 \u001b[0mrequired\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mthunk\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    559\u001b[0m                 \u001b[1;32massert\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[0mrequired\u001b[0m  \u001b[1;31m# We provided all inputs\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    560\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/op.py\u001b[0m in \u001b[0;36mrval\u001b[1;34m()\u001b[0m\n\u001b[0;32m    733\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    734\u001b[0m         \u001b[1;32mdef\u001b[0m \u001b[0mrval\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 735\u001b[1;33m             \u001b[0mfill_storage\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    736\u001b[0m             \u001b[1;32mfor\u001b[0m \u001b[0mo\u001b[0m \u001b[1;32min\u001b[0m \u001b[0mnode\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0moutputs\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    737\u001b[0m                 \u001b[0mcompute_map\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mo\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;36m0\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mTrue\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/cc.py\u001b[0m in \u001b[0;36m__call__\u001b[1;34m(self)\u001b[0m\n\u001b[0;32m   1538\u001b[0m                 \u001b[1;32mraise\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1539\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m-> 1540\u001b[1;33m             \u001b[1;32mraise\u001b[0m \u001b[0mexc_type\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mexc_value\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mexc_trace\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m   1541\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1542\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;31mValueError\u001b[0m: Input dimension mis-match. (input[0].shape[0] = 6, input[1].shape[0] = 3)"
+     ]
+    }
+   ],
+   "source": [
+    "from pymc3 import Dirichlet, Model\n",
+    "with Model():\n",
+    "    Dirichlet('beta', np.ones((3, 3)))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[ 1.,  1.],\n",
+       "       [ 1.,  1.],\n",
+       "       [ 1.,  1.],\n",
+       "       [ 1.,  1.]])"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "np.ones((N, K))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Automatic pdb calling has been turned ON\n"
+     ]
+    }
+   ],
+   "source": [
+    "%pdb"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[ 1.,  1.],\n",
+       "       [ 1.,  1.],\n",
+       "       [ 1.,  1.],\n",
+       "       [ 1.,  1.]])"
+      ]
+     },
+     "execution_count": 15,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "np.ones((4, 2))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "TypeError",
+     "evalue": "For compute_test_value, one input test value does not have the requested type.\n\nThe error when converting the test value to that variable type:\nWrong number of dimensions: expected 0, got 2 with shape (2, 3).",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[1;31mTypeError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[1;32m<ipython-input-18-a22a8a1138c1>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m\n\u001b[0;32m      1\u001b[0m \u001b[1;32mwith\u001b[0m \u001b[0mModel\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m----> 2\u001b[1;33m     \u001b[0mDirichlet\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'beta'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mnp\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mones\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;36m2\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m3\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36m__new__\u001b[1;34m(cls, name, *args, **kwargs)\u001b[0m\n\u001b[0;32m     17\u001b[0m             \u001b[0mdata\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mkwargs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mpop\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'observed'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     18\u001b[0m             \u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mcls\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 19\u001b[1;33m             \u001b[1;32mreturn\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdata\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     20\u001b[0m         \u001b[1;32melif\u001b[0m \u001b[0mname\u001b[0m \u001b[1;32mis\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     21\u001b[0m             \u001b[1;32mreturn\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;31m#for pickle\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36mVar\u001b[1;34m(self, name, dist, data)\u001b[0m\n\u001b[0;32m    151\u001b[0m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mfree_RVs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvar\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    152\u001b[0m             \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 153\u001b[1;33m                 \u001b[0mvar\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mTransformedRV\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    154\u001b[0m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdeterministics\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvar\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    155\u001b[0m                 \u001b[1;32mreturn\u001b[0m \u001b[0mvar\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, type, owner, index, name, distribution, model, transform)\u001b[0m\n\u001b[0;32m    506\u001b[0m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mmodel\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    507\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 508\u001b[1;33m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransformed\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m \u001b[1;33m+\u001b[0m \u001b[1;34m\"_\"\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mapply\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdistribution\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    509\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    510\u001b[0m             \u001b[0mnormalRV\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mbackward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransformed\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36mapply\u001b[1;34m(self, dist)\u001b[0m\n\u001b[0;32m     23\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     24\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mapply\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 25\u001b[1;33m         \u001b[1;32mreturn\u001b[0m \u001b[0mTransformedDistribution\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     26\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     27\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0m__str__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36mdist\u001b[1;34m(cls, *args, **kwargs)\u001b[0m\n\u001b[0;32m     29\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     30\u001b[0m         \u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 31\u001b[1;33m         \u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__init__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     32\u001b[0m         \u001b[1;32mreturn\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     33\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, dist, transform, *args, **kwargs)\u001b[0m\n\u001b[0;32m     50\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     51\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransform_used\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 52\u001b[1;33m         \u001b[0mv\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mforward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mFreeRV\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;34m'v'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     53\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mv\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     54\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, type, owner, index, name, distribution, model)\u001b[0m\n\u001b[0;32m    360\u001b[0m             self.tag.test_value = np.ones(\n\u001b[0;32m    361\u001b[0m                 distribution.shape, distribution.dtype) * distribution.default()\n\u001b[1;32m--> 362\u001b[1;33m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mlogp_elemwiset\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mlogp\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    363\u001b[0m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mmodel\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    364\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/multivariate.py\u001b[0m in \u001b[0;36mlogp\u001b[1;34m(self, value)\u001b[0m\n\u001b[0;32m     83\u001b[0m         \u001b[1;31m# only defined for sum(value) == 1\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     84\u001b[0m         return bound(\n\u001b[1;32m---> 85\u001b[1;33m             \u001b[0msum\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mlogpow\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvalue\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0ma\u001b[0m \u001b[1;33m-\u001b[0m \u001b[1;36m1\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;33m-\u001b[0m \u001b[0mgammaln\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0ma\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;36m0\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mgammaln\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0msum\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0ma\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     86\u001b[0m             \u001b[0mk\u001b[0m \u001b[1;33m>\u001b[0m \u001b[1;36m1\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     87\u001b[0m             \u001b[0mall\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0ma\u001b[0m \u001b[1;33m>\u001b[0m \u001b[1;36m0\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/dist_math.py\u001b[0m in \u001b[0;36mlogpow\u001b[1;34m(x, m)\u001b[0m\n\u001b[0;32m     54\u001b[0m     \u001b[0mCalculates\u001b[0m \u001b[0mlog\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m**\u001b[0m\u001b[0mm\u001b[0m\u001b[1;33m)\u001b[0m \u001b[0msince\u001b[0m \u001b[0mm\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0mlog\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m)\u001b[0m \u001b[0mwill\u001b[0m \u001b[0mfail\u001b[0m \u001b[0mwhen\u001b[0m \u001b[0mm\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mx\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;36m0.\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     55\u001b[0m     \"\"\"\n\u001b[1;32m---> 56\u001b[1;33m     \u001b[1;32mreturn\u001b[0m \u001b[0mswitch\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0meq\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m0\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;33m&\u001b[0m \u001b[0meq\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mm\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m0\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m0\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mm\u001b[0m \u001b[1;33m*\u001b[0m \u001b[0mlog\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     57\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     58\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/op.py\u001b[0m in \u001b[0;36m__call__\u001b[1;34m(self, *inputs, **kwargs)\u001b[0m\n\u001b[0;32m    515\u001b[0m             \u001b[1;32mfor\u001b[0m \u001b[0mi\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mins\u001b[0m \u001b[1;32min\u001b[0m \u001b[0menumerate\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mnode\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0minputs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    516\u001b[0m                 \u001b[1;32mtry\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 517\u001b[1;33m                     \u001b[0mstorage_map\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mins\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;33m[\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m_get_test_value\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mins\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    518\u001b[0m                     \u001b[0mcompute_map\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mins\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;33m[\u001b[0m\u001b[0mTrue\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    519\u001b[0m                 \u001b[1;32mexcept\u001b[0m \u001b[0mAttributeError\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/op.py\u001b[0m in \u001b[0;36m_get_test_value\u001b[1;34m(cls, v)\u001b[0m\n\u001b[0;32m    452\u001b[0m             \u001b[1;31m# ensure that the test value is correct\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    453\u001b[0m             \u001b[1;32mtry\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 454\u001b[1;33m                 \u001b[0mret\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mv\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mfilter\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mv\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtag\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtest_value\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    455\u001b[0m             \u001b[1;32mexcept\u001b[0m \u001b[0mException\u001b[0m \u001b[1;32mas\u001b[0m \u001b[0me\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    456\u001b[0m                 \u001b[1;31m# Better error message.\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/type.py\u001b[0m in \u001b[0;36mfilter\u001b[1;34m(self, data, strict, allow_downcast)\u001b[0m\n\u001b[0;32m    166\u001b[0m             raise TypeError(\"Wrong number of dimensions: expected %s,\"\n\u001b[0;32m    167\u001b[0m                             \" got %s with shape %s.\" % (self.ndim, data.ndim,\n\u001b[1;32m--> 168\u001b[1;33m                                                         data.shape))\n\u001b[0m\u001b[0;32m    169\u001b[0m         \u001b[1;32mif\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[0mdata\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mflags\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0maligned\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    170\u001b[0m             \u001b[1;32mtry\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;31mTypeError\u001b[0m: For compute_test_value, one input test value does not have the requested type.\n\nThe error when converting the test value to that variable type:\nWrong number of dimensions: expected 0, got 2 with shape (2, 3)."
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "> \u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/type.py\u001b[0m(168)\u001b[0;36mfilter\u001b[1;34m()\u001b[0m\n",
+      "\u001b[1;32m    167 \u001b[1;33m                            \" got %s with shape %s.\" % (self.ndim, data.ndim,\n",
+      "\u001b[0m\u001b[1;32m--> 168 \u001b[1;33m                                                        data.shape))\n",
+      "\u001b[0m\u001b[1;32m    169 \u001b[1;33m        \u001b[1;32mif\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[0mdata\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mflags\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0maligned\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\n",
+      "ipdb> c\n"
+     ]
+    }
+   ],
+   "source": [
+    "with Model():\n",
+    "    Dirichlet('beta', np.ones((2, 3)))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Automatic pdb calling has been turned ON\n"
+     ]
+    }
+   ],
+   "source": [
+    "%pdb"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": false
+   },
+   "outputs": [
+    {
+     "ename": "AsTensorError",
+     "evalue": "('Cannot convert Ellipsis to TensorType', <type 'ellipsis'>)",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[1;31mAsTensorError\u001b[0m                             Traceback (most recent call last)",
+      "\u001b[1;32m<ipython-input-5-114403a3356a>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m\n\u001b[0;32m     18\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     19\u001b[0m \u001b[1;32mwith\u001b[0m \u001b[0mlda_model\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 20\u001b[1;33m     \u001b[0mbeta\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mDirichlet\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'beta'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mnp\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mones\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mN\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mK\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mshape\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mN\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mK\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     21\u001b[0m     \u001b[0mtheta\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mDirichlet\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'theta'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mnp\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mones\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mK\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mshape\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mD\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     22\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36m__new__\u001b[1;34m(cls, name, *args, **kwargs)\u001b[0m\n\u001b[0;32m     17\u001b[0m             \u001b[0mdata\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mkwargs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mpop\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'observed'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     18\u001b[0m             \u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mcls\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 19\u001b[1;33m             \u001b[1;32mreturn\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdata\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     20\u001b[0m         \u001b[1;32melif\u001b[0m \u001b[0mname\u001b[0m \u001b[1;32mis\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     21\u001b[0m             \u001b[1;32mreturn\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;31m#for pickle\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36mVar\u001b[1;34m(self, name, dist, data)\u001b[0m\n\u001b[0;32m    151\u001b[0m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mfree_RVs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvar\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    152\u001b[0m             \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 153\u001b[1;33m                 \u001b[0mvar\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mTransformedRV\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    154\u001b[0m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdeterministics\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvar\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    155\u001b[0m                 \u001b[1;32mreturn\u001b[0m \u001b[0mvar\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, type, owner, index, name, distribution, model, transform)\u001b[0m\n\u001b[0;32m    506\u001b[0m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mmodel\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    507\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 508\u001b[1;33m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransformed\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m \u001b[1;33m+\u001b[0m \u001b[1;34m\"_\"\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mapply\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdistribution\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    509\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    510\u001b[0m             \u001b[0mnormalRV\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mbackward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransformed\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36mapply\u001b[1;34m(self, dist)\u001b[0m\n\u001b[0;32m     23\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     24\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mapply\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 25\u001b[1;33m         \u001b[1;32mreturn\u001b[0m \u001b[0mTransformedDistribution\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     26\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     27\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0m__str__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36mdist\u001b[1;34m(cls, *args, **kwargs)\u001b[0m\n\u001b[0;32m     29\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     30\u001b[0m         \u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 31\u001b[1;33m         \u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__init__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     32\u001b[0m         \u001b[1;32mreturn\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     33\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, dist, transform, *args, **kwargs)\u001b[0m\n\u001b[0;32m     50\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     51\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransform_used\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 52\u001b[1;33m         \u001b[0mv\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mforward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mFreeRV\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;34m'v'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     53\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mv\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     54\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36mforward\u001b[1;34m(self, x)\u001b[0m\n\u001b[0;32m    150\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mforward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mx\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    151\u001b[0m         \u001b[1;31m#reverse cumsum\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 152\u001b[1;33m         \u001b[0mx0\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mx\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m.\u001b[0m\u001b[1;33m.\u001b[0m\u001b[1;33m.\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m:\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    153\u001b[0m         \u001b[0ms\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mt\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mextra_ops\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mcumsum\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx0\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mx\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m.\u001b[0m\u001b[1;33m.\u001b[0m\u001b[1;33m.\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    154\u001b[0m         \u001b[0mz\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mx0\u001b[0m\u001b[1;33m/\u001b[0m\u001b[0ms\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/var.py\u001b[0m in \u001b[0;36m__getitem__\u001b[1;34m(self, args)\u001b[0m\n\u001b[0;32m    392\u001b[0m                 \u001b[1;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtake\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0maxis\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    393\u001b[0m             \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 394\u001b[1;33m                 \u001b[1;32mreturn\u001b[0m \u001b[0mtheano\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtensor\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0msubtensor\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0madvanced_subtensor\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    395\u001b[0m         \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    396\u001b[0m             \u001b[1;32mif\u001b[0m \u001b[0mnumpy\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mnewaxis\u001b[0m \u001b[1;32min\u001b[0m \u001b[0margs\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/op.py\u001b[0m in \u001b[0;36m__call__\u001b[1;34m(self, *inputs, **kwargs)\u001b[0m\n\u001b[0;32m    505\u001b[0m         \"\"\"\n\u001b[0;32m    506\u001b[0m         \u001b[0mreturn_list\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mkwargs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mpop\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'return_list'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mFalse\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 507\u001b[1;33m         \u001b[0mnode\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mmake_node\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0minputs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    508\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    509\u001b[0m         \u001b[1;32mif\u001b[0m \u001b[0mconfig\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mcompute_test_value\u001b[0m \u001b[1;33m!=\u001b[0m \u001b[1;34m'off'\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/subtensor.py\u001b[0m in \u001b[0;36mmake_node\u001b[1;34m(self, x, *index)\u001b[0m\n\u001b[0;32m   2048\u001b[0m         \u001b[0mx\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtheano\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtensor\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mas_tensor_variable\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   2049\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m-> 2050\u001b[1;33m         \u001b[0mindex\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtuple\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mmap\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mas_index_variable\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mindex\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m   2051\u001b[0m         \u001b[0mbcast\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0madv_index_broadcastable_pattern\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mindex\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   2052\u001b[0m         return gof.Apply(self,\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/subtensor.py\u001b[0m in \u001b[0;36mas_index_variable\u001b[1;34m(idx)\u001b[0m\n\u001b[0;32m   1990\u001b[0m     \u001b[1;32mif\u001b[0m \u001b[0misinstance\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0midx\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mgof\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVariable\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;32mand\u001b[0m \u001b[0misinstance\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0midx\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mSliceType\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1991\u001b[0m         \u001b[1;32mreturn\u001b[0m \u001b[0midx\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m-> 1992\u001b[1;33m     \u001b[0midx\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtheano\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtensor\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mas_tensor_variable\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0midx\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m   1993\u001b[0m     \u001b[1;32mif\u001b[0m \u001b[0midx\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdtype\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;36m3\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[1;32min\u001b[0m \u001b[1;33m(\u001b[0m\u001b[1;34m'int'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;34m'uin'\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1994\u001b[0m         \u001b[1;32mraise\u001b[0m \u001b[0mTypeError\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'index must be integers'\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/basic.py\u001b[0m in \u001b[0;36mas_tensor_variable\u001b[1;34m(x, name, ndim)\u001b[0m\n\u001b[0;32m    200\u001b[0m         \u001b[1;32mexcept\u001b[0m \u001b[0mException\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    201\u001b[0m             \u001b[0mstr_x\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mrepr\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 202\u001b[1;33m         \u001b[1;32mraise\u001b[0m \u001b[0mAsTensorError\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m\"Cannot convert %s to TensorType\"\u001b[0m \u001b[1;33m%\u001b[0m \u001b[0mstr_x\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtype\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    203\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    204\u001b[0m \u001b[1;31m# this has a different name, because _as_tensor_variable is the\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;31mAsTensorError\u001b[0m: ('Cannot convert Ellipsis to TensorType', <type 'ellipsis'>)"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "> \u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/basic.py\u001b[0m(202)\u001b[0;36mas_tensor_variable\u001b[1;34m()\u001b[0m\n",
+      "\u001b[1;32m    201 \u001b[1;33m            \u001b[0mstr_x\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mrepr\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\u001b[1;32m--> 202 \u001b[1;33m        \u001b[1;32mraise\u001b[0m \u001b[0mAsTensorError\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m\"Cannot convert %s to TensorType\"\u001b[0m \u001b[1;33m%\u001b[0m \u001b[0mstr_x\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtype\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\u001b[1;32m    203 \u001b[1;33m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\n",
+      "ipdb> up\n",
+      "> \u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/subtensor.py\u001b[0m(1992)\u001b[0;36mas_index_variable\u001b[1;34m()\u001b[0m\n",
+      "\u001b[1;32m   1991 \u001b[1;33m        \u001b[1;32mreturn\u001b[0m \u001b[0midx\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\u001b[1;32m-> 1992 \u001b[1;33m    \u001b[0midx\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtheano\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtensor\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mas_tensor_variable\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0midx\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\u001b[1;32m   1993 \u001b[1;33m    \u001b[1;32mif\u001b[0m \u001b[0midx\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdtype\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;36m3\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[1;32min\u001b[0m \u001b[1;33m(\u001b[0m\u001b[1;34m'int'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;34m'uin'\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\n",
+      "ipdb> \n",
+      "> \u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/subtensor.py\u001b[0m(2050)\u001b[0;36mmake_node\u001b[1;34m()\u001b[0m\n",
+      "\u001b[1;32m   2049 \u001b[1;33m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\u001b[1;32m-> 2050 \u001b[1;33m        \u001b[0mindex\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtuple\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mmap\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mas_index_variable\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mindex\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\u001b[1;32m   2051 \u001b[1;33m        \u001b[0mbcast\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0madv_index_broadcastable_pattern\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mindex\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\n",
+      "ipdb> \n",
+      "> \u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/op.py\u001b[0m(507)\u001b[0;36m__call__\u001b[1;34m()\u001b[0m\n",
+      "\u001b[1;32m    506 \u001b[1;33m        \u001b[0mreturn_list\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mkwargs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mpop\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'return_list'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mFalse\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\u001b[1;32m--> 507 \u001b[1;33m        \u001b[0mnode\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mmake_node\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0minputs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\u001b[1;32m    508 \u001b[1;33m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\n",
+      "ipdb> \n",
+      "> \u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/var.py\u001b[0m(394)\u001b[0;36m__getitem__\u001b[1;34m()\u001b[0m\n",
+      "\u001b[1;32m    393 \u001b[1;33m            \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\u001b[1;32m--> 394 \u001b[1;33m                \u001b[1;32mreturn\u001b[0m \u001b[0mtheano\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtensor\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0msubtensor\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0madvanced_subtensor\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\u001b[1;32m    395 \u001b[1;33m        \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\n",
+      "ipdb> \n",
+      "> \u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m(152)\u001b[0;36mforward\u001b[1;34m()\u001b[0m\n",
+      "\u001b[1;32m    151 \u001b[1;33m        \u001b[1;31m#reverse cumsum\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\u001b[1;32m--> 152 \u001b[1;33m        \u001b[0mx0\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mx\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m.\u001b[0m\u001b[1;33m.\u001b[0m\u001b[1;33m.\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m:\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\u001b[1;32m    153 \u001b[1;33m        \u001b[0ms\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mt\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mextra_ops\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mcumsum\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx0\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mx\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m.\u001b[0m\u001b[1;33m.\u001b[0m\u001b[1;33m.\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;33m-\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\n",
+      "ipdb> x\n",
+      "v\n",
+      "ipdb> type(x0\n",
+      "*** SyntaxError: unexpected EOF while parsing (<stdin>, line 1)\n",
+      "ipdb> type(x)\n",
+      "<class 'pymc3.model.FreeRV'>\n",
+      "ipdb> c\n"
+     ]
+    }
+   ],
+   "source": [
+    "## Data Preparation\n",
+    "\n",
+    "K = 2 # number of topics\n",
+    "N = 4 # number of words\n",
+    "D = 3 # number of documents\n",
+    "\n",
+    "import numpy as np\n",
+    "\n",
+    "data = np.array([[1, 1, 1, 1], [1, 1, 1, 1], [0, 0, 0, 0]])\n",
+    "Wd = [len(doc) for doc in data]  # length of each document\n",
+    "\n",
+    "## Model Specification\n",
+    "\n",
+    "from pymc3 import Model, Normal, HalfNormal, Dirichlet, Categorical, constant\n",
+    "from pymc3.distributions.transforms import sum_to_1\n",
+    "\n",
+    "lda_model = Model()\n",
+    "\n",
+    "with lda_model:\n",
+    "    beta = Dirichlet('beta', np.ones((N, K)), shape=(N, K))\n",
+    "    theta = Dirichlet('theta', np.ones(K), shape=D)\n",
+    "\n",
+    "    z = [Categorical('z_%i' % d, p = theta[d], shape=Wd[d]) for d in range(D)]\n",
+    "\n",
+    "    # That's when you get the error. It is caused by: beta[z[d][w]]\n",
+    "    w = [Categorical('w_%i_%i' % (d, w), p=beta[z[d][w]], observed=data[d, w]) for d in range(D) for w in range(Wd[d])]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "TensorConstant{[ 2.  3.  ...  2.  2.]}"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "a"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "model = Model()\n",
+    "with model:\n",
+    "\n",
+    "    k = 5\n",
+    "    a = constant(np.array([2, 3., 4, 2, 2]))\n",
+    "\n",
+    "    p = Dirichlet('p', a, shape=k)\n",
+    "\n",
+    "    c = Categorical('c', p, observed=np.random.randint(0, k, 5))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Automatic pdb calling has been turned ON\n"
+     ]
+    }
+   ],
+   "source": [
+    "%pdb"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "collapsed": false,
+    "scrolled": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Couldn't import dot_parser, loading of dot files will not be possible.\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "Using gpu device 0: NVS 5200M\n"
+     ]
+    },
+    {
+     "ename": "TypeError",
+     "evalue": "For compute_test_value, one input test value does not have the requested type.\n\nThe error when converting the test value to that variable type:\nWrong number of dimensions: expected 0, got 2 with shape (4, 3).",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[1;31mTypeError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[1;32m<ipython-input-2-50a504bad0f8>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m\n\u001b[0;32m      2\u001b[0m \u001b[1;32mfrom\u001b[0m \u001b[0mpymc3\u001b[0m \u001b[1;32mimport\u001b[0m \u001b[0mDirichlet\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mModel\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m      3\u001b[0m \u001b[1;32mwith\u001b[0m \u001b[0mModel\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m----> 4\u001b[1;33m     \u001b[0mDirichlet\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'beta'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mnp\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mones\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;36m4\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m3\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36m__new__\u001b[1;34m(cls, name, *args, **kwargs)\u001b[0m\n\u001b[0;32m     17\u001b[0m             \u001b[0mdata\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mkwargs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mpop\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'observed'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     18\u001b[0m             \u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mcls\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 19\u001b[1;33m             \u001b[1;32mreturn\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdata\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     20\u001b[0m         \u001b[1;32melif\u001b[0m \u001b[0mname\u001b[0m \u001b[1;32mis\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     21\u001b[0m             \u001b[1;32mreturn\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;31m#for pickle\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36mVar\u001b[1;34m(self, name, dist, data)\u001b[0m\n\u001b[0;32m    151\u001b[0m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mfree_RVs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvar\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    152\u001b[0m             \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 153\u001b[1;33m                 \u001b[0mvar\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mTransformedRV\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    154\u001b[0m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdeterministics\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvar\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    155\u001b[0m                 \u001b[1;32mreturn\u001b[0m \u001b[0mvar\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, type, owner, index, name, distribution, model, transform)\u001b[0m\n\u001b[0;32m    506\u001b[0m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mmodel\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    507\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 508\u001b[1;33m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransformed\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m \u001b[1;33m+\u001b[0m \u001b[1;34m\"_\"\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mapply\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdistribution\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    509\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    510\u001b[0m             \u001b[0mnormalRV\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mbackward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransformed\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36mapply\u001b[1;34m(self, dist)\u001b[0m\n\u001b[0;32m     23\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     24\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mapply\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 25\u001b[1;33m         \u001b[1;32mreturn\u001b[0m \u001b[0mTransformedDistribution\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     26\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     27\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0m__str__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36mdist\u001b[1;34m(cls, *args, **kwargs)\u001b[0m\n\u001b[0;32m     29\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     30\u001b[0m         \u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 31\u001b[1;33m         \u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__init__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     32\u001b[0m         \u001b[1;32mreturn\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     33\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, dist, transform, *args, **kwargs)\u001b[0m\n\u001b[0;32m     50\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     51\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransform_used\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 52\u001b[1;33m         \u001b[0mv\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mforward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mFreeRV\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;34m'v'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     53\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mv\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     54\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, type, owner, index, name, distribution, model)\u001b[0m\n\u001b[0;32m    360\u001b[0m             self.tag.test_value = np.ones(\n\u001b[0;32m    361\u001b[0m                 distribution.shape, distribution.dtype) * distribution.default()\n\u001b[1;32m--> 362\u001b[1;33m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mlogp_elemwiset\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mlogp\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    363\u001b[0m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mmodel\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    364\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/multivariate.py\u001b[0m in \u001b[0;36mlogp\u001b[1;34m(self, value)\u001b[0m\n\u001b[0;32m     83\u001b[0m         \u001b[1;31m# only defined for sum(value) == 1\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     84\u001b[0m         return bound(\n\u001b[1;32m---> 85\u001b[1;33m             \u001b[0msum\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mlogpow\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvalue\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0ma\u001b[0m \u001b[1;33m-\u001b[0m \u001b[1;36m1\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;33m-\u001b[0m \u001b[0mgammaln\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0ma\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;36m0\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mgammaln\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0msum\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0ma\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     86\u001b[0m             \u001b[0mk\u001b[0m \u001b[1;33m>\u001b[0m \u001b[1;36m1\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     87\u001b[0m             \u001b[0mall\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0ma\u001b[0m \u001b[1;33m>\u001b[0m \u001b[1;36m0\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/dist_math.py\u001b[0m in \u001b[0;36mlogpow\u001b[1;34m(x, m)\u001b[0m\n\u001b[0;32m     54\u001b[0m     \u001b[0mCalculates\u001b[0m \u001b[0mlog\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m**\u001b[0m\u001b[0mm\u001b[0m\u001b[1;33m)\u001b[0m \u001b[0msince\u001b[0m \u001b[0mm\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0mlog\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m)\u001b[0m \u001b[0mwill\u001b[0m \u001b[0mfail\u001b[0m \u001b[0mwhen\u001b[0m \u001b[0mm\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mx\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;36m0.\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     55\u001b[0m     \"\"\"\n\u001b[1;32m---> 56\u001b[1;33m     \u001b[1;32mreturn\u001b[0m \u001b[0mswitch\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0meq\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m0\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;33m&\u001b[0m \u001b[0meq\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mm\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m0\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m0\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mm\u001b[0m \u001b[1;33m*\u001b[0m \u001b[0mlog\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     57\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     58\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/op.py\u001b[0m in \u001b[0;36m__call__\u001b[1;34m(self, *inputs, **kwargs)\u001b[0m\n\u001b[0;32m    515\u001b[0m             \u001b[1;32mfor\u001b[0m \u001b[0mi\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mins\u001b[0m \u001b[1;32min\u001b[0m \u001b[0menumerate\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mnode\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0minputs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    516\u001b[0m                 \u001b[1;32mtry\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 517\u001b[1;33m                     \u001b[0mstorage_map\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mins\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;33m[\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m_get_test_value\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mins\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    518\u001b[0m                     \u001b[0mcompute_map\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mins\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;33m[\u001b[0m\u001b[0mTrue\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    519\u001b[0m                 \u001b[1;32mexcept\u001b[0m \u001b[0mAttributeError\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/op.py\u001b[0m in \u001b[0;36m_get_test_value\u001b[1;34m(cls, v)\u001b[0m\n\u001b[0;32m    452\u001b[0m             \u001b[1;31m# ensure that the test value is correct\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    453\u001b[0m             \u001b[1;32mtry\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 454\u001b[1;33m                 \u001b[0mret\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mv\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mfilter\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mv\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtag\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtest_value\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    455\u001b[0m             \u001b[1;32mexcept\u001b[0m \u001b[0mException\u001b[0m \u001b[1;32mas\u001b[0m \u001b[0me\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    456\u001b[0m                 \u001b[1;31m# Better error message.\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/type.py\u001b[0m in \u001b[0;36mfilter\u001b[1;34m(self, data, strict, allow_downcast)\u001b[0m\n\u001b[0;32m    166\u001b[0m             raise TypeError(\"Wrong number of dimensions: expected %s,\"\n\u001b[0;32m    167\u001b[0m                             \" got %s with shape %s.\" % (self.ndim, data.ndim,\n\u001b[1;32m--> 168\u001b[1;33m                                                         data.shape))\n\u001b[0m\u001b[0;32m    169\u001b[0m         \u001b[1;32mif\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[0mdata\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mflags\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0maligned\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    170\u001b[0m             \u001b[1;32mtry\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;31mTypeError\u001b[0m: For compute_test_value, one input test value does not have the requested type.\n\nThe error when converting the test value to that variable type:\nWrong number of dimensions: expected 0, got 2 with shape (4, 3)."
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "> \u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/type.py\u001b[0m(168)\u001b[0;36mfilter\u001b[1;34m()\u001b[0m\n",
+      "\u001b[1;32m    167 \u001b[1;33m                            \" got %s with shape %s.\" % (self.ndim, data.ndim,\n",
+      "\u001b[0m\u001b[1;32m--> 168 \u001b[1;33m                                                        data.shape))\n",
+      "\u001b[0m\u001b[1;32m    169 \u001b[1;33m        \u001b[1;32mif\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[0mdata\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mflags\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0maligned\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[0m\n",
+      "ipdb> self.ndim\n",
+      "0\n",
+      "ipdb> data.ndim\n",
+      "2\n",
+      "ipdb> c\n"
+     ]
+    }
+   ],
+   "source": [
+    "import numpy as np\n",
+    "from pymc3 import Dirichlet, Model\n",
+    "with Model():\n",
+    "    Dirichlet('beta', np.ones((4, 3)))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([ 1.,  1.])"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "np.ones((2, 3))[:, 1]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "> \u001b[33;01m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[00m(\u001b[36;01m153\u001b[00m)forward()\n",
+      "-> x0 = x[..., :-1]\n",
+      "(Pdb++) n\n",
+      "> \u001b[33;01m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[00m(\u001b[36;01m154\u001b[00m)forward()\n",
+      "-> s = t.extra_ops.cumsum(x0[::-1], axis=-1)[::-1] + x[...,-1]\n",
+      "(Pdb++) x0\n",
+      "array([[ 0.16666667,  0.16666667],\n",
+      "       [ 0.16666667,  0.16666667]])\n",
+      "(Pdb++) n\n",
+      "> \u001b[33;01m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[00m(\u001b[36;01m155\u001b[00m)forward()\n",
+      "-> z = x0/s\n",
+      "(Pdb++) n\n",
+      "> \u001b[33;01m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[00m(\u001b[36;01m156\u001b[00m)forward()\n",
+      "-> Km1 = x.shape[-1] - 1\n",
+      "(Pdb++) \n",
+      "> \u001b[33;01m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[00m(\u001b[36;01m157\u001b[00m)forward()\n",
+      "-> k = arange(Km1)\n",
+      "(Pdb++) \n",
+      "> \u001b[33;01m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[00m(\u001b[36;01m158\u001b[00m)forward()\n",
+      "-> eq_share = - t.log(Km1 - k) # logit(1./(Km1 + 1 - k))\n",
+      "(Pdb++) \n",
+      "> \u001b[33;01m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[00m(\u001b[36;01m159\u001b[00m)forward()\n",
+      "-> y = logit(z) - eq_share\n",
+      "(Pdb++) \n",
+      "> \u001b[33;01m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[00m(\u001b[36;01m160\u001b[00m)forward()\n",
+      "-> return y\n",
+      "(Pdb++) \n",
+      "--Return--\n",
+      "> \u001b[33;01m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[00m(\u001b[36;01m160\u001b[00m)forward()->Elemwise...nplace}.0\n",
+      "-> return y\n",
+      "(Pdb++) \n",
+      "> \u001b[33;01m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[00m(\u001b[36;01m50\u001b[00m)__init__()\n",
+      "-> self.dist = dist\n",
+      "(Pdb++) \n",
+      "> \u001b[33;01m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[00m(\u001b[36;01m51\u001b[00m)__init__()\n",
+      "-> self.transform_used = transform\n",
+      "(Pdb++) c\n"
+     ]
+    },
+    {
+     "ename": "TypeError",
+     "evalue": "For compute_test_value, one input test value does not have the requested type.\n\nThe error when converting the test value to that variable type:\nWrong number of dimensions: expected 0, got 2 with shape (2, 3).",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[1;31mTypeError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[1;32m<ipython-input-5-9e38a501ad9d>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m\n\u001b[0;32m      2\u001b[0m \u001b[1;32mfrom\u001b[0m \u001b[0mpymc3\u001b[0m \u001b[1;32mimport\u001b[0m \u001b[0mDirichlet\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mModel\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m      3\u001b[0m \u001b[1;32mwith\u001b[0m \u001b[0mModel\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m----> 4\u001b[1;33m     \u001b[0mDirichlet\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'beta'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mnp\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mones\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;36m2\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m3\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36m__new__\u001b[1;34m(cls, name, *args, **kwargs)\u001b[0m\n\u001b[0;32m     17\u001b[0m             \u001b[0mdata\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mkwargs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mpop\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'observed'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     18\u001b[0m             \u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mcls\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 19\u001b[1;33m             \u001b[1;32mreturn\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdata\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     20\u001b[0m         \u001b[1;32melif\u001b[0m \u001b[0mname\u001b[0m \u001b[1;32mis\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     21\u001b[0m             \u001b[1;32mreturn\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;31m#for pickle\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36mVar\u001b[1;34m(self, name, dist, data)\u001b[0m\n\u001b[0;32m    151\u001b[0m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mfree_RVs\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvar\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    152\u001b[0m             \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 153\u001b[1;33m                 \u001b[0mvar\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mTransformedRV\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransform\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    154\u001b[0m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdeterministics\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvar\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    155\u001b[0m                 \u001b[1;32mreturn\u001b[0m \u001b[0mvar\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, type, owner, index, name, distribution, model, transform)\u001b[0m\n\u001b[0;32m    506\u001b[0m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mmodel\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    507\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 508\u001b[1;33m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransformed\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mVar\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m \u001b[1;33m+\u001b[0m \u001b[1;34m\"_\"\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mapply\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdistribution\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    509\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    510\u001b[0m             \u001b[0mnormalRV\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mbackward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransformed\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36mapply\u001b[1;34m(self, dist)\u001b[0m\n\u001b[0;32m     23\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     24\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mapply\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 25\u001b[1;33m         \u001b[1;32mreturn\u001b[0m \u001b[0mTransformedDistribution\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     26\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     27\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0m__str__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36mdist\u001b[1;34m(cls, *args, **kwargs)\u001b[0m\n\u001b[0;32m     29\u001b[0m     \u001b[1;32mdef\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     30\u001b[0m         \u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mobject\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__new__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mcls\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 31\u001b[1;33m         \u001b[0mdist\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__init__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     32\u001b[0m         \u001b[1;32mreturn\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     33\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/transforms.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, dist, transform, *args, **kwargs)\u001b[0m\n\u001b[0;32m     49\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     50\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdist\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mdist\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 51\u001b[1;33m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtransform_used\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtransform\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     52\u001b[0m         \u001b[0mv\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mforward\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mFreeRV\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;34m'v'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mdist\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     53\u001b[0m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mv\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/model.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, type, owner, index, name, distribution, model)\u001b[0m\n\u001b[0;32m    360\u001b[0m             self.tag.test_value = np.ones(\n\u001b[0;32m    361\u001b[0m                 distribution.shape, distribution.dtype) * distribution.default()\n\u001b[1;32m--> 362\u001b[1;33m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mlogp_elemwiset\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mdistribution\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mlogp\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    363\u001b[0m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mmodel\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmodel\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    364\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/multivariate.py\u001b[0m in \u001b[0;36mlogp\u001b[1;34m(self, value)\u001b[0m\n\u001b[0;32m     83\u001b[0m         \u001b[1;31m# only defined for sum(value) == 1\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     84\u001b[0m         return bound(\n\u001b[1;32m---> 85\u001b[1;33m             \u001b[0msum\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mlogpow\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mvalue\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0ma\u001b[0m \u001b[1;33m-\u001b[0m \u001b[1;36m1\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;33m-\u001b[0m \u001b[0mgammaln\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0ma\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;36m0\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;33m+\u001b[0m \u001b[0mgammaln\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0msum\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0ma\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     86\u001b[0m             \u001b[0mk\u001b[0m \u001b[1;33m>\u001b[0m \u001b[1;36m1\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     87\u001b[0m             \u001b[0mall\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0ma\u001b[0m \u001b[1;33m>\u001b[0m \u001b[1;36m0\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/dist_math.py\u001b[0m in \u001b[0;36mlogpow\u001b[1;34m(x, m)\u001b[0m\n\u001b[0;32m     54\u001b[0m     \u001b[0mCalculates\u001b[0m \u001b[0mlog\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m**\u001b[0m\u001b[0mm\u001b[0m\u001b[1;33m)\u001b[0m \u001b[0msince\u001b[0m \u001b[0mm\u001b[0m\u001b[1;33m*\u001b[0m\u001b[0mlog\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m)\u001b[0m \u001b[0mwill\u001b[0m \u001b[0mfail\u001b[0m \u001b[0mwhen\u001b[0m \u001b[0mm\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mx\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;36m0.\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     55\u001b[0m     \"\"\"\n\u001b[1;32m---> 56\u001b[1;33m     \u001b[1;32mreturn\u001b[0m \u001b[0mswitch\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0meq\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m0\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;33m&\u001b[0m \u001b[0meq\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mm\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m0\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;36m0\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mm\u001b[0m \u001b[1;33m*\u001b[0m \u001b[0mlog\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mx\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     57\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     58\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/op.py\u001b[0m in \u001b[0;36m__call__\u001b[1;34m(self, *inputs, **kwargs)\u001b[0m\n\u001b[0;32m    515\u001b[0m             \u001b[1;32mfor\u001b[0m \u001b[0mi\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mins\u001b[0m \u001b[1;32min\u001b[0m \u001b[0menumerate\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mnode\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0minputs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    516\u001b[0m                 \u001b[1;32mtry\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 517\u001b[1;33m                     \u001b[0mstorage_map\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mins\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;33m[\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m_get_test_value\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mins\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    518\u001b[0m                     \u001b[0mcompute_map\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mins\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;33m[\u001b[0m\u001b[0mTrue\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    519\u001b[0m                 \u001b[1;32mexcept\u001b[0m \u001b[0mAttributeError\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/op.py\u001b[0m in \u001b[0;36m_get_test_value\u001b[1;34m(cls, v)\u001b[0m\n\u001b[0;32m    452\u001b[0m             \u001b[1;31m# ensure that the test value is correct\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    453\u001b[0m             \u001b[1;32mtry\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 454\u001b[1;33m                 \u001b[0mret\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mv\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtype\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mfilter\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mv\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtag\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtest_value\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    455\u001b[0m             \u001b[1;32mexcept\u001b[0m \u001b[0mException\u001b[0m \u001b[1;32mas\u001b[0m \u001b[0me\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    456\u001b[0m                 \u001b[1;31m# Better error message.\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/tensor/type.py\u001b[0m in \u001b[0;36mfilter\u001b[1;34m(self, data, strict, allow_downcast)\u001b[0m\n\u001b[0;32m    166\u001b[0m             raise TypeError(\"Wrong number of dimensions: expected %s,\"\n\u001b[0;32m    167\u001b[0m                             \" got %s with shape %s.\" % (self.ndim, data.ndim,\n\u001b[1;32m--> 168\u001b[1;33m                                                         data.shape))\n\u001b[0m\u001b[0;32m    169\u001b[0m         \u001b[1;32mif\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[0mdata\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mflags\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0maligned\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    170\u001b[0m             \u001b[1;32mtry\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;31mTypeError\u001b[0m: For compute_test_value, one input test value does not have the requested type.\n\nThe error when converting the test value to that variable type:\nWrong number of dimensions: expected 0, got 2 with shape (2, 3)."
+     ]
+    }
+   ],
+   "source": [
+    "import numpy as np\n",
+    "from pymc3 import Dirichlet, Model\n",
+    "with Model():\n",
+    "    Dirichlet('beta', np.ones((2, 3)))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "MissingInputError",
+     "evalue": "A variable that is an input to the graph was neither provided as an input to the function nor given a value. A chain of variables leading from this input to an output is [z_0, Subtensor{int64}.0]. This chain may not be unique",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[1;31mMissingInputError\u001b[0m                         Traceback (most recent call last)",
+      "\u001b[1;32m<ipython-input-27-e9dffd0eab75>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m\n\u001b[1;32m----> 1\u001b[1;33m \u001b[0mz\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0md\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mw\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0meval\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/graph.py\u001b[0m in \u001b[0;36meval\u001b[1;34m(self, inputs_to_values)\u001b[0m\n\u001b[0;32m    412\u001b[0m         \u001b[0minputs\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtuple\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0msorted\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0minputs_to_values\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mkeys\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mkey\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mid\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    413\u001b[0m         \u001b[1;32mif\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[0minputs\u001b[0m \u001b[1;32min\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m_fn_cache\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 414\u001b[1;33m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m_fn_cache\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0minputs\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mtheano\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mfunction\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0minputs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    415\u001b[0m         \u001b[0margs\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;33m[\u001b[0m\u001b[0minputs_to_values\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0mparam\u001b[0m\u001b[1;33m]\u001b[0m \u001b[1;32mfor\u001b[0m \u001b[0mparam\u001b[0m \u001b[1;32min\u001b[0m \u001b[0minputs\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    416\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/compile/function.py\u001b[0m in \u001b[0;36mfunction\u001b[1;34m(inputs, outputs, mode, updates, givens, no_default_updates, accept_inplace, name, rebuild_strict, allow_input_downcast, profile, on_unused_input)\u001b[0m\n\u001b[0;32m    307\u001b[0m                    \u001b[0mon_unused_input\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mon_unused_input\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    308\u001b[0m                    \u001b[0mprofile\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mprofile\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 309\u001b[1;33m                    output_keys=output_keys)\n\u001b[0m\u001b[0;32m    310\u001b[0m     \u001b[1;31m# We need to add the flag check_aliased inputs if we have any mutable or\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    311\u001b[0m     \u001b[1;31m# borrowed used defined inputs\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/compile/pfunc.py\u001b[0m in \u001b[0;36mpfunc\u001b[1;34m(params, outputs, mode, updates, givens, no_default_updates, accept_inplace, name, rebuild_strict, allow_input_downcast, profile, on_unused_input, output_keys)\u001b[0m\n\u001b[0;32m    520\u001b[0m                          \u001b[0maccept_inplace\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0maccept_inplace\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mname\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    521\u001b[0m                          \u001b[0mprofile\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mprofile\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mon_unused_input\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mon_unused_input\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 522\u001b[1;33m                          output_keys=output_keys)\n\u001b[0m\u001b[0;32m    523\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    524\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/compile/function_module.py\u001b[0m in \u001b[0;36morig_function\u001b[1;34m(inputs, outputs, mode, accept_inplace, name, profile, on_unused_input, output_keys)\u001b[0m\n\u001b[0;32m   1520\u001b[0m                    \u001b[0mprofile\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mprofile\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1521\u001b[0m                    \u001b[0mon_unused_input\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mon_unused_input\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m-> 1522\u001b[1;33m                    \u001b[0moutput_keys\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0moutput_keys\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mcreate\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m   1523\u001b[0m             defaults)\n\u001b[0;32m   1524\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/compile/debugmode.py\u001b[0m in \u001b[0;36mfunction_maker\u001b[1;34m(self, i, o, m, *args, **kwargs)\u001b[0m\n\u001b[0;32m   2554\u001b[0m         \"\"\"\n\u001b[0;32m   2555\u001b[0m         \u001b[1;32massert\u001b[0m \u001b[0mm\u001b[0m \u001b[1;32mis\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m-> 2556\u001b[1;33m         \u001b[1;32mreturn\u001b[0m \u001b[0m_Maker\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mi\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mo\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0moptimizer\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m*\u001b[0m\u001b[0margs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m   2557\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   2558\u001b[0m     def __init__(self,\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/compile/debugmode.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, inputs, outputs, optimizer, mode, accept_inplace, function_builder, profile, on_unused_input, output_keys)\u001b[0m\n\u001b[0;32m   2270\u001b[0m         \u001b[1;32mfor\u001b[0m \u001b[0mi\u001b[0m \u001b[1;32min\u001b[0m \u001b[0mxrange\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mmode\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mstability_patience\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   2271\u001b[0m             fgraph, additional_outputs, equivalence_tracker = _optcheck_fgraph(\n\u001b[1;32m-> 2272\u001b[1;33m                 inputs, outputs, accept_inplace)\n\u001b[0m\u001b[0;32m   2273\u001b[0m             \u001b[0mfgraph\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mequivalence_tracker\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mequivalence_tracker\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   2274\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/compile/debugmode.py\u001b[0m in \u001b[0;36m_optcheck_fgraph\u001b[1;34m(input_specs, output_specs, accept_inplace)\u001b[0m\n\u001b[0;32m    705\u001b[0m     \u001b[0mequivalence_tracker\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0m_VariableEquivalenceTracker\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    706\u001b[0m     fgraph = gof.fg.FunctionGraph(orig_inputs, orig_outputs,\n\u001b[1;32m--> 707\u001b[1;33m                                   features=[equivalence_tracker])\n\u001b[0m\u001b[0;32m    708\u001b[0m     \u001b[1;31m# DestroyHandler may not be needed yet, as there is usually no\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    709\u001b[0m     \u001b[1;31m# inplace operation in the graph at this stage. DestroyHandler\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/fg.py\u001b[0m in \u001b[0;36m__init__\u001b[1;34m(self, inputs, outputs, features, clone)\u001b[0m\n\u001b[0;32m    132\u001b[0m             \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mvariables\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0madd\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0minput\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    133\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 134\u001b[1;33m         \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__import_r__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0moutputs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mreason\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;34m\"init\"\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    135\u001b[0m         \u001b[1;32mfor\u001b[0m \u001b[0mi\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0moutput\u001b[0m \u001b[1;32min\u001b[0m \u001b[0menumerate\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0moutputs\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    136\u001b[0m             \u001b[0moutput\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mclients\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'output'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mi\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/fg.py\u001b[0m in \u001b[0;36m__import_r__\u001b[1;34m(self, variables, reason)\u001b[0m\n\u001b[0;32m    254\u001b[0m         \u001b[1;32mfor\u001b[0m \u001b[0mapply_node\u001b[0m \u001b[1;32min\u001b[0m \u001b[1;33m[\u001b[0m\u001b[0mr\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mowner\u001b[0m \u001b[1;32mfor\u001b[0m \u001b[0mr\u001b[0m \u001b[1;32min\u001b[0m \u001b[0mvariables\u001b[0m \u001b[1;32mif\u001b[0m \u001b[0mr\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mowner\u001b[0m \u001b[1;32mis\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[0mNone\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    255\u001b[0m             \u001b[1;32mif\u001b[0m \u001b[0mapply_node\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[1;32min\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mapply_nodes\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 256\u001b[1;33m                 \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m__import__\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mapply_node\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mreason\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mreason\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    257\u001b[0m         \u001b[1;32mfor\u001b[0m \u001b[0mr\u001b[0m \u001b[1;32min\u001b[0m \u001b[0mvariables\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    258\u001b[0m             \u001b[1;32mif\u001b[0m \u001b[0mr\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mowner\u001b[0m \u001b[1;32mis\u001b[0m \u001b[0mNone\u001b[0m \u001b[1;32mand\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[0misinstance\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mr\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mgraph\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mConstant\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;32mand\u001b[0m \u001b[0mr\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[1;32min\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0minputs\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m/home/wiecki/envs/pymc3/local/lib/python2.7/site-packages/theano/gof/fg.py\u001b[0m in \u001b[0;36m__import__\u001b[1;34m(self, apply_node, check, reason)\u001b[0m\n\u001b[0;32m    350\u001b[0m                                 \u001b[1;34m'leading from this input to an output is %s. '\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    351\u001b[0m                                 \u001b[1;34m'This chain may not be unique'\u001b[0m \u001b[1;33m%\u001b[0m \u001b[0mstr\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mpath\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;33m+\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 352\u001b[1;33m                                 detailed_err_msg)\n\u001b[0m\u001b[0;32m    353\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    354\u001b[0m                         \u001b[1;31m# Standard error message\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;31mMissingInputError\u001b[0m: A variable that is an input to the graph was neither provided as an input to the function nor given a value. A chain of variables leading from this input to an output is [z_0, Subtensor{int64}.0]. This chain may not be unique"
+     ]
+    }
+   ],
+   "source": [
+    "z[d][w].eval()"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 2",
+   "language": "python",
+   "name": "python2"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 2
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython2",
+   "version": "2.7.8"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 0
+}

@@ -1,0 +1,549 @@
+{
+ "metadata": {
+  "name": "",
+  "signature": "sha256:6f2fc972e4299affb4e8b52eb6a96cb8ac4c7e9437e0f1b47634497bcc7e62b8"
+ },
+ "nbformat": 3,
+ "nbformat_minor": 0,
+ "worksheets": [
+  {
+   "cells": [
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "pm.Wishart('jo')"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "ename": "TypeError",
+       "evalue": "No model on context stack, which is needed to use the Normal('x', 0,1) syntax. Add a 'with model:' block",
+       "output_type": "pyerr",
+       "traceback": [
+        "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m\n\u001b[1;31mTypeError\u001b[0m                                 Traceback (most recent call last)",
+        "\u001b[1;32m<ipython-input-3-27f143729e68>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m\n\u001b[1;32m----> 1\u001b[1;33m \u001b[0mpm\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mWishart\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'jo'\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m",
+        "\u001b[1;32m/home/wiecki/working/projects/pymc/pymc3/distributions/distribution.py\u001b[0m in \u001b[0;36m__new__\u001b[1;34m(cls, name, *args, **kwargs)\u001b[0m\n\u001b[0;32m     12\u001b[0m             \u001b[0mmodel\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mModel\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mget_context\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     13\u001b[0m         \u001b[1;32mexcept\u001b[0m \u001b[0mTypeError\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 14\u001b[1;33m             \u001b[1;32mraise\u001b[0m \u001b[0mTypeError\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m\"No model on context stack, which is needed to use the Normal('x', 0,1) syntax. Add a 'with model:' block\"\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     15\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     16\u001b[0m         \u001b[1;32mif\u001b[0m \u001b[0misinstance\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mname\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mstr\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+        "\u001b[1;31mTypeError\u001b[0m: No model on context stack, which is needed to use the Normal('x', 0,1) syntax. Add a 'with model:' block"
+       ]
+      }
+     ],
+     "prompt_number": 3
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "import numpy as np\n",
+      "import pymc3 as pm\n",
+      "import scipy.optimize as opt\n",
+      "prec_prior = np.array([[ 25.3968254,   -1.58730159],\n",
+      "                       [ -1.58730159,   6.34920635]])\n",
+      "with pm.Model() as model:\n",
+      "    prec = pm.Wishart('prec', 100., prec_prior / 100., shape=(2, 2))\n",
+      "\n",
+      "    start = pm.find_MAP(fmin=opt.fmin_powell)\n",
+      "    #start = {'prec': prec_prior}\n",
+      "    step = pm.Metropolis()\n",
+      "    trace = pm.sample(50000, step, start)"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stderr",
+       "text": [
+        "ERROR (theano.sandbox.cuda): nvcc compiler not found on $PATH. Check your nvcc installation and try again.\n"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stderr",
+       "text": [
+        "ERROR:theano.sandbox.cuda:nvcc compiler not found on $PATH. Check your nvcc installation and try again.\n"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "Couldn't import dot_parser, loading of dot files will not be possible.\n",
+        "\r"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        " [-                 3%                  ] 1779 of 50000 complete in 0.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [--                7%                  ] 3641 of 50000 complete in 1.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [----             10%                  ] 5444 of 50000 complete in 1.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----            14%                  ] 7321 of 50000 complete in 2.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [------           18%                  ] 9021 of 50000 complete in 2.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [--------         21%                  ] 10900 of 50000 complete in 3.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [---------        25%                  ] 12765 of 50000 complete in 3.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------      29%                  ] 14645 of 50000 complete in 4.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [------------     33%                  ] 16505 of 50000 complete in 4.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-------------    36%                  ] 18383 of 50000 complete in 5.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [---------------  40%                  ] 20213 of 50000 complete in 5.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [---------------- 43%                  ] 21721 of 50000 complete in 6.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------47%                  ] 23552 of 50000 complete in 6.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------50%                  ] 25429 of 50000 complete in 7.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------54%                  ] 27266 of 50000 complete in 7.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------58%--                ] 29142 of 50000 complete in 8.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------61%---               ] 30998 of 50000 complete in 8.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------65%----              ] 32876 of 50000 complete in 9.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------69%------            ] 34700 of 50000 complete in 9.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------73%-------           ] 36578 of 50000 complete in 10.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------76%---------         ] 38439 of 50000 complete in 10.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------80%----------        ] 40321 of 50000 complete in 11.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------84%------------      ] 42168 of 50000 complete in 11.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------88%-------------     ] 44052 of 50000 complete in 12.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------91%--------------    ] 45918 of 50000 complete in 12.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------95%----------------  ] 47802 of 50000 complete in 13.0 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------99%----------------- ] 49633 of 50000 complete in 13.5 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\r",
+        " [-----------------100%-----------------] 50000 of 50000 complete in 13.6 sec"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stderr",
+       "text": [
+        "/home/wiecki/working/projects/pymc/pymc3/distributions/multivariate.py:165: UserWarning: The Wishart distribution can currently not be used for MCMC sampling. The probability of sampling a symmetric matrix is basically zero. Instead, please use the LKJCorr prior. For more information on the issues surrounding the Wishart see here: https://github.com/pymc-devs/pymc3/issues/538.\n",
+        "  warnings.warn('The Wishart distribution can currently not be used for MCMC sampling. The probability of sampling a symmetric matrix is basically zero. Instead, please use the LKJCorr prior. For more information on the issues surrounding the Wishart see here: https://github.com/pymc-devs/pymc3/issues/538.', UserWarning)\n"
+       ]
+      }
+     ],
+     "prompt_number": 1
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "%matplotlib inline"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 3
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "np.linalg.eigh(trace[100]['prec'])"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 12,
+       "text": [
+        "(array([  1.72380714,  30.72256455]), array([[ 0.25090562, -0.96801155],\n",
+        "        [-0.96801155, -0.25090562]]))"
+       ]
+      }
+     ],
+     "prompt_number": 12
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "import scipy as sp"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 15
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "pm.distributions.Wishart.dist(100., prec_prior / 100., shape=(2, 2)).logp(trace[500]['prec']).eval()"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 20,
+       "text": [
+        "array(94.90002431902366)"
+       ]
+      }
+     ],
+     "prompt_number": 20
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "trace[51]"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 6,
+       "text": [
+        "{'prec': array([[ 25.3968254 ,  -1.58730159],\n",
+        "        [ -1.58730159,   6.34920635]])}"
+       ]
+      }
+     ],
+     "prompt_number": 6
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "trace[100]"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 7,
+       "text": [
+        "{'prec': array([[ 25.3968254 ,  -1.58730159],\n",
+        "        [ -1.58730159,   6.34920635]])}"
+       ]
+      }
+     ],
+     "prompt_number": 7
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "import theano"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 11
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "theano.tensor.tril"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 13,
+       "text": [
+        "<function theano.tensor.basic.tril>"
+       ]
+      }
+     ],
+     "prompt_number": 13
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "t = trace[50:]\n",
+      "pm.traceplot(t);"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "display_data",
+       "png": "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\n",
+       "text": [
+        "<matplotlib.figure.Figure at 0x7fda600a6810>"
+       ]
+      }
+     ],
+     "prompt_number": 9
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "trace[:20]['prec']"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 3,
+       "text": [
+        "array([[[  2.71705254e+001,  -1.45994891e+307],\n",
+        "        [  1.06845642e+001,   1.03801233e+001]],\n",
+        "\n",
+        "       [[  2.81707589e+001,  -1.45994891e+307],\n",
+        "        [  1.01541724e+001,   9.96350107e+000]],\n",
+        "\n",
+        "       [[  2.79628694e+001,  -1.45994891e+307],\n",
+        "        [  1.18000649e+001,   1.03071813e+001]],\n",
+        "\n",
+        "       [[  2.66869908e+001,  -1.45994891e+307],\n",
+        "        [  1.14491176e+001,   1.11287249e+001]],\n",
+        "\n",
+        "       [[  2.56072884e+001,  -1.45994891e+307],\n",
+        "        [  1.12182284e+001,   1.11621632e+001]],\n",
+        "\n",
+        "       [[  2.49051696e+001,  -1.45994891e+307],\n",
+        "        [  1.04482072e+001,   9.51357450e+000]],\n",
+        "\n",
+        "       [[  2.61888430e+001,  -1.45994891e+307],\n",
+        "        [  1.10191506e+001,   9.74135368e+000]],\n",
+        "\n",
+        "       [[  2.56913406e+001,  -1.45994891e+307],\n",
+        "        [  1.02982690e+001,   1.06540367e+001]],\n",
+        "\n",
+        "       [[  2.40567322e+001,  -1.45994891e+307],\n",
+        "        [  1.00699148e+001,   1.19104536e+001]],\n",
+        "\n",
+        "       [[  2.28341812e+001,  -1.45994891e+307],\n",
+        "        [  1.02317901e+001,   1.26194154e+001]],\n",
+        "\n",
+        "       [[  2.24045998e+001,  -1.45994891e+307],\n",
+        "        [  1.02385647e+001,   1.29636247e+001]],\n",
+        "\n",
+        "       [[  2.08101153e+001,  -1.45994891e+307],\n",
+        "        [  9.96276760e+000,   1.46764792e+001]],\n",
+        "\n",
+        "       [[  2.01623918e+001,  -1.45994891e+307],\n",
+        "        [  9.94025085e+000,   1.28206786e+001]],\n",
+        "\n",
+        "       [[  1.99120119e+001,  -1.45994891e+307],\n",
+        "        [  1.16385034e+001,   1.27706756e+001]],\n",
+        "\n",
+        "       [[  2.07880535e+001,  -1.45994891e+307],\n",
+        "        [  1.01067828e+001,   1.21660105e+001]],\n",
+        "\n",
+        "       [[  1.99925497e+001,  -1.45994891e+307],\n",
+        "        [  9.56031931e+000,   1.42149597e+001]],\n",
+        "\n",
+        "       [[  1.94286924e+001,  -1.45994891e+307],\n",
+        "        [  9.52546270e+000,   1.30627567e+001]],\n",
+        "\n",
+        "       [[  1.86449246e+001,  -1.45994891e+307],\n",
+        "        [  8.76484408e+000,   1.33631109e+001]],\n",
+        "\n",
+        "       [[  1.89847734e+001,  -1.45994891e+307],\n",
+        "        [  8.00341787e+000,   1.29455565e+001]],\n",
+        "\n",
+        "       [[  1.82025743e+001,  -1.45994891e+307],\n",
+        "        [  6.21034606e+000,   1.31743166e+001]]])"
+       ]
+      }
+     ],
+     "prompt_number": 3
+    }
+   ],
+   "metadata": {}
+  }
+ ]
+}

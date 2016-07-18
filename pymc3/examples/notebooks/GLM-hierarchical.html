@@ -1,0 +1,984 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Hierarchical Linear Regression &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../../../index.html"/> 
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../docs/source/index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../docs/source/getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../docs/source/examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../docs/source/api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../../docs/source/index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../../docs/source/index.html">Docs</a> &raquo;</li>
+      
+    <li>Hierarchical Linear Regression</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../../_sources/pymc3/examples/notebooks/GLM-hierarchical.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Hierarchical-Linear-Regression">
+<h1>Hierarchical Linear Regression<a class="headerlink" href="#Hierarchical-Linear-Regression" title="Permalink to this headline">¶</a></h1>
+<ol class="loweralpha simple" start="3">
+<li>2016 by Danne Elbers, Thomas Wiecki</li>
+</ol>
+<p>This tutorial is adapted from a <a class="reference external" href="http://twiecki.github.io/blog/2014/03/17/bayesian-glms-3/">blog post by Danne Elbers and Thomas
+Wiecki called &#8220;The Best Of Both Worlds: Hierarchical Linear Regression
+in
+PyMC3&#8221;</a>.</p>
+<p>Today&#8217;s blog post is co-written by <a class="reference external" href="http://www.linkedin.com/pub/danne-elbers/69/3a2/7ba">Danne
+Elbers</a> who is
+doing her masters thesis with me on computational psychiatry using
+Bayesian modeling. This post also borrows heavily from a
+<a class="reference external" href="http://nbviewer.ipython.org/github/fonnesbeck/multilevel_modeling/blob/master/multilevel_modeling.ipynb?create=1">Notebook</a>
+by <a class="reference external" href="http://biostat.mc.vanderbilt.edu/wiki/Main/ChrisFonnesbeck">Chris
+Fonnesbeck</a>.</p>
+<p>The power of Bayesian modelling really clicked for me when I was first
+introduced to hierarchical modelling. In this blog post we will:</p>
+<ul class="simple">
+<li>provide and intuitive explanation of hierarchical/multi-level
+Bayesian modeling;</li>
+<li>show how this type of model can easily be built and estimated in
+<a class="reference external" href="https://github.com/pymc-devs/pymc">PyMC3</a>;</li>
+<li>demonstrate the advantage of using hierarchical Bayesian modelling as
+opposed to non-hierarchical Bayesian modelling by comparing the two;</li>
+<li>visualize the &#8220;shrinkage effect&#8221; (explained below); and</li>
+<li>highlight connections to the frequentist version of this model.</li>
+</ul>
+<p>Having multiple sets of related measurements comes up all the time. In
+mathematical psychology, for example, you test multiple subjects on the
+same task. We then want to estimate a computational/mathematical model
+that describes the behavior on the task by a set of parameters. We could
+thus fit a model to each subject individually, assuming they share no
+similarities; or, pool all the data and estimate one model assuming all
+subjects are identical. Hierarchical modeling allows the best of both
+worlds by modeling subjects&#8217; similarities but also allowing estimiation
+of individual parameters. As an aside, software from our lab,
+<a class="reference external" href="http://ski.cog.brown.edu/hddm_docs/">HDDM</a>, allows hierarchical
+Bayesian estimation of a widely used decision making model in
+psychology. In this blog post, however, we will use a more classical
+example of <a class="reference external" href="http://en.wikipedia.org/wiki/Hierarchical_linear_modeling">hierarchical linear
+regression</a>
+to predict radon levels in houses.</p>
+<p>This is the 3rd blog post on the topic of Bayesian modeling in PyMC3,
+see here for the previous two:</p>
+<ul class="simple">
+<li><a class="reference external" href="http://twiecki.github.io/blog/2013/08/12/bayesian-glms-1/">The Inference Button: Bayesian GLMs made easy with
+PyMC3</a></li>
+<li><a class="reference external" href="http://twiecki.github.io/blog/2013/08/27/bayesian-glms-2/">This world is far from Normal(ly distributed): Bayesian Robust
+Regression in
+PyMC3</a></li>
+</ul>
+<div class="section" id="The-data-set">
+<h2>The data set<a class="headerlink" href="#The-data-set" title="Permalink to this headline">¶</a></h2>
+<p>Gelman et al.&#8217;s (2007) radon dataset is a classic for hierarchical
+modeling. In this dataset the amount of the radioactive gas radon has
+been measured among different households in all counties of several
+states. Radon gas is known to be the highest cause of lung cancer in
+non-smokers. It is believed to be more strongly present in households
+containing a basement and to differ in amount present among types of
+soil. Here we&#8217;ll investigate this differences and try to make
+predictions of radonlevels in different counties based on the county
+itself and the presence of a basement. In this example we&#8217;ll look at
+Minnesota, a state that contains 85 counties in which different
+measurements are taken, ranging from 2 to 116 measurements per county.</p>
+<div class="figure" id="id1">
+<img alt="radon" src="http://www.fix-your-radon.com/images/how_radon_enters.jpg" />
+<p class="caption"><span class="caption-text">radon</span></p>
+</div>
+<p>First, we&#8217;ll load the data:</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/radon.csv&#39;</span><span class="p">)</span>
+
+<span class="n">county_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">county</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+<span class="n">county_idx</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">county_code</span><span class="o">.</span><span class="n">values</span>
+
+<span class="n">n_counties</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">county</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<p>The relevant part of the data we will model looks as follows:</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">data</span><span class="p">[[</span><span class="s1">&#39;county&#39;</span><span class="p">,</span> <span class="s1">&#39;log_radon&#39;</span><span class="p">,</span> <span class="s1">&#39;floor&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[2]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>county</th>
+      <th>log_radon</th>
+      <th>floor</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>AITKIN</td>
+      <td>0.832909</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>AITKIN</td>
+      <td>0.832909</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>AITKIN</td>
+      <td>1.098612</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>AITKIN</td>
+      <td>0.095310</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>ANOKA</td>
+      <td>1.163151</td>
+      <td>0.0</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>As you can see, we have multiple <code class="docutils literal"><span class="pre">radon</span></code> measurements (log-converted
+to be on the real line) &#8211; one row for each house &#8211; in a <code class="docutils literal"><span class="pre">county</span></code> and
+whether the house has a basement (<code class="docutils literal"><span class="pre">floor</span></code> == 0) or not (<code class="docutils literal"><span class="pre">floor</span></code> ==
+1). We are interested in whether having a basement increases the
+<code class="docutils literal"><span class="pre">radon</span></code> measured in the house.</p>
+</div>
+<div class="section" id="The-Models">
+<h2>The Models<a class="headerlink" href="#The-Models" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Pooling-of-measurements">
+<h3>Pooling of measurements<a class="headerlink" href="#Pooling-of-measurements" title="Permalink to this headline">¶</a></h3>
+<p>Now you might say: &#8220;That&#8217;s easy! I&#8217;ll just pool all my data and estimate
+one big regression to asses the influence of a basement across all
+counties&#8221;. In math-speak that model would be:</p>
+<div class="math">
+\[radon_{i, c} = \alpha + \beta*\text{floor}_{i, c} + \epsilon\]</div>
+<p>Where <span class="math">\(i\)</span> represents the measurement, <span class="math">\(c\)</span> the county and
+floor contains a 0 or 1 if the house has a basement or not,
+respectively. If you need a refresher on Linear Regressions in <code class="docutils literal"><span class="pre">PyMC</span></code>,
+check out my <a class="reference external" href="http://twiecki.github.io/blog/2013/08/12/bayesian-glms-1/">previous blog
+post</a>.
+Critically, we are only estimating <em>one</em> intercept and <em>one</em> slope for
+all measurements over all counties pooled together as illustrated in the
+graphic below (<span class="math">\(\theta\)</span> represents <span class="math">\((\alpha, \beta)\)</span> in our
+case and <span class="math">\(y_i\)</span> are the measurements of the <span class="math">\(i\)</span>th county).</p>
+<div class="figure" id="id2">
+<img alt="pooled" src="http://f.cl.ly/items/0R1W063h1h0W2M2C0S3M/Screen%20Shot%202013-10-10%20at%208.22.21%20AM.png" />
+<p class="caption"><span class="caption-text">pooled</span></p>
+</div>
+</div>
+<div class="section" id="Unpooled-measurements:-separate-regressions">
+<h3>Unpooled measurements: separate regressions<a class="headerlink" href="#Unpooled-measurements:-separate-regressions" title="Permalink to this headline">¶</a></h3>
+<p>But what if we are interested in whether different counties actually
+have different relationships (slope) and different base-rates of radon
+(intercept)? Then you might say &#8220;OK then, I&#8217;ll just estimate <span class="math">\(n\)</span>
+(number of counties) different regressions &#8211; one for each county&#8221;. In
+math-speak that model would be:</p>
+<div class="math">
+\[radon_{i, c} = \alpha_{c} + \beta_{c}*\text{floor}_{i, c} + \epsilon_c\]</div>
+<p>Note that we added the subindex <span class="math">\(c\)</span> so we are estimating <span class="math">\(n\)</span>
+different <span class="math">\(\alpha\)</span>s and <span class="math">\(\beta\)</span>s &#8211; one for each county.</p>
+<div class="figure" id="id3">
+<img alt="unpooled" src="http://f.cl.ly/items/38020n2t2Y2b1p3t0B0e/Screen%20Shot%202013-10-10%20at%208.23.36%20AM.png" />
+<p class="caption"><span class="caption-text">unpooled</span></p>
+</div>
+<p>This is the extreme opposite model; where above we assumed all counties
+are exactly the same, here we are saying that they share no similarities
+whatsoever. As we show below, this type of model can be very noisy when
+we have little data per county, as is the case in this data set.</p>
+</div>
+<div class="section" id="Partial-pooling:-Hierarchical-Regression-aka,-the-best-of-both-worlds">
+<h3>Partial pooling: Hierarchical Regression aka, the best of both worlds<a class="headerlink" href="#Partial-pooling:-Hierarchical-Regression-aka,-the-best-of-both-worlds" title="Permalink to this headline">¶</a></h3>
+<p>Fortunately, there is a middle ground to both of these extremes.
+Specifically, we may assume that while <span class="math">\(\alpha\)</span>s and
+<span class="math">\(\beta\)</span>s are different for each county as in the unpooled case,
+the coefficients all share similarity. We can model this by assuming
+that each individual coefficient comes from a common group distribution:</p>
+<div class="math">
+\[\alpha_{c} \sim \mathcal{N}(\mu_{\alpha}, \sigma_{\alpha}^2)\]</div>
+<div class="math">
+\[\beta_{c} \sim \mathcal{N}(\mu_{\beta}, \sigma_{\beta}^2)\]</div>
+<p>We thus assume the intercepts <span class="math">\(\alpha\)</span> and slopes <span class="math">\(\beta\)</span> to
+come from a normal distribution centered around their respective group
+mean <span class="math">\(\mu\)</span> with a certain standard deviation <span class="math">\(\sigma^2\)</span>, the
+values (or rather posteriors) of which we also estimate. That&#8217;s why this
+is called a multilevel, hierarchical or partial-pooling modeling.</p>
+<div class="figure" id="id4">
+<img alt="hierarchical" src="http://f.cl.ly/items/1B3U223i002y3V2W3r0W/Screen%20Shot%202013-10-10%20at%208.25.05%20AM.png" />
+<p class="caption"><span class="caption-text">hierarchical</span></p>
+</div>
+<p>How do we estimate such a complex model you might ask? Well, that&#8217;s the
+beauty of Probabilistic Programming &#8211; we just formulate the model we
+want and press our <a class="reference external" href="http://twiecki.github.io/blog/2013/08/12/bayesian-glms-1/">Inference
+Button(TM)</a>.</p>
+<p>(Note that the above is not a complete Bayesian model specification as
+we haven&#8217;t defined priors or hyperpriors (i.e. priors for the group
+distribution, <span class="math">\(\mu\)</span> and <span class="math">\(\sigma\)</span>). These will be used in the
+model implementation below but only distract here.)</p>
+</div>
+</div>
+<div class="section" id="Probabilistic-Programming">
+<h2>Probabilistic Programming<a class="headerlink" href="#Probabilistic-Programming" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Unpooled/non-hierarchical-model">
+<h3>Unpooled/non-hierarchical model<a class="headerlink" href="#Unpooled/non-hierarchical-model" title="Permalink to this headline">¶</a></h3>
+<p>To highlight the effect of the hierarchical linear regression we&#8217;ll
+first estimate the non-hierarchical, unpooled Bayesian model from above
+(separate regressions). For each county we estimate a completely
+separate mean (intercept). As we have no prior information on what the
+intercept or regressions could be, we will be using a normal
+distribution centered around 0 with a wide standard-deviation to
+describe the intercept and regressions. We&#8217;ll assume the measurements
+are normally distributed with noise <span class="math">\(\epsilon\)</span> on which we place a
+uniform distribution.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [35]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">unpooled_model</span><span class="p">:</span>
+
+    <span class="c1"># Independent parameters for each county</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_counties</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_counties</span><span class="p">)</span>
+
+    <span class="c1"># Model error</span>
+    <span class="n">eps</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;eps&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+    <span class="c1"># Model prediction of radon level</span>
+    <span class="c1"># a[county_idx] translates to a[0, 0, 0, 1, 1, ...],</span>
+    <span class="c1"># we thus link multiple household measures of a county</span>
+    <span class="c1"># to its coefficients.</span>
+    <span class="n">radon_est</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">county_idx</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">county_idx</span><span class="p">]</span><span class="o">*</span><span class="n">data</span><span class="o">.</span><span class="n">floor</span><span class="o">.</span><span class="n">values</span>
+
+    <span class="c1"># Data likelihood</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">radon_est</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">eps</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">log_radon</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied log-transform to eps and added transformed eps_log to model.
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [36]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">unpooled_model</span><span class="p">:</span>
+    <span class="n">unpooled_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Assigned NUTS to a
+Assigned NUTS to b
+Assigned NUTS to eps_log
+ [-----------------100%-----------------] 2000 of 2000 complete in 29.6 sec
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Hierarchical-Model">
+<h3>Hierarchical Model<a class="headerlink" href="#Hierarchical-Model" title="Permalink to this headline">¶</a></h3>
+<p>Instead of creating models separatley, the hierarchical model creates
+group parameters that consider the countys not as completely different
+but as having an underlying similarity. These distributions are
+subsequently used to influence the distribution of each county&#8217;s
+<span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span>.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [37]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">hierarchical_model</span><span class="p">:</span>
+    <span class="c1"># Hyperpriors for group nodes</span>
+    <span class="n">mu_a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_a&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">sigma_a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;sigma_a&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">mu_b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_b&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">sigma_b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;sigma_b&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+    <span class="c1"># Intercept for each county, distributed around group mean mu_a</span>
+    <span class="c1"># Above we just set mu and sd to a fixed value while here we</span>
+    <span class="c1"># plug in a common group distribution for all a and b (which are</span>
+    <span class="c1"># vectors of length n_counties).</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_a</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma_a</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_counties</span><span class="p">)</span>
+    <span class="c1"># Intercept for each county, distributed around group mean mu_a</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu_b</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma_b</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">n_counties</span><span class="p">)</span>
+
+    <span class="c1"># Model error</span>
+    <span class="n">eps</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;eps&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+    <span class="n">radon_est</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">county_idx</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="n">county_idx</span><span class="p">]</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">floor</span><span class="o">.</span><span class="n">values</span>
+
+    <span class="c1"># Data likelihood</span>
+    <span class="n">radon_like</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;radon_like&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">radon_est</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">eps</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">log_radon</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied log-transform to sigma_a and added transformed sigma_a_log to model.
+Applied log-transform to sigma_b and added transformed sigma_b_log to model.
+Applied log-transform to eps and added transformed eps_log to model.
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [38]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Inference button (TM)!</span>
+<span class="k">with</span> <span class="n">hierarchical_model</span><span class="p">:</span>
+    <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Assigned NUTS to mu_a
+Assigned NUTS to sigma_a_log
+Assigned NUTS to mu_b
+Assigned NUTS to sigma_b_log
+Assigned NUTS to a
+Assigned NUTS to b
+Assigned NUTS to eps_log
+ [-----------------100%-----------------] 2000 of 2000 complete in 15.8 sec
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [39]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Plotting the hierarchical model trace -its found values- from 500 iterations onwards (right side plot)</span>
+<span class="c1"># and its accumulated marginal values (left side plot)</span>
+<span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">hierarchical_trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../../_images/pymc3_examples_notebooks_GLM-hierarchical_14_0.png" src="../../../_images/pymc3_examples_notebooks_GLM-hierarchical_14_0.png" />
+</div>
+</div>
+<p>The marginal posteriors in the left column are highly informative.
+<code class="docutils literal"><span class="pre">mu_a</span></code> tells us the group mean (log) radon levels. <code class="docutils literal"><span class="pre">mu_b</span></code> tells us
+that having no basement decreases radon levels significantly (no mass
+above zero). We can also see by looking at the marginals for <code class="docutils literal"><span class="pre">a</span></code> that
+there is quite some differences in radon levels between counties (each
+&#8216;rainbow&#8217; color corresponds to a single county); the different widths
+are related to how much confidence we have in each paramter estimate &#8211;
+the more measurements per county, the higher our confidence will be.</p>
+</div>
+</div>
+<div class="section" id="Posterior-Predictive-Check">
+<h2>Posterior Predictive Check<a class="headerlink" href="#Posterior-Predictive-Check" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="The-Root-Mean-Square-Deviation">
+<h3>The Root Mean Square Deviation<a class="headerlink" href="#The-Root-Mean-Square-Deviation" title="Permalink to this headline">¶</a></h3>
+<p>To find out which of the models explains the data better we can
+calculate the Root Mean Square Deviaton (RMSD). This posterior
+predictive check revolves around recreating the data based on the
+parameters found at different moments in the chain. The recreated or
+predicted values are subsequently compared to the real data points, the
+model that predicts data points closer to the original data is
+considered the better one. Thus, the lower the RMSD the better.</p>
+<p>When computing the RMSD (code not shown) we get the following result:</p>
+<ul class="simple">
+<li>individual/non-hierarchical model: 0.13</li>
+<li>hierarchical model: 0.08</li>
+</ul>
+<p>As can be seen above the hierarchical model performs better than the
+non-hierarchical model in predicting the radon values. Following this,
+we&#8217;ll plot some examples of county&#8217;s showing the actual radon
+measurements, the hierarchial predictions and the non-hierarchical
+predictions.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [45]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">selection</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;CASS&#39;</span><span class="p">,</span> <span class="s1">&#39;CROW WING&#39;</span><span class="p">,</span> <span class="s1">&#39;FREEBORN&#39;</span><span class="p">]</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">sharey</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">axis</span> <span class="o">=</span> <span class="n">axis</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">selection</span><span class="p">):</span>
+    <span class="n">c_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">ix</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">county</span> <span class="o">==</span> <span class="n">c</span><span class="p">]</span>
+    <span class="n">c_data</span> <span class="o">=</span> <span class="n">c_data</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
+    <span class="n">c_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">county_names</span><span class="o">==</span><span class="n">c</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">c_data</span><span class="p">[</span><span class="s1">&#39;county_code&#39;</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">xvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">a_val</span><span class="p">,</span> <span class="n">b_val</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">unpooled_trace</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:,</span> <span class="n">c_index</span><span class="p">],</span> <span class="n">unpooled_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:,</span> <span class="n">c_index</span><span class="p">]):</span>
+        <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span> <span class="n">a_val</span> <span class="o">+</span> <span class="n">b_val</span> <span class="o">*</span> <span class="n">xvals</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span> <span class="n">unpooled_trace</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:,</span> <span class="n">c_index</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">unpooled_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:,</span> <span class="n">c_index</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="n">xvals</span><span class="p">,</span>
+                 <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;individual&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">a_val</span><span class="p">,</span> <span class="n">b_val</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">hierarchical_trace</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:][</span><span class="n">z</span><span class="p">],</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:][</span><span class="n">z</span><span class="p">]):</span>
+        <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span> <span class="n">a_val</span> <span class="o">+</span> <span class="n">b_val</span> <span class="o">*</span> <span class="n">xvals</span><span class="p">,</span> <span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:][</span><span class="n">z</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:][</span><span class="n">z</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="n">xvals</span><span class="p">,</span>
+                 <span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;hierarchical&#39;</span><span class="p">)</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">c_data</span><span class="o">.</span><span class="n">floor</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">c_data</span><span class="p">))</span><span class="o">*</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">c_data</span><span class="o">.</span><span class="n">log_radon</span><span class="p">,</span>
+                    <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;original data&#39;</span><span class="p">)</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([</span><span class="s1">&#39;basement&#39;</span><span class="p">,</span> <span class="s1">&#39;no basement&#39;</span><span class="p">])</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">i</span><span class="o">%</span><span class="k">3</span>:
+        <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">axis</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;log radon level&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../../_images/pymc3_examples_notebooks_GLM-hierarchical_17_0.png" src="../../../_images/pymc3_examples_notebooks_GLM-hierarchical_17_0.png" />
+</div>
+</div>
+<p>In the above plot we have the data points in black of three selected
+counties. The thick lines represent the mean estimate of the regression
+line of the individual (blue) and hierarchical model (in green). The
+thinner lines are regression lines of individual samples from the
+posterior and give us a sense of how variable the estimates are.</p>
+<p>When looking at the county &#8216;CASS&#8217; we see that the non-hierarchical
+estimation is strongly biased: as this county&#8217;s data contains only
+households with a basement the estimated regression produces the
+non-sensical result of a giant negative slope meaning that we would
+expect negative radon levels in a house without basement!</p>
+<p>Moreover, in the example county&#8217;s &#8216;CROW WING&#8217; and &#8216;FREEBORN&#8217; the
+non-hierarchical model appears to react more strongly than the
+hierarchical model to the existance of outliers in the dataset (&#8216;CROW
+WING&#8217;: no basement upper right. &#8216;FREEBORN&#8217;: basement upper left).
+Assuming that there should be a higher amount of radon gas measurable in
+households with basements opposed to those without, the county &#8216;CROW
+WING&#8217;&#8217;s non-hierachical model seems off. Having the group-distribution
+constrain the coefficients we get meaningful estimates in all cases as
+we apply what we learn from the group to the individuals and vice-versa.</p>
+</div>
+</div>
+<div class="section" id="Shrinkage">
+<h2>Shrinkage<a class="headerlink" href="#Shrinkage" title="Permalink to this headline">¶</a></h2>
+<p>Shrinkage describes the process by which our estimates are &#8220;pulled&#8221;
+towards the group-mean as a result of the common group distribution &#8211;
+county-coefficients very far away from the group mean have very low
+probability under the normality assumption, moving them closer to the
+group mean gives them higher probability. In the non-hierachical model
+every county is allowed to differ completely from the others by just
+using each county&#8217;s data, resulting in a model more prone to outliers
+(as shown above).</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [43]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">hier_a</span> <span class="o">=</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">][</span><span class="mi">500</span><span class="p">:]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">hier_b</span> <span class="o">=</span> <span class="n">hierarchical_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][</span><span class="mi">500</span><span class="p">:]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">indv_a</span> <span class="o">=</span> <span class="p">[</span><span class="n">unpooled_trace</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">][</span><span class="mi">500</span><span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">county_names</span><span class="o">==</span><span class="n">c</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">county_names</span><span class="p">]</span>
+<span class="n">indv_b</span> <span class="o">=</span> <span class="p">[</span><span class="n">unpooled_trace</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">][</span><span class="mi">500</span><span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">county_names</span><span class="o">==</span><span class="n">c</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">county_names</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [44]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;Intercept&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Floor Measure&#39;</span><span class="p">,</span>
+                     <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Hierarchical vs. Non-hierarchical Bayes&#39;</span><span class="p">,</span>
+                     <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">indv_a</span><span class="p">,</span> <span class="n">indv_b</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">26</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;non-hierarchical&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">hier_a</span><span class="p">,</span><span class="n">hier_b</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">26</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;hierarchical&#39;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">indv_b</span><span class="p">)):</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">arrow</span><span class="p">(</span><span class="n">indv_a</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">indv_b</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">hier_a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">indv_a</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">hier_b</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">indv_b</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+             <span class="n">fc</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">ec</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">length_includes_head</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">head_width</span><span class="o">=.</span><span class="mo">04</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">();</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../../_images/pymc3_examples_notebooks_GLM-hierarchical_21_0.png" src="../../../_images/pymc3_examples_notebooks_GLM-hierarchical_21_0.png" />
+</div>
+</div>
+<p>In the shrinkage plot above we show the coefficients of each county&#8217;s
+non-hierarchical posterior mean (blue) and the hierarchical posterior
+mean (red). To show the effect of shrinkage on a single coefficient-pair
+(alpha and beta) we connect the blue and red points belonging to the
+same county by an arrow. Some non-hierarchical posteriors are so far out
+that we couldn&#8217;t display them in this plot (it makes the axes too wide).
+Interestingly, all hierarchical posteriors of the floor-measure seem to
+be around -0.6 indicating that having a basement in almost all county&#8217;s
+is a clear indicator for heightened radon levels. The intercept (which
+we take for type of soil) appears to differ among countys. This
+information would have been difficult to find if we had only used the
+non-hierarchial model.</p>
+<p>Critically, many effects that look quite large and significant in the
+non-hiearchical model actually turn out to be much smaller when we take
+the group distribution into account (this point can also well be seen in
+plot <code class="docutils literal"><span class="pre">In[12]</span></code> in <a class="reference external" href="http://nbviewer.ipython.org/github/fonnesbeck/multilevel_modeling/blob/master/multilevel_modeling.ipynb">Chris&#8217;
+NB</a>).
+Shrinkage can thus be viewed as a form of smart regularization that
+helps reduce false-positives!</p>
+<div class="section" id="Connections-to-Frequentist-statistics">
+<h3>Connections to Frequentist statistics<a class="headerlink" href="#Connections-to-Frequentist-statistics" title="Permalink to this headline">¶</a></h3>
+<p>This type of hierarchical, partial pooling model is known as a <a class="reference external" href="https://en.wikipedia.org/wiki/Random_effects_model">random
+effects model</a> in
+frequentist terms. Interestingly, if we placed uniform priors on the
+group mean and variance in the above model, the resulting Bayesian model
+would be equivalent to a random effects model. One might imagine that
+the difference between a model with uniform or wide normal hyperpriors
+should not have a huge impact. However, <a class="reference external" href="http://andrewgelman.com/2014/03/15/problematic-interpretations-confidence-intervals/">Gelman
+says</a>
+encourages use of weakly-informative priors (like we did above) over
+flat priors.</p>
+</div>
+</div>
+<div class="section" id="Summary">
+<h2>Summary<a class="headerlink" href="#Summary" title="Permalink to this headline">¶</a></h2>
+<p>In this post, co-authored by Danne Elbers, we showed how a multi-level
+hierarchical Bayesian model gives the best of both worlds when we have
+multiple sets of measurements we expect to have similarity. The naive
+approach either pools all data together and ignores the individual
+differences, or treats each set as completely separate leading to noisy
+estimates, as shown above. By assuming that each individual data set
+(each county in our case) is distributed according to a group
+distribution &#8211; which we simultaneously estimate &#8211; we benefit from
+increased statistical power and smart regularization via the shrinkage
+effect. Probabilistic Programming in
+<a class="reference external" href="https://github.com/pymc-devs/pymc">PyMC</a> then makes Bayesian
+estimation of this model trivial.</p>
+<p>As a follow-up we could also include other states into our model. For
+this we could add yet another layer to the hierarchy where each state is
+pooled at the country level. Finally, readers of my blog will notice
+that we didn&#8217;t use <code class="docutils literal"><span class="pre">glm()</span></code> here as it does not play nice with
+hierarchical models yet.</p>
+</div>
+<div class="section" id="References">
+<h2>References<a class="headerlink" href="#References" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="https://rawgithub.com/twiecki/WhileMyMCMCGentlySamples/master/content/downloads/notebooks/GLM_hierarchical.ipynb">The underlying Notebook of this blog
+post</a></li>
+<li>Blog post: <a class="reference external" href="http://twiecki.github.io/blog/2013/08/12/bayesian-glms-1/">The Inference Button: Bayesian GLMs made easy with
+PyMC3</a></li>
+<li>Blog post: <a class="reference external" href="http://twiecki.github.io/blog/2013/08/27/bayesian-glms-2/">This world is far from Normal(ly distributed): Bayesian
+Robust Regression in
+PyMC3</a></li>
+<li><a class="reference external" href="https://github.com/fonnesbeck/multilevel_modeling/">Chris Fonnesbeck repo containing a more extensive
+analysis</a></li>
+<li>Blog post: <a class="reference external" href="http://doingbayesiandataanalysis.blogspot.com/2012/11/shrinkage-in-multi-level-hierarchical.html">Shrinkage in multi-level hierarchical
+models</a>
+by John Kruschke</li>
+<li>Gelman, A.; Carlin; Stern; and Rubin, D., 2007, &#8220;Replication data
+for: Bayesian Data Analysis, Second Edition&#8221;,</li>
+<li>Gelman, A., &amp; Hill, J. (2006). <a class="reference external" href="http://www.amazon.com/Analysis-Regression-Multilevel-Hierarchical-Models/dp/052168689X">Data Analysis Using Regression and
+Multilevel/Hierarchical Models (1st ed.). Cambridge University
+Press.</a></li>
+<li>Gelman, A. (2006). Multilevel (Hierarchical) modeling: what it can
+and cannot do. Technometrics, 48(3), 432–435.</li>
+</ul>
+<div class="section" id="Acknowledgements">
+<h3>Acknowledgements<a class="headerlink" href="#Acknowledgements" title="Permalink to this headline">¶</a></h3>
+<p>Thanks to <a class="reference external" href="http://serre-lab.clps.brown.edu/person/imri-sofer/">Imri
+Sofer</a> for
+feedback and teaching us about the connections to random-effects models
+and <a class="reference external" href="http://cdasr.mclean.harvard.edu/index.php/about-us/current-lab-members/14-faculty/62-daniel-dillon">Dan
+Dillon</a>
+for useful comments on an earlier draft.</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

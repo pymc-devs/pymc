@@ -1,0 +1,654 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>&lt;no title&gt; &mdash; pymc3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="pymc3 3.0 documentation" href="../../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../docs/source/index.html" class="icon icon-home"> pymc3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../docs/source/api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../docs/source/index.html">pymc3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../docs/source/index.html">Docs</a> &raquo;</li>
+      
+    <li>&lt;no title&gt;</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../_sources/pymc3/examples/Untitled4.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [26]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python2</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">mc</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="kn">as</span> <span class="nn">sci</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">th</span>
+
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">13</span><span class="p">)</span>
+
+<span class="n">n</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">tau_scale</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">tau0</span> <span class="o">=</span> <span class="n">sci</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">expon</span><span class="o">.</span><span class="n">rvs</span><span class="p">()</span> <span class="o">*</span> <span class="n">tau_scale</span>
+<span class="n">mu0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">tau0</span><span class="p">)</span>
+<span class="n">x0</span> <span class="o">=</span> <span class="n">mu0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">mc</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model1</span><span class="p">:</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="n">tau_scale</span><span class="p">,</span> <span class="p">)</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,))</span>
+    <span class="n">mc</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">x0</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">mc</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model2</span><span class="p">:</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="n">tau_scale</span><span class="p">)</span>
+    <span class="n">mu_z</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_z&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,))</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">mu_z</span> <span class="o">/</span> <span class="n">th</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">tau</span><span class="p">))</span>
+    <span class="n">mc</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">x0</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">infer</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+        <span class="n">map_</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sci</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">map_</span><span class="p">)</span>
+        <span class="n">hess</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">find_hessian</span><span class="p">(</span><span class="n">map_</span><span class="p">)</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span> <span class="o">=</span><span class="n">hess</span><span class="p">)</span>
+        <span class="c1">#step = mc.NUTS()</span>
+        <span class="n">trace</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">trace</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">mc</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">11000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+<span class="n">trace1</span> <span class="o">=</span> <span class="n">infer</span><span class="p">(</span><span class="n">model1</span><span class="p">)</span>
+<span class="n">trace2</span> <span class="o">=</span> <span class="n">infer</span><span class="p">(</span><span class="n">model2</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">model2</span><span class="p">:</span>
+    <span class="n">trace3</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">100000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">mc</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                       <span class="n">start</span><span class="o">=</span><span class="n">mc</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sci</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">))</span>
+
+<span class="n">samples_tau1</span> <span class="o">=</span> <span class="n">trace1</span><span class="p">[</span><span class="s1">&#39;tau&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:]</span>
+<span class="n">samples_tau2</span> <span class="o">=</span> <span class="n">trace2</span><span class="p">[</span><span class="s1">&#39;tau&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:]</span>
+<span class="n">samples_tau3</span> <span class="o">=</span> <span class="n">trace3</span><span class="p">[</span><span class="s1">&#39;tau&#39;</span><span class="p">][</span><span class="mi">10000</span><span class="p">:]</span>
+
+
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;pymc3 version: &#39;</span> <span class="o">+</span> <span class="n">mc</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Model 1 NUTS tau&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Mean: {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">samples_tau1</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Standard Deviation: {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">samples_tau1</span><span class="o">.</span><span class="n">std</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Median {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">samples_tau1</span><span class="p">,</span> <span class="mi">50</span><span class="p">)))</span>
+<span class="k">print</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Model 2 NUTS tau&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Mean: {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">samples_tau2</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Standard Deviation: {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">samples_tau2</span><span class="o">.</span><span class="n">std</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Median {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">samples_tau2</span><span class="p">,</span> <span class="mi">50</span><span class="p">)))</span>
+<span class="k">print</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Model 2 Metropolis tau&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Mean: {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">samples_tau3</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Standard Deviation: {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">samples_tau3</span><span class="o">.</span><span class="n">std</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Median {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">samples_tau3</span><span class="p">,</span> <span class="mi">50</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied log-transform to tau and added transformed tau_log to model.
+Applied log-transform to tau and added transformed tau_log to model.
+{&#39;tau_log&#39;: array(2.4429919807805516), &#39;mu&#39;: array([-0.06059215,  0.04253397,  0.13906949, -0.05520804, -0.02540626,
+       -0.02849384, -0.00025149, -0.05427661,  0.04359657,  0.09291143])}
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">IndexError</span>                                Traceback (most recent call last)
+<span class="ansi-green-intense-fg ansi-bold">&lt;ipython-input-26-85c25bf78123&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
+<span class="ansi-green-fg">     38</span>         <span class="ansi-green-intense-fg ansi-bold">return</span> mc<span class="ansi-yellow-intense-fg ansi-bold">.</span>sample<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-cyan-intense-fg ansi-bold">11000</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> step<span class="ansi-yellow-intense-fg ansi-bold">=</span>step<span class="ansi-yellow-intense-fg ansi-bold">,</span> progressbar<span class="ansi-yellow-intense-fg ansi-bold">=</span><span class="ansi-green-intense-fg ansi-bold">False</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">     39</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 40</span><span class="ansi-yellow-intense-fg ansi-bold"> </span>trace1 <span class="ansi-yellow-intense-fg ansi-bold">=</span> infer<span class="ansi-yellow-intense-fg ansi-bold">(</span>model1<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">     41</span> trace2 <span class="ansi-yellow-intense-fg ansi-bold">=</span> infer<span class="ansi-yellow-intense-fg ansi-bold">(</span>model2<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">     42</span>
+
+<span class="ansi-green-intense-fg ansi-bold">&lt;ipython-input-26-85c25bf78123&gt;</span> in <span class="ansi-cyan-fg">infer</span><span class="ansi-blue-intense-fg ansi-bold">(model)</span>
+<span class="ansi-green-fg">     32</span>         print<span class="ansi-yellow-intense-fg ansi-bold">(</span>map_<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">     33</span>         hess <span class="ansi-yellow-intense-fg ansi-bold">=</span> mc<span class="ansi-yellow-intense-fg ansi-bold">.</span>find_hessian<span class="ansi-yellow-intense-fg ansi-bold">(</span>map_<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 34</span><span class="ansi-yellow-intense-fg ansi-bold">         </span>step <span class="ansi-yellow-intense-fg ansi-bold">=</span> mc<span class="ansi-yellow-intense-fg ansi-bold">.</span>NUTS<span class="ansi-yellow-intense-fg ansi-bold">(</span>scaling<span class="ansi-yellow-intense-fg ansi-bold">=</span>hess<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">     35</span>         <span class="ansi-red-intense-fg ansi-bold">#step = mc.NUTS()</span>
+<span class="ansi-green-fg">     36</span>         trace <span class="ansi-yellow-intense-fg ansi-bold">=</span> mc<span class="ansi-yellow-intense-fg ansi-bold">.</span>sample<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-cyan-intense-fg ansi-bold">100</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> step<span class="ansi-yellow-intense-fg ansi-bold">=</span>step<span class="ansi-yellow-intense-fg ansi-bold">,</span> progressbar<span class="ansi-yellow-intense-fg ansi-bold">=</span><span class="ansi-green-intense-fg ansi-bold">False</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/working/projects/pymc/pymc3/step_methods/nuts.py</span> in <span class="ansi-cyan-fg">__init__</span><span class="ansi-blue-intense-fg ansi-bold">(self, vars, scaling, step_scale, is_cov, state, Emax, target_accept, gamma, k, t0, model, profile, **kwargs)</span>
+<span class="ansi-green-fg">     95</span>
+<span class="ansi-green-fg">     96</span>         shared <span class="ansi-yellow-intense-fg ansi-bold">=</span> make_shared_replacements<span class="ansi-yellow-intense-fg ansi-bold">(</span>vars<span class="ansi-yellow-intense-fg ansi-bold">,</span> model<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 97</span><span class="ansi-yellow-intense-fg ansi-bold">         </span>self<span class="ansi-yellow-intense-fg ansi-bold">.</span>leapfrog1_dE <span class="ansi-yellow-intense-fg ansi-bold">=</span> leapfrog1_dE<span class="ansi-yellow-intense-fg ansi-bold">(</span>model<span class="ansi-yellow-intense-fg ansi-bold">.</span>logpt<span class="ansi-yellow-intense-fg ansi-bold">,</span> vars<span class="ansi-yellow-intense-fg ansi-bold">,</span> shared<span class="ansi-yellow-intense-fg ansi-bold">,</span> self<span class="ansi-yellow-intense-fg ansi-bold">.</span>potential<span class="ansi-yellow-intense-fg ansi-bold">,</span> profile<span class="ansi-yellow-intense-fg ansi-bold">=</span>profile<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">     98</span>
+<span class="ansi-green-fg">     99</span>         super<span class="ansi-yellow-intense-fg ansi-bold">(</span>NUTS<span class="ansi-yellow-intense-fg ansi-bold">,</span> self<span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">.</span>__init__<span class="ansi-yellow-intense-fg ansi-bold">(</span>vars<span class="ansi-yellow-intense-fg ansi-bold">,</span> shared<span class="ansi-yellow-intense-fg ansi-bold">,</span> <span class="ansi-yellow-intense-fg ansi-bold">**</span>kwargs<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/working/projects/pymc/pymc3/step_methods/nuts.py</span> in <span class="ansi-cyan-fg">leapfrog1_dE</span><span class="ansi-blue-intense-fg ansi-bold">(logp, vars, shared, pot, profile)</span>
+<span class="ansi-green-fg">    200</span>     e<span class="ansi-yellow-intense-fg ansi-bold">.</span>tag<span class="ansi-yellow-intense-fg ansi-bold">.</span>test_value <span class="ansi-yellow-intense-fg ansi-bold">=</span> <span class="ansi-cyan-intense-fg ansi-bold">1</span>
+<span class="ansi-green-fg">    201</span>
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 202</span><span class="ansi-yellow-intense-fg ansi-bold">     </span>q1<span class="ansi-yellow-intense-fg ansi-bold">,</span> p1 <span class="ansi-yellow-intense-fg ansi-bold">=</span> leapfrog<span class="ansi-yellow-intense-fg ansi-bold">(</span>H<span class="ansi-yellow-intense-fg ansi-bold">,</span> q0<span class="ansi-yellow-intense-fg ansi-bold">,</span> p0<span class="ansi-yellow-intense-fg ansi-bold">,</span> <span class="ansi-cyan-intense-fg ansi-bold">1</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> e<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">    203</span>     E <span class="ansi-yellow-intense-fg ansi-bold">=</span> energy<span class="ansi-yellow-intense-fg ansi-bold">(</span>H<span class="ansi-yellow-intense-fg ansi-bold">,</span> q1<span class="ansi-yellow-intense-fg ansi-bold">,</span> p1<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">    204</span>     E0 <span class="ansi-yellow-intense-fg ansi-bold">=</span> energy<span class="ansi-yellow-intense-fg ansi-bold">(</span>H<span class="ansi-yellow-intense-fg ansi-bold">,</span> q0<span class="ansi-yellow-intense-fg ansi-bold">,</span> p0<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/working/projects/pymc/pymc3/step_methods/hmc.py</span> in <span class="ansi-cyan-fg">leapfrog</span><span class="ansi-blue-intense-fg ansi-bold">(H, q, p, n, e)</span>
+<span class="ansi-green-fg">    116</span>     <span class="ansi-green-intense-fg ansi-bold">for</span> i <span class="ansi-green-intense-fg ansi-bold">in</span> range<span class="ansi-yellow-intense-fg ansi-bold">(</span>n<span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-fg">    117</span>         <span class="ansi-red-intense-fg ansi-bold">#alternate full variable and momentum updates</span>
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 118</span><span class="ansi-yellow-intense-fg ansi-bold">         </span>q <span class="ansi-yellow-intense-fg ansi-bold">=</span> q <span class="ansi-yellow-intense-fg ansi-bold">+</span> e <span class="ansi-yellow-intense-fg ansi-bold">*</span> pot<span class="ansi-yellow-intense-fg ansi-bold">.</span>velocity<span class="ansi-yellow-intense-fg ansi-bold">(</span>p<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">    119</span>
+<span class="ansi-green-fg">    120</span>         <span class="ansi-green-intense-fg ansi-bold">if</span> i <span class="ansi-yellow-intense-fg ansi-bold">!=</span> n <span class="ansi-yellow-intense-fg ansi-bold">-</span> <span class="ansi-cyan-intense-fg ansi-bold">1</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/working/projects/pymc/pymc3/step_methods/quadpotential.py</span> in <span class="ansi-cyan-fg">velocity</span><span class="ansi-blue-intense-fg ansi-bold">(self, x)</span>
+<span class="ansi-green-fg">     95</span>
+<span class="ansi-green-fg">     96</span>     <span class="ansi-green-intense-fg ansi-bold">def</span> velocity<span class="ansi-yellow-intense-fg ansi-bold">(</span>self<span class="ansi-yellow-intense-fg ansi-bold">,</span> x<span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 97</span><span class="ansi-yellow-intense-fg ansi-bold">         </span><span class="ansi-green-intense-fg ansi-bold">return</span> cho_solve<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-yellow-intense-fg ansi-bold">(</span>self<span class="ansi-yellow-intense-fg ansi-bold">.</span>L<span class="ansi-yellow-intense-fg ansi-bold">,</span> <span class="ansi-green-intense-fg ansi-bold">True</span><span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">,</span> x<span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">     98</span>
+<span class="ansi-green-fg">     99</span>     <span class="ansi-green-intense-fg ansi-bold">def</span> random<span class="ansi-yellow-intense-fg ansi-bold">(</span>self<span class="ansi-yellow-intense-fg ansi-bold">)</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+
+<span class="ansi-green-intense-fg ansi-bold">/home/wiecki/miniconda3/lib/python3.4/site-packages/scipy/linalg/decomp_cholesky.py</span> in <span class="ansi-cyan-fg">cho_solve</span><span class="ansi-blue-intense-fg ansi-bold">(c_and_lower, b, overwrite_b, check_finite)</span>
+<span class="ansi-green-fg">    169</span>     <span class="ansi-green-intense-fg ansi-bold">if</span> c<span class="ansi-yellow-intense-fg ansi-bold">.</span>ndim <span class="ansi-yellow-intense-fg ansi-bold">!=</span> <span class="ansi-cyan-intense-fg ansi-bold">2</span> <span class="ansi-green-intense-fg ansi-bold">or</span> c<span class="ansi-yellow-intense-fg ansi-bold">.</span>shape<span class="ansi-yellow-intense-fg ansi-bold">[</span><span class="ansi-cyan-intense-fg ansi-bold">0</span><span class="ansi-yellow-intense-fg ansi-bold">]</span> <span class="ansi-yellow-intense-fg ansi-bold">!=</span> c<span class="ansi-yellow-intense-fg ansi-bold">.</span>shape<span class="ansi-yellow-intense-fg ansi-bold">[</span><span class="ansi-cyan-intense-fg ansi-bold">1</span><span class="ansi-yellow-intense-fg ansi-bold">]</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-fg">    170</span>         <span class="ansi-green-intense-fg ansi-bold">raise</span> ValueError<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-blue-intense-fg ansi-bold">&#34;The factored matrix c is not square.&#34;</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 171</span><span class="ansi-yellow-intense-fg ansi-bold">     </span><span class="ansi-green-intense-fg ansi-bold">if</span> c<span class="ansi-yellow-intense-fg ansi-bold">.</span>shape<span class="ansi-yellow-intense-fg ansi-bold">[</span><span class="ansi-cyan-intense-fg ansi-bold">1</span><span class="ansi-yellow-intense-fg ansi-bold">]</span> <span class="ansi-yellow-intense-fg ansi-bold">!=</span> b1<span class="ansi-yellow-intense-fg ansi-bold">.</span>shape<span class="ansi-yellow-intense-fg ansi-bold">[</span><span class="ansi-cyan-intense-fg ansi-bold">0</span><span class="ansi-yellow-intense-fg ansi-bold">]</span><span class="ansi-yellow-intense-fg ansi-bold">:</span>
+<span class="ansi-green-fg">    172</span>         <span class="ansi-green-intense-fg ansi-bold">raise</span> ValueError<span class="ansi-yellow-intense-fg ansi-bold">(</span><span class="ansi-blue-intense-fg ansi-bold">&#34;incompatible dimensions.&#34;</span><span class="ansi-yellow-intense-fg ansi-bold">)</span>
+<span class="ansi-green-fg">    173</span>
+
+<span class="ansi-red-intense-fg ansi-bold">IndexError</span>: tuple index out of range
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1">#3.5, standard deviation 2.3, and median 3.0</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [24]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="c1">#sns.distplot(trace1[&#39;tau&#39;][1000:])</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">trace2</span><span class="p">[</span><span class="s1">&#39;tau&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:])</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">trace3</span><span class="p">[</span><span class="s1">&#39;tau&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[24]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7fad3d851630&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_examples_Untitled4_2_1.png" src="../../_images/pymc3_examples_Untitled4_2_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python2</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">mc</span>
+<span class="kn">import</span> <span class="nn">scipy</span> <span class="kn">as</span> <span class="nn">sci</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">th</span>
+
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">13</span><span class="p">)</span>
+
+<span class="n">n</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">tau_scale</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">tau0</span> <span class="o">=</span> <span class="n">sci</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">expon</span><span class="o">.</span><span class="n">rvs</span><span class="p">()</span> <span class="o">*</span> <span class="n">tau_scale</span>
+<span class="n">mu0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">tau0</span><span class="p">)</span>
+<span class="n">x0</span> <span class="o">=</span> <span class="n">mu0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">mc</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model1</span><span class="p">:</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="n">tau_scale</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="n">tau</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,))</span>
+    <span class="n">mc</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">x0</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">mc</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model2</span><span class="p">:</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;tau&#39;</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="n">tau_scale</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+    <span class="n">mu_z</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_z&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,))</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="n">mu_z</span> <span class="o">/</span> <span class="n">th</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">tau</span><span class="p">))</span>
+    <span class="n">mc</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">x0</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">infer</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+        <span class="n">map_</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sci</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">map_</span><span class="p">)</span>
+        <span class="n">trace</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">map_</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">trace</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">mc</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">11000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">trace</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+<span class="n">trace1</span> <span class="o">=</span> <span class="n">infer</span><span class="p">(</span><span class="n">model1</span><span class="p">)</span>
+<span class="n">trace2</span> <span class="o">=</span> <span class="n">infer</span><span class="p">(</span><span class="n">model2</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">model2</span><span class="p">:</span>
+    <span class="n">trace3</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">100000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">mc</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">(),</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                       <span class="n">start</span><span class="o">=</span><span class="n">mc</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">sci</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">))</span>
+
+<span class="n">samples_tau1</span> <span class="o">=</span> <span class="n">trace1</span><span class="p">[</span><span class="s1">&#39;tau&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:]</span>
+<span class="n">samples_tau2</span> <span class="o">=</span> <span class="n">trace2</span><span class="p">[</span><span class="s1">&#39;tau&#39;</span><span class="p">][</span><span class="mi">1000</span><span class="p">:]</span>
+<span class="n">samples_tau3</span> <span class="o">=</span> <span class="n">trace3</span><span class="p">[</span><span class="s1">&#39;tau&#39;</span><span class="p">][</span><span class="mi">10000</span><span class="p">:]</span>
+
+
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;pymc3 version: &#39;</span> <span class="o">+</span> <span class="n">mc</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Model 1 NUTS tau&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Mean: {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">samples_tau1</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Standard Deviation: {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">samples_tau1</span><span class="o">.</span><span class="n">std</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Median {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">samples_tau1</span><span class="p">,</span> <span class="mi">50</span><span class="p">)))</span>
+<span class="k">print</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Model 2 NUTS tau&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Mean: {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">samples_tau2</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Standard Deviation: {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">samples_tau2</span><span class="o">.</span><span class="n">std</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Median {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">samples_tau2</span><span class="p">,</span> <span class="mi">50</span><span class="p">)))</span>
+<span class="k">print</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Model 2 Metropolis tau&#39;</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Mean: {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">samples_tau3</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Standard Deviation: {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">samples_tau3</span><span class="o">.</span><span class="n">std</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span> <span class="s1">&#39;Median {0:3.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">samples_tau3</span><span class="p">,</span> <span class="mi">50</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+pymc3 version: 3.0
+Model 1 NUTS tau
+Mean: 3.6
+Standard Deviation: 3.0
+Median 2.8
+
+Model 2 NUTS tau
+Mean: 3.4
+Standard Deviation: 0.0
+Median 3.4
+
+Model 2 Metropolis tau
+Mean: 3.5
+Standard Deviation: 2.3
+Median 2.9
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace2</span><span class="p">[</span><span class="mi">1000</span><span class="p">:]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../../_images/pymc3_examples_Untitled4_4_0.png" src="../../_images/pymc3_examples_Untitled4_4_0.png" />
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
