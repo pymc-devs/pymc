@@ -1,0 +1,955 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Bayesian Deep Learning with Variational Inference &mdash; PyMC3 3.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>Bayesian Deep Learning with Variational Inference</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/bayesian_neural_network.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Bayesian-Deep-Learning-with-Variational-Inference">
+<h1>Bayesian Deep Learning with Variational Inference<a class="headerlink" href="#Bayesian-Deep-Learning-with-Variational-Inference" title="Permalink to this headline">¶</a></h1>
+<ol class="loweralpha simple" start="3">
+<li>2016 by Thomas Wiecki</li>
+</ol>
+<div class="section" id="Current-trends-in-Machine-Learning">
+<h2>Current trends in Machine Learning<a class="headerlink" href="#Current-trends-in-Machine-Learning" title="Permalink to this headline">¶</a></h2>
+<p>There are currently three big trends in machine learning:
+<strong>Probabilistic Programming</strong>, <strong>Deep Learning</strong> and &#8220;<strong>Big Data</strong>&#8221;.
+Inside of PP, a lot of innovation is in making things scale using
+<strong>Variational Inference</strong>. In this blog post, I will show how to use
+<strong>Variational Inference</strong> in [PyMC3] to fit a Bayesian Neural Network to
+a toy-data set. Bridging Probabilistic Programming and Deep Learning is
+a very interesting avenue to explore for future research.</p>
+<div class="section" id="Probabilistic-Programming-at-scale">
+<h3>Probabilistic Programming at scale<a class="headerlink" href="#Probabilistic-Programming-at-scale" title="Permalink to this headline">¶</a></h3>
+<p><strong>Probabilistic Programming</strong> allows very flexible creation of custom
+probabilistic models and is mainly concerned with <strong>insight</strong> and
+learning from your data. The approach is inherently <strong>Bayesian</strong> so we
+can specify <strong>priors</strong> to inform and constrain our models and get
+uncertainty estimation in form of a <strong>posterior</strong> distribution. Using
+<a class="reference external" href="http://twiecki.github.io/blog/2015/11/10/mcmc-sampling/">MCMC sampling
+algorithms</a>
+we can draw samples from this posterior to very flexibly estimate these
+models. <a class="reference external" href="http://pymc-devs.github.io/pymc3/">PyMC3</a> and
+<a class="reference external" href="http://mc-stan.org/">Stan</a> are the current state-of-the-art tools to
+consruct and estimate these models. One major drawback of sampling,
+however, is that it&#8217;s often very slow, especially for high-dimensional
+models. That&#8217;s why more recently, <strong>variational inference</strong> algorithms
+have been developed that are almost as flexible as MCMC but much faster.
+Instead of drawing samples from the posterior, these algorithms instead
+fit a distribution (e.g. normal) to the posterior turning a sampling
+problem into and optimization problem.
+<a class="reference external" href="http://arxiv.org/abs/1506.03431">ADVI</a> &#8211; Automatic Differentation
+Variational Inference &#8211; is implemented in [PyMC3] and [Stan], as well
+as a new package called <a class="reference external" href="https://github.com/blei-lab/edward/">Edward</a>
+which is mainly concerned with Variational Inference.</p>
+<p>Unfortunately, when it comes traditional ML problems like classification
+or (non-linear) regression, Probabilistic Programming often plays second
+fiddle (in terms of accuracy and scalability) to more algorithmic
+approaches like ensemble learning (e.g. random forests) and boosting
+(e.g. gradient boosted regression trees).</p>
+</div>
+<div class="section" id="Deep-Learning">
+<h3>Deep Learning<a class="headerlink" href="#Deep-Learning" title="Permalink to this headline">¶</a></h3>
+<p>Now in its third renaissance, deep learning has been making headlines
+almost constantly by dominating almost any object recognition benchmark,
+being amazing at Atari games, and beating the world-champion Lee Sedol
+at Go. From a statistical point, Neural Networks are extremely good
+non-linear function approximators and representation learners. While
+mostly known for classification, its been extended to unsupervised
+learning with <a href="#id1"><span class="problematic" id="id2">`AutoEncoders &lt;&gt;`__</span></a> and in all sorts of other interesting
+ways (e.g. <a class="reference external" href="http://cbonnett.github.io/MDN_EDWARD_KERAS_TF.html">MDNs</a>
+to estimate multimodal distributions). Why do they work so well? No one
+truly knows as the statistical properties are still being worked out.</p>
+<p>A large part of the innoviation in deep learning is the ability to train
+these extremely complex models. This rests on several pillars: * Speed:
+facilitating the GPU allowed for much faster processing. * Software:
+frameworks like [Theano] and
+<a class="reference external" href="https://www.tensorflow.org/">TensorFlow</a> allow flexible creation of
+abstract models that can then be optimized and compiled to CPU or GPU.
+* Learning algorithms: training on sub-sets of the data &#8211; stochastic
+gradient descent &#8211; allows us to train these models on massive amounts
+of data. * Theoretical improvements: like drop-out to avoid overfitting
+and things like convolutional neural nets.</p>
+</div>
+<div class="section" id="Bridging-Deep-Learning-and-Probabilistic-Programming">
+<h3>Bridging Deep Learning and Probabilistic Programming<a class="headerlink" href="#Bridging-Deep-Learning-and-Probabilistic-Programming" title="Permalink to this headline">¶</a></h3>
+<p>On one hand we probabilistic programming which allows us to build rather
+small and focused models in a very principled and well-understood way to
+gain insight into our data; on the other hand we have deep learning
+which uses many heuristics to train huge and highly complex models that
+are amazing at prediction. Recent innovations in variational inference
+allow probabilistic programming to scale model complexity as well as
+data size. We are thus at the cusp of being able to combine these two
+approaches to hopefully unlock new innovations in Machine Learning. For
+more motivation, see also [Dustin Tran]&#8217;s recent <a class="reference external" href="http://dustintran.com/blog/a-quick-update-edward-and-some-motivations/">blog
+post</a>.</p>
+<p>While this would allow Probabilistic Programming to be applied to a much
+wider set of interesting problems, I believe this bridging also holds
+great promise for innovations in Deep Learning. The obvious benefits are
+that we also get uncertainty estimates of our predictions, as I will
+show below. In addition, however, using the probabilistic programming
+framework in deep learning might also open the door to innovations in
+neural networks. Some ideas are: * <strong>Regularization with priors</strong>:
+Weights are often L2-regularized to keep them small, this very naturally
+becomes a normal prior for the weight coefficients. * <strong>Transfer
+learning with informed priors</strong>: If we wanted to train a network on a
+new object recognition data set, we could bootstrap the learning by
+placing informed priors centered around weights retrieved from
+pre-trained networks, like
+<a class="reference external" href="https://arxiv.org/abs/1409.4842">GoogLeNet</a>. * <strong>Hierarchical
+Neural Networks</strong>: A very powerful approach in Probabilistic Programming
+is hierarchical modeling that allows the pooling of things that were
+learned on sub-groups to the overall population. See my tutorial on
+<a class="reference external" href="http://twiecki.github.io/blog/2014/03/17/bayesian-glms-3/">Hierarchical Linear Regression in
+PyMC3</a>.
+Applied to Neural Networks, in hierarchical data sets, we could train
+individual neural nets to specialize on sub-groups while still being
+informed about representations of the overall population. For example,
+imagine a model trained to classify car models from pictures. You could
+train a hierarchical neural network where a single neural network is
+trained to tell apart models from each manufacturer but still share
+information from weights across the individual models. Interestingly,
+different layers of the network could be informed by various levels of
+the hierarchy &#8211; e.g. early layers that extract visual lines could be
+identical to all sub-networks while the higher-order representations
+would be different. The hierarchical model would learn all that from the
+data.</p>
+</div>
+</div>
+<div class="section" id="Bayesian-Neural-Networks-in-PyMC3">
+<h2>Bayesian Neural Networks in PyMC3<a class="headerlink" href="#Bayesian-Neural-Networks-in-PyMC3" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Generating-data">
+<h3>Generating data<a class="headerlink" href="#Generating-data" title="Permalink to this headline">¶</a></h3>
+<p>First, lets generate some toy data. It is a simple binary classification
+problem that&#8217;s not linearly separable.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [78]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
+<span class="kn">import</span> <span class="nn">theano</span>
+<span class="kn">import</span> <span class="nn">sklearn</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set_style</span><span class="p">(</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">datasets</span>
+<span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">scale</span>
+<span class="kn">from</span> <span class="nn">sklearn.cross_validation</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">make_moons</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [79]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">make_moons</span><span class="p">(</span><span class="n">noise</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">scale</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">,</span> <span class="n">Y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=.</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [84]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Class 0&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X</span><span class="p">[</span><span class="n">Y</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Class 1&#39;</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">();</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;X&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Y&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Toy binary classification data set&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_bayesian_neural_network_6_0.png" src="../_images/notebooks_bayesian_neural_network_6_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Model-specification">
+<h3>Model specification<a class="headerlink" href="#Model-specification" title="Permalink to this headline">¶</a></h3>
+<p>A neural network is quite simple. The basic unit is a
+<a class="reference external" href="https://en.wikipedia.org/wiki/Perceptron">perceptron</a> which is
+nothing more than <a class="reference external" href="http://pymc-devs.github.io/pymc3/notebooks/posterior_predictive.html#Prediction">logistic
+regression</a>.
+We use many of these in parallel and then stack them up to get hidden
+layers. Here we will use 2 hidden layers with 5 neurons each which is
+sufficient for such a simple problem.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [56]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Turn inputs and outputs into shared variables so that we can change them later</span>
+<span class="n">ann_input</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">X_train</span><span class="p">)</span>
+<span class="n">ann_output</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">Y_train</span><span class="p">)</span>
+
+<span class="n">n_hidden</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="c1"># Initialize random weights between each layer</span>
+<span class="n">init_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">n_hidden</span><span class="p">)</span>
+<span class="n">init_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_hidden</span><span class="p">,</span> <span class="n">n_hidden</span><span class="p">)</span>
+<span class="n">init_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_hidden</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">neural_network</span><span class="p">:</span>
+    <span class="c1"># Weights from input to hidden layer</span>
+    <span class="n">weights_in_1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;w_in_1&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                             <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">n_hidden</span><span class="p">),</span>
+                             <span class="n">testval</span><span class="o">=</span><span class="n">init_1</span><span class="p">)</span>
+
+    <span class="c1"># Weights from 1st to 2nd layer</span>
+    <span class="n">weights_1_2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;w_1_2&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_hidden</span><span class="p">,</span> <span class="n">n_hidden</span><span class="p">),</span>
+                            <span class="n">testval</span><span class="o">=</span><span class="n">init_2</span><span class="p">)</span>
+
+    <span class="c1"># Weights from hidden layer to output</span>
+    <span class="n">weights_2_out</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;w_2_out&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                              <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_hidden</span><span class="p">,),</span>
+                              <span class="n">testval</span><span class="o">=</span><span class="n">init_out</span><span class="p">)</span>
+
+    <span class="c1"># Build neural-network using tanh activation function</span>
+    <span class="n">act_1</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">ann_input</span><span class="p">,</span> <span class="n">weights_in_1</span><span class="p">))</span>
+    <span class="n">act_2</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">act_1</span><span class="p">,</span> <span class="n">weights_1_2</span><span class="p">))</span>
+    <span class="n">act_out</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">nnet</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">act_2</span><span class="p">,</span> <span class="n">weights_2_out</span><span class="p">))</span>
+
+    <span class="c1"># Binary classification -&gt; Bernoulli likelihood</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Bernoulli</span><span class="p">(</span><span class="s1">&#39;out&#39;</span><span class="p">,</span>
+                       <span class="n">act_out</span><span class="p">,</span>
+                       <span class="n">observed</span><span class="o">=</span><span class="n">ann_output</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Vartional-Inference:-Scaling-model-complexity">
+<h3>Vartional Inference: Scaling model complexity<a class="headerlink" href="#Vartional-Inference:-Scaling-model-complexity" title="Permalink to this headline">¶</a></h3>
+<p>We could now just run an MCMC sampler like
+<code class="docutils literal"><span class="pre">`NUTS</span></code> &lt;<a class="reference external" href="http://pymc-devs.github.io/pymc3/api.html#nuts">http://pymc-devs.github.io/pymc3/api.html#nuts</a>&gt;`__ which
+works pretty well in this case but as I already mentioned, this will
+become very slow as we scale model up to deeper architectures with more
+layers.</p>
+<p>Instead, we will use the brand-new
+<a class="reference external" href="http://pymc-devs.github.io/pymc3/api.html#advi">ADVI</a> which was
+recently added to <code class="docutils literal"><span class="pre">PyMC3</span></code>. This is much faster and will scale better.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [68]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">neural_network</span><span class="p">:</span>
+    <span class="c1"># Run ADVI which returns posterior means, standard deviations, and the evidence lower bound (ELBO)</span>
+    <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">50000</span><span class="p">)</span>
+    <span class="c1"># As samples are more convenient to work with, we can very quickly draw samples from the variational posterior.</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">sample_vp</span><span class="p">(</span><span class="n">v_params</span><span class="p">,</span> <span class="n">draws</span><span class="o">=</span><span class="mi">50000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Iteration 0 [0%]: ELBO = -265.25
+Iteration 5000 [10%]: ELBO = -246.92
+Iteration 10000 [20%]: ELBO = -227.64
+Iteration 15000 [30%]: ELBO = -227.61
+Iteration 20000 [40%]: ELBO = -173.4
+Iteration 25000 [50%]: ELBO = -147.61
+Iteration 30000 [60%]: ELBO = -155.04
+Iteration 35000 [70%]: ELBO = -116.6
+Iteration 40000 [80%]: ELBO = -128.69
+Iteration 45000 [90%]: ELBO = -117.97
+Finished [100%]: ELBO = -127.34
+</pre></div></div>
+</div>
+<p>Plotting the objective function (ELBO) we can see that the optimization
+slowly improves the fit over time.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [69]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">v_params</span><span class="o">.</span><span class="n">elbo_vals</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;ELBO&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;iteration&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[69]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.text.Text at 0x7f80f2d4a860&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_bayesian_neural_network_12_1.png" src="../_images/notebooks_bayesian_neural_network_12_1.png" />
+</div>
+</div>
+<p>Now that we trained our model, lets predict on the hold-out set. We use
+<code class="docutils literal"><span class="pre">`sample_ppc()</span></code> &lt;&gt;`__.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [70]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Replace shared variables with testing set</span>
+<span class="n">ann_input</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+<span class="n">ann_output</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">Y_test</span><span class="p">)</span>
+
+<span class="c1"># Creater posterior predictive samples</span>
+<span class="n">ppc</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample_ppc</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">neural_network</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+
+<span class="n">pred</span> <span class="o">=</span> <span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;out&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [71]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X_test</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X_test</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X_test</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X_test</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Predicted labels in testing set&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[71]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.text.Text at 0x7f80f2cfff60&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_bayesian_neural_network_15_1.png" src="../_images/notebooks_bayesian_neural_network_15_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [72]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">print</span><span class="p">(</span><span class="s1">&#39;Accuracy = {}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">((</span><span class="n">Y_test</span> <span class="o">==</span> <span class="n">pred</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Accuracy = 95.0%
+</pre></div></div>
+</div>
+</div>
+</div>
+<div class="section" id="Lets-look-at-what-the-classifier-has-learned">
+<h2>Lets look at what the classifier has learned<a class="headerlink" href="#Lets-look-at-what-the-classifier-has-learned" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [73]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:</span><span class="mi">3</span><span class="p">:</span><span class="mi">100j</span><span class="p">,</span><span class="o">-</span><span class="mi">3</span><span class="p">:</span><span class="mi">3</span><span class="p">:</span><span class="mi">100j</span><span class="p">]</span>
+<span class="n">grid_2d</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+<span class="n">dummy_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [74]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">ann_input</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">grid_2d</span><span class="p">)</span>
+<span class="n">ann_output</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">dummy_out</span><span class="p">)</span>
+
+<span class="c1"># Creater posterior predictive samples</span>
+<span class="n">ppc</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample_ppc</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">neural_network</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="Probability-of-label-==-1">
+<h3>Probability of label == 1<a class="headerlink" href="#Probability-of-label-==-1" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [75]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">cmap</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">diverging_palette</span><span class="p">(</span><span class="mi">250</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">85</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">as_cmap</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+<span class="n">contour</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="o">*</span><span class="n">grid</span><span class="p">,</span> <span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;out&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X_test</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X_test</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X_test</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X_test</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+<span class="n">cbar</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">contour</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">));</span>
+<span class="n">cbar</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Posterior predictive mean probability of class label = 1&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[75]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.text.Text at 0x7f80f2bd75f8&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_bayesian_neural_network_21_1.png" src="../_images/notebooks_bayesian_neural_network_21_1.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Uncertainty-in-predicted-value">
+<h3>Uncertainty in predicted value<a class="headerlink" href="#Uncertainty-in-predicted-value" title="Permalink to this headline">¶</a></h3>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [76]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">cmap</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">cubehelix_palette</span><span class="p">(</span><span class="n">light</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">as_cmap</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+<span class="n">contour</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="o">*</span><span class="n">grid</span><span class="p">,</span> <span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;out&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X_test</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X_test</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X_test</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">X_test</span><span class="p">[</span><span class="n">pred</span><span class="o">==</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+<span class="n">cbar</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">contour</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">));</span>
+<span class="n">cbar</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Uncertainty (posterior predictive standard deviation)&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[76]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.text.Text at 0x7f80f2acaa58&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_bayesian_neural_network_23_1.png" src="../_images/notebooks_bayesian_neural_network_23_1.png" />
+</div>
+</div>
+<p>This is really neat &#8211; because we&#8217;re in a Bayesian framework we get
+uncertainty in our predictions. You can see that very close to the
+decision boundary, our uncertainty as to which label to predict is
+highest.</p>
+</div>
+</div>
+<div class="section" id="Mini-batch-ADVI-for-Big-Data:-Scaling-data-size">
+<h2>Mini-batch ADVI for Big Data: Scaling data size<a class="headerlink" href="#Mini-batch-ADVI-for-Big-Data:-Scaling-data-size" title="Permalink to this headline">¶</a></h2>
+<p>Contributed to PyMC3 by Taku Yoshioka.</p>
+<p>Define mini-batches and how to set them</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [40]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">minibatch_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">ann_input</span><span class="p">,</span> <span class="n">ann_output</span><span class="p">]</span>
+<span class="n">minibatch_RVs</span> <span class="o">=</span> <span class="p">[</span><span class="n">out</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">ixs</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="n">data</span><span class="p">[</span><span class="n">ixs</span><span class="p">]</span>
+
+<span class="n">minibatches</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">create_minibatch</span><span class="p">(</span><span class="n">X_train</span><span class="p">),</span>
+    <span class="n">create_minibatch</span><span class="p">(</span><span class="n">Y_train</span><span class="p">),</span>
+<span class="p">]</span>
+
+<span class="n">total_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Y_train</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [43]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">neural_network</span><span class="p">:</span>
+    <span class="c1"># Run advi_minibatch</span>
+    <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi_minibatch</span><span class="p">(</span>
+        <span class="n">n</span><span class="o">=</span><span class="mi">40000</span><span class="p">,</span> <span class="n">minibatch_tensors</span><span class="o">=</span><span class="n">minibatch_tensors</span><span class="p">,</span>
+        <span class="n">minibatch_RVs</span><span class="o">=</span><span class="n">minibatch_RVs</span><span class="p">,</span> <span class="n">minibatches</span><span class="o">=</span><span class="n">minibatches</span><span class="p">,</span>
+        <span class="n">total_size</span><span class="o">=</span><span class="n">total_size</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0</span>
+    <span class="p">)</span>
+
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">sample_vp</span><span class="p">(</span><span class="n">v_params</span><span class="p">,</span> <span class="n">draws</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Iteration 0 [0%]: ELBO = -537.07
+Iteration 4000 [10%]: ELBO = -102.12
+Iteration 8000 [20%]: ELBO = -122.95
+Iteration 12000 [30%]: ELBO = -135.84
+Iteration 16000 [40%]: ELBO = -105.18
+Iteration 20000 [50%]: ELBO = -81.61
+Iteration 24000 [60%]: ELBO = -90.2
+Iteration 28000 [70%]: ELBO = -124.09
+Iteration 32000 [80%]: ELBO = -154.55
+Iteration 36000 [90%]: ELBO = -93.45
+Finished [100%]: ELBO = -90.84
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [42]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">v_params</span><span class="o">.</span><span class="n">elbo_vals</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;ELBO&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;iteration&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[42]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.text.Text at 0x7f80c8e31b00&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_bayesian_neural_network_29_1.png" src="../_images/notebooks_bayesian_neural_network_29_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [77]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_bayesian_neural_network_30_0.png" src="../_images/notebooks_bayesian_neural_network_30_0.png" />
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
