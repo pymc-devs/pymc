@@ -5,4 +5,4 @@ Getting started
 ***************
 
 .. toctree::
-   notebooks/getting_started.ipynb
+   ../../pymc3/examples/notebooks/getting_started.ipynb
