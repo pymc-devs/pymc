@@ -62,6 +62,11 @@ class TransformedDistribution(Distribution):
             v.shape.tag.test_value, v.dtype,
             testval, dist.defaults, *args, **kwargs)
 
+        if transform.name == 'stickbreaking':
+            b = np.hstack(((np.atleast_1d(self.shape) == 1)[:-1], False))
+            self.type = tt.TensorType(v.dtype, b) # force the last dim not broadcastable
+
+
     def logp(self, x):
         return (self.dist.logp(self.transform_used.backward(x)) +
                 self.transform_used.jacobian_det(x))
