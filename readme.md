@@ -87,6 +87,7 @@ Salvatier J, Wiecki TV, Fonnesbeck C. (2016) Probabilistic programming in Python
 
 ## Conference papers on PyMC3
 Peadar Coyle wrote a peer-reviewed paper for the European Scientific Python Conference held in the Summer of 2015 in Cambridge, UK. 
+```
 @ARTICLE{2016arXiv160700379C,
    author = {{Coyle}, P.},
     title = "{Probabilistic Programming and PyMC3}",
@@ -100,7 +101,7 @@ archivePrefix = "arXiv",
    adsurl = {http://adsabs.harvard.edu/abs/2016arXiv160700379C},
   adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 }
-
+```
 ## License
 [Apache License, Version 2.0](https://github.com/pymc-devs/pymc3/blob/master/LICENSE)
 
