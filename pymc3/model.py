@@ -610,7 +610,7 @@ theano.config.compute_test_value = 'raise'
 
 # Replace theano as_op decorator with something friendly
 
-if sys.version_info < [3]:
+if sys.version_info < (3,2,0):
     def deterministic(f=None, **kwds):
         itypes = kwds.get('itypes')
         otypes = kwds.get('otypes') or [t.dvector]
