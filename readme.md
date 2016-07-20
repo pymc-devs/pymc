@@ -85,6 +85,22 @@ The best places to ask general questions about PyMC3 is on [StackOverflow](http:
 
 Salvatier J, Wiecki TV, Fonnesbeck C. (2016) Probabilistic programming in Python using PyMC3. PeerJ Computer Science 2:e55 https://doi.org/10.7717/peerj-cs.55
 
+## Conference papers on PyMC3
+Peadar Coyle wrote a peer-reviewed paper for the European Scientific Python Conference held in the Summer of 2015 in Cambridge, UK. 
+@ARTICLE{2016arXiv160700379C,
+   author = {{Coyle}, P.},
+    title = "{Probabilistic Programming and PyMC3}",
+  journal = {ArXiv e-prints},
+archivePrefix = "arXiv",
+   eprint = {1607.00379},
+ primaryClass = "cs.OH",
+ keywords = {Computer Science - Other Computer Science},
+     year = 2016,
+    month = jul,
+   adsurl = {http://adsabs.harvard.edu/abs/2016arXiv160700379C},
+  adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+
 ## License
 [Apache License, Version 2.0](https://github.com/pymc-devs/pymc3/blob/master/LICENSE)
 
