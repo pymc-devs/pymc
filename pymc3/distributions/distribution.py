@@ -1,5 +1,6 @@
 import numpy as np
 import theano.tensor as tt
+import theano
 from theano import function
 
 from ..memoize import memoize
@@ -78,20 +79,20 @@ def TensorType(dtype, shape):
     return tt.TensorType(str(dtype), np.atleast_1d(shape) == 1)
 
 class NoDistribution(Distribution):
-    
+
     def __init__(self, shape, dtype, testval=None, defaults=[], transform=None, parent_dist=None, *args, **kwargs):
-        super(NoDistribution, self).__init__(shape=shape, dtype=dtype, 
-                                            testval=testval, defaults=defaults, 
+        super(NoDistribution, self).__init__(shape=shape, dtype=dtype,
+                                            testval=testval, defaults=defaults,
                                             *args, **kwargs)
         self.parent_dist = parent_dist
-    
+
 
     def __getattr__(self, name):
         try:
             self.__dict__[name]
         except KeyError:
             return getattr(self.parent_dist, name)
-    
+
     def logp(self, x):
         return 0
 
@@ -102,12 +103,12 @@ class Discrete(Distribution):
 
 class Continuous(Distribution):
     """Base class for continuous distributions"""
-    def __init__(self, shape=(), dtype='float64', defaults=['median', 'mean', 'mode'], *args, **kwargs):
+    def __init__(self, shape=(), dtype=theano.config.floatX, defaults=['median', 'mean', 'mode'], *args, **kwargs):
         super(Continuous, self).__init__(shape, dtype, defaults=defaults, *args, **kwargs)
 
 class DensityDist(Distribution):
     """Distribution based on a given log density function."""
-    def __init__(self, logp, shape=(), dtype='float64',testval=0, *args, **kwargs):
+    def __init__(self, logp, shape=(), dtype=theano.config.floatX,testval=0, *args, **kwargs):
         super(DensityDist, self).__init__(shape, dtype, testval, *args, **kwargs)
         self.logp = logp
 
