@@ -62,6 +62,11 @@ class TransformedDistribution(Distribution):
             v.shape.tag.test_value, v.dtype,
             testval, dist.defaults, *args, **kwargs)
 
+        if transform.name == 'stickbreaking':
+            b = np.hstack(((np.atleast_1d(self.shape) == 1)[:-1], False))
+            self.type = tt.TensorType(v.dtype, b) # force the last dim not broadcastable
+
+
     def logp(self, x):
         return (self.dist.logp(self.transform_used.backward(x)) +
                 self.transform_used.jacobian_det(x))
@@ -177,46 +182,46 @@ class SumTo1(Transform):
 
 sum_to_1 = SumTo1()
 
-
 class StickBreaking(Transform):
     """Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of real values.
-
     Primarily borrowed from the STAN implementation.
     """
 
     name = "stickbreaking"
 
-    def forward(self, x):
+    def forward(self, x_):
+        x = x_.T
         # reverse cumsum
         x0 = x[:-1]
         s = tt.extra_ops.cumsum(x0[::-1], 0)[::-1] + x[-1]
         z = x0/s
         Km1 = x.shape[0] - 1
         k = tt.arange(Km1)[(slice(None), ) + (None, ) * (x.ndim - 1)]
-        eq_share = - tt.log(Km1 - k)   # logit(1./(Km1 + 1 - k))
+        eq_share = logit(1./(Km1 + 1 - k)) # - tt.log(Km1 - k)
         y = logit(z) - eq_share
-        return y
+        return y.T
 
-    def backward(self, y):
+    def backward(self, y_):
+        y = y_.T
         Km1 = y.shape[0]
         k = tt.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
-        eq_share = - tt.log(Km1 - k)   # logit(1./(Km1 + 1 - k))
+        eq_share = logit(1./(Km1 + 1 - k)) #- tt.log(Km1 - k)
         z = inverse_logit(y + eq_share)
         yl = tt.concatenate([z, tt.ones(y[:1].shape)])
         yu = tt.concatenate([tt.ones(y[:1].shape), 1-z])
         S = tt.extra_ops.cumprod(yu, 0)
         x = S * yl
-        return x
+        return x.T
 
-    def jacobian_det(self, y):
+    def jacobian_det(self, y_):
+        y = y_.T
         Km1 = y.shape[0]
         k = tt.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
-        eq_share = -tt.log(Km1 - k)  # logit(1./(Km1 + 1 - k))
+        eq_share = logit(1./(Km1 + 1 - k)) # -tt.log(Km1 - k)
         yl = y + eq_share
         yu = tt.concatenate([tt.ones(y[:1].shape), 1-inverse_logit(yl)])
         S = tt.extra_ops.cumprod(yu, 0)
-        return tt.sum(tt.log(S[:-1]) - tt.log1p(tt.exp(yl)) - tt.log1p(tt.exp(-yl)),
-                     0)
+        return tt.sum(tt.log(S[:-1]) - tt.log1p(tt.exp(yl)) - tt.log1p(tt.exp(-yl)), 0).T
 
 stick_breaking = StickBreaking()
 
@@ -229,7 +234,7 @@ class Circular(ElemwiseTransform):
     def backward(self, y):
         return tt.arctan2(tt.sin(y), tt.cos(y))
 
-    def forward(self, x): 
+    def forward(self, x):
         return x
 
 circular = Circular()

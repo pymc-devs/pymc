@@ -80,9 +80,9 @@ class MvStudentT(Continuous):
     Multivariate Student T log-likelihood.
 
     .. math::
-    
+
     f(\mathbf{x}| \nu,\mu,\Sigma) = \frac{\Gamma\left[(\nu+p)/2\right]}{\Gamma(\nu/2)\nu^{p/2}\pi^{p/2}\left|{\Sigma}\right|^{1/2}\left[1+\frac{1}{\nu}({\mathbf x}-{\mu})^T{\Sigma}^{-1}({\mathbf x}-{\mu})\right]^{(\nu+p)/2}}
-    
+
     ========  ==========================
     Support   :math:`x \in \mathbb{R}^k`
     Mean      :math:`\mu` if :math:`\nu > 1`  else undefined
@@ -103,37 +103,35 @@ class MvStudentT(Continuous):
         self.nu = nu
         self.mu = np.zeros(Sigma.shape[0]) if mu is None else mu
         self.Sigma = Sigma
-        
+
         self.mean = self.median = self.mode = self.mu = mu
-        
+
     def random(self, point=None, size=None):
         chi2 = np.random.chisquare
         mvn = np.random.multivariate_normal
-        
+
         nu, S, mu = draw_values([self.nu, self.Sigma, self.mu], point=point)
-        
+
         return (np.sqrt(nu) * (mvn(np.zeros(len(S)), S, size).T
                                            / chi2(nu, size))).T + mu
-        
-    def logp(self, value): 
-        
+
+    def logp(self, value):
+
         S = self.Sigma
         nu = self.nu
         mu = self.mu
 
         d = S.shape[0]
         n = value.shape[0]
-        
+
         X = value - mu
-    
+
         Q = X.dot(matrix_inverse(S)).dot(X.T).sum()
         log_det = tt.log(det(S))
         log_pdf = gammaln((nu + d)/2.) - 0.5 * (d*tt.log(np.pi*nu) + log_det) - gammaln(nu/2.)
         log_pdf -= 0.5*(nu + d)*tt.log(1 + Q/nu)
-    
+
         return log_pdf
-    
-        
 
 
 class Dirichlet(Continuous):
@@ -167,7 +165,7 @@ class Dirichlet(Continuous):
     """
     def __init__(self, a, transform=transforms.stick_breaking,
                  *args, **kwargs):
-        shape = a.shape[0]
+        shape = a.shape[-1]
         kwargs.setdefault("shape", shape)
         super(Dirichlet, self).__init__(transform=transform, *args, **kwargs)
 
@@ -195,8 +193,8 @@ class Dirichlet(Continuous):
         a = self.a
 
         # only defined for sum(value) == 1
-        return bound(tt.sum(logpow(value, a - 1) - gammaln(a), axis=0)
-                     + gammaln(tt.sum(a, axis=0)),
+        return bound(tt.sum(logpow(value, a - 1) - gammaln(a), axis=-1)
+                     + gammaln(tt.sum(a, axis=-1)),
                      tt.all(value >= 0), tt.all(value <= 1),
                      k > 1, tt.all(a > 0))
 
