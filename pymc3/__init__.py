@@ -9,6 +9,7 @@ from .interactive_sampling import *
 from .step_methods import *
 from .tuning import *
 from .variational import *
+import sampling
 
 from .debug import *
 
