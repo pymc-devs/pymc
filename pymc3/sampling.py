@@ -232,6 +232,19 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     except TypeError:
         pass
 
+    if isinstance(step, CompoundStep):
+        for i in step.methods:
+            if isinstance(i, Metropolis):
+                i.draws = draws
+            # compound step within compound step
+            elif isinstance(i, CompoundStep):
+                for j in i.methods:
+                    if isinstance(j, Metropolis):
+                        j.draws = draws
+    else:
+        if isinstance(step, Metropolis):
+            step.draws = draws
+
     point = Point(start, model=model)
 
     strace.setup(draws, chain)
