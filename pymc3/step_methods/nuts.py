@@ -1,6 +1,7 @@
 from .quadpotential import quad_potential
 from .arraystep import ArrayStepShared, ArrayStep, SamplerHist
 from ..model import modelcontext, Point
+from ..vartypes import continuous_types
 from numpy import exp, log, array
 from numpy.random import uniform
 from .hmc import leapfrog, Hamiltonian, bern, energy

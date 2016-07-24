@@ -14,7 +14,7 @@ from ..blocking import DictToArrayBijection
 from ..backends import Text
 from ..backends.base import MultiTrace
 from ..progressbar import progress_bar
-from .. import sampling
+from pymc3 import sampling
 
 import os
 import theano
