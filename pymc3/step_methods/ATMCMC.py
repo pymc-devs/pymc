@@ -14,7 +14,7 @@ from ..blocking import DictToArrayBijection
 from ..backends import Text
 from ..backends.base import MultiTrace
 from ..progressbar import progress_bar
-from pymc3 import sampling
+from ..sampling import _choose_backend
 
 import os
 import theano
@@ -491,7 +491,7 @@ def _iter_initial(step, chain=0, trace=None, model=None):
     _iter_sample, just different input to loop over.
     """
 
-    strace = sampling._choose_backend(trace, chain, model=model)
+    strace = _choose_backend(trace, chain, model=model)
     # check if trace file already exists before setup
     filename = os.path.join(strace.name, 'chain-{}.csv'.format(chain))
     if os.path.exists(filename):

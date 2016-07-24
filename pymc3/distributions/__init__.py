@@ -54,6 +54,12 @@ from .timeseries import AR1
 from .timeseries import GaussianRandomWalk
 from .timeseries import GARCH11
 
+from .transforms import transform
+from .transforms import stick_breaking
+from .transforms import logodds
+from .transforms import log
+from .transforms import sum_to_1
+
 __all__ = ['Uniform',
     'Flat',
     'Normal',

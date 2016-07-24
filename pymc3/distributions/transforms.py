@@ -6,7 +6,7 @@ from .distribution import Distribution
 from ..math import logit
 import numpy as np
 
-__all__ = ['transform', 'stick_breaking', 'logodds', 'log']
+__all__ = ['transform', 'stick_breaking', 'logodds', 'log', 'sum_to_1']
 
 
 class Transform(object):
