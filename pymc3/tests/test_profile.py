@@ -1,6 +1,5 @@
 import pymc3 as pm
-from .models import *
-from .checks import *
+from .models import simple_model
 
 
 def test_profile_model():

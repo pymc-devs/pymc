@@ -1,6 +1,6 @@
 import pymc3 as pm
 import numpy as np
-from pymc3.step_methods import ATMCMC as atmcmc
+from ..step_methods import ATMCMC, ATMIP_sample
 import theano.tensor as tt
 from matplotlib import pylab as plt
 
@@ -28,7 +28,7 @@ w2 = (1 - stdev)
 def two_gaussians(x):
     log_like1 = - 0.5 * n * tt.log(2 * np.pi) \
                 - 0.5 * tt.log(dsigma) \
-                - 0.5 * (x - mu1).tt.dot(isigma).dot(x - mu1)
+                - 0.5 * (x - mu1).T.dot(isigma).dot(x - mu1)
     log_like2 = - 0.5 * n * tt.log(2 * np.pi) \
                 - 0.5 * tt.log(dsigma) \
                 - 0.5 * (x - mu2).T.dot(isigma).dot(x - mu2)
@@ -45,10 +45,10 @@ with pm.Model() as ATMIP_test:
     llk = pm.Potential('like', like)
 
 with ATMIP_test:
-    step = atmcmc.ATMCMC(n_chains=n_chains, tune_interval=tune_interval,
+    step = ATMCMC(n_chains=n_chains, tune_interval=tune_interval,
                          likelihood_name=ATMIP_test.deterministics[0].name)
 
-trcs = atmcmc.ATMIP_sample(
+trcs = ATMIP_sample(
                         n_steps=n_steps,
                         step=step,
                         njobs=njobs,

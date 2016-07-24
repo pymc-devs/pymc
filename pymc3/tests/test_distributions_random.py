@@ -2,20 +2,23 @@
 from __future__ import division
 import unittest
 
-from .checks import *
-from .knownfailure import *
+from .knownfailure import knownfailure
 from nose import SkipTest
 from nose.plugins.attrib import attr
 
-from pymc3.tests.test_distributions import (build_model,
+from ..tests.test_distributions import (build_model,
     Domain, product, R, Rplus, Rplusbig, Unit, Nat, NatSmall,
     I, Simplex, Vector, PdMatrix)
 
-from pymc3.distributions.continuous import *
-from pymc3.distributions.discrete import *
-from pymc3.distributions.multivariate import *
-from pymc3.distributions.distribution import draw_values
-from pymc3 import Model, Point
+from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
+                            MvStudentT, MvNormal, ZeroInflatedPoisson, ConstantDist,
+                            Poisson, Bernoulli, Beta, BetaBinomial, StudentTpos, 
+                            StudentT, Weibull, Pareto, InverseGamma, Gamma, Cauchy,
+                            HalfCauchy, Lognormal, Laplace, NegativeBinomial, Geometric,
+                            Exponential, ExGaussian, Normal, Flat, LKJCorr, Wald, 
+                            ChiSquared, HalfNormal, DiscreteUniform, Bound, Uniform,
+                            Binomial, draw_values)
+from ..model import Model, Point, Potential
 
 import numpy as np
 import scipy.stats as st

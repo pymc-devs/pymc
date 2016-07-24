@@ -1,4 +1,4 @@
-from .checks import *
+from .checks import close_to
 from numpy import inf
 from pymc3.tuning import starting
 from pymc3 import find_MAP, Point, Model

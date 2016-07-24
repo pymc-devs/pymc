@@ -4,7 +4,7 @@ import theano
 import theano.tensor as tt
 from .test_distributions import Simplex, Rplusbig, Rminusbig, Unit, R, Vector, MultiSimplex
 
-from .checks import *
+from .checks import close_to
 from ..theanof import jacobian
 
 tol = 1e-7

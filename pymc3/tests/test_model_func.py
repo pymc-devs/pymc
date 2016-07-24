@@ -1,6 +1,6 @@
 import pymc3 as pm
-from .models import *
-from .checks import *
+from .models import simple_model
+from .checks import close_to
 
 
 def test_lop():

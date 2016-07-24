@@ -6,7 +6,8 @@ from __future__ import division
 '''
 import numpy as np
 from numpy import exp, log, sqrt
-from ..core import *
+from ..model import modelcontext, Point
+from ..theanof import hessian_diag
 
 __all__ = ['approx_hessian', 'find_hessian', 'trace_cov', 'guess_scaling']
 

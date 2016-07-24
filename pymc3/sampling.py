@@ -3,11 +3,12 @@ from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from joblib import Parallel, delayed
 from time import time
-from .core import *
-from .step_methods import *
+from .model import modelcontext, Point
+from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
+                         BinaryGibbsMetropolis, Slice, ElemwiseCategorical, CompoundStep)
 from .progressbar import progress_bar
 from numpy.random import randint, seed
-from numpy import shape
+from numpy import shape, append, asarray
 from collections import defaultdict
 
 import sys
@@ -48,7 +49,7 @@ def assign_step_methods(model, step=None,
     steps = []
     assigned_vars = set()
     if step is not None:
-        steps = np.append(steps, step).tolist()
+        steps = append(steps, step).tolist()
         for s in steps:
             try:
                 assigned_vars = assigned_vars | set(s.vars)
@@ -346,4 +347,4 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None):
             ppc[var.name].append(var.distribution.random(point=param,
                                                          size=size))
 
-    return {k: np.asarray(v) for k, v in ppc.items()}
+    return {k: asarray(v) for k, v in ppc.items()}

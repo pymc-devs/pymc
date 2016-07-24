@@ -5,7 +5,16 @@ Created on March, 2016
 '''
 
 import numpy as np
-import pymc3 as pm
+from .arraystep import ArrayStep, ArrayStepShared
+from ..model import modelcontext, Point
+from ..theanof import inputvars
+from ..vartypes import discrete_types
+from ..step_methods import metropolis
+from ..blocking import DictToArrayBijection
+from ..backends import Text
+from ..backends.base import MultiTrace
+from ..progressbar import progress_bar
+from .. import sampling
 
 import os
 import theano
@@ -19,7 +28,7 @@ from joblib import Parallel, delayed
 __all__ = ['ATMCMC', 'ATMIP_sample']
 
 
-class ATMCMC(pm.arraystep.ArrayStepShared):
+class ATMCMC(ArrayStepShared):
     """
     Adaptive Transitional Markov-Chain Monte-Carlo
     following: Ching & Chen 2007: Transitional Markov chain Monte Carlo method
@@ -67,11 +76,11 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
                  likelihood_name='like', proposal_dist=MvNPd,
                  coef_variation=1., **kwargs):
 
-        model = pm.modelcontext(model)
+        model = modelcontext(model)
 
         if vars is None:
             vars = model.vars
-        vars = pm.inputvars(vars)
+        vars = inputvars(vars)
 
         if covariance is None:
             self.covariance = np.eye(sum(v.dsize for v in vars))
@@ -94,7 +103,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
         self.likelihoods = []
         self.likelihood_name = likelihood_name
         self.discrete = np.concatenate(
-            [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in vars])
+            [[v.dtype in discrete_types] * (v.dsize or 1) for v in vars])
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
 
@@ -102,14 +111,14 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
         self.population = []
         self.array_population = np.zeros(n_chains)
         for i in range(self.n_chains):
-            dummy = pm.Point({v.name: v.random() for v in vars},
+            dummy = Point({v.name: v.random() for v in vars},
                                                             model=model)
             self.population.append(dummy)
 
         shared = make_shared_replacements(vars, model)
         self.logp_forw = logp_forw(model.logpt, vars, shared)
         self.check_bnd = logp_forw(model.varlogpt, vars, shared)
-        self.delta_logp = pm.metropolis.delta_logp(model.logpt, vars, shared)
+        self.delta_logp = metropolis.delta_logp(model.logpt, vars, shared)
 
         super(ATMCMC, self).__init__(vars, shared)
 
@@ -148,14 +157,14 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
             if self.check_bnd:
                 varlogp = self.check_bnd(q)
                 if np.isfinite(varlogp):
-                    q_new = pm.metropolis.metrop_select(
+                    q_new = metropolis.metrop_select(
                                     self.beta * self.delta_logp(q, q0), q, q0)
                     if q_new is q:
                         self.accepted += 1
                 else:
                     q_new = q0
             else:
-                q_new = pm.metropolis.metrop_select(
+                q_new = metropolis.metrop_select(
                                 self.beta * self.delta_logp(q, q0), q, q0)
                 if q_new is q:
                     self.accepted += 1
@@ -228,7 +237,7 @@ class ATMCMC(pm.arraystep.ArrayStepShared):
         array_population = np.zeros((self.n_chains,
                                       self.ordering.dimensions))
         n_steps = len(mtrace)
-        bij = pm.DictToArrayBijection(self.ordering, self.population[0])
+        bij = DictToArrayBijection(self.ordering, self.population[0])
 
         if self.stage > 0:
             # collect end points of each chain and put into array
@@ -367,7 +376,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
     MultiTrace object with access to sampling values
     """
 
-    model = pm.modelcontext(model)
+    model = modelcontext(model)
     step.n_steps = int(n_steps)
     seed(random_seed)
 
@@ -415,16 +424,16 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
                     # Initial stage
                     print('Sample initial stage: ...')
                     stage_path = homepath + '/stage_' + str(step.stage)
-                    trace = pm.backends.Text(stage_path, model=model)
+                    trace = Text(stage_path, model=model)
                     initial = _iter_initial(step, chain=chain, trace=trace)
-                    progress = pm.progressbar.progress_bar(step.n_chains)
+                    progress = progress_bar(step.n_chains)
                     try:
                         for i, strace in enumerate(initial):
                             if progressbar:
                                 progress.update(i)
                     except KeyboardInterrupt:
                         strace.close()
-                    mtrace = pm.backends.base.MultiTrace([strace])
+                    mtrace = MultiTrace([strace])
                     step.population, step.array_population, step.likelihoods = \
                                             step.select_end_points(mtrace)
                     step.beta, step.old_beta, step.weights = step.calc_beta()
@@ -482,7 +491,7 @@ def _iter_initial(step, chain=0, trace=None, model=None):
     _iter_sample, just different input to loop over.
     """
 
-    strace = pm.sampling._choose_backend(trace, chain, model=model)
+    strace = sampling._choose_backend(trace, chain, model=model)
     # check if trace file already exists before setup
     filename = os.path.join(strace.name, 'chain-{}.csv'.format(chain))
     if os.path.exists(filename):
@@ -513,12 +522,12 @@ def _iter_serial_chains(draws, step=None, stage_path=None,
     sampled 'draws' times. Serial execution one after another.
     """
     mtraces = []
-    progress = pm.progressbar.progress_bar(step.n_chains)
+    progress = progress_bar(step.n_chains)
     for chain in range(step.n_chains):
         if progressbar:
             progress.update(chain)
-        trace = pm.backends.Text(stage_path, model=model)
-        mtraces.append(pm.sampling._sample(
+        trace = Text(stage_path, model=model)
+        mtraces.append(sampling._sample(
                 draws=draws,
                 step=step,
                 chain=chain,
@@ -527,7 +536,7 @@ def _iter_serial_chains(draws, step=None, stage_path=None,
                 progressbar=False,
                 start=step.population[step.res_indx[chain]]))
 
-    return pm.sampling.merge_traces(mtraces)
+    return sampling.merge_traces(mtraces)
 
 
 def _iter_parallel_chains(parallel, **kwargs):
@@ -542,16 +551,16 @@ def _iter_parallel_chains(parallel, **kwargs):
 
     print('Initialising chain traces ...')
     for chain in chains:
-        trace_list.append(pm.backends.Text(stage_path))
+        trace_list.append(Text(stage_path))
 
     print('Sampling ...')
     traces = parallel(delayed(
-                    pm.sampling._sample)(
+                    sampling._sample)(
                         chain=chain,
                         trace=trace_list[chain],
                         start=step.population[step.res_indx[chain]],
                         **kwargs) for chain in chains)
-    return pm.sampling.merge_traces(traces)
+    return sampling.merge_traces(traces)
 
 
 def tune(acc_rate):

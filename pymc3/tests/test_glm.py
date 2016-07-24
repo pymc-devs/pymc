@@ -1,7 +1,6 @@
 import unittest
 from nose import SkipTest
 
-from pymc3 import *
 import sys
 try:
     import statsmodels.api as sm

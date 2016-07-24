@@ -4,9 +4,10 @@ matplotlib.use('Agg', warn=False)
 import numpy as np
 from .checks import close_to
 
-import pymc3.plots
-from pymc3.plots import *
-from pymc3 import Slice, Metropolis, find_hessian, sample
+from ..plots import traceplot, forestplot, autocorrplot
+from ..step_methods import Slice, Metropolis
+from ..sampling import sample
+from ..tuning.scaling import find_hessian
 
 
 def test_plots():

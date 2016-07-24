@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats import kde, mode
-from .stats import *
+from .stats import autocorr
 from numpy.linalg import LinAlgError
 import matplotlib.pyplot as plt
 

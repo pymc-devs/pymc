@@ -1,4 +1,4 @@
-from .checks import *
+from .checks import close_to
 from .models import simple_model, mv_simple, mv_simple_discrete, simple_2model
 from theano.tensor import constant
 from scipy.stats.mstats import moment

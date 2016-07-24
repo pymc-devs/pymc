@@ -2,7 +2,7 @@ import pymc3 as pm
 
 from . import models
 from pymc3.step_methods.hmc import leapfrog, Hamiltonian
-from .checks import *
+from .checks import close_to
 
 
 def test_leapfrog_reversible():

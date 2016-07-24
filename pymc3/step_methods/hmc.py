@@ -4,11 +4,11 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 '''
 from numpy import floor
-from .quadpotential import *
-from .arraystep import *
-from ..core import *
+from .quadpotential import quad_potential
+from .arraystep import ArrayStep
 from ..tuning import guess_scaling
-from ..distributions import *
+from ..model import modelcontext
+from ..theanof import inputvars
 
 import numpy as np
 from scipy.sparse import issparse

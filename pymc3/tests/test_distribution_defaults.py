@@ -1,8 +1,10 @@
 from __future__ import division
 
-from .checks import *
-from pymc3 import *
+from ..model import Model
+from ..distributions import DiscreteUniform, Continuous
+
 from numpy import array, inf
+import numpy as np
 from nose.tools import raises
 
 class DistTest(Continuous):
@@ -54,5 +56,5 @@ def test_default_b():
 
 def test_default_discrete_uniform():
     with Model():
-        x = pm.DiscreteUniform('x', lower=1, upper=2)
+        x = DiscreteUniform('x', lower=1, upper=2)
         assert x.init_value == 1

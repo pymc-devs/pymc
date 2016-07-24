@@ -1,7 +1,7 @@
-from ..core import *
 from .compound import CompoundStep
-from ..vartypes import *
-
+from ..model import modelcontext
+from ..theanof import inputvars
+from ..blocking import ArrayOrdering, DictToArrayBijection
 import numpy as np
 from numpy.random import uniform
 from numpy import log, isfinite
