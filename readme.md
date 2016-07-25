@@ -23,7 +23,7 @@ PyMC3 is beta software. Users should consider using [PyMC 2 repository](https://
  * Transparent support for missing value imputation
 
 ## Getting started
- * The [PyMC3 tutorial](http://pymc-devs.github.io/pymc3/getting_started) or [journal publication](https://peerj.com/articles/cs-55/)
+ * The [PyMC3 tutorial](http://pymc-devs.github.io/pymc3/notebooks/getting_started.html) or [journal publication](https://peerj.com/articles/cs-55/)
  * [PyMC3 examples](http://pymc-devs.github.io/pymc3/examples.html) and the [API reference](http://pymc-devs.github.io/pymc3/api.html)
  * [Bayesian Modelling in Python -- tutorials on Bayesian statistics and PyMC3 as Jupyter Notebooks by Mark Dregan](https://github.com/markdregan/Bayesian-Modelling-in-Python)
  * [Talk at PyData London 2016 on PyMC3](https://www.youtube.com/watch?v=LlzVlqVzeD8)
