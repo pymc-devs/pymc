@@ -14,13 +14,13 @@ from ..blocking import DictToArrayBijection
 from ..backends import Text
 from ..backends.base import MultiTrace
 from ..progressbar import progress_bar
-from .. import sampling
+from pymc3 import sampling
 
 import os
 import theano
 
-from pymc3.theanof import make_shared_replacements, join_nonshared_inputs
-from pymc3.step_methods.metropolis import MultivariateNormalProposal as MvNPd
+from ..theanof import make_shared_replacements, join_nonshared_inputs
+from ..step_methods.metropolis import MultivariateNormalProposal as MvNPd
 from numpy.random import seed
 from joblib import Parallel, delayed
 
