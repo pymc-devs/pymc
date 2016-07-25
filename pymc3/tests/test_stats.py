@@ -5,6 +5,7 @@ import pandas as pd
 import pymc3 as pm
 from ..tests import backend_fixtures as bf
 from ..backends import ndarray
+from ..stats import df_summary, autocorr, hpd, mc_error, quantiles
 from numpy.random import random, normal, seed
 from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
 from scipy import stats as st

@@ -1,5 +1,6 @@
 import pymc3 as pm
 import pymc3.distributions.transforms as tr
+import numpy as np
 import theano
 import theano.tensor as tt
 from .test_distributions import Simplex, Rplusbig, Rminusbig, Unit, R, Vector, MultiSimplex

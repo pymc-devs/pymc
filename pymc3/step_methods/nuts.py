@@ -1,5 +1,5 @@
 from .quadpotential import quad_potential
-from .arraystep import ArrayStepShared, ArrayStep, SamplerHist
+from .arraystep import ArrayStepShared, ArrayStep, SamplerHist, Competence
 from ..model import modelcontext, Point
 from ..vartypes import continuous_types
 from numpy import exp, log, array

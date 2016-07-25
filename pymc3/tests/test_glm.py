@@ -1,6 +1,6 @@
 import unittest
 from nose import SkipTest
-
+import numpy as np
 import sys
 try:
     import statsmodels.api as sm

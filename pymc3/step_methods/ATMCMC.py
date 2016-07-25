@@ -5,7 +5,7 @@ Created on March, 2016
 '''
 
 import numpy as np
-from .arraystep import ArrayStep, ArrayStepShared
+from .arraystep import ArrayStep, ArrayStepShared, Competence
 from ..model import modelcontext, Point
 from ..theanof import inputvars
 from ..vartypes import discrete_types

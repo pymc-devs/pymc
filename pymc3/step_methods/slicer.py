@@ -1,8 +1,9 @@
 # Modified from original implementation by Dominik Wabersich (2013)
 
-from .arraystep import ArrayStep
+from .arraystep import ArrayStep, Competence
 from ..model import modelcontext
 from ..theanof import inputvars
+from ..vartypes import continuous_types
 from numpy import floor, abs, atleast_1d, empty, isfinite, sum, resize
 from numpy.random import standard_exponential, random, uniform
 

@@ -3,10 +3,11 @@ from numpy.linalg import cholesky
 from .quadpotential import quad_potential
 from ..model import modelcontext
 from ..theanof import inputvars
-from ..vartypes import discrete_types
-from .arraystep import ArrayStepShared, ArrayStep, metrop_select
+from ..vartypes import discrete_types, bool_types
+from .arraystep import ArrayStepShared, ArrayStep, metrop_select, Competence
 from numpy.random import (normal, standard_cauchy, standard_exponential, poisson, random,
                         multivariate_normal, shuffle)
+from ..distributions import Bernoulli, Categorical
 from numpy import round, exp, copy, where, size, zeros, ones, atleast_1d, concatenate
 import theano
 

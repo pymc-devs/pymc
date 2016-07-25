@@ -5,10 +5,11 @@ Created on Mar 7, 2011
 '''
 from numpy import floor
 from .quadpotential import quad_potential
-from .arraystep import ArrayStep, SamplerHist, metrop_select
+from .arraystep import ArrayStep, SamplerHist, metrop_select, Competence
 from ..tuning import guess_scaling
 from ..model import modelcontext
 from ..theanof import inputvars
+from ..vartypes import discrete_types
 
 import numpy as np
 from scipy.sparse import issparse
