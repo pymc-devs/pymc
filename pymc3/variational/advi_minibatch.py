@@ -1,12 +1,10 @@
-
 import numpy as np
-from ..core import modelcontext, inputvars, ArrayOrdering, DictToArrayBijection
-
+from ..model import modelcontext
+from ..blocking import ArrayOrdering, DictToArrayBijection
 import theano
-from ..theanof import reshape_t
+from ..theanof import reshape_t, inputvars
 import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
-import types
 from collections import OrderedDict
 from .advi import check_discrete_rvs, adagrad, ADVIFit
 
