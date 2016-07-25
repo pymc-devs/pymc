@@ -240,7 +240,7 @@ class NegativeBinomial(Discrete):
 
     def random(self, point=None, size=None, repeat=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point)
-        g = generate_samples(stats.gamma.rvs, alpha, scale=alpha / mu,
+        g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
