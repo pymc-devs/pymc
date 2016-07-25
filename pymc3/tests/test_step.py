@@ -1,10 +1,11 @@
 from .checks import close_to
 from .models import simple_model, mv_simple, mv_simple_discrete, simple_2model
+from ..step_methods import MultivariateNormalProposal
 from theano.tensor import constant
 from scipy.stats.mstats import moment
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
-from pymc3.step_methods import NUTS, BinaryMetropolis, BinaryGibbsMetropolis, Metropolis, Constant, ElemwiseCategorical
+from pymc3.step_methods import NUTS, BinaryMetropolis, BinaryGibbsMetropolis, Metropolis, Constant, ElemwiseCategorical, CompoundStep, Slice
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
 from numpy.testing import assert_almost_equal
 import numpy as np
