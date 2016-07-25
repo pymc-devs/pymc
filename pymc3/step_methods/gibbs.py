@@ -3,8 +3,7 @@ Created on May 12, 2012
 
 @author: john
 '''
-from ..core import *
-from .arraystep import *
+from .arraystep import ArrayStep, Competence
 from ..distributions.discrete import Categorical
 from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, ones, arange
 from numpy.random import uniform

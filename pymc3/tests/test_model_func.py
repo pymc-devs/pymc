@@ -1,7 +1,9 @@
 import pymc3 as pm
-from .models import *
-from .checks import *
-
+import numpy as np
+from .models import simple_model
+from .checks import close_to
+from .models import simple_model, mv_simple
+from ..distributions import Normal
 
 def test_lop():
     start, model, _ = simple_model()

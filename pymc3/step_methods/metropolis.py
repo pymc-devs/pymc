@@ -1,13 +1,14 @@
 from numpy.linalg import cholesky
 
-from ..core import *
 from .quadpotential import quad_potential
-
-from ..distributions import *
-
-from .arraystep import *
-from numpy.random import normal, standard_cauchy, standard_exponential, poisson, random
-from numpy import round, exp, copy, where
+from ..model import modelcontext
+from ..theanof import inputvars
+from ..vartypes import discrete_types, bool_types
+from .arraystep import ArrayStepShared, ArrayStep, metrop_select, Competence
+from numpy.random import (normal, standard_cauchy, standard_exponential, poisson, random,
+                        multivariate_normal, shuffle)
+from ..distributions import Bernoulli, Categorical
+from numpy import round, exp, copy, where, size, zeros, ones, atleast_1d, concatenate
 import theano
 
 from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor
@@ -30,23 +31,23 @@ class NormalProposal(Proposal):
 
 class CauchyProposal(Proposal):
     def __call__(self):
-        return standard_cauchy(size=np.size(self.s)) * self.s
+        return standard_cauchy(size=size(self.s)) * self.s
 
 
 class LaplaceProposal(Proposal):
     def __call__(self):
-        size = np.size(self.s)
+        size = size(self.s)
         return (standard_exponential(size=size) - standard_exponential(size=size)) * self.s
 
 
 class PoissonProposal(Proposal):
     def __call__(self):
-        return poisson(lam=self.s, size=np.size(self.s)) - self.s
+        return poisson(lam=self.s, size=size(self.s)) - self.s
 
 
 class MultivariateNormalProposal(Proposal):
     def __call__(self, num_draws=None):
-        return np.random.multivariate_normal(mean=np.zeros(self.s.shape[0]), cov=self.s, size=num_draws)
+        return multivariate_normal(mean=zeros(self.s.shape[0]), cov=self.s, size=num_draws)
 
 
 class Metropolis(ArrayStepShared):
@@ -84,16 +85,16 @@ class Metropolis(ArrayStepShared):
         vars = inputvars(vars)
 
         if S is None:
-            S = np.ones(sum(v.dsize for v in vars))
+            S = ones(sum(v.dsize for v in vars))
         self.proposal_dist = proposal_dist(S)
-        self.scaling = np.atleast_1d(scaling)
+        self.scaling = atleast_1d(scaling)
         self.tune = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.accepted = 0
 
         # Determine type of variables
-        self.discrete = np.concatenate([[v.dtype in discrete_types ] * (v.dsize or 1) for v in vars])
+        self.discrete = concatenate([[v.dtype in discrete_types ] * (v.dsize or 1) for v in vars])
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
 
@@ -260,7 +261,7 @@ class BinaryGibbsMetropolis(ArrayStep):
     def astep(self, q0, logp):
         order = list(range(self.dim))
         if self.order == 'random':
-            np.random.shuffle(order)
+            shuffle(order)
 
         q_prop = copy(q0)
         q_cur = copy(q0)

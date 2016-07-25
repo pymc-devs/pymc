@@ -4,11 +4,12 @@ Created on Mar 7, 2011
 @author: johnsalvatier
 '''
 from numpy import floor
-from .quadpotential import *
-from .arraystep import *
-from ..core import *
+from .quadpotential import quad_potential
+from .arraystep import ArrayStep, SamplerHist, metrop_select, Competence
 from ..tuning import guess_scaling
-from ..distributions import *
+from ..model import modelcontext, Point
+from ..theanof import inputvars
+from ..vartypes import discrete_types
 
 import numpy as np
 from scipy.sparse import issparse
@@ -97,7 +98,7 @@ class HamiltonianMC(ArrayStep):
         if var.dtype in discrete_types:
             return Competence.INCOMPATIBLE
         return Competence.COMPATIBLE
-            
+
 
 
 def bern(p):

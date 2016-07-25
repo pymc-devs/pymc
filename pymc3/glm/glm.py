@@ -1,7 +1,7 @@
 import numpy as np
-from ..core import *
-from ..distributions import *
+from ..distributions import Normal
 from ..tuning.starting import find_MAP
+from ..model import modelcontext
 import patsy
 import theano
 import pandas as pd
@@ -9,6 +9,8 @@ from collections import defaultdict
 from pandas.tools.plotting import scatter_matrix
 
 from . import families
+
+__all__ = ['glm', 'linear_component', 'plot_posterior_predictive']
 
 def linear_component(formula, data, priors=None,
                      intercept_prior=None,

@@ -1,6 +1,12 @@
-from pymc3 import *
-
+from ..theanof import inputvars
+from ..model import Model, modelcontext
+from ..step_methods import Slice, Metropolis, NUTS
+from ..distributions import Normal
+from ..tuning import find_MAP
+from ..sampling import sample
+from ..diagnostics import effective_n, geweke, gelman_rubin
 from pymc3.examples import disaster_model as dm
+from numpy import all, isclose
 
 def test_gelman_rubin(n=1000):
 
@@ -14,7 +20,7 @@ def test_gelman_rubin(n=1000):
 
     rhat = gelman_rubin(ptrace)
 
-    assert np.all([r < 1.5 for r in rhat.values()])
+    assert all([r < 1.5 for r in rhat.values()])
 
 
 def test_geweke(n=3000):
@@ -56,4 +62,4 @@ def test_effective_n(k=3, n=1000):
         
     n_eff = effective_n(ptrace)['x']
     
-    assert np.isclose(n_eff, k*n, 2).all()
+    assert isclose(n_eff, k*n, 2).all()

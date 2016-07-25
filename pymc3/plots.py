@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats import kde, mode
-from .stats import *
+from .stats import autocorr, quantiles, hpd
 from numpy.linalg import LinAlgError
 import matplotlib.pyplot as plt
 
@@ -31,14 +31,14 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
         Flag for combining multiple chains into a single chain. If False
         (default), chains will be plotted separately.
     plot_transformed : bool
-        Flag for plotting automatically transformed variables in addition to 
+        Flag for plotting automatically transformed variables in addition to
         original variables (defaults to False).
     grid : bool
         Flag for adding gridlines to histogram. Defaults to True.
     alpha : float
         Alpha value for plot line. Defaults to 0.35.
     priors : iterable of PyMC distributions
-        PyMC prior distribution(s) to be plotted alongside poterior. Defaults 
+        PyMC prior distribution(s) to be plotted alongside poterior. Defaults
         to None (no prior plots).
     prior_alpha : float
         Alpha value for prior plot. Defaults to 1.
@@ -116,7 +116,7 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
             l = np.min(d)
             u = np.max(d)
             x = np.linspace(0, 1, 100) * (u - l) + l
-            
+
             if prior is not None:
                 p = prior.logp(x).eval()
                 ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style)
@@ -188,7 +188,7 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
         Number of samples to discard from the beginning of the trace.
         Defaults to 0.
     plot_transformed : bool
-        Flag for plotting automatically transformed variables in addition to 
+        Flag for plotting automatically transformed variables in addition to
         original variables (defaults to False).
     symmetric_plot : boolean
         Plot from either [0, +lag] or [-lag, lag]. Defaults to False, [-, +lag].
@@ -296,7 +296,7 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
         varnames: list
             List of variables to plot (defaults to None, which results in all
             variables plotted).
-               
+
         transform : callable
             Function to transform data (defaults to identity)
 
@@ -589,8 +589,8 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
     return gs
 
 
-def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None, 
-                    alpha_level=0.05, round_to=3, point_estimate='mean', rope=None, 
+def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
+                    alpha_level=0.05, round_to=3, point_estimate='mean', rope=None,
                     ref_val=None, kde_plot=False, plot_transformed=False, ax=None, **kwargs):
     """Plot Posterior densities in style of John K. Kruschke book
 
@@ -617,12 +617,12 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
     kde_plot: bool
         if True plot a KDE instead of a histogram
     plot_transformed : bool
-        Flag for plotting automatically transformed variables in addition to 
+        Flag for plotting automatically transformed variables in addition to
         original variables (defaults to False).
     ax : axes
         Matplotlib axes. Defaults to None.
     **kwargs
-        Passed as-is to plt.hist() or plt.plot() function, depending on the 
+        Passed as-is to plt.hist() or plt.plot() function, depending on the
         value of the argument kde_plot
         Some defaults are added, if not specified
         color='#87ceeb' will match the style in the book
@@ -648,15 +648,15 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
             greater_than_ref_probability = (trace_values >= ref_val).mean()
             ref_in_posterior = format_as_percent(less_than_ref_probability, 1) + ' <{:g}< '.format(ref_val) + format_as_percent(
                 greater_than_ref_probability, 1)
-            ax.axvline(ref_val, ymin=0.02, ymax=.75, color='g', 
+            ax.axvline(ref_val, ymin=0.02, ymax=.75, color='g',
             linewidth=4, alpha=0.65)
             ax.text(trace_values.mean(), plot_height * 0.6, ref_in_posterior,
                         size=14, horizontalalignment='center')
-                        
+
         def display_rope(rope):
-            pc_in_rope = format_as_percent(np.sum((trace_values > rope[0]) & 
+            pc_in_rope = format_as_percent(np.sum((trace_values > rope[0]) &
             (trace_values < rope[1]))/len(trace_values), round_to)
-            ax.plot(rope, (plot_height * 0.02, plot_height * 0.02), 
+            ax.plot(rope, (plot_height * 0.02, plot_height * 0.02),
             linewidth=20, color='r', alpha=0.75)
             text_props = dict(size=16, horizontalalignment='center', color='r')
             ax.text(rope[0], plot_height * 0.14, rope[0], **text_props)
@@ -711,11 +711,11 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
             l = np.min(trace_values)
             u = np.max(trace_values)
             x = np.linspace(0, 1, 100) * (u - l) + l
-            ax.plot(x, density(x), **kwargs)    
+            ax.plot(x, density(x), **kwargs)
         else:
             set_key_if_doesnt_exist(kwargs, 'bins', 30)
             set_key_if_doesnt_exist(kwargs, 'edgecolor', 'w')
-            set_key_if_doesnt_exist(kwargs, 'align', 'right')        
+            set_key_if_doesnt_exist(kwargs, 'align', 'right')
             ax.hist(trace_values, **kwargs)
 
         plot_height = ax.get_ylim()[1]

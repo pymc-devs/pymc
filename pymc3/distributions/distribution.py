@@ -6,7 +6,7 @@ from ..memoize import memoize
 from ..model import Model, get_named_nodes
 
 
-__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete', 'NoDistribution', 'TensorType']
+__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
 
 
 class Distribution(object):

@@ -62,7 +62,7 @@ def interpolate(x0,y0, x, group):
 with Model() as model:
     coeff_sd = StudentT('coeff_sd', 10, 1, 5**-2)
 
-    y = GaussianRandomWalk('y', sd=coeff_sd, shape = (nknots, ncountries))
+    y = GaussianRandomWalk('y', sd=coeff_sd, shape=(nknots, ncountries))
 
     p = interpolate(knots, y, age, group)
 
@@ -78,14 +78,14 @@ with Model() as model:
 # <codecell>
 
 with model:
-    s = find_MAP( vars=[sd, y])
+    s = find_MAP(vars=[sd, y])
 
     step = NUTS(scaling = s)
     trace = sample(100, step, s)
 
     s = trace[-1]
 
-    step = NUTS(scaling = s)
+    step = NUTS(scaling=s)
 
 def run(n=3000):
     if n == "short":
@@ -106,13 +106,6 @@ def run(n=3000):
 
         ylim(0,rate.max())
 
-    # <codecell>
-
-    traceplot(trace[100:], varnames = [coeff_sd,sd ]);
-
-    # <codecell>
-
-    autocorrplot(trace, varnames = [coeff_sd,sd ])
 
 if __name__ == '__main__':
     run()

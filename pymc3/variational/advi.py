@@ -5,8 +5,9 @@ Created on Mar 12, 2011
 @author: johnsalvatier
 '''
 import numpy as np
-from ..core import modelcontext, inputvars, ArrayOrdering, DictToArrayBijection
-from ..model import ObservedRV
+from ..blocking import DictToArrayBijection, ArrayOrdering
+from ..theanof import inputvars
+from ..model import ObservedRV, modelcontext
 from ..vartypes import discrete_types
 
 import theano

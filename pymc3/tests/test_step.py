@@ -1,12 +1,14 @@
-from .checks import *
+from .checks import close_to
 from .models import simple_model, mv_simple, mv_simple_discrete, simple_2model
+from ..step_methods import MultivariateNormalProposal
 from theano.tensor import constant
 from scipy.stats.mstats import moment
-from pymc3.sampling import assign_step_methods
+from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
-from pymc3.step_methods import NUTS, BinaryMetropolis, BinaryGibbsMetropolis, Metropolis, Constant, ElemwiseCategorical
+from pymc3.step_methods import NUTS, BinaryMetropolis, BinaryGibbsMetropolis, Metropolis, Constant, ElemwiseCategorical, Slice, CompoundStep, MultivariateNormalProposal, HamiltonianMC
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
 from numpy.testing import assert_almost_equal
+import numpy as np
 
 def check_stat(name, trace, var, stat, value, bound):
     s = stat(trace[var][2000:], axis=0)
@@ -17,19 +19,19 @@ def test_step_continuous():
     start, model, (mu, C) = mv_simple()
 
     with model:
-        mh = pm.Metropolis()
-        slicer = pm.Slice()
-        hmc = pm.HamiltonianMC(scaling=C, is_cov=True, blocked=False)
-        nuts = pm.NUTS(scaling=C, is_cov=True, blocked=False)
+        mh = Metropolis()
+        slicer = Slice()
+        hmc = HamiltonianMC(scaling=C, is_cov=True, blocked=False)
+        nuts = NUTS(scaling=C, is_cov=True, blocked=False)
 
-        mh_blocked = pm.Metropolis(S=C,
-                                   proposal_dist=pm.MultivariateNormalProposal,
+        mh_blocked = Metropolis(S=C,
+                                   proposal_dist=MultivariateNormalProposal,
                                    blocked=True)
-        slicer_blocked = pm.Slice(blocked=True)
-        hmc_blocked = pm.HamiltonianMC(scaling=C, is_cov=True)
-        nuts_blocked = pm.NUTS(scaling=C, is_cov=True)
+        slicer_blocked = Slice(blocked=True)
+        hmc_blocked = HamiltonianMC(scaling=C, is_cov=True)
+        nuts_blocked = NUTS(scaling=C, is_cov=True)
 
-        compound = pm.CompoundStep([hmc_blocked, mh_blocked])
+        compound = CompoundStep([hmc_blocked, mh_blocked])
 
 
     steps = [slicer, hmc, nuts, mh_blocked, hmc_blocked,
@@ -53,34 +55,34 @@ def test_non_blocked():
 
     with model:
         # Metropolis and Slice are non-blocked by default
-        mh = pm.Metropolis()
-        assert isinstance(mh, pm.CompoundStep)
-        slicer = pm.Slice()
-        assert isinstance(slicer, pm.CompoundStep)
-        hmc = pm.HamiltonianMC(blocked=False)
-        assert isinstance(hmc, pm.CompoundStep)
-        nuts = pm.NUTS(blocked=False)
-        assert isinstance(nuts, pm.CompoundStep)
+        mh = Metropolis()
+        assert isinstance(mh, CompoundStep)
+        slicer = Slice()
+        assert isinstance(slicer, CompoundStep)
+        hmc = HamiltonianMC(blocked=False)
+        assert isinstance(hmc, CompoundStep)
+        nuts = NUTS(blocked=False)
+        assert isinstance(nuts, CompoundStep)
 
-        mh_blocked = pm.Metropolis(blocked=True)
-        assert isinstance(mh_blocked, pm.Metropolis)
-        slicer_blocked = pm.Slice(blocked=True)
-        assert isinstance(slicer_blocked, pm.Slice)
-        hmc_blocked = pm.HamiltonianMC()
-        assert isinstance(hmc_blocked, pm.HamiltonianMC)
-        nuts_blocked = pm.NUTS()
-        assert isinstance(nuts_blocked, pm.NUTS)
+        mh_blocked = Metropolis(blocked=True)
+        assert isinstance(mh_blocked, Metropolis)
+        slicer_blocked = Slice(blocked=True)
+        assert isinstance(slicer_blocked, Slice)
+        hmc_blocked = HamiltonianMC()
+        assert isinstance(hmc_blocked, HamiltonianMC)
+        nuts_blocked = NUTS()
+        assert isinstance(nuts_blocked, NUTS)
 
-        compound = pm.CompoundStep([hmc_blocked, mh_blocked])
+        compound = CompoundStep([hmc_blocked, mh_blocked])
 
 
 def test_step_discrete():
     start, model, (mu, C) = mv_simple_discrete()
 
     with model:
-        mh = pm.Metropolis(S=C,
-                           proposal_dist=pm.MultivariateNormalProposal)
-        slicer = pm.Slice()
+        mh = Metropolis(S=C,
+                           proposal_dist=MultivariateNormalProposal)
+        slicer = Slice()
 
 
     steps = [mh]

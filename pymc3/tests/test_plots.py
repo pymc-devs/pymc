@@ -4,9 +4,10 @@ matplotlib.use('Agg', warn=False)
 import numpy as np
 from .checks import close_to
 
-import pymc3.plots
-from pymc3.plots import *
-from pymc3 import Slice, Metropolis, find_hessian, sample
+from ..plots import traceplot, forestplot, autocorrplot, make_2d
+from ..step_methods import Slice, Metropolis
+from ..sampling import sample
+from ..tuning.scaling import find_hessian
 
 
 def test_plots():
@@ -61,11 +62,11 @@ def test_multichain_plots():
 def test_make_2d():
 
     a = np.arange(4)
-    close_to(pymc3.plots.make_2d(a), a[:,None], 0)
+    close_to(make_2d(a), a[:,None], 0)
 
     n = 7
     a = np.arange(n*4*5).reshape((n,4,5))
-    res = pymc3.plots.make_2d(a)
+    res = make_2d(a)
 
     assert res.shape == (n,20)
     close_to(a[:,0,0], res[:,0], 0)

@@ -1,9 +1,10 @@
 # Modified from original implementation by Dominik Wabersich (2013)
 
-from ..core import *
-from .arraystep import *
-from ..distributions import *
-from numpy import floor, abs, atleast_1d, empty, isfinite, sum
+from .arraystep import ArrayStep, Competence
+from ..model import modelcontext
+from ..theanof import inputvars
+from ..vartypes import continuous_types
+from numpy import floor, abs, atleast_1d, empty, isfinite, sum, resize
 from numpy.random import standard_exponential, random, uniform
 
 __all__ = ['Slice']
@@ -45,7 +46,7 @@ class Slice(ArrayStep):
     def astep(self, q0, logp):
 
         q = q0.copy()
-        self.w = np.resize(self.w, len(q))
+        self.w = resize(self.w, len(q))
 
         y = logp(q0) - standard_exponential()
 

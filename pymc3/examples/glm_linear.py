@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.optimize as opt
 
-from pymc3 import *
+from pymc3 import Model, glm, find_MAP, sample
 
 # Generate data
 size = 50

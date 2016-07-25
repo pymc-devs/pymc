@@ -1,5 +1,6 @@
-from .checks import *
+from .checks import close_to
 from numpy import inf
+import numpy as np
 from pymc3.tuning import starting
 from pymc3 import find_MAP, Point, Model
 from pymc3 import Model, Uniform, Normal, Beta, Binomial

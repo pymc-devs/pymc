@@ -1,13 +1,14 @@
-from .quadpotential import *
-from .arraystep import *
-from ..core import *
-from numpy import exp, log
+from .quadpotential import quad_potential
+from .arraystep import ArrayStepShared, ArrayStep, SamplerHist, Competence
+from ..model import modelcontext, Point
+from ..vartypes import continuous_types
+from numpy import exp, log, array
 from numpy.random import uniform
 from .hmc import leapfrog, Hamiltonian, bern, energy
-from ..distributions import *
 from ..tuning import guess_scaling
 import theano
-from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor
+from ..theanof import (make_shared_replacements, join_nonshared_inputs, CallableTensor,
+                        gradient, inputvars)
 import theano.tensor as tt
 
 __all__ = ['NUTS']
@@ -147,7 +148,7 @@ class NUTS(ArrayStepShared):
 def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):
     if j == 0:
         leapfrog1_dE = H
-        q1, p1, dE = leapfrog1_dE(q, p, np.array(v*e), q0, p0)
+        q1, p1, dE = leapfrog1_dE(q, p, array(v*e), q0, p0)
 
         n1 = int(log(u) + dE <= 0)
         s1 = int(log(u) + dE < Emax)

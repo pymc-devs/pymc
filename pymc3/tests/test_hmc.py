@@ -1,8 +1,9 @@
 import pymc3 as pm
-
+import numpy as np
 from . import models
 from pymc3.step_methods.hmc import leapfrog, Hamiltonian
-from .checks import *
+from .checks import close_to
+from ..blocking import DictToArrayBijection
 
 
 def test_leapfrog_reversible():
@@ -13,7 +14,7 @@ def test_leapfrog_reversible():
         h = pm.find_hessian(start, model=model)
         step = pm.HamiltonianMC(model.vars, h, model=model)
 
-    bij = pm.DictToArrayBijection(step.ordering, start)
+    bij = DictToArrayBijection(step.ordering, start)
 
     logp, dlogp = list(map(bij.mapf, step.fs))
     H = Hamiltonian(logp, dlogp, step.potential)

@@ -2,18 +2,26 @@ from __future__ import division
 import unittest
 
 import itertools
-from .checks import *
-from pymc3 import *
-from numpy import array, inf
-import numpy
+from ..vartypes import continuous_types
+from ..model import Model, Point, Potential
+from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
+from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
+                            MvStudentT, MvNormal, ZeroInflatedPoisson, ConstantDist,
+                            Poisson, Bernoulli, Beta, BetaBinomial, StudentTpos,
+                            StudentT, Weibull, Pareto, InverseGamma, Gamma, Cauchy,
+                            HalfCauchy, Lognormal, Laplace, NegativeBinomial, Geometric,
+                            Exponential, ExGaussian, Normal, Flat, LKJCorr, Wald,
+                            ChiSquared, HalfNormal, DiscreteUniform, Bound, Uniform,
+                            Binomial)
+from ..distributions import continuous
+from numpy import array, inf, log, exp
+import numpy as np
+from numpy.testing import assert_almost_equal
 from numpy.linalg import inv
 
 from scipy import integrate
 import scipy.stats.distributions  as sp
 import scipy.stats
-
-from .knownfailure import *
-
 
 
 class Domain(object):
@@ -322,7 +330,7 @@ def scipy_exponweib_sucks(value, alpha, beta):
     the Weibull PDF fails for some valid combinations of parameters, while the
     log-PDF fails for others.
     """
-    pdf = numpy.log(sp.exponweib.pdf(value, 1, alpha, scale=beta))
+    pdf = np.log(sp.exponweib.pdf(value, 1, alpha, scale=beta))
     logpdf = sp.exponweib.logpdf(value, 1, alpha, scale=beta)
 
     if np.isinf(pdf):
@@ -397,20 +405,20 @@ def check_mvt(n):
             MvStudentT, Vector(R,n), {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu':Vector(R,n)},
             mvt_logpdf
             )
-            
-def mvt_logpdf(value, nu, Sigma, mu=0): 
+
+def mvt_logpdf(value, nu, Sigma, mu=0):
 
     d = len(Sigma)
     n = len(value)
     X = np.atleast_2d(value ) - mu
-    
+
     Q = X.dot(np.linalg.inv(Sigma)).dot(X.T).sum()
     log_det = np.log(np.linalg.det(Sigma))
-    log_pdf = (scipy.special.gammaln((nu + d)/2.) 
-            - 0.5 * (d*np.log(np.pi*nu) + log_det) 
+    log_pdf = (scipy.special.gammaln((nu + d)/2.)
+            - 0.5 * (d*np.log(np.pi*nu) + log_det)
             - scipy.special.gammaln(nu/2.))
     log_pdf -= 0.5*(nu + d)*np.log(1 + Q/nu)
-    
+
     return log_pdf
 
 def test_wishart():
@@ -533,7 +541,7 @@ def pymc3_matches_scipy(pymc3_dist, domain, paramdomains, scipy_dist, extra_args
 
 def test_get_tau_sd():
     sd = np.array([2])
-    assert_almost_equal(distributions.continuous.get_tau_sd(sd=sd), [1./sd**2, sd])
+    assert_almost_equal(continuous.get_tau_sd(sd=sd), [1./sd**2, sd])
 
 def check_int_to_1(model, value, domain, paramdomains):
     pdf = model.fastfn(exp(model.logpt))

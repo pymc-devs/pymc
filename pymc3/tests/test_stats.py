@@ -1,11 +1,11 @@
-from ..stats import *
 from .models import Model, Normal, Metropolis
 import numpy as np
 import numpy.testing as npt
 import pandas as pd
 import pymc3 as pm
-from pymc3.tests import backend_fixtures as bf
-from pymc3.backends import ndarray
+from ..tests import backend_fixtures as bf
+from ..backends import ndarray
+from ..stats import df_summary, autocorr, hpd, mc_error, quantiles
 from numpy.random import random, normal, seed
 from numpy.testing import assert_equal, assert_almost_equal, assert_array_almost_equal
 from scipy import stats as st

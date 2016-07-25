@@ -6,12 +6,14 @@ Created on Mar 12, 2011
 from scipy import optimize
 import numpy as np
 from numpy import isfinite, nan_to_num, logical_not
-from ..core import *
 from ..vartypes import discrete_types, typefilter
+from ..model import modelcontext, Point
+from ..theanof import inputvars
+from ..blocking import DictToArrayBijection, ArrayOrdering
 
 from inspect import getargspec
 
-__all__ = ['find_MAP', 'scipyminimize']
+__all__ = ['find_MAP']
 
 
 def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
@@ -139,11 +141,6 @@ def allfinite(x):
 
 def nan_to_high(x):
     return np.where(isfinite(x), x, 1.0e100)
-
-
-def scipyminimize(f, x0, fprime, *args, **kwargs):
-    r = scipy.optimize.minimize(f, x0, jac=fprime, *args, **kwargs)
-    return r.x, r
 
 
 def allinmodel(vars, model):
