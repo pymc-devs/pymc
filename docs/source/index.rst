@@ -1,7 +1,7 @@
 Welcome to PyMC3's documentation!
 =================================
 
-.. include:: ../../readme.rst
+.. include:: ../../README.rst
 
 Contents:
 
