@@ -12,9 +12,10 @@ from ..vartypes import discrete_types
 from ..step_methods import metropolis
 from ..blocking import DictToArrayBijection
 from ..backends import Text
-from ..backends.base import MultiTrace
+from ..backends.base import merge_traces, BaseTrace, MultiTrace
+from ..backends.ndarray import NDArray
+import ..backends
 from ..progressbar import progress_bar
-from pymc3 import sampling
 
 import os
 import theano
@@ -483,6 +484,27 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
             sample_args['stage_path'] = stage_path
             mtrace = _iter_parallel_chains(parallel, **sample_args)
             return mtrace
+       
+            
+def _choose_backend(trace, chain, shortcuts=None, **kwds):
+    if isinstance(trace, BaseTrace):
+        return trace
+    if isinstance(trace, MultiTrace):
+        return trace._straces[chain]
+    if trace is None:
+        return NDArray(**kwds)
+
+    if shortcuts is None:
+        shortcuts = backends._shortcuts
+
+    try:
+        backend = shortcuts[trace]['backend']
+        name = shortcuts[trace]['name']
+        return backend(name, **kwds)
+    except TypeError:
+        return NDArray(vars=trace, **kwds)
+    except KeyError:
+        raise ValueError('Argument `trace` is invalid.')
 
 
 def _iter_initial(step, chain=0, trace=None, model=None):
