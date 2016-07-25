@@ -7,10 +7,10 @@ from ..model import Model, Point, Potential
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
 from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
                             MvStudentT, MvNormal, ZeroInflatedPoisson, ConstantDist,
-                            Poisson, Bernoulli, Beta, BetaBinomial, StudentTpos, 
+                            Poisson, Bernoulli, Beta, BetaBinomial, StudentTpos,
                             StudentT, Weibull, Pareto, InverseGamma, Gamma, Cauchy,
                             HalfCauchy, Lognormal, Laplace, NegativeBinomial, Geometric,
-                            Exponential, ExGaussian, Normal, Flat, LKJCorr, Wald, 
+                            Exponential, ExGaussian, Normal, Flat, LKJCorr, Wald,
                             ChiSquared, HalfNormal, DiscreteUniform, Bound, Uniform,
                             Binomial)
 from ..distributions import continuous
@@ -405,20 +405,20 @@ def check_mvt(n):
             MvStudentT, Vector(R,n), {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu':Vector(R,n)},
             mvt_logpdf
             )
-            
-def mvt_logpdf(value, nu, Sigma, mu=0): 
+
+def mvt_logpdf(value, nu, Sigma, mu=0):
 
     d = len(Sigma)
     n = len(value)
     X = np.atleast_2d(value ) - mu
-    
+
     Q = X.dot(np.linalg.inv(Sigma)).dot(X.T).sum()
     log_det = np.log(np.linalg.det(Sigma))
-    log_pdf = (scipy.special.gammaln((nu + d)/2.) 
-            - 0.5 * (d*np.log(np.pi*nu) + log_det) 
+    log_pdf = (scipy.special.gammaln((nu + d)/2.)
+            - 0.5 * (d*np.log(np.pi*nu) + log_det)
             - scipy.special.gammaln(nu/2.))
     log_pdf -= 0.5*(nu + d)*np.log(1 + Q/nu)
-    
+
     return log_pdf
 
 def test_wishart():

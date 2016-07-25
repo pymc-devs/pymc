@@ -7,7 +7,7 @@ from numpy import floor
 from .quadpotential import quad_potential
 from .arraystep import ArrayStep, SamplerHist, metrop_select, Competence
 from ..tuning import guess_scaling
-from ..model import modelcontext
+from ..model import modelcontext, Point
 from ..theanof import inputvars
 from ..vartypes import discrete_types
 
@@ -98,7 +98,7 @@ class HamiltonianMC(ArrayStep):
         if var.dtype in discrete_types:
             return Competence.INCOMPATIBLE
         return Competence.COMPATIBLE
-            
+
 
 
 def bern(p):
