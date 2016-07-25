@@ -14,7 +14,7 @@ from ..blocking import DictToArrayBijection
 from ..backends import Text
 from ..backends.base import merge_traces, BaseTrace, MultiTrace
 from ..backends.ndarray import NDArray
-import ..backends
+from .. import backends
 from ..progressbar import progress_bar
 
 import os
