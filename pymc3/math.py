@@ -15,10 +15,8 @@ def logsumexp(x, axis=None):
      x_max = tt.max(x, axis=axis, keepdims=True)
      return tt.log(tt.sum(tt.exp(x - x_max), axis=axis, keepdims=True)) + x_max
 
-def invlogit(x):
-    p_min = sys.float_info.epsilon
-
-    return (1 - 2 * p_min) / (1 + tt.exp(-x)) + p_min
+def invlogit(x, eps=sys.float_info.epsilon):
+    return (1 - 2 * eps) / (1 + tt.exp(-x)) + eps
 
 def logit(p):
     return tt.log(p/(1-p))
