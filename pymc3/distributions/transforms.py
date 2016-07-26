@@ -3,10 +3,10 @@ import theano.tensor as tt
 from ..model import FreeRV
 from ..theanof import gradient
 from .distribution import Distribution
-from ..math import logit
+from ..math import logit, invlogit
 import numpy as np
 
-__all__ = ['transform', 'stick_breaking', 'logodds', 'log', 'sum_to_1']
+__all__ = ['transform', 'stick_breaking', 'logodds', 'log', 'sum_to_1', 't_stick_breaking']
 
 
 class Transform(object):
@@ -85,9 +85,6 @@ class Log(ElemwiseTransform):
 
 log = Log()
 
-inverse_logit = tt.nnet.sigmoid
-
-
 class LogOdds(ElemwiseTransform):
     name = "logodds"
 
@@ -95,7 +92,7 @@ class LogOdds(ElemwiseTransform):
         pass
 
     def backward(self, x):
-        return inverse_logit(x)
+        return invlogit(x, 0.0)
 
     def forward(self, x):
         return logit(x)
@@ -185,9 +182,17 @@ sum_to_1 = SumTo1()
 class StickBreaking(Transform):
     """Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of real values.
     Primarily borrowed from the STAN implementation.
+
+    Parameters
+    ----------
+    eps : float, positive value
+        A small value for numerical stability in invlogit. 
     """
 
     name = "stickbreaking"
+
+    def __init__(self, eps=0.0):
+        self.eps = eps
 
     def forward(self, x_):
         x = x_.T
@@ -206,7 +211,7 @@ class StickBreaking(Transform):
         Km1 = y.shape[0]
         k = tt.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
         eq_share = logit(1./(Km1 + 1 - k)) #- tt.log(Km1 - k)
-        z = inverse_logit(y + eq_share)
+        z = invlogit(y + eq_share, self.eps)
         yl = tt.concatenate([z, tt.ones(y[:1].shape)])
         yu = tt.concatenate([tt.ones(y[:1].shape), 1-z])
         S = tt.extra_ops.cumprod(yu, 0)
@@ -219,12 +224,13 @@ class StickBreaking(Transform):
         k = tt.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
         eq_share = logit(1./(Km1 + 1 - k)) # -tt.log(Km1 - k)
         yl = y + eq_share
-        yu = tt.concatenate([tt.ones(y[:1].shape), 1-inverse_logit(yl)])
+        yu = tt.concatenate([tt.ones(y[:1].shape), 1-invlogit(yl, self.eps)])
         S = tt.extra_ops.cumprod(yu, 0)
         return tt.sum(tt.log(S[:-1]) - tt.log1p(tt.exp(yl)) - tt.log1p(tt.exp(-yl)), 0).T
 
 stick_breaking = StickBreaking()
 
+t_stick_breaking = lambda eps: StickBreaking(eps)
 
 class Circular(ElemwiseTransform):
     """Transforms a linear space into a circular one.

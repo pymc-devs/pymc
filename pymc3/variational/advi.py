@@ -98,108 +98,6 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         w[var] = np.exp(w[var])
     return ADVIFit(u, w, elbos)
 
-def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
-    minibatch_RVs=None, minibatch_tensors=None, minibatches=None, total_size=None,
-    learning_rate=.001, epsilon=.1, random_seed=20090425, verbose=1):
-    """Run mini-batch ADVI.
-
-    minibatch_RVs, minibatch_tensors and minibatches should be in the
-    same order.
-
-    Parameters
-    ----------
-    vars : object
-        Random variables.
-    start : Dict or None
-        Initial values of parameters (variational means).
-    model : Model
-        Probabilistic model.
-    n : int
-        Number of interations updating parameters.
-    n_mcsamples : int
-        Number of Monte Carlo samples to approximate ELBO.
-    minibatch_RVs : list of ObservedRVs
-        Random variables for mini-batch.
-    minibatch_tensors : list of tensors
-        Tensors used to create ObservedRVs in minibatch_RVs.
-    minibatches : list of generators
-        Generates minibatches when calling next().
-    totalsize : int
-        Total size of training samples.
-    learning_rate: float
-        Adagrad base learning rate.
-    epsilon : float
-        Offset in denominator of the scale of learning rate in Adagrad.
-    random_seed : int
-        Seed to initialize random state.
-
-    Returns
-    -------
-    ADVIFit
-        Named tuple, which includes 'means', 'stds', and 'elbo_vals'.
-    """
-
-    model = modelcontext(model)
-    if start is None:
-        start = model.test_point
-
-    if vars is None:
-        vars = model.vars
-
-    vars = set(inputvars(vars)) - set(minibatch_RVs)
-
-    check_discrete_rvs(vars)
-
-    # Create variational gradient tensor
-    grad, elbo, shared, uw = variational_gradient_estimate(
-        vars, model, minibatch_RVs, minibatch_tensors, total_size,
-        n_mcsamples=n_mcsamples, random_seed=random_seed)
-
-    # Set starting values
-    for var, share in shared.items():
-        share.set_value(start[str(var)])
-
-    order = ArrayOrdering(vars)
-    bij = DictToArrayBijection(order, start)
-    u_start = bij.map(start)
-    w_start = np.zeros_like(u_start)
-    uw_start = np.concatenate([u_start, w_start])
-
-    shared_inarray = theano.shared(uw_start, 'uw_shared')
-    grad = theano.clone(grad, { uw : shared_inarray }, strict=False)
-    elbo = theano.clone(elbo, { uw : shared_inarray }, strict=False)
-    updates = adagrad(grad, shared_inarray, learning_rate=learning_rate, epsilon=epsilon, n=10)
-
-    # Create in-place update function
-    tensors, givens = replace_shared_minibatch_tensors(minibatch_tensors)
-    f = theano.function(tensors, [shared_inarray, grad, elbo],
-                        updates=updates, givens=givens)
-
-    # Run adagrad steps
-    elbos = np.empty(n)
-    for i in range(n):
-        uw_i, g, e = f(*next(minibatches))
-        elbos[i] = e
-        if verbose and not i % (n//10):
-            if not i:
-                print('Iteration {0} [{1}%]: ELBO = {2}'.format(i, 100*i//n, e.round(2)))
-            else:
-                avg_elbo = elbos[i-n//10:i].mean()
-                print('Iteration {0} [{1}%]: Average ELBO = {2}'.format(i, 100*i//n, avg_elbo.round(2)))
-
-    if verbose:
-        avg_elbo = elbos[i-n//10:i].mean()
-        print('Finished [100%]: Average ELBO = {}'.format(avg_elbo.round(2)))
-
-    l = int(uw_i.size / 2)
-
-    u = bij.rmap(uw_i[:l])
-    w = bij.rmap(uw_i[l:])
-    # w is in log space
-    for var in w.keys():
-        w[var] = np.exp(w[var])
-    return ADVIFit(u, w, elbos)
-
 def replace_shared_minibatch_tensors(minibatch_tensors):
     """Replace shared variables in minibatch tensors with normal tensors.
     """
@@ -326,9 +224,10 @@ def adagrad(grad, param, learning_rate, epsilon, n):
                               tt.sqrt(accu_sum + epsilon))
     return updates
 
-def sample_vp(vparams, draws=1000, model=None, random_seed=20090425, 
-              hide_transformed=True):
-    """Draw samples from variational posterior.
+def sample_vp(
+    vparams, draws=1000, model=None, local_RVs=None, random_seed=20090425, 
+    hide_transformed=True):
+    """Draw samples from variational posterior. 
 
     Parameters
     ----------
@@ -356,17 +255,33 @@ def sample_vp(vparams, draws=1000, model=None, random_seed=20090425,
             'stds': vparams.stds
         }
 
+    ds = model.deterministics
+    get_transformed = lambda v: v if v not in ds else v.transformed
+    rvs = lambda x: [get_transformed(v) for v in x] if x is not None else []
+
+    global_RVs = list(set(model.free_RVs) - set(rvs(local_RVs)))
+
     # Make dict for replacements of random variables
     r = MRG_RandomStreams(seed=random_seed)
     updates = {}
-    for var in model.free_RVs:
-        u = theano.shared(vparams['means'][str(var)]).ravel()
-        w = theano.shared(vparams['stds'][str(var)]).ravel()
+    for v in global_RVs:
+        u = theano.shared(vparams['means'][str(v)]).ravel()
+        w = theano.shared(vparams['stds'][str(v)]).ravel()
         n = r.normal(size=u.tag.test_value.shape)
-        updates.update({var: (n * w + u).reshape(var.tag.test_value.shape)})
-    vars = model.free_RVs
+        updates.update({v: (n * w + u).reshape(v.tag.test_value.shape)})
+
+    if local_RVs is not None:
+        ds = model.deterministics
+        get_transformed = lambda v: v if v not in ds else v.transformed
+        for v_, (uw, _) in local_RVs.items():
+            v = get_transformed(v_)
+            u = uw[0].ravel()
+            w = uw[1].ravel()
+            n = r.normal(size=u.tag.test_value.shape)
+            updates.update({v: (n * tt.exp(w) + u).reshape(v.tag.test_value.shape)})
 
     # Replace some nodes of the graph with variational distributions
+    vars = model.free_RVs
     samples = theano.clone(vars, updates)
     f = theano.function([], samples)
 
