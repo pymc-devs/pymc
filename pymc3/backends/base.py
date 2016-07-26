@@ -32,7 +32,7 @@ class BaseTrace(object):
         if vars is None:
             vars = model.unobserved_RVs
         self.vars = vars
-        self.varnames = [str(var) for var in vars]
+        self.varnames = [var.name for var in vars]
         self.fn = model.fastfn(vars)
 
 
