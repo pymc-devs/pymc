@@ -212,6 +212,6 @@ def leapfrog1_dE(logp, vars, shared, pot, profile):
     E0 = energy(H, q0, p0)
     dE = E - E0
 
-    f = theano.function([q, p, e, q0, p0], [q1, p1, dE], profile=profile)
+    f = theano.function([q, p, e, q0, p0], [q1, p1, dE], profile=profile, allow_input_downcast=True)
     f.trust_input = True
     return f
