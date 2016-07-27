@@ -430,6 +430,6 @@ def delta_logp(logp, vars, shared):
 
     logp1 = pm.CallableTensor(logp0)(inarray1)
 
-    f = theano.function([inarray1, inarray0], logp1 - logp0)
+    f = theano.function([inarray1, inarray0], logp1 - logp0, allow_input_downcast=True)
     f.trust_input = True
     return f
