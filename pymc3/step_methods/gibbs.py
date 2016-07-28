@@ -10,7 +10,7 @@ from numpy.random import uniform
 
 from theano.gof.graph import inputs
 from theano.tensor import add 
-
+from ..model import modelcontext
 __all__ = ['ElemwiseCategorical']
 
 
