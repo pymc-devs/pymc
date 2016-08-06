@@ -156,12 +156,12 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
     progress = progress_bar(draws)
-    for i, strace in enumerate(sampling):
-        try:
+    try:
+        for i, strace in enumerate(sampling):
             if progressbar:
                 progress.update(i)
-        except KeyboardInterrupt:
-            strace.close()
+    except KeyboardInterrupt:
+        strace.close()
     return MultiTrace([strace])
 
 
