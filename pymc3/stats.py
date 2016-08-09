@@ -112,21 +112,34 @@ def waic(trace, model=None, n_eff=False):
         return -2 * lppd + 2 * p_waic, p_waic    
     else:
         return -2 * lppd + 2 * p_waic
-    
-def loo(trace, model=None):
+   
+def loo(trace, model=None, n_eff=False):
     """
     Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
     Pareto-smoothed importance sampling (PSIS).
     
-    Returns log pointwise predictive density calculated via approximated LOO cross-validation.
+    Parameters
+    ----------
+    trace : result of MCMC run
+    model : PyMC Model
+        Optional model. Default None, taken from context.
+    n_eff: bool
+        if True the effective number parameters will be computed and returned. 
+        Default False
+    
+    Returns
+    -------
+    elpd_loo: log pointwise predictive density calculated via approximated LOO cross-validation
+    p_loo: effective number parameters, only if n_eff True
     """
     model = modelcontext(model)
     
     log_py = log_post_trace(trace, model)
     
     # Importance ratios
-    r = 1./np.exp(log_py)
+    py = np.exp(log_py)
+    r = 1./py
     r_sorted = np.sort(r, axis=0)
 
     # Extract largest 20% of importance ratios and fit generalized Pareto to each 
@@ -154,11 +167,14 @@ def loo(trace, model=None):
     # Truncate weights to guarantee finite variance
     w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
     
-    loo_lppd = np.sum(np.log(np.sum(w * np.exp(log_py), axis=0) / np.sum(w, axis=0)))
+    loo_lppd = np.sum(np.log(np.sum(w * py, axis=0) / np.sum(w, axis=0)))
     
-    return loo_lppd
+    if n_eff:
+        p_loo = np.sum(np.log(np.mean(py, axis=0))) - loo_lppd
+        return -2 * loo_lppd, p_loo  
+    else:
+        return -2 * loo_lppd
     
-
 def bpic(trace, model=None):
     """
     Calculates Bayesian predictive information criterion n of the samples in trace from model
