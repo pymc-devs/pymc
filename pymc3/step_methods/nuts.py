@@ -69,12 +69,11 @@ class NUTS(ArrayStepShared):
         if isinstance(scaling, dict):
             scaling = guess_scaling(Point(scaling, model=model), model=model, vars = vars)
 
-
+        scaling = scaling.astype(theano.config.floatX)
 
         n = scaling.shape[0]
 
         self.step_size = step_scale / n**(1/4.)
-
 
         self.potential = quad_potential(scaling, is_cov, as_cov=False)
 
@@ -92,19 +91,18 @@ class NUTS(ArrayStepShared):
         self.u = log(self.step_size*10)
         self.m = 1
 
-
-
         shared = make_shared_replacements(vars, model)
         self.leapfrog1_dE = leapfrog1_dE(model.logpt, vars, shared, self.potential, profile=profile)
 
         super(NUTS, self).__init__(vars, shared, **kwargs)
 
     def astep(self, q0):
+        q0 = q0.astype(theano.config.floatX)
         H = self.leapfrog1_dE #Hamiltonian(self.logp, self.dlogp, self.potential)
         Emax = self.Emax
-        e = self.step_size
+        e = array(self.step_size, dtype=theano.config.floatX)
 
-        p0 = self.potential.random()
+        p0 = self.potential.random().astype(theano.config.floatX)
         u = uniform()
         q = qn = qp = q0
         p = pn = pp = p0
@@ -112,7 +110,7 @@ class NUTS(ArrayStepShared):
         n, s, j = 1, 1, 0
 
         while s == 1:
-            v = bern(.5) * 2 - 1
+            v = array(bern(.5) * 2 - 1, dtype=theano.config.floatX)
 
             if v == -1:
                 qn, pn, _, _, q1, n1, s1, a, na = buildtree(H, qn, pn, u, v, j, e, Emax, q0, p0)
@@ -196,22 +194,22 @@ def leapfrog1_dE(logp, vars, shared, pot, profile):
 
     H = Hamiltonian(logp, dlogp, pot)
 
-    p = tt.dvector('p')
+    p = tt.vector('p')
     p.tag.test_value = q.tag.test_value
 
-    q0 = tt.dvector('q0')
+    q0 = tt.vector('q0')
     q0.tag.test_value = q.tag.test_value
-    p0 = tt.dvector('p0')
+    p0 = tt.vector('p0')
     p0.tag.test_value = p.tag.test_value
 
-    e = tt.dscalar('e')
-    e.tag.test_value = 1
+    e = tt.scalar('e')
+    e.tag.test_value = 1.
 
     q1, p1 = leapfrog(H, q, p, 1, e)
     E = energy(H, q1, p1)
     E0 = energy(H, q0, p0)
     dE = E - E0
 
-    f = theano.function([q, p, e, q0, p0], [q1, p1, dE], profile=profile)
+    f = theano.function([q, p, e, q0, p0], [q1, p1, dE], profile=profile, allow_input_downcast=True)
     f.trust_input = True
     return f
