@@ -119,7 +119,19 @@ def loo(trace, model=None, n_eff=False):
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
     Pareto-smoothed importance sampling (PSIS).
     
-    Returns log pointwise predictive density calculated via approximated LOO cross-validation.
+    Parameters
+    ----------
+    trace : result of MCMC run
+    model : PyMC Model
+        Optional model. Default None, taken from context.
+    n_eff: bool
+        if True the effective number parameters will be computed and returned. 
+        Default False
+    
+    Returns
+    -------
+    elpd_loo: log pointwise predictive density calculated via approximated LOO cross-validation
+    p_loo: effective number parameters, only if n_eff True
     """
     model = modelcontext(model)
     
