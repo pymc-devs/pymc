@@ -99,17 +99,38 @@ def waic(trace, model=None, n_eff=False):
     """
     Calculate the widely available information criterion and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
+    
+    Parameters
+    ----------
+    trace : result of MCMC run
+    model : PyMC Model
+        Optional model. Default None, taken from context.
+    n_eff: bool
+        if True the effective number parameters will be returned. 
+        Default False
+    
+    Returns
+    -------
+    waic: widely available information criterion
+    p_waic: effective number parameters, only if n_eff True
+    
     """
     model = modelcontext(model)
     
     log_py = log_post_trace(trace, model)
 
     lppd =  np.sum(np.log(np.mean(np.exp(log_py), axis=0)))
-        
-    p_waic = np.sum(np.var(log_py, axis=0))
+
+    vars_lpd = np.var(log_py, axis=0)
+    if np.any(vars_lpd > 0.4):
+        warnings.warn("""For one or more samples the posterior variance of the 
+        log predictive densities exceeds 0.4. This could be indication of 
+        WAIC starting to fail see http://arxiv.org/abs/1507.04544 for details
+        """)
+    p_waic = np.sum(vars_lpd)
     
     if n_eff:
-        return -2 * lppd + 2 * p_waic, p_waic    
+        return -2 * lppd + 2 * p_waic, p_waic
     else:
         return -2 * lppd + 2 * p_waic
    
