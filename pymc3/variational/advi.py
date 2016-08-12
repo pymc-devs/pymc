@@ -1,6 +1,6 @@
 
 '''
-Created on Mar 12, 2011
+Created on 2016
 
 @author: johnsalvatier
 '''
@@ -19,7 +19,7 @@ from collections import OrderedDict, namedtuple
 from pymc3.sampling import NDArray
 from pymc3.backends.base import MultiTrace
 
-__all__ = ['advi']
+__all__ = ['advi', 'sample_vp']
 
 ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
 
@@ -32,7 +32,29 @@ def check_discrete_rvs(vars):
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     learning_rate=.001, epsilon=.1, random_seed=20090425, verbose=1):
-    """Run ADVI.
+    """Performe automatic differentiation variational inference (ADVI). 
+
+    This function implements the meanfield ADVI, where the variational 
+    posterior distribution is assumed to spherical Gaussian without 
+    correlation of parameters and fit to the true posterior distribution. 
+    The means and standard deviations of the variational posterior are referred 
+    to as variational parameters. 
+
+    The return value of this function is an :code:`ADVIfit` object, which has 
+    variational parameters. If you want to draw samples from the variational 
+    posterior, you need to pass the :code:`ADVIfit` object to 
+    :code:`pymc3.variational.sample_vp()`. 
+
+    The variational parameters are defined on the transformed space, which is 
+    required to do ADVI on an unconstrained parameter space as described in 
+    [KTR+2016]. The parameters in the :code:`ADVIfit` object are in the 
+    transformed space, while traces returned by :code:`sample_vp()` are in 
+    the original space as obtained by MCMC sampling methods in PyMC3. 
+
+    The variational parameters are optimized with a modified version of 
+    Adagrad, where only the last (n_window) gradient vectors are used to 
+    control the learning rate and older gradient vectors are ignored. 
+    n_window denotes the size of time window and fixed to 10. 
 
     Parameters
     ----------
@@ -58,9 +80,15 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     ADVIFit
         Named tuple, which includes 'means', 'stds', and 'elbo_vals'.
 
-    'means' and 'stds' include parameters of the variational posterior.
-    """
+    'means' is the mean. 'stds' is log of the standard deviation. 
+    'elbo_vals' is the trace of ELBO values during optimizaiton. 
 
+    References
+    ----------
+    .. [KTR+2016] Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A., 
+        and Blei, D. M. (2016). Automatic Differentiation Variational Inference. 
+        arXiv preprint arXiv:1603.00788.
+    """
     model = modelcontext(model)
     if start is None:
         start = model.test_point
