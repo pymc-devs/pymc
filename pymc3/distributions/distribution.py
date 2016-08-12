@@ -27,7 +27,7 @@ class Distribution(object):
         elif name is None:
             return object.__new__(cls)  # for pickle
         else:
-            raise TypeError("needed name or None but got: " + name)
+            raise TypeError("needed name or None but got: %s" % name)
 
     def __getnewargs__(self):
         return None,
