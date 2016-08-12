@@ -316,6 +316,8 @@ class Model(Context, Factor):
 
     def add_random_variable(self, var):
         """Add a random variable to the named variables of the model."""
+        if var.name in self.named_vars:
+            raise ValueError("Variable name {} already exists.".format(var.name))
         self.named_vars[var.name] = var
         if not hasattr(self, var.name):
             setattr(self, var.name, var)
