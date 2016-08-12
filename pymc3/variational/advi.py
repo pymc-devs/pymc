@@ -1,8 +1,6 @@
 
 '''
-Created on 2016
-
-@author: johnsalvatier
+(c) 2016, John Salvatier & Taku Yoshioka
 '''
 import numpy as np
 from ..blocking import DictToArrayBijection, ArrayOrdering
@@ -32,10 +30,10 @@ def check_discrete_rvs(vars):
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     learning_rate=.001, epsilon=.1, random_seed=20090425, verbose=1):
-    """Performe automatic differentiation variational inference (ADVI). 
+    """Perform automatic differentiation variational inference (ADVI). 
 
     This function implements the meanfield ADVI, where the variational 
-    posterior distribution is assumed to spherical Gaussian without 
+    posterior distribution is assumed to be spherical Gaussian without 
     correlation of parameters and fit to the true posterior distribution. 
     The means and standard deviations of the variational posterior are referred 
     to as variational parameters. 
