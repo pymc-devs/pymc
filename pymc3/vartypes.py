@@ -1,5 +1,3 @@
-import theano
-
 __all__ = ['bool_types', 'int_types', 'float_types', 'complex_types', 'continuous_types',
         'discrete_types', 'default_type', 'typefilter']
 
@@ -21,9 +19,9 @@ continuous_types = float_types | complex_types
 discrete_types = bool_types | int_types
 
 default_type = {'discrete': 'int64',
-                'continuous': theano.config.floatX}
+                'continuous': 'float64'}
 
 
 def typefilter(vars, types):
     # Returns variables of type `types` from `vars`
-    return [v for v in vars if v.dtype in types]
+    return [v for v in vars if v.dtype in types] 
