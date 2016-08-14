@@ -3,7 +3,7 @@
 
 set -e # fail on first error
 
-${PYTHON_VERSION:=-3.5} # if no python specified, use 3
+PYTHON_VERSION=${PYTHON_VERSION:-3.5} # if no python specified, use 3.5
 
 echo "using miniconda for python-${PYTHON_VERSION}"
 
