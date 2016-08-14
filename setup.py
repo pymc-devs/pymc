@@ -1,11 +1,12 @@
 #!/usr/bin/env python
+from pip.req import parse_requirements
 from setuptools import setup
 import sys
 
 
 DISTNAME = 'pymc3'
 DESCRIPTION = "PyMC3"
-LONG_DESCRIPTION    = """Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC), is an increasingly relevant approach to statistical estimation. However, few statistical software packages implement MCMC samplers, and they are non-trivial to code by hand. ``pymc3`` is a python package that implements the Metropolis-Hastings algorithm as a python class, and is extremely flexible and applicable to a large suite of problems. ``pymc3`` includes methods for summarizing output, plotting, goodness-of-fit and convergence diagnostics."""
+LONG_DESCRIPTION = """Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC), is an increasingly relevant approach to statistical estimation. However, few statistical software packages implement MCMC samplers, and they are non-trivial to code by hand. ``pymc3`` is a python package that implements the Metropolis-Hastings algorithm as a python class, and is extremely flexible and applicable to a large suite of problems. ``pymc3`` includes methods for summarizing output, plotting, goodness-of-fit and convergence diagnostics."""
 MAINTAINER = 'John Salvatier'
 MAINTAINER_EMAIL = 'jsalvati@u.washington.edu'
 AUTHOR = 'John Salvatier and Christopher Fonnesbeck'
@@ -26,8 +27,10 @@ classifiers = ['Development Status :: 4 - Beta',
                'Topic :: Scientific/Engineering :: Mathematics',
                'Operating System :: OS Independent']
 
-with open('requirements.txt') as f:
-    install_reqs = f.read().splitlines()
+
+install_reqs = []
+for req in parse_requirements('requirements.txt', session=False):
+    install_reqs.append(str(req.req))
 
 if sys.version_info < (3, 4):
     install_reqs.append('enum34')
@@ -50,7 +53,7 @@ if __name__ == "__main__":
                     'pymc3.step_methods', 'pymc3.tuning',
                     'pymc3.tests', 'pymc3.glm', 'pymc3.examples',
                     'pymc3.backends', 'pymc3.variational'],
-          package_data = {'pymc3.examples': ['data/*.*']},
+          package_data={'pymc3.examples': ['data/*.*']},
           classifiers=classifiers,
           install_requires=install_reqs,
           tests_require=test_reqs,
