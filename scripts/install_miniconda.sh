@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-
 set -e # fail on first error
 
 PYTHON_VERSION=${PYTHON_VERSION:-3.4} # if no python specified, use 3.4
