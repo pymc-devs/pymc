@@ -12,13 +12,16 @@ before_install:
   - if [ ${MATPLOTLIB} = "1.2" ]; then cp ${SRCDIR}/tools/matplotlibrc $HOME/.matplotlib/matplotlibrc; fi
   #- mkdir -p $HOME/.config/matplotlib; echo "backend: agg" > $HOME/.config/matplotlib/matplotlibrc
 
-install: . ./scripts/create_testenv.sh
+install:
+  - . ./scripts/create_testenv.sh
 
 env:
   - TESTCMD=" -vv --with-timer -e test_examples -e test_distributions" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
   - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
   - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions_random" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
-script: . ./scripts/test.sh $TESTCMD
+
+script:
+  - . ./scripts/test.sh $TESTCMD
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

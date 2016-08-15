@@ -4,8 +4,10 @@ set -e # fail on first error
 
 PYTHON_VERSION=${PYTHON_VERSION:-3.4} # if no python specified, use 3.4
 
-conda create -n testenv --yes pip python=$PYTHON_VERSION
+conda create -n testenv --yes pip python=${PYTHON_VERSION}
+
 source activate testenv
+
 conda install --yes jupyter pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels joblib
 if [ ${PYTHON_VERSION} == "2.7" ]; then
   conda install --yes mock enum34;
