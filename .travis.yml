@@ -5,7 +5,7 @@ python:
   - "3.4"
 
 before_install:
-  - ./scripts/install_miniconda.sh
+  - . ./scripts/install_miniconda.sh
   - "export DISPLAY=:99.0"
   - "sh -e /etc/init.d/xvfb start"
   - if [ ${MATPLOTLIB} = "1.2" ]; then mkdir $HOME/.matplotlib; fi
