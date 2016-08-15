@@ -78,7 +78,7 @@ def autocov(x, lag=1):
 def dic(trace, model=None):
     """
     Calculate the deviance information criterion of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
+    Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353
     """
     model = modelcontext(model)
 
@@ -98,7 +98,7 @@ def log_post_trace(trace, model):
 def waic(trace, model=None, n_eff=False):
     """
     Calculate the widely available information criterion and the effective number of parameters of the samples in trace from model.
-    Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
+    Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353
     
     Parameters
     ----------
@@ -199,7 +199,7 @@ def loo(trace, model=None, n_eff=False):
 def bpic(trace, model=None):
     """
     Calculates Bayesian predictive information criterion n of the samples in trace from model
-    Read more theory here - in a paper by some of the leading authorities on Model Selection - http://bit.ly/1W2YJ7c
+    Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353
     """
     model = modelcontext(model)
 
