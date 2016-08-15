@@ -4,9 +4,6 @@ python:
   - "2.7"
   - "3.4"
 
-env:
-  - PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
-
 before_install:
   - ./scripts/install_miniconda.sh
   - "export DISPLAY=:99.0"
@@ -27,9 +24,9 @@ install:
   - python setup.py build_ext --inplace
 
 env:
-  - TESTCMD=" -vv --with-timer -e test_examples -e test_distributions"
-  - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions"
-  - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions_random"
+  - TESTCMD=" -vv --with-timer -e test_examples -e test_distributions" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
+  - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
+  - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions_random" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
 script:
   - THEANO_FLAGS='gcc.cxxflags="-march=core2"' nosetests $TESTCMD
 

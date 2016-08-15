@@ -32,3 +32,4 @@ fi
 bash miniconda.sh -b -p $INSTALL_FOLDER
 export PATH="$INSTALL_FOLDER/bin:$PATH"
 conda update -q conda
+echo $PATH
