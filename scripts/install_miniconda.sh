@@ -3,9 +3,7 @@
 
 set -e # fail on first error
 
-PYTHON_VERSION=${PYTHON_VERSION:-3.5} # if no python specified, use 3.5
-
-echo "using miniconda for python-${PYTHON_VERSION}"
+PYTHON_VERSION=${PYTHON_VERSION:-3.4} # if no python specified, use 3.4
 
 if [ "$(uname)" == "Darwin" ]; then
   URL_OS="MacOSX"
@@ -15,21 +13,21 @@ elif [ "$(expr substr "$(uname -s)" 1 10)" == "MINGW32_NT" ]; then
   URL_OS="Windows"
 fi
 
-echo "detected operating system: $URL_OS"
+echo "Downloading miniconda for $URL_OS"
 
 if [ ${PYTHON_VERSION} == "2.7" ]; then
-  echo "Installing miniconda for python 2.7"
   wget http://repo.continuum.io/miniconda/Miniconda-latest-$URL_OS-x86_64.sh -O miniconda.sh;
   INSTALL_FOLDER="$HOME/minconda2"
 else
-  echo "Installing miniconda for python 3.5"
   wget http://repo.continuum.io/miniconda/Miniconda3-latest-$URL_OS-x86_64.sh -O miniconda.sh;
   INSTALL_FOLDER="$HOME/minconda3"
 fi
 
 
+echo "Installing miniconda for python-$PYTHON_VERSION to $INSTALL_FOLDER"
 # install miniconda to home folder
 bash miniconda.sh -b -p $INSTALL_FOLDER
+
 export PATH="$INSTALL_FOLDER/bin:$PATH"
+echo "Adding $INSTALL_FOLDER to PATH.  Consider adding it in your .rc file as well."
 conda update -q conda
-echo $PATH

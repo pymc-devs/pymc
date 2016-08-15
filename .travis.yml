@@ -13,7 +13,6 @@ before_install:
   #- mkdir -p $HOME/.config/matplotlib; echo "backend: agg" > $HOME/.config/matplotlib/matplotlibrc
 
 install:
-  - echo $PATH
   - conda create -n testenv --yes pip python=$TRAVIS_PYTHON_VERSION
   - source activate testenv
   - conda install --yes jupyter pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels joblib
