@@ -374,7 +374,7 @@ class Wishart(Continuous):
                      n > (p - 1))
 
 
-def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False):
+def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testval=None):
     """
     Bartlett decomposition of the Wishart distribution. As the Wishart
     distribution requires the matrix to be symmetric positive semi-definite
@@ -404,6 +404,8 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False):
         Input matrix S is already Cholesky decomposed as S.T * S
       return_cholesky : bool (default=False)
         Only return the Cholesky decomposed matrix.
+      testval : ndarray
+        p x p positive definite matrix used to initialize
 
     :Note:
       This is not a standard Distribution class but follows a similar
@@ -412,14 +414,25 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False):
     """
 
     L = S if is_cholesky else scipy.linalg.cholesky(S)
-
     diag_idx = np.diag_indices_from(S)
     tril_idx = np.tril_indices_from(S, k=-1)
     n_diag = len(diag_idx[0])
     n_tril = len(tril_idx[0])
-    c = tt.sqrt(ChiSquared('c', nu - np.arange(2, 2+n_diag), shape=n_diag))
+
+    if testval is not None:
+        # Inverse transform
+        testval = np.dot(np.dot(np.linalg.inv(L), testval), np.linalg.inv(L.T))
+        testval = scipy.linalg.cholesky(testval, lower=True)
+        diag_testval = testval[diag_idx]**2
+        tril_testval = testval[tril_idx]
+    else:
+        diag_testval = None
+        tril_testval = None
+
+    c = tt.sqrt(ChiSquared('c', nu - np.arange(2, 2+n_diag), shape=n_diag,
+                           testval=diag_testval))
     print('Added new variable c to model diagonal of Wishart.')
-    z = Normal('z', 0, 1, shape=n_tril)
+    z = Normal('z', 0, 1, shape=n_tril, testval=tril_testval)
     print('Added new variable z to model off-diagonals of Wishart.')
     # Construct A matrix
     A = tt.zeros(S.shape, dtype=np.float32)
