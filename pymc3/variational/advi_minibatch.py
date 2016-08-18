@@ -6,7 +6,7 @@ from ..theanof import reshape_t, inputvars
 import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 from collections import OrderedDict
-from .advi import check_discrete_rvs, adagrad, ADVIFit
+from .advi import check_discrete_rvs, ADVIFit, adagrad_optimizer
 
 __all__ = ['advi_minibatch']
 
@@ -37,22 +37,6 @@ def _check_minibatches(minibatch_tensors, minibatches):
 
     _value_error(hasattr(minibatches, "__iter__"), 
                  'minibatches must be an iterator.')
-
-def _replace_shared_minibatch_tensors(minibatch_tensors):
-    """Replace shared variables in minibatch tensors with normal tensors. 
-    """
-    givens = dict()
-    tensors = list()
-
-    for t in minibatch_tensors:
-        if isinstance(t, theano.compile.sharedvalue.SharedVariable):
-            t_ = t.type()
-            tensors.append(t_)
-            givens.update({t: t_})
-        else:
-            tensors.append(t)
-
-    return tensors, givens
 
 def _get_rvss(
     minibatch_RVs, local_RVs, observed_RVs, minibatch_tensors, total_size):
@@ -141,8 +125,7 @@ def _make_logpt(global_RVs, local_RVs, observed_RVs, model):
 
     return logpt
 
-def _elbo_t_new(logp, uw_g, uw_l, inarray_g, inarray_l, 
-                n_mcsamples, random_seed):
+def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
     """Return expression of approximate ELBO based on Monte Carlo sampling.
     """
     r = MRG_RandomStreams(seed=random_seed)
@@ -203,8 +186,8 @@ def _elbo_t_new(logp, uw_g, uw_l, inarray_g, inarray_l,
 def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1, 
     minibatch_RVs=None, minibatch_tensors=None, minibatches=None, 
     local_RVs=None, observed_RVs=None, encoder_params=[], 
-    total_size=None, scales=None, learning_rate=.001, epsilon=.1, 
-    random_seed=20090425, verbose=1):
+    total_size=None, scales=None, optimizer=None, learning_rate=.001, 
+    epsilon=.1, random_seed=20090425, verbose=1, ):
     """Run mini-batch ADVI. 
 
     minibatch_tensors and minibatches should be in the same order. 
@@ -231,10 +214,16 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         random variables in `minibatch_tensors`. 
     total_size : int
         Total size of training samples. 
+    optimizer : (loss, tensor) -> dict or OrderedDict
+        A function that returns parameter updates given loss and parameter 
+        tensor. If :code:`None` (default), a default Adagrad optimizer is 
+        used with parameters :code:`learning_rate` and :code:`epsilon` below. 
     learning_rate: float
-        Adagrad base learning rate. 
+        Base learning rate for adagrad. This parameter is ignored when
+        optimizer is given. 
     epsilon : float
-        Offset in denominator of the scale of learning rate in Adagrad.  
+        Offset in denominator of the scale of learning rate in Adagrad.
+        This parameter is ignored when optimizer is given. 
     random_seed : int
         Seed to initialize random state. 
 
@@ -250,6 +239,10 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     start = start if start is not None else model.test_point
     check_discrete_rvs(vars)
     _check_minibatches(minibatch_tensors, minibatches)
+
+    # Prepare optimizer
+    if optimizer is None:
+        optimizer = adagrad_optimizer(learning_rate, epsilon)
 
     # For backward compatibility in how input arguments are given
     local_RVs, observed_RVs = _get_rvss(minibatch_RVs, local_RVs, observed_RVs, 
@@ -277,8 +270,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     replace = replace_g
     if replace_l is not None: replace.update(replace_l)
     logp = theano.clone(logpt, replace, strict=False)
-    elbo = _elbo_t_new(logp, uw_g, uw_l, inarray_g, inarray_l, 
-                       n_mcsamples, random_seed)
+    elbo = _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, 
+                   n_mcsamples, random_seed)
     del logpt
 
     # Variational parameters for global RVs
@@ -309,11 +302,12 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     params = [uw_global_shared] + encoder_params
     updates = OrderedDict()
     for param in params:
-        g = tt.grad(elbo, wrt=param)
-        updates.update(adagrad(g, param, learning_rate, epsilon, n=10))
+        # g = tt.grad(elbo, wrt=param)
+        # updates.update(adagrad(g, param, learning_rate, epsilon, n=10))
+        updates.update(optimizer(loss=-1 * elbo, param=param))
     f = theano.function(tensors, elbo, updates=updates)
 
-    # Training loop
+    # Optimization loop
     elbos = np.empty(n)
     for i in range(n):
         e = f(*next(minibatches))
