@@ -9,7 +9,7 @@ from ..model import ObservedRV, modelcontext
 from ..vartypes import discrete_types
 
 import theano
-from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor, gradient
+from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor
 from theano.tensor import exp, dvector
 import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
@@ -29,7 +29,8 @@ def check_discrete_rvs(vars):
         raise ValueError('Model should not include discrete RVs for ADVI.')
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
-    learning_rate=.001, epsilon=.1, random_seed=20090425, verbose=1):
+    optimizer=None, learning_rate=.001, epsilon=.1, random_seed=20090425, 
+    verbose=1):
     """Perform automatic differentiation variational inference (ADVI). 
 
     This function implements the meanfield ADVI, where the variational 
@@ -49,10 +50,12 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     transformed space, while traces returned by :code:`sample_vp()` are in 
     the original space as obtained by MCMC sampling methods in PyMC3. 
 
-    The variational parameters are optimized with a modified version of 
-    Adagrad, where only the last (n_window) gradient vectors are used to 
-    control the learning rate and older gradient vectors are ignored. 
-    n_window denotes the size of time window and fixed to 10. 
+    The variational parameters are optimized with given optimizer, which is a 
+    function that returns a dictionary of parameter updates as provided to 
+    Theano function. If no optimizer is provided, optimization is performed 
+    with a modified version of adagrad, where only the last (n_window) gradient 
+    vectors are used to control the learning rate and older gradient vectors 
+    are ignored. n_window denotes the size of time window and fixed to 10. 
 
     Parameters
     ----------
@@ -66,10 +69,16 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         Number of interations updating parameters.
     accurate_elbo : bool
         If true, 100 MC samples are used for accurate calculation of ELBO.
+    optimizer : (loss, tensor) -> dict or OrderedDict
+        A function that returns parameter updates given loss and parameter 
+        tensor. If :code:`None` (default), a default Adagrad optimizer is 
+        used with parameters :code:`learning_rate` and :code:`epsilon` below. 
     learning_rate: float
-        Adagrad base learning rate.
+        Base learning rate for adagrad. This parameter is ignored when
+        optimizer is given. 
     epsilon : float
         Offset in denominator of the scale of learning rate in Adagrad.
+        This parameter is ignored when optimizer is given. 
     random_seed : int
         Seed to initialize random state.
 
@@ -99,9 +108,13 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
     n_mcsamples = 100 if accurate_elbo else 1
 
+    # Prepare optimizer
+    if optimizer is None:
+        optimizer = adagrad_optimizer(learning_rate, epsilon)
+
     # Create variational gradient tensor
-    grad, elbo, shared, _ = variational_gradient_estimate(
-        vars, model, n_mcsamples=n_mcsamples, random_seed=random_seed)
+    elbo, shared = _calc_elbo(vars, model, n_mcsamples=n_mcsamples, 
+                              random_seed=random_seed)
 
     # Set starting values
     for var, share in shared.items():
@@ -113,51 +126,16 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     w_start = np.zeros_like(u_start)
     uw = np.concatenate([u_start, w_start])
 
-    result, elbos = run_adagrad(uw, grad, elbo, n, learning_rate=learning_rate, epsilon=epsilon, verbose=verbose)
+    # Create parameter update function used in the training loop
+    uw_shared = theano.shared(uw, 'uw_shared')
+    elbo = CallableTensor(elbo)(uw_shared)
+    updates = optimizer(loss=-1 * elbo, param=uw_shared)
+    f = theano.function([], [uw_shared, elbo], updates=updates)
 
-    l = int(result.size / 2)
-
-    u = bij.rmap(result[:l])
-    w = bij.rmap(result[l:])
-    # w is in log space
-    for var in w.keys():
-        w[var] = np.exp(w[var])
-    return ADVIFit(u, w, elbos)
-
-def replace_shared_minibatch_tensors(minibatch_tensors):
-    """Replace shared variables in minibatch tensors with normal tensors.
-    """
-    givens = dict()
-    tensors = list()
-
-    for t in minibatch_tensors:
-        if isinstance(t, theano.compile.sharedvalue.SharedVariable):
-            t_ = t.type()
-            tensors.append(t_)
-            givens.update({t: t_})
-        else:
-            tensors.append(t)
-
-    return tensors, givens
-
-def run_adagrad(uw, grad, elbo, n, learning_rate=.001, epsilon=.1, verbose=1):
-    """Run Adagrad parameter update.
-
-    This function is only used in batch training.
-    """
-    shared_inarray = theano.shared(uw, 'uw_shared')
-    grad = CallableTensor(grad)(shared_inarray)
-    elbo = CallableTensor(elbo)(shared_inarray)
-
-    updates = adagrad(grad, shared_inarray, learning_rate=learning_rate, epsilon=epsilon, n=10)
-
-    # Create in-place update function
-    f = theano.function([], [shared_inarray, grad, elbo], updates=updates)
-
-    # Run adagrad steps
+    # Optimization loop
     elbos = np.empty(n)
     for i in range(n):
-        uw_i, g, e = f()
+        uw_i, e = f()
         elbos[i] = e
         if verbose and not i % (n//10):
             if not i:
@@ -169,24 +147,24 @@ def run_adagrad(uw, grad, elbo, n, learning_rate=.001, epsilon=.1, verbose=1):
     if verbose:
         avg_elbo = elbos[-n//10:].mean()
         print('Finished [100%]: Average ELBO = {}'.format(avg_elbo.round(2)))
-    return uw_i, elbos
 
-def variational_gradient_estimate(
-    vars, model, minibatch_RVs=[], minibatch_tensors=[], total_size=None,
-    n_mcsamples=1, random_seed=20090425):
-    """Calculate approximate ELBO and its (stochastic) gradient.
+    # Estimated parameters
+    l = int(uw_i.size / 2)
+    u = bij.rmap(uw_i[:l])
+    w = bij.rmap(uw_i[l:])
+    # w is in log space
+    for var in w.keys():
+        w[var] = np.exp(w[var])
+
+    return ADVIFit(u, w, elbos)
+
+def _calc_elbo(vars, model, n_mcsamples, random_seed):
+    """Calculate approximate ELBO.
     """
-
     theano.config.compute_test_value = 'ignore'
     shared = make_shared_replacements(vars, model)
 
-    # Correction sample size
-    r = 1 if total_size is None else \
-        float(total_size) / minibatch_tensors[0].shape[0]
-
-    other_RVs = set(model.basic_RVs) - set(minibatch_RVs)
-    factors = [r * var.logpt for var in minibatch_RVs] + \
-              [var.logpt for var in other_RVs] + model.potentials
+    factors = [var.logpt for var in model.basic_RVs] + model.potentials
     logpt = tt.add(*map(tt.sum, factors))
 
     [logp], inarray = join_nonshared_inputs([logpt], vars, shared)
@@ -195,14 +173,11 @@ def variational_gradient_estimate(
     uw.tag.test_value = np.concatenate([inarray.tag.test_value,
                                         inarray.tag.test_value])
 
-    elbo = elbo_t(logp, uw, inarray, n_mcsamples=n_mcsamples, random_seed=random_seed)
+    elbo = _elbo_t(logp, uw, inarray, n_mcsamples, random_seed)
 
-    # Gradient
-    grad = gradient(elbo, [uw])
+    return elbo, shared
 
-    return grad, elbo, shared, uw
-
-def elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
+def _elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
     """Create Theano tensor of approximate ELBO by Monte Carlo sampling.
     """
     l = (uw.size/2).astype('int64')
@@ -229,26 +204,50 @@ def elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
 
     return elbo
 
-def adagrad(grad, param, learning_rate, epsilon, n):
-    """Create Theano parameter (tensor) updates by Adagrad.
+def adagrad_optimizer(learning_rate, epsilon, n_win=10):
+    """Returns a function that returns parameter updates. 
+
+    Parameter
+    ---------
+    learning_rate : float
+        Learning rate. 
+    epsilon : float
+        Offset to avoid zero-division in the normalizer of adagrad. 
+    n_win : int
+        Number of past steps to calculate scales of parameter gradients. 
+
+    Returns
+    -------
+    A function (loss, param) -> updates.
+
+    loss : Theano scalar
+        Loss function to be minimized (e.g., negative ELBO). 
+    param : Theano tensor
+        Parameters to be optimized. 
+    updates : OrderedDict
+        Parameter updates used in Theano functions. 
     """
-    # Compute windowed adagrad using last n gradients
-    i = theano.shared(np.array(0), 'i')
-    value = param.get_value(borrow=True)
-    accu = theano.shared(np.zeros(value.shape+(n,), dtype=value.dtype))
+    def optimizer(loss, param):
+        i = theano.shared(np.array(0))
+        value = param.get_value(borrow=True)
+        accu = theano.shared(np.zeros(value.shape+(n_win,), dtype=value.dtype))
+        # grad = tt.grad(loss, wrt=param)
+        grad = tt.grad(loss, param)
 
-    # Append squared gradient vector to accu_new
-    accu_new = tt.set_subtensor(accu[:,i], grad ** 2)
-    i_new = tt.switch((i + 1) < n, i + 1, 0)
+        # Append squared gradient vector to accu_new
+        accu_new = tt.set_subtensor(accu[:,i], grad ** 2)
+        i_new = tt.switch((i + 1) < n_win, i + 1, 0)
 
-    updates = OrderedDict()
-    updates[accu] = accu_new
-    updates[i] = i_new
+        updates = OrderedDict()
+        updates[accu] = accu_new
+        updates[i] = i_new
 
-    accu_sum = accu_new.sum(axis=1)
-    updates[param] = param - (-learning_rate * grad /
-                              tt.sqrt(accu_sum + epsilon))
-    return updates
+        accu_sum = accu_new.sum(axis=1)
+        updates[param] = param - (learning_rate * grad /
+                                  tt.sqrt(accu_sum + epsilon))
+
+        return updates
+    return optimizer
 
 def sample_vp(
     vparams, draws=1000, model=None, local_RVs=None, random_seed=20090425, 

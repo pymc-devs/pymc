@@ -3,7 +3,8 @@ import pymc3 as pm
 from pymc3 import Model, Normal, DiscreteUniform, Poisson, switch, Exponential
 from pymc3.theanof import inputvars
 from pymc3.variational import advi, advi_minibatch, sample_vp
-from pymc3.variational.advi import variational_gradient_estimate
+from pymc3.variational.advi import _calc_elbo, adagrad_optimizer
+from pymc3.theanof import CallableTensor
 from theano import function, shared
 import theano.tensor as tt
 
@@ -17,20 +18,21 @@ def test_elbo():
     # Create a model for test
     with Model() as model:
         mu = Normal('mu', mu=mu0, sd=sigma)
-        y = Normal('y', mu=mu, sd=1, observed=y_obs)
+        Normal('y', mu=mu, sd=1, observed=y_obs)
 
     vars = inputvars(model.vars)
 
     # Create variational gradient tensor
-    grad, elbo, shared, uw = variational_gradient_estimate(
-        vars, model, n_mcsamples=10000, random_seed=1)
+    elbo, _ = _calc_elbo(vars, model, n_mcsamples=10000, random_seed=1)
 
     # Variational posterior parameters
     uw_ = np.array([1.88, np.log(1)])
 
     # Calculate elbo computed with MonteCarlo
-    f = function([uw], elbo)
-    elbo_mc = f(uw_)
+    uw_shared = shared(uw_, 'uw_shared')
+    elbo = CallableTensor(elbo)(uw_shared)
+    f = function([], elbo)
+    elbo_mc = f()
 
     # Exact value
     elbo_true = (-0.5 * (
@@ -107,11 +109,37 @@ def test_advi():
 
     with Model() as model: 
         mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
-        x = Normal('x', mu=mu_, sd=sd, observed=data)
+        Normal('x', mu=mu_, sd=sd, observed=data)
 
     advi_fit = advi(
         model=model, n=1000, accurate_elbo=False, learning_rate=1e-1, 
         random_seed=1)
+
+    np.testing.assert_allclose(advi_fit.means['mu'], mu_post, rtol=0.1)
+
+    trace = sample_vp(advi_fit, 10000, model)
+
+    np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
+    np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+
+def test_advi_optimizer():
+    n = 1000
+    sd0 = 2.
+    mu0 = 4.
+    sd = 3.
+    mu = -5.
+
+    data = sd * np.random.RandomState(0).randn(n) + mu
+
+    d = n / sd**2 + 1 / sd0**2
+    mu_post = (n * np.mean(data) / sd**2 + mu0 / sd0**2) / d
+
+    with Model() as model: 
+        mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
+        Normal('x', mu=mu_, sd=sd, observed=data)
+
+    optimizer = adagrad_optimizer(learning_rate=0.1, epsilon=0.1)
+    advi_fit = advi(model=model, n=1000, optimizer=optimizer, random_seed=1)
 
     np.testing.assert_allclose(advi_fit.means['mu'], mu_post, rtol=0.1)
 
