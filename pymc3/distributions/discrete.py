@@ -441,9 +441,14 @@ class ZeroInflatedPoisson(Discrete):
         self.mode = self.pois.mode
 
     def random(self, point=None, size=None, repeat=None):
-        theta = draw_values([self.theta], point=point)
-        # To do: Finish me
-        return None
+        theta, z = draw_values([self.theta, self.z], point=point)
+        g = generate_samples(stats.poisson.rvs, theta,
+                                dist_shape=self.shape,
+                                size=size)
+        if theta.shape == z.shape:
+            return g * (np.random.random(np.squeeze(g.shape)) < z)
+        else:
+            return g * (np.random.random(np.squeeze(g.shape)) < z.mean(0))
 
     def logp(self, value):
         return tt.switch(self.z,
