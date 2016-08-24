@@ -53,7 +53,7 @@ with model:
     theta = Uniform('theta', 0, 100)
 
     # Poisson likelihood
-    yd = ZeroInflatedPoisson('y', theta, p, observed=y)
+    yd = ZeroInflatedPoisson('y', theta, psi, observed=y)
 
 
 point = model.test_point
