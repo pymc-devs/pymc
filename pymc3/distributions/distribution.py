@@ -4,9 +4,16 @@ from theano import function
 
 from ..memoize import memoize
 from ..model import Model, get_named_nodes
+import sys
 
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
+
+
+if sys.version_info[0] == 3:
+    string_types = str
+else:
+    string_types = basestring
 
 
 class Distribution(object):
@@ -19,7 +26,7 @@ class Distribution(object):
                             "use the Normal('x', 0,1) syntax. "
                             "Add a 'with model:' block")
 
-        if isinstance(name, str):
+        if isinstance(name, string_types):
             data = kwargs.pop('observed', None)
             dist = cls.dist(*args, **kwargs)
             return model.Var(name, dist, data)
@@ -65,7 +72,7 @@ class Distribution(object):
 
 
     def getattr_value(self, val):
-        if isinstance(val, str):
+        if isinstance(val, string_types):
             val = getattr(self, val)
 
         if isinstance(val, tt.TensorVariable):
