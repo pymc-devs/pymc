@@ -4,16 +4,10 @@ from theano import function
 
 from ..memoize import memoize
 from ..model import Model, get_named_nodes
-import sys
+from ..vartypes import string_types
 
 
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
-
-
-if sys.version_info[0] == 3:
-    string_types = str
-else:
-    string_types = basestring
 
 
 class Distribution(object):
