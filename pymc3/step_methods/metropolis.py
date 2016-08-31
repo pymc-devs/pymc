@@ -182,7 +182,7 @@ def tune(scale, acc_rate):
 
 class BinaryMetropolis(ArrayStep):
     """Metropolis-Hastings optimized for binary variables
-    
+
     Parameters
     ----------
     vars : list
@@ -195,7 +195,7 @@ class BinaryMetropolis(ArrayStep):
         The frequency of tuning. Defaults to 100 iterations.
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
-    
+
     """
 
     def __init__(self, vars, scaling=1., tune=True, tune_interval=100, model=None):
@@ -294,6 +294,6 @@ def delta_logp(logp, vars, shared):
 
     logp1 = CallableTensor(logp0)(inarray1)
 
-    f = theano.function([inarray1, inarray0], logp1 - logp0)
+    f = theano.function([inarray1, inarray0], logp1 - logp0, allow_input_downcast=True)
     f.trust_input = True
     return f
