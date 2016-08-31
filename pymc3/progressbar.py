@@ -6,15 +6,10 @@ Modified from original code by Corey Goldberg (2010)
 from __future__ import print_function
 
 import warnings
-warnings.simplefilter(action = "ignore", category = FutureWarning)
+warnings.simplefilter(action="ignore", category=FutureWarning)
 import sys
 import time
 import uuid
-try:
-    __IPYTHON__
-    from IPython.core.display import HTML, Javascript, display
-except (NameError, ImportError):
-    pass
 
 __all__ = ['progress_bar']
 
@@ -85,27 +80,22 @@ def ipythonprint(s):
 
 class IPythonNotebookPB(ProgressBar):
     def __init__(self, iterations):
-        self.divid = str(uuid.uuid4())
-        self.sec_id = str(uuid.uuid4())
+        if not hasattr(self, '_widget'):
+            from IPython.html import widgets
+            from IPython.display import display
 
-        pb = HTML(
-            """
-            <div style="float: left; border: 1px solid black; width:500px">
-              <div id="%s" style="background-color:blue; width:0%%">&nbsp;</div>
-            </div>
-            <label id="%s" style="padding-left: 10px;" text = ""/>
-            """ % (self.divid, self.sec_id))
-        display(pb)
+            self._widget = widgets.FloatProgress()
+            display(self._widget)
+            self._widget.value = 0
 
         super(IPythonNotebookPB, self).__init__(iterations)
 
     def animate(self, i, elapsed):
-        percentage = int(self.fraction(i))
+        percentage = int(self.percentage(i))
 
-        display(Javascript(
-            "$('div#%s').width('%i%%')" % (self.divid, percentage)))
-        display(Javascript("$('label#%s').text('%i%% in %.1f sec')" %
-                (self.sec_id, fraction, round(elapsed, 1))))
+        # Calculate percent completion, and update progress bar
+        self._widget.value = percentage
+        self._widget.description = ' ({0:>3s}%)'.format('{:d}'.format(percentage))
 
 
 def run_from_ipython():
@@ -117,10 +107,11 @@ def run_from_ipython():
 
 
 def progress_bar(iters):
-    if run_from_ipython():
-        if None:
-            return NotebookProgressBar(iters)
-        else:
-            return TextProgressBar(iters, ipythonprint)
-    else:
+    try:
+        from IPython.html import widgets
+        widgets.FloatProgress()
+        return IPythonNotebookPB(iters)
+    except RuntimeError:
+        return TextProgressBar(iters, ipythonprint)
+    except ImportError:
         return TextProgressBar(iters, consoleprint)
