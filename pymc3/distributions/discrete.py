@@ -432,20 +432,49 @@ class ConstantDist(Discrete):
 
 
 class ZeroInflatedPoisson(Discrete):
-    def __init__(self, theta, z, *args, **kwargs):
+    R"""
+    Zero-inflated Poisson log-likelihood.
+
+    Often used to model the number of events occurring in a fixed period
+    of time when the times at which events occur are independent.
+
+    .. math:: 
+    
+        f(x \mid \theta, \psi) = \left\{ \begin{array}{l}
+            (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
+            \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
+            \end{array} \right.
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\psi\theta`
+    Variance  :math:`\theta + \frac{1-\psi}{\psi}\theta^2`
+    ========  ==========================
+
+    Parameters
+    ----------
+    theta : float
+        Expected number of occurrences during the given interval
+        (theta >= 0).
+    psi : float
+        Expected proportion of Poisson variates (0 < psi < 1)
+
+    """
+    def __init__(self, theta, psi, *args, **kwargs):
         super(ZeroInflatedPoisson, self).__init__(*args, **kwargs)
         self.theta = theta
-        self.z = z
+        self.psi = psi
         self.pois = Poisson.dist(theta)
-        self.const = ConstantDist.dist(0)
         self.mode = self.pois.mode
 
     def random(self, point=None, size=None, repeat=None):
-        theta = draw_values([self.theta], point=point)
-        # To do: Finish me
-        return None
+            theta, psi = draw_values([self.theta, self.psi], point=point)
+            g = generate_samples(stats.poisson.rvs, theta,
+                                    dist_shape=self.shape,
+                                    size=size)
+            return g * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
-        return tt.switch(self.z,
-                        self.pois.logp(value),
-                        self.const.logp(value))
+        return tt.switch(value > 0,
+                        tt.log(self.psi) + self.pois.logp(value),
+                        tt.log((1. - self.psi) + self.psi * tt.exp(-self.theta)))

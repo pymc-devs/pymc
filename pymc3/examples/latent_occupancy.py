@@ -47,16 +47,13 @@ model = Model()
 with model:
     # Estimated occupancy
 
-    p = Beta('p', 1, 1)
-
-    # Latent variable for occupancy
-    z = Bernoulli('z', p, y.shape)
+    psi = Beta('psi', 1, 1)
 
     # Estimated mean count
     theta = Uniform('theta', 0, 100)
 
     # Poisson likelihood
-    yd = ZeroInflatedPoisson('y', theta, z, observed=y)
+    yd = ZeroInflatedPoisson('y', theta, psi, observed=y)
 
 
 point = model.test_point
@@ -77,11 +74,9 @@ def run(n=5000):
     if n == "short":
         n = 50
     with model:
-        start = {'p': 0.5, 'z': (y > 0).astype(int), 'theta': 5}
+        start = {'psi': 0.5, 'z': (y > 0).astype(int), 'theta': 5}
 
-        step1 = Metropolis([theta, p])
-
-        step2 = BinaryMetropolis([z])
+        step1 = Metropolis([theta, psi])
 
         trace = sample(n, [step1, step2], start)
 

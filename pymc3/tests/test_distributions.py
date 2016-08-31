@@ -380,7 +380,7 @@ def test_constantdist():
             )
 
 def test_zeroinflatedpoisson():
-    checkd(ZeroInflatedPoisson, I, {'theta': Rplus, 'z': Bool})
+    checkd(ZeroInflatedPoisson, Nat, {'theta': Rplus, 'psi': Unit})
 
 def test_mvnormal():
     for n in [1, 2]:

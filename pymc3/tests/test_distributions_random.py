@@ -201,11 +201,8 @@ class ScalarParameterShape(unittest.TestCase):
         self.check(ConstantDist, c=3)
 
     def test_zero_inflated_poisson(self):
-        # To do: implement ZIP random
-        #self.check(ZeroInflatedPoisson)
-        raise SkipTest(
-            'ZeroInflatedPoisson random sampling not yet implemented.')
-
+        self.check(ZeroInflatedPoisson, theta=1, psi=0.3)
+        
     def test_discrete_uniform(self):
         self.check(DiscreteUniform, lower=0., upper=10)
 
@@ -297,9 +294,7 @@ class ScalarShape(unittest.TestCase):
         self.check(ConstantDist, c=3)
 
     def test_zero_inflated_poisson(self):
-        # To do: implement ZIP random
-        raise SkipTest(
-            'ZeroInflatedPoisson random sampling not yet implemented.')
+       self.check(ZeroInflatedPoisson, theta=1, psi=0.3)
 
     def test_discrete_uniform(self):
         self.check(DiscreteUniform, lower=0., upper=10)
@@ -402,10 +397,7 @@ class Parameters1dShape(unittest.TestCase):
         self.check(ConstantDist, c=(self.ones * 3).astype(int))
 
     def test_zero_inflated_poisson(self):
-        # To do: implement ZIP random
-        raise SkipTest(
-            'ZeroInflatedPoisson random sampling not yet implemented.')
-        self.check(ZeroInflatedPoisson, {}, SkipTest)
+        self.check(ZeroInflatedPoisson, theta=self.ones, psi=self.ones/2)
 
     def test_discrete_uniform(self):
         self.check(DiscreteUniform,
@@ -515,10 +507,7 @@ class BroadcastShape(unittest.TestCase):
         self.check(ConstantDist, c=(self.ones * 3).astype(int))
 
     def test_zero_inflated_poisson(self):
-        # To do: implement ZIP random
-        raise SkipTest(
-            'ZeroInflatedPoisson random sampling not yet implemented.')
-        self.check(ZeroInflatedPoisson, {})
+        self.check(ZeroInflatedPoisson, theta=self.ones*2, psi=self.ones/3)
 
     def test_discrete_uniform(self):
         self.check(DiscreteUniform, lower=self.zeros.astype(int),
