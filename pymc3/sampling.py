@@ -162,6 +162,7 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
                 progress.update(i)
     except KeyboardInterrupt:
         strace.close()
+    strace.rm_transformed()
     return MultiTrace([strace])
 
 
