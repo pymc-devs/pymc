@@ -34,9 +34,9 @@ class ProgressBar(object):
         i += 1
 
         if elapsed - self.last > self.animation_interval:
-            self.animate(i + 1, elapsed)
+            self.animate(i, elapsed)
             self.last = elapsed
-        elif i == self.iterations:
+        elif i == self.iterations and i != 1:
             self.animate(i, elapsed)
 
 
