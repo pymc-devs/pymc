@@ -6,8 +6,8 @@ from ..vartypes import continuous_types
 from ..model import Model, Point, Potential
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
 from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
-                            MvStudentT, MvNormal, ZeroInflatedPoisson, ConstantDist,
-                            Poisson, Bernoulli, Beta, BetaBinomial, StudentTpos,
+                            MvStudentT, MvNormal, ZeroInflatedPoisson, ZeroInflatedNegativeBinomial,
+                            ConstantDist, Poisson, Bernoulli, Beta, BetaBinomial, StudentTpos,
                             StudentT, Weibull, Pareto, InverseGamma, Gamma, Cauchy,
                             HalfCauchy, Lognormal, Laplace, NegativeBinomial, Geometric,
                             Exponential, ExGaussian, Normal, Flat, LKJCorr, Wald,
@@ -381,6 +381,9 @@ def test_constantdist():
 
 def test_zeroinflatedpoisson():
     checkd(ZeroInflatedPoisson, Nat, {'theta': Rplus, 'psi': Unit})
+
+def test_zeroinflatednegativebinomial():
+    checkd(ZeroInflatedNegativeBinomial, Nat, {'mu': Rplusbig, 'alpha': Rplusbig, 'psi': Unit})
 
 def test_mvnormal():
     for n in [1, 2]:

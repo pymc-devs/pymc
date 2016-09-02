@@ -30,6 +30,7 @@ from .discrete import Poisson
 from .discrete import NegativeBinomial
 from .discrete import ConstantDist
 from .discrete import ZeroInflatedPoisson
+from .discrete import ZeroInflatedNegativeBinomial
 from .discrete import DiscreteUniform
 from .discrete import Geometric
 from .discrete import Categorical
@@ -88,6 +89,7 @@ __all__ = ['Uniform',
     'NegativeBinomial',
     'ConstantDist',
     'ZeroInflatedPoisson',
+    'ZeroInflatedNegativeBinomial',
     'DiscreteUniform',
     'Geometric',
     'Categorical',

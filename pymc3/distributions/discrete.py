@@ -9,8 +9,9 @@ from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
-           'NegativeBinomial', 'ConstantDist', 'ZeroInflatedPoisson',
-           'DiscreteUniform', 'Geometric', 'Categorical']
+           'NegativeBinomial', 'ConstantDist', 'ZeroInflatedPoisson', 
+           'ZeroInflatedNegativeBinomial', 'DiscreteUniform', 'Geometric',
+           'Categorical']
 
 
 class Binomial(Discrete):
@@ -478,3 +479,55 @@ class ZeroInflatedPoisson(Discrete):
         return tt.switch(value > 0,
                         tt.log(self.psi) + self.pois.logp(value),
                         tt.log((1. - self.psi) + self.psi * tt.exp(-self.theta)))
+
+
+class ZeroInflatedNegativeBinomial(Discrete):
+    R"""
+    Zero-Inflated Negative binomial log-likelihood.
+
+    The Zero-inflated version of the Negative Binomial (NB).
+    The NB distribution describes a Poisson random variable
+    whose rate parameter is gamma distributed. 
+
+    .. math::
+
+       f(x \mid \mu, \alpha, \psi) = \left\{ \begin{array}{l}
+            (1-\psi) + \psi \left (\frac{\alpha}{\alpha+\mu} \right) ^\alpha, \text{if } x = 0 \\
+            \psi \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} \left (\frac{\alpha}{\mu+\alpha} \right)^\alpha \left( \frac{\mu}{\mu+\alpha} \right)^x, \text{if } x=1,2,3,\ldots
+            \end{array} \right.
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\psi\mu`
+    Var       :math:`\psi\mu +  \left (1 + \frac{\mu}{\alpha} + \frac{1-\psi}{\mu} \right)`
+    ========  ==========================
+
+    Parameters
+    ----------
+    mu : float
+        Poission distribution parameter (mu > 0).
+    alpha : float
+        Gamma distribution parameter (alpha > 0).
+    psi : float
+        Expected proportion of NegativeBinomial variates (0 < psi < 1)
+    """
+    def __init__(self, mu, alpha, psi, *args, **kwargs):
+        super(ZeroInflatedNegativeBinomial, self).__init__(*args, **kwargs)
+        self.mu = mu
+        self.alpha = alpha
+        self.psi = psi
+        self.nb = NegativeBinomial.dist(mu, alpha)
+        self.mode = self.nb.mode
+        
+    def random(self, point=None, size=None, repeat=None):
+        mu, alpha, psi = draw_values([self.mu, self.alpha, self.psi], point=point)
+        g = generate_samples(stats.gamma.rvs, alpha, scale=mu/alpha,
+                             dist_shape=self.shape,
+                             size=size)
+        g[g == 0] = np.finfo(float).eps  # Just in case 
+        return stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
+
+    def logp(self, value):
+        return tt.switch(value > 0,
+                        tt.log(self.psi) + self.nb.logp(value),
+                        tt.log((1. - self.psi) + self.psi * (self.alpha/(self.alpha+self.mu))**self.alpha))

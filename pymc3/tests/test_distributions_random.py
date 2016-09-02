@@ -11,8 +11,8 @@ from ..tests.test_distributions import (build_model,
     I, Simplex, Vector, PdMatrix)
 
 from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
-                            MvStudentT, MvNormal, ZeroInflatedPoisson, ConstantDist,
-                            Poisson, Bernoulli, Beta, BetaBinomial, StudentTpos, 
+                            MvStudentT, MvNormal, ZeroInflatedPoisson, ZeroInflatedNegativeBinomial,
+                            ConstantDist, Poisson, Bernoulli, Beta, BetaBinomial, StudentTpos, 
                             StudentT, Weibull, Pareto, InverseGamma, Gamma, Cauchy,
                             HalfCauchy, Lognormal, Laplace, NegativeBinomial, Geometric,
                             Exponential, ExGaussian, Normal, Flat, LKJCorr, Wald, 
@@ -202,7 +202,10 @@ class ScalarParameterShape(unittest.TestCase):
 
     def test_zero_inflated_poisson(self):
         self.check(ZeroInflatedPoisson, theta=1, psi=0.3)
-        
+
+    def test_zero_inflated_negative_binomial(self):
+        self.check(ZeroInflatedNegativeBinomial, mu=1., alpha=1., psi=0.3)
+
     def test_discrete_uniform(self):
         self.check(DiscreteUniform, lower=0., upper=10)
 
@@ -295,6 +298,9 @@ class ScalarShape(unittest.TestCase):
 
     def test_zero_inflated_poisson(self):
        self.check(ZeroInflatedPoisson, theta=1, psi=0.3)
+       
+    def test_zero_inflated_negative_binomial(self):
+        self.check(ZeroInflatedNegativeBinomial, mu=1., alpha=1., psi=0.3)
 
     def test_discrete_uniform(self):
         self.check(DiscreteUniform, lower=0., upper=10)
@@ -398,6 +404,9 @@ class Parameters1dShape(unittest.TestCase):
 
     def test_zero_inflated_poisson(self):
         self.check(ZeroInflatedPoisson, theta=self.ones, psi=self.ones/2)
+        
+    def test_zero_inflated_negative_binomial(self):
+        self.check(ZeroInflatedNegativeBinomial, mu=self.ones, alpha=self.ones, psi=self.ones/2)
 
     def test_discrete_uniform(self):
         self.check(DiscreteUniform,
@@ -508,6 +517,9 @@ class BroadcastShape(unittest.TestCase):
 
     def test_zero_inflated_poisson(self):
         self.check(ZeroInflatedPoisson, theta=self.ones*2, psi=self.ones/3)
+        
+    def test_zero_inflated_negative_binomial(self):
+        self.check(ZeroInflatedNegativeBinomial, mu=self.ones*2, alpha=self.ones*2, psi=self.ones/3)
 
     def test_discrete_uniform(self):
         self.check(DiscreteUniform, lower=self.zeros.astype(int),
