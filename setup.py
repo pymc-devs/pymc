@@ -54,4 +54,9 @@ if __name__ == "__main__":
           classifiers=classifiers,
           install_requires=install_reqs,
           tests_require=test_reqs,
-          test_suite='nose.collector')
+          test_suite='nose.collector',
+          command_options={
+              'build_sphinx': {
+                  'project': ('setup.py', DISTNAME),
+                  'version': ('setup.py', VERSION)}},
+)

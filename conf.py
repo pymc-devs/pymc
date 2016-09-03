@@ -58,7 +58,7 @@ source_suffix = ['.rst', '.md']
 #source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = 'docs/source/index'
 
 # General information about the project.
 project = 'PyMC3'
