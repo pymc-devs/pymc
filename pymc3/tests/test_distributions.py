@@ -18,11 +18,13 @@ from numpy import array, inf, log, exp
 import numpy as np
 from numpy.testing import assert_almost_equal
 from numpy.linalg import inv
+import numpy.random as nr
 
 from scipy import integrate
 import scipy.stats.distributions  as sp
 import scipy.stats
 
+nr.seed(20160905)
 
 class Domain(object):
     def __init__(self, vals, dtype=None, edges=None, shape=None):

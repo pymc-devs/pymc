@@ -1,8 +1,7 @@
 """Convergence diagnostics and model validation"""
 
 import numpy as np
-from .stats import autocorr, autocov, statfunc
-from copy import copy
+from .stats import statfunc
 
 __all__ = ['geweke', 'gelman_rubin', 'effective_n']
 
@@ -54,6 +53,12 @@ def geweke(x, first=.1, last=.5, intervals=20):
         return [geweke(y, first, last, intervals) for y in np.transpose(x)]
 
     # Filter out invalid intervals
+    for interval in (first, last):
+        if interval <= 0 or interval >= 1:
+            raise ValueError(
+                "Invalid intervals for Geweke convergence analysis",
+                (first,
+                 last))
     if first + last >= 1:
         raise ValueError(
             "Invalid intervals for Geweke convergence analysis",
@@ -66,18 +71,20 @@ def geweke(x, first=.1, last=.5, intervals=20):
     # Last index value
     end = len(x) - 1
 
+    # Start intervals going up to the <last>% of the chain
+    last_start_idx = (1 - last) * end
+
     # Calculate starting indices
-    sindices = np.arange(0, end // 2, step=int((end / 2) / (intervals - 1)))
+    start_indices = np.arange(0, int(last_start_idx), step=int((last_start_idx) / (intervals - 1)))
 
     # Loop over start indices
-    for start in sindices:
-
+    for start in start_indices:
         # Calculate slices
         first_slice = x[start: start + int(first * (end - start))]
         last_slice = x[int(end - last * (end - start)):]
 
-        z = (first_slice.mean() - last_slice.mean())
-        z /= np.sqrt(first_slice.std() ** 2 + last_slice.std() ** 2)
+        z = first_slice.mean() - last_slice.mean()
+        z /= np.sqrt(first_slice.var() + last_slice.var())
 
         zscores.append([start, z])
 
@@ -177,7 +184,7 @@ def effective_n(mtrace):
     mtrace : MultiTrace
       A MultiTrace object containing parallel traces (minimum 2)
       of one or more stochastic parameters.
-    
+
     Returns
     -------
     n_eff : float
@@ -191,13 +198,13 @@ def effective_n(mtrace):
       .. math:: \hat{n}_{eff} = \frac{mn}}{1 + 2 \sum_{t=1}^T \hat{\rho}_t}
 
     where :math:`\hat{\rho}_t` is the estimated autocorrelation at lag t, and T
-    is the first odd positive integer for which the sum :math:`\hat{\rho}_{T+1} + \hat{\rho}_{T+1}` 
+    is the first odd positive integer for which the sum :math:`\hat{\rho}_{T+1} + \hat{\rho}_{T+1}`
     is negative.
 
     References
     ----------
     Gelman et al. (2014)"""
-    
+
     if mtrace.nchains < 2:
         raise ValueError(
             'Calculation of effective sample size requires multiple chains of the same length.')
@@ -226,32 +233,32 @@ def effective_n(mtrace):
             rotated_indices = np.roll(np.arange(x.ndim), 1)
             # Now iterate over the dimension of the variable
             return np.squeeze([calc_vhat(xi) for xi in x.transpose(rotated_indices)])
-    
+
     def calc_n_eff(x):
-        
+
         m, n = x.shape
-        
+
         negative_autocorr = False
         t = 1
-        
+
         Vhat = calc_vhat(x)
-        
-        variogram = lambda t: (sum(sum((x[j][i] - x[j][i-t])**2 
+
+        variogram = lambda t: (sum(sum((x[j][i] - x[j][i-t])**2
                             for i in range(t,n)) for j in range(m)) / (m*(n - t)))
-        
+
         rho = np.ones(n)
         # Iterate until the sum of consecutive estimates of autocorrelation is negative
         while not negative_autocorr and (t < n):
-        
+
             rho[t] = 1. - variogram(t)/(2.*Vhat)
-        
+
             if not t % 2:
                 negative_autocorr = sum(rho[t-1:t+1]) < 0
-        
+
             t += 1
-            
+
         return int(m*n / (1. + 2*rho[1:t].sum()))
-    
+
     n_eff = {}
     for var in mtrace.varnames:
 
