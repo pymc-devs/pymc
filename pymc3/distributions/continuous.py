@@ -6,11 +6,9 @@ nodes in PyMC.
 
 """
 from __future__ import division
-
 import numpy as np
 import theano.tensor as tt
 from scipy import stats
-
 from . import transforms
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
 from .distribution import Continuous, draw_values, generate_samples
@@ -20,17 +18,22 @@ __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'Bound', 'StudentTpos', 'Lognormal', 'ChiSquared', 'HalfNormal',
            'Wald', 'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises']
 
+
 class PositiveContinuous(Continuous):
     """Base class for positive continuous distributions"""
+
     def __init__(self, transform=transforms.log, *args, **kwargs):
         super(PositiveContinuous, self).__init__(
             transform=transform, *args, **kwargs)
-        
+
+
 class UnitContinuous(Continuous):
     """Base class for continuous distributions on [0,1]"""
+
     def __init__(self, transform=transforms.logodds, *args, **kwargs):
         super(UnitContinuous, self).__init__(
             transform=transform, *args, **kwargs)
+
 
 def get_tau_sd(tau=None, sd=None):
     """
@@ -57,13 +60,13 @@ def get_tau_sd(tau=None, sd=None):
             sd = 1.
             tau = 1.
         else:
-            tau = sd**-2.
+            tau = sd ** -2.
 
     else:
         if sd is not None:
             raise ValueError("Can't pass both tau and sd")
         else:
-            sd = tau**-.5
+            sd = tau ** -.5
 
     # cast tau and sd to float in a way that works for both np.arrays
     # and pure python
@@ -94,6 +97,7 @@ class Uniform(Continuous):
     upper : float
         Upper limit.
     """
+
     def __init__(self, lower=0, upper=1, transform='interval',
                  *args, **kwargs):
         super(Uniform, self).__init__(*args, **kwargs)
@@ -126,6 +130,7 @@ class Flat(Continuous):
     Uninformative log-likelihood that returns 0 regardless of
     the passed value.
     """
+
     def __init__(self, *args, **kwargs):
         super(Flat, self).__init__(*args, **kwargs)
         self.median = 0
@@ -170,6 +175,7 @@ class Normal(Continuous):
     sd : float
         Standard deviation (sd > 0).
     """
+
     def __init__(self, mu=0.0, tau=None, sd=None, *args, **kwargs):
         super(Normal, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
@@ -179,7 +185,7 @@ class Normal(Continuous):
     def random(self, point=None, size=None, repeat=None):
         mu, tau, sd = draw_values([self.mu, self.tau, self.sd],
                                   point=point)
-        return generate_samples(stats.norm.rvs, loc=mu, scale=tau**-0.5,
+        return generate_samples(stats.norm.rvs, loc=mu, scale=tau ** -0.5,
                                 dist_shape=self.shape,
                                 size=size)
 
@@ -187,7 +193,8 @@ class Normal(Continuous):
         tau = self.tau
         sd = self.sd
         mu = self.mu
-        return bound((-tau * (value - mu)**2 + tt.log(tau / np.pi / 2.)) / 2.,
+        return bound((-tau * (value - mu) ** 2 + tt.log(tau /
+                                                        np.pi / 2.)) / 2.,
                      tau > 0, sd > 0)
 
 
@@ -214,22 +221,23 @@ class HalfNormal(PositiveContinuous):
     sd : float
         Standard deviation (sd > 0).
     """
+
     def __init__(self, tau=None, sd=None, *args, **kwargs):
         super(HalfNormal, self).__init__(*args, **kwargs)
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.mean = tt.sqrt(2 / (np.pi * self.tau))
-        self.variance = (1. - 2/np.pi) / self.tau
+        self.variance = (1. - 2 / np.pi) / self.tau
 
     def random(self, point=None, size=None, repeat=None):
         tau = draw_values([self.tau], point=point)
-        return generate_samples(stats.halfnorm.rvs, loc=0., scale=tau**-0.5,
+        return generate_samples(stats.halfnorm.rvs, loc=0., scale=tau ** -0.5,
                                 dist_shape=self.shape,
                                 size=size)
 
     def logp(self, value):
         tau = self.tau
         sd = self.sd
-        return bound(-0.5 * tau * value**2 + 0.5 * tt.log(tau * 2. / np.pi),
+        return bound(-0.5 * tau * value ** 2 + 0.5 * tt.log(tau * 2. / np.pi),
                      value >= 0,
                      tau > 0, sd > 0)
 
@@ -289,14 +297,15 @@ class Wald(PositiveContinuous):
         Generating Random Variates Using Transformations with Multiple Roots.
         The American Statistician, Vol. 30, No. 2, pp. 88-90
     """
+
     def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
         super(Wald, self).__init__(*args, **kwargs)
         self.mu, self.lam, self.phi = self.get_mu_lam_phi(mu, lam, phi)
         self.alpha = alpha
         self.mean = self.mu + alpha
-        self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam)**2)
+        self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam) ** 2)
                                - 1.5 * self.mu / self.lam) + alpha
-        self.variance = (self.mu**3) / self.lam
+        self.variance = (self.mu ** 3) / self.lam
 
     def get_mu_lam_phi(self, mu, lam, phi):
         if mu is None:
@@ -316,12 +325,12 @@ class Wald(PositiveContinuous):
                          'mu and lam, mu and phi, or lam and phi.')
 
     def _random(self, mu, lam, alpha, size=None):
-        v = np.random.normal(size=size)**2
-        value = (mu + (mu**2) * v / (2. * lam) - mu / (2. * lam)
-                 * np.sqrt(4. * mu * lam * v + (mu * v)**2))
+        v = np.random.normal(size=size) ** 2
+        value = (mu + (mu ** 2) * v / (2. * lam) - mu / (2. * lam)
+                 * np.sqrt(4. * mu * lam * v + (mu * v) ** 2))
         z = np.random.uniform(size=size)
         i = np.floor(z - mu / (mu + value)) * 2 + 1
-        value = (value**-i) * (mu**(i + 1))
+        value = (value ** -i) * (mu ** (i + 1))
         return value + alpha
 
     def random(self, point=None, size=None, repeat=None):
@@ -340,7 +349,7 @@ class Wald(PositiveContinuous):
         return bound(logpow(lam / (2. * np.pi), 0.5)
                      - logpow(value - alpha, 1.5)
                      - (0.5 * lam / (value - alpha)
-                        * ((value - alpha - mu) / mu)**2),
+                        * ((value - alpha - mu) / mu) ** 2),
                      # XXX these two are redundant. Please, check.
                      value > 0, value - alpha > 0,
                      mu > 0, lam > 0, alpha >= 0)
@@ -369,8 +378,7 @@ class Beta(UnitContinuous):
 
        \alpha &= \mu \kappa \\
        \beta  &= (1 - \mu) \kappa
-       
-       \text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1 
+       \text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1
 
     Parameters
     ----------
@@ -388,6 +396,7 @@ class Beta(UnitContinuous):
     Beta distribution is a conjugate prior for the parameter :math:`p` of
     the binomial distribution.
     """
+
     def __init__(self, alpha=None, beta=None, mu=None, sd=None,
                  *args, **kwargs):
         super(Beta, self).__init__(*args, **kwargs)
@@ -397,13 +406,13 @@ class Beta(UnitContinuous):
         self.beta = beta
         self.mean = alpha / (alpha + beta)
         self.variance = alpha * beta / (
-            (alpha + beta)**2 * (alpha + beta + 1))
+            (alpha + beta) ** 2 * (alpha + beta + 1))
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sd is not None):
-            kappa = mu * (1-mu) / sd**2 - 1 
+            kappa = mu * (1 - mu) / sd ** 2 - 1
             alpha = mu * kappa
             beta = (1 - mu) * kappa
         else:
@@ -448,6 +457,7 @@ class Exponential(PositiveContinuous):
     lam : float
         Rate or inverse scale (lam > 0)
     """
+
     def __init__(self, lam, *args, **kwargs):
         super(Exponential, self).__init__(*args, **kwargs)
         self.lam = lam
@@ -455,11 +465,11 @@ class Exponential(PositiveContinuous):
         self.median = self.mean * tt.log(2)
         self.mode = 0
 
-        self.variance = lam**-2
+        self.variance = lam ** -2
 
     def random(self, point=None, size=None, repeat=None):
         lam = draw_values([self.lam], point=point)
-        return generate_samples(np.random.exponential, scale=1./lam,
+        return generate_samples(np.random.exponential, scale=1. / lam,
                                 dist_shape=self.shape,
                                 size=size)
 
@@ -490,12 +500,13 @@ class Laplace(Continuous):
     b : float
         Scale parameter (b > 0).
     """
+
     def __init__(self, mu, b, *args, **kwargs):
         super(Laplace, self).__init__(*args, **kwargs)
         self.b = b
         self.mean = self.median = self.mode = self.mu = mu
 
-        self.variance = 2 * b**2
+        self.variance = 2 * b ** 2
 
     def random(self, point=None, size=None, repeat=None):
         mu, b = draw_values([self.mu, self.b], point=point)
@@ -538,6 +549,7 @@ class Lognormal(PositiveContinuous):
     tau : float
         Scale parameter (tau > 0).
     """
+
     def __init__(self, mu=0, tau=1, *args, **kwargs):
         super(Lognormal, self).__init__(*args, **kwargs)
 
@@ -546,11 +558,11 @@ class Lognormal(PositiveContinuous):
         self.mean = tt.exp(mu + 1. / (2 * tau))
         self.median = tt.exp(mu)
         self.mode = tt.exp(mu - 1. / tau)
-        self.variance = (tt.exp(1./tau) - 1) * tt.exp(2 * mu + 1. / tau)
+        self.variance = (tt.exp(1. / tau) - 1) * tt.exp(2 * mu + 1. / tau)
 
     def _random(self, mu, tau, size=None):
         samples = np.random.normal(size=size)
-        return np.exp(mu + (tau**-0.5) * samples)
+        return np.exp(mu + (tau ** -0.5) * samples)
 
     def random(self, point=None, size=None, repeat=None):
         mu, tau = draw_values([self.mu, self.tau], point=point)
@@ -561,8 +573,8 @@ class Lognormal(PositiveContinuous):
     def logp(self, value):
         mu = self.mu
         tau = self.tau
-        return bound(-0.5 * tau * (tt.log(value) - mu)**2
-                     + 0.5 * tt.log(tau/(2. * np.pi))
+        return bound(-0.5 * tau * (tt.log(value) - mu) ** 2
+                     + 0.5 * tt.log(tau / (2. * np.pi))
                      - tt.log(value),
                      tau > 0)
 
@@ -595,6 +607,7 @@ class StudentT(Continuous):
     lam : float
         Scale parameter (lam > 0).
     """
+
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
         super(StudentT, self).__init__(*args, **kwargs)
         self.nu = nu = tt.as_tensor_variable(nu)
@@ -602,13 +615,13 @@ class StudentT(Continuous):
         self.mean = self.median = self.mode = self.mu = mu
 
         self.variance = tt.switch((nu > 2) * 1,
-                                 (1 / self.lam) * (nu / (nu - 2)),
-                                 np.inf)
+                                  (1 / self.lam) * (nu / (nu - 2)),
+                                  np.inf)
 
     def random(self, point=None, size=None, repeat=None):
         nu, mu, lam = draw_values([self.nu, self.mu, self.lam],
                                   point=point)
-        return generate_samples(stats.t.rvs, nu, loc=mu, scale=lam**-0.5,
+        return generate_samples(stats.t.rvs, nu, loc=mu, scale=lam ** -0.5,
                                 dist_shape=self.shape,
                                 size=size)
 
@@ -621,7 +634,8 @@ class StudentT(Continuous):
         return bound(gammaln((nu + 1.0) / 2.0)
                      + .5 * tt.log(lam / (nu * np.pi))
                      - gammaln(nu / 2.0)
-                     - (nu + 1.0) / 2.0 * tt.log1p(lam * (value - mu)**2 / nu),
+                     - (nu + 1.0) / 2.0 * tt.log1p(lam * (value -
+                                                          mu) ** 2 / nu),
                      lam > 0, nu > 0, sd > 0)
 
 
@@ -650,20 +664,22 @@ class Pareto(PositiveContinuous):
     m : float
         Scale parameter (m > 0).
     """
+
     def __init__(self, alpha, m, *args, **kwargs):
         super(Pareto, self).__init__(*args, **kwargs)
         self.alpha = alpha
         self.m = m
-        self.mean = tt.switch(tt.gt(alpha, 1), alpha * m / (alpha - 1.), np.inf)
-        self.median = m * 2.**(1./alpha)
+        self.mean = tt.switch(tt.gt(alpha, 1), alpha * m /
+                              (alpha - 1.), np.inf)
+        self.median = m * 2. ** (1. / alpha)
         self.variance = tt.switch(
             tt.gt(alpha, 2),
-            (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2),
+            (alpha * m ** 2) / ((alpha - 2.) * (alpha - 1.) ** 2),
             np.inf)
 
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
-        return m * (1. - u)**(-1. / alpha)
+        return m * (1. - u) ** (-1. / alpha)
 
     def random(self, point=None, size=None, repeat=None):
         alpha, m = draw_values([self.alpha, self.m],
@@ -705,6 +721,7 @@ class Cauchy(Continuous):
     beta : float
         Scale parameter > 0
     """
+
     def __init__(self, alpha, beta, *args, **kwargs):
         super(Cauchy, self).__init__(*args, **kwargs)
         self.median = self.mode = self.alpha = alpha
@@ -712,7 +729,7 @@ class Cauchy(Continuous):
 
     def _random(self, alpha, beta, size=None):
         u = np.random.uniform(size=size)
-        return alpha + beta * np.tan(np.pi*(u - 0.5))
+        return alpha + beta * np.tan(np.pi * (u - 0.5))
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -725,7 +742,7 @@ class Cauchy(Continuous):
         alpha = self.alpha
         beta = self.beta
         return bound(- tt.log(np.pi) - tt.log(beta)
-                     - tt.log1p(((value - alpha) / beta)**2),
+                     - tt.log1p(((value - alpha) / beta) ** 2),
                      beta > 0)
 
 
@@ -749,6 +766,7 @@ class HalfCauchy(PositiveContinuous):
     beta : float
         Scale parameter (beta > 0).
     """
+
     def __init__(self, beta, *args, **kwargs):
         super(HalfCauchy, self).__init__(*args, **kwargs)
         self.mode = 0
@@ -768,7 +786,7 @@ class HalfCauchy(PositiveContinuous):
     def logp(self, value):
         beta = self.beta
         return bound(tt.log(2) - tt.log(np.pi) - tt.log(beta)
-                     - tt.log1p((value / beta)**2),
+                     - tt.log1p((value / beta) ** 2),
                      value >= 0, beta > 0)
 
 
@@ -810,6 +828,7 @@ class Gamma(PositiveContinuous):
     sd : float
         Alternative scale parameter (sd > 0).
     """
+
     def __init__(self, alpha=None, beta=None, mu=None, sd=None,
                  *args, **kwargs):
         super(Gamma, self).__init__(*args, **kwargs)
@@ -818,14 +837,14 @@ class Gamma(PositiveContinuous):
         self.beta = beta
         self.mean = alpha / beta
         self.mode = tt.maximum((alpha - 1) / beta, 0)
-        self.variance = alpha / beta**2
+        self.variance = alpha / beta ** 2
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sd is not None):
-            alpha = mu**2 / sd**2
-            beta = mu / sd**2
+            alpha = mu ** 2 / sd ** 2
+            beta = mu / sd ** 2
         else:
             raise ValueError('Incompatible parameterization. Either use '
                              'alpha and beta, or mu and sd to specify '
@@ -876,6 +895,7 @@ class InverseGamma(PositiveContinuous):
     beta : float
         Scale parameter (beta > 0).
     """
+
     def __init__(self, alpha, beta=1, *args, **kwargs):
         super(InverseGamma, self).__init__(*args, **kwargs)
         self.alpha = alpha
@@ -883,8 +903,8 @@ class InverseGamma(PositiveContinuous):
         self.mean = (alpha > 1) * beta / (alpha - 1.) or np.inf
         self.mode = beta / (alpha + 1.)
         self.variance = tt.switch(tt.gt(alpha, 2),
-                                 (beta**2) / (alpha * (alpha - 1.)**2),
-                                 np.inf)
+                                  (beta ** 2) / (alpha * (alpha - 1.) ** 2),
+                                  np.inf)
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -920,6 +940,7 @@ class ChiSquared(Gamma):
     nu : int
         Degrees of freedom (nu > 0).
     """
+
     def __init__(self, nu, *args, **kwargs):
         self.nu = nu
         super(ChiSquared, self).__init__(alpha=nu / 2., beta=0.5,
@@ -949,20 +970,22 @@ class Weibull(PositiveContinuous):
     beta : float
         Scale parameter (beta > 0).
     """
+
     def __init__(self, alpha, beta, *args, **kwargs):
         super(Weibull, self).__init__(*args, **kwargs)
         self.alpha = alpha
         self.beta = beta
-        self.mean = beta * tt.exp(gammaln(1 + 1./alpha))
-        self.median = beta * tt.exp(gammaln(tt.log(2)))**(1./alpha)
-        self.variance = (beta**2) * tt.exp(gammaln(1 + 2./alpha - self.mean**2))
+        self.mean = beta * tt.exp(gammaln(1 + 1. / alpha))
+        self.median = beta * tt.exp(gammaln(tt.log(2))) ** (1. / alpha)
+        self.variance = (beta ** 2) * tt.exp(gammaln(1 + 2. /
+                                                     alpha - self.mean ** 2))
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point)
 
         def _random(a, b, size=None):
-            return b * (-np.log(np.random.uniform(size=size)))**(1/a)
+            return b * (-np.log(np.random.uniform(size=size))) ** (1 / a)
 
         return generate_samples(_random, alpha, beta,
                                 dist_shape=self.shape,
@@ -972,8 +995,8 @@ class Weibull(PositiveContinuous):
         alpha = self.alpha
         beta = self.beta
         return bound(tt.log(alpha) - tt.log(beta)
-                     + (alpha - 1) * tt.log(value/beta)
-                     - (value/beta)**alpha,
+                     + (alpha - 1) * tt.log(value / beta)
+                     - (value / beta) ** alpha,
                      value >= 0, alpha > 0, beta > 0)
 
 
@@ -990,11 +1013,14 @@ class Bounded(Continuous):
     upper : float (optional)
         Upper bound of the distribibution, set to inf to disable.
     tranform : 'infer' or object
-        If 'infer', infers the right transform to apply from the supplied bounds.
+        If 'infer', infers the right transform
+        to apply from the supplied bounds.
         If transform object, has to supply .forward() and .backward() methods.
         See pymc3.distributions.transforms for more information.
     """
-    def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
+
+    def __init__(self, distribution, lower, upper,
+                 transform='infer', *args, **kwargs):
         self.dist = distribution.dist(*args, **kwargs)
 
         self.__dict__.update(self.dist.__dict__)
@@ -1010,7 +1036,7 @@ class Bounded(Continuous):
             if not np.isinf(lower) and not np.isinf(upper):
                 self.transform = transforms.interval(lower, upper)
                 if default <= lower or default >= upper:
-                    self.testval = 0.5*(upper+lower)
+                    self.testval = 0.5 * (upper + lower)
 
             if not np.isinf(lower) and np.isinf(upper):
                 self.transform = transforms.lowerbound(lower)
@@ -1028,7 +1054,7 @@ class Bounded(Continuous):
         while i < len(samples):
             sample = self.dist.random(point=point, size=n)
             select = sample[np.logical_and(sample > lower, sample <= upper)]
-            samples[i:(i+len(select))] = select[:]
+            samples[i:(i + len(select))] = select[:]
             i += len(select)
             n -= len(select)
         if size is not None:
@@ -1064,6 +1090,7 @@ class Bound(object):
     boundedNormal = pymc3.Bound(pymc3.Normal, lower=0.0)
     par = boundedNormal(mu=0.0, sd=1.0, testval=1.0)
     """
+
     def __init__(self, distribution, lower=-np.inf, upper=np.inf):
         self.distribution = distribution
         self.lower = lower
@@ -1081,6 +1108,7 @@ class Bound(object):
 
 
 StudentTpos = Bound(StudentT, lower=0)
+
 
 class ExGaussian(Continuous):
     R"""
@@ -1126,13 +1154,14 @@ class ExGaussian(Continuous):
         Tutorials in Quantitative Methods for Psychology,
         Vol. 4, No. 1, pp 35-45.
     """
+
     def __init__(self, mu, sigma, nu, *args, **kwargs):
         super(ExGaussian, self).__init__(*args, **kwargs)
         self.mu = mu
         self.sigma = sigma
         self.nu = nu
         self.mean = mu + nu
-        self.variance = (sigma**2) + (nu**2)
+        self.variance = (sigma ** 2) + (nu ** 2)
 
     def random(self, point=None, size=None, repeat=None):
         mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu],
@@ -1152,11 +1181,13 @@ class ExGaussian(Continuous):
         nu = self.nu
 
         # This condition suggested by exGAUS.R from gamlss
-        lp = tt.switch(tt.gt(nu,  0.05 * sigma),
-                      - tt.log(nu) + (mu - value) / nu + 0.5 * (sigma / nu)**2
-                      + logpow(std_cdf((value - mu) / sigma - sigma / nu), 1.),
-                      - tt.log(sigma * tt.sqrt(2 * np.pi))
-                      - 0.5 * ((value - mu) / sigma)**2)
+        lp = tt.switch(tt.gt(nu, 0.05 * sigma),
+                       - tt.log(nu) + (mu - value) / nu +
+                       0.5 * (sigma / nu) ** 2
+                       + logpow(std_cdf((value - mu) / sigma -
+                                        sigma / nu), 1.),
+                       - tt.log(sigma * tt.sqrt(2 * np.pi))
+                       - 0.5 * ((value - mu) / sigma) ** 2)
         return bound(lp, sigma > 0., nu > 0.)
 
 
@@ -1164,11 +1195,11 @@ class VonMises(Continuous):
     R"""
     Univariate VonMises log-likelihood.
     .. math::
-        f(x \mid \mu, \kappa) =  
+        f(x \mid \mu, \kappa) =
             \frac{e^{\kappa\cos(x-\mu)}}{2\pi I_0(\kappa)}
-             
+
     where :I_0 is the modified Bessel function of order 0.
-        
+
     ========  ==========================================
     Support   :math:`x \in [-\pi, \pi]`
     Mean      :math:`\mu`
@@ -1181,19 +1212,20 @@ class VonMises(Continuous):
     kappa : float
         Concentration (\frac{1}{kappa} is analogous to \sigma^2).
     """
+
     def __init__(self, mu=0.0, kappa=None, transform='circular',
-    *args, **kwargs):
+                 *args, **kwargs):
         super(VonMises, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
-        self.kappa = kappa 
-        self.variance = 1 - i1(kappa)/i0(kappa)
-        
+        self.kappa = kappa
+        self.variance = 1 - i1(kappa) / i0(kappa)
+
         if transform == 'circular':
             self.transform = transforms.Circular()
-            
+
     def random(self, point=None, size=None, repeat=None):
         mu, kappa = draw_values([self.mu, self.kappa],
-                                  point=point)
+                                point=point)
         return generate_samples(stats.vonmises.rvs, loc=mu, kappa=kappa,
                                 dist_shape=self.shape,
                                 size=size)
@@ -1201,4 +1233,7 @@ class VonMises(Continuous):
     def logp(self, value):
         mu = self.mu
         kappa = self.kappa
-        return bound(kappa * tt.cos(mu - value) - tt.log(2 * np.pi * i0(kappa)), value >= -np.pi, value <= np.pi, kappa >= 0)
+        return bound(kappa * tt.cos(mu - value) -
+                     tt.log(2 * np.pi * i0(kappa)),
+                     value >= -np.pi, value <= np.pi,
+                     kappa >= 0)
