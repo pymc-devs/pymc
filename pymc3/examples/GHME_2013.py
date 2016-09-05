@@ -2,10 +2,11 @@
 # <nbformat>3.0</nbformat>
 
 # <codecell>
-from pylab import *
 import pandas as pd
-from pymc3 import *
-from pymc3.distributions.timeseries import *
+from pylab import *
+
+from pymc3 import StudentT, Model, NUTS, Normal, find_MAP, trace, get_data_file
+from pymc3.distributions.timeseries import GaussianRandomWalk
 
 # <markdowncell>
 
@@ -15,7 +16,7 @@ from pymc3.distributions.timeseries import *
 # <codecell>
 
 data = pd.read_csv(get_data_file('pymc3.examples', 'data/pancreatitis.csv'))
-countries = ['CYP', 'DNK', 'ESP', 'FIN','GBR', 'ISL']
+countries = ['CYP', 'DNK', 'ESP', 'FIN', 'GBR', 'ISL']
 data = data[data.area.isin(countries)]
 
 age = data['age'] = np.array(data.age_start + data.age_end)/2
@@ -28,12 +29,12 @@ ncountries = len(countries)
 # <codecell>
 
 for i, country in enumerate(countries):
-    subplot(2,3,i+1)
+    subplot(2, 3, i+1)
     title(country)
     d = data[data.area == country]
     plot(d.age, d.value, '.')
 
-    ylim(0,rate.max())
+    ylim(0, rate.max())
 
 # <markdowncell>
 
@@ -43,17 +44,17 @@ for i, country in enumerate(countries):
 # <codecell>
 
 nknots = 10
-knots = np.linspace(data.age_start.min(),data.age_end.max(), nknots)
+knots = np.linspace(data.age_start.min(), data.age_end.max(), nknots)
 
 
-def interpolate(x0,y0, x, group):
+def interpolate(x0, y0, x, group):
     x = np.array(x)
     group = np.array(group)
 
     idx = np.searchsorted(x0, x)
     dl = np.array(x - x0[idx - 1])
     dr = np.array(x0[idx] - x)
-    d=dl+dr
+    d = dl + dr
     wl = dr/d
 
     return wl*y0[idx-1, group] + (1-wl)*y0[idx, group]
@@ -68,7 +69,7 @@ with Model() as model:
 
     sd = StudentT('sd', 10, 2, 5**-2)
 
-    vals = Normal('vals', p, sd=sd, observed = rate)
+    vals = Normal('vals', p, sd=sd, observed=rate)
 
 # <markdowncell>
 
@@ -80,31 +81,30 @@ with Model() as model:
 with model:
     s = find_MAP(vars=[sd, y])
 
-    step = NUTS(scaling = s)
+    step = NUTS(scaling=s)
     trace = sample(100, step, s)
 
     s = trace[-1]
 
     step = NUTS(scaling=s)
 
+
 def run(n=3000):
     if n == "short":
         n = 150
     with model:
         trace = sample(n, step, s)
-
-
     # <codecell>
 
     for i, country in enumerate(countries):
-        subplot(2,3,i+1)
+        subplot(2, 3, i+1)
         title(country)
 
         d = data[data.area == country]
         plot(d.age, d.value, '.')
-        plot(knots, trace[y][::5,:,i].T, color ='r', alpha =.01);
+        plot(knots, trace[y][::5, :, i].T, color='r', alpha=.01)
 
-        ylim(0,rate.max())
+        ylim(0, rate.max())
 
 
 if __name__ == '__main__':
