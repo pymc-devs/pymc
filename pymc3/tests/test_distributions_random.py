@@ -530,7 +530,7 @@ class BroadcastShape(unittest.TestCase):
             'Categorical cannot be initialised with >1D probabilities')
         self.check(Categorical, p=self.ones / self.n)
 
-
+nr.seed(20090425)
 @attr('scalar_parameter_samples')
 class ScalarParameterSamples(unittest.TestCase):
 
