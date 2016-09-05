@@ -10,7 +10,7 @@ from enum import IntEnum, unique
 __all__ = ['ArrayStep', 'ArrayStepShared', 'metrop_select', 'SamplerHist',
              'Competence', 'Constant']
 
-# TODO Add docstrings to ArrayStep
+
 @unique
 class Competence(IntEnum):
     """Enum for charaterizing competence classes of step methods.
@@ -81,6 +81,17 @@ class BlockedStep(object):
 
 
 class ArrayStep(BlockedStep):
+    """
+    Blocked step method that is generalized to accept vectors of variables.
+
+    Parameters
+    ----------
+    vars : list
+        List of variables for sampler.
+    allvars: Boolean (default False)
+    blocked: Boolean (default True)
+    fs: logp theano function
+    """
     def __init__(self, vars, fs, allvars=False, blocked=True):
         self.vars = vars
         self.ordering = ArrayOrdering(vars)
