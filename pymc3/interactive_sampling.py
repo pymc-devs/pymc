@@ -63,23 +63,22 @@ if IPython:
         clock = Unicode(sync=True)
 
         def __init__(self, *args, **kwargs):
-            widgets.DOMWidget.__init__(self,*args, **kwargs)
+            widgets.DOMWidget.__init__(self, *args, **kwargs)
             self.iteration = 0
             self.on_msg(self._handle_custom_msg)
             self.send_state()
             self.stopped = False
+
         def _handle_custom_msg(self, message):
             if message == "stop":
                 self.stopped = True
-    
-    
 
     def nbsample(draws, step, start=None, trace=None, chain=0, tune=None, model=None, random_seed=None):
         try:
             assert(hasattr(IPython.get_ipython(), 'comm_manager'))
         except (AssertionError, NameError, KeyError) as e:
             raise NotImplementedError(_no_notebook_error_message)
-    
+
         display.display_html(_javascript, raw=True)
         w = ISampleWidget()
         display.display(w)
@@ -100,7 +99,8 @@ if IPython:
             if elapsed_last > 0.1:
                 t_last = time.time()
                 w.current_samples = i
-                w.clock = "%02i:%02i:%02i" % (elapsed / 60 / 60, elapsed / 60 % 60, elapsed % 60)
+                w.clock = "%02i:%02i:%02i" % (
+                    elapsed / 60 / 60, elapsed / 60 % 60, elapsed % 60)
                 get_ipython().kernel.do_one_iteration()
                 if w.stopped:
                     trace.close()

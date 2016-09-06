@@ -45,6 +45,7 @@ with model:
     lr = Normal(
         'lr', floor * floor_m + means[group], sd ** -2., observed=lradon)
 
+
 def run(n=3000):
     if n == "short":
         n = 50

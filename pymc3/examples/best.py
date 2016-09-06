@@ -59,7 +59,7 @@ with pm.Model() as model:
 
     diff_of_means = pm.Deterministic(
         'difference of means', group1_mean -
-                               group2_mean)
+        group2_mean)
     diff_of_stds = pm.Deterministic(
         'difference of stds',
         group1_std - group2_std)

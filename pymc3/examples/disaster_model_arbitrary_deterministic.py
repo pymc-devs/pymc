@@ -10,21 +10,23 @@ import theano.tensor as tt
 from numpy import arange, array, empty
 
 __all__ = ['disasters_data', 'switchpoint', 'early_mean', 'late_mean', 'rate',
-             'disasters']
+           'disasters']
 
 # Time series of recorded coal mining disasters in the UK from 1851 to 1962
 disasters_data = array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
-                            3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
-                            2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
-                            1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
-                            0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-                            3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-                            0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+                        3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
+                        2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
+                        1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+                        0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
+                        3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+                        0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 years = len(disasters_data)
 
-#here is the trick
-@theano.compile.ops.as_op(itypes=[tt.lscalar, tt.dscalar, tt.dscalar],otypes=[tt.dvector])
-def rateFunc(switchpoint,early_mean, late_mean):
+# here is the trick
+
+
+@theano.compile.ops.as_op(itypes=[tt.lscalar, tt.dscalar, tt.dscalar], otypes=[tt.dvector])
+def rateFunc(switchpoint, early_mean, late_mean):
     ''' Concatenate Poisson means '''
     out = empty(years)
     out[:switchpoint] = early_mean
@@ -43,9 +45,9 @@ with Model() as model:
     # Allocate appropriate Poisson rates to years before and after current
     # switchpoint location
     idx = arange(years)
-    #theano style:
+    # theano style:
     #rate = switch(switchpoint >= idx, early_mean, late_mean)
-    #non-theano style
+    # non-theano style
     rate = rateFunc(switchpoint, early_mean, late_mean)
 
     # Data likelihood
@@ -61,5 +63,5 @@ with Model() as model:
 
     # njobs>1 works only with most recent (mid August 2014) Thenao version:
     # https://github.com/Theano/Theano/pull/2021
-    tr = sample(1000, tune=500, start=start, step=[step1, step2],njobs=1)
+    tr = sample(1000, tune=500, start=start, step=[step1, step2], njobs=1)
     traceplot(tr)

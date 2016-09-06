@@ -111,7 +111,8 @@ def check_shape(rv, size=None, expected=None):
     expected = np.atleast_1d(expected)
     assert np.all(actual == expected), \
         'Expected shape `{0}` but got `{1}` using `(size={2})`' \
-        ' with `{3}` rv'.format(expected, actual, size, rv.distribution.__class__.__name__)
+        ' with `{3}` rv'.format(expected, actual, size,
+                                rv.distribution.__class__.__name__)
 
 # TODO: factor out a base class to avoid copy/paste.
 
@@ -401,7 +402,8 @@ class Parameters1dShape(unittest.TestCase):
         self.check(ZeroInflatedPoisson, theta=self.ones, psi=self.ones / 2)
 
     def test_zero_inflated_negative_binomial(self):
-        self.check(ZeroInflatedNegativeBinomial, mu=self.ones, alpha=self.ones, psi=self.ones / 2)
+        self.check(ZeroInflatedNegativeBinomial, mu=self.ones,
+                   alpha=self.ones, psi=self.ones / 2)
 
     def test_discrete_uniform(self):
         self.check(DiscreteUniform,
@@ -515,7 +517,8 @@ class BroadcastShape(unittest.TestCase):
         self.check(ZeroInflatedPoisson, theta=self.twos, psi=self.ones / 3)
 
     def test_zero_inflated_negative_binomial(self):
-        self.check(ZeroInflatedNegativeBinomial, mu=self.twos, alpha=self.twos, psi=self.ones / 3)
+        self.check(ZeroInflatedNegativeBinomial, mu=self.twos,
+                   alpha=self.twos, psi=self.ones / 3)
 
     def test_discrete_uniform(self):
         self.check(DiscreteUniform, lower=self.zeros.astype(int),
@@ -546,7 +549,8 @@ class ScalarParameterSamples(unittest.TestCase):
         def ref_rand(size, lower, upper):
             return st.uniform.rvs(size=size, loc=lower, scale=upper - lower)
 
-        pymc3_random(Uniform, {'lower': -Rplus, 'upper': Rplus}, ref_rand=ref_rand)
+        pymc3_random(Uniform, {'lower': -Rplus,
+                               'upper': Rplus}, ref_rand=ref_rand)
 
     def test_normal(self):
         def ref_rand(size, mu, sd):
@@ -564,7 +568,8 @@ class ScalarParameterSamples(unittest.TestCase):
         def ref_rand(size, mu, lam, alpha):
             return st.wald.rvs(size=size, loc=alpha)
         pymc3_random(Wald,
-                     {'mu': Domain([1., 1., 1.]), 'lam': Domain([1., 1., 1.]), 'alpha': Rplus},
+                     {'mu': Domain([1., 1., 1.]), 'lam': Domain(
+                         [1., 1., 1.]), 'alpha': Rplus},
                      ref_rand=ref_rand)
 
     def test_beta(self):
@@ -592,7 +597,8 @@ class ScalarParameterSamples(unittest.TestCase):
     def test_student_t(self):
         def ref_rand(size, nu, mu, lam):
             return st.t.rvs(nu, mu, lam**-.5, size=size)
-        pymc3_random(StudentT, {'nu': Rplus, 'mu': R, 'lam': Rplus}, ref_rand=ref_rand)
+        pymc3_random(StudentT, {'nu': Rplus, 'mu': R,
+                                'lam': Rplus}, ref_rand=ref_rand)
 
     def test_cauchy(self):
         def ref_rand(size, alpha, beta):
@@ -607,26 +613,31 @@ class ScalarParameterSamples(unittest.TestCase):
     def test_gamma(self):
         def ref_rand(size, alpha, beta):
             return st.gamma.rvs(alpha, scale=1. / beta, size=size)
-        pymc3_random(Gamma, {'alpha': Rplusbig, 'beta': Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(Gamma, {'alpha': Rplusbig,
+                             'beta': Rplusbig}, ref_rand=ref_rand)
 
         def ref_rand(size, mu, sd):
             return st.gamma.rvs(mu**2 / sd**2, scale=sd ** 2 / mu, size=size)
-        pymc3_random(Gamma, {'mu': Rplusbig, 'sd': Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(
+            Gamma, {'mu': Rplusbig, 'sd': Rplusbig}, ref_rand=ref_rand)
 
     def test_inverse_gamma(self):
         def ref_rand(size, alpha, beta):
             return st.invgamma.rvs(a=alpha, scale=beta, size=size)
-        pymc3_random(InverseGamma, {'alpha': Rplus, 'beta': Rplus}, ref_rand=ref_rand)
+        pymc3_random(InverseGamma, {'alpha': Rplus,
+                                    'beta': Rplus}, ref_rand=ref_rand)
 
     def test_pareto(self):
         def ref_rand(size, alpha, m):
             return st.pareto.rvs(alpha, scale=m, size=size)
-        pymc3_random(Pareto, {'alpha': Rplusbig, 'm': Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(Pareto, {'alpha': Rplusbig,
+                              'm': Rplusbig}, ref_rand=ref_rand)
 
     def test_ex_gaussian(self):
         def ref_rand(size, mu, sigma, nu):
             return nr.normal(mu, sigma, size=size) + nr.exponential(scale=nu, size=size)
-        pymc3_random(ExGaussian, {'mu': R, 'sigma': Rplus, 'nu': Rplus}, ref_rand=ref_rand)
+        pymc3_random(
+            ExGaussian, {'mu': R, 'sigma': Rplus, 'nu': Rplus}, ref_rand=ref_rand)
 
     def test_vonmises(self):
         def ref_rand(size, mu, kappa):
@@ -640,7 +651,8 @@ class ScalarParameterSamples(unittest.TestCase):
                 f.random(1)
 
     def test_binomial(self):
-        pymc3_random_discrete(Binomial, {'n': Nat, 'p': Unit}, ref_rand=st.binom.rvs)
+        pymc3_random_discrete(
+            Binomial, {'n': Nat, 'p': Unit}, ref_rand=st.binom.rvs)
 
     def test_beta_binomial(self):
         pymc3_random_discrete(BetaBinomial,
@@ -656,7 +668,8 @@ class ScalarParameterSamples(unittest.TestCase):
 
     def test_poisson(self):
         pymc3_random_discrete(Poisson, {'mu': Rplusbig},
-                              size=500,  # Test always fails with larger sample sizes.
+                              # Test always fails with larger sample sizes.
+                              size=500,
                               ref_rand=st.poisson.rvs)
 
     def poisson_gamma_random(alpha, mu, size):
@@ -669,12 +682,14 @@ class ScalarParameterSamples(unittest.TestCase):
         #   pymc3_random_discrete(NegativeBinomial, {'mu':Rplusbig, 'alpha':Rplusbig},
         #                          size=1000,
         #                          ref_rand=lambda size, mu=None,
-        #                          alpha=None: poisson_gamma_random(alpha, mu, size))
-        raise SkipTest('NegativeBinomial test always fails for unknown reason.')
+        # alpha=None: poisson_gamma_random(alpha, mu, size))
+        raise SkipTest(
+            'NegativeBinomial test always fails for unknown reason.')
 
     def test_geometric(self):
         pymc3_random_discrete(Geometric, {'p': Unit},
-                              size=500,  # Test always fails with larger sample sizes.
+                              # Test always fails with larger sample sizes.
+                              size=500,
                               fails=50,  # Be a bit more generous.
                               ref_rand=nr.geometric)
 
@@ -692,7 +707,8 @@ class ScalarParameterSamples(unittest.TestCase):
     def checks_categorical_random(self, s):
         def ref_rand(size, p):
             return nr.choice(np.arange(p.shape[0]), p=p, size=size)
-        pymc3_random_discrete(Categorical, {'p': Simplex(s)}, ref_rand=ref_rand)
+        pymc3_random_discrete(
+            Categorical, {'p': Simplex(s)}, ref_rand=ref_rand)
 
     def test_constant_dist(self):
         def ref_rand(size, c):
@@ -713,7 +729,8 @@ class ScalarParameterSamples(unittest.TestCase):
             return mu + np.sqrt(nu) * (normal / chi2).T
         for n in [2, 3]:
             pymc3_random(MvStudentT,
-                         {'nu': Domain([5, 10, 25, 50]), 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
+                         {'nu': Domain([5, 10, 25, 50]), 'Sigma': PdMatrix(
+                             n), 'mu': Vector(R, n)},
                          size=100, valuedomain=Vector(R, n), ref_rand=ref_rand)
 
     def test_dirichlet(self):

@@ -12,6 +12,7 @@ from . import families
 
 __all__ = ['glm', 'linear_component', 'plot_posterior_predictive']
 
+
 def linear_component(formula, data, priors=None,
                      intercept_prior=None,
                      regressor_prior=None,
@@ -87,7 +88,8 @@ def linear_component(formula, data, priors=None,
             coeff.tag.test_value = init_vals[reg_name]
         coeffs.append(coeff)
 
-    y_est = theano.dot(np.asarray(dmatrix), theano.tensor.stack(*coeffs)).reshape((1, -1))
+    y_est = theano.dot(np.asarray(dmatrix),
+                       theano.tensor.stack(*coeffs)).reshape((1, -1))
 
     return y_est, coeffs
 

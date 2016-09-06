@@ -17,7 +17,8 @@ from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln
 
-__all__ = ['MvNormal', 'MvStudentT', 'Dirichlet', 'Multinomial', 'Wishart', 'WishartBartlett', 'LKJCorr']
+__all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
+           'Multinomial', 'Wishart', 'WishartBartlett', 'LKJCorr']
 
 
 class MvNormal(Continuous):
@@ -43,6 +44,7 @@ class MvNormal(Continuous):
     tau : array
         Precision matrix.
     """
+
     def __init__(self, mu, tau, *args, **kwargs):
         super(MvNormal, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.mu = mu
@@ -70,9 +72,9 @@ class MvNormal(Continuous):
         delta = value - mu
         k = tau.shape[0]
 
-        result = k * tt.log(2 * np.pi) + tt.log(1./det(tau))
+        result = k * tt.log(2 * np.pi) + tt.log(1. / det(tau))
         result += (delta.dot(tau) * delta).sum(axis=delta.ndim - 1)
-        return -1/2. * result
+        return -1 / 2. * result
 
 
 class MvStudentT(Continuous):
@@ -98,6 +100,7 @@ class MvStudentT(Continuous):
     mu : array
         Vector of means.
     """
+
     def __init__(self, nu, Sigma, mu=None, *args, **kwargs):
         super(MvStudentT, self).__init__(*args, **kwargs)
         self.nu = nu
@@ -113,7 +116,7 @@ class MvStudentT(Continuous):
         nu, S, mu = draw_values([self.nu, self.Sigma, self.mu], point=point)
 
         return (np.sqrt(nu) * (mvn(np.zeros(len(S)), S, size).T
-                                           / chi2(nu, size))).T + mu
+                               / chi2(nu, size))).T + mu
 
     def logp(self, value):
 
@@ -128,8 +131,9 @@ class MvStudentT(Continuous):
 
         Q = X.dot(matrix_inverse(S)).dot(X.T).sum()
         log_det = tt.log(det(S))
-        log_pdf = gammaln((nu + d)/2.) - 0.5 * (d*tt.log(np.pi*nu) + log_det) - gammaln(nu/2.)
-        log_pdf -= 0.5*(nu + d)*tt.log(1 + Q/nu)
+        log_pdf = gammaln((nu + d) / 2.) - 0.5 * \
+            (d * tt.log(np.pi * nu) + log_det) - gammaln(nu / 2.)
+        log_pdf -= 0.5 * (nu + d) * tt.log(1 + Q / nu)
 
         return log_pdf
 
@@ -163,6 +167,7 @@ class Dirichlet(Continuous):
     Only the first `k-1` elements of `x` are expected. Can be used
     as a parent of Multinomial and Categorical nevertheless.
     """
+
     def __init__(self, a, transform=transforms.stick_breaking,
                  *args, **kwargs):
         shape = a.shape[-1]
@@ -174,8 +179,8 @@ class Dirichlet(Continuous):
         self.mean = a / tt.sum(a)
 
         self.mode = tt.switch(tt.all(a > 1),
-                             (a - 1) / tt.sum(a - 1),
-                             np.nan)
+                              (a - 1) / tt.sum(a - 1),
+                              np.nan)
 
     def random(self, point=None, size=None):
         a = draw_values([self.a], point=point)
@@ -229,10 +234,11 @@ class Multinomial(Discrete):
         Probability of each one of the different outcomes. Elements must
         be non-negative and sum to 1. They will be automatically rescaled otherwise.
     """
+
     def __init__(self, n, p, *args, **kwargs):
         super(Multinomial, self).__init__(*args, **kwargs)
         self.n = n
-        self.p = p/tt.sum(p)
+        self.p = p / tt.sum(p)
         self.mean = n * p
         self.mode = tt.cast(tt.round(n * p), 'int32')
 
@@ -257,6 +263,7 @@ class Multinomial(Discrete):
             tt.all(x >= 0), tt.all(x <= n), tt.eq(tt.sum(x), n),
             n >= 0)
 
+
 def posdef(AA):
     try:
         fct = np.linalg.cholesky(AA)
@@ -271,16 +278,15 @@ class PosDefMatrix(theano.Op):
 
     """
 
-    #Properties attribute
+    # Properties attribute
     __props__ = ()
 
-
-    #Compulsory if itypes and otypes are not defined
+    # Compulsory if itypes and otypes are not defined
 
     def make_node(self, x):
         x = tt.as_tensor_variable(x)
         assert x.ndim == 2
-        o=tt.TensorType(dtype='int8', broadcastable = [])()
+        o = tt.TensorType(dtype='int8', broadcastable=[])()
         return theano.Apply(self, [x], [o])
 
     # Python implementation:
@@ -340,6 +346,7 @@ class Wishart(Continuous):
     V : array
         p x p positive definite matrix.
     """
+
     def __init__(self, n, V, *args, **kwargs):
         super(Wishart, self).__init__(*args, **kwargs)
         warnings.warn('The Wishart distribution can currently not be used '
@@ -353,9 +360,9 @@ class Wishart(Continuous):
         self.p = p = V.shape[0]
         self.V = V
         self.mean = n * V
-        self.mode = tt.switch(1*(n >= p + 1),
-                             (n - p - 1) * V,
-                             np.nan)
+        self.mode = tt.switch(1 * (n >= p + 1),
+                              (n - p - 1) * V,
+                              np.nan)
 
     def logp(self, X):
         n = self.n
@@ -366,9 +373,9 @@ class Wishart(Continuous):
         IXI = det(X)
 
         return bound(((n - p - 1) * tt.log(IXI)
-                     - trace(matrix_inverse(V).dot(X))
-                     - n * p * tt.log(2) - n * tt.log(IVI)
-                     - 2 * multigammaln(n / 2., p)) / 2,
+                      - trace(matrix_inverse(V).dot(X))
+                      - n * p * tt.log(2) - n * tt.log(IVI)
+                      - 2 * multigammaln(n / 2., p)) / 2,
                      matrix_pos_def(X),
                      tt.eq(X, X.T),
                      n > (p - 1))
@@ -429,7 +436,7 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
         diag_testval = None
         tril_testval = None
 
-    c = tt.sqrt(ChiSquared('c', nu - np.arange(2, 2+n_diag), shape=n_diag,
+    c = tt.sqrt(ChiSquared('c', nu - np.arange(2, 2 + n_diag), shape=n_diag,
                            testval=diag_testval))
     print('Added new variable c to model diagonal of Wishart.')
     z = Normal('z', 0, 1, shape=n_tril, testval=tril_testval)
@@ -485,6 +492,7 @@ class LKJCorr(Continuous):
         extended onion method." Journal of multivariate analysis,
         100(9), pp.1989-2001.
     """
+
     def __init__(self, n, p, *args, **kwargs):
         self.n = n
         self.p = p
@@ -498,7 +506,7 @@ class LKJCorr(Continuous):
 
     def _normalizing_constant(self, n, p):
         if n == 1:
-            result = gammaln(2. * tt.arange(1, int((p-1) / 2) + 1)).sum()
+            result = gammaln(2. * tt.arange(1, int((p - 1) / 2) + 1)).sum()
             if p % 2 == 1:
                 result += (0.25 * (p ** 2 - 1) * tt.log(np.pi)
                            - 0.25 * (p - 1) ** 2 * tt.log(2.)
@@ -506,7 +514,7 @@ class LKJCorr(Continuous):
             else:
                 result += (0.25 * p * (p - 2) * tt.log(np.pi)
                            + 0.25 * (3 * p ** 2 - 4 * p) * tt.log(2.)
-                           + p * gammaln(p / 2) - (p-1) * gammaln(p))
+                           + p * gammaln(p / 2) - (p - 1) * gammaln(p))
         else:
             result = -(p - 1) * gammaln(n + 0.5 * (p - 1))
             k = tt.arange(1, p)

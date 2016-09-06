@@ -10,6 +10,7 @@ from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
 from numpy.testing import assert_almost_equal
 import numpy as np
 
+
 def check_stat(name, trace, var, stat, value, bound):
     s = stat(trace[var][2000:], axis=0)
     close_to(s, value, bound)
@@ -25,14 +26,13 @@ def test_step_continuous():
         nuts = NUTS(scaling=C, is_cov=True, blocked=False)
 
         mh_blocked = Metropolis(S=C,
-                                   proposal_dist=MultivariateNormalProposal,
-                                   blocked=True)
+                                proposal_dist=MultivariateNormalProposal,
+                                blocked=True)
         slicer_blocked = Slice(blocked=True)
         hmc_blocked = HamiltonianMC(scaling=C, is_cov=True)
         nuts_blocked = NUTS(scaling=C, is_cov=True)
 
         compound = CompoundStep([hmc_blocked, mh_blocked])
-
 
     steps = [slicer, hmc, nuts, mh_blocked, hmc_blocked,
              slicer_blocked, nuts_blocked, compound]
@@ -81,9 +81,8 @@ def test_step_discrete():
 
     with model:
         mh = Metropolis(S=C,
-                           proposal_dist=MultivariateNormalProposal)
+                        proposal_dist=MultivariateNormalProposal)
         slicer = Slice()
-
 
     steps = [mh]
 
@@ -97,13 +96,15 @@ def test_step_discrete():
         for (var, stat, val, bound) in check:
             yield check_stat, repr(st), h, var, stat, val, bound
 
+
 def test_constant_step():
 
     with Model() as model:
         x = Normal('x', 0, 1)
-        start = {'x':-1}
+        start = {'x': -1}
         tr = sample(10, step=Constant([x]), start=start)
         assert_almost_equal(tr['x'], start['x'], decimal=10)
+
 
 def test_assign_step_methods():
 

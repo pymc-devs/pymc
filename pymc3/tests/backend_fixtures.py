@@ -22,6 +22,7 @@ class ModelBackendSetupTestCase(unittest.TestCase):
     - name
     - shape
     """
+
     def setUp(self):
         self.test_point, self.model, _ = models.beta_bernoulli(self.shape)
         with self.model:
@@ -136,6 +137,7 @@ class SelectionTestCase(ModelBackendSampledTestCase):
     - name
     - shape
     """
+
     def test_get_values_default(self):
         for varname in self.test_point.keys():
             expected = np.concatenate([self.expected[chain][varname]
@@ -369,7 +371,7 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
                                                          burn=3),
                                  self.mtrace1.get_values(varname, combine=cf,
                                                          burn=3))
-                ## Burn to one value.
+                # Burn to one value.
                 npt.assert_equal(self.mtrace0.get_values(varname, combine=cf,
                                                          burn=self.draws - 1),
                                  self.mtrace1.get_values(varname, combine=cf,
@@ -380,8 +382,8 @@ class BackendEqualityTestCase(ModelBackendSampledTestCase):
             for cf in [False, True]:
                 npt.assert_equal(self.mtrace0.get_values(varname, combine=cf,
                                                          thin=2),
-                             self.mtrace1.get_values(varname, combine=cf,
-                                                     thin=2))
+                                 self.mtrace1.get_values(varname, combine=cf,
+                                                         thin=2))
 
     def test_get_values_with_burn_and_thin(self):
         for varname in self.test_point.keys():

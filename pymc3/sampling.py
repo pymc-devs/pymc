@@ -5,7 +5,7 @@ from joblib import Parallel, delayed
 from time import time
 from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
-                         BinaryGibbsMetropolis, Slice, ElemwiseCategorical, CompoundStep)
+                           BinaryGibbsMetropolis, Slice, ElemwiseCategorical, CompoundStep)
 from .progressbar import progress_bar
 from numpy.random import randint, seed
 from numpy import shape, append, asarray
@@ -16,9 +16,10 @@ sys.setrecursionlimit(10000)
 
 __all__ = ['sample', 'iter_sample', 'sample_ppc']
 
+
 def assign_step_methods(model, step=None,
-        methods=(NUTS, HamiltonianMC, Metropolis, BinaryMetropolis, BinaryGibbsMetropolis,
-        Slice, ElemwiseCategorical)):
+                        methods=(NUTS, HamiltonianMC, Metropolis, BinaryMetropolis, BinaryGibbsMetropolis,
+                                 Slice, ElemwiseCategorical)):
     '''
     Assign model variables to appropriate step methods. Passing a specified
     model will auto-assign its constituent stochastic variables to step methods
@@ -57,12 +58,13 @@ def assign_step_methods(model, step=None,
                 for m in s.methods:
                     assigned_vars = assigned_vars | set(m.vars)
 
-    # Use competence classmethods to select step methods for remaining variables
+    # Use competence classmethods to select step methods for remaining
+    # variables
     selected_steps = defaultdict(list)
     for var in model.free_RVs:
         if not var in assigned_vars:
 
-            competences = {s:s._competence(var) for s in methods}
+            competences = {s: s._competence(var) for s in methods}
 
             selected = max(competences.keys(), key=(lambda k: competences[k]))
 
@@ -71,12 +73,14 @@ def assign_step_methods(model, step=None,
             selected_steps[selected].append(var)
 
     # Instantiate all selected step methods
-    steps += [s(vars=selected_steps[s]) for s in selected_steps if selected_steps[s]]
+    steps += [s(vars=selected_steps[s])
+              for s in selected_steps if selected_steps[s]]
 
-    if len(steps)==1:
+    if len(steps) == 1:
         steps = steps[0]
 
     return steps
+
 
 def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None,
            progressbar=True, model=None, random_seed=None):
@@ -132,22 +136,22 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
         import multiprocessing as mp
         njobs = max(mp.cpu_count() - 2, 1)
 
-    sample_args = {'draws':draws, 
-                    'step':step, 
-                    'start':start, 
-                    'trace':trace, 
-                    'chain':chain,
-                    'tune':tune, 
-                    'progressbar':progressbar, 
-                    'model':model, 
-                    'random_seed':random_seed}
-               
-    if njobs>1:
+    sample_args = {'draws': draws,
+                   'step': step,
+                   'start': start,
+                   'trace': trace,
+                   'chain': chain,
+                   'tune': tune,
+                   'progressbar': progressbar,
+                   'model': model,
+                   'random_seed': random_seed}
+
+    if njobs > 1:
         sample_func = _mp_sample
         sample_args['njobs'] = njobs
     else:
         sample_func = _sample
-        
+
     return sample_func(**sample_args)
 
 
@@ -266,27 +270,29 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
     except KeyError:
         raise ValueError('Argument `trace` is invalid.')
 
+
 def _make_parallel(arg, njobs):
     if not shape(arg):
-        return [arg]*njobs
+        return [arg] * njobs
     return arg
+
 
 def _mp_sample(**kwargs):
     njobs = kwargs.pop('njobs')
     chain = kwargs.pop('chain')
     random_seed = kwargs.pop('random_seed')
     start = kwargs.pop('start')
-    
+
     rseed = _make_parallel(random_seed, njobs)
     start_vals = _make_parallel(start, njobs)
-        
+
     chains = list(range(chain, chain + njobs))
     pbars = [kwargs.pop('progressbar')] + [False] * (njobs - 1)
     traces = Parallel(n_jobs=njobs)(delayed(_sample)(chain=chains[i],
-                                                    progressbar=pbars[i],
-                                                    random_seed=rseed[i],
-                                                    start=start_vals[i],
-                                                    **kwargs) for i in range(njobs))
+                                                     progressbar=pbars[i],
+                                                     random_seed=rseed[i],
+                                                     start=start_vals[i],
+                                                     **kwargs) for i in range(njobs))
     return merge_traces(traces)
 
 
@@ -300,6 +306,7 @@ def stop_tuning(step):
         step.methods = [stop_tuning(s) for s in step.methods]
 
     return step
+
 
 def _soft_update(a, b):
     """As opposed to dict.update, don't overwrite keys if present.

@@ -9,8 +9,12 @@ __all__ = ['Normal', 'StudentT', 'Binomial', 'Poisson']
 
 # Define link functions
 
-# Hack as assigning a function in the class definition automatically binds it as a method.
+# Hack as assigning a function in the class definition automatically binds
+# it as a method.
+
+
 class Identity():
+
     def __call__(self, x):
         return x
 
@@ -18,6 +22,7 @@ identity = Identity()
 logit = tt.nnet.sigmoid
 inverse = tt.inv
 exp = tt.exp
+
 
 class Family(object):
     """Base class for Family of likelihood distribution and link functions.
@@ -80,11 +85,13 @@ class StudentT(Family):
     priors = {'lam': pm_dists.HalfCauchy.dist(beta=10, testval=1.),
               'nu': 1}
 
+
 class Normal(Family):
     link = identity
     likelihood = pm_dists.Normal
     parent = 'mu'
     priors = {'sd': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
+
 
 class Binomial(Family):
     link = logit

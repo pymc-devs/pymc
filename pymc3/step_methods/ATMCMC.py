@@ -113,7 +113,7 @@ class ATMCMC(ArrayStepShared):
         self.array_population = np.zeros(n_chains)
         for i in range(self.n_chains):
             dummy = Point({v.name: v.random() for v in vars},
-                                                            model=model)
+                          model=model)
             self.population.append(dummy)
 
         shared = make_shared_replacements(vars, model)
@@ -140,7 +140,7 @@ class ATMCMC(ArrayStepShared):
                 self.accepted = 0
 
             delta = self.proposal_samples_array[self.stage_sample, :] * \
-                                                                self.scaling
+                self.scaling
 
             if self.any_discrete:
                 if self.all_discrete:
@@ -149,7 +149,7 @@ class ATMCMC(ArrayStepShared):
                     q = (q0 + delta).astype(int)
                 else:
                     delta[self.discrete] = np.round(
-                                        delta[self.discrete], 0).astype(int)
+                        delta[self.discrete], 0).astype(int)
                     q = q0 + delta
                     q = q[self.discrete].astype(int)
             else:
@@ -159,14 +159,14 @@ class ATMCMC(ArrayStepShared):
                 varlogp = self.check_bnd(q)
                 if np.isfinite(varlogp):
                     q_new = metropolis.metrop_select(
-                                    self.beta * self.delta_logp(q, q0), q, q0)
+                        self.beta * self.delta_logp(q, q0), q, q0)
                     if q_new is q:
                         self.accepted += 1
                 else:
                     q_new = q0
             else:
                 q_new = metropolis.metrop_select(
-                                self.beta * self.delta_logp(q, q0), q, q0)
+                    self.beta * self.delta_logp(q, q0), q, q0)
                 if q_new is q:
                     self.accepted += 1
 
@@ -197,8 +197,8 @@ class ATMCMC(ArrayStepShared):
 
         while up_beta - low_beta > 1e-6:
             current_beta = (low_beta + up_beta) / 2.
-            temp = np.exp((current_beta - self.beta) * \
-                           (self.likelihoods - self.likelihoods.max()))
+            temp = np.exp((current_beta - self.beta) *
+                          (self.likelihoods - self.likelihoods.max()))
             cov_temp = np.std(temp) / np.mean(temp)
             if cov_temp > self.coef_variation:
                 up_beta = current_beta
@@ -236,7 +236,7 @@ class ATMCMC(ArrayStepShared):
         """
 
         array_population = np.zeros((self.n_chains,
-                                      self.ordering.dimensions))
+                                     self.ordering.dimensions))
         n_steps = len(mtrace)
         bij = DictToArrayBijection(self.ordering, self.population[0])
 
@@ -245,14 +245,14 @@ class ATMCMC(ArrayStepShared):
             for var, slc, shp, _ in self.ordering.vmap:
                 if len(shp) == 0:
                     array_population[:, slc] = np.atleast_2d(
-                                        mtrace.get_values(varname=var,
-                                                    burn=n_steps - 1,
-                                                    combine=True)).T
+                        mtrace.get_values(varname=var,
+                                          burn=n_steps - 1,
+                                          combine=True)).T
                 else:
                     array_population[:, slc] = mtrace.get_values(
-                                                        varname=var,
-                                                        burn=n_steps - 1,
-                                                        combine=True)
+                        varname=var,
+                        burn=n_steps - 1,
+                        combine=True)
             # get likelihoods
             likelihoods = mtrace.get_values(varname=self.likelihood_name,
                                             burn=n_steps - 1,
@@ -316,8 +316,8 @@ class ATMCMC(ArrayStepShared):
 
 
 def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
-                  stage=None, njobs=1, tune=None, progressbar=False,
-                  model=None, random_seed=None):
+                 stage=None, njobs=1, tune=None, progressbar=False,
+                 model=None, random_seed=None):
     """
     (C)ATMIP sampling algorithm from Minson et al. 2013:
     Bayesian inversion for finite fault earthquake source models I-
@@ -403,9 +403,9 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
 
     if not any(
             step.likelihood_name in var.name for var in model.deterministics):
-            raise Exception('Model (deterministic) variables need to contain '
-                            'a variable `' + step.likelihood_name + '` as '
-                            'defined in `step`.')
+        raise Exception('Model (deterministic) variables need to contain '
+                        'a variable `' + step.likelihood_name + '` as '
+                        'defined in `step`.')
 
     if progressbar:
         verbosity = 5
@@ -436,7 +436,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
                         strace.close()
                     mtrace = MultiTrace([strace])
                     step.population, step.array_population, step.likelihoods = \
-                                            step.select_end_points(mtrace)
+                        step.select_end_points(mtrace)
                     step.beta, step.old_beta, step.weights = step.calc_beta()
                     step.covariance = step.calc_covariance()
                     step.res_indx = step.resample()
@@ -450,15 +450,15 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
                     step.proposal_dist = MvNPd(step.covariance)
 
                     sample_args = {
-                            'draws': n_steps,
-                            'step': step,
-                            'stage_path': stage_path,
-                            'progressbar': progressbar,
-                            'model': model}
+                        'draws': n_steps,
+                        'step': step,
+                        'stage_path': stage_path,
+                        'progressbar': progressbar,
+                        'model': model}
                     mtrace = _iter_parallel_chains(parallel, **sample_args)
 
                     step.population, step.array_population, step.likelihoods = \
-                                            step.select_end_points(mtrace)
+                        step.select_end_points(mtrace)
                     step.beta, step.old_beta, step.weights = step.calc_beta()
                     step.stage += 1
 
@@ -473,8 +473,8 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
             # Metropolis sampling final stage
             print('Sample final stage')
             stage_path = homepath + '/stage_final'
-            temp = np.exp((1 - step.old_beta) * \
-                               (step.likelihoods - step.likelihoods.max()))
+            temp = np.exp((1 - step.old_beta) *
+                          (step.likelihoods - step.likelihoods.max()))
             step.weights = temp / np.sum(temp)
             step.covariance = step.calc_covariance()
             step.proposal_dist = MvNPd(step.covariance)
@@ -484,8 +484,8 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
             sample_args['stage_path'] = stage_path
             mtrace = _iter_parallel_chains(parallel, **sample_args)
             return mtrace
-       
-            
+
+
 def _choose_backend(trace, chain, shortcuts=None, **kwds):
     if isinstance(trace, BaseTrace):
         return trace
@@ -550,13 +550,13 @@ def _iter_serial_chains(draws, step=None, stage_path=None,
             progress.update(chain)
         trace = Text(stage_path, model=model)
         mtraces.append(sampling._sample(
-                draws=draws,
-                step=step,
-                chain=chain,
-                trace=trace,
-                model=model,
-                progressbar=False,
-                start=step.population[step.res_indx[chain]]))
+            draws=draws,
+            step=step,
+            chain=chain,
+            trace=trace,
+            model=model,
+            progressbar=False,
+            start=step.population[step.res_indx[chain]]))
 
     return sampling.merge_traces(mtraces)
 
@@ -577,11 +577,11 @@ def _iter_parallel_chains(parallel, **kwargs):
 
     print('Sampling ...')
     traces = parallel(delayed(
-                    sampling._sample)(
-                        chain=chain,
-                        trace=trace_list[chain],
-                        start=step.population[step.res_indx[chain]],
-                        **kwargs) for chain in chains)
+        sampling._sample)(
+        chain=chain,
+        trace=trace_list[chain],
+        start=step.population[step.res_indx[chain]],
+        **kwargs) for chain in chains)
     return sampling.merge_traces(traces)
 
 

@@ -53,7 +53,7 @@ err ~ normal(0,sigma);
 Ported to PyMC3 by Peadar Coyle and Chris Fonnesbeck (c) 2016.
 """
 
-t = np.array([1, 2, 4,5,6,8, 19, 18, 12])
+t = np.array([1, 2, 4, 5, 6, 8, 19, 18, 12])
 
 y = shared(np.array([15, 10, 16, 11, 9, 11, 10, 18], dtype=np.float32))
 
@@ -65,14 +65,14 @@ with Model() as arma_model:
     phi = Normal('phi', 0, sd=2)
     mu = Normal('mu', 0, sd=10)
 
-    err0 = y[0] - (mu + phi*mu)
+    err0 = y[0] - (mu + phi * mu)
 
     def calc_next(last_y, this_y, err, mu, phi, theta):
-        nu_t = mu + phi*last_y + theta*err
+        nu_t = mu + phi * last_y + theta * err
         return this_y - nu_t
 
     err, _ = scan(fn=calc_next,
-                  sequences=dict(input=y, taps=[-1,0]),
+                  sequences=dict(input=y, taps=[-1, 0]),
                   outputs_info=[err0],
                   non_sequences=[mu, phi, theta])
 
@@ -89,7 +89,7 @@ def run(n=1000):
 
         trace = sample(1000)
 
-    burn = n/10
+    burn = n / 10
 
     traceplot(trace[burn:])
     plots.summary(trace[burn:])

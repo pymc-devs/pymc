@@ -16,10 +16,10 @@ n_var = len(mu)
 stds = np.ones(4) / 2.0
 
 # Correlation matrix of 4 variables:
-corr = array([[ 1.  ,  0.75,  0.  ,  0.15],
-              [ 0.75,  1.  , -0.06,  0.19],
-              [ 0.  , -0.06,  1.  , -0.04],
-              [ 0.15,  0.19, -0.04,  1.  ]])
+corr = array([[1.,  0.75,  0.,  0.15],
+              [0.75,  1., -0.06,  0.19],
+              [0., -0.06,  1., -0.04],
+              [0.15,  0.19, -0.04,  1.]])
 cov_matrix = diag(stds).dot(corr.dot(diag(stds)))
 
 dataset = multivariate_normal(mu, cov_matrix, size=n_obs)

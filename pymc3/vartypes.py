@@ -1,7 +1,7 @@
 import sys
 
 __all__ = ['bool_types', 'int_types', 'float_types', 'complex_types', 'continuous_types',
-        'discrete_types', 'default_type', 'typefilter']
+           'discrete_types', 'default_type', 'typefilter']
 
 bool_types = set(['int8'])
 
@@ -31,4 +31,4 @@ else:
 
 def typefilter(vars, types):
     # Returns variables of type `types` from `vars`
-    return [v for v in vars if v.dtype in types] 
+    return [v for v in vars if v.dtype in types]

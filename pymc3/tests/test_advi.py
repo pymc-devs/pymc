@@ -10,11 +10,12 @@ import theano.tensor as tt
 
 from nose.tools import assert_raises
 
+
 def test_elbo():
     mu0 = 1.5
     sigma = 1.0
     y_obs = np.array([1.6, 1.4])
-        
+
     # Create a model for test
     with Model() as model:
         mu = Normal('mu', mu=mu0, sd=sigma)
@@ -43,17 +44,19 @@ def test_elbo():
     np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
 
 disaster_data = np.ma.masked_values([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
-                        3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
-                        2, 2, 3, 4, 2, 1, 3, -999, 2, 1, 1, 1, 1, 3, 0, 0,
-                        1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
-                        0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-                        3, 3, 1, -999, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-                        0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1], value=-999)
+                                     3, 3, 5, 4, 5, 3, 1, 4, 4, 1, 5, 5, 3, 4, 2, 5,
+                                     2, 2, 3, 4, 2, 1, 3, -999, 2, 1, 1, 1, 1, 3, 0, 0,
+                                     1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+                                     0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
+                                     3, 3, 1, -999, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+                                     0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1], value=-999)
 year = np.arange(1851, 1962)
+
 
 def test_check_discrete():
     with Model() as disaster_model:
-        switchpoint = DiscreteUniform('switchpoint', lower=year.min(), upper=year.max(), testval=1900)
+        switchpoint = DiscreteUniform(
+            'switchpoint', lower=year.min(), upper=year.max(), testval=1900)
 
         # Priors for pre- and post-switch rates number of disasters
         early_rate = Exponential('early_rate', 1)
@@ -66,6 +69,7 @@ def test_check_discrete():
 
     # This should raise ValueError
     assert_raises(ValueError, advi, model=disaster_model, n=10)
+
 
 def test_check_discrete_minibatch():
     disaster_data_t = tt.vector()
@@ -91,10 +95,11 @@ def test_check_discrete_minibatch():
 
     # This should raise ValueError
     assert_raises(
-        ValueError, advi_minibatch, model=disaster_model, n=10, 
-        minibatch_RVs=[disasters], minibatch_tensors=[disaster_data_t], 
+        ValueError, advi_minibatch, model=disaster_model, n=10,
+        minibatch_RVs=[disasters], minibatch_tensors=[disaster_data_t],
         minibatches=create_minibatch(), verbose=False)
-    
+
+
 def test_advi():
     n = 1000
     sd0 = 2.
@@ -107,12 +112,12 @@ def test_advi():
     d = n / sd**2 + 1 / sd0**2
     mu_post = (n * np.mean(data) / sd**2 + mu0 / sd0**2) / d
 
-    with Model() as model: 
+    with Model() as model:
         mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
         Normal('x', mu=mu_, sd=sd, observed=data)
 
     advi_fit = advi(
-        model=model, n=1000, accurate_elbo=False, learning_rate=1e-1, 
+        model=model, n=1000, accurate_elbo=False, learning_rate=1e-1,
         random_seed=1)
 
     np.testing.assert_allclose(advi_fit.means['mu'], mu_post, rtol=0.1)
@@ -121,6 +126,7 @@ def test_advi():
 
     np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
     np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+
 
 def test_advi_optimizer():
     n = 1000
@@ -134,7 +140,7 @@ def test_advi_optimizer():
     d = n / sd**2 + 1 / sd0**2
     mu_post = (n * np.mean(data) / sd**2 + mu0 / sd0**2) / d
 
-    with Model() as model: 
+    with Model() as model:
         mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
         Normal('x', mu=mu_, sd=sd, observed=data)
 
@@ -147,6 +153,7 @@ def test_advi_optimizer():
 
     np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
     np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+
 
 def test_advi_minibatch():
     n = 1000
@@ -161,12 +168,12 @@ def test_advi_minibatch():
     mu_post = (n * np.mean(data) / sd**2 + mu0 / sd0**2) / d
 
     data_t = tt.vector()
-    data_t.tag.test_value=np.zeros(1,)
+    data_t.tag.test_value = np.zeros(1,)
 
     with Model() as model:
         mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
         x = Normal('x', mu=mu_, sd=sd, observed=data_t)
-        
+
     minibatch_RVs = [x]
     minibatch_tensors = [data_t]
 
@@ -179,8 +186,8 @@ def test_advi_minibatch():
 
     with model:
         advi_fit = advi_minibatch(
-            n=1000, minibatch_tensors=minibatch_tensors, 
-            minibatch_RVs=minibatch_RVs, minibatches=minibatches, 
+            n=1000, minibatch_tensors=minibatch_tensors,
+            minibatch_RVs=minibatch_RVs, minibatches=minibatches,
             total_size=n, learning_rate=1e-1, random_seed=1
         )
 
@@ -190,6 +197,7 @@ def test_advi_minibatch():
 
     np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
     np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+
 
 def test_advi_minibatch_shared():
     n = 1000
@@ -208,7 +216,7 @@ def test_advi_minibatch_shared():
     with Model() as model:
         mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
         x = Normal('x', mu=mu_, sd=sd, observed=data_t)
-        
+
     minibatch_RVs = [x]
     minibatch_tensors = [data_t]
 
@@ -221,8 +229,8 @@ def test_advi_minibatch_shared():
 
     with model:
         advi_fit = advi_minibatch(
-            n=1000, minibatch_tensors=minibatch_tensors, 
-            minibatch_RVs=minibatch_RVs, minibatches=minibatches, 
+            n=1000, minibatch_tensors=minibatch_tensors,
+            minibatch_RVs=minibatch_RVs, minibatches=minibatches,
             total_size=n, learning_rate=1e-1, random_seed=1
         )
 
@@ -232,6 +240,7 @@ def test_advi_minibatch_shared():
 
     np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
     np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+
 
 def test_sample_vp():
     n_samples = 100

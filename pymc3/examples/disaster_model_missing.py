@@ -14,16 +14,16 @@ from numpy import arange, array
 from numpy.ma import masked_values
 
 __all__ = ['disasters_data', 'switchpoint', 'early_mean', 'late_mean', 'rate',
-             'disasters']
+           'disasters']
 
 # Time series of recorded coal mining disasters in the UK from 1851 to 1962
 disasters_data = array([4, 5, 4, 0, 1, 4, 3, 4, 0, 6, 3, 3, 4, 0, 2, 6,
-                            3, 3, 5, 4, 5, 3, 1, -1, 4, 1, 5, 5, 3, 4, 2, 5,
-                            2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
-                            1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
-                            0, 1, 0, 1, -1, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
-                            3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
-                            0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+                        3, 3, 5, 4, 5, 3, 1, -1, 4, 1, 5, 5, 3, 4, 2, 5,
+                        2, 2, 3, 4, 2, 1, 3, 2, 2, 1, 1, 1, 1, 3, 0, 0,
+                        1, 0, 1, 1, 0, 0, 3, 1, 0, 3, 2, 2, 0, 1, 1, 1,
+                        0, 1, 0, 1, -1, 0, 0, 2, 1, 0, 0, 0, 1, 1, 0, 2,
+                        3, 3, 1, 1, 2, 1, 1, 1, 1, 2, 4, 2, 0, 0, 1, 4,
+                        0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
 years = len(disasters_data)
 
 masked_values = masked_values(disasters_data, value=-1)
@@ -57,7 +57,7 @@ def run(n=1000):
         step = Slice([early_mean, late_mean])
 
         tr = sample(n, tune=500, start=start, step=step)
-        
+
         summary(tr, varnames=['disasters_missing'])
 
 if __name__ == '__main__':

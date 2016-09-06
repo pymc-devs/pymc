@@ -71,9 +71,10 @@ _pymc3_dlogp = model.dlogp()
 
 def pymc3_dlogp():
     _pymc3_dlogp(point)
-    
+
+
 def run(n=1):
     pass
-    
+
 if __name__ == '__main__':
     run()

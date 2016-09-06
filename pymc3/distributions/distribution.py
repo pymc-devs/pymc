@@ -7,7 +7,8 @@ from ..model import Model, get_named_nodes
 from ..vartypes import string_types
 
 
-__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
+__all__ = ['DensityDist', 'Distribution', 'Continuous',
+           'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
 
 
 class Distribution(object):
@@ -51,7 +52,6 @@ class Distribution(object):
     def default(self):
         return self.get_test_val(self.testval, self.defaults)
 
-
     def get_test_val(self, val, defaults):
         if val is None:
             for v in defaults:
@@ -62,8 +62,7 @@ class Distribution(object):
 
         if val is None:
             raise AttributeError(str(self) + " has no finite default value to use, checked: " +
-                         str(defaults) + " pass testval argument or adjust so value is finite.")
-
+                                 str(defaults) + " pass testval argument or adjust so value is finite.")
 
     def getattr_value(self, val):
         if isinstance(val, string_types):
@@ -78,47 +77,59 @@ class Distribution(object):
 def TensorType(dtype, shape):
     return tt.TensorType(str(dtype), np.atleast_1d(shape) == 1)
 
+
 class NoDistribution(Distribution):
-    
+
     def __init__(self, shape, dtype, testval=None, defaults=[], transform=None, parent_dist=None, *args, **kwargs):
-        super(NoDistribution, self).__init__(shape=shape, dtype=dtype, 
-                                            testval=testval, defaults=defaults, 
-                                            *args, **kwargs)
+        super(NoDistribution, self).__init__(shape=shape, dtype=dtype,
+                                             testval=testval, defaults=defaults,
+                                             *args, **kwargs)
         self.parent_dist = parent_dist
-    
 
     def __getattr__(self, name):
         try:
             self.__dict__[name]
         except KeyError:
             return getattr(self.parent_dist, name)
-    
+
     def logp(self, x):
         return 0
 
+
 class Discrete(Distribution):
     """Base class for discrete distributions"""
+
     def __init__(self, shape=(), dtype='int64', defaults=['mode'], *args, **kwargs):
-        super(Discrete, self).__init__(shape, dtype, defaults=defaults, *args, **kwargs)
+        super(Discrete, self).__init__(
+            shape, dtype, defaults=defaults, *args, **kwargs)
+
 
 class Continuous(Distribution):
     """Base class for continuous distributions"""
+
     def __init__(self, shape=(), dtype='float64', defaults=['median', 'mean', 'mode'], *args, **kwargs):
-        super(Continuous, self).__init__(shape, dtype, defaults=defaults, *args, **kwargs)
+        super(Continuous, self).__init__(
+            shape, dtype, defaults=defaults, *args, **kwargs)
+
 
 class DensityDist(Distribution):
     """Distribution based on a given log density function."""
-    def __init__(self, logp, shape=(), dtype='float64',testval=0, *args, **kwargs):
-        super(DensityDist, self).__init__(shape, dtype, testval, *args, **kwargs)
+
+    def __init__(self, logp, shape=(), dtype='float64', testval=0, *args, **kwargs):
+        super(DensityDist, self).__init__(
+            shape, dtype, testval, *args, **kwargs)
         self.logp = logp
+
 
 class MultivariateContinuous(Continuous):
 
     pass
 
+
 class MultivariateDiscrete(Discrete):
 
     pass
+
 
 def draw_values(params, point=None):
     """
@@ -148,12 +159,13 @@ def draw_values(params, point=None):
                 named_nodes.pop(param.name)
             for name, node in named_nodes.items():
                 if not isinstance(node, (tt.sharedvar.TensorSharedVariable,
-                                  tt.TensorConstant)):
+                                         tt.TensorConstant)):
                     givens[name] = (node, draw_value(node, point=point))
     values = [None for _ in params]
     for i, param in enumerate(params):
         # "Homogonise" output
-        values[i] = np.atleast_1d(draw_value(param, point=point, givens=givens.values()))
+        values[i] = np.atleast_1d(draw_value(
+            param, point=point, givens=givens.values()))
     if len(values) == 1:
         return values[0]
     else:
@@ -239,8 +251,8 @@ def broadcast_shapes(*args):
         y = list(np.atleast_1d(arg))
         if len(x) < len(y):
             x, y = y, x
-        x[-len(y):] = [j if i == 1 else i if j == 1 else i if i == j else 0 \
-                       for i, j in  zip(x[-len(y):], y)]
+        x[-len(y):] = [j if i == 1 else i if j == 1 else i if i == j else 0
+                       for i, j in zip(x[-len(y):], y)]
         if not all(x):
             return None
     return tuple(x)
@@ -251,7 +263,7 @@ def replicate_samples(generator, size, repeats, *args, **kwargs):
     if n == 1:
         samples = generator(size=size, *args, **kwargs)
     else:
-        samples = np.array([generator(size=size, *args, **kwargs) \
+        samples = np.array([generator(size=size, *args, **kwargs)
                             for _ in range(n)])
         samples = np.reshape(samples, tuple(repeats) + tuple(size))
     return samples
@@ -292,8 +304,8 @@ def generate_samples(generator, *args, **kwargs):
     params = args + tuple(kwargs.values())
 
     if broadcast_shape is None:
-        broadcast_shape = broadcast_shapes(*[np.atleast_1d(p).shape for p in params \
-                                      if not isinstance(p, tuple)])
+        broadcast_shape = broadcast_shapes(*[np.atleast_1d(p).shape for p in params
+                                             if not isinstance(p, tuple)])
     if broadcast_shape == ():
         broadcast_shape = (1,)
 
@@ -309,7 +321,7 @@ def generate_samples(generator, *args, **kwargs):
 
     try:
         repeat_shape = tuple(size or ())
-    except TypeError:# If size is an int
+    except TypeError:  # If size is an int
         repeat_shape = tuple((size,))
 
     if broadcast_shape == (1,) and prefix_shape == ():
@@ -320,16 +332,16 @@ def generate_samples(generator, *args, **kwargs):
     else:
         if size is not None:
             samples = replicate_samples(generator,
-                                  broadcast_shape,
-                                  repeat_shape + prefix_shape,
-                                  *args, **kwargs)
+                                        broadcast_shape,
+                                        repeat_shape + prefix_shape,
+                                        *args, **kwargs)
             if broadcast_shape == (1,) and not prefix_shape == ():
                 samples = np.reshape(samples, repeat_shape + prefix_shape)
         else:
             samples = replicate_samples(generator,
-                                  broadcast_shape,
-                                  prefix_shape,
-                                  *args, **kwargs)
+                                        broadcast_shape,
+                                        prefix_shape,
+                                        *args, **kwargs)
             if broadcast_shape == (1,):
                 samples = np.reshape(samples, prefix_shape)
     return samples

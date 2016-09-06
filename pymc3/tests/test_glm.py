@@ -15,9 +15,10 @@ np.random.seed(1)
 true_intercept = 0
 true_slope = 3
 
+
 def generate_data(size=700):
     x = np.linspace(-1, 1, size)
-    y = true_intercept + x*true_slope
+    y = true_intercept + x * true_slope
     return x, y
 
 true_sd = .05
@@ -26,11 +27,13 @@ y_linear += np.random.normal(size=1000, scale=true_sd)
 data_linear = dict(x=x_linear, y=y_linear)
 
 x_logistic, y_logistic = generate_data(size=3000)
-y_logistic = 1 / (1+np.exp(-y_logistic))
+y_logistic = 1 / (1 + np.exp(-y_logistic))
 bern_trials = [np.random.binomial(1, i) for i in y_logistic]
 data_logistic = dict(x=x_logistic, y=bern_trials)
 
+
 class TestGLM(unittest.TestCase):
+
     @unittest.skip("Fails only on travis. Investigate")
     def test_linear_component(self):
         with Model() as model:
@@ -43,7 +46,8 @@ class TestGLM(unittest.TestCase):
             step = Slice(model.vars)
             trace = sample(2000, step, start, progressbar=False)
 
-            self.assertAlmostEqual(np.mean(trace['Intercept']), true_intercept, 1)
+            self.assertAlmostEqual(
+                np.mean(trace['Intercept']), true_intercept, 1)
             self.assertAlmostEqual(np.mean(trace['x']), true_slope, 1)
             self.assertAlmostEqual(np.mean(trace['sigma']), true_sd, 1)
 
@@ -56,7 +60,8 @@ class TestGLM(unittest.TestCase):
             step = Slice(model.vars)
             trace = sample(2000, step, progressbar=False)
 
-            self.assertAlmostEqual(np.mean(trace['Intercept']), true_intercept, 1)
+            self.assertAlmostEqual(
+                np.mean(trace['Intercept']), true_intercept, 1)
             self.assertAlmostEqual(np.mean(trace['x']), true_slope, 1)
             self.assertAlmostEqual(np.mean(trace['sigma']), true_sd, 1)
 
@@ -71,5 +76,6 @@ class TestGLM(unittest.TestCase):
             step = Slice(model.vars)
             trace = sample(2000, step, progressbar=False)
 
-            self.assertAlmostEqual(np.mean(trace['Intercept']), true_intercept, 1)
+            self.assertAlmostEqual(
+                np.mean(trace['Intercept']), true_intercept, 1)
             self.assertAlmostEqual(np.mean(trace['x']), true_slope, 0)

@@ -40,7 +40,8 @@ with Model() as garch:
     beta1 = BoundedNormal('beta1', 0, sd=1e6)
     mu = Normal('mu', 0, sd=1e6)
 
-    theta = tt.sqrt(alpha0 + alpha1 * tt.pow(r - mu, 2) + beta1 * tt.pow(sigma1, 2))
+    theta = tt.sqrt(alpha0 + alpha1 * tt.pow(r - mu, 2) +
+                    beta1 * tt.pow(sigma1, 2))
 
     obs = Normal('obs', mu, sd=theta, observed=r)
 

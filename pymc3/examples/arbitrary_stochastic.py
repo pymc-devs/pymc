@@ -9,10 +9,10 @@ with Model() as model:
     def logp(failure, value):
         return sum(failure * log(lam) - lam * value)
 
-    x = DensityDist('x', logp, observed={'failure':failure, 'value':value})
+    x = DensityDist('x', logp, observed={'failure': failure, 'value': value})
 
 
-def run (n=3000):
+def run(n=3000):
     if n == "short":
         n = 50
     with model:

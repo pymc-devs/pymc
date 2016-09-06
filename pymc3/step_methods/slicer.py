@@ -13,7 +13,7 @@ __all__ = ['Slice']
 class Slice(ArrayStep):
     """
     Univariate slice sampler step method
-    
+
     Parameters
     ----------
     vars : list
@@ -24,10 +24,10 @@ class Slice(ArrayStep):
         Flag for tuning (Defaults to True).
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
-    
+
     """
     default_blocked = False
-    
+
     def __init__(self, vars=None, w=1, tune=True, model=None, **kwargs):
 
         model = modelcontext(model)

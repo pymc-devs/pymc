@@ -8,7 +8,8 @@ with Model() as model:
     h = find_hessian(start)
     step = Metropolis(model.vars, h)
 
-def run(n = 3000):
+
+def run(n=3000):
     if n == "short":
         n = 50
     with model:

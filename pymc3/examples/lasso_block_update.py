@@ -47,6 +47,7 @@ with model:
 
     step2 = Metropolis([s], proposal_dist=LaplaceProposal)
 
+
 def run(n=5000):
     if n == "short":
         n = 300

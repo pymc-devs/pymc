@@ -19,13 +19,14 @@ class NDArray(base.BaseTrace):
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
     """
+
     def __init__(self, name=None, model=None, vars=None):
         super(NDArray, self).__init__(name, model, vars)
         self.draw_idx = 0
         self.draws = None
         self.samples = {}
 
-    ## Sampling methods
+    # Sampling methods
 
     def setup(self, draws, chain):
         """Perform chain-specific setup.
@@ -70,12 +71,12 @@ class NDArray(base.BaseTrace):
     def close(self):
         if self.draw_idx == self.draws:
             return
-        ## Remove trailing zeros if interrupted before completed all
-        ## draws.
+        # Remove trailing zeros if interrupted before completed all
+        # draws.
         self.samples = {var: vtrace[:self.draw_idx]
                         for var, vtrace in self.samples.items()}
 
-    ## Selection methods
+    # Selection methods
 
     def __len__(self):
         if not self.samples:  # `setup` has not been called.
