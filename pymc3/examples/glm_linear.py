@@ -9,7 +9,7 @@ true_intercept = 1
 true_slope = 2
 
 x = np.linspace(0, 1, size)
-y = true_intercept + x*true_slope + np.random.normal(scale=.5, size=size)
+y = true_intercept + x * true_slope + np.random.normal(scale=.5, size=size)
 
 data = dict(x=x, y=y)
 

@@ -9,7 +9,7 @@ from numpy import array, max, exp, cumsum, nested_iters, empty, searchsorted, on
 from numpy.random import uniform
 
 from theano.gof.graph import inputs
-from theano.tensor import add 
+from theano.tensor import add
 from ..model import modelcontext
 __all__ = ['ElemwiseCategorical']
 
@@ -23,6 +23,7 @@ class ElemwiseCategorical(ArrayStep):
     # TODO: It would be great to come up with a way to make
     # ElemwiseCategorical  more general (handling more complex elementwise
     # variables)
+
     def __init__(self, vars, values=None, model=None):
         model = modelcontext(model)
         self.var = vars[0]
@@ -31,9 +32,9 @@ class ElemwiseCategorical(ArrayStep):
             self.values = arange(self.var.distribution.k)
         else:
             self.values = values
-        
 
-        super(ElemwiseCategorical, self).__init__(vars, [elemwise_logp(model, self.var)])
+        super(ElemwiseCategorical, self).__init__(
+            vars, [elemwise_logp(model, self.var)])
 
     def astep(self, q, logp):
         p = array([logp(v * self.sh) for v in self.values])
@@ -41,16 +42,19 @@ class ElemwiseCategorical(ArrayStep):
 
     @staticmethod
     def competence(var):
-        distribution = getattr(var.distribution, 'parent_dist', var.distribution)
+        distribution = getattr(
+            var.distribution, 'parent_dist', var.distribution)
         if isinstance(var.distribution, Categorical):
-            if var.distribution.k>2:
+            if var.distribution.k > 2:
                 return Competence.IDEAL
             else:
                 return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
 
+
 def elemwise_logp(model, var):
-    terms = [v.logp_elemwiset for v in model.basic_RVs if var in inputs([v.logpt])]
+    terms = [v.logp_elemwiset for v in model.basic_RVs if var in inputs([
+                                                                        v.logpt])]
     return model.fn(add(*terms))
 
 

@@ -34,8 +34,8 @@ TEMPLATES = {
                          'WHERE chain = ?'),
     'draw_count':       ('SELECT COUNT(*) FROM [{table}] '
                          'WHERE chain = ?'),
-    ## Named placeholders are used in the selection templates because
-    ## some values occur more than once in the same template.
+    # Named placeholders are used in the selection templates because
+    # some values occur more than once in the same template.
     'select':           ('SELECT * FROM [{table}] '
                          'WHERE (chain = :chain)'),
     'select_burn':      ('SELECT * FROM [{table}] '
@@ -71,6 +71,7 @@ class SQLite(base.BaseTrace):
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
     """
+
     def __init__(self, name, model=None, vars=None):
         super(SQLite, self).__init__(name, model, vars)
         self._var_cols = {}
@@ -80,13 +81,13 @@ class SQLite(base.BaseTrace):
         self._len = None
 
         self.db = _SQLiteDB(name)
-        ## Inserting sampling information is queued to avoid locks
-        ## caused by hitting the database with transactions each
-        ## iteration.
+        # Inserting sampling information is queued to avoid locks
+        # caused by hitting the database with transactions each
+        # iteration.
         self._queue = {varname: [] for varname in self.varnames}
         self._queue_limit = 5000
 
-    ## Sampling methods
+    # Sampling methods
 
     def setup(self, draws, chain):
         """Perform chain-specific setup.
@@ -127,7 +128,7 @@ class SQLite(base.BaseTrace):
     def _create_insert_queries(self, chain):
         template = TEMPLATES['insert']
         for varname, var_cols in self._var_cols.items():
-            ## Create insert statement for each variable.
+            # Create insert statement for each variable.
             var_str = ', '.join(var_cols)
             placeholders = ', '.join(['?'] * len(var_cols))
             statement = template.format(table=varname,
@@ -164,7 +165,7 @@ class SQLite(base.BaseTrace):
         self._execute_queue()
         self.db.close()
 
-    ## Selection methods
+    # Selection methods
 
     def __len__(self):
         if not self._is_setup:
@@ -252,6 +253,7 @@ class SQLite(base.BaseTrace):
 
 
 class _SQLiteDB(object):
+
     def __init__(self, name):
         self.name = name
         self.con = None
@@ -306,8 +308,8 @@ def load(name, model=None):
 
 def _get_table_list(cursor):
     """Return a list of table names in the current database."""
-    ## Modified from Django. Skips the sqlite_sequence system table used
-    ## for autoincrement key generation.
+    # Modified from Django. Skips the sqlite_sequence system table used
+    # for autoincrement key generation.
     cursor.execute("SELECT name FROM sqlite_master "
                    "WHERE type='table' AND NOT name='sqlite_sequence' "
                    "ORDER BY name")

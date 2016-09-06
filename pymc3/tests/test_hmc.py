@@ -20,7 +20,7 @@ def test_leapfrog_reversible():
     H = Hamiltonian(logp, dlogp, step.potential)
 
     q0 = bij.map(start)
-    p0 = np.ones(n)*.05
+    p0 = np.ones(n) * .05
     for e in [.01, .1, 1.2]:
         for L in [1, 2, 3, 4, 20]:
 

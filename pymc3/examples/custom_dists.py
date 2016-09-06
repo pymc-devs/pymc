@@ -27,13 +27,16 @@ data = {'x': xdata, 'y': ydata}
 with pymc3.Model() as model:
     alpha = pymc3.Uniform('intercept', -100, 100)
     # Create custom densities
-    beta = pymc3.DensityDist('slope', lambda value: -1.5 * tt.log(1 + value**2), testval=0)
-    sigma = pymc3.DensityDist('sigma', lambda value: -tt.log(tt.abs_(value)), testval=1)
+    beta = pymc3.DensityDist('slope', lambda value: -
+                             1.5 * tt.log(1 + value**2), testval=0)
+    sigma = pymc3.DensityDist(
+        'sigma', lambda value: -tt.log(tt.abs_(value)), testval=1)
     # Create likelihood
-    like = pymc3.Normal('y_est', mu=alpha + beta * xdata, sd=sigma, observed=ydata)
+    like = pymc3.Normal('y_est', mu=alpha + beta *
+                        xdata, sd=sigma, observed=ydata)
 
     start = pymc3.find_MAP()
-    step = pymc3.NUTS(scaling=start) # Instantiate sampler
+    step = pymc3.NUTS(scaling=start)  # Instantiate sampler
     trace = pymc3.sample(10000, step, start=start)
 
 
@@ -97,8 +100,8 @@ def plot_MCMC_results(xdata, ydata, trace, colors='k'):
     plot_MCMC_model(ax[1], xdata, ydata, trace)
 
 pymc3_trace = [trace['intercept'],
-              trace['slope'],
-              trace['sigma']]
+               trace['slope'],
+               trace['sigma']]
 
 plot_MCMC_results(xdata, ydata, pymc3_trace)
 plt.show()

@@ -7,11 +7,13 @@ from numpy import array, inf
 import numpy as np
 from nose.tools import raises
 
+
 class DistTest(Continuous):
+
     def __init__(self, a, b, *args, **kwargs):
         super(DistTest, self).__init__(*args, **kwargs)
         self.a = a
-        self.b = b 
+        self.b = b
 
     def logp(self, v):
         return 0
@@ -28,31 +30,37 @@ def test_default_empty_fail():
     with Model() as model:
         x = DistTest('x', 1, 2, defaults=[])
 
+
 def test_default_testval():
     with Model() as model:
         x = DistTest('x', 1, 2, testval=5, defaults=[])
         assert x.tag.test_value == 5
 
+
 def test_default_testval_nan():
     with Model() as model:
-        x = DistTest('x', 1,2, testval=np.nan, defaults=['a'])
+        x = DistTest('x', 1, 2, testval=np.nan, defaults=['a'])
         np.testing.assert_almost_equal(x.tag.test_value, np.nan)
+
 
 def test_default_a():
     with Model() as model:
         x = DistTest('x', 1, 2, defaults=['a'])
         assert x.tag.test_value == 1
 
+
 def test_default_b():
     with Model() as model:
         x = DistTest('x', np.nan, 2, defaults=['a', 'b'])
         assert x.tag.test_value == 2
+
 
 def test_default_b():
     with Model() as model:
         y = DistTest('y', 7, 8, testval=94)
         x = DistTest('x', y, 2, defaults=['a', 'b'])
         assert x.tag.test_value == 94
+
 
 def test_default_discrete_uniform():
     with Model():

@@ -26,6 +26,7 @@ nr.seed(20160905)
 
 
 class Domain(object):
+
     def __init__(self, vals, dtype=None, edges=None, shape=None):
         avals = array(vals)
 
@@ -91,6 +92,7 @@ Bool = Domain([0, 0, 1, 1], 'int64')
 
 
 class ProductDomain(object):
+
     def __init__(self, domains):
         self.vals = list(itertools.product(*[d.vals for d in domains]))
 
@@ -116,6 +118,7 @@ def simplex_values(n):
 
 
 class Simplex(object):
+
     def __init__(self, n):
         self.vals = list(simplex_values(n))
         self.shape = (n,)
@@ -123,6 +126,7 @@ class Simplex(object):
 
 
 class MultiSimplex(object):
+
     def __init__(self, n_dependent, n_independent):
         self.vals = []
         for simplex_value in itertools.product(simplex_values(n_dependent), repeat=n_independent):
@@ -145,7 +149,8 @@ PdMatrix1 = Domain([np.eye(1), [[.5]]], edges=(None, None))
 
 PdMatrix2 = Domain([np.eye(2), [[.5, .05], [.05, 4.5]]], edges=(None, None))
 
-PdMatrix3 = Domain([np.eye(3), [[.5, .1, 0], [.1, 1, 0], [0, 0, 2.5]]], edges=(None, None))
+PdMatrix3 = Domain(
+    [np.eye(3), [[.5, .1, 0], [.1, 1, 0], [0, 0, 2.5]]], edges=(None, None))
 
 
 def test_uniform():
@@ -184,12 +189,14 @@ def test_chi_squared():
 
 
 def test_wald_scipy():
-    pymc3_matches_scipy(Wald, Rplus, {'mu': Rplus}, lambda value, mu: sp.invgauss.logpdf(value, mu))
+    pymc3_matches_scipy(
+        Wald, Rplus, {'mu': Rplus}, lambda value, mu: sp.invgauss.logpdf(value, mu))
 
 
 def test_wald():
     # Log probabilities calculated using the dIG function from the R package gamlss.
-    # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/.
+    # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or
+    # http://www.gamlss.org/.
     test_cases = [
         (.5, .001, .5, None, 0., -124500.7257914),
         (1., .5, .001, None, 0., -4.3733162),
@@ -244,7 +251,8 @@ def test_geometric():
 def test_negative_binomial():
     def test_fun(value, mu, alpha):
         return sp.nbinom.logpmf(value, alpha, 1 - mu / (mu + alpha))
-    pymc3_matches_scipy(NegativeBinomial, Nat, {'mu': Rplus, 'alpha': Rplus}, test_fun)
+    pymc3_matches_scipy(NegativeBinomial, Nat, {
+                        'mu': Rplus, 'alpha': Rplus}, test_fun)
 
 
 def test_laplace():
@@ -278,7 +286,8 @@ def test_gamma():
 
     def test_fun(value, mu, sd):
         return sp.gamma.logpdf(value, mu**2 / sd**2, scale=1.0 / (mu / sd**2))
-    pymc3_matches_scipy(Gamma, Rplus, {'mu': Rplusbig, 'sd': Rplusbig}, test_fun)
+    pymc3_matches_scipy(
+        Gamma, Rplus, {'mu': Rplusbig, 'sd': Rplusbig}, test_fun)
 
 
 def test_inverse_gamma():
@@ -343,7 +352,8 @@ def test_zeroinflatedpoisson():
 
 
 def test_zeroinflatednegativebinomial():
-    checkd(ZeroInflatedNegativeBinomial, Nat, {'mu': Rplusbig, 'alpha': Rplusbig, 'psi': Unit})
+    checkd(ZeroInflatedNegativeBinomial, Nat, {
+           'mu': Rplusbig, 'alpha': Rplusbig, 'psi': Unit})
 
 
 def test_mvnormal():
@@ -369,7 +379,8 @@ def test_mvt():
 
 def check_mvt(n):
     pymc3_matches_scipy(MvStudentT, Vector(R, n),
-                        {'nu': Rplus, 'Sigma': PdMatrix(n), 'mu': Vector(R, n)},
+                        {'nu': Rplus, 'Sigma': PdMatrix(
+                            n), 'mu': Vector(R, n)},
                         mvt_logpdf)
 
 
@@ -380,7 +391,7 @@ def mvt_logpdf(value, nu, Sigma, mu=0):
     log_det = np.log(np.linalg.det(Sigma))
 
     log_pdf = scipy.special.gammaln(0.5 * (nu + d))
-    log_pdf -= 0.5 * (d * np.log(np.pi*nu) + log_det)
+    log_pdf -= 0.5 * (d * np.log(np.pi * nu) + log_det)
     log_pdf -= scipy.special.gammaln(nu / 2.)
     log_pdf -= 0.5 * (nu + d) * np.log(1 + Q / nu)
     return log_pdf
@@ -435,7 +446,7 @@ def logpow(v, p):
 
 
 def dirichlet_logpdf(value, a):
-    return (-betafn(a) + logpow(value, a-1).sum(-1)).sum()
+    return (-betafn(a) + logpow(value, a - 1).sum(-1)).sum()
 
 
 def test_dirichlet():
@@ -445,7 +456,8 @@ def test_dirichlet():
 
 
 def check_dirichlet(n):
-    pymc3_matches_scipy(Dirichlet, Simplex(n), {'a': Vector(Rplus, n)}, dirichlet_logpdf)
+    pymc3_matches_scipy(Dirichlet, Simplex(
+        n), {'a': Vector(Rplus, n)}, dirichlet_logpdf)
 
 
 def check_dirichlet2D(ndep, nind):
@@ -455,8 +467,8 @@ def check_dirichlet2D(ndep, nind):
 
 def multinomial_logpdf(value, n, p):
     if value.sum() == n and (0 <= value).all() and (value <= n).all():
-        logpdf = scipy.special.gammaln(n+1)
-        logpdf -= scipy.special.gammaln(value+1).sum()
+        logpdf = scipy.special.gammaln(n + 1)
+        logpdf -= scipy.special.gammaln(value + 1).sum()
         logpdf += logpow(p, value).sum()
         return logpdf
     else:
@@ -606,21 +618,23 @@ def build_model(distfam, valuedomain, vardomains, extra_args={}):
     with Model() as m:
         vals = {}
         for v, dom in vardomains.items():
-            vals[v] = Flat(v, dtype=dom.dtype, shape=dom.shape, testval=dom.vals[0])
+            vals[v] = Flat(v, dtype=dom.dtype, shape=dom.shape,
+                           testval=dom.vals[0])
         vals.update(extra_args)
         distfam('value', shape=valuedomain.shape, transform=None, **vals)
     return m
 
 
 def checkd(distfam, valuedomain, vardomains, checks=(check_int_to_1, check_dlogp), extra_args={}):
-        m = build_model(distfam, valuedomain, vardomains, extra_args=extra_args)
-        for check in checks:
-            check(m, m.named_vars['value'], valuedomain, vardomains)
+    m = build_model(distfam, valuedomain, vardomains, extra_args=extra_args)
+    for check in checks:
+        check(m, m.named_vars['value'], valuedomain, vardomains)
 
 
 def test_ex_gaussian():
     # Log probabilities calculated using the dexGAUS function from the R package gamlss.
-    # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or http://www.gamlss.org/.
+    # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or
+    # http://www.gamlss.org/.
     test_cases = [
         (0.5, -50.000, 0.500, 0.500, -99.8068528),
         (1.0, -1.000, 0.001, 0.001, -1992.5922447),

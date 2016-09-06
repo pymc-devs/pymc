@@ -21,6 +21,7 @@ except:
 
 RSEED = 20090425
 
+
 def test_sample():
 
     model, start, step, _ = simple_init()
@@ -41,13 +42,16 @@ def test_iter_sample():
     samps = sampling.iter_sample(5, step, start, model=model)
     for i, trace in enumerate(samps):
         assert i == len(trace) - 1, "Trace does not have correct length."
-        
+
+
 def test_parallel_start():
     model, _, _, _ = simple_init()
     with model:
-        tr = sample(5, njobs=2, start=[{'x': [10,10]}, {'x': [-10,-10]}], random_seed=RSEED)
+        tr = sample(5, njobs=2, start=[{'x': [10, 10]}, {
+                    'x': [-10, -10]}], random_seed=RSEED)
     assert tr.get_values('x', chains=0)[0][0] > 0
     assert tr.get_values('x', chains=1)[0][0] < 0
+
 
 def test_soft_update_all_present():
     start = {'a': 1, 'b': 2}

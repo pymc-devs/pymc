@@ -52,7 +52,7 @@ returns[:5]
 
 model = Model()
 with model:
-    sigma= Exponential('sigma', 1. / .02, testval=.1)
+    sigma = Exponential('sigma', 1. / .02, testval=.1)
 
     nu = Exponential('nu', 1. / 10)
 
@@ -66,7 +66,11 @@ with model:
 #
 # To get a decent scaling matrix for the Hamiltonian sampler, we find the Hessian at a point. The method `Model.d2logpc` gives us a `Theano` compiled function that returns the matrix of 2nd derivatives.
 #
-# However, the 2nd derivatives for the degrees of freedom parameter, `nu`, are negative and thus not very informative and make the matrix non-positive definite, so we replace that entry with a reasonable guess at the scale. The interactions between `log_sigma`/`nu` and `s` are also not very useful, so we set them to zero.
+# However, the 2nd derivatives for the degrees of freedom parameter, `nu`,
+# are negative and thus not very informative and make the matrix
+# non-positive definite, so we replace that entry with a reasonable guess
+# at the scale. The interactions between `log_sigma`/`nu` and `s` are also
+# not very useful, so we set them to zero.
 
 # <markdowncell>
 
@@ -83,6 +87,7 @@ with model:
 # example.
 
 # <codecell>
+
 
 def run(n=2000):
     if n == "short":

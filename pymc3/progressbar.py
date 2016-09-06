@@ -6,7 +6,7 @@ Modified from original code by Corey Goldberg (2010)
 from __future__ import print_function
 
 import warnings
-warnings.simplefilter(action = "ignore", category = FutureWarning)
+warnings.simplefilter(action="ignore", category=FutureWarning)
 import sys
 import time
 import uuid
@@ -20,6 +20,7 @@ __all__ = ['progress_bar']
 
 
 class ProgressBar(object):
+
     def __init__(self, iterations, animation_interval=.5):
         self.iterations = iterations
         self.start = time.time()
@@ -41,6 +42,7 @@ class ProgressBar(object):
 
 
 class TextProgressBar(ProgressBar):
+
     def __init__(self, iterations, printer):
         self.fill_char = '-'
         self.width = 40
@@ -84,6 +86,7 @@ def ipythonprint(s):
 
 
 class IPythonNotebookPB(ProgressBar):
+
     def __init__(self, iterations):
         self.divid = str(uuid.uuid4())
         self.sec_id = str(uuid.uuid4())
@@ -105,15 +108,15 @@ class IPythonNotebookPB(ProgressBar):
         display(Javascript(
             "$('div#%s').width('%i%%')" % (self.divid, percentage)))
         display(Javascript("$('label#%s').text('%i%% in %.1f sec')" %
-                (self.sec_id, fraction, round(elapsed, 1))))
+                           (self.sec_id, fraction, round(elapsed, 1))))
 
 
 def run_from_ipython():
-        try:
-            __IPYTHON__
-            return True
-        except NameError:
-            return False
+    try:
+        __IPYTHON__
+        return True
+    except NameError:
+        return False
 
 
 def progress_bar(iters):

@@ -4,7 +4,8 @@ from .stats import autocorr, quantiles, hpd
 from numpy.linalg import LinAlgError
 import matplotlib.pyplot as plt
 
-__all__ = ['traceplot', 'kdeplot', 'kde2plot', 'forestplot', 'autocorrplot','plot_posterior']
+__all__ = ['traceplot', 'kdeplot', 'kde2plot',
+           'forestplot', 'autocorrplot', 'plot_posterior']
 
 
 def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
@@ -60,11 +61,11 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
     n = len(varnames)
 
     if figsize is None:
-        figsize = (12, n*2)
+        figsize = (12, n * 2)
 
     if ax is None:
         fig, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
-    elif ax.shape != (n,2):
+    elif ax.shape != (n, 2):
         print('traceplot requires n*2 subplots')
         return None
 
@@ -90,12 +91,14 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
             if lines:
                 try:
                     ax[i, 0].axvline(x=lines[v], color="r", lw=1.5)
-                    ax[i, 1].axhline(y=lines[v], color="r", lw=1.5, alpha=alpha)
+                    ax[i, 1].axhline(y=lines[v], color="r",
+                                     lw=1.5, alpha=alpha)
                 except KeyError:
                     pass
 
     plt.tight_layout()
     return ax
+
 
 def histplot_op(ax, data, alpha=.35):
     for i in range(data.shape[1]):
@@ -103,9 +106,10 @@ def histplot_op(ax, data, alpha=.35):
 
         mind = np.min(d)
         maxd = np.max(d)
-        step = max((maxd-mind)//100, 1)
+        step = max((maxd - mind) // 100, 1)
         ax.hist(d, bins=range(mind, maxd + 2, step), alpha=alpha, align='left')
         ax.set_xlim(mind - .5, maxd + .5)
+
 
 def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
     errored = []
@@ -127,14 +131,15 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
             errored.append(i)
 
     if errored:
-        ax.text(.27,.47, 'WARNING: KDE plot failed for: ' + str(errored), style='italic',
-                        bbox={'facecolor':'red', 'alpha':0.5, 'pad':10})
+        ax.text(.27, .47, 'WARNING: KDE plot failed for: ' + str(errored), style='italic',
+                bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 10})
+
 
 def make_2d(a):
     """Ravel the dimensions after the first.
     """
     a = np.atleast_2d(a.T).T
-    #flatten out dimensions beyond the first
+    # flatten out dimensions beyond the first
     n = a.shape[0]
     newshape = np.product(a.shape[1:]).astype(int)
     a = a.reshape((n, newshape), order='F')
@@ -215,19 +220,19 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
         varnames = [name for name in trace.varnames if not name.endswith('_')]
 
     varnames = [item for sub in [[i for i in _handle_array_varnames(v)]
-                    for v in varnames] for item in sub]
+                                 for v in varnames] for item in sub]
 
     nchains = trace.nchains
 
     if figsize is None:
-        figsize = (12, len(varnames)*2)
+        figsize = (12, len(varnames) * 2)
 
     if ax is None:
         fig, ax = plt.subplots(len(varnames), nchains, squeeze=False,
-                                sharex=True, sharey=True, figsize=figsize)
+                               sharex=True, sharey=True, figsize=figsize)
     elif ax.shape != (len(varnames), nchains):
         raise ValueError('autocorrplot requires {}*{} subplots'.format(
-                            len(varnames), nchains))
+            len(varnames), nchains))
         return None
 
     max_lag = min(len(trace) - 1, max_lag)
@@ -236,12 +241,12 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
         for j in range(nchains):
             try:
                 d = np.squeeze(trace.get_values(v, chains=[j], burn=burn,
-                                            combine=False))
+                                                combine=False))
             except KeyError:
                 k = int(v.split('_')[-1])
                 v_use = '_'.join(v.split('_')[:-1])
                 d = np.squeeze(trace.get_values(v_use, chains=[j],
-                                        burn=burn, combine=False)[:, k])
+                                                burn=burn, combine=False)[:, k])
 
             ax[i, j].acorr(d, detrend=plt.mlab.detrend_mean, maxlags=max_lag)
 
@@ -256,7 +261,7 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
                 ax[i, j].set_xlim(0, max_lag)
 
             if nchains > 1:
-                ax[i, j].set_title("chain {0}".format(j+1))
+                ax[i, j].set_title("chain {0}".format(j + 1))
 
     return ax
 
@@ -387,8 +392,8 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
         # Subplot for confidence intervals
         interval_plot = plt.subplot(gs[0])
 
-
-    trace_quantiles = quantiles(trace_obj, qlist, transform=transform, squeeze=False)
+    trace_quantiles = quantiles(
+        trace_obj, qlist, transform=transform, squeeze=False)
     hpd_intervals = hpd(trace_obj, alpha, transform=transform, squeeze=False)
 
     for j, chain in enumerate(trace_obj.chains):
@@ -565,7 +570,7 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
 
             if k > 1:
                 plt.plot([min(r, 2) for r in R[varname]], [-(j + i)
-                     for j in range(k)], 'bo', markersize=4)
+                                                           for j in range(k)], 'bo', markersize=4)
             else:
                 plt.plot(min(R[varname], 2), -i, 'bo', markersize=4)
 
@@ -590,8 +595,8 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
 
 
 def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
-                    alpha_level=0.05, round_to=3, point_estimate='mean', rope=None,
-                    ref_val=None, kde_plot=False, plot_transformed=False, ax=None, **kwargs):
+                   alpha_level=0.05, round_to=3, point_estimate='mean', rope=None,
+                   ref_val=None, kde_plot=False, plot_transformed=False, ax=None, **kwargs):
     """Plot Posterior densities in style of John K. Kruschke book
 
     Parameters
@@ -649,15 +654,15 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
             ref_in_posterior = format_as_percent(less_than_ref_probability, 1) + ' <{:g}< '.format(ref_val) + format_as_percent(
                 greater_than_ref_probability, 1)
             ax.axvline(ref_val, ymin=0.02, ymax=.75, color='g',
-            linewidth=4, alpha=0.65)
+                       linewidth=4, alpha=0.65)
             ax.text(trace_values.mean(), plot_height * 0.6, ref_in_posterior,
-                        size=14, horizontalalignment='center')
+                    size=14, horizontalalignment='center')
 
         def display_rope(rope):
             pc_in_rope = format_as_percent(np.sum((trace_values > rope[0]) &
-            (trace_values < rope[1]))/len(trace_values), round_to)
+                                                  (trace_values < rope[1])) / len(trace_values), round_to)
             ax.plot(rope, (plot_height * 0.02, plot_height * 0.02),
-            linewidth=20, color='r', alpha=0.75)
+                    linewidth=20, color='r', alpha=0.75)
             text_props = dict(size=16, horizontalalignment='center', color='r')
             ax.text(rope[0], plot_height * 0.14, rope[0], **text_props)
             ax.text(rope[1], plot_height * 0.14, rope[1], **text_props)
@@ -666,26 +671,33 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
             if not point_estimate:
                 return
             if point_estimate not in ('mode', 'mean', 'median'):
-                raise ValueError("Point Estimate should be in ('mode','mean','median', None)")
+                raise ValueError(
+                    "Point Estimate should be in ('mode','mean','median', None)")
             if point_estimate == 'mean':
                 point_value = trace_values.mean()
-                point_text = '{}={}'.format(point_estimate, point_value.round(round_to))
+                point_text = '{}={}'.format(
+                    point_estimate, point_value.round(round_to))
             elif point_estimate == 'mode':
                 point_value = mode(trace_values.round(round_to))[0][0]
-                point_text = '{}={}'.format(point_estimate, point_value.round(round_to))
+                point_text = '{}={}'.format(
+                    point_estimate, point_value.round(round_to))
             elif point_estimate == 'median':
                 point_value = np.median(trace_values)
-                point_text = '{}={}'.format(point_estimate, point_value.round(round_to))
+                point_text = '{}={}'.format(
+                    point_estimate, point_value.round(round_to))
 
             ax.text(point_value, plot_height * 0.8, point_text,
                     size=16, horizontalalignment='center')
 
         def display_hpd():
             hpd_intervals = hpd(trace_values, alpha=alpha_level)
-            ax.plot(hpd_intervals, (plot_height * 0.02, plot_height * 0.02), linewidth=4, color='k')
+            ax.plot(hpd_intervals, (plot_height * 0.02,
+                                    plot_height * 0.02), linewidth=4, color='k')
             text_props = dict(size=16, horizontalalignment='center')
-            ax.text(hpd_intervals[0], plot_height * 0.07, hpd_intervals[0].round(round_to), **text_props)
-            ax.text(hpd_intervals[1], plot_height * 0.07, hpd_intervals[1].round(round_to), **text_props)
+            ax.text(hpd_intervals[0], plot_height * 0.07,
+                    hpd_intervals[0].round(round_to), **text_props)
+            ax.text(hpd_intervals[1], plot_height * 0.07,
+                    hpd_intervals[1].round(round_to), **text_props)
             ax.text((hpd_intervals[0] + hpd_intervals[1]) / 2, plot_height * 0.2,
                     format_as_percent(1 - alpha_level) + ' HPD', **text_props)
 
@@ -704,7 +716,6 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
         def set_key_if_doesnt_exist(d, key, value):
             if key not in d:
                 d[key] = value
-
 
         if kde_plot:
             density = kde.gaussian_kde(trace_values)
@@ -747,13 +758,15 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
         plot_posterior_op(transform(trace), ax)
     else:
         if varnames is None:
-            varnames = [name for name in trace.varnames if not name.endswith('_')]
+            varnames = [
+                name for name in trace.varnames if not name.endswith('_')]
 
         if ax is None:
             ax, fig = create_axes_grid(figsize, varnames)
 
         for a, v in zip(ax, varnames):
-            tr_values = transform(trace.get_values(v, combine=True, squeeze=True))
+            tr_values = transform(trace.get_values(
+                v, combine=True, squeeze=True))
             plot_posterior_op(tr_values, ax=a)
             a.set_title(v)
 

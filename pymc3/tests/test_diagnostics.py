@@ -28,16 +28,19 @@ class TestGelmanRubin(unittest.TestCase):
         """Confirm Gelman-Rubin statistic is close to 1 for a reasonable number of samples."""
         n_samples = 1000
         rhat = gelman_rubin(self.get_ptrace(n_samples))
-        self.assertTrue(all(1 / self.good_ratio < r < self.good_ratio for r in rhat.values()))
+        self.assertTrue(all(1 / self.good_ratio < r <
+                            self.good_ratio for r in rhat.values()))
 
     def test_bad(self):
         """Confirm Gelman-Rubin statistic is far from 1 for a small number of samples."""
         n_samples = 10
         rhat = gelman_rubin(self.get_ptrace(n_samples))
-        self.assertFalse(all(1 / self.good_ratio < r < self.good_ratio for r in rhat.values()))
+        self.assertFalse(all(1 / self.good_ratio < r <
+                             self.good_ratio for r in rhat.values()))
 
 
 class TestDiagnostics(unittest.TestCase):
+
     def get_switchpoint(self, n_samples):
         with dm.model:
             # Run sampler
@@ -54,8 +57,10 @@ class TestDiagnostics(unittest.TestCase):
         switchpoint = self.get_switchpoint(n_samples)
         first = 0.1
         last = 0.7
-        # returns (intervalsx2) matrix, with first row start indexes, second z-scores
-        z_switch = geweke(switchpoint, first=first, last=last, intervals=n_intervals)
+        # returns (intervalsx2) matrix, with first row start indexes, second
+        # z-scores
+        z_switch = geweke(switchpoint, first=first,
+                          last=last, intervals=n_intervals)
 
         # These z-scores should be larger, since there are not many samples.
         self.assertGreater(max(abs(z_switch[:, 1])), 1)
@@ -76,8 +81,10 @@ class TestDiagnostics(unittest.TestCase):
 
         first = 0.1
         last = 0.7
-        # returns (intervalsx2) matrix, with first row start indexes, second z-scores
-        z_switch = geweke(switchpoint, first=first, last=last, intervals=n_intervals)
+        # returns (intervalsx2) matrix, with first row start indexes, second
+        # z-scores
+        z_switch = geweke(switchpoint, first=first,
+                          last=last, intervals=n_intervals)
         start = z_switch[:, 0]
         z_scores = z_switch[:, 1]
 
@@ -101,7 +108,8 @@ class TestDiagnostics(unittest.TestCase):
             # start sampling at the MAP
             start = find_MAP()
             step = NUTS(scaling=start)
-            ptrace = sample(n_samples, step, start, njobs=n_jobs, random_seed=42)
+            ptrace = sample(n_samples, step, start,
+                            njobs=n_jobs, random_seed=42)
 
         n_effective = effective_n(ptrace)['x']
         assert_allclose(n_effective, n_jobs * n_samples, 2)

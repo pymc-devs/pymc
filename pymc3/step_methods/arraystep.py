@@ -8,7 +8,7 @@ from numpy import log, isfinite
 from enum import IntEnum, unique
 
 __all__ = ['ArrayStep', 'ArrayStepShared', 'metrop_select', 'SamplerHist',
-             'Competence', 'Constant']
+           'Competence', 'Constant']
 
 
 @unique
@@ -21,11 +21,13 @@ class Competence(IntEnum):
     3: IDEAL
     """
     INCOMPATIBLE = 0
-    COMPATIBLE   = 1
-    PREFERRED    = 2
-    IDEAL        = 3
+    COMPATIBLE = 1
+    PREFERRED = 2
+    IDEAL = 3
+
 
 class BlockedStep(object):
+
     def __new__(cls, *args, **kwargs):
         blocked = kwargs.get('blocked')
         if blocked is None:
@@ -41,10 +43,10 @@ class BlockedStep(object):
             args = args[1:]
         elif 'vars' in kwargs:
             vars = kwargs.pop('vars')
-        else: # Assume all model variables
+        else:  # Assume all model variables
             vars = model.vars
 
-        #get the actual inputs from the vars
+        # get the actual inputs from the vars
         vars = inputvars(vars)
 
         if not blocked and len(vars) > 1:
@@ -92,6 +94,7 @@ class ArrayStep(BlockedStep):
     blocked: Boolean (default True)
     fs: logp theano function
     """
+
     def __init__(self, vars, fs, allvars=False, blocked=True):
         self.vars = vars
         self.ordering = ArrayOrdering(vars)
@@ -116,6 +119,7 @@ class ArrayStepShared(BlockedStep):
     Works by setting shared variables before using the step. This eliminates the mapping and unmapping overhead as well
     as moving fewer variables around.
     """
+
     def __init__(self, vars, shared, blocked=True):
         """
         Parameters
@@ -126,7 +130,7 @@ class ArrayStepShared(BlockedStep):
         """
         self.vars = vars
         self.ordering = ArrayOrdering(vars)
-        self.shared = { str(var) : shared for var, shared in shared.items() }
+        self.shared = {str(var): shared for var, shared in shared.items()}
         self.blocked = blocked
 
     def step(self, point):
@@ -137,6 +141,7 @@ class ArrayStepShared(BlockedStep):
 
         apoint = self.astep(bij.map(point))
         return bij.rmap(apoint)
+
 
 def metrop_select(mr, q, q0):
     # Perform rejection/acceptance step for Metropolis class samplers
@@ -151,11 +156,13 @@ def metrop_select(mr, q, q0):
 
 
 class SamplerHist(object):
+
     def __init__(self):
         self.metrops = []
 
     def acceptr(self):
         return np.minimum(np.exp(self.metrops), 1)
+
 
 class Constant(ArrayStep):
     """

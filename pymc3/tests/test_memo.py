@@ -1,5 +1,6 @@
 from pymc3.memoize import memoize
 
+
 def getmemo():
     @memoize
     def f(a, b=['a']):

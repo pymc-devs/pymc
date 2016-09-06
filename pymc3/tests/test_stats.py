@@ -13,13 +13,16 @@ from scipy import stats as st
 seed(111)
 normal_sample = normal(0, 1, 1000000)
 
+
 def test_autocorr():
     """Test autocorrelation and autocovariance functions"""
 
     assert_almost_equal(autocorr(normal_sample), 0, 2)
 
-    y = [(normal_sample[i-1] + normal_sample[i])/2 for i in range(1, len(normal_sample))]
+    y = [(normal_sample[i - 1] + normal_sample[i]) /
+         2 for i in range(1, len(normal_sample))]
     assert_almost_equal(autocorr(y), 0.5, 2)
+
 
 def test_dic():
     """Test deviance information criterion calculation"""
@@ -39,6 +42,7 @@ def test_dic():
     actual = 2 * mean_deviance - deviance_at_mean
 
     assert_almost_equal(calculated, actual, decimal=2)
+
 
 def test_bpic():
     """Test Bayesian predictive information criterion"""
@@ -73,12 +77,13 @@ def test_waic():
         calculated = pm.waic(trace)
 
     log_py = st.binom.logpmf(np.atleast_2d(x_obs).T, 5, trace['p']).T
-    
-    lppd =  np.sum(np.log(np.mean(np.exp(log_py), axis=0)))
+
+    lppd = np.sum(np.log(np.mean(np.exp(log_py), axis=0)))
     p_waic = np.sum(np.var(log_py, axis=0))
     actual = -2 * lppd + 2 * p_waic
-    
+
     assert_almost_equal(calculated, actual, decimal=2)
+
 
 def test_hpd():
     """Test HPD calculation"""
@@ -86,6 +91,7 @@ def test_hpd():
     interval = hpd(normal_sample)
 
     assert_array_almost_equal(interval, [-1.96, 1.96], 2)
+
 
 def test_make_indices():
     """Test make_indices function"""
@@ -96,6 +102,7 @@ def test_make_indices():
 
     assert_equal(ind, make_indices((2, 3)))
 
+
 def test_mc_error():
     """Test batch standard deviation function"""
 
@@ -103,16 +110,18 @@ def test_mc_error():
 
     assert(mc_error(x) < 0.0025)
 
+
 def test_quantiles():
     """Test quantiles function"""
 
     q = quantiles(normal_sample)
 
-    assert_array_almost_equal(sorted(q.values()), [-1.96, -0.67, 0, 0.67, 1.96], 2)
+    assert_array_almost_equal(
+        sorted(q.values()), [-1.96, -0.67, 0, 0.67, 1.96], 2)
 
 
-## For all the summary tests, the number of dimensions refer to the
-## original variable dimensions, not the MCMC trace dimensions.
+# For all the summary tests, the number of dimensions refer to the
+# original variable dimensions, not the MCMC trace dimensions.
 
 
 def test_summary_0d_variable_model():
@@ -176,9 +185,10 @@ def test_calculate_stats_0d_variable():
 
 def test_calculate_stats_variable_1d_variable():
     sample = np.arange(10).reshape(5, 2)
-    result= list(pm.stats._calculate_stats(sample, 5, 0.05))
+    result = list(pm.stats._calculate_stats(sample, 5, 0.05))
     assert result[0] == ()
     assert len(result) == 3
+
 
 def test_calculate_pquantiles_0d_variable():
     sample = np.arange(10)[:, None]
@@ -192,7 +202,7 @@ def test_stats_value_line():
     roundto = 1
     summ = pm.stats._StatSummary(roundto, None, 0.05)
     values = [{'mean': 0, 'sd': 1, 'mce': 2, 'hpd': [4, 4]},
-              {'mean': 5, 'sd': 6, 'mce': 7, 'hpd': [8, 8]},]
+              {'mean': 5, 'sd': 6, 'mce': 7, 'hpd': [8, 8]}, ]
 
     expected = ['0.0              1.0              2.0              [4.0, 4.0]',
                 '5.0              6.0              7.0              [8.0, 8.0]']
@@ -204,7 +214,7 @@ def test_post_quantile_value_line():
     roundto = 1
     summ = pm.stats._PosteriorQuantileSummary(roundto, 0.05)
     values = [{'lo': 0, 'q25': 1, 'q50': 2, 'q75': 4, 'hi': 5},
-              {'lo': 6, 'q25': 7, 'q50': 8, 'q75': 9, 'hi': 10},]
+              {'lo': 6, 'q25': 7, 'q50': 8, 'q75': 9, 'hi': 10}, ]
 
     expected = ['0.0            1.0            2.0            4.0            5.0',
                 '6.0            7.0            8.0            9.0            10.0']
@@ -221,7 +231,7 @@ def test_stats_output_lines_0d_variable():
     expected = ['  Mean             SD               MC Error         95% HPD interval',
                 '  -------------------------------------------------------------------',
                 '  ',
-                '  2.0              1.4              0.6              [0.0, 4.0]',]
+                '  2.0              1.4              0.6              [0.0, 4.0]', ]
 
     result = list(summ._get_lines(x))
     assert result == expected
@@ -237,7 +247,7 @@ def test_stats_output_lines_1d_variable():
                 '  -------------------------------------------------------------------',
                 '  ',
                 '  4.0              2.8              1.3              [0.0, 8.0]',
-                '  5.0              2.8              1.3              [1.0, 9.0]',]
+                '  5.0              2.8              1.3              [1.0, 9.0]', ]
     result = list(summ._get_lines(x))
     assert result == expected
 
@@ -255,7 +265,7 @@ def test_stats_output_lines_2d_variable():
                 '  9.0              5.7              2.5              [1.0, 17.0]',
                 '  ..............................[1, :]...............................',
                 '  10.0             5.7              2.5              [2.0, 18.0]',
-                '  11.0             5.7              2.5              [3.0, 19.0]',]
+                '  11.0             5.7              2.5              [3.0, 19.0]', ]
     result = list(summ._get_lines(x))
     assert result == expected
 
@@ -284,7 +294,7 @@ def test_posterior_quantiles_output_lines_0d_variable():
                 '  2.5            25             50             75             97.5',
                 '  |--------------|==============|==============|--------------|',
                 '  ',
-                '  0.0            1.0            2.0            3.0            4.0',]
+                '  0.0            1.0            2.0            3.0            4.0', ]
 
     result = list(summ._get_lines(x))
     assert result == expected
@@ -321,7 +331,7 @@ def test_posterior_quantiles_output_lines_2d_variable():
                 '  1.0            5.0            9.0            13.0           17.0',
                 '  .............................[1, :].............................',
                 '  2.0            6.0            10.0           14.0           18.0',
-                '  3.0            7.0            11.0           15.0           19.0',]
+                '  3.0            7.0            11.0           15.0           19.0', ]
 
     result = list(summ._get_lines(x))
     assert result == expected

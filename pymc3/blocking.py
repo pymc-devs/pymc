@@ -17,6 +17,7 @@ class ArrayOrdering(object):
     """
     An ordering for an array space
     """
+
     def __init__(self, vars):
         self.vmap = []
         dim = 0
@@ -33,6 +34,7 @@ class DictToArrayBijection(object):
     """
     A mapping between a dict space and an array space
     """
+
     def __init__(self, ordering, dpoint):
         self.ordering = ordering
         self.dpt = dpoint
@@ -85,6 +87,7 @@ class DictToVarBijection(object):
     """
     A mapping between a dict space and the array space for one element within the dict space
     """
+
     def __init__(self, var, idx, dpoint):
         self.var = str(var)
         self.idx = idx
@@ -111,6 +114,7 @@ class Compose(object):
     """
     Compose two functions in a pickleable way
     """
+
     def __init__(self, fa, fb):
         self.fa = fa
         self.fb = fb

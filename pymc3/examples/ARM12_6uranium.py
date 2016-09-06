@@ -54,13 +54,13 @@ def run(n=3000):
     with model:
 
         start = Point({
-                 'groupmean': obs_means.mean(),
-                 'groupsd_interval_': 0,
-                 'sd_interval_': 0,
-                 'means': np.array(obs_means),
-                 'u_m': np.array([.72]),
-                 'floor_m': 0.,
-                 })
+            'groupmean': obs_means.mean(),
+            'groupsd_interval_': 0,
+            'sd_interval_': 0,
+            'means': np.array(obs_means),
+            'u_m': np.array([.72]),
+            'floor_m': 0.,
+        })
 
         start = find_MAP(start, model.vars[:-1])
         H = model.fastd2logp()

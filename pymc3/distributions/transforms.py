@@ -6,7 +6,8 @@ from .distribution import Distribution
 from ..math import logit, invlogit
 import numpy as np
 
-__all__ = ['transform', 'stick_breaking', 'logodds', 'log', 'sum_to_1', 't_stick_breaking']
+__all__ = ['transform', 'stick_breaking', 'logodds',
+           'log', 'sum_to_1', 't_stick_breaking']
 
 
 class Transform(object):
@@ -35,6 +36,7 @@ class Transform(object):
 
 
 class ElemwiseTransform(Transform):
+
     def jacobian_det(self, x):
         grad = tt.reshape(gradient(tt.sum(self.backward(x)), [x]), x.shape)
         return tt.log(tt.abs_(grad))
@@ -42,6 +44,7 @@ class ElemwiseTransform(Transform):
 
 class TransformedDistribution(Distribution):
     """A distribution that has been transformed from one space into another."""
+
     def __init__(self, dist, transform, *args, **kwargs):
         """
         Parameters
@@ -64,8 +67,8 @@ class TransformedDistribution(Distribution):
 
         if transform.name == 'stickbreaking':
             b = np.hstack(((np.atleast_1d(self.shape) == 1)[:-1], False))
-            self.type = tt.TensorType(v.dtype, b) # force the last dim not broadcastable
-
+            # force the last dim not broadcastable
+            self.type = tt.TensorType(v.dtype, b)
 
     def logp(self, x):
         return (self.dist.logp(self.transform_used.backward(x)) +
@@ -84,6 +87,7 @@ class Log(ElemwiseTransform):
         return tt.log(x)
 
 log = Log()
+
 
 class LogOdds(ElemwiseTransform):
     name = "logodds"
@@ -105,7 +109,7 @@ class Interval(ElemwiseTransform):
 
     name = "interval"
 
-    def __init__(self, a,b):
+    def __init__(self, a, b):
         self.a = a
         self.b = b
 
@@ -120,6 +124,7 @@ class Interval(ElemwiseTransform):
         return r
 
 interval = Interval
+
 
 class LowerBound(ElemwiseTransform):
     """Transform from real line interval [a,inf] to whole real line."""
@@ -179,6 +184,7 @@ class SumTo1(Transform):
 
 sum_to_1 = SumTo1()
 
+
 class StickBreaking(Transform):
     """Transforms K dimensional simplex space (values in [0,1] and sum to 1) to K - 1 vector of real values.
     Primarily borrowed from the STAN implementation.
@@ -199,10 +205,10 @@ class StickBreaking(Transform):
         # reverse cumsum
         x0 = x[:-1]
         s = tt.extra_ops.cumsum(x0[::-1], 0)[::-1] + x[-1]
-        z = x0/s
+        z = x0 / s
         Km1 = x.shape[0] - 1
         k = tt.arange(Km1)[(slice(None), ) + (None, ) * (x.ndim - 1)]
-        eq_share = logit(1./(Km1 + 1 - k)) # - tt.log(Km1 - k)
+        eq_share = logit(1. / (Km1 + 1 - k))  # - tt.log(Km1 - k)
         y = logit(z) - eq_share
         return y.T
 
@@ -210,10 +216,10 @@ class StickBreaking(Transform):
         y = y_.T
         Km1 = y.shape[0]
         k = tt.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
-        eq_share = logit(1./(Km1 + 1 - k)) #- tt.log(Km1 - k)
+        eq_share = logit(1. / (Km1 + 1 - k))  # - tt.log(Km1 - k)
         z = invlogit(y + eq_share, self.eps)
         yl = tt.concatenate([z, tt.ones(y[:1].shape)])
-        yu = tt.concatenate([tt.ones(y[:1].shape), 1-z])
+        yu = tt.concatenate([tt.ones(y[:1].shape), 1 - z])
         S = tt.extra_ops.cumprod(yu, 0)
         x = S * yl
         return x.T
@@ -222,15 +228,16 @@ class StickBreaking(Transform):
         y = y_.T
         Km1 = y.shape[0]
         k = tt.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
-        eq_share = logit(1./(Km1 + 1 - k)) # -tt.log(Km1 - k)
+        eq_share = logit(1. / (Km1 + 1 - k))  # -tt.log(Km1 - k)
         yl = y + eq_share
-        yu = tt.concatenate([tt.ones(y[:1].shape), 1-invlogit(yl, self.eps)])
+        yu = tt.concatenate([tt.ones(y[:1].shape), 1 - invlogit(yl, self.eps)])
         S = tt.extra_ops.cumprod(yu, 0)
         return tt.sum(tt.log(S[:-1]) - tt.log1p(tt.exp(yl)) - tt.log1p(tt.exp(-yl)), 0).T
 
 stick_breaking = StickBreaking()
 
 t_stick_breaking = lambda eps: StickBreaking(eps)
+
 
 class Circular(ElemwiseTransform):
     """Transforms a linear space into a circular one.

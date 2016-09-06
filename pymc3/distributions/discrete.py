@@ -9,7 +9,7 @@ from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
-           'NegativeBinomial', 'ConstantDist', 'ZeroInflatedPoisson', 
+           'NegativeBinomial', 'ConstantDist', 'ZeroInflatedPoisson',
            'ZeroInflatedNegativeBinomial', 'DiscreteUniform', 'Geometric',
            'Categorical']
 
@@ -37,6 +37,7 @@ class Binomial(Discrete):
     p : float
         Probability of success in each trial (0 < p < 1).
     """
+
     def __init__(self, n, p, *args, **kwargs):
         super(Binomial, self).__init__(*args, **kwargs)
         self.n = n
@@ -87,6 +88,7 @@ class BetaBinomial(Discrete):
     beta : float
         beta > 0.
     """
+
     def __init__(self, alpha, beta, n, *args, **kwargs):
         super(BetaBinomial, self).__init__(*args, **kwargs)
         self.alpha = alpha
@@ -142,6 +144,7 @@ class Bernoulli(Discrete):
     p : float
         Probability of success (0 < p < 1).
     """
+
     def __init__(self, p, *args, **kwargs):
         super(Bernoulli, self).__init__(*args, **kwargs)
         self.p = p
@@ -187,6 +190,7 @@ class Poisson(Discrete):
     The Poisson distribution can be derived as a limiting case of the
     binomial distribution.
     """
+
     def __init__(self, mu, *args, **kwargs):
         super(Poisson, self).__init__(*args, **kwargs)
         self.mu = mu
@@ -200,12 +204,12 @@ class Poisson(Discrete):
 
     def logp(self, value):
         mu = self.mu
-        log_prob =  bound(
+        log_prob = bound(
             logpow(mu, value) - factln(value) - mu,
             mu >= 0, value >= 0)
         # Return zero when mu and value are both zero
         return tt.switch(1 * tt.eq(mu, 0) * tt.eq(value, 0),
-                        0, log_prob)
+                         0, log_prob)
 
 
 class NegativeBinomial(Discrete):
@@ -233,6 +237,7 @@ class NegativeBinomial(Discrete):
     alpha : float
         Gamma distribution parameter (alpha > 0).
     """
+
     def __init__(self, mu, alpha, *args, **kwargs):
         super(NegativeBinomial, self).__init__(*args, **kwargs)
         self.mu = mu
@@ -257,8 +262,8 @@ class NegativeBinomial(Discrete):
 
         # Return Poisson when alpha gets very large.
         return tt.switch(1 * (alpha > 1e10),
-                        Poisson.dist(self.mu).logp(value),
-                        negbinom)
+                         Poisson.dist(self.mu).logp(value),
+                         negbinom)
 
 
 class Geometric(Discrete):
@@ -281,6 +286,7 @@ class Geometric(Discrete):
     p : float
         Probability of success on an individual trial (0 < p <= 1).
     """
+
     def __init__(self, p, *args, **kwargs):
         super(Geometric, self).__init__(*args, **kwargs)
         self.p = p
@@ -317,11 +323,13 @@ class DiscreteUniform(Discrete):
     upper : int
         Upper limit (upper > lower).
     """
+
     def __init__(self, lower, upper, *args, **kwargs):
         super(DiscreteUniform, self).__init__(*args, **kwargs)
         self.lower = tt.floor(lower).astype('int32')
         self.upper = tt.floor(upper).astype('int32')
-        self.mode = tt.maximum(tt.floor((upper - lower) / 2.).astype('int32'), self.lower)
+        self.mode = tt.maximum(
+            tt.floor((upper - lower) / 2.).astype('int32'), self.lower)
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
@@ -362,6 +370,7 @@ class Categorical(Discrete):
         p > 0 and the elements of p must sum to 1. They will be automatically
         rescaled otherwise.
     """
+
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
         try:
@@ -369,9 +378,8 @@ class Categorical(Discrete):
         except AttributeError:
             self.k = tt.shape(p)[-1]
         self.p = tt.as_tensor_variable(p)
-        self.p = (p.T/tt.sum(p,-1)).T
+        self.p = (p.T / tt.sum(p, -1)).T
         self.mode = tt.argmax(p)
-
 
     def random(self, point=None, size=None, repeat=None):
         def random_choice(k, *args, **kwargs):
@@ -394,7 +402,8 @@ class Categorical(Discrete):
         p = self.p
         k = self.k
 
-        sumto1 = theano.gradient.zero_grad(tt.le(abs(tt.sum(p, axis=-1) - 1), 1e-5))
+        sumto1 = theano.gradient.zero_grad(
+            tt.le(abs(tt.sum(p, axis=-1) - 1), 1e-5))
         if p.ndim > 1:
             a = tt.log(p[tt.arange(p.shape[0]), value])
         else:
@@ -413,6 +422,7 @@ class ConstantDist(Discrete):
     value : float or int
         Constant parameter.
     """
+
     def __init__(self, c, *args, **kwargs):
         super(ConstantDist, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c
@@ -440,7 +450,7 @@ class ZeroInflatedPoisson(Discrete):
     of time when the times at which events occur are independent.
 
     .. math:: 
-    
+
         f(x \mid \theta, \psi) = \left\{ \begin{array}{l}
             (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
             \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
@@ -461,6 +471,7 @@ class ZeroInflatedPoisson(Discrete):
         Expected proportion of Poisson variates (0 < psi < 1)
 
     """
+
     def __init__(self, theta, psi, *args, **kwargs):
         super(ZeroInflatedPoisson, self).__init__(*args, **kwargs)
         self.theta = theta
@@ -469,16 +480,16 @@ class ZeroInflatedPoisson(Discrete):
         self.mode = self.pois.mode
 
     def random(self, point=None, size=None, repeat=None):
-            theta, psi = draw_values([self.theta, self.psi], point=point)
-            g = generate_samples(stats.poisson.rvs, theta,
-                                    dist_shape=self.shape,
-                                    size=size)
-            return g * (np.random.random(np.squeeze(g.shape)) < psi)
+        theta, psi = draw_values([self.theta, self.psi], point=point)
+        g = generate_samples(stats.poisson.rvs, theta,
+                             dist_shape=self.shape,
+                             size=size)
+        return g * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
         return tt.switch(value > 0,
-                        tt.log(self.psi) + self.pois.logp(value),
-                        tt.log((1. - self.psi) + self.psi * tt.exp(-self.theta)))
+                         tt.log(self.psi) + self.pois.logp(value),
+                         tt.log((1. - self.psi) + self.psi * tt.exp(-self.theta)))
 
 
 class ZeroInflatedNegativeBinomial(Discrete):
@@ -511,6 +522,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
     psi : float
         Expected proportion of NegativeBinomial variates (0 < psi < 1)
     """
+
     def __init__(self, mu, alpha, psi, *args, **kwargs):
         super(ZeroInflatedNegativeBinomial, self).__init__(*args, **kwargs)
         self.mu = mu
@@ -518,16 +530,17 @@ class ZeroInflatedNegativeBinomial(Discrete):
         self.psi = psi
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
-        
+
     def random(self, point=None, size=None, repeat=None):
-        mu, alpha, psi = draw_values([self.mu, self.alpha, self.psi], point=point)
-        g = generate_samples(stats.gamma.rvs, alpha, scale=mu/alpha,
+        mu, alpha, psi = draw_values(
+            [self.mu, self.alpha, self.psi], point=point)
+        g = generate_samples(stats.gamma.rvs, alpha, scale=mu / alpha,
                              dist_shape=self.shape,
                              size=size)
-        g[g == 0] = np.finfo(float).eps  # Just in case 
+        g[g == 0] = np.finfo(float).eps  # Just in case
         return stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
 
     def logp(self, value):
         return tt.switch(value > 0,
-                        tt.log(self.psi) + self.nb.logp(value),
-                        tt.log((1. - self.psi) + self.psi * (self.alpha/(self.alpha+self.mu))**self.alpha))
+                         tt.log(self.psi) + self.nb.logp(value),
+                         tt.log((1. - self.psi) + self.psi * (self.alpha / (self.alpha + self.mu))**self.alpha))

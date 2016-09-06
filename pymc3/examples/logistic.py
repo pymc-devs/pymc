@@ -27,6 +27,7 @@ with model:
 
     o = Bernoulli('o', p, observed=outcomes)
 
+
 def run(n=3000):
     if n == "short":
         n = 50

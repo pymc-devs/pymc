@@ -75,7 +75,8 @@ def geweke(x, first=.1, last=.5, intervals=20):
     last_start_idx = (1 - last) * end
 
     # Calculate starting indices
-    start_indices = np.arange(0, int(last_start_idx), step=int((last_start_idx) / (intervals - 1)))
+    start_indices = np.arange(0, int(last_start_idx), step=int(
+        (last_start_idx) / (intervals - 1)))
 
     # Loop over start indices
     for start in start_indices:
@@ -151,9 +152,9 @@ def gelman_rubin(mtrace):
             W = np.mean(np.var(x, axis=1, ddof=1))
 
             # Estimate of marginal posterior variance
-            Vhat = W*(n - 1)/n + B/n
+            Vhat = W * (n - 1) / n + B / n
 
-            return np.sqrt(Vhat/W)
+            return np.sqrt(Vhat / W)
 
         except ValueError:
 
@@ -223,7 +224,7 @@ def effective_n(mtrace):
             W = np.mean(np.var(x, axis=1, ddof=1))
 
             # Estimate of marginal posterior variance
-            Vhat = W*(n - 1)/n + B/n
+            Vhat = W * (n - 1) / n + B / n
 
             return Vhat
 
@@ -243,21 +244,22 @@ def effective_n(mtrace):
 
         Vhat = calc_vhat(x)
 
-        variogram = lambda t: (sum(sum((x[j][i] - x[j][i-t])**2
-                            for i in range(t,n)) for j in range(m)) / (m*(n - t)))
+        variogram = lambda t: (sum(sum((x[j][i] - x[j][i - t])**2
+                                       for i in range(t, n)) for j in range(m)) / (m * (n - t)))
 
         rho = np.ones(n)
-        # Iterate until the sum of consecutive estimates of autocorrelation is negative
+        # Iterate until the sum of consecutive estimates of autocorrelation is
+        # negative
         while not negative_autocorr and (t < n):
 
-            rho[t] = 1. - variogram(t)/(2.*Vhat)
+            rho[t] = 1. - variogram(t) / (2. * Vhat)
 
             if not t % 2:
-                negative_autocorr = sum(rho[t-1:t+1]) < 0
+                negative_autocorr = sum(rho[t - 1:t + 1]) < 0
 
             t += 1
 
-        return int(m*n / (1. + 2*rho[1:t].sum()))
+        return int(m * n / (1. + 2 * rho[1:t].sum()))
 
     n_eff = {}
     for var in mtrace.varnames:

@@ -20,6 +20,7 @@ with model:
 
     step = NUTS()
 
+
 def run(n=1000):
     if n == "short":
         n = 50

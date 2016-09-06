@@ -32,15 +32,11 @@ with pm.Model() as model:
     y_hosp = pm.Binomial('y_hosp', y_amman, market_share, observed=rsv_cases)
 
 
-    
-
-def run(n=1000): 
+def run(n=1000):
     if n == "short":
         n = 50
     with model:
-        trace = pm.sample(10000, step=[pm.NUTS(), pm.Metropolis()]) 
+        trace = pm.sample(10000, step=[pm.NUTS(), pm.Metropolis()])
 
 if __name__ == '__main__':
     run()
-
-

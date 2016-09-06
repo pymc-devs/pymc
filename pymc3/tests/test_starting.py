@@ -6,33 +6,36 @@ from pymc3 import find_MAP, Point, Model
 from pymc3 import Model, Uniform, Normal, Beta, Binomial
 from .models import simple_init, simple_model, non_normal, exponential_beta
 
+
 def test_accuracy_normal():
     _, model, (mu, _) = simple_model()
 
-    with model: 
-        newstart = find_MAP(Point(x = [-10.5, 100.5]))
+    with model:
+        newstart = find_MAP(Point(x=[-10.5, 100.5]))
         close_to(newstart['x'], [mu, mu], 1e-5)
 
 
 def test_accuracy_non_normal():
     _, model, (mu, _) = non_normal(4)
 
-    with model: 
-        newstart = find_MAP(Point(x = [.5, .01, .95, .99]))
+    with model:
+        newstart = find_MAP(Point(x=[.5, .01, .95, .99]))
         close_to(newstart['x'], mu, 1e-5)
+
 
 def test_errors():
     _, model, _ = exponential_beta(2)
 
-    with model: 
-        try : 
-            newstart = find_MAP(Point(x = [-.5, .01], y = [.5, 4.4]))
+    with model:
+        try:
+            newstart = find_MAP(Point(x=[-.5, .01], y=[.5, 4.4]))
         except ValueError as e:
-            msg = str(e) 
+            msg = str(e)
             assert "x.logp" in msg, msg
             assert "x.value" not in msg, msg
         else:
             assert False, newstart
+
 
 def test_find_MAP_discrete():
     tol = 2.0**-11
@@ -60,7 +63,7 @@ def test_find_MAP():
     data = np.random.randn(100)
     # data should be roughly mean 0, std 1, but let's
     # normalize anyway to get it really close
-    data = (data-np.mean(data))/np.std(data)
+    data = (data - np.mean(data)) / np.std(data)
 
     with Model() as model:
         mu = Uniform('mu', -1, 1, transform=None)

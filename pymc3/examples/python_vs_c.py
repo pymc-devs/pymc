@@ -32,6 +32,7 @@ start = model.test_point
 
 from theano import ProfileMode
 
+
 def run(n=1):
     if n == "short":
         n = 50
@@ -42,8 +43,8 @@ def run(n=1):
         logp = model.logpt
         f = model.fn([logp, gradient(logp)], mode)
         print(f(start))
-        
-        #mode.print_summary()
-    
+
+        # mode.print_summary()
+
 if __name__ == '__main__':
     run()

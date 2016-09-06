@@ -31,7 +31,6 @@ def approx_hessian(point, vars=None, model=None):
         vars = model.cont_vars
     vars = inputvars(vars)
 
-
     point = Point(point, model=model)
 
     bij = DictToArrayBijection(ArrayOrdering(vars), point)
@@ -65,13 +64,12 @@ def fixed_hessian(point, vars=None, model=None):
         vars = model.cont_vars
     vars = inputvars(vars)
 
-
     point = Point(point, model=model)
 
     bij = DictToArrayBijection(ArrayOrdering(vars), point)
     dlogp = bij.mapf(model.fastdlogp(vars))
 
-    rval = np.ones(bij.map(point).size)/10
+    rval = np.ones(bij.map(point).size) / 10
     return rval
 
 
@@ -90,6 +88,7 @@ def find_hessian(point, vars=None, model=None):
     H = model.fastd2logp(vars)
     return H(Point(point, model=model))
 
+
 def find_hessian_diag(point, vars=None, model=None):
     """
     Returns Hessian of logp at the point passed.
@@ -105,6 +104,7 @@ def find_hessian_diag(point, vars=None, model=None):
     H = model.fastfn(hessian_diag(model.logpt, vars))
     return H(Point(point, model=model))
 
+
 def guess_scaling(point, vars=None, model=None):
     model = modelcontext(model)
     try:
@@ -113,6 +113,7 @@ def guess_scaling(point, vars=None, model=None):
         h = fixed_hessian(point, vars, model=model)
     return adjust_scaling(h)
 
+
 def adjust_scaling(s):
     if s.ndim < 2:
         return adjust_precision(s)
@@ -120,6 +121,7 @@ def adjust_scaling(s):
         val, vec = np.linalg.eigh(s)
         val = adjust_precision(val)
         return eig_recompose(val, vec)
+
 
 def adjust_precision(tau):
     mag = sqrt(abs(tau))
@@ -130,6 +132,7 @@ def adjust_precision(tau):
 
 def bound(a, l, u):
     return np.maximum(np.minimum(a, u), l)
+
 
 def eig_recompose(val, vec):
     return vec.dot(np.diag(val)).dot(vec.T)

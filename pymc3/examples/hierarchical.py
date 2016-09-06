@@ -12,7 +12,8 @@ n_group_predictors = 1
 n_predictors = 3
 
 group = concatenate([[i] * no_pergroup for i in range(n_groups)])
-group_predictors = random.normal(size=(n_groups, n_group_predictors))  # random.normal(size = (n_groups, n_group_predictors))
+# random.normal(size = (n_groups, n_group_predictors))
+group_predictors = random.normal(size=(n_groups, n_group_predictors))
 predictors = random.normal(size=(n_observed, n_predictors))
 
 group_effects_a = random.normal(size=(n_group_predictors, n_predictors))
@@ -33,11 +34,10 @@ with model:
     # sg ~ Uniform(.05, 10)
     sg = Uniform("sg", .05, 10, testval=2.)
 
-
     # m ~ N(mg * pg, sg)
     effects = Normal("effects",
                      sum(group_predictors[:, :, newaxis] *
-                     group_effects, 1), sg ** -2,
+                         group_effects, 1), sg ** -2,
                      shape=(n_groups, n_predictors))
 
     s = Uniform("s", .01, 10, shape=n_groups)
@@ -52,11 +52,12 @@ with model:
 
     step = NUTS(model.vars, scaling=start)
 
+
 def run(n=3000):
     if n == "short":
         n = 50
     with model:
         trace = sample(n, step, start)
-        
+
 if __name__ == '__main__':
     run()

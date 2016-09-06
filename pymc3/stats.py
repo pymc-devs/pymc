@@ -11,8 +11,9 @@ from scipy.stats.distributions import pareto
 
 from .backends import tracetab as ttab
 
-__all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles', 
-            'mc_error', 'summary', 'df_summary']
+__all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
+           'mc_error', 'summary', 'df_summary']
+
 
 def statfunc(f):
     """
@@ -31,14 +32,14 @@ def statfunc(f):
         burn = kwargs.pop('burn', 0)
         thin = kwargs.pop('thin', 1)
         combine = kwargs.pop('combine', False)
-        ## Remove outer level chain keys if only one chain)
+        # Remove outer level chain keys if only one chain)
         squeeze = kwargs.pop('squeeze', True)
 
         results = {chain: {} for chain in chains}
         for var in vars:
             samples = pymc3_obj.get_values(var, chains=chains, burn=burn,
-                                          thin=thin, combine=combine,
-                                          squeeze=False)
+                                           thin=thin, combine=combine,
+                                           squeeze=False)
             for chain, data in zip(chains, samples):
                 results[chain][var] = f(np.squeeze(data), *args, **kwargs)
 
@@ -51,6 +52,7 @@ def statfunc(f):
 
     return wrapped_f
 
+
 @statfunc
 def autocorr(x, lag=1):
     """Sample autocorrelation at specified lag.
@@ -58,7 +60,8 @@ def autocorr(x, lag=1):
     """
 
     S = autocov(x, lag)
-    return S[0, 1]/np.sqrt(np.prod(np.diag(S)))
+    return S[0, 1] / np.sqrt(np.prod(np.diag(S)))
+
 
 @statfunc
 def autocov(x, lag=1):
@@ -70,10 +73,12 @@ def autocov(x, lag=1):
     """
     x = np.asarray(x)
 
-    if not lag: return 1
+    if not lag:
+        return 1
     if lag < 0:
         raise ValueError("Autocovariance lag must be a positive integer")
     return np.cov(x[:-lag], x[lag:], bias=1)
+
 
 def dic(trace, model=None):
     """
@@ -84,22 +89,25 @@ def dic(trace, model=None):
 
     mean_deviance = -2 * np.mean([model.logp(pt) for pt in trace])
 
-    free_rv_means = {rv.name: trace[rv.name].mean(axis=0) for rv in model.free_RVs}
+    free_rv_means = {rv.name: trace[rv.name].mean(
+        axis=0) for rv in model.free_RVs}
     deviance_at_mean = -2 * model.logp(free_rv_means)
 
     return 2 * mean_deviance - deviance_at_mean
-    
+
+
 def log_post_trace(trace, model):
     '''
     Calculate the elementwise log-posterior for the sampled trace.
     '''
     return np.hstack([obs.logp_elemwise(pt) for pt in trace] for obs in model.observed_RVs)
 
+
 def waic(trace, model=None, n_eff=False):
     """
     Calculate the widely available information criterion and the effective number of parameters of the samples in trace from model.
     Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353
-    
+
     Parameters
     ----------
     trace : result of MCMC run
@@ -108,18 +116,18 @@ def waic(trace, model=None, n_eff=False):
     n_eff: bool
         if True the effective number parameters will be returned. 
         Default False
-    
+
     Returns
     -------
     waic: widely available information criterion
     p_waic: effective number parameters, only if n_eff True
-    
+
     """
     model = modelcontext(model)
-    
+
     log_py = log_post_trace(trace, model)
 
-    lppd =  np.sum(np.log(np.mean(np.exp(log_py), axis=0)))
+    lppd = np.sum(np.log(np.mean(np.exp(log_py), axis=0)))
 
     vars_lpd = np.var(log_py, axis=0)
     if np.any(vars_lpd > 0.4):
@@ -128,18 +136,19 @@ def waic(trace, model=None, n_eff=False):
         WAIC starting to fail see http://arxiv.org/abs/1507.04544 for details
         """)
     p_waic = np.sum(vars_lpd)
-    
+
     if n_eff:
         return -2 * lppd + 2 * p_waic, p_waic
     else:
         return -2 * lppd + 2 * p_waic
-   
+
+
 def loo(trace, model=None, n_eff=False):
     """
     Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
     Pareto-smoothed importance sampling (PSIS).
-    
+
     Parameters
     ----------
     trace : result of MCMC run
@@ -148,54 +157,57 @@ def loo(trace, model=None, n_eff=False):
     n_eff: bool
         if True the effective number parameters will be computed and returned. 
         Default False
-    
+
     Returns
     -------
     elpd_loo: log pointwise predictive density calculated via approximated LOO cross-validation
     p_loo: effective number parameters, only if n_eff True
     """
     model = modelcontext(model)
-    
+
     log_py = log_post_trace(trace, model)
-    
+
     # Importance ratios
     py = np.exp(log_py)
-    r = 1./py
+    r = 1. / py
     r_sorted = np.sort(r, axis=0)
 
-    # Extract largest 20% of importance ratios and fit generalized Pareto to each 
+    # Extract largest 20% of importance ratios and fit generalized Pareto to each
     # (returns tuple with shape, location, scale)
-    q80 = int(len(log_py)*0.8)
-    pareto_fit = np.apply_along_axis(lambda x: pareto.fit(x, floc=0), 0, r_sorted[q80:])
-    
+    q80 = int(len(log_py) * 0.8)
+    pareto_fit = np.apply_along_axis(
+        lambda x: pareto.fit(x, floc=0), 0, r_sorted[q80:])
+
     if np.any(pareto_fit[0] > 0.5):
         warnings.warn("""Estimated shape parameter of Pareto distribution
         is for one or more samples is greater than 0.5. This may indicate
         that the variance of the Pareto smoothed importance sampling estimate 
         is very large.""")
-    
+
     # Calculate expected values of the order statistics of the fitted Pareto
     S = len(r_sorted)
     M = S - q80
-    z = (np.arange(M)+0.5)/M
+    z = (np.arange(M) + 0.5) / M
     expvals = map(lambda x: pareto.ppf(z, x[0], scale=x[2]), pareto_fit.T)
-    
+
     # Replace importance ratios with order statistics of fitted Pareto
     r_sorted[q80:] = np.vstack(expvals).T
     # Unsort ratios (within columns) before using them as weights
-    r_new = np.array([r[np.argsort(i)] for r,i in zip(r_sorted, np.argsort(r, axis=0))])
-    
+    r_new = np.array([r[np.argsort(i)]
+                      for r, i in zip(r_sorted, np.argsort(r, axis=0))])
+
     # Truncate weights to guarantee finite variance
     w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
-    
+
     loo_lppd = np.sum(np.log(np.sum(w * py, axis=0) / np.sum(w, axis=0)))
-    
+
     if n_eff:
         p_loo = np.sum(np.log(np.mean(py, axis=0))) - loo_lppd
-        return -2 * loo_lppd, p_loo  
+        return -2 * loo_lppd, p_loo
     else:
         return -2 * loo_lppd
-    
+
+
 def bpic(trace, model=None):
     """
     Calculates Bayesian predictive information criterion n of the samples in trace from model
@@ -205,17 +217,20 @@ def bpic(trace, model=None):
 
     mean_deviance = -2 * np.mean([model.logp(pt) for pt in trace])
 
-    free_rv_means = {rv.name: trace[rv.name].mean(axis=0) for rv in model.free_RVs}
+    free_rv_means = {rv.name: trace[rv.name].mean(
+        axis=0) for rv in model.free_RVs}
     deviance_at_mean = -2 * model.logp(free_rv_means)
 
     return 3 * mean_deviance - 2 * deviance_at_mean
+
 
 def make_indices(dimensions):
     # Generates complete set of indices for given dimensions
 
     level = len(dimensions)
 
-    if level == 1: return list(range(dimensions[0]))
+    if level == 1:
+        return list(range(dimensions[0]))
 
     indices = [[]]
 
@@ -223,9 +238,9 @@ def make_indices(dimensions):
 
         _indices = []
 
-        for j in range(dimensions[level-1]):
+        for j in range(dimensions[level - 1]):
 
-            _indices += [[j]+i for i in indices]
+            _indices += [[j] + i for i in indices]
 
         indices = _indices
 
@@ -236,6 +251,7 @@ def make_indices(dimensions):
     except TypeError:
         return indices
 
+
 def calc_min_interval(x, alpha):
     """Internal method to determine the minimum interval of
     a given width
@@ -244,9 +260,9 @@ def calc_min_interval(x, alpha):
     """
 
     n = len(x)
-    cred_mass = 1.0-alpha
+    cred_mass = 1.0 - alpha
 
-    interval_idx_inc = int(np.floor(cred_mass*n))
+    interval_idx_inc = int(np.floor(cred_mass * n))
     n_intervals = n - interval_idx_inc
     interval_width = x[interval_idx_inc:] - x[:n_intervals]
 
@@ -255,8 +271,9 @@ def calc_min_interval(x, alpha):
 
     min_idx = np.argmin(interval_width)
     hdi_min = x[min_idx]
-    hdi_max = x[min_idx+interval_idx_inc]
+    hdi_max = x[min_idx + interval_idx_inc]
     return hdi_min, hdi_max
+
 
 @statfunc
 def hpd(x, alpha=0.05, transform=lambda x: x):
@@ -280,11 +297,11 @@ def hpd(x, alpha=0.05, transform=lambda x: x):
     if x.ndim > 1:
 
         # Transpose first, then sort
-        tx = np.transpose(x, list(range(x.ndim))[1:]+[0])
+        tx = np.transpose(x, list(range(x.ndim))[1:] + [0])
         dims = np.shape(tx)
 
         # Container list for intervals
-        intervals = np.resize(0.0, dims[:-1]+(2,))
+        intervals = np.resize(0.0, dims[:-1] + (2,))
 
         for index in make_indices(dims[:-1]):
 
@@ -307,6 +324,7 @@ def hpd(x, alpha=0.05, transform=lambda x: x):
         sx = np.sort(x)
 
         return np.array(calc_min_interval(sx, alpha))
+
 
 @statfunc
 def mc_error(x, batches=5):
@@ -331,10 +349,11 @@ def mc_error(x, batches=5):
         return np.reshape([mc_error(t, batches) for t in trace], dims[1:])
 
     else:
-        if batches == 1: return np.std(x)/np.sqrt(len(x))
+        if batches == 1:
+            return np.std(x) / np.sqrt(len(x))
 
         try:
-            batched_traces = np.resize(x, (batches, int(len(x)/batches)))
+            batched_traces = np.resize(x, (batches, int(len(x) / batches)))
         except ValueError:
             # If batches do not divide evenly, trim excess samples
             resid = len(x) % batches
@@ -343,7 +362,8 @@ def mc_error(x, batches=5):
 
         means = np.mean(batched_traces, 1)
 
-        return np.std(means)/np.sqrt(batches)
+        return np.std(means) / np.sqrt(batches)
+
 
 @statfunc
 def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
@@ -371,7 +391,7 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
 
     try:
         # Generate specified quantiles
-        quants = [sx[int(len(sx)*q/100.0)] for q in qlist]
+        quants = [sx[int(len(sx) * q / 100.0)] for q in qlist]
 
         return dict(zip(qlist, quants))
 
@@ -480,8 +500,8 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
 
 
 def _hpd_df(x, alpha):
-    cnames = ['hpd_{0:g}'.format(100 * alpha/2),
-              'hpd_{0:g}'.format(100 * (1 - alpha/2))]
+    cnames = ['hpd_{0:g}'.format(100 * alpha / 2),
+              'hpd_{0:g}'.format(100 * (1 - alpha / 2))]
     return pd.DataFrame(hpd(x, alpha), columns=cnames)
 
 
@@ -512,7 +532,7 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
 
     roundto : int
       The number of digits to round posterior statistics.
-            
+
     include_transformed : bool
       Flag for summarizing automatically transformed variables in addition to 
       original variables (defaults to False).
@@ -544,8 +564,10 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
     if fh is not sys.stdout:
         fh.close()
 
+
 class _Summary(object):
     """Base class for summary output"""
+
     def __init__(self, roundto):
         self.roundto = roundto
         self.header_lines = None
@@ -569,8 +591,8 @@ class _Summary(object):
                 self._format_values(values)
                 yield self.value_line.format(pad=self.spaces, **values).strip()
             except AttributeError:
-            # This is a key for the leading indices, not a normal row.
-            # `values` will be an empty tuple unless it is 2d or above.
+                # This is a key for the leading indices, not a normal row.
+                # `values` will be an empty tuple unless it is 2d or above.
                 if values:
                     leading_idxs = [str(v) for v in values]
                     numpy_idx = '[{}, :]'.format(', '.join(leading_idxs))
@@ -591,13 +613,14 @@ class _Summary(object):
 
 
 class _StatSummary(_Summary):
+
     def __init__(self, roundto, batches, alpha):
         super(_StatSummary, self).__init__(roundto)
         spaces = 17
         hpd_name = '{0:g}% HPD interval'.format(100 * (1 - alpha))
         value_line = '{mean:<{pad}}{sd:<{pad}}{mce:<{pad}}{hpd:<{pad}}'
         header = value_line.format(mean='Mean', sd='SD', mce='MC Error',
-                                  hpd=hpd_name, pad=spaces).strip()
+                                   hpd=hpd_name, pad=spaces).strip()
         self.width = len(header)
         hline = '-' * self.width
 
@@ -622,6 +645,7 @@ class _StatSummary(_Summary):
 
 
 class _PosteriorQuantileSummary(_Summary):
+
     def __init__(self, roundto, alpha):
         super(_PosteriorQuantileSummary, self).__init__(roundto)
         spaces = 15
@@ -660,7 +684,7 @@ def _calculate_stats(sample, batches, alpha):
 
 def _calculate_posterior_quantiles(sample, qlist):
     var_quantiles = quantiles(sample, qlist=qlist)
-    ## Replace ends of qlist with 'lo' and 'hi'
+    # Replace ends of qlist with 'lo' and 'hi'
     qends = {qlist[0]: 'lo', qlist[-1]: 'hi'}
     qkeys = {q: qends[q] if q in qends else 'q{}'.format(q) for q in qlist}
     for key, idxs in _groupby_leading_idxs(sample.shape[1:]):

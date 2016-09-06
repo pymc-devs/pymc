@@ -20,7 +20,8 @@ with Model() as model:
 
     step = NUTS()
 
-def run(n=1000): 
+
+def run(n=1000):
     if n == "short":
         n = 50
     with model:
@@ -28,5 +29,3 @@ def run(n=1000):
 
 if __name__ == '__main__':
     run()
-
-

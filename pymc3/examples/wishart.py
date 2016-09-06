@@ -21,7 +21,7 @@ with pm.Model() as model:
     S = np.eye(3)
     nu = 5
     mu = pm.Normal('mu', mu=0, sd=1, shape=3)
-    
+
     # Use the transformed Wishart distribution
     # Under the hood this will do a Cholesky decomposition
     # of S and add two RVs to the sampler: c and z
@@ -36,13 +36,13 @@ with pm.Model() as model:
     step = pm.NUTS(scaling=start)
 
 
-def run(n = 3000):
+def run(n=3000):
     if n == "short":
         n = 50
     with model:
         trace = pm.sample(n, step, start)
 
-    pm.traceplot(trace);
+    pm.traceplot(trace)
 
 if __name__ == '__main__':
     run()

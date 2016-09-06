@@ -21,6 +21,7 @@ __all__ = ['advi', 'sample_vp']
 
 ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
 
+
 def check_discrete_rvs(vars):
     """Check that vars not include discrete variables, excepting ObservedRVs.
     """
@@ -28,9 +29,10 @@ def check_discrete_rvs(vars):
     if any([var.dtype in discrete_types for var in vars_]):
         raise ValueError('Model should not include discrete RVs for ADVI.')
 
+
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
-    optimizer=None, learning_rate=.001, epsilon=.1, random_seed=20090425, 
-    verbose=1):
+         optimizer=None, learning_rate=.001, epsilon=.1, random_seed=20090425,
+         verbose=1):
     """Perform automatic differentiation variational inference (ADVI). 
 
     This function implements the meanfield ADVI, where the variational 
@@ -113,7 +115,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         optimizer = adagrad_optimizer(learning_rate, epsilon)
 
     # Create variational gradient tensor
-    elbo, shared = _calc_elbo(vars, model, n_mcsamples=n_mcsamples, 
+    elbo, shared = _calc_elbo(vars, model, n_mcsamples=n_mcsamples,
                               random_seed=random_seed)
 
     # Set starting values
@@ -137,15 +139,17 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     for i in range(n):
         uw_i, e = f()
         elbos[i] = e
-        if verbose and not i % (n//10):
+        if verbose and not i % (n // 10):
             if not i:
-                print('Iteration {0} [{1}%]: ELBO = {2}'.format(i, 100*i//n, e.round(2)))
+                print('Iteration {0} [{1}%]: ELBO = {2}'.format(
+                    i, 100 * i // n, e.round(2)))
             else:
-                avg_elbo = elbos[i-n//10:i].mean()
-                print('Iteration {0} [{1}%]: Average ELBO = {2}'.format(i, 100*i//n, avg_elbo.round(2)))
+                avg_elbo = elbos[i - n // 10:i].mean()
+                print('Iteration {0} [{1}%]: Average ELBO = {2}'.format(
+                    i, 100 * i // n, avg_elbo.round(2)))
 
     if verbose:
-        avg_elbo = elbos[-n//10:].mean()
+        avg_elbo = elbos[-n // 10:].mean()
         print('Finished [100%]: Average ELBO = {}'.format(avg_elbo.round(2)))
 
     # Estimated parameters
@@ -157,6 +161,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         w[var] = np.exp(w[var])
 
     return ADVIFit(u, w, elbos)
+
 
 def _calc_elbo(vars, model, n_mcsamples, random_seed):
     """Calculate approximate ELBO.
@@ -177,10 +182,11 @@ def _calc_elbo(vars, model, n_mcsamples, random_seed):
 
     return elbo, shared
 
+
 def _elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
     """Create Theano tensor of approximate ELBO by Monte Carlo sampling.
     """
-    l = (uw.size/2).astype('int64')
+    l = (uw.size / 2).astype('int64')
     u = uw[:l]
     w = uw[l:]
 
@@ -203,6 +209,7 @@ def _elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
         elbo = tt.mean(logps) + tt.sum(w) + 0.5 * l * (1 + np.log(2.0 * np.pi))
 
     return elbo
+
 
 def adagrad_optimizer(learning_rate, epsilon, n_win=10):
     """Returns a function that returns parameter updates. 
@@ -230,12 +237,13 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
     def optimizer(loss, param):
         i = theano.shared(np.array(0))
         value = param.get_value(borrow=True)
-        accu = theano.shared(np.zeros(value.shape+(n_win,), dtype=value.dtype))
+        accu = theano.shared(
+            np.zeros(value.shape + (n_win,), dtype=value.dtype))
         # grad = tt.grad(loss, wrt=param)
         grad = tt.grad(loss, param)
 
         # Append squared gradient vector to accu_new
-        accu_new = tt.set_subtensor(accu[:,i], grad ** 2)
+        accu_new = tt.set_subtensor(accu[:, i], grad ** 2)
         i_new = tt.switch((i + 1) < n_win, i + 1, 0)
 
         updates = OrderedDict()
@@ -249,9 +257,10 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
         return updates
     return optimizer
 
+
 def sample_vp(
-    vparams, draws=1000, model=None, local_RVs=None, random_seed=20090425, 
-    hide_transformed=True):
+        vparams, draws=1000, model=None, local_RVs=None, random_seed=20090425,
+        hide_transformed=True):
     """Draw samples from variational posterior. 
 
     Parameters
@@ -303,7 +312,8 @@ def sample_vp(
             u = uw[0].ravel()
             w = uw[1].ravel()
             n = r.normal(size=u.tag.test_value.shape)
-            updates.update({v: (n * tt.exp(w) + u).reshape(v.tag.test_value.shape)})
+            updates.update(
+                {v: (n * tt.exp(w) + u).reshape(v.tag.test_value.shape)})
 
     # Replace some nodes of the graph with variational distributions
     vars = model.free_RVs
@@ -312,7 +322,7 @@ def sample_vp(
 
     # Random variables which will be sampled
     vars_sampled = [v for v in model.unobserved_RVs if not str(v).endswith('_')] \
-                   if hide_transformed else \
+        if hide_transformed else \
                    [v for v in model.unobserved_RVs]
 
     varnames = [str(var) for var in model.unobserved_RVs]

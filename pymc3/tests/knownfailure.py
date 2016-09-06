@@ -1,6 +1,7 @@
 import functools
 import nose
 
+
 def knownfailure(msg):
     def decorator(test):
         @functools.wraps(test)

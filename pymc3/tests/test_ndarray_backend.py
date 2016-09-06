@@ -65,7 +65,6 @@ class TestMultiTrace(bf.ModelBackendSetupTestCase):
                           base.merge_traces, [mtrace0, mtrace1])
 
 
-
 class TestSqueezeCat(unittest.TestCase):
 
     def setUp(self):

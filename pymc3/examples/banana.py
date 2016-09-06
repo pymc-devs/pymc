@@ -36,7 +36,7 @@ with Model() as model:
     step = HamiltonianMC(model.vars, h, path_length=4.)
 
 
-def run(n = 3000):
+def run(n=3000):
     if n == "short":
         n = 50
     with model:
@@ -44,7 +44,6 @@ def run(n = 3000):
 
         pl.figure()
         pl.hexbin(trace['x'], trace['y'])
-
 
         # lets plot the samples vs. the actual distribution
         xn = 1500

@@ -9,6 +9,7 @@ import numpy as np
 __all__ = ['quad_potential', 'ElemWiseQuadPotential', 'QuadPotential',
            'QuadPotential_Inv', 'isquadpotential']
 
+
 def quad_potential(C, is_cov, as_cov):
     """
     Parameters
@@ -59,6 +60,7 @@ def partial_check_positive_definite(C):
 
 
 class PositiveDefiniteError(ValueError):
+
     def __init__(self, msg, idx):
         self.idx = idx
         self.msg = msg
@@ -72,6 +74,7 @@ def isquadpotential(o):
 
 
 class ElemWiseQuadPotential(object):
+
     def __init__(self, v):
         s = v ** .5
 
@@ -90,6 +93,7 @@ class ElemWiseQuadPotential(object):
 
 
 class QuadPotential_Inv(object):
+
     def __init__(self, A):
         self.L = cholesky(A, lower=True)
 
@@ -106,6 +110,7 @@ class QuadPotential_Inv(object):
 
 
 class QuadPotential(object):
+
     def __init__(self, A):
         self.A = A
         self.L = cholesky(A, lower=True)
@@ -132,6 +137,7 @@ if chol_available:
     __all__ += ['QuadPotential_SparseInv']
 
     class QuadPotential_SparseInv(object):
+
         def __init__(self, A):
             self.n = A.shape[0]
             self.factor = factor = cholmod.cholesky(A)
