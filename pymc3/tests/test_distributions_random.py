@@ -120,94 +120,124 @@ def check_shape(rv, size=None, expected=None):
 class ScalarParameterShape(unittest.TestCase):
 
     def check(self, dist, **kwargs):
+        nr.seed(20090425)
         test_cases = [(None, (1,)), (5, (5,)), ((4, 5), (4, 5))]
         check_dist((dist, kwargs), test_cases)
 
     def test_normal(self):
+        nr.seed(20090425)
         self.check(Normal, mu=0., tau=1.)
 
     def test_uniform(self):
+        nr.seed(20090425)
         self.check(Uniform, lower=0., upper=1.)
 
     def test_half_normal(self):
+        nr.seed(20090425)
         self.check(HalfNormal, tau=1.)
 
     def test_wald(self):
+        nr.seed(20090425)
         self.check(Wald, mu=1., lam=1., alpha=0.)
 
     def test_beta(self):
+        nr.seed(20090425)
         self.check(Beta, alpha=1., beta=1.)
 
     def test_exponential(self):
+        nr.seed(20090425)
         self.check(Exponential, lam=1.)
 
     def test_laplace(self):
+        nr.seed(20090425)
         self.check(Laplace, mu=1., b=1)
 
     def test_lognormal(self):
+        nr.seed(20090425)
         self.check(Lognormal, mu=1., tau=1.)
 
     def test_student_t(self):
+        nr.seed(20090425)
         self.check(StudentT, nu=5, mu=0., lam=1.)
 
     def test_pareto(self):
+        nr.seed(20090425)
         self.check(Pareto, alpha=0.5, m=1.)
 
     def test_cauchy(self):
+        nr.seed(20090425)
         self.check(Cauchy, alpha=1., beta=1.)
 
     def test_half_cauchy(self):
+        nr.seed(20090425)
         self.check(HalfCauchy, beta=1.)
 
     def test_gamma(self):
+        nr.seed(20090425)
         self.check(Gamma, alpha=1., beta=1.)
 
     def test_inverse_gamma(self):
+        nr.seed(20090425)
         self.check(InverseGamma, alpha=0.5, beta=0.5)
 
     def test_chi_squared(self):
+        nr.seed(20090425)
         self.check(ChiSquared, nu=2)
 
     def test_weibull(self):
+        nr.seed(20090425)
         self.check(Weibull, alpha=1., beta=1.)
 
     def test_ex_gaussian(self):
+        nr.seed(20090425)
         self.check(ExGaussian, mu=0., sigma=1., nu=1.)
 
     def test_vonmises(self):
+        nr.seed(20090425)
         self.check(VonMises, mu=0., kappa=1.)
 
     def test_binomial(self):
+        nr.seed(20090425)
         self.check(Binomial, n=5, p=0.5)
 
     def test_beta_binomial(self):
+        nr.seed(20090425)
         self.check(BetaBinomial, alpha=1., beta=1., n=1)
 
     def test_bernoulli(self):
+        nr.seed(20090425)
         self.check(Bernoulli, p=0.5)
 
     def test_poisson(self):
+        nr.seed(20090425)
         self.check(Poisson, mu=1.)
 
     def test_negative_binomial(self):
+        nr.seed(20090425)
         self.check(NegativeBinomial, mu=1., alpha=1.)
 
     def test_constant_dist(self):
+        nr.seed(20090425)
         self.check(ConstantDist, c=3)
 
     def test_zero_inflated_poisson(self):
+        nr.seed(20090425)
         self.check(ZeroInflatedPoisson, theta=1, psi=0.3)
 
     def test_zero_inflated_negative_binomial(self):
+        nr.seed(20090425)
         self.check(ZeroInflatedNegativeBinomial, mu=1., alpha=1., psi=0.3)
 
     def test_discrete_uniform(self):
+        nr.seed(20090425)
         self.check(DiscreteUniform, lower=0., upper=10)
 
     def test_geometric(self):
+        nr.seed(20090425)
         self.check(Geometric, p=0.5)
 
     def test_categorical(self):
+        nr.seed(20090425)
         self.check(Categorical, p=np.array([0.2, 0.3, 0.5]))
 
 
