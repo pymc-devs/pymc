@@ -126,6 +126,10 @@ Salvatier J, Wiecki TV, Fonnesbeck C. (2016) Probabilistic programming
 in Python using PyMC3. PeerJ Computer Science 2:e55
 https://doi.org/10.7717/peerj-cs.55
 
+Coyle P. (2016) Probabilistic programming
+and PyMC3. European Scientific Python Conference 2015 (Cambridge, UK)
+http://adsabs.harvard.edu/abs/2016arXiv160700379C
+
 License
 -------
 
