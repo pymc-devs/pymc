@@ -42,8 +42,8 @@ class ElemwiseCategorical(ArrayStep):
     @staticmethod
     def competence(var):
         distribution = getattr(var.distribution, 'parent_dist', var.distribution)
-        if isinstance(var.distribution, Categorical):
-            if var.distribution.k>2:
+        if isinstance(distribution, Categorical):
+            if distribution.k>2:
                 return Competence.IDEAL
             else:
                 return Competence.COMPATIBLE
