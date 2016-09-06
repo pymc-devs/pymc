@@ -6,9 +6,9 @@ import sys
 DISTNAME = 'pymc3'
 DESCRIPTION = "PyMC3"
 LONG_DESCRIPTION    = """Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC), is an increasingly relevant approach to statistical estimation. However, few statistical software packages implement MCMC samplers, and they are non-trivial to code by hand. ``pymc3`` is a python package that implements the Metropolis-Hastings algorithm as a python class, and is extremely flexible and applicable to a large suite of problems. ``pymc3`` includes methods for summarizing output, plotting, goodness-of-fit and convergence diagnostics."""
-MAINTAINER = 'John Salvatier'
-MAINTAINER_EMAIL = 'jsalvati@u.washington.edu'
-AUTHOR = 'John Salvatier and Christopher Fonnesbeck'
+MAINTAINER = 'Thomas Wiecki'
+MAINTAINER_EMAIL = 'thomas.wiecki@gmail.com'
+AUTHOR = 'Christopher Fonnesbeck'
 AUTHOR_EMAIL = 'chris.fonnesbeck@vanderbilt.edu'
 URL = "http://github.com/pymc-devs/pymc"
 LICENSE = "Apache License, Version 2.0"
