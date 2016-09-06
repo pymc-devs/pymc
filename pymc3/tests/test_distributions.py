@@ -64,12 +64,26 @@ class Domain(object):
             self.shape)
 
 
-def product(domains):
-    names = [name for (name, domain) in domains.items()]
-    domains = [domain for (name, domain) in domains.items()]
+def product(domains, n_samples=-1):
+    """Get an iterator over a product of domains.
 
-    for val in itertools.product(*[d.vals for d in domains]):
-        yield zip(names, val)
+    Args:
+        domains: a dictionary of (name, object) pairs, where the objects
+                 must be "domain-like", as in, have a `.vals` property
+        n_samples: int, maximum samples to return.  -1 to return whole product
+
+    Returns:
+        list of the cartesian product of the domains
+    """
+    try:
+        names, domains = zip(*domains.items())
+    except ValueError:  # domains.items() is empty
+        return []
+    all_vals = [zip(names, val) for val in itertools.product(*[d.vals for d in domains])]
+    if n_samples > 0 and len(all_vals) > n_samples:
+            return nr.choice(all_vals, n_samples, replace=False)
+    return all_vals
+
 
 R = Domain([-inf, -2.1, -1, -.01, .0, .01, 1, 2.1, inf])
 Rplus = Domain([0, .01, .1, .9, .99, 1, 1.5, 2, 100, inf])
@@ -532,7 +546,7 @@ def test_get_tau_sd():
 def check_int_to_1(model, value, domain, paramdomains):
     pdf = model.fastfn(exp(model.logpt))
 
-    for pt in product(paramdomains):
+    for pt in product(paramdomains, n_samples=100):
         pt = Point(pt, value=value.tag.test_value, model=model)
 
         bij = DictToVarBijection(value, (), pt)
@@ -548,7 +562,7 @@ def integrate_nd(f, domain, shape, dtype):
         if dtype in continuous_types:
             return integrate.quad(f, domain.lower, domain.upper, epsabs=1e-8)[0]
         else:
-            return np.sum(list(map(f, np.arange(domain.lower, domain.upper + 1))))
+            return sum(f(j) for j in range(domain.lower, domain.upper + 1))
     elif shape == (2,):
         def f2(a, b):
             return f([a, b])
@@ -595,11 +609,9 @@ def check_dlogp(model, value, domain, paramdomains):
 
     ndlogp = Gradient(wrapped_logp)
 
-    for pt in product(domains):
+    for pt in product(domains, n_samples=100):
         pt = Point(pt, model=model)
-
         pt = bij.map(pt)
-
         assert_almost_equal(dlogp(pt), ndlogp(pt),
                             decimal=6, err_msg=str(pt))
 
@@ -608,7 +620,8 @@ def check_logp(model, value, domain, paramdomains, logp_reference):
     domains = paramdomains.copy()
     domains['value'] = domain
     logp = model.fastlogp
-    for pt in product(domains):
+
+    for pt in product(domains, n_samples=100):
         pt = Point(pt, model=model)
         assert_almost_equal(logp(pt), logp_reference(pt),
                             decimal=6, err_msg=str(pt))
