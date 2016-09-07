@@ -27,7 +27,7 @@ def pymc3_random(dist, paramdomains, ref_rand, valuedomain=Domain([0]),
                  size=10000, alpha=0.05, fails=10):
     model = build_model(dist, valuedomain, paramdomains)
     domains = paramdomains.copy()
-    for pt in product(domains):
+    for pt in product(domains, n_samples=100):
         pt = Point(pt, model=model)
         p = alpha
         # Allow KS test to fail (i.e., the samples be different)
@@ -47,7 +47,7 @@ def pymc3_random_discrete(dist, paramdomains,
                           size=100000, alpha=0.05, fails=20):
     model = build_model(dist, valuedomain, paramdomains)
     domains = paramdomains.copy()
-    for pt in product(domains):
+    for pt in product(domains, n_samples=100):
         pt = Point(pt, model=model)
         p = alpha
         # Allow Chisq test to fail (i.e., the samples be different)
