@@ -53,7 +53,7 @@ if __name__ == "__main__":
                     'pymc3.backends', 'pymc3.variational', 'docs', '.'],
           package_data={'pymc3.examples': ['data/*.*'],
                         '.': ['requirements.txt', '*.md'],
-                        'docs': ['source/*/*']},
+                        'docs': ['source/*/*', 'source/*/*/*']},
           classifiers=classifiers,
           install_requires=install_reqs,
           tests_require=test_reqs,
