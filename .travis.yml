@@ -2,7 +2,7 @@ language: python
 
 python:
   - "2.7"
-  - "3.4"
+  - "3.5"
 
 before_install:
   - . ./scripts/install_miniconda.sh

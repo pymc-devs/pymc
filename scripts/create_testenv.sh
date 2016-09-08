@@ -2,7 +2,7 @@
 
 set -e # fail on first error
 
-PYTHON_VERSION=${PYTHON_VERSION:-3.4} # if no python specified, use 3.4
+PYTHON_VERSION=${PYTHON_VERSION:-3.5} # if no python specified, use 3.5
 
 conda create -n testenv --yes pip python=${PYTHON_VERSION}
 
