@@ -105,9 +105,9 @@ class ArrayStep(BlockedStep):
     def step(self, point):
         bij = DictToArrayBijection(self.ordering, point)
 
-        inputs = list(map(bij.mapf, self.fs))
+        inputs = [bij.mapf(x) for x in self.fs]
         if self.allvars:
-            inputs += [point]
+            inputs.append(point)
 
         apoint = self.astep(bij.map(point), *inputs)
         return bij.rmap(apoint)

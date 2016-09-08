@@ -11,92 +11,72 @@ from numpy.testing import assert_almost_equal
 import numpy as np
 
 
-def check_stat(name, trace, var, stat, value, bound):
-    s = stat(trace[var][2000:], axis=0)
-    close_to(s, value, bound)
+class TestStepMethods(object):  # yield test doesn't work subclassing unittest.TestCase
+    def check_stat(self, check, trace):
+        for (var, stat, value, bound) in check:
+            s = stat(trace[var][2000:], axis=0)
+            close_to(s, value, bound)
 
+    def test_step_continuous(self):
+        start, model, (mu, C) = mv_simple()
+        unc = np.diag(C) ** .5
+        check = (('x', np.mean, mu, unc / 10.),
+                 ('x', np.std, unc, unc / 10.))
+        with model:
+            steps = (
+                Slice(),
+                HamiltonianMC(scaling=C, is_cov=True, blocked=False),
+                NUTS(scaling=C, is_cov=True, blocked=False),
+                Metropolis(S=C, proposal_dist=MultivariateNormalProposal, blocked=True),
+                Slice(blocked=True),
+                HamiltonianMC(scaling=C, is_cov=True),
+                NUTS(scaling=C, is_cov=True),
+                CompoundStep([
+                    HamiltonianMC(scaling=C, is_cov=True),
+                    HamiltonianMC(scaling=C, is_cov=True, blocked=False)]),
+            )
+        for step in steps:
+            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
+            yield self.check_stat, check, trace
 
-def test_step_continuous():
-    start, model, (mu, C) = mv_simple()
+    def test_step_discrete(self):
+        start, model, (mu, C) = mv_simple_discrete()
+        unc = np.diag(C) ** .5
+        check = (('x', np.mean, mu, unc / 10.),
+                 ('x', np.std, unc, unc / 10.))
+        with model:
+            steps = (
+                Metropolis(S=C, proposal_dist=MultivariateNormalProposal),
+            )
+        for step in steps:
+            trace = sample(20000, step=step, start=start, model=model, random_seed=1)
+            self.check_stat(check, trace)
 
-    with model:
-        slicer = Slice()
-        hmc = HamiltonianMC(scaling=C, is_cov=True, blocked=False)
-        nuts = NUTS(scaling=C, is_cov=True, blocked=False)
-
-        mh_blocked = Metropolis(S=C,
-                                proposal_dist=MultivariateNormalProposal,
-                                blocked=True)
-        slicer_blocked = Slice(blocked=True)
-        hmc_blocked = HamiltonianMC(scaling=C, is_cov=True)
-        nuts_blocked = NUTS(scaling=C, is_cov=True)
-
-        compound = CompoundStep([hmc_blocked, mh_blocked])
-
-    steps = [slicer, hmc, nuts, mh_blocked, hmc_blocked,
-             slicer_blocked, nuts_blocked, compound]
-
-    unc = np.diag(C) ** .5
-    check = [('x', np.mean, mu, unc / 10.),
-             ('x', np.std, unc, unc / 10.)]
-
-    for st in steps:
-        h = sample(8000, st, start, model=model, random_seed=1)
-        for (var, stat, val, bound) in check:
-            yield check_stat, repr(st), h, var, stat, val, bound
-
-
-def test_non_blocked():
-    """Test that samplers correctly create non-blocked compound steps.
-    """
-
-    start, model = simple_2model()
-
-    with model:
-        # Metropolis and Slice are non-blocked by default
-        mh = Metropolis()
-        assert isinstance(mh, CompoundStep)
-        slicer = Slice()
-        assert isinstance(slicer, CompoundStep)
-        hmc = HamiltonianMC(blocked=False)
-        assert isinstance(hmc, CompoundStep)
-        nuts = NUTS(blocked=False)
-        assert isinstance(nuts, CompoundStep)
-
-        mh_blocked = Metropolis(blocked=True)
-        assert isinstance(mh_blocked, Metropolis)
-        slicer_blocked = Slice(blocked=True)
-        assert isinstance(slicer_blocked, Slice)
-        hmc_blocked = HamiltonianMC()
-        assert isinstance(hmc_blocked, HamiltonianMC)
-        nuts_blocked = NUTS()
-        assert isinstance(nuts_blocked, NUTS)
-        CompoundStep([hmc_blocked, mh_blocked])
-
-
-def test_step_discrete():
-    start, model, (mu, C) = mv_simple_discrete()
-
-    with model:
-        mh = Metropolis(S=C, proposal_dist=MultivariateNormalProposal)
-        Slice()
-
-    steps = [mh]
-    unc = np.diag(C) ** .5
-    check = [('x', np.mean, mu, unc / 10.),
-             ('x', np.std, unc, unc / 10.)]
-    for st in steps:
-        h = sample(20000, st, start, model=model, random_seed=1)
-        for (var, stat, val, bound) in check:
-            yield check_stat, repr(st), h, var, stat, val, bound
-
-
-def test_constant_step():
-    with Model():
-        x = Normal('x', 0, 1)
-        start = {'x': -1}
-        tr = sample(10, step=Constant([x]), start=start)
+    def test_constant_step(self):
+        with Model():
+            x = Normal('x', 0, 1)
+            start = {'x': -1}
+            tr = sample(10, step=Constant([x]), start=start)
         assert_almost_equal(tr['x'], start['x'], decimal=10)
+
+
+class TestCompoundStep(unittest.TestCase):
+    samplers = (Metropolis, Slice, HamiltonianMC, NUTS)
+
+    def test_non_blocked(self):
+        """Test that samplers correctly create non-blocked compound steps."""
+        _, model = simple_2model()
+        with model:
+            for sampler in self.samplers:
+                self.assertIsInstance(sampler(blocked=False), CompoundStep)
+
+    def test_blocked(self):
+        _, model = simple_2model()
+        with model:
+            for sampler in self.samplers:
+                sampler_instance = sampler(blocked=True)
+                self.assertNotIsInstance(sampler_instance, CompoundStep)
+                self.assertIsInstance(sampler_instance, sampler)
 
 
 class TestAssignStepMethods(unittest.TestCase):
