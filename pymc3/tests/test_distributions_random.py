@@ -1,11 +1,11 @@
 from __future__ import division
-import unittest
 
 from nose import SkipTest
 from nose.plugins.attrib import attr
 
-from ..tests.test_distributions import (build_model, Domain, product, R, Rplus, Rplusbig, Unit, Nat,
-                                        NatSmall, I, Simplex, Vector, PdMatrix)
+from .helpers import SeededTest
+from .test_distributions import (build_model, Domain, product, R, Rplus, Rplusbig, Unit, Nat,
+                                 NatSmall, I, Simplex, Vector, PdMatrix)
 
 from ..distributions import (Categorical, Multinomial, VonMises, Dirichlet,
                              MvStudentT, MvNormal, ZeroInflatedPoisson,
@@ -19,8 +19,6 @@ from ..model import Model, Point
 import numpy as np
 import scipy.stats as st
 import numpy.random as nr
-
-nr.seed(20090425)
 
 
 def pymc3_random(dist, paramdomains, ref_rand, valuedomain=Domain([0]),
@@ -71,25 +69,6 @@ def pymc3_random_discrete(dist, paramdomains,
         assert p > alpha, str(pt)
 
 
-def test_draw_values():
-    with Model():
-        mu = Normal('mu', mu=0., tau=1e-3)
-        sigma = Gamma('sigma', alpha=1., beta=1., transform=None)
-        y1 = Normal('y1', mu=0., sd=1.)
-        y2 = Normal('y2', mu=mu, sd=sigma)
-
-        mu1, tau1 = draw_values([y1.distribution.mu, y1.distribution.tau])
-        assert mu1 == 0. and tau1 == 1, "Draw values failed with scalar parameters"
-
-        mu2, tau2 = draw_values([y2.distribution.mu, y2.distribution.tau],
-                                point={'mu': 5., 'sigma': 2.})
-        assert mu2 == 5. and tau2 == 0.25, "Draw values failed using point replacement"
-
-        mu3, tau3 = draw_values([y2.distribution.mu, y2.distribution.tau])
-        assert isinstance(mu3, np.ndarray) and isinstance(tau3, np.ndarray), \
-            "Draw values did not return np.ndarray with random sampling"
-
-
 def check_dist(dist_case, test_cases, shape=None):
     dist, dist_kwargs = dist_case
     with Model():
@@ -114,11 +93,38 @@ def check_shape(rv, size=None, expected=None):
         ' with `{3}` rv'.format(expected, actual, size,
                                 rv.distribution.__class__.__name__)
 
+
+class TestDrawValues(SeededTest):
+    def test_draw_scalar_parameters(self):
+        with Model():
+            y = Normal('y1', mu=0., sd=1.)
+            mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
+        self.assertAlmostEqual(mu, 0.)
+        self.assertAlmostEqual(tau, 1.)
+
+    def test_draw_point_replacement(self):
+        with Model():
+            mu = Normal('mu', mu=0., tau=1e-3)
+            sigma = Gamma('sigma', alpha=1., beta=1., transform=None)
+            y = Normal('y', mu=mu, sd=sigma)
+            mu2, tau2 = draw_values([y.distribution.mu, y.distribution.tau],
+                                    point={'mu': 5., 'sigma': 2.})
+        self.assertAlmostEqual(mu2, 5.)
+        self.assertAlmostEqual(tau2, 1 / 2.**2)
+
+    def test_random_sample_returns_nd_array(self):
+        with Model():
+            mu = Normal('mu', mu=0., tau=1e-3)
+            sigma = Gamma('sigma', alpha=1., beta=1., transform=None)
+            y = Normal('y', mu=mu, sd=sigma)
+            mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
+        self.assertIsInstance(mu, np.ndarray)
+        self.assertIsInstance(tau, np.ndarray)
+
+
 # TODO: factor out a base class to avoid copy/paste.
-
-
 @attr('scalar_parameter_shape')
-class ScalarParameterShape(unittest.TestCase):
+class ScalarParameterShape(SeededTest):
 
     def check(self, dist, **kwargs):
         test_cases = [(None, (1,)), (5, (5,)), ((4, 5), (4, 5))]
@@ -213,8 +219,7 @@ class ScalarParameterShape(unittest.TestCase):
 
 
 @attr('scalar_shape')
-class ScalarShape(unittest.TestCase):
-
+class ScalarShape(SeededTest):
     def check(self, dist, **kwargs):
         n = 10
         test_cases = [(None, (n,)), (5, (5, n,)), ((4, 5), (4, 5, n,))]
@@ -309,9 +314,10 @@ class ScalarShape(unittest.TestCase):
 
 
 @attr('parameters_1d_shape')
-class Parameters1dShape(unittest.TestCase):
+class Parameters1dShape(SeededTest):
 
     def setUp(self):
+        super(Parameters1dShape, self).setUp()
         self.n = 5
         self.zeros = np.zeros(self.n)
         self.ones = np.ones(self.n)
@@ -421,9 +427,10 @@ class Parameters1dShape(unittest.TestCase):
 
 
 @attr('broadcast_shape')
-class BroadcastShape(unittest.TestCase):
+class BroadcastShape(SeededTest):
 
     def setUp(self):
+        super(BroadcastShape, self).setUp()
         self.n = 6
         self.zeros = np.zeros(self.n)
         self.ones = np.ones(self.n)
@@ -533,10 +540,9 @@ class BroadcastShape(unittest.TestCase):
             'Categorical cannot be initialised with >1D probabilities')
         self.check(Categorical, p=self.ones / self.n)
 
-nr.seed(20090425)
-@attr('scalar_parameter_samples')
-class ScalarParameterSamples(unittest.TestCase):
 
+@attr('scalar_parameter_samples')
+class ScalarParameterSamples(SeededTest):
     def test_bounded(self):
         # A bit crude...
         BoundedNormal = Bound(Normal, upper=0)
