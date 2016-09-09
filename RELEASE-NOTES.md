@@ -1,14 +1,34 @@
 # Release Notes
-## PyMC3 3.0rc1 (September 4th, 2016)
-PyMC3 has seen some excellent development in the past year, we've ironed out some bugs in the NUTS sampler,
-and we've enhanced the examples and documentation. 
+## PyMC3 3.0 (September xx, 2016)
 
-We have model evaluation tools such as Leave one out Cross Validation, WAIC, DIC which make this a much more robust tool. Since criticism of models is important. 
+This is the first official release of PyMC3, a re-implementation of PyMC that is focused on modern Bayesian computational methods, primarily gradient-based (Hamiltonian) MCMC sampling and variational inference. The main technological difference in PyMC3 is the reliance on Theano as the computational backend, rather than on Fortran extensions, as was the case in PyMC 2.x.
 
-One major feature worth highlighting is the addition of Automatic Differentiation Variational Inference. 
-Taku Yoshioka did a lot of work on ADVI in PyMC3, including the mini-batch implementation as well as the sampling from the variational posterior. We’d also like to the thank the Stan guys (specifically Alp Kucukelbir and Daniel Lee) for deriving ADVI and teaching us about it.
+Since the beta release last year, the following improvements have been implemented:
 
-We on the PyMC3 core team would like to thank everyone for contributing and now feel that this is ready for the big time. We look forward to hearing about all the cool stuff you use PyMC3 for, and further development will continue. 
+* Added `variational` submodule, which features the automatic differentiation variational inference (ADVI) fitting method. Much of this work was due to the efforts of Taku Yoshioka, and important guidance was provided by the Stan team (specifically Alp Kucukelbir and Daniel Lee).
+
+* Added model checking utility functions, including leave-one-out (LOO) cross-validation, BPIC, WAIC, and DIC.
+
+* Implemented posterior predictive sampling (`sample_ppc`).
+
+* Implemented auto-assignment of step methods by `sample` function.
+
+* Enhanced IPython Notebook examples, featuring more complete narratives accompanying code.
+
+* Extensive debugging of NUTS sampler.
+
+* Updated documentation to reflect changes in code since beta.
+
+* Refactored test suite for better efficiency.
+
+* Added von Mises, zero-inflated negative binomial, and Lewandowski, Kurowicka and Joe (LKJ)  distributions.
+
+* Adopted `joblib` for managing parallel computation of chains.
+
+* Added contributor guidelines, contributor code of conduct and governance document.
+
+We on the PyMC3 core team would like to thank everyone for contributing and now feel that this is ready for the big time. We look forward to hearing about all the cool stuff you use PyMC3 for, and look forward to continued development on the package. 
+
 ## Contributors
 
 A Kuz <for.akuz@gmail.com>
@@ -94,6 +114,7 @@ taku-y <taku.yoshioka.4096@gmail.com>
 tyarkoni <tyarkoni@gmail.com>
 x2apps <x2apps@yahoo.com>
 zenourn <daniel@zeno.co.nz>
+
 ## PyMC3 3.0b (June 16th, 2015)
 
 Probabilistic programming allows for flexible specification of Bayesian statistical models in code. PyMC3 is a new, open-source probabilistic programmer framework with an intuitive, readable and concise, yet powerful, syntax that is close to the natural notation statisticians use to describe models. It features next-generation fitting techniques, such as the No U-Turn Sampler, that allow fitting complex models with thousands of parameters without specialized knowledge of fitting algorithms.
