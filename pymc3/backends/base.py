@@ -24,6 +24,7 @@ class BaseTrace(object):
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
     """
+
     def __init__(self, name, model=None, vars=None):
         self.name = name
 
@@ -35,9 +36,8 @@ class BaseTrace(object):
         self.varnames = [var.name for var in vars]
         self.fn = model.fastfn(vars)
 
-
-        ## Get variable shapes. Most backends will need this
-        ## information.
+        # Get variable shapes. Most backends will need this
+        # information.
         var_values = list(zip(self.varnames, self.fn(model.test_point)))
         self.var_shapes = {var: value.shape
                            for var, value in var_values}
@@ -45,7 +45,7 @@ class BaseTrace(object):
                            for var, value in var_values}
         self.chain = None
 
-    ## Sampling methods
+    # Sampling methods
 
     def setup(self, draws, chain):
         """Perform chain-specific setup.
@@ -76,7 +76,7 @@ class BaseTrace(object):
         """
         pass
 
-    ## Selection methods
+    # Selection methods
 
     def __getitem__(self, idx):
         if isinstance(idx, slice):
@@ -149,6 +149,7 @@ class MultiTrace(object):
     of the MultiTrace instance, which returns the number of draws), the
     trace with the highest chain number is always used.
     """
+
     def __init__(self, straces):
         self._straces = {}
         for strace in straces:

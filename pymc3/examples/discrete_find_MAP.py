@@ -39,15 +39,15 @@ with model:
 # does not converge.
 
 with model:
-    for i in range(n+1):
+    for i in range(n + 1):
         s = {'p_logodds_': 0.5, 'surv_sim': i}
         map_est = mc.find_MAP(start=s, vars=model.vars,
                               fmin=mc.starting.optimize.fmin_bfgs)
-        print('surv_sim: %i->%i, p: %f->%f, LogP:%f'%(s['surv_sim'],
-                                                      map_est['surv_sim'],
-                                                      s['p_logodds_'],
-                                                      map_est['p_logodds_'],
-                                                      model.logp(map_est)))
+        print('surv_sim: %i->%i, p: %f->%f, LogP:%f' % (s['surv_sim'],
+                                                        map_est['surv_sim'],
+                                                        s['p_logodds_'],
+                                                        map_est['p_logodds_'],
+                                                        model.logp(map_est)))
 
 # Once again because the gradient of `surv_sim` provides no information to the
 # `fmin` routine and it is only changed in a few cases, most of which are not
@@ -57,14 +57,14 @@ with model:
 # variables are detected), we might be able to get a better estimate.
 
 with model:
-    for i in range(n+1):
+    for i in range(n + 1):
         s = {'p_logodds_': 0.0, 'surv_sim': i}
         map_est = mc.find_MAP(start=s, vars=model.vars)
-        print('surv_sim: %i->%i, p: %f->%f, LogP:%f'%(s['surv_sim'],
-                                                      map_est['surv_sim'],
-                                                      s['p_logodds_'],
-                                                      map_est['p_logodds_'],
-                                                      model.logp(map_est)))
+        print('surv_sim: %i->%i, p: %f->%f, LogP:%f' % (s['surv_sim'],
+                                                        map_est['surv_sim'],
+                                                        s['p_logodds_'],
+                                                        map_est['p_logodds_'],
+                                                        model.logp(map_est)))
 
 # For most starting values this converges to the maximum log likelihood of
 # $\approx -3.15$, but for particularly low starting values of `surv_sim`, or
@@ -81,29 +81,29 @@ def bh(*args, **kwargs):
     return result['x']
 
 with model:
-    for i in range(n+1):
+    for i in range(n + 1):
         s = {'p_logodds_': 0.0, 'surv_sim': i}
         map_est = mc.find_MAP(start=s, vars=model.vars, fmin=bh)
-        print('surv_sim: %i->%i, p: %f->%f, LogP:%f'%(s['surv_sim'],
-                                                      map_est['surv_sim'],
-                                                      s['p_logodds_'],
-                                                      map_est['p_logodds_'],
-                                                      model.logp(map_est)))
+        print('surv_sim: %i->%i, p: %f->%f, LogP:%f' % (s['surv_sim'],
+                                                        map_est['surv_sim'],
+                                                        s['p_logodds_'],
+                                                        map_est['p_logodds_'],
+                                                        model.logp(map_est)))
 
 # By default `basinhopping` uses a gradient minimization technique,
 # `fmin_bfgs`, resulting in inaccurate predictions many times. If we force
 # `basinhoping` to use a non-gradient technique we get much better results
 
 with model:
-    for i in range(n+1):
+    for i in range(n + 1):
         s = {'p_logodds_': 0.0, 'surv_sim': i}
         map_est = mc.find_MAP(start=s, vars=model.vars,
                               fmin=bh, minimizer_kwargs={"method": "Powell"})
-        print('surv_sim: %i->%i, p: %f->%f, LogP:%f'%(s['surv_sim'],
-                                                      map_est['surv_sim'],
-                                                      s['p_logodds_'],
-                                                      map_est['p_logodds_'],
-                                                      model.logp(map_est)))
+        print('surv_sim: %i->%i, p: %f->%f, LogP:%f' % (s['surv_sim'],
+                                                        map_est['surv_sim'],
+                                                        s['p_logodds_'],
+                                                        map_est['p_logodds_'],
+                                                        model.logp(map_est)))
 
 # Confident in our MAP estimate we can sample from the posterior, making sure
 # we use the `Metropolis` method for our discrete variables.
@@ -115,4 +115,4 @@ with model:
 with model:
     trace = mc.sample(25000, [step1, step2], start=map_est)
 
-mc.traceplot(trace);
+mc.traceplot(trace)

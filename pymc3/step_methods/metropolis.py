@@ -6,7 +6,7 @@ from ..theanof import inputvars
 from ..vartypes import discrete_types, bool_types
 from .arraystep import ArrayStepShared, ArrayStep, metrop_select, Competence
 from numpy.random import (normal, standard_cauchy, standard_exponential, poisson, random,
-                        multivariate_normal, shuffle)
+                          multivariate_normal, shuffle)
 from ..distributions import Bernoulli, Categorical
 from numpy import round, exp, copy, where, size, zeros, ones, atleast_1d, concatenate
 import theano
@@ -14,38 +14,45 @@ import theano
 from ..theanof import make_shared_replacements, join_nonshared_inputs, CallableTensor
 
 
-__all__ = ['Metropolis', 'BinaryMetropolis', 'BinaryGibbsMetropolis', 'NormalProposal', 'CauchyProposal', 'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal']
+__all__ = ['Metropolis', 'BinaryMetropolis', 'BinaryGibbsMetropolis', 'NormalProposal',
+           'CauchyProposal', 'LaplaceProposal', 'PoissonProposal', 'MultivariateNormalProposal']
 
 # Available proposal distributions for Metropolis
 
 
 class Proposal(object):
+
     def __init__(self, s):
         self.s = s
 
 
 class NormalProposal(Proposal):
+
     def __call__(self):
         return normal(scale=self.s)
 
 
 class CauchyProposal(Proposal):
+
     def __call__(self):
         return standard_cauchy(size=size(self.s)) * self.s
 
 
 class LaplaceProposal(Proposal):
+
     def __call__(self):
         size = size(self.s)
         return (standard_exponential(size=size) - standard_exponential(size=size)) * self.s
 
 
 class PoissonProposal(Proposal):
+
     def __call__(self):
         return poisson(lam=self.s, size=size(self.s)) - self.s
 
 
 class MultivariateNormalProposal(Proposal):
+
     def __call__(self, num_draws=None):
         return multivariate_normal(mean=zeros(self.s.shape[0]), cov=self.s, size=num_draws)
 
@@ -94,7 +101,8 @@ class Metropolis(ArrayStepShared):
         self.accepted = 0
 
         # Determine type of variables
-        self.discrete = concatenate([[v.dtype in discrete_types ] * (v.dsize or 1) for v in vars])
+        self.discrete = concatenate(
+            [[v.dtype in discrete_types] * (v.dsize or 1) for v in vars])
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
 
@@ -120,7 +128,8 @@ class Metropolis(ArrayStepShared):
                 q0 = q0.astype(int)
                 q = (q0 + delta).astype(int)
             else:
-                delta[self.discrete] = round(delta[self.discrete], 0).astype(int)
+                delta[self.discrete] = round(
+                    delta[self.discrete], 0).astype(int)
                 q = q0 + delta
         else:
             q = q0 + delta
@@ -182,7 +191,7 @@ def tune(scale, acc_rate):
 
 class BinaryMetropolis(ArrayStep):
     """Metropolis-Hastings optimized for binary variables
-    
+
     Parameters
     ----------
     vars : list
@@ -195,7 +204,7 @@ class BinaryMetropolis(ArrayStep):
         The frequency of tuning. Defaults to 100 iterations.
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
-    
+
     """
 
     def __init__(self, vars, scaling=1., tune=True, tune_interval=100, model=None):
@@ -235,12 +244,14 @@ class BinaryMetropolis(ArrayStep):
         BinaryMetropolis is only suitable for binary (bool)
         and Categorical variables with k=1.
         '''
-        distribution = getattr(var.distribution, 'parent_dist', var.distribution)
+        distribution = getattr(
+            var.distribution, 'parent_dist', var.distribution)
         if isinstance(distribution, Bernoulli) or (var.dtype in bool_types):
             return Competence.COMPATIBLE
         elif isinstance(distribution, Categorical) and (distribution.k == 2):
             return Competence.COMPATIBLE
         return Competence.INCOMPATIBLE
+
 
 class BinaryGibbsMetropolis(ArrayStep):
     """Metropolis-Hastings optimized for binary variables"""
@@ -279,12 +290,14 @@ class BinaryGibbsMetropolis(ArrayStep):
         BinaryMetropolis is only suitable for binary (bool)
         and Categorical variables with k=1.
         '''
-        distribution = getattr(var.distribution, 'parent_dist', var.distribution)
+        distribution = getattr(
+            var.distribution, 'parent_dist', var.distribution)
         if isinstance(distribution, Bernoulli) or (var.dtype in bool_types):
             return Competence.IDEAL
         elif isinstance(distribution, Categorical) and (distribution.k == 2):
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
+
 
 def delta_logp(logp, vars, shared):
     [logp0], inarray0 = join_nonshared_inputs([logp], vars, shared)

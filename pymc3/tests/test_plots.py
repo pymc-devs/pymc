@@ -27,11 +27,11 @@ def test_plots():
 
         autocorrplot(trace)
 
+
 def test_plots_multidimensional():
 
     # Test single trace
     from .models import multidimensional_model
-
 
     start, model, _ = multidimensional_model()
     with model as model:
@@ -40,8 +40,8 @@ def test_plots_multidimensional():
         trace = sample(3000, step, start)
 
         traceplot(trace)
-        #forestplot(trace)
-        #autocorrplot(trace)
+        # forestplot(trace)
+        # autocorrplot(trace)
 
 
 def test_multichain_plots():
@@ -59,15 +59,16 @@ def test_multichain_plots():
 
     autocorrplot(ptrace, varnames=['switchpoint'])
 
+
 def test_make_2d():
 
     a = np.arange(4)
-    close_to(make_2d(a), a[:,None], 0)
+    close_to(make_2d(a), a[:, None], 0)
 
     n = 7
-    a = np.arange(n*4*5).reshape((n,4,5))
+    a = np.arange(n * 4 * 5).reshape((n, 4, 5))
     res = make_2d(a)
 
-    assert res.shape == (n,20)
-    close_to(a[:,0,0], res[:,0], 0)
-    close_to(a[:,3,2], res[:,2*4+3], 0)
+    assert res.shape == (n, 20)
+    close_to(a[:, 0, 0], res[:, 0], 0)
+    close_to(a[:, 3, 2], res[:, 2 * 4 + 3], 0)

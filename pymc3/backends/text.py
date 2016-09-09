@@ -37,6 +37,7 @@ class Text(base.BaseTrace):
         Sampling values will be stored for these variables. If None,
         `model.unobserved_RVs` is used.
     """
+
     def __init__(self, name, model=None, vars=None):
         if not os.path.exists(name):
             os.mkdir(name)
@@ -49,7 +50,7 @@ class Text(base.BaseTrace):
         self._fh = None
         self.df = None
 
-    ## Sampling methods
+    # Sampling methods
 
     def setup(self, draws, chain):
         """Perform chain-specific setup.
@@ -96,7 +97,7 @@ class Text(base.BaseTrace):
         self._fh.close()
         self._fh = None  # Avoid serialization issue.
 
-    ## Selection methods
+    # Selection methods
 
     def _load_df(self):
         if self.df is None:
@@ -194,5 +195,6 @@ def dump(name, trace, chains=None):
 
     for chain in chains:
         filename = os.path.join(name, 'chain-{}.csv'.format(chain))
-        df = ttab.trace_to_dataframe(trace, chains=chain, flat_names=flat_names)
+        df = ttab.trace_to_dataframe(
+            trace, chains=chain, flat_names=flat_names)
         df.to_csv(filename, index=False)

@@ -29,6 +29,7 @@ def unif(step_size, elow=.85, ehigh=1.15):
 
 class HamiltonianMC(ArrayStep):
     default_blocked = True
+
     def __init__(self, vars=None, scaling=None, step_scale=.25, path_length=2., is_cov=False, step_rand=unif, state=None, model=None, **kwargs):
         """
         Parameters
@@ -73,7 +74,8 @@ class HamiltonianMC(ArrayStep):
             state = SamplerHist()
         self.state = state
 
-        super(HamiltonianMC, self).__init__(vars, [model.fastlogp, model.fastdlogp(vars)], **kwargs)
+        super(HamiltonianMC, self).__init__(
+            vars, [model.fastlogp, model.fastdlogp(vars)], **kwargs)
 
     def astep(self, q0, logp, dlogp):
         H = Hamiltonian(logp, dlogp, self.potential)
@@ -92,7 +94,6 @@ class HamiltonianMC(ArrayStep):
 
         return metrop_select(mr, q, q0)
 
-
     @staticmethod
     def competence(var):
         if var.dtype in discrete_types:
@@ -100,26 +101,27 @@ class HamiltonianMC(ArrayStep):
         return Competence.COMPATIBLE
 
 
-
 def bern(p):
     return np.random.uniform() < p
 
 Hamiltonian = namedtuple("Hamiltonian", "logp, dlogp, pot")
 
+
 def energy(H, q, p):
-        return -(H.logp(q) - H.pot.energy(p))
+    return -(H.logp(q) - H.pot.energy(p))
+
 
 def leapfrog(H, q, p, n, e):
     _, dlogp, pot = H
 
-    p = p - (e/2) * -dlogp(q)  # half momentum update
+    p = p - (e / 2) * -dlogp(q)  # half momentum update
 
     for i in range(n):
-        #alternate full variable and momentum updates
+        # alternate full variable and momentum updates
         q = q + e * pot.velocity(p)
 
         if i != n - 1:
             p = p - e * -dlogp(q)
 
-    p = p - (e/2) * -dlogp(q)  # do a half step momentum update to finish off
+    p = p - (e / 2) * -dlogp(q)  # do a half step momentum update to finish off
     return q, p

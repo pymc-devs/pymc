@@ -18,6 +18,7 @@ class AR1(Continuous):
     tau_e : tensor
        precision for innovations
     """
+
     def __init__(self, k, tau_e, *args, **kwargs):
         super(AR1, self).__init__(*args, **kwargs)
         self.k = k
@@ -52,6 +53,7 @@ class GaussianRandomWalk(Continuous):
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
+
     def __init__(self, tau=None, init=Flat.dist(), sd=None, mu=0.,
                  *args, **kwargs):
         super(GaussianRandomWalk, self).__init__(*args, **kwargs)
@@ -95,6 +97,7 @@ class GARCH11(Continuous):
     initial_vol : distribution
         initial_vol >= 0, distribution for initial volatility, sigma_0
     """
+
     def __init__(self, omega=None, alpha_1=None, beta_1=None,
                  initial_vol=None, *args, **kwargs):
         super(GARCH11, self).__init__(*args, **kwargs)

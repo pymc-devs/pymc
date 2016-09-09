@@ -13,9 +13,6 @@ large suite of problems.
 Check out the `getting started
 guide <http://pymc-devs.github.io/pymc3/notebooks/getting_started.html>`__!
 
-PyMC3 is beta software. Users should consider using `PyMC 2
-repository <https://github.com/pymc-devs/pymc>`__.
-
 Features
 --------
 
@@ -60,8 +57,16 @@ Getting started
 Installation
 ------------
 
-The latest version of PyMC3 can be installed from the master branch
-using pip:
+The latest release of PyMC3 can be installed from PyPI using ``pip``:
+
+::
+
+    pip install pymc3
+
+**Note:** Running ``pip install pymc`` will install PyMC 2.3, not PyMC3,
+from PyPI.
+
+The current development branch of PyMC3 can be installed from GitHub, also using ``pip``:
 
 ::
 
@@ -83,13 +88,11 @@ your system, you can install PyMC3 directly from GitHub.
 Another option is to clone the repository and install PyMC3 using
 ``python setup.py install`` or ``python setup.py develop``.
 
-**Note:** Running ``pip install pymc`` will install PyMC 2.3, not PyMC3,
-from PyPI.
 
 Dependencies
 ------------
 
-PyMC3 is tested on Python 2.7 and 3.3 and depends on Theano, NumPy,
+PyMC3 is tested on Python 2.7 and 3.4 and depends on Theano, NumPy,
 SciPy, Pandas, and Matplotlib (see ``requirements.txt`` for version
 information).
 
@@ -119,6 +122,7 @@ scikits-sparse:
     ln -s /usr/local/Cellar/suite-sparse/4.2.1/include/ /usr/local/include/suitesparse
     pip install git+https://github.com/njsmith/scikits-sparse.git
 
+
 Citing PyMC3
 ------------
 
@@ -135,6 +139,7 @@ License
 
 `Apache License, Version
 2.0 <https://github.com/pymc-devs/pymc3/blob/master/LICENSE>`__
+
 
 Contributors
 ------------

@@ -5,6 +5,7 @@ from .checks import close_to
 from .models import simple_model, mv_simple
 from ..distributions import Normal
 
+
 def test_lop():
     start, model, _ = simple_model()
 

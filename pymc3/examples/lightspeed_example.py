@@ -14,10 +14,11 @@ with model_1:
     # mu = pm.Uniform('mu', lower = -tt.inf, upper= np.inf)
     # sigma = pm.Uniform('sigma', lower = 0, upper= np.inf)
 
-
     # using vague priors works
-    mu = pm.Uniform('mu', lower=light_speed.std() / 1000.0, upper=light_speed.std() * 1000.0)
-    sigma = pm.Uniform('sigma', lower=light_speed.std() / 1000.0, upper=light_speed.std() * 1000.0)
+    mu = pm.Uniform('mu', lower=light_speed.std() / 1000.0,
+                    upper=light_speed.std() * 1000.0)
+    sigma = pm.Uniform('sigma', lower=light_speed.std() /
+                       1000.0, upper=light_speed.std() * 1000.0)
 
     # define likelihood
     y_obs = pm.Normal('Y_obs', mu=mu, sd=sigma, observed=light_speed)
@@ -35,7 +36,8 @@ def run(n=5000):
     with model_1:
         xstart = pm.find_MAP()
         xstep = pm.Slice()
-        trace = pm.sample(5000, xstep, xstart, random_seed=123, progressbar=True)
+        trace = pm.sample(5000, xstep, xstart,
+                          random_seed=123, progressbar=True)
 
         pm.summary(trace)
 

@@ -1,5 +1,6 @@
 import functools
 
+
 def memoize(obj):
     """
     An expensive memoizer that works with unhashables
@@ -15,6 +16,7 @@ def memoize(obj):
 
         return cache[key]
     return memoizer
+
 
 def hashable(a):
     """

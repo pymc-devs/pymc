@@ -31,6 +31,7 @@ with Model() as model:
 
     s = Bernoulli('s', p, observed=np.array(data.switch))
 
+
 def run(n=3000):
     if n == "short":
         n = 50

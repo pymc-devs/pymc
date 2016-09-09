@@ -18,8 +18,8 @@ class TestTraceToDf(bf.ModelBackendSampledTestCase):
         checked = False
         for varname in self.test_point.keys():
             vararr = mtrace.get_values(varname)
-            ## With `shape` above, only one variable has to have that
-            ## `shape`.
+            # With `shape` above, only one variable has to have that
+            # `shape`.
             if vararr.shape[1:] != self.shape:
                 continue
             npt.assert_equal(vararr[:, 0, 0], df[varname + '__0_0'].values)
@@ -36,8 +36,8 @@ class TestTraceToDf(bf.ModelBackendSampledTestCase):
         checked = False
         for varname in self.test_point.keys():
             vararr = mtrace.get_values(varname, chains=0)
-            ## With `shape` above, only one variable has to have that
-            ## `shape`.
+            # With `shape` above, only one variable has to have that
+            # `shape`.
             if vararr.shape[1:] != self.shape:
                 continue
             npt.assert_equal(vararr[:, 0, 0], df[varname + '__0_0'].values)

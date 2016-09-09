@@ -44,23 +44,35 @@ zdata = np.random.normal(loc=xtrue + ytrue, scale=.75, size=(ndims, nobs))
 #
 # We construct new random variables with the constructor for its prior distribution such as `Normal` while within a model context (inside the `with`). When you make a random variable it is automatically added to the model. The constructor returns a Theano variable.
 #
-# Using the constructor may specify the name of the random variable, the parameters of a random variable's prior distribution, as well as the shape of the random variable. We can specify that a random variable is observed by specifying the data that was observed.
+# Using the constructor may specify the name of the random variable, the
+# parameters of a random variable's prior distribution, as well as the
+# shape of the random variable. We can specify that a random variable is
+# observed by specifying the data that was observed.
 
 # In[3]:
 
 with pm.Model() as model:
     x = pm.Normal('x', mu=0., sd=1)
-    y = pm.Normal('y', mu=pm.exp(x), sd=2., shape=(ndims, 1)) # here, shape is telling us it's a vector rather than a scalar.
-    z = pm.Normal('z', mu=x + y, sd=.75, observed=zdata) # shape is inferred from zdata
+    # here, shape is telling us it's a vector rather than a scalar.
+    y = pm.Normal('y', mu=pm.exp(x), sd=2., shape=(ndims, 1))
+    # shape is inferred from zdata
+    z = pm.Normal('z', mu=x + y, sd=.75, observed=zdata)
 
 
-# A parenthetical note on the parameters for the normal. Variance is encoded as `tau`, indicating precision, which is simply inverse variance (so $\tau=\sigma^{-2}$ ). This is used because the gamma function is the conjugate prior for precision, and must be inverted to get variance. Encoding in terms of precision saves the inversion step in cases where variance is actually modeled using gamma as a prior.
+# A parenthetical note on the parameters for the normal. Variance is
+# encoded as `tau`, indicating precision, which is simply inverse variance
+# (so $\tau=\sigma^{-2}$ ). This is used because the gamma function is the
+# conjugate prior for precision, and must be inverted to get variance.
+# Encoding in terms of precision saves the inversion step in cases where
+# variance is actually modeled using gamma as a prior.
 
 # Fit Model
 # ---------
 # We need a starting point for our sampling. The `find_MAP` function finds the maximum a posteriori point (MAP), which is often a good choice for starting point. `find_MAP` uses an optimization algorithm (`scipy.optimize.fmin_l_bfgs_b`, or [BFGS](http://en.wikipedia.org/wiki/BFGS_method), by default) to find the local maximum of the log posterior.
 #
-# Note that this `with` construction is used again. Functions like `find_MAP` and `HamiltonianMC` need to have a model in their context. `with` activates the context of a particular model within its block.
+# Note that this `with` construction is used again. Functions like
+# `find_MAP` and `HamiltonianMC` need to have a model in their context.
+# `with` activates the context of a particular model within its block.
 
 # In[4]:
 
@@ -68,7 +80,8 @@ with model:
     start = pm.find_MAP()
 
 
-# Points in parameter space are represented by dictionaries with parameter names as they keys and the value of the parameters as the values.
+# Points in parameter space are represented by dictionaries with parameter
+# names as they keys and the value of the parameters as the values.
 
 # In[5]:
 
@@ -93,7 +106,8 @@ print("xtrue", xtrue)
 #     xtrue [ 2.03525495]
 #
 
-# We will use NUTS to sample from the posterior as implemented by the `NUTS` step method class.
+# We will use NUTS to sample from the posterior as implemented by the
+# `NUTS` step method class.
 
 # In[6]:
 
@@ -101,7 +115,8 @@ with model:
     step = pm.NUTS()
 
 
-# The `sample` function takes a number of steps to sample, a step method, a starting point. It returns a trace object which contains our samples.
+# The `sample` function takes a number of steps to sample, a step method,
+# a starting point. It returns a trace object which contains our samples.
 
 # In[7]:
 
@@ -129,7 +144,7 @@ trace[y].shape
 
 # In[9]:
 
-pm.traceplot(trace);
+pm.traceplot(trace)
 
 
 # Out[9]:
@@ -192,7 +207,7 @@ help(model)
 #      |  dlogpc(model, vars=None)
 #      |      Compiled log probability density gradient function
 #      |
-#      |  ----------------------------------------------------------------------
+#      |  ----------------------------------------------------------------
 #      |  Data descriptors defined here:
 #      |
 #      |  cont_vars
@@ -217,26 +232,26 @@ help(model)
 #      |  test_point
 #      |      Test point used to check that the model doesn't generate errors
 #      |
-#      |  ----------------------------------------------------------------------
+#      |  ----------------------------------------------------------------
 #      |  Data and other attributes defined here:
 #      |
 #      |  contexts = []
 #      |
-#      |  ----------------------------------------------------------------------
+#      |  ----------------------------------------------------------------
 #      |  Methods inherited from Context:
 #      |
 #      |  __enter__(self)
 #      |
 #      |  __exit__(self, typ, value, traceback)
 #      |
-#      |  ----------------------------------------------------------------------
+#      |  ----------------------------------------------------------------
 #      |  Class methods inherited from Context:
 #      |
 #      |  get_context(cls) from __builtin__.type
 #      |
 #      |  get_contexts(cls) from __builtin__.type
 #      |
-#      |  ----------------------------------------------------------------------
+#      |  ----------------------------------------------------------------
 #      |  Data descriptors inherited from Context:
 #      |
 #      |  __dict__
@@ -248,6 +263,3 @@ help(model)
 #
 
 # In[10]:
-
-
-

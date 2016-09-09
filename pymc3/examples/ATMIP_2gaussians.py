@@ -46,15 +46,15 @@ with pm.Model() as ATMIP_test:
 
 with ATMIP_test:
     step = ATMCMC(n_chains=n_chains, tune_interval=tune_interval,
-                         likelihood_name=ATMIP_test.deterministics[0].name)
+                  likelihood_name=ATMIP_test.deterministics[0].name)
 
 trcs = ATMIP_sample(
-                        n_steps=n_steps,
-                        step=step,
-                        njobs=njobs,
-                        progressbar=True,
-                        trace=test_folder,
-                        model=ATMIP_test)
+    n_steps=n_steps,
+    step=step,
+    njobs=njobs,
+    progressbar=True,
+    trace=test_folder,
+    model=ATMIP_test)
 
 pm.summary(trcs)
 Pltr = pm.traceplot(trcs, combined=True)
