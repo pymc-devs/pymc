@@ -1,7 +1,7 @@
 # Release Notes
 ## PyMC3 3.0 (September xx, 2016)
 
-This is the first official release of PyMC3, a re-implementation of PyMC that is focused on modern Bayesian computational methods, primarily gradient-based (Hamiltonian) MCMC sampling and variational inference. The main technological difference in PyMC3 is the reliance on Theano as the computational backend, rather than on Fortran extensions, as was the case in PyMC 2.x.
+We are proud and excited to release the first stable version of PyMC3, the product of more than [5 years](https://github.com/pymc-devs/pymc3/commit/85c7e06b6771c0d99cbc09cb68885cda8f7785cb) of ongoing development and contributions from over 80 individuals. PyMC3 is a Python module for Bayesian modeling which focuses on modern Bayesian computational methods, primarily gradient-based (Hamiltonian) MCMC sampling and variational inference. Models are specified in Python, which allows for great flexibility. The main technological difference in PyMC3 relative to previous versions is the reliance on Theano for the computational backend, rather than on Fortran extensions.
 
 Since the beta release last year, the following improvements have been implemented:
 
