@@ -2,13 +2,12 @@ from . import backends
 from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from joblib import Parallel, delayed
-from time import time
 from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, Slice, ElemwiseCategorical, CompoundStep)
 from .progressbar import progress_bar
 from numpy.random import randint, seed
-from numpy import shape, append, asarray
+from numpy import shape, asarray
 from collections import defaultdict
 
 import sys
@@ -17,9 +16,9 @@ sys.setrecursionlimit(10000)
 __all__ = ['sample', 'iter_sample', 'sample_ppc']
 
 
-def assign_step_methods(model, step=None,
-                        methods=(NUTS, HamiltonianMC, Metropolis, BinaryMetropolis, BinaryGibbsMetropolis,
-                                 Slice, ElemwiseCategorical)):
+def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropolis,
+                                                   BinaryMetropolis, BinaryGibbsMetropolis,
+                                                   Slice, ElemwiseCategorical)):
     '''
     Assign model variables to appropriate step methods. Passing a specified
     model will auto-assign its constituent stochastic variables to step methods
@@ -50,31 +49,29 @@ def assign_step_methods(model, step=None,
     steps = []
     assigned_vars = set()
     if step is not None:
-        steps = append(steps, step).tolist()
-        for s in steps:
+        try:
+            steps += list(step)
+        except TypeError:
+            steps.append(step)
+        for step in steps:
             try:
-                assigned_vars = assigned_vars | set(s.vars)
+                assigned_vars = assigned_vars.union(set(step.vars))
             except AttributeError:
-                for m in s.methods:
-                    assigned_vars = assigned_vars | set(m.vars)
+                for method in step.methods:
+                    assigned_vars = assigned_vars.union(set(method.vars))
 
     # Use competence classmethods to select step methods for remaining
     # variables
     selected_steps = defaultdict(list)
     for var in model.free_RVs:
-        if not var in assigned_vars:
-
-            competences = {s: s._competence(var) for s in methods}
-
-            selected = max(competences.keys(), key=(lambda k: competences[k]))
-
+        if var not in assigned_vars:
+            selected = max(methods, key=lambda method: method._competence(var))
             if model.verbose:
                 print('Assigned {0} to {1}'.format(selected.__name__, var))
             selected_steps[selected].append(var)
 
     # Instantiate all selected step methods
-    steps += [s(vars=selected_steps[s])
-              for s in selected_steps if selected_steps[s]]
+    steps += [step(vars=selected_steps[step]) for step in selected_steps if selected_steps[step]]
 
     if len(steps) == 1:
         steps = steps[0]
