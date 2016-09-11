@@ -38,23 +38,23 @@ Alexey Goldin <alexey.goldin@gmail.com>
 Anand Patil <anand.prabhakar.patil@gmail.com>
 Andrea Zonca <code@andreazonca.com>
 Andreas Klostermann <andreasklostermann@googlemail.com>
-Andres Asensio Ramos <thomas.wiecki@gmail.com>
+Andres Asensio Ramos 
 Andrew Clegg <andrew.clegg@pearson.com>
-Anjum48 <thomas.wiecki@gmail.com>
+Anjum48 
 AustinRochford <arochford@monetate.com>
 Benjamin Edwards <bedwards@cs.unm.edu>
 Boris Avdeev <borisaqua@gmail.com>
 Brian Naughton <briannaughton@gmail.com>
-Byron Smith <thomas.wiecki@gmail.com>
+Byron Smith 
 Chad Heyne <chadheyne@gmail.com>
 Chris Fonnesbeck <chris.fonnesbeck@vanderbilt.edu>
-Colin <thomas.wiecki@gmail.com>
+Colin 
 Corey Farwell <coreyf@rwell.org>
 David Huard <david.huard@gmail.com>
 David Huard <huardda@angus.meteo.mcgill.ca>
 David Stück <dstuck@users.noreply.github.com>
 DeliciousHair <mshepit@gmail.com>
-Dustin Tran <thomas.wiecki@gmail.com>
+Dustin Tran 
 Eigenblutwurst <Hannes.Bathke@gmx.net>
 Gideon Wulfsohn <gideon.wulfsohn@gmail.com>
 Gil Raphaelli <g@raphaelli.com>
@@ -65,31 +65,31 @@ Jake Biesinger <jake.biesinger@gmail.com>
 James Webber <jamestwebber@gmail.com>
 John McDonnell <john.v.mcdonnell@gmail.com>
 John Salvatier <jsalvatier@gmail.com>
-Jordi Diaz <thomas.wiecki@gmail.com>
+Jordi Diaz 
 Jordi Warmenhoven <jordi.warmenhoven@gmail.com>
 Karlson Pfannschmidt <kiudee@mail.uni-paderborn.de>
 Kyle Bishop <citizenphnix@gmail.com>
 Kyle Meyer <kyle@kyleam.com>
-Lin Xiao <thomas.wiecki@gmail.com>
+Lin Xiao  
 Mack Sweeney <mackenzie.sweeney@gmail.com>
 Matthew Emmett <memmett@unc.edu>
-Maxim <thomas.wiecki@gmail.com>
+Maxim 
 Michael Gallaspy <gallaspy.michael@gmail.com>
 Nick <nalourie@example.com>
 Osvaldo Martin <aloctavodia@gmail.com>
 Patricio Benavente <patbenavente@gmail.com>
 Peadar Coyle (springcoil) <peadarcoyle@googlemail.com>
-Raymond Roberts <thomas.wiecki@gmail.com>
+Raymond Roberts 
 Rodrigo Benenson <rodrigo.benenson@gmail.com>
 Sergei Lebedev <superbobry@gmail.com>
 Skipper Seabold <chris.fonnesbeck@vanderbilt.edu>
-Taku Yoshioka <thomas.wiecki@gmail.com>
+Taku Yoshioka <taku.yoshioka.4096@gmail.com>
 The Gitter Badger <badger@gitter.im>
 Thomas Kluyver <takowl@gmail.com>
 Thomas Wiecki <thomas.wiecki@gmail.com>
 Tobias Knuth <mail@tobiasknuth.de>
-Volodymyr <thomas.wiecki@gmail.com>
-Volodymyr Kazantsev <thomas.wiecki@gmail.com>
+Volodymyr 
+Volodymyr Kazantsev 
 Wes McKinney <wesmckinn@gmail.com>
 Zach Ploskey <zploskey@gmail.com>
 akuz <for.akuz@gmail.com>
