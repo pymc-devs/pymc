@@ -1,4 +1,3 @@
-import pymc3 as pm
 import pymc3.distributions.transforms as tr
 import numpy as np
 import theano
@@ -63,7 +62,11 @@ def test_sum_to_1_jacobian_det():
                        tt.dvector, np.array([0, 0]), lambda x: x[:-1])
 
 
-def check_jacobian_det(transform, domain, constructor=tt.dscalar, test=0, make_comparable=None, elemwise=False):
+def check_jacobian_det(transform, domain,
+                       constructor=tt.dscalar,
+                       test=0,
+                       make_comparable=None,
+                       elemwise=False):
     y = constructor('y')
     y.tag.test_value = test
 

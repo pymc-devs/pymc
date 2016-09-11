@@ -1,4 +1,4 @@
-from pymc3 import Model, Normal, Metropolis, MvNormal
+from pymc3 import Model, Normal, Metropolis
 import numpy as np
 import pymc3 as pm
 from itertools import product
@@ -9,7 +9,7 @@ def simple_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        x = Normal('x', mu, tau, shape=2, testval=[.1] * 2)
+        Normal('x', mu, tau, shape=2, testval=[.1] * 2)
 
     return model.test_point, model, (mu, tau ** -1)
 
@@ -18,14 +18,13 @@ def multidimensional_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        x = Normal('x', mu, tau, shape=(3, 2), testval=.1 * np.ones((3, 2)))
+        Normal('x', mu, tau, shape=(3, 2), testval=.1 * np.ones((3, 2)))
 
     return model.test_point, model, (mu, tau ** -1)
 
 
 def simple_init():
     start, model, moments = simple_model()
-
     step = Metropolis(model.vars, np.diag([1.]), model=model)
     return model, start, step, moments
 
@@ -36,9 +35,8 @@ def simple_2model():
     p = .4
     with Model() as model:
         x = pm.Normal('x', mu, tau, testval=.1)
-        logx = pm.Deterministic('logx', log(x))
-        y = pm.Bernoulli('y', p)
-
+        pm.Deterministic('logx', log(x))
+        pm.Bernoulli('y', p)
     return model.test_point, model
 
 
@@ -48,16 +46,11 @@ def mv_simple():
         [2., 0, 0],
         [.05, .1, 0],
         [1., -0.05, 5.5]])
-
     tau = np.dot(p, p.T)
-
     with pm.Model() as model:
-        x = pm.MvNormal('x', pm.constant(mu), pm.constant(
-            tau), shape=3, testval=np.array([.1, 1., .8]))
-
+        pm.MvNormal('x', pm.constant(mu), pm.constant(tau), shape=3, testval=np.array([.1, 1., .8]))
     H = tau
     C = np.linalg.inv(H)
-
     return model.test_point, model, (mu, C)
 
 
@@ -65,12 +58,9 @@ def mv_simple_discrete():
     d = 2
     n = 5
     p = np.array([.15, .85])
-
     with pm.Model() as model:
-        x = pm.Multinomial('x', n, pm.constant(
-            p), shape=d, testval=np.array([1, 4]))
+        pm.Multinomial('x', n, pm.constant(p), shape=d, testval=np.array([1, 4]))
         mu = n * p
-
         # covariance matrix
         C = np.zeros((d, d))
         for (i, j) in product(range(d), range(d)):
@@ -84,21 +74,19 @@ def mv_simple_discrete():
 
 def non_normal(n=2):
     with pm.Model() as model:
-        x = pm.Beta('x', 3, 3, shape=n, transform=None)
-
+        pm.Beta('x', 3, 3, shape=n, transform=None)
     return model.test_point, model, (np.tile([.5], n), None)
 
 
 def exponential_beta(n=2):
     with pm.Model() as model:
-        x = pm.Beta('x', 3, 1, shape=n, transform=None)
-        y = pm.Exponential('y', 1, shape=n, transform=None)
-
+        pm.Beta('x', 3, 1, shape=n, transform=None)
+        pm.Exponential('y', 1, shape=n, transform=None)
     return model.test_point, model, None
 
 
 def beta_bernoulli(n=2):
     with pm.Model() as model:
-        x = pm.Beta('x', 3, 1, shape=n, transform=None)
-        y = pm.Bernoulli('y', 0.5)
+        pm.Beta('x', 3, 1, shape=n, transform=None)
+        pm.Bernoulli('y', 0.5)
     return model.test_point, model, None

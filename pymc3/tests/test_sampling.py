@@ -1,5 +1,4 @@
 import numpy as np
-import numpy.testing as npt
 try:
     import unittest.mock as mock  # py3
 except ImportError:
@@ -10,6 +9,7 @@ import pymc3
 from pymc3 import sampling
 from pymc3.sampling import sample
 from .models import simple_init
+from .helpers import SeededTest
 
 # Test if multiprocessing is available
 import multiprocessing
@@ -23,14 +23,8 @@ RSEED = 20090425
 
 
 def test_sample():
-
     model, start, step, _ = simple_init()
-
     test_njobs = [1]
-
-    if test_parallel:
-        test_samplers.append(psample)
-
     with model:
         for njobs in test_njobs:
             for n in [1, 10, 300]:
@@ -74,10 +68,7 @@ def test_soft_update_empty():
     assert start == test_point
 
 
-class TestNamedSampling(unittest.TestCase):
-
-    # TODO: Set a seed for these!
-
+class TestNamedSampling(SeededTest):
     def test_shared_named(self):
         from theano import shared
         import theano.tensor as tt
@@ -125,7 +116,6 @@ class TestNamedSampling(unittest.TestCase):
 
 
 class TestChooseBackend(unittest.TestCase):
-
     def test_choose_backend_none(self):
         with mock.patch('pymc3.sampling.NDArray') as nd:
             sampling._choose_backend(None, 'chain')
