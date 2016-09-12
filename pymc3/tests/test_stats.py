@@ -16,7 +16,7 @@ class TestStats(SeededTest):
     @classmethod
     def setUpClass(cls):
         super(TestStats, cls).setUpClass()
-        cls.normal_sample = normal(0, 1, 150000)
+        cls.normal_sample = normal(0, 1, 200000)
 
     def test_autocorr(self):
         """Test autocorrelation and autocovariance functions"""
