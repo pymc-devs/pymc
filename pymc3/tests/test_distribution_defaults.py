@@ -3,7 +3,6 @@ from __future__ import division
 from ..model import Model
 from ..distributions import DiscreteUniform, Continuous
 
-from numpy import array, inf
 import numpy as np
 from nose.tools import raises
 
@@ -21,42 +20,42 @@ class DistTest(Continuous):
 
 @raises(AttributeError)
 def test_default_nan_fail():
-    with Model() as model:
-        x = DistTest('x', np.nan, 2, defaults=['a'])
+    with Model():
+        DistTest('x', np.nan, 2, defaults=['a'])
 
 
 @raises(AttributeError)
 def test_default_empty_fail():
-    with Model() as model:
-        x = DistTest('x', 1, 2, defaults=[])
+    with Model():
+        DistTest('x', 1, 2, defaults=[])
 
 
 def test_default_testval():
-    with Model() as model:
+    with Model():
         x = DistTest('x', 1, 2, testval=5, defaults=[])
         assert x.tag.test_value == 5
 
 
 def test_default_testval_nan():
-    with Model() as model:
+    with Model():
         x = DistTest('x', 1, 2, testval=np.nan, defaults=['a'])
         np.testing.assert_almost_equal(x.tag.test_value, np.nan)
 
 
 def test_default_a():
-    with Model() as model:
+    with Model():
         x = DistTest('x', 1, 2, defaults=['a'])
         assert x.tag.test_value == 1
 
 
 def test_default_b():
-    with Model() as model:
+    with Model():
         x = DistTest('x', np.nan, 2, defaults=['a', 'b'])
         assert x.tag.test_value == 2
 
 
-def test_default_b():
-    with Model() as model:
+def test_default_c():
+    with Model():
         y = DistTest('y', 7, 8, testval=94)
         x = DistTest('x', y, 2, defaults=['a', 'b'])
         assert x.tag.test_value == 94

@@ -1,4 +1,3 @@
-import numpy.testing as npt
 from pymc3.tests import backend_fixtures as bf
 from pymc3.backends import ndarray, text
 

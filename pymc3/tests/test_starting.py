@@ -1,15 +1,12 @@
 from .checks import close_to
-from numpy import inf
 import numpy as np
 from pymc3.tuning import starting
-from pymc3 import find_MAP, Point, Model
-from pymc3 import Model, Uniform, Normal, Beta, Binomial
-from .models import simple_init, simple_model, non_normal, exponential_beta
+from pymc3 import Model, Uniform, Normal, Beta, Binomial, find_MAP, Point
+from .models import simple_model, non_normal, exponential_beta
 
 
 def test_accuracy_normal():
     _, model, (mu, _) = simple_model()
-
     with model:
         newstart = find_MAP(Point(x=[-10.5, 100.5]))
         close_to(newstart['x'], [mu, mu], 1e-5)
@@ -17,7 +14,6 @@ def test_accuracy_normal():
 
 def test_accuracy_non_normal():
     _, model, (mu, _) = non_normal(4)
-
     with model:
         newstart = find_MAP(Point(x=[.5, .01, .95, .99]))
         close_to(newstart['x'], mu, 1e-5)
@@ -25,7 +21,6 @@ def test_accuracy_non_normal():
 
 def test_errors():
     _, model, _ = exponential_beta(2)
-
     with model:
         try:
             newstart = find_MAP(Point(x=[-.5, .01], y=[.5, 4.4]))
@@ -46,8 +41,8 @@ def test_find_MAP_discrete():
 
     with Model() as model:
         p = Beta('p', alpha, beta, transform=None)
-        ss = Binomial('ss', n=n, p=p, transform=None)
-        s = Binomial('s', n=n, p=p, observed=yes)
+        Binomial('ss', n=n, p=p, transform=None)
+        Binomial('s', n=n, p=p, observed=yes)
 
         map_est1 = starting.find_MAP()
         map_est2 = starting.find_MAP(vars=model.vars)
@@ -65,10 +60,10 @@ def test_find_MAP():
     # normalize anyway to get it really close
     data = (data - np.mean(data)) / np.std(data)
 
-    with Model() as model:
+    with Model():
         mu = Uniform('mu', -1, 1, transform=None)
         sigma = Uniform('sigma', .5, 1.5, transform=None)
-        y = Normal('y', mu=mu, tau=sigma**-2, observed=data)
+        Normal('y', mu=mu, tau=sigma**-2, observed=data)
 
         # Test gradient minimization
         map_est1 = starting.find_MAP()

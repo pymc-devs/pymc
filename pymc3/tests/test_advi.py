@@ -64,8 +64,7 @@ def test_check_discrete():
 
         # Allocate appropriate Poisson rates to years before and after current
         rate = switch(switchpoint >= year, early_rate, late_rate)
-
-        disasters = Poisson('disasters', rate, observed=disaster_data)
+        Poisson('disasters', rate, observed=disaster_data)
 
     # This should raise ValueError
     assert_raises(ValueError, advi, model=disaster_model, n=10)

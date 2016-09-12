@@ -19,8 +19,7 @@ def test_functions():
 
     gammaln = function([x], ps.gammaln(x))
     psi = function([x], ps.psi(x))
-    multigammaln = function([x, p], ps.multigammaln(x, p))
-
+    function([x, p], ps.multigammaln(x, p))
     for x in xvals:
         yield check_vals, gammaln, ss.gammaln, x
     for x in xvals[1:]:

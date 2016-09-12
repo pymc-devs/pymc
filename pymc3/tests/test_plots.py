@@ -4,19 +4,17 @@ matplotlib.use('Agg', warn=False)
 import numpy as np
 from .checks import close_to
 
+from .models import multidimensional_model
 from ..plots import traceplot, forestplot, autocorrplot, make_2d
 from ..step_methods import Slice, Metropolis
 from ..sampling import sample
 from ..tuning.scaling import find_hessian
+from pymc3.examples import disaster_model as dm, arbitrary_stochastic as asmod
 
 
 def test_plots():
-
     # Test single trace
-    from pymc3.examples import arbitrary_stochastic as asmod
-
     with asmod.model as model:
-
         start = model.test_point
         h = find_hessian(start)
         step = Metropolis(model.vars, h)
@@ -29,10 +27,7 @@ def test_plots():
 
 
 def test_plots_multidimensional():
-
     # Test single trace
-    from .models import multidimensional_model
-
     start, model, _ = multidimensional_model()
     with model as model:
         h = np.diag(find_hessian(start))
@@ -45,10 +40,7 @@ def test_plots_multidimensional():
 
 
 def test_multichain_plots():
-
-    from pymc3.examples import disaster_model as dm
-
-    with dm.model as model:
+    with dm.model:
         # Run sampler
         step1 = Slice([dm.early_mean, dm.late_mean])
         step2 = Metropolis([dm.switchpoint])
@@ -56,12 +48,10 @@ def test_multichain_plots():
         ptrace = sample(1000, [step1, step2], start, njobs=2)
 
     forestplot(ptrace, varnames=['early_mean', 'late_mean'])
-
     autocorrplot(ptrace, varnames=['switchpoint'])
 
 
 def test_make_2d():
-
     a = np.arange(4)
     close_to(make_2d(a), a[:, None], 0)
 

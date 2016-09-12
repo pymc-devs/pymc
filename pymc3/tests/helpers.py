@@ -9,5 +9,9 @@ class SeededTest(unittest.TestCase):
     def setUpClass(cls):
         nr.seed(cls.random_seed)
 
+    @classmethod
+    def setUpClass(cls):
+        nr.seed(cls.random_seed)
+
     def setUp(self):
         nr.seed(self.random_seed)
