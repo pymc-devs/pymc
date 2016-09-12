@@ -136,21 +136,28 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
 
     # Optimization loop
     elbos = np.empty(n)
-    for i in range(n):
-        uw_i, e = f()
-        elbos[i] = e
-        if verbose and not i % (n // 10):
-            if not i:
-                print('Iteration {0} [{1}%]: ELBO = {2}'.format(
-                    i, 100 * i // n, e.round(2)))
-            else:
-                avg_elbo = elbos[i - n // 10:i].mean()
-                print('Iteration {0} [{1}%]: Average ELBO = {2}'.format(
-                    i, 100 * i // n, avg_elbo.round(2)))
-
-    if verbose:
-        avg_elbo = elbos[-n // 10:].mean()
-        print('Finished [100%]: Average ELBO = {}'.format(avg_elbo.round(2)))
+    try:
+        for i in range(n):
+            uw_i, e = f()
+            elbos[i] = e
+            if verbose and not i % (n // 10):
+                if not i:
+                    print('Iteration {0} [{1}%]: ELBO = {2}'.format(
+                        i, 100 * i // n, e.round(2)))
+                else:
+                    avg_elbo = elbos[i - n // 10:i].mean()
+                    print('Iteration {0} [{1}%]: Average ELBO = {2}'.format(
+                        i, 100 * i // n, avg_elbo.round(2)))
+    except KeyboardInterrupt:
+        if verbose:
+            elbos = elbos[:i]
+            avg_elbo = elbos[i - n // 10:].mean()
+            print('Interrupted at {0} [{1}%]: Average ELBO = {2}'.format(
+                i, 100 * i // n, avg_elbo.round(2)))
+    else:
+        if verbose:
+            avg_elbo = elbos[-n // 10:].mean()
+            print('Finished [100%]: Average ELBO = {}'.format(avg_elbo.round(2)))
 
     # Estimated parameters
     l = int(uw_i.size / 2)
