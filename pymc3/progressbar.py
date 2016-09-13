@@ -44,7 +44,7 @@ class ProgressBar(object):
 class TextProgressBar(ProgressBar):
     def __init__(self, iterations, printer):
         self.fill_char = '-'
-        self.width = 30
+        self.width = 20
         self.printer = printer
 
         super(TextProgressBar, self).__init__(iterations)
@@ -55,11 +55,11 @@ class TextProgressBar(ProgressBar):
 
     def progbar(self, i, elapsed):
         bar = self.bar(self.percentage(i))
-        sps = float(i) / float(elapsed) 
-        ete = (float(self.iterations) / sps) - elapsed
-        return ("[%s] %i of %i in %.1f sec | SPS: %.1f | ETE: %s" % 
+        sps = i / float(elapsed) 
+        eta = (self.iterations / sps) - elapsed
+        return ("[%s] %i of %i in %.1f sec | SPS: %.1f | ETA: %s" % 
                 (bar, i, self.iterations, round(elapsed, 1), sps, 
-                 str(datetime.timedelta(seconds=int(ete)))))
+                 str(datetime.timedelta(seconds=int(eta)))))
 
 
     def bar(self, percent):
