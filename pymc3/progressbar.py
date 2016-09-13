@@ -57,9 +57,15 @@ class TextProgressBar(ProgressBar):
         bar = self.bar(self.percentage(i))
         sps = i / float(elapsed) 
         eta = (self.iterations / sps) - elapsed
-        return ("[%s] %i of %i in %.1f sec | SPS: %.1f | ETA: %s" % 
-                (bar, i, self.iterations, round(elapsed, 1), sps, 
-                 str(datetime.timedelta(seconds=int(eta)))))
+        its = self.iterations
+
+        prog_str = "[{bar}] {it} of {its} in {s_elapsed} sec. " \
+                   "| SPS: {sps} | ETA: {eta}" \
+                   "".format(bar = bar, it = i, its = its, 
+                             s_elapsed = round(elapsed, 1),
+                             sps = round(sps, 1), eta = round(eta, 1))
+               
+        return(prog_str)
 
 
     def bar(self, percent):
@@ -74,7 +80,7 @@ class TextProgressBar(ProgressBar):
 
 
 def replace_at(str, new, start, stop):
-    return str[:start] + new + str[stop:]
+    return(str[:start] + new + str[stop:])
 
 
 def consoleprint(s):
