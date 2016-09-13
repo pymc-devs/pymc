@@ -118,7 +118,7 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
         Whether or not to display a progress bar in the command line. The 
         bar shows the percentage of completion, the sampling speed in 
         samples per second (SPS), and the estimated remaining time until
-        completionvv("expected time of arrival"; ETA).
+        completion ("expected time of arrival"; ETA).
     model : Model (optional if in `with` context)
     random_seed : int or list of ints
         A list is accepted if more if `njobs` is greater than one.
