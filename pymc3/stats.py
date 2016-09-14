@@ -178,6 +178,14 @@ def loo(trace, model=None, n_eff=False):
     pareto_fit = np.apply_along_axis(
         lambda x: pareto.fit(x, floc=0), 0, r_sorted[q80:])
 
+    if np.any(pareto_fit[0] > 0.7):
+        raise ValueError("""Estimated shape parameter of Pareto distribution
+        is for one or more samples is greater than 0.7.
+        You should consider using a more robust model, this is
+        because importance sampling is less likely to work well if the marginal
+        posterior and LOO posterior are very different. This is more likely to
+        happen with a non-robust model and highly influential observations.""")
+
     if np.any(pareto_fit[0] > 0.5):
         warnings.warn("""Estimated shape parameter of Pareto distribution
         is for one or more samples is greater than 0.5. This may indicate
