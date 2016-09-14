@@ -89,7 +89,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     ADVIFit
         Named tuple, which includes 'means', 'stds', and 'elbo_vals'.
 
-    'means' is the mean. 'stds' is log of the standard deviation. 
+    'means' is the mean. 'stds' is the standard deviation.
     'elbo_vals' is the trace of ELBO values during optimizaiton. 
 
     References
