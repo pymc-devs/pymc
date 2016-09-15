@@ -21,6 +21,7 @@ __all__ = ['progress_bar']
 
 
 class ProgressBar(object):
+
     def __init__(self, iterations, animation_interval=.5):
         self.iterations = iterations
         self.start = time.time()
@@ -42,6 +43,7 @@ class ProgressBar(object):
 
 
 class TextProgressBar(ProgressBar):
+
     def __init__(self, iterations, printer):
         self.fill_char = '-'
         self.width = 20
@@ -55,18 +57,17 @@ class TextProgressBar(ProgressBar):
 
     def progbar(self, i, elapsed):
         bar = self.bar(self.percentage(i))
-        sps = i / float(elapsed) 
+        sps = i / float(elapsed)
         eta = (self.iterations / sps) - elapsed
         its = self.iterations
 
         prog_str = "[{bar}] {it} of {its} in {s_elapsed} sec. " \
                    "| SPS: {sps} | ETA: {eta}" \
-                   "".format(bar=bar, it=i, its=its, 
+                   "".format(bar=bar, it=i, its=its,
                              s_elapsed=round(elapsed, 1),
                              sps=round(sps, 1), eta=round(eta, 1))
-               
-        return(prog_str)
 
+        return(prog_str)
 
     def bar(self, percent):
         all_full = self.width - 2
@@ -96,6 +97,7 @@ def ipythonprint(s):
 
 
 class IPythonNotebookPB(ProgressBar):
+
     def __init__(self, iterations):
         self.divid = str(uuid.uuid4())
         self.sec_id = str(uuid.uuid4())
