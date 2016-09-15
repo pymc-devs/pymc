@@ -6,7 +6,7 @@ Modified from original code by Corey Goldberg (2010)
 from __future__ import print_function
 
 import warnings
-warnings.simplefilter(action = "ignore", category = FutureWarning)
+warnings.simplefilter(action="ignore", category=FutureWarning)
 import sys
 import time
 import datetime
@@ -61,9 +61,9 @@ class TextProgressBar(ProgressBar):
 
         prog_str = "[{bar}] {it} of {its} in {s_elapsed} sec. " \
                    "| SPS: {sps} | ETA: {eta}" \
-                   "".format(bar = bar, it = i, its = its, 
-                             s_elapsed = round(elapsed, 1),
-                             sps = round(sps, 1), eta = round(eta, 1))
+                   "".format(bar=bar, it=i, its=its, 
+                             s_elapsed=round(elapsed, 1),
+                             sps=round(sps, 1), eta=round(eta, 1))
                
         return(prog_str)
 
