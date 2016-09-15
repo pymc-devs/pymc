@@ -694,8 +694,7 @@ class TransformedRV(TensorVariable):
 
             theano.Apply(theano.compile.view_op, inputs=[
                          normalRV], outputs=[self])
-            self.tag.test_value = transform.forward(
-                normalRV.tag.test_value).eval()
+            self.tag.test_value = normalRV.tag.test_value
 
             incorporate_methods(source=distribution, destination=self,
                                 methods=['random'],
