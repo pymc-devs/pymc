@@ -9,6 +9,7 @@ import warnings
 warnings.simplefilter(action="ignore", category=FutureWarning)
 import sys
 import time
+import datetime
 import uuid
 try:
     __IPYTHON__
@@ -45,7 +46,7 @@ class TextProgressBar(ProgressBar):
 
     def __init__(self, iterations, printer):
         self.fill_char = '-'
-        self.width = 40
+        self.width = 20
         self.printer = printer
 
         super(TextProgressBar, self).__init__(iterations)
@@ -56,7 +57,17 @@ class TextProgressBar(ProgressBar):
 
     def progbar(self, i, elapsed):
         bar = self.bar(self.percentage(i))
-        return "[%s] %i of %i complete in %.1f sec" % (bar, i, self.iterations, round(elapsed, 1))
+        sps = i / float(elapsed)
+        eta = (self.iterations / sps) - elapsed
+        its = self.iterations
+
+        prog_str = "[{bar}] {it} of {its} in {s_elapsed} sec. " \
+                   "| SPS: {sps} | ETA: {eta}" \
+                   "".format(bar=bar, it=i, its=its,
+                             s_elapsed=round(elapsed, 1),
+                             sps=round(sps, 1), eta=round(eta, 1))
+
+        return(prog_str)
 
     def bar(self, percent):
         all_full = self.width - 2
@@ -70,7 +81,7 @@ class TextProgressBar(ProgressBar):
 
 
 def replace_at(str, new, start, stop):
-    return str[:start] + new + str[stop:]
+    return(str[:start] + new + str[stop:])
 
 
 def consoleprint(s):

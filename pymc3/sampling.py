@@ -90,7 +90,7 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     ----------
 
     draws : int
-        The number of samples to draw
+        The number of samples to draw.
     step : function or iterable of functions
         A step function or collection of functions. If no step methods are
         specified, or are partially specified, they will be assigned
@@ -98,7 +98,7 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     start : dict
         Starting point in parameter space (or partial point)
         Defaults to trace.point(-1)) if there is a trace provided and
-        model.test_point if not (defaults to empty dict)
+        model.test_point if not (defaults to empty dict).
     trace : backend, list, or MultiTrace
         This should be a backend instance, a list of variables to track,
         or a MultiTrace object with past values. If a MultiTrace object
@@ -116,7 +116,10 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
     progressbar : bool
-        Flag for progress bar
+        Whether or not to display a progress bar in the command line. The 
+        bar shows the percentage of completion, the sampling speed in 
+        samples per second (SPS), and the estimated remaining time until
+        completion ("expected time of arrival"; ETA).
     model : Model (optional if in `with` context)
     random_seed : int or list of ints
         A list is accepted if more if `njobs` is greater than one.
