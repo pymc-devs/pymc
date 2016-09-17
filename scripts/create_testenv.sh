@@ -8,7 +8,7 @@ conda create -n testenv --yes pip python=${PYTHON_VERSION}
 
 source activate testenv
 
-conda install --yes jupyter pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels joblib
+conda install --yes jupyter pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels joblib pyqt
 if [ ${PYTHON_VERSION} == "2.7" ]; then
   conda install --yes mock enum34;
 fi
