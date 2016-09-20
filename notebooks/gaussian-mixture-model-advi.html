@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Inference of Gaussian mixture model with ADVI &mdash; PyMC3 3.0 documentation</title>
+  <title>Inference of Gaussian mixture model with ADVI &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -341,7 +341,7 @@ components.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.collections.PathCollection at 0x1156c92b0&gt;
+<span></span>&lt;matplotlib.collections.PathCollection at 0x7f4c45598588&gt;
 </pre></div>
 </div>
 </div>
@@ -364,7 +364,7 @@ which recieves observations (denoted by &#8216;value&#8217;) and returns the ten
 representation of the log-likelihood.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -396,18 +396,29 @@ representation of the log-likelihood.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+INFO (theano.gof.compilelock): Waiting for existing lock by process &#39;30516&#39; (I am process &#39;30541&#39;)
+INFO (theano.gof.compilelock): To manually release the lock, delete /home/wiecki/.theano/compiledir_Linux-4.4--generic-x86_64-with-debian-stretch-sid-x86_64-3.5.2-64/lock_dir
+INFO (theano.gof.compilelock): Waiting for existing lock by process &#39;30557&#39; (I am process &#39;30541&#39;)
+INFO (theano.gof.compilelock): To manually release the lock, delete /home/wiecki/.theano/compiledir_Linux-4.4--generic-x86_64-with-debian-stretch-sid-x86_64-3.5.2-64/lock_dir
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Applied stickbreaking-transform to pi and added transformed pi_stickbreaking to model.
+Applied stickbreaking-transform to pi and added transformed pi_stickbreaking_ to model.
 </pre></div></div>
 </div>
 <p>For comparison with ADVI, run MCMC.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -423,7 +434,7 @@ Applied stickbreaking-transform to pi and added transformed pi_stickbreaking to 
 </div>
 <div class="container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 1000 of 1000 complete in 2.9 sec
+ [-----------------100%-----------------] 1000 of 1000 complete in 0.6 sec
 </pre></div></div>
 </div>
 <p>Check posterior of component means and weights. We can see that the MCMC
@@ -432,7 +443,7 @@ than the upper-right due to the difference of the sample size of these
 clusters.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -448,7 +459,7 @@ clusters.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[5]:
+<span></span>Out[4]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -465,7 +476,7 @@ clusters.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -476,11 +487,11 @@ clusters.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[6]:
+<span></span>Out[5]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x12c53ee80&gt;
+<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7f4bef32c2b0&gt;
 </pre></div>
 </div>
 </div>
@@ -494,7 +505,7 @@ clusters.</p>
 <p>We can use the same model with ADVI as follows.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -514,7 +525,7 @@ clusters.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Applied stickbreaking-transform to pi and added transformed pi_stickbreaking to model.
+Applied stickbreaking-transform to pi and added transformed pi_stickbreaking_ to model.
 Iteration 0 [0%]: ELBO = -504.62
 Iteration 100 [10%]: Average ELBO = -358.19
 Iteration 200 [20%]: Average ELBO = -331.11
@@ -526,8 +537,8 @@ Iteration 700 [70%]: Average ELBO = -324.26
 Iteration 800 [80%]: Average ELBO = -324.3
 Iteration 900 [90%]: Average ELBO = -324.05
 Finished [100%]: Average ELBO = -324.16
-CPU times: user 6.12 s, sys: 800 ms, total: 6.92 s
-Wall time: 15.9 s
+CPU times: user 2.57 s, sys: 50 ms, total: 2.62 s
+Wall time: 2.69 s
 </pre></div></div>
 </div>
 <p>The function returns three variables. &#8216;means&#8217; and &#8216;sds&#8217; are the mean and
@@ -538,7 +549,7 @@ transformation is applied. Then we can see the variational posterior in
 the original space.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -577,7 +588,7 @@ the original space.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[8]:
+<span></span>Out[7]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -598,7 +609,7 @@ the original space.</p>
 the algorithm.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -608,11 +619,11 @@ the algorithm.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[9]:
+<span></span>Out[8]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x12d420c50&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7f4be6af1a20&gt;]
 </pre></div>
 </div>
 </div>
@@ -627,7 +638,7 @@ the algorithm.</p>
 create 100,000 samples from the same mixture distribution.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -649,7 +660,7 @@ create 100,000 samples from the same mixture distribution.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[10]:
+<span></span>Out[9]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -667,7 +678,7 @@ create 100,000 samples from the same mixture distribution.</p>
 <p>MCMC took 55 seconds, 20 times longer than the small dataset.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -689,14 +700,14 @@ create 100,000 samples from the same mixture distribution.</p>
 <div class="container">
 <div class="highlight"><pre>
 Applied stickbreaking-transform to pi and added transformed pi_stickbreaking to model.
- [-----------------100%-----------------] 1000 of 1000 complete in 94.6 sec
+ [-----------------100%-----------------] 1000 of 1000 complete in 50.0 sec
 </pre></div></div>
 </div>
 <p>Posterior samples are concentrated on the true means, so looks like
 single point for each component.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -712,7 +723,7 @@ single point for each component.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[12]:
+<span></span>Out[11]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -734,9 +745,9 @@ log-likelihood term should be appropriately scaled. To tell the
 log-likelihood term, we need to give ObservedRV objects
 (&#8216;minibatch_RVs&#8217; below) where mini-batch is put. Also we should keep
 the tensor (&#8216;minibatch_tensors&#8217;).</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -754,19 +765,11 @@ the tensor (&#8216;minibatch_tensors&#8217;).</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied stickbreaking-transform to pi and added transformed pi_stickbreaking to model.
-</pre></div></div>
-</div>
 <p>Make a generator for mini-batches of size 200. Here, we take random
 sampling strategy to make mini-batches.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -775,9 +778,9 @@ sampling strategy to make mini-batches.</p>
 
     <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
         <span class="n">ixs</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
-        <span class="k">yield</span> <span class="n">data</span><span class="p">[</span><span class="n">ixs</span><span class="p">]</span>
+        <span class="k">yield</span> <span class="p">[</span><span class="n">data</span><span class="p">[</span><span class="n">ixs</span><span class="p">]]</span>
 
-<span class="n">minibatches</span> <span class="o">=</span> <span class="p">[</span><span class="n">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="p">)]</span>
+<span class="n">minibatches</span> <span class="o">=</span> <span class="n">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 <span class="n">total_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -786,7 +789,7 @@ sampling strategy to make mini-batches.</p>
 and it&#8217;s not a fair comparison.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<span></span>In [14]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -817,15 +820,15 @@ Iteration 600 [60%]: Average ELBO = -323936.5
 Iteration 700 [70%]: Average ELBO = -324239.14
 Iteration 800 [80%]: Average ELBO = -324799.07
 Iteration 900 [90%]: Average ELBO = -323471.43
-Finished [100%]: Average ELBO = -323046.48
-CPU times: user 4.85 s, sys: 330 ms, total: 5.18 s
-Wall time: 10 s
+Finished [100%]: ELBO = -313584.87
+CPU times: user 2.52 s, sys: 60 ms, total: 2.58 s
+Wall time: 2.59 s
 </pre></div></div>
 </div>
 <p>The result is almost the same.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<span></span>In [15]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -845,7 +848,7 @@ Wall time: 10 s
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[16]:
+<span></span>Out[15]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -864,22 +867,21 @@ Wall time: 10 s
 because of the subsampling from the whole samples.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<span></span>In [16]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">elbos</span><span class="p">)</span>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">elbos</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[17]:
+<span></span>Out[16]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x14d32b550&gt;]
-</pre></div>
+<div class="container">
+<img alt="../_images/notebooks_gaussian-mixture-model-advi_32_0.png" src="../_images/notebooks_gaussian-mixture-model-advi_32_0.png" />
 </div>
 </div>
 <div class="nboutput nblast container">
@@ -923,7 +925,7 @@ because of the subsampling from the whole samples.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0',
+            VERSION:'3.0.rc1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Bayesian Estimation Supersedes the T-Test &mdash; PyMC3 3.0 documentation</title>
+  <title>Bayesian Estimation Supersedes the T-Test &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Stochastic Volatility model" href="stochastic_volatility.html"/>
         <link rel="prev" title="Examples" href="../examples.html"/> 
@@ -99,14 +99,17 @@
 <li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a></li>
 <li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -708,7 +711,7 @@ here, suggest that the model has converged.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plots</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span>
                  <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;difference of means&#39;</span><span class="p">,</span> <span class="s1">&#39;difference of stds&#39;</span><span class="p">,</span> <span class="s1">&#39;effect size&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
@@ -819,7 +822,7 @@ Gen. 2013;142(2):573-603. doi:10.1037/a0029146.</li>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0',
+            VERSION:'3.0.rc1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

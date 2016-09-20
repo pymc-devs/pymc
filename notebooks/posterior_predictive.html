@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Posterior Predictive Checks &mdash; PyMC3 3.0 documentation</title>
+  <title>Posterior Predictive Checks &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Bayesian Survival Analysis" href="survival_analysis.html"/>
         <link rel="prev" title="A Hierarchical model for Rugby prediction" href="rugby_analytics.html"/> 
@@ -92,10 +92,12 @@
 <li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Posterior Predictive Checks</a><ul>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Posterior Predictive Checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#Prediction">Prediction</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#Mean-predicted-values-plus-error-bars-to-give-sense-of-uncertainty-in-prediction">Mean predicted values plus error bars to give sense of uncertainty in prediction</a></li>
 </ul>
@@ -106,6 +108,7 @@
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -325,6 +328,13 @@ div.nboutput  > :nth-child(2).stderr {
 <p>PPCs are a great way to validate a model. The idea is to generate data
 sets from the model using parameter settings from draws from the
 posterior.</p>
+<p>Elaborating slightly one can say that - Posterior predictive checks
+(PPCs) analyze the degree to which data generated from the model deviate
+from data generated from the true distribution. So often you&#8217;ll want to
+know if for example your posterior distribution is approximating your
+underlying distribution. The visualization aspect of this model
+evaluation method is also great for a &#8216;sense check&#8217; or explaining your
+model to others and getting criticism.</p>
 <p><code class="docutils literal"><span class="pre">PyMC3</span></code> has random number support thanks to <a class="reference external" href="https://github.com/mwibrow">Mark
 Wibrow</a> as implemented in
 <a class="reference external" href="https://github.com/pymc-devs/pymc3/pull/784">PR784</a>.</p>
@@ -468,6 +478,27 @@ inferred means to the actual sample mean:</p>
 <img alt="../_images/notebooks_posterior_predictive_11_0.png" src="../_images/notebooks_posterior_predictive_11_0.png" />
 </div>
 </div>
+</div>
+<div class="section" id="Comparison-between-PPC-and-other-model-evaluation-methods.">
+<h1>Comparison between PPC and other model evaluation methods.<a class="headerlink" href="#Comparison-between-PPC-and-other-model-evaluation-methods." title="Permalink to this headline">¶</a></h1>
+<p>An excellent introduction to this is given on
+<a class="reference external" href="http://edwardlib.org/tut_PPC">Edward</a> and since I can&#8217;t write this
+acny better I&#8217;ll just quote this. &#8220;PPCs are an excellent tool for
+revising models, simplifying or expanding the current model as one
+examines how well it fits the data. They are inspired by prior checks
+and classical hypothesis testing, under the philosophy that models
+should be criticized under the frequentist perspective of large sample
+assessment.</p>
+<p>PPCs can also be applied to tasks such as hypothesis testing, model
+comparison, model selection, and model averaging. It’s important to note
+that while they can be applied as a form of Bayesian hypothesis testing,
+hypothesis testing is generally not recommended: binary decision making
+from a single test is not as common a use case as one might believe. We
+recommend performing many PPCs to get a holistic understanding of the
+model fit.&#8221;</p>
+<p>An important lesson to learn as someone using Probabilistic Programming
+is to not overfit your understanding or your criticism of models to only
+one metric. Model evaluation is a skill that can be honed with practice.</p>
 <div class="section" id="Prediction">
 <h2>Prediction<a class="headerlink" href="#Prediction" title="Permalink to this headline">¶</a></h2>
 <p>The same pattern can be used for prediction. Here we&#8217;re building a
@@ -618,7 +649,7 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_posterior_predictive_21_1.png" src="../_images/notebooks_posterior_predictive_21_1.png" />
+<img alt="../_images/notebooks_posterior_predictive_22_1.png" src="../_images/notebooks_posterior_predictive_22_1.png" />
 </div>
 </div>
 <div class="nbinput nblast container">
@@ -676,7 +707,7 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0',
+            VERSION:'3.0.rc1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

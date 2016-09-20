@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Dirichlet process mixtures for density estimation &mdash; PyMC3 3.0 documentation</title>
+  <title>Dirichlet process mixtures for density estimation &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Variational Inference: Bayesian Neural Networks" href="bayesian_neural_network_advi.html"/>
         <link rel="prev" title="Gaussian Process (GP) smoothing" href="GP-smoothing.html"/> 
@@ -92,10 +92,12 @@
 <li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a></li>
 <li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Dirichlet process mixtures for density estimation</a><ul>
@@ -104,6 +106,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -417,7 +420,7 @@ the base distribution is <span class="math">\(N(0, 1)\)</span>.</p>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 </pre></div>
 </div>
@@ -427,17 +430,17 @@ the base distribution is <span class="math">\(N(0, 1)\)</span>.</p>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
@@ -448,20 +451,12 @@ the base distribution is <span class="math">\(N(0, 1)\)</span>.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Couldn&#39;t import dot_parser, loading of dot files will not be possible.
-</pre></div></div>
-</div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">blue</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
 </pre></div>
 </div>
@@ -471,7 +466,7 @@ Couldn&#39;t import dot_parser, loading of dot files will not be possible.
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">462233</span><span class="p">)</span> <span class="c1"># from random.org</span>
 </pre></div>
 </div>
@@ -481,7 +476,7 @@ Couldn&#39;t import dot_parser, loading of dot files will not be possible.
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">N</span> <span class="o">=</span> <span class="mi">20</span>
 <span class="n">K</span> <span class="o">=</span> <span class="mi">30</span>
 
@@ -496,7 +491,7 @@ Couldn&#39;t import dot_parser, loading of dot files will not be possible.
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">beta</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">beta</span><span class="o">.</span><span class="n">rvs</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">K</span><span class="p">))</span>
 <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span>
 <span class="n">w</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">beta</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
@@ -515,7 +510,7 @@ Couldn&#39;t import dot_parser, loading of dot files will not be possible.
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_plot</span><span class="p">,</span> <span class="n">sample_cdfs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.75</span><span class="p">,</span>
@@ -542,7 +537,7 @@ Dirichlet process converge to the base distribution.</p>
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">l_ax</span><span class="p">,</span> <span class="n">r_ax</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">K</span> <span class="o">=</span> <span class="mi">50</span>
@@ -622,7 +617,7 @@ mixture with <span class="math">\(\alpha = 2\)</span>, <span class="math">\(\the
 <span></span>In [10]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">N</span> <span class="o">=</span> <span class="mi">5</span>
 <span class="n">K</span> <span class="o">=</span> <span class="mi">30</span>
 
@@ -637,7 +632,7 @@ mixture with <span class="math">\(\alpha = 2\)</span>, <span class="math">\(\the
 <span></span>In [11]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">beta</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">beta</span><span class="o">.</span><span class="n">rvs</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">K</span><span class="p">))</span>
 <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span>
 <span class="n">w</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">beta</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
@@ -655,7 +650,7 @@ mixture with <span class="math">\(\alpha = 2\)</span>, <span class="math">\(\the
 <span></span>In [12]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_plot</span><span class="p">,</span> <span class="n">dpm_pdfs</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">);</span>
@@ -678,7 +673,7 @@ mixture with <span class="math">\(\alpha = 2\)</span>, <span class="math">\(\the
 <span></span>In [13]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">ix</span> <span class="o">=</span> <span class="mi">1</span>
@@ -717,7 +712,7 @@ Park</a>.</p>
 <span></span>In [14]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">old_faithful_df</span> <span class="o">=</span> <span class="n">get_rdataset</span><span class="p">(</span><span class="s1">&#39;faithful&#39;</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="p">[[</span><span class="s1">&#39;waiting&#39;</span><span class="p">]]</span>
 </pre></div>
 </div>
@@ -729,7 +724,7 @@ between eruptions.</p>
 <span></span>In [15]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">old_faithful_df</span><span class="p">[</span><span class="s1">&#39;std_waiting&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">old_faithful_df</span><span class="o">.</span><span class="n">waiting</span> <span class="o">-</span> <span class="n">old_faithful_df</span><span class="o">.</span><span class="n">waiting</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="n">old_faithful_df</span><span class="o">.</span><span class="n">waiting</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -739,7 +734,7 @@ between eruptions.</p>
 <span></span>In [16]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">old_faithful_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -794,7 +789,7 @@ between eruptions.</p>
 <span></span>In [17]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">n_bins</span> <span class="o">=</span> <span class="mi">20</span>
@@ -871,7 +866,7 @@ mixture.</p>
 <span></span>In [18]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">N</span> <span class="o">=</span> <span class="n">old_faithful_df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
 <span class="n">K</span> <span class="o">=</span> <span class="mi">30</span>
@@ -883,7 +878,7 @@ mixture.</p>
 <span></span>In [19]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
     <span class="n">beta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Beta</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
@@ -903,23 +898,23 @@ mixture.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Applied log-transform to alpha and added transformed alpha_log to model.
-Applied logodds-transform to beta and added transformed beta_logodds to model.
-Applied log-transform to tau and added transformed tau_log to model.
-Applied interval-transform to lambda and added transformed lambda_interval to model.
+Applied log-transform to alpha and added transformed alpha_log_ to model.
+Applied logodds-transform to beta and added transformed beta_logodds_ to model.
+Applied log-transform to tau and added transformed tau_log_ to model.
+Applied interval-transform to lambda and added transformed lambda_interval_ to model.
 </pre></div></div>
 </div>
 <p>We sample from the posterior distribution 20,000 times, burn the first
 10,000 samples, and thin to every tenth sample.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [20]:
+<span></span>In [22]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">step1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">lambda_</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">obs</span><span class="p">])</span>
-    <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">ElemwiseCategoricalStep</span><span class="p">([</span><span class="n">component</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">K</span><span class="p">))</span>
+    <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">ElemwiseCategorical</span><span class="p">([</span><span class="n">component</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">K</span><span class="p">))</span>
 
     <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="p">[</span><span class="n">step1</span><span class="p">,</span> <span class="n">step2</span><span class="p">])</span>
 
@@ -932,17 +927,17 @@ Applied interval-transform to lambda and added transformed lambda_interval to mo
 </div>
 <div class="container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 20000 of 20000 complete in 133.1 sec
+ [-----------------100%-----------------] 20000 of 20000 complete in 247.1 sec
 </pre></div></div>
 </div>
 <p>The posterior distribution of <span class="math">\(\alpha\)</span> is concentrated between 0.2
 and 1.2.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [21]:
+<span></span>In [23]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
@@ -958,20 +953,20 @@ and 1.2.</p>
 the distribution of the number of mixture components used.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [22]:
+<span></span>In [24]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">n_components_used</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">apply_along_axis</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;component&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [23]:
+<span></span>In [25]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_components_used</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">n_components_used</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
@@ -1000,10 +995,10 @@ we can be quite sure that truncation did not bias our results.</p>
 <p>We now compute and plot our posterior density estimate.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [24]:
+<span></span>In [26]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">post_pdf_contribs</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_3d</span><span class="p">(</span><span class="n">x_plot</span><span class="p">),</span>
                                       <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
                                       <span class="mf">1.</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;lambda&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;tau&#39;</span><span class="p">])[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:])</span>
@@ -1015,10 +1010,10 @@ we can be quite sure that truncation did not bias our results.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [25]:
+<span></span>In [27]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">n_bins</span> <span class="o">=</span> <span class="mi">20</span>
@@ -1053,10 +1048,10 @@ we can be quite sure that truncation did not bias our results.</p>
 mixture components.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [26]:
+<span></span>In [28]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">n_bins</span> <span class="o">=</span> <span class="mi">20</span>
@@ -1093,27 +1088,27 @@ flexibility below by using Poisson component distributions to estimate
 the density of sunspots per year.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [27]:
+<span></span>In [29]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">sunspot_df</span> <span class="o">=</span> <span class="n">get_rdataset</span><span class="p">(</span><span class="s1">&#39;sunspot.year&#39;</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span><span class="o">.</span><span class="n">data</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [28]:
+<span></span>In [30]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">sunspot_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[28]:
+<span></span>Out[30]:
 </pre></div>
 </div>
 <div class="container">
@@ -1130,27 +1125,27 @@ the density of sunspots per year.</p>
     <tr>
       <th>0</th>
       <td>1700</td>
-      <td>5</td>
+      <td>5.0</td>
     </tr>
     <tr>
       <th>1</th>
       <td>1701</td>
-      <td>11</td>
+      <td>11.0</td>
     </tr>
     <tr>
       <th>2</th>
       <td>1702</td>
-      <td>16</td>
+      <td>16.0</td>
     </tr>
     <tr>
       <th>3</th>
       <td>1703</td>
-      <td>23</td>
+      <td>23.0</td>
     </tr>
     <tr>
       <th>4</th>
       <td>1704</td>
-      <td>36</td>
+      <td>36.0</td>
     </tr>
   </tbody>
 </table>
@@ -1169,10 +1164,10 @@ the density of sunspots per year.</p>
         &amp; \sim \textrm{Gamma}(1, 1).
 \end{align*}\]</div><div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [29]:
+<span></span>In [31]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">N</span> <span class="o">=</span> <span class="n">sunspot_df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
 <span class="n">K</span> <span class="o">=</span> <span class="mi">30</span>
@@ -1181,10 +1176,10 @@ the density of sunspots per year.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [30]:
+<span></span>In [32]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">alpha</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
     <span class="n">beta</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Beta</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">K</span><span class="p">)</span>
@@ -1201,20 +1196,20 @@ the density of sunspots per year.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Applied log-transform to alpha and added transformed alpha_log to model.
-Applied logodds-transform to beta and added transformed beta_logodds to model.
-Applied interval-transform to mu and added transformed mu_interval to model.
+Applied log-transform to alpha and added transformed alpha_log_ to model.
+Applied logodds-transform to beta and added transformed beta_logodds_ to model.
+Applied interval-transform to mu and added transformed mu_interval_ to model.
 </pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [31]:
+<span></span>In [34]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">step1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">obs</span><span class="p">])</span>
-    <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">ElemwiseCategoricalStep</span><span class="p">([</span><span class="n">component</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">K</span><span class="p">))</span>
+    <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">ElemwiseCategorical</span><span class="p">([</span><span class="n">component</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">K</span><span class="p">))</span>
 
     <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">20000</span><span class="p">,</span> <span class="p">[</span><span class="n">step1</span><span class="p">,</span> <span class="n">step2</span><span class="p">])</span>
 </pre></div>
@@ -1225,15 +1220,15 @@ Applied interval-transform to mu and added transformed mu_interval to model.
 </div>
 <div class="container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 20000 of 20000 complete in 116.3 sec
+ [-----------------100%-----------------] 20000 of 20000 complete in 218.1 sec
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [32]:
+<span></span>In [35]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">trace</span> <span class="o">=</span> <span class="n">trace_</span><span class="p">[</span><span class="mi">10000</span><span class="p">::</span><span class="mi">10</span><span class="p">]</span>
 </pre></div>
 </div>
@@ -1244,10 +1239,10 @@ more components to contribute non-negligible amounts to the mixture than
 for the Old Faithful waiting time model.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [33]:
+<span></span>In [36]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
@@ -1263,20 +1258,20 @@ for the Old Faithful waiting time model.</p>
 components used by this model.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [34]:
+<span></span>In [37]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">n_components_used</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">apply_along_axis</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;component&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [35]:
+<span></span>In [38]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_components_used</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">n_components_used</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
@@ -1301,20 +1296,20 @@ components used by this model.</p>
 <p>We now calculate and plot the fitted density estimate.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [36]:
+<span></span>In [39]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">x_plot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">250</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [37]:
+<span></span>In [40]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">post_pmf_contribs</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">poisson</span><span class="o">.</span><span class="n">pmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_3d</span><span class="p">(</span><span class="n">x_plot</span><span class="p">),</span>
                                          <span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:])</span>
 <span class="n">post_pmfs</span> <span class="o">=</span> <span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">post_pmf_contribs</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
@@ -1325,10 +1320,10 @@ components used by this model.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [38]:
+<span></span>In [41]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">sunspot_df</span><span class="p">[</span><span class="s1">&#39;sunspot.year&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">normed</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.75</span><span class="p">);</span>
@@ -1358,10 +1353,10 @@ components used by this model.</p>
 mixture densities.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [39]:
+<span></span>In [42]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 
 <span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">sunspot_df</span><span class="p">[</span><span class="s1">&#39;sunspot.year&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">normed</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.75</span><span class="p">);</span>
@@ -1431,7 +1426,7 @@ mixture densities.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0',
+            VERSION:'3.0.rc1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

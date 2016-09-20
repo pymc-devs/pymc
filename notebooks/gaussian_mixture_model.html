@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Mixture Model in PyMC3 &mdash; PyMC3 3.0 documentation</title>
+  <title>Mixture Model in PyMC3 &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -294,7 +294,7 @@ div.nboutput  > :nth-child(2).stderr {
 </style>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [1]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -311,15 +311,15 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Mon Aug 17 14:54:44 CEST 2015
+Thu Jul 14 09:50:30 CEST 2016
 </pre></div></div>
 </div>
 <div class="section" id="Mixture-Model-in-PyMC3">
 <h1>Mixture Model in PyMC3<a class="headerlink" href="#Mixture-Model-in-PyMC3" title="Permalink to this headline">¶</a></h1>
 <p>Original NB by Abe Flaxman, modified by Thomas Wiecki</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -327,20 +327,9 @@ Mon Aug 17 14:54:44 CEST 2015
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-/home/wiecki/miniconda3/lib/python3.4/site-packages/IPython/html.py:14: ShimWarning: The `IPython.html` package has been deprecated. You should import from `notebook` instead. `IPython.html.widgets` has moved to `ipywidgets`.
-  &#34;`IPython.html.widgets` has moved to `ipywidgets`.&#34;, ShimWarning)
-/home/wiecki/miniconda3/lib/python3.4/site-packages/IPython/utils/traitlets.py:5: UserWarning: IPython.utils.traitlets has moved to a top-level traitlets package.
-  warn(&#34;IPython.utils.traitlets has moved to a top-level traitlets package.&#34;)
-</pre></div></div>
-</div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -367,9 +356,9 @@ Mon Aug 17 14:54:44 CEST 2015
 <img alt="../_images/notebooks_gaussian_mixture_model_3_0.png" src="../_images/notebooks_gaussian_mixture_model_3_0.png" />
 </div>
 </div>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -406,16 +395,25 @@ Mon Aug 17 14:54:44 CEST 2015
 </pre></div>
 </div>
 </div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied stickbreaking-transform to p and added transformed p_stickbreaking_ to model.
+Applied interval-transform to sd and added transformed sd_interval_ to model.
+</pre></div></div>
+</div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># fit model</span>
 <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">step1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">p</span><span class="p">,</span> <span class="n">sd</span><span class="p">,</span> <span class="n">means</span><span class="p">])</span>
-    <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">ElemwiseCategoricalStep</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">category</span><span class="p">],</span> <span class="n">values</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+    <span class="n">step2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">ElemwiseCategorical</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">category</span><span class="p">],</span> <span class="n">values</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
     <span class="n">tr</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="p">[</span><span class="n">step1</span><span class="p">,</span> <span class="n">step2</span><span class="p">])</span>
 </pre></div>
 </div>
@@ -425,14 +423,14 @@ Mon Aug 17 14:54:44 CEST 2015
 </div>
 <div class="container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 10000 of 10000 complete in 93.9 sec
+ [-----------------100%-----------------] 10000 of 10000 complete in 177.1 sec
 </pre></div></div>
 </div>
 <div class="section" id="Full-trace">
 <h2>Full trace<a class="headerlink" href="#Full-trace" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -452,7 +450,7 @@ Mon Aug 17 14:54:44 CEST 2015
 <h2>After convergence<a class="headerlink" href="#After-convergence" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -471,7 +469,7 @@ Mon Aug 17 14:54:44 CEST 2015
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -482,12 +480,11 @@ Mon Aug 17 14:54:44 CEST 2015
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[12]:
+<span></span>Out[10]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>(&lt;matplotlib.figure.Figure at 0x7fa3cc21ae80&gt;,
- array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x7fa3cc27a908&gt;]], dtype=object))
+<span></span>array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x7f7dde9723c8&gt;]], dtype=object)
 </pre></div>
 </div>
 </div>
@@ -503,7 +500,7 @@ Mon Aug 17 14:54:44 CEST 2015
 <h2>Sampling of cluster for individual data point<a class="headerlink" href="#Sampling-of-cluster-for-individual-data-point" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -515,7 +512,7 @@ Mon Aug 17 14:54:44 CEST 2015
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[13]:
+<span></span>Out[11]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -532,7 +529,7 @@ Mon Aug 17 14:54:44 CEST 2015
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -597,7 +594,7 @@ true cluster: 2
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0',
+            VERSION:'3.0.rc1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>API Reference &mdash; PyMC3 3.0 documentation</title>
+  <title>API Reference &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="PyMC3 3.0 documentation" href="index.html"/>
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="index.html"/>
         <link rel="prev" title="How to debug a model" href="notebooks/howto_debugging.html"/> 
 
   
@@ -1168,8 +1168,8 @@ Vol. 4, No. 1, pp 35-45.</td></tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.ConstantDist" title="pymc3.distributions.discrete.ConstantDist"><code class="xref py py-obj docutils literal"><span class="pre">ConstantDist</span></code></a>(c,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Constant log-likelihood.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">ZeroInflatedPoisson</span></code>(theta,&nbsp;z,&nbsp;*args,&nbsp;**kwargs)</td>
-<td></td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.discrete.ZeroInflatedPoisson" title="pymc3.distributions.discrete.ZeroInflatedPoisson"><code class="xref py py-obj docutils literal"><span class="pre">ZeroInflatedPoisson</span></code></a>(theta,&nbsp;psi,&nbsp;*args,&nbsp;**kwargs)</td>
+<td>Zero-inflated Poisson log-likelihood.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.discrete.DiscreteUniform" title="pymc3.distributions.discrete.DiscreteUniform"><code class="xref py py-obj docutils literal"><span class="pre">DiscreteUniform</span></code></a>(lower,&nbsp;upper,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Discrete uniform distribution.</td>
@@ -1410,6 +1410,104 @@ whose rate parameter is gamma distributed.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>value</strong> : float or int</p>
 <blockquote class="last">
 <div><p>Constant parameter.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.ZeroInflatedPoisson">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">ZeroInflatedPoisson</code><span class="sig-paren">(</span><em>theta</em>, <em>psi</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.ZeroInflatedPoisson" title="Permalink to this definition">¶</a></dt>
+<dd><p>Zero-inflated Poisson log-likelihood.</p>
+<p>Often used to model the number of events occurring in a fixed period
+of time when the times at which events occur are independent.</p>
+<div class="math">
+\[\begin{split}f(x \mid \theta, \psi) = \left\{ \begin{array}{l}
+    (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
+    \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
+    \end{array} \right.\end{split}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="15%" />
+<col width="85%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{N}_0\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\psi\theta\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\theta + \frac{1-\psi}{\psi}\theta^2\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>theta</strong> : float</p>
+<blockquote>
+<div><p>Expected number of occurrences during the given interval
+(theta &gt;= 0).</p>
+</div></blockquote>
+<p><strong>psi</strong> : float</p>
+<blockquote class="last">
+<div><p>Expected proportion of Poisson variates (0 &lt; psi &lt; 1)</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.discrete.ZeroInflatedNegativeBinomial">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.discrete.</code><code class="descname">ZeroInflatedNegativeBinomial</code><span class="sig-paren">(</span><em>mu</em>, <em>alpha</em>, <em>psi</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.discrete.ZeroInflatedNegativeBinomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Zero-Inflated Negative binomial log-likelihood.</p>
+<p>The Zero-inflated version of the Negative Binomial (NB).
+The NB distribution describes a Poisson random variable
+whose rate parameter is gamma distributed.</p>
+<div class="math">
+\[\begin{split}f(x \mid \mu, \alpha, \psi) = \left\{ \begin{array}{l}
+     (1-\psi) + \psi \left (\frac{\alpha}{\alpha+\mu} \right) ^\alpha, \text{if } x = 0 \\
+     \psi \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} \left (\frac{\alpha}{\mu+\alpha} \right)^\alpha \left( \frac{\mu}{\mu+\alpha} \right)^x, \text{if } x=1,2,3,\ldots
+     \end{array} \right.\end{split}\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="9%" />
+<col width="91%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{N}_0\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\psi\mu\)</span></td>
+</tr>
+<tr class="row-odd"><td>Var</td>
+<td><span class="math">\(\psi\mu +  \left (1 + \frac{\mu}{\alpha} + \frac{1-\psi}{\mu} \right)\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>mu</strong> : float</p>
+<blockquote>
+<div><p>Poission distribution parameter (mu &gt; 0).</p>
+</div></blockquote>
+<p><strong>alpha</strong> : float</p>
+<blockquote>
+<div><p>Gamma distribution parameter (alpha &gt; 0).</p>
+</div></blockquote>
+<p><strong>psi</strong> : float</p>
+<blockquote class="last">
+<div><p>Expected proportion of NegativeBinomial variates (0 &lt; psi &lt; 1)</p>
 </div></blockquote>
 </td>
 </tr>
@@ -1802,7 +1900,7 @@ is identical to the chi-square distribution with n degrees of freedom.</p>
 
 <dl class="function">
 <dt id="pymc3.distributions.multivariate.WishartBartlett">
-<code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">WishartBartlett</code><span class="sig-paren">(</span><em>name</em>, <em>S</em>, <em>nu</em>, <em>is_cholesky=False</em>, <em>return_cholesky=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.WishartBartlett" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">WishartBartlett</code><span class="sig-paren">(</span><em>name</em>, <em>S</em>, <em>nu</em>, <em>is_cholesky=False</em>, <em>return_cholesky=False</em>, <em>testval=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.WishartBartlett" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bartlett decomposition of the Wishart distribution. As the Wishart
 distribution requires the matrix to be symmetric positive semi-definite
 it is impossible for MCMC to ever propose acceptable matrices.</p>
@@ -1836,6 +1934,9 @@ of the covariance matrix.</p>
 </dd>
 <dt>return_cholesky</dt>
  <span class="classifier-delimiter">:</span> <span class="classifier">bool (default=False)</span><dd><p class="first last">Only return the Cholesky decomposed matrix.</p>
+</dd>
+<dt>testval</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">ndarray</span><dd><p class="first last">p x p positive definite matrix used to initialize</p>
 </dd>
 </dl>
 </td>
@@ -1944,7 +2045,7 @@ e.g. mean of posteriors, true values of a simulation</p>
 </div></blockquote>
 <p><strong>plot_transformed</strong> : bool</p>
 <blockquote>
-<div><p>Flag for plotting automatically transformed variables in addition to 
+<div><p>Flag for plotting automatically transformed variables in addition to
 original variables (defaults to False).</p>
 </div></blockquote>
 <p><strong>grid</strong> : bool</p>
@@ -1957,7 +2058,7 @@ original variables (defaults to False).</p>
 </div></blockquote>
 <p><strong>priors</strong> : iterable of PyMC distributions</p>
 <blockquote>
-<div><p>PyMC prior distribution(s) to be plotted alongside poterior. Defaults 
+<div><p>PyMC prior distribution(s) to be plotted alongside poterior. Defaults
 to None (no prior plots).</p>
 </div></blockquote>
 <p><strong>prior_alpha</strong> : float</p>
@@ -2072,7 +2173,7 @@ Defaults to 0.</p>
 </div></blockquote>
 <p><strong>plot_transformed</strong> : bool</p>
 <blockquote>
-<div><p>Flag for plotting automatically transformed variables in addition to 
+<div><p>Flag for plotting automatically transformed variables in addition to
 original variables (defaults to False).</p>
 </div></blockquote>
 <p><strong>symmetric_plot</strong> : boolean</p>
@@ -2144,7 +2245,7 @@ Note this is not used if ax is supplied.</p>
 </div></blockquote>
 <p><strong>plot_transformed</strong> : bool</p>
 <blockquote>
-<div><p>Flag for plotting automatically transformed variables in addition to 
+<div><p>Flag for plotting automatically transformed variables in addition to
 original variables (defaults to False).</p>
 </div></blockquote>
 <p><strong>ax</strong> : axes</p>
@@ -2153,7 +2254,7 @@ original variables (defaults to False).</p>
 </div></blockquote>
 <p><strong>**kwargs</strong></p>
 <blockquote>
-<div><p>Passed as-is to plt.hist() or plt.plot() function, depending on the 
+<div><p>Passed as-is to plt.hist() or plt.plot() function, depending on the
 value of the argument kde_plot
 Some defaults are added, if not specified
 color=&#8217;#87ceeb&#8217; will match the style in the book</p>
@@ -2191,30 +2292,73 @@ on the off-diagonal.</p>
 <dt id="pymc3.stats.dic">
 <code class="descclassname">pymc3.stats.</code><code class="descname">dic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.dic" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate the deviance information criterion of the samples in trace from model
-Read more theory here - in a paper by some of the leading authorities on Model Selection - <a class="reference external" href="http://bit.ly/1W2YJ7c">http://bit.ly/1W2YJ7c</a></p>
+Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353</p>
 </dd></dl>
 
 <dl class="function">
 <dt id="pymc3.stats.bpic">
 <code class="descclassname">pymc3.stats.</code><code class="descname">bpic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.bpic" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculates Bayesian predictive information criterion n of the samples in trace from model
-Read more theory here - in a paper by some of the leading authorities on Model Selection - <a class="reference external" href="http://bit.ly/1W2YJ7c">http://bit.ly/1W2YJ7c</a></p>
+Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353</p>
 </dd></dl>
 
 <dl class="function">
 <dt id="pymc3.stats.waic">
 <code class="descclassname">pymc3.stats.</code><code class="descname">waic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em>, <em>n_eff=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.waic" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate the widely available information criterion and the effective number of parameters of the samples in trace from model.
-Read more theory here - in a paper by some of the leading authorities on Model Selection - <a class="reference external" href="http://bit.ly/1W2YJ7c">http://bit.ly/1W2YJ7c</a></p>
+Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>trace</strong> : result of MCMC run</p>
+<p><strong>model</strong> : PyMC Model</p>
+<blockquote>
+<div><p>Optional model. Default None, taken from context.</p>
+</div></blockquote>
+<p><strong>n_eff: bool</strong></p>
+<blockquote>
+<div><p>if True the effective number parameters will be returned. 
+Default False</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">waic: widely available information criterion</p>
+<p class="last">p_waic: effective number parameters, only if n_eff True</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt id="pymc3.stats.loo">
-<code class="descclassname">pymc3.stats.</code><code class="descname">loo</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.loo" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.stats.</code><code class="descname">loo</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em>, <em>n_eff=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.loo" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculates leave-one-out (LOO) cross-validation for out of sample predictive
 model fit, following Vehtari et al. (2015). Cross-validation is computed using
 Pareto-smoothed importance sampling (PSIS).</p>
-<p>Returns log pointwise predictive density calculated via approximated LOO cross-validation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>trace</strong> : result of MCMC run</p>
+<p><strong>model</strong> : PyMC Model</p>
+<blockquote>
+<div><p>Optional model. Default None, taken from context.</p>
+</div></blockquote>
+<p><strong>n_eff: bool</strong></p>
+<blockquote>
+<div><p>if True the effective number parameters will be computed and returned. 
+Default False</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">elpd_loo: log pointwise predictive density calculated via approximated LOO cross-validation</p>
+<p class="last">p_loo: effective number parameters, only if n_eff True</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
@@ -2443,7 +2587,7 @@ returns the amount of time taken.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>draws</strong> : int</p>
 <blockquote>
-<div><p>The number of samples to draw</p>
+<div><p>The number of samples to draw.</p>
 </div></blockquote>
 <p><strong>step</strong> : function or iterable of functions</p>
 <blockquote>
@@ -2455,7 +2599,7 @@ automatically (defaults to None).</p>
 <blockquote>
 <div><p>Starting point in parameter space (or partial point)
 Defaults to trace.point(-1)) if there is a trace provided and
-model.test_point if not (defaults to empty dict)</p>
+model.test_point if not (defaults to empty dict).</p>
 </div></blockquote>
 <p><strong>trace</strong> : backend, list, or MultiTrace</p>
 <blockquote>
@@ -2483,7 +2627,10 @@ in the system - 2.</p>
 </div></blockquote>
 <p><strong>progressbar</strong> : bool</p>
 <blockquote>
-<div><p>Flag for progress bar</p>
+<div><p>Whether or not to display a progress bar in the command line. The 
+bar shows the percentage of completion, the sampling speed in 
+samples per second (SPS), and the estimated remaining time until
+completion (&#8220;expected time of arrival&#8221;; ETA).</p>
 </div></blockquote>
 <p><strong>model</strong> : Model (optional if in <cite>with</cite> context)</p>
 <p><strong>random_seed</strong> : int or list of ints</p>
@@ -2976,12 +3123,33 @@ model likelihood</p>
 <h3>Variational<a class="headerlink" href="#variational" title="Permalink to this headline">¶</a></h3>
 <div class="section" id="advi">
 <h4>ADVI<a class="headerlink" href="#advi" title="Permalink to this headline">¶</a></h4>
-<span class="target" id="module-pymc3.variational.advi"></span><p>Created on Mar 12, 2011</p>
-<p>&#64;author: johnsalvatier</p>
+<span class="target" id="module-pymc3.variational.advi"></span><ol class="loweralpha simple" start="3">
+<li>2016, John Salvatier &amp; Taku Yoshioka</li>
+</ol>
 <dl class="function">
 <dt id="pymc3.variational.advi.advi">
-<code class="descclassname">pymc3.variational.advi.</code><code class="descname">advi</code><span class="sig-paren">(</span><em>vars=None</em>, <em>start=None</em>, <em>model=None</em>, <em>n=5000</em>, <em>accurate_elbo=False</em>, <em>learning_rate=0.001</em>, <em>epsilon=0.1</em>, <em>random_seed=20090425</em>, <em>verbose=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi.advi" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run ADVI.</p>
+<code class="descclassname">pymc3.variational.advi.</code><code class="descname">advi</code><span class="sig-paren">(</span><em>vars=None</em>, <em>start=None</em>, <em>model=None</em>, <em>n=5000</em>, <em>accurate_elbo=False</em>, <em>optimizer=None</em>, <em>learning_rate=0.001</em>, <em>epsilon=0.1</em>, <em>random_seed=20090425</em>, <em>verbose=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi.advi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform automatic differentiation variational inference (ADVI).</p>
+<p>This function implements the meanfield ADVI, where the variational 
+posterior distribution is assumed to be spherical Gaussian without 
+correlation of parameters and fit to the true posterior distribution. 
+The means and standard deviations of the variational posterior are referred 
+to as variational parameters.</p>
+<p>The return value of this function is an <code class="code docutils literal"><span class="pre">ADVIfit</span></code> object, which has 
+variational parameters. If you want to draw samples from the variational 
+posterior, you need to pass the <code class="code docutils literal"><span class="pre">ADVIfit</span></code> object to 
+<code class="code docutils literal"><span class="pre">pymc3.variational.sample_vp()</span></code>.</p>
+<p>The variational parameters are defined on the transformed space, which is 
+required to do ADVI on an unconstrained parameter space as described in 
+[KTR+2016]. The parameters in the <code class="code docutils literal"><span class="pre">ADVIfit</span></code> object are in the 
+transformed space, while traces returned by <code class="code docutils literal"><span class="pre">sample_vp()</span></code> are in 
+the original space as obtained by MCMC sampling methods in PyMC3.</p>
+<p>The variational parameters are optimized with given optimizer, which is a 
+function that returns a dictionary of parameter updates as provided to 
+Theano function. If no optimizer is provided, optimization is performed 
+with a modified version of adagrad, where only the last (n_window) gradient 
+vectors are used to control the learning rate and older gradient vectors 
+are ignored. n_window denotes the size of time window and fixed to 10.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -3006,13 +3174,21 @@ model likelihood</p>
 <blockquote>
 <div><p>If true, 100 MC samples are used for accurate calculation of ELBO.</p>
 </div></blockquote>
+<p><strong>optimizer</strong> : (loss, tensor) -&gt; dict or OrderedDict</p>
+<blockquote>
+<div><p>A function that returns parameter updates given loss and parameter 
+tensor. If <code class="code docutils literal"><span class="pre">None</span></code> (default), a default Adagrad optimizer is 
+used with parameters <code class="code docutils literal"><span class="pre">learning_rate</span></code> and <code class="code docutils literal"><span class="pre">epsilon</span></code> below.</p>
+</div></blockquote>
 <p><strong>learning_rate: float</strong></p>
 <blockquote>
-<div><p>Adagrad base learning rate.</p>
+<div><p>Base learning rate for adagrad. This parameter is ignored when
+optimizer is given.</p>
 </div></blockquote>
 <p><strong>epsilon</strong> : float</p>
 <blockquote>
-<div><p>Offset in denominator of the scale of learning rate in Adagrad.</p>
+<div><p>Offset in denominator of the scale of learning rate in Adagrad.
+This parameter is ignored when optimizer is given.</p>
 </div></blockquote>
 <p><strong>random_seed</strong> : int</p>
 <blockquote>
@@ -3024,7 +3200,57 @@ model likelihood</p>
 <blockquote>
 <div><p>Named tuple, which includes &#8216;means&#8217;, &#8216;stds&#8217;, and &#8216;elbo_vals&#8217;.</p>
 </div></blockquote>
-<p class="last">&#8216;means&#8217; and &#8216;stds&#8217; include parameters of the variational posterior.</p>
+<p>&#8216;means&#8217; is the mean. &#8216;stds&#8217; is the standard deviation.</p>
+<p class="last">&#8216;elbo_vals&#8217; is the trace of ELBO values during optimizaiton.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="ktr-2016" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[KTR+2016]</td><td>Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A., 
+and Blei, D. M. (2016). Automatic Differentiation Variational Inference. 
+arXiv preprint arXiv:1603.00788.</td></tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.variational.advi.sample_vp">
+<code class="descclassname">pymc3.variational.advi.</code><code class="descname">sample_vp</code><span class="sig-paren">(</span><em>vparams</em>, <em>draws=1000</em>, <em>model=None</em>, <em>local_RVs=None</em>, <em>random_seed=20090425</em>, <em>hide_transformed=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi.sample_vp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw samples from variational posterior.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>vparams</strong> : dict or pymc3.variational.ADVIFit</p>
+<blockquote>
+<div><p>Estimated variational parameters of the model.</p>
+</div></blockquote>
+<p><strong>draws</strong> : int</p>
+<blockquote>
+<div><p>Number of random samples.</p>
+</div></blockquote>
+<p><strong>model</strong> : pymc3.Model</p>
+<blockquote>
+<div><p>Probabilistic model.</p>
+</div></blockquote>
+<p><strong>random_seed</strong> : int</p>
+<blockquote>
+<div><p>Seed of random number generator.</p>
+</div></blockquote>
+<p><strong>hide_transformed</strong> : bool</p>
+<blockquote>
+<div><p>If False, transformed variables are also sampled. Default is True.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>trace</strong> : pymc3.backends.base.MultiTrace</p>
+<blockquote class="last">
+<div><p>Samples drawn from the variational posterior.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -3075,7 +3301,7 @@ model likelihood</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'3.0',
+            VERSION:'3.0.rc1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

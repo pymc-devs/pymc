@@ -1,0 +1,1178 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3 &mdash; PyMC3 3.0.rc1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/lda-advi-aevb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Automatic-autoencoding-variational-Bayes-for-latent-dirichlet-allocation-with-PyMC3">
+<h1>Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3<a class="headerlink" href="#Automatic-autoencoding-variational-Bayes-for-latent-dirichlet-allocation-with-PyMC3" title="Permalink to this headline">¶</a></h1>
+<ol class="loweralpha simple" start="3">
+<li>2016 by Taku Yoshioka</li>
+</ol>
+<p>For probabilistic models with latent variables, autoencoding variational
+Bayes (AEVB; Kingma and Welling, 2014) is an algorithm which allows us
+to perform inference efficiently for large datasets with an encoder. In
+AEVB, the encoder is used to infer variational parameters of approximate
+posterior on latent variables from given samples. By using tunable and
+flexible encoders such as multilayer perceptrons (MLPs), AEVB
+approximates complex variational posterior based on mean-field
+approximation, which does not utilize analytic representations of the
+true posterior. Combining AEVB with ADVI (Kucukelbir et al., 2015), we
+can perform posterior inference on almost arbitrary probabilistic models
+involving continuous latent variables.</p>
+<p>I have implemented AEVB for ADVI with mini-batch on PyMC3. To
+demonstrate flexibility of this approach, we will apply this to latent
+dirichlet allocation (LDA; Blei et al., 2003) for modeling documents. In
+the LDA model, each document is assumed to be generated from a
+multinomial distribution, whose parameters are treated as latent
+variables. By using AEVB with an MLP as an encoder, we will fit the LDA
+model to the 20-newsgroups dataset.</p>
+<p>In this example, extracted topics by AEVB seem to be qualitatively
+comparable to those with a standard LDA implementation, i.e., online VB
+implemented on scikit-learn. Unfortunately, the predictive accuracy of
+unseen words is less than the standard implementation of LDA, it might
+be due to the mean-field approximation. However, the combination of AEVB
+and ADVI allows us to quickly apply more complex probabilistic models
+than LDA to big data with the help of mini-batches. I hope this notebook
+will attract readers, especially practitioners working on a variety of
+machine learning tasks, to probabilistic programming and PyMC3.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">os</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s1">&#39;~/git/github/taku-y/pymc3&#39;</span><span class="p">))</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+<span class="kn">from</span> <span class="nn">sklearn.feature_extraction.text</span> <span class="kn">import</span> <span class="n">TfidfVectorizer</span><span class="p">,</span> <span class="n">CountVectorizer</span>
+<span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">fetch_20newsgroups</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="kn">import</span> <span class="nn">theano</span>
+<span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">shared</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
+<span class="kn">from</span> <span class="nn">theano.sandbox.rng_mrg</span> <span class="kn">import</span> <span class="n">MRG_RandomStreams</span>
+
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Dirichlet</span>
+<span class="kn">from</span> <span class="nn">pymc3.distributions.transforms</span> <span class="kn">import</span> <span class="n">t_stick_breaking</span>
+<span class="kn">from</span> <span class="nn">pymc3.variational.advi</span> <span class="kn">import</span> <span class="n">advi</span><span class="p">,</span> <span class="n">sample_vp</span>
+
+<span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">compute_test_value</span> <span class="o">=</span> <span class="s1">&#39;ignore&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/Users/taku-y/anaconda/anaconda/envs/py35con/lib/python3.5/site-packages/IPython/html.py:14: ShimWarning: The `IPython.html` package has been deprecated. You should import from `notebook` instead. `IPython.html.widgets` has moved to `ipywidgets`.
+  &#34;`IPython.html.widgets` has moved to `ipywidgets`.&#34;, ShimWarning)
+</pre></div></div>
+</div>
+<div class="section" id="Dataset">
+<h2>Dataset<a class="headerlink" href="#Dataset" title="Permalink to this headline">¶</a></h2>
+<p>Here, we will use the 20-newsgroups dataset. This dataset can be
+obtained by using functions of scikit-learn. The below code is partially
+adopted from an example of scikit-learn
+(<a class="reference external" href="http://scikit-learn.org/stable/auto_examples/applications/topics_extraction_with_nmf_lda.html">http://scikit-learn.org/stable/auto_examples/applications/topics_extraction_with_nmf_lda.html</a>).
+We set the number of words in the vocabulary to 1000.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># The number of words in the vocaburary</span>
+<span class="n">n_words</span> <span class="o">=</span> <span class="mi">1000</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;Loading dataset...&quot;</span><span class="p">)</span>
+<span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">fetch_20newsgroups</span><span class="p">(</span><span class="n">shuffle</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                             <span class="n">remove</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;headers&#39;</span><span class="p">,</span> <span class="s1">&#39;footers&#39;</span><span class="p">,</span> <span class="s1">&#39;quotes&#39;</span><span class="p">))</span>
+<span class="n">data_samples</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">data</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;done in </span><span class="si">%0.3f</span><span class="s2">s.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span><span class="p">))</span>
+
+<span class="c1"># Use tf (raw term count) features for LDA.</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;Extracting tf features for LDA...&quot;</span><span class="p">)</span>
+<span class="n">tf_vectorizer</span> <span class="o">=</span> <span class="n">CountVectorizer</span><span class="p">(</span><span class="n">max_df</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">min_df</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">max_features</span><span class="o">=</span><span class="n">n_words</span><span class="p">,</span>
+                                <span class="n">stop_words</span><span class="o">=</span><span class="s1">&#39;english&#39;</span><span class="p">)</span>
+
+<span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+<span class="n">tf</span> <span class="o">=</span> <span class="n">tf_vectorizer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">data_samples</span><span class="p">)</span>
+<span class="n">feature_names</span> <span class="o">=</span> <span class="n">tf_vectorizer</span><span class="o">.</span><span class="n">get_feature_names</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;done in </span><span class="si">%0.3f</span><span class="s2">s.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Loading dataset...
+done in 1.823s.
+Extracting tf features for LDA...
+done in 1.841s.
+</pre></div></div>
+</div>
+<p>Each document is represented by 1000-dimensional term-frequency vector.
+Let&#8217;s check the data.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tf</span><span class="p">[:</span><span class="mi">10</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_lda-advi-aevb_5_0.png" src="../_images/notebooks_lda-advi-aevb_5_0.png" />
+</div>
+</div>
+<p>We split the whole documents into training and test sets. The number of
+tokens in the training set is 480K. Sparsity of the term-frequency
+document matrix is 0.025%, which implies almost all components in the
+term-frequency matrix is zero.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">n_samples_tr</span> <span class="o">=</span> <span class="mi">10000</span>
+<span class="n">n_samples_te</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">n_samples_tr</span>
+<span class="n">docs_tr</span> <span class="o">=</span> <span class="n">tf</span><span class="p">[:</span><span class="n">n_samples_tr</span><span class="p">,</span> <span class="p">:]</span>
+<span class="n">docs_te</span> <span class="o">=</span> <span class="n">tf</span><span class="p">[</span><span class="n">n_samples_tr</span><span class="p">:,</span> <span class="p">:]</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Number of docs for training = {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">docs_tr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Number of docs for test = {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">docs_te</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+<span class="n">n_tokens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">docs_tr</span><span class="p">[</span><span class="n">docs_tr</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()])</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Number of tokens in training set = {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_tokens</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Sparsity = {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+    <span class="nb">len</span><span class="p">(</span><span class="n">docs_tr</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">docs_tr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">docs_tr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Number of docs for training = 10000
+Number of docs for test = 1314
+Number of tokens in training set = 480287
+Sparsity = 0.0253837
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Log-likelihood-of-documents-for-LDA">
+<h2>Log-likelihood of documents for LDA<a class="headerlink" href="#Log-likelihood-of-documents-for-LDA" title="Permalink to this headline">¶</a></h2>
+<p>For a document <span class="math">\(d\)</span> consisting of tokens <span class="math">\(w\)</span>, the
+log-likelihood of the LDA model with <span class="math">\(K\)</span> topics is given as</p>
+<div class="math">
+\[\begin{eqnarray}
+    \log p\left(d|\theta_{d},\beta\right) &amp; = &amp; \sum_{w\in d}\log\left[\sum_{k=1}^{K}\exp\left(\log\theta_{d,k} + \log \beta_{k,w}\right)\right]+const,
+\end{eqnarray}\]</div><p>where <span class="math">\(\theta_{d}\)</span> is the topic distribution for document
+<span class="math">\(d\)</span> and <span class="math">\(\beta\)</span> is the word distribution for the <span class="math">\(K\)</span>
+topics. We define a function that returns a tensor of the log-likelihood
+of documents given <span class="math">\(\theta_{d}\)</span> and <span class="math">\(\beta\)</span>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">logp_lda_doc</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">theta</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the log-likelihood function for given documents.</span>
+
+<span class="sd">    K : number of topics in the model</span>
+<span class="sd">    V : number of words (size of vocabulary)</span>
+<span class="sd">    D : number of documents (in a mini-batch)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    beta : tensor (K x V)</span>
+<span class="sd">        Word distributions.</span>
+<span class="sd">    theta : tensor (D x K)</span>
+<span class="sd">        Topic distributions for documents.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">ll_docs_f</span><span class="p">(</span><span class="n">docs</span><span class="p">):</span>
+        <span class="n">dixs</span><span class="p">,</span> <span class="n">vixs</span> <span class="o">=</span> <span class="n">docs</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()</span>
+        <span class="n">vfreqs</span> <span class="o">=</span> <span class="n">docs</span><span class="p">[</span><span class="n">dixs</span><span class="p">,</span> <span class="n">vixs</span><span class="p">]</span>
+        <span class="n">ll_docs</span> <span class="o">=</span> <span class="n">vfreqs</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">logsumexp</span><span class="p">(</span>
+            <span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">theta</span><span class="p">[</span><span class="n">dixs</span><span class="p">])</span> <span class="o">+</span> <span class="n">tt</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">beta</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">vixs</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+        <span class="c1"># Per-word log-likelihood times num of tokens in the whole dataset</span>
+        <span class="k">return</span> <span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">ll_docs</span><span class="p">)</span> <span class="o">/</span> <span class="n">tt</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">vfreqs</span><span class="p">)</span> <span class="o">*</span> <span class="n">n_tokens</span>
+
+    <span class="k">return</span> <span class="n">ll_docs_f</span>
+</pre></div>
+</div>
+</div>
+<p>In the inner function, the log-likelihood is scaled for mini-batches by
+the number of tokens in the dataset.</p>
+</div>
+<div class="section" id="LDA-model">
+<h2>LDA model<a class="headerlink" href="#LDA-model" title="Permalink to this headline">¶</a></h2>
+<p>With the log-likelihood function, we can construct the probabilistic
+model for LDA. <code class="docutils literal"><span class="pre">doc_t</span></code> works as a placeholder to which documents in a
+mini-batch are set.</p>
+<p>For ADVI, each of random variables <span class="math">\(\theta\)</span> and <span class="math">\(\beta\)</span>,
+drawn from Dirichlet distributions, is transformed into unconstrained
+real coordinate space. To do this, by default, PyMC3 uses a centered
+stick-breaking transformation. Since these random variables are on a
+simplex, the dimension of the unconstrained coordinate space is the
+original dimension minus 1. For example, the dimension of
+<span class="math">\(\theta_{d}\)</span> is the number of topics (<code class="docutils literal"><span class="pre">n_topics</span></code>) in the LDA
+model, thus the transformed space has dimension <code class="docutils literal"><span class="pre">(n_topics</span> <span class="pre">-</span> <span class="pre">1)</span></code>. It
+shuold be noted that, in this example, we use <code class="docutils literal"><span class="pre">t_stick_breaking</span></code>,
+which is a numerically stable version of <code class="docutils literal"><span class="pre">stick_breaking</span></code> used by
+default. This is required to work ADVI for the LDA model.</p>
+<p>The variational posterior on these transformed parameters is represented
+by a spherical Gaussian distributions (meanfield approximation). Thus,
+the number of variational parameters of <span class="math">\(\theta_{d}\)</span>, the latent
+variable for each document, is <code class="docutils literal"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">(n_topics</span> <span class="pre">-</span> <span class="pre">1)</span></code> for means and
+standard deviations.</p>
+<p>In the last line of the below cell, <code class="docutils literal"><span class="pre">DensityDist</span></code> class is used to
+define the log-likelihood function of the model. The second argument is
+a Python function which takes observations (a document matrix in this
+example) and returns the log-likelihood value. This function is given as
+a return value of <code class="docutils literal"><span class="pre">logp_lda_doc(beta,</span> <span class="pre">theta)</span></code>, which has been defined
+above.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">n_topics</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">128</span>
+
+<span class="c1"># Tensor for documents</span>
+<span class="n">doc_t</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">n_words</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;doc_t&#39;</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_topics</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">n_topics</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span>
+                      <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">n_topics</span><span class="p">),</span> <span class="n">transform</span><span class="o">=</span><span class="n">t_stick_breaking</span><span class="p">(</span><span class="mf">1e-9</span><span class="p">))</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_topics</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">n_words</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span>
+                     <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">n_words</span><span class="p">),</span> <span class="n">transform</span><span class="o">=</span><span class="n">t_stick_breaking</span><span class="p">(</span><span class="mf">1e-9</span><span class="p">))</span>
+    <span class="n">doc</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">DensityDist</span><span class="p">(</span><span class="s1">&#39;doc&#39;</span><span class="p">,</span> <span class="n">logp_lda_doc</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">theta</span><span class="p">),</span> <span class="n">observed</span><span class="o">=</span><span class="n">doc_t</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied stickbreaking-transform to theta and added transformed theta_stickbreaking_ to model.
+Applied stickbreaking-transform to beta and added transformed beta_stickbreaking_ to model.
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Mini-batch">
+<h2>Mini-batch<a class="headerlink" href="#Mini-batch" title="Permalink to this headline">¶</a></h2>
+<p>To perform ADVI with stochastic variational inference for large
+datasets, whole training samples are splitted into mini-batches. PyMC3&#8217;s
+ADVI function accepts a Python generator which send a list of
+mini-batches to the algorithm. Here is an example to make a generator.</p>
+<p>TODO: replace the code using the new interface</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="c1"># Return random data samples of a size &#39;minibatch_size&#39; at each iteration</span>
+        <span class="n">ixs</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="p">[</span><span class="n">data</span><span class="p">[</span><span class="n">ixs</span><span class="p">]]</span>
+
+<span class="n">minibatches</span> <span class="o">=</span> <span class="n">create_minibatch</span><span class="p">(</span><span class="n">docs_tr</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>The ADVI function replaces the values of Theano tensors with samples
+given by generators. We need to specify those tensors by a list. The
+order of the list should be the same with the mini-batches sent from the
+generator. Note that <code class="docutils literal"><span class="pre">doc_t</span></code> has been used in the model creation as
+the observation of the random variable named <code class="docutils literal"><span class="pre">doc</span></code>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># The value of doc_t will be replaced with mini-batches</span>
+<span class="n">minibatch_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">doc_t</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<p>To tell the algorithm that random variable <code class="docutils literal"><span class="pre">doc</span></code> is observed, we need
+to pass them as an <code class="docutils literal"><span class="pre">OrderedDict</span></code>. The key of <code class="docutils literal"><span class="pre">OrderedDict</span></code> is an
+observed random variable and the value is a scalar representing the
+scaling factor. Since the likelihood of the documents in mini-batches
+have been already scaled in the likelihood function, we set the scaling
+factor to 1.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># observed_RVs = OrderedDict([(doc, n_samples_tr / minibatch_size)])</span>
+<span class="n">observed_RVs</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="n">doc</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Encoder">
+<h2>Encoder<a class="headerlink" href="#Encoder" title="Permalink to this headline">¶</a></h2>
+<p>Given a document, the encoder calculates variational parameters of the
+(transformed) latent variables, more specifically, parameters of
+Gaussian distributions in the unconstrained real coordinate space. The
+<code class="docutils literal"><span class="pre">encode()</span></code> method is required to output variational means and stds as
+a tuple, as shown in the following code. As explained above, the number
+of variational parameters is <code class="docutils literal"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">(n_topics)</span> <span class="pre">-</span> <span class="pre">1</span></code>. Specifically, the
+shape of <code class="docutils literal"><span class="pre">zs_mean</span></code> (or <code class="docutils literal"><span class="pre">zs_std</span></code>) in the method is
+<code class="docutils literal"><span class="pre">(minibatch_size,</span> <span class="pre">n_topics</span> <span class="pre">-</span> <span class="pre">1)</span></code>. It should be noted that <code class="docutils literal"><span class="pre">zs_std</span></code>
+is defined as log-transformed standard deviation and this is
+automativally exponentiated (thus bounded to be positive) in
+<code class="docutils literal"><span class="pre">advi_minibatch()</span></code>, the estimation function.</p>
+<p>To enhance generalization ability to unseen words, a bernoulli
+corruption process is applied to the inputted documents. Unfortunately,
+I have never see any significant improvement with this.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">class</span> <span class="nc">LDAEncoder</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Encode (term-frequency) document vectors to variational means and (log-transformed) stds.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_words</span><span class="p">,</span> <span class="n">n_hidden</span><span class="p">,</span> <span class="n">n_topics</span><span class="p">,</span> <span class="n">p_corruption</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="n">random_seed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_words</span> <span class="o">=</span> <span class="n">n_words</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_hidden</span> <span class="o">=</span> <span class="n">n_hidden</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_topics</span> <span class="o">=</span> <span class="n">n_topics</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w0</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="mf">0.01</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_words</span><span class="p">,</span> <span class="n">n_hidden</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;w0&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b0</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="mf">0.01</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_hidden</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;b0&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w1</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="mf">0.01</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_hidden</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_topics</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;w1&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b1</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="mf">0.01</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_topics</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;b1&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rng</span> <span class="o">=</span> <span class="n">MRG_RandomStreams</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="n">random_seed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p_corruption</span> <span class="o">=</span> <span class="n">p_corruption</span>
+
+    <span class="k">def</span> <span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_corruption</span><span class="p">:</span>
+            <span class="n">dixs</span><span class="p">,</span> <span class="n">vixs</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">set_subtensor</span><span class="p">(</span>
+                <span class="n">tt</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">xs</span><span class="p">)[</span><span class="n">dixs</span><span class="p">,</span> <span class="n">vixs</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">dixs</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">p_corruption</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">xs_</span> <span class="o">=</span> <span class="n">xs</span> <span class="o">*</span> <span class="n">mask</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">xs_</span> <span class="o">=</span> <span class="n">xs</span>
+
+        <span class="n">w0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w0</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_words</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_hidden</span><span class="p">))</span>
+        <span class="n">w1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w1</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_hidden</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_topics</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)))</span>
+        <span class="n">hs</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">xs_</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w0</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">b0</span><span class="p">)</span>
+        <span class="n">zs</span> <span class="o">=</span> <span class="n">hs</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w1</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">b1</span>
+        <span class="n">zs_mean</span> <span class="o">=</span> <span class="n">zs</span><span class="p">[:,</span> <span class="p">:(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_topics</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="n">zs_std</span> <span class="o">=</span> <span class="n">zs</span><span class="p">[:,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_topics</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):]</span>
+        <span class="k">return</span> <span class="n">zs_mean</span><span class="p">,</span> <span class="n">zs_std</span>
+
+    <span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">w0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">b0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">w1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">b1</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<p>To feed the output of the encoder to the variational parameters of
+<span class="math">\(\theta\)</span>, we set an OrderedDict of tuples as below.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">encoder</span> <span class="o">=</span> <span class="n">LDAEncoder</span><span class="p">(</span><span class="n">n_words</span><span class="o">=</span><span class="n">n_words</span><span class="p">,</span> <span class="n">n_hidden</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">n_topics</span><span class="o">=</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">p_corruption</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">local_RVs</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="n">theta</span><span class="p">,</span> <span class="p">(</span><span class="n">encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">doc_t</span><span class="p">),</span> <span class="n">n_samples_tr</span> <span class="o">/</span> <span class="n">minibatch_size</span><span class="p">))])</span>
+</pre></div>
+</div>
+</div>
+<p><code class="docutils literal"><span class="pre">theta</span></code> is the random variable defined in the model creation and is a
+key of an entry of the <code class="docutils literal"><span class="pre">OrderedDict</span></code>. The value
+<code class="docutils literal"><span class="pre">(encoder.encode(doc_t),</span> <span class="pre">n_samples_tr</span> <span class="pre">/</span> <span class="pre">minibatch_size)</span></code> is a tuple of
+a theano expression and a scalar. The theano expression
+<code class="docutils literal"><span class="pre">encoder.encode(doc_t)</span></code> is the output of the encoder given inputs
+(documents). The scalar <code class="docutils literal"><span class="pre">n_samples_tr</span> <span class="pre">/</span> <span class="pre">minibatch_size</span></code> specifies the
+scaling factor for mini-batches.</p>
+<p>ADVI optimizes the parameters of the encoder. They are passed to the
+function for ADVI.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">encoder_params</span> <span class="o">=</span> <span class="n">encoder</span><span class="o">.</span><span class="n">get_params</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="AEVB-with-ADVI">
+<h2>AEVB with ADVI<a class="headerlink" href="#AEVB-with-ADVI" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal"><span class="pre">advi_minibatch()</span></code> can be used to run AEVB with ADVI on the LDA model.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">run_advi</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+        <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi_minibatch</span><span class="p">(</span>
+            <span class="n">n</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">minibatch_tensors</span><span class="o">=</span><span class="n">minibatch_tensors</span><span class="p">,</span> <span class="n">minibatches</span><span class="o">=</span><span class="n">minibatches</span><span class="p">,</span>
+            <span class="n">local_RVs</span><span class="o">=</span><span class="n">local_RVs</span><span class="p">,</span> <span class="n">observed_RVs</span><span class="o">=</span><span class="n">observed_RVs</span><span class="p">,</span> <span class="n">encoder_params</span><span class="o">=</span><span class="n">encoder_params</span><span class="p">,</span>
+            <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">n_mcsamples</span><span class="o">=</span><span class="mi">1</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">v_params</span>
+
+<span class="o">%</span><span class="k">time</span> v_params = run_advi()
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">v_params</span><span class="o">.</span><span class="n">elbo_vals</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Iteration 0 [0%]: ELBO = -3722434.15
+Iteration 100 [10%]: Average ELBO = -3638038.51
+Iteration 200 [20%]: Average ELBO = -3564631.95
+Iteration 300 [30%]: Average ELBO = -3524136.65
+Iteration 400 [40%]: Average ELBO = -3501375.19
+Iteration 500 [50%]: Average ELBO = -3490198.31
+Iteration 600 [60%]: Average ELBO = -3486100.88
+Iteration 700 [70%]: Average ELBO = -3474677.82
+Iteration 800 [80%]: Average ELBO = -3474558.58
+Iteration 900 [90%]: Average ELBO = -3483356.59
+Finished [100%]: ELBO = -3408887.83
+CPU times: user 18.6 s, sys: 390 ms, total: 19 s
+Wall time: 17.4 s
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[13]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>[&lt;matplotlib.lines.Line2D at 0x1234b3320&gt;]
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_lda-advi-aevb_26_2.png" src="../_images/notebooks_lda-advi-aevb_26_2.png" />
+</div>
+</div>
+<p>We can see ELBO increases as optimization proceeds. The trace of ELBO
+looks jaggy because at each iteration documents in the mini-batch are
+replaced.</p>
+</div>
+<div class="section" id="Extraction-of-characteristic-words-of-topics-based-on-posterior-samples">
+<h2>Extraction of characteristic words of topics based on posterior samples<a class="headerlink" href="#Extraction-of-characteristic-words-of-topics-based-on-posterior-samples" title="Permalink to this headline">¶</a></h2>
+<p>By using estimated variational parameters, we can draw samples from the
+variational posterior. To do this, we use function <code class="docutils literal"><span class="pre">sample_vp()</span></code>. Here
+we use this function to obtain posterior mean of the word-topic
+distribution <span class="math">\(\beta\)</span> and show top-10 words frequently appeared in
+the 10 topics.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">print_top_words</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">feature_names</span><span class="p">,</span> <span class="n">n_top_words</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">beta</span><span class="p">)):</span>
+        <span class="k">print</span><span class="p">((</span><span class="s2">&quot;Topic #</span><span class="si">%d</span><span class="s2">: &quot;</span> <span class="o">%</span> <span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">feature_names</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">beta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[:</span><span class="o">-</span><span class="n">n_top_words</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]))</span>
+
+<span class="n">doc_t</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">docs_te</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">)[:</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="p">:])</span>
+
+<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">sample_vp</span><span class="p">(</span><span class="n">v_params</span><span class="p">,</span> <span class="n">draws</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">local_RVs</span><span class="o">=</span><span class="n">local_RVs</span><span class="p">)</span>
+    <span class="n">beta_pymc3</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;beta&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">print_top_words</span><span class="p">(</span><span class="n">beta_pymc3</span><span class="p">,</span> <span class="n">feature_names</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Topic #0: people just think know don time like way say said
+Topic #1: people like time know just use new don think right
+Topic #2: use using edu work new like windows time program key
+Topic #3: think people know like don god say just time way
+Topic #4: don think know just god people like time does believe
+Topic #5: use windows like used thanks work know edu using drive
+Topic #6: just like know good don think use people does time
+Topic #7: new just year time years know people like think way
+Topic #8: use like time just edu know good don new using
+Topic #9: use new like used know don just 10 time edu
+</pre></div></div>
+</div>
+<p>We compare these topics to those obtained by a standard LDA
+implementation on scikit-learn, which is based on an online stochastic
+variational inference (Hoffman et al., 2013). We can see that estimated
+words in the topics are qualitatively similar.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">sklearn.decomposition</span> <span class="kn">import</span> <span class="n">LatentDirichletAllocation</span>
+
+<span class="n">lda</span> <span class="o">=</span> <span class="n">LatentDirichletAllocation</span><span class="p">(</span><span class="n">n_topics</span><span class="o">=</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                                <span class="n">learning_method</span><span class="o">=</span><span class="s1">&#39;online&#39;</span><span class="p">,</span> <span class="n">learning_offset</span><span class="o">=</span><span class="mf">50.</span><span class="p">,</span>
+                                <span class="n">random_state</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="o">%</span><span class="k">time</span> lda.fit(docs_tr)
+<span class="n">beta_sklearn</span> <span class="o">=</span> <span class="n">lda</span><span class="o">.</span><span class="n">components_</span> <span class="o">/</span> <span class="n">lda</span><span class="o">.</span><span class="n">components_</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+<span class="n">print_top_words</span><span class="p">(</span><span class="n">beta_sklearn</span><span class="p">,</span> <span class="n">feature_names</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+CPU times: user 11.7 s, sys: 9.92 ms, total: 11.7 s
+Wall time: 11.7 s
+Topic #0: government people law mr president gun state states public rights
+Topic #1: drive card scsi bit disk use mac hard memory does
+Topic #2: people armenian said armenians turkish did war killed saw russian
+Topic #3: year just good time team game car years like think
+Topic #4: 10 00 25 15 20 12 11 14 16 17
+Topic #5: windows window program dos file use version display ms application
+Topic #6: edu space com file information mail data available send ftp
+Topic #7: ax max g9v pl b8f a86 34u 145 1t 75u
+Topic #8: god people jesus believe does think say life don true
+Topic #9: don like know just think ve does use want good
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Predictive-distribution">
+<h2>Predictive distribution<a class="headerlink" href="#Predictive-distribution" title="Permalink to this headline">¶</a></h2>
+<p>In some papers (e.g., Hoffman et al. 2013), the predictive distribution
+of held-out words was proposed as a quantitative measure for goodness of
+the model fitness. The log-likelihood function for tokens of the
+held-out word can be calculated with posterior means of <span class="math">\(\theta\)</span>
+and <span class="math">\(\beta\)</span>. The validity of this is explained in (Hoffman et al.
+2013).</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">calc_pp</span><span class="p">(</span><span class="n">ws</span><span class="p">,</span> <span class="n">thetas</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">wix</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ws: ndarray (N,)</span>
+<span class="sd">        Number of times the held-out word appeared in N documents.</span>
+<span class="sd">    thetas: ndarray, shape=(N, K)</span>
+<span class="sd">        Topic distributions for N documents.</span>
+<span class="sd">    beta: ndarray, shape=(K, V)</span>
+<span class="sd">        Word distributions for K topics.</span>
+<span class="sd">    wix: int</span>
+<span class="sd">        Index of the held-out word</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    Log probability of held-out words.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">ws</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">thetas</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">[:,</span> <span class="n">wix</span><span class="p">]))</span>
+
+<span class="k">def</span> <span class="nf">eval_lda</span><span class="p">(</span><span class="n">transform</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">docs_te</span><span class="p">,</span> <span class="n">wixs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Evaluate LDA model by log predictive probability.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    transform: Python function</span>
+<span class="sd">        Transform document vectors to posterior mean of topic proportions.</span>
+<span class="sd">    wixs: iterable of int</span>
+<span class="sd">        Word indices to be held-out.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">lpss</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">docs_</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">docs_te</span><span class="p">)</span>
+    <span class="n">thetass</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">wss</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">total_words</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">wix</span> <span class="ow">in</span> <span class="n">wixs</span><span class="p">:</span>
+        <span class="n">ws</span> <span class="o">=</span> <span class="n">docs_te</span><span class="p">[:,</span> <span class="n">wix</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">ws</span><span class="o">.</span><span class="n">sum</span><span class="p">():</span>
+            <span class="c1"># Hold-out</span>
+            <span class="n">docs_</span><span class="p">[:,</span> <span class="n">wix</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="c1"># Topic distributions</span>
+            <span class="n">thetas</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span><span class="n">docs_</span><span class="p">)</span>
+
+            <span class="c1"># Predictive log probability</span>
+            <span class="n">lpss</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">calc_pp</span><span class="p">(</span><span class="n">ws</span><span class="p">,</span> <span class="n">thetas</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">wix</span><span class="p">))</span>
+
+            <span class="n">docs_</span><span class="p">[:,</span> <span class="n">wix</span><span class="p">]</span> <span class="o">=</span> <span class="n">ws</span>
+            <span class="n">thetass</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">thetas</span><span class="p">)</span>
+            <span class="n">wss</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ws</span><span class="p">)</span>
+            <span class="n">total_words</span> <span class="o">+=</span> <span class="n">ws</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">thetass</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+            <span class="n">wss</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+
+    <span class="c1"># Log-probability</span>
+    <span class="n">lp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">lpss</span><span class="p">))</span> <span class="o">/</span> <span class="n">total_words</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;lp&#39;</span><span class="p">:</span> <span class="n">lp</span><span class="p">,</span>
+        <span class="s1">&#39;thetass&#39;</span><span class="p">:</span> <span class="n">thetass</span><span class="p">,</span>
+        <span class="s1">&#39;beta&#39;</span><span class="p">:</span> <span class="n">beta</span><span class="p">,</span>
+        <span class="s1">&#39;wss&#39;</span><span class="p">:</span> <span class="n">wss</span>
+    <span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>To apply the above function for the LDA model, we redefine the
+probabilistic model because the number of documents to be tested
+changes. Since variational parameters have already been obtained, we can
+reuse them for sampling from the approximate posterior distribution.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">n_docs_te</span> <span class="o">=</span> <span class="n">docs_te</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">doc_t</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="n">docs_te</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;doc_t&#39;</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_topics</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_docs_te</span><span class="p">,</span> <span class="n">n_topics</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span>
+                      <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_docs_te</span><span class="p">,</span> <span class="n">n_topics</span><span class="p">),</span> <span class="n">transform</span><span class="o">=</span><span class="n">t_stick_breaking</span><span class="p">(</span><span class="mf">1e-9</span><span class="p">))</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_topics</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">n_words</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span>
+                     <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">n_words</span><span class="p">),</span> <span class="n">transform</span><span class="o">=</span><span class="n">t_stick_breaking</span><span class="p">(</span><span class="mf">1e-9</span><span class="p">))</span>
+    <span class="n">doc</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">DensityDist</span><span class="p">(</span><span class="s1">&#39;doc&#39;</span><span class="p">,</span> <span class="n">logp_lda_doc</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">theta</span><span class="p">),</span> <span class="n">observed</span><span class="o">=</span><span class="n">doc_t</span><span class="p">)</span>
+
+<span class="c1"># Encoder has already been trained</span>
+<span class="n">encoder</span><span class="o">.</span><span class="n">p_corruption</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">local_RVs</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="n">theta</span><span class="p">,</span> <span class="p">(</span><span class="n">encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">doc_t</span><span class="p">),</span> <span class="mi">1</span><span class="p">))])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied stickbreaking-transform to theta and added transformed theta_stickbreaking_ to model.
+Applied stickbreaking-transform to beta and added transformed beta_stickbreaking_ to model.
+</pre></div></div>
+</div>
+<p><code class="docutils literal"><span class="pre">transform()</span></code> function is defined with <code class="docutils literal"><span class="pre">sample_vp()</span></code> function. This
+function is an argument to the function for calculating log predictive
+probabilities.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">transform_pymc3</span><span class="p">(</span><span class="n">docs</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+        <span class="n">doc_t</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">sample_vp</span><span class="p">(</span><span class="n">v_params</span><span class="p">,</span> <span class="n">draws</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">local_RVs</span><span class="o">=</span><span class="n">local_RVs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">samples</span><span class="p">[</span><span class="s1">&#39;theta&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The mean of the log predictive probability is -7.25.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">time</span> result_pymc3 = eval_lda(transform_pymc3, beta_pymc3, docs_te.toarray().astype(&#39;float32&#39;), np.arange(100))
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Predictive log prob (pm3) = {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">result_pymc3</span><span class="p">[</span><span class="s1">&#39;lp&#39;</span><span class="p">]))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+CPU times: user 3min 55s, sys: 9.34 s, total: 4min 4s
+Wall time: 1min 46s
+Predictive log prob (pm3) = -7.251825504934308
+</pre></div></div>
+</div>
+<p>We compare the result with the scikit-learn LDA implemented The log
+predictive probability is significantly higher (-6.04) than AEVB-ADVI,
+though it shows similar words in the estimated topics. It may because
+that the mean-field approximation to distribution on the simplex (topic
+and/or word distributions) is less accurate. See
+<a class="reference external" href="https://gist.github.com/taku-y/f724392bc0ad633deac45ffa135414d3">https://gist.github.com/taku-y/f724392bc0ad633deac45ffa135414d3</a>.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">transform_sklearn</span><span class="p">(</span><span class="n">docs</span><span class="p">):</span>
+    <span class="n">thetas</span> <span class="o">=</span> <span class="n">lda</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">thetas</span> <span class="o">/</span> <span class="n">thetas</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+<span class="o">%</span><span class="k">time</span> result_sklearn = eval_lda(transform_sklearn, beta_sklearn, docs_te.toarray(), np.arange(100))
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Predictive log prob (sklearn) = {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">result_sklearn</span><span class="p">[</span><span class="s1">&#39;lp&#39;</span><span class="p">]))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+CPU times: user 25.4 s, sys: 27.3 ms, total: 25.5 s
+Wall time: 25.5 s
+Predictive log prob (sklearn) = -6.041000209921997
+</pre></div></div>
+</div>
+</div>
+</div>
+<div class="section" id="Summary">
+<h1>Summary<a class="headerlink" href="#Summary" title="Permalink to this headline">¶</a></h1>
+<p>We have seen that PyMC3 allows us to estimate random variables of LDA, a
+probabilistic model with latent variables, based on automatic
+variational inference. Variational parameters of the local latent
+variables in the probabilistic model are encoded from observations. The
+parameters of the encoding model, MLP in this example, are optimized
+with variational parameters of the global latent variables. Once the
+probabilistic and the encoding models are defined, parameter
+optimization is done just by invoking a function (<code class="docutils literal"><span class="pre">advi_minibatch()</span></code>)
+without need to derive complex update equations.</p>
+<p>Unfortunately, the estimation result was not accurate compared to LDA in
+sklearn, which is based on the conjugate priors and thus not relying on
+the mean field approximation. To improve the estimation accuracy, some
+researchers proposed post processings that moves Monte Carlo samples to
+improve variational lower bound (e.g., Rezende and Mohamed, 2015;
+Salinams et al., 2015). By implementing such methods on PyMC3, we may
+achieve more accurate estimation while automated as shown in this
+notebook.</p>
+</div>
+<div class="section" id="References">
+<h1>References<a class="headerlink" href="#References" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li>Kingma, D. P., &amp; Welling, M. (2014). Auto-Encoding Variational Bayes.
+stat, 1050, 1.</li>
+<li>Kucukelbir, A., Ranganath, R., Gelman, A., &amp; Blei, D. (2015).
+Automatic variational inference in Stan. In Advances in neural
+information processing systems (pp. 568-576).</li>
+<li>Blei, D. M., Ng, A. Y., &amp; Jordan, M. I. (2003). Latent dirichlet
+allocation. Journal of machine Learning research, 3(Jan), 993-1022.</li>
+<li>Hoffman, M. D., Blei, D. M., Wang, C., &amp; Paisley, J. W. (2013).
+Stochastic variational inference. Journal of Machine Learning
+Research, 14(1), 1303-1347.</li>
+<li>Rezende, D. J., &amp; Mohamed, S. (2015). Variational inference with
+normalizing flows. arXiv preprint arXiv:1505.05770.</li>
+<li>Salimans, T., Kingma, D. P., &amp; Welling, M. (2015). Markov chain Monte
+Carlo and variational inference: Bridging the gap. In International
+Conference on Machine Learning (pp. 1218-1226).</li>
+</ul>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0.rc1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

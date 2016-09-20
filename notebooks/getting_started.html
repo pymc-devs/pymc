@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Getting started with PyMC3 &mdash; PyMC3 3.0 documentation</title>
+  <title>Getting started with PyMC3 &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="PyMC3 3.0 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Getting started" href="../getting_started.html"/>
         <link rel="next" title="Examples" href="../examples.html"/>
         <link rel="prev" title="Getting started" href="../getting_started.html"/> 
@@ -552,7 +552,7 @@ explain each part line-by-line.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Applied log-transform to sigma and added transformed sigma_log to model.
+Applied log-transform to sigma and added transformed sigma_log_ to model.
 </pre></div></div>
 </div>
 <p>The first line,</p>
@@ -669,6 +669,7 @@ class Normal(pymc3.distributions.distribution.Continuous)
  |  Methods defined here:
  |
  |  __init__(self, mu=0.0, tau=None, sd=None, *args, **kwargs)
+ |      Initialize self.  See help(type(self)) for accurate signature.
  |
  |  logp(self, value)
  |
@@ -694,6 +695,7 @@ class Normal(pymc3.distributions.distribution.Continuous)
  |  Static methods inherited from pymc3.distributions.distribution.Distribution:
  |
  |  __new__(cls, name, *args, **kwargs)
+ |      Create and return a new object.  See help(type) for accurate signature.
  |
  |  ----------------------------------------------------------------------
  |  Data descriptors inherited from pymc3.distributions.distribution.Distribution:
@@ -783,7 +785,7 @@ of variable names to NumPy arrays of parameter values.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-{&#39;alpha&#39;: array(0.9065985757588751), &#39;sigma_log&#39;: array(-0.03278147323450366), &#39;beta&#39;: array([ 0.94848596,  2.60705517])}
+{&#39;beta&#39;: array([ 0.948486  ,  2.60705513]), &#39;alpha&#39;: array(0.9065985664354854), &#39;sigma_log_&#39;: array(-0.032781468548420796)}
 </pre></div></div>
 </div>
 <p>By default, <code class="docutils literal"><span class="pre">find_MAP</span></code> uses the Broyden–Fletcher–Goldfarb–Shanno
@@ -810,7 +812,7 @@ find the MAP.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-{&#39;alpha&#39;: array(0.9090521896381477), &#39;sigma_log&#39;: array(-0.030009775415224028), &#39;beta&#39;: array([ 0.95140146,  2.61437458])}
+{&#39;beta&#39;: array([ 0.95140146,  2.61437458]), &#39;alpha&#39;: array(0.9090521898978398), &#39;sigma_log_&#39;: array(-0.03000977520318259)}
 </pre></div></div>
 </div>
 <p>It is important to note that the MAP estimate is not always reasonable,
@@ -921,8 +923,8 @@ context of the model.</p>
 <div class="highlight"><pre>
 Assigned NUTS to alpha
 Assigned NUTS to beta
-Assigned NUTS to sigma_log
- [-----------------100%-----------------] 2000 of 2000 complete in 1.8 sec
+Assigned NUTS to sigma_log_
+ [-----------------100%-----------------] 2000 of 2000 complete in 1.4 sec
 </pre></div></div>
 </div>
 <p>The <code class="docutils literal"><span class="pre">sample</span></code> function runs the step method(s) assigned (or passed) to
@@ -949,7 +951,7 @@ match the shape of the variable. We can see the last 5 values for the
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([ 0.85388655,  0.69643822,  0.92526615,  0.89313739,  0.86641949])
+<span></span>array([ 0.79115469,  0.84196267,  0.8183097 ,  0.9622195 ,  0.82890068])
 </pre></div>
 </div>
 </div>
@@ -985,7 +987,7 @@ the <code class="docutils literal"><span class="pre">step</span></code> argument
 <div class="highlight"><pre>
 Assigned NUTS to alpha
 Assigned NUTS to beta
- [-----------------100%-----------------] 5000 of 5000 complete in 10.6 sec
+ [-----------------100%-----------------] 5000 of 5000 complete in 10.4 sec
 </pre></div></div>
 </div>
 </div>
@@ -1045,13 +1047,13 @@ alpha:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.906            0.097            0.001            [0.710, 1.092]
+  0.906            0.099            0.001            [0.714, 1.104]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.713          0.843          0.906          0.970          1.098
+  0.710          0.842          0.906          0.971          1.103
 
 
 beta:
@@ -1059,29 +1061,15 @@ beta:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.947            0.085            0.001            [0.777, 1.114]
-  2.621            0.521            0.006            [1.622, 3.669]
+  0.947            0.088            0.001            [0.778, 1.120]
+  2.611            0.496            0.005            [1.649, 3.594]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.773          0.891          0.947          1.004          1.113
-  1.575          2.276          2.622          2.970          3.640
-
-
-sigma_log:
-
-  Mean             SD               MC Error         95% HPD interval
-  -------------------------------------------------------------------
-
-  -0.013           0.072            0.001            [-0.153, 0.127]
-
-  Posterior quantiles:
-  2.5            25             50             75             97.5
-  |--------------|==============|==============|--------------|
-
-  -0.151         -0.062         -0.014         0.033          0.133
+  0.776          0.889          0.946          1.006          1.119
+  1.650          2.276          2.604          2.934          3.598
 
 
 sigma:
@@ -1089,13 +1077,13 @@ sigma:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.989            0.072            0.001            [0.853, 1.128]
+  0.988            0.071            0.001            [0.857, 1.130]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.860          0.939          0.986          1.034          1.142
+  0.862          0.938          0.982          1.033          1.141
 
 </pre></div></div>
 </div>
@@ -1134,19 +1122,33 @@ latent log volatility process.</p>
 <div class="section" id="The-Data">
 <h3>The Data<a class="headerlink" href="#The-Data" title="Permalink to this headline">¶</a></h3>
 <p>Our data consist of daily returns of the S&amp;P 500 during the 2008
-financial crisis.</p>
-<div class="nbinput container">
+financial crisis. Here, we use <code class="docutils literal"><span class="pre">pandas-datareader</span></code> to obtain the price
+data from Yahoo!-Finance; it can be installed with
+<code class="docutils literal"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pandas-datareader</span></code>.</p>
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">pandas_datareader</span> <span class="kn">import</span> <span class="n">data</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="o">!</span>pip install pandas-datareader
+    <span class="kn">from</span> <span class="nn">pandas_datareader</span> <span class="kn">import</span> <span class="n">data</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="s1">&#39;data/SP500.csv&#39;</span><span class="p">):</span>
-    <span class="n">returns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;data/SP500.csv&#39;</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-<span class="k">else</span><span class="p">:</span>
-    <span class="n">returns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/notebooks/data/SP500.csv&#39;</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="n">returns</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_data_yahoo</span><span class="p">(</span><span class="s1">&#39;SPY&#39;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="s1">&#39;2008-5-1&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;2009-12-1&#39;</span><span class="p">)[</span><span class="s1">&#39;Adj Close&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">pct_change</span><span class="p">()</span>
+
 <span class="k">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">returns</span><span class="p">))</span>
 </pre></div>
 </div>
@@ -1156,12 +1158,12 @@ financial crisis.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-400
+401
 </pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [15]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1174,7 +1176,7 @@ financial crisis.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_getting_started_32_0.png" src="../_images/notebooks_getting_started_32_0.png" />
+<img alt="../_images/notebooks_getting_started_33_0.png" src="../_images/notebooks_getting_started_33_0.png" />
 </div>
 </div>
 </div>
@@ -1213,7 +1215,7 @@ terms of the precision of the normally distributed innovations and can
 be a scalar or vector.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<span></span>In [16]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1230,7 +1232,7 @@ be a scalar or vector.</p>
 
     <span class="n">volatility_process</span> <span class="o">=</span> <span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;volatility_process&#39;</span><span class="p">,</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">s</span><span class="p">))</span>
 
-    <span class="n">r</span> <span class="o">=</span> <span class="n">StudentT</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="n">volatility_process</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">returns</span><span class="p">[</span><span class="s1">&#39;S&amp;P500&#39;</span><span class="p">])</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">StudentT</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="n">volatility_process</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">returns</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1239,8 +1241,8 @@ be a scalar or vector.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Applied log-transform to nu and added transformed nu_log to model.
-Applied log-transform to sigma and added transformed sigma_log to model.
+Applied log-transform to nu and added transformed nu_log_ to model.
+Applied log-transform to sigma and added transformed sigma_log_ to model.
 </pre></div></div>
 </div>
 <p>Notice that we transform the log volatility process <code class="docutils literal"><span class="pre">s</span></code> into the
@@ -1264,28 +1266,26 @@ and <code class="docutils literal"><span class="pre">nu</span></code> constant a
 optimizer, which is provided by the <code class="docutils literal"><span class="pre">scipy.optimize</span></code> package, as it is
 more efficient for high dimensional functions and we have 400 stochastic
 random variables (mostly from <code class="docutils literal"><span class="pre">s</span></code>).</p>
-<p>To do the sampling, we do a short initial run to put us in a volume of
-high probability, then start again at the new starting point.
-<code class="docutils literal"><span class="pre">trace[-1]</span></code> gives us the last point in the sampling trace. NUTS will
-recalculate the scaling parameters based on the new point, and in this
-case it leads to faster sampling due to better scaling.</p>
+<p>To achieve good convergence with NUTS, it is critical to find a good
+scaling. The MAP as found by <code class="docutils literal"><span class="pre">find_MAP()</span></code> is in our experience a poor
+choice. Instead, we run automatic differentiation variational inference
+(ADVI) to get a variational estimate of the posterior mean as well as
+the posterior variances. We can use these estimates to initialize NUTS
+to achieve faster sampling due to better scaling.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<span></span>In [17]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="c1"># WARNING: this step can take up to 5 minutes on an old PC</span>
+<span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">variational</span>
+
 <span class="kn">import</span> <span class="nn">scipy</span>
 <span class="k">with</span> <span class="n">sp500_model</span><span class="p">:</span>
-    <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">(</span><span class="nb">vars</span><span class="o">=</span><span class="p">[</span><span class="n">s</span><span class="p">],</span> <span class="n">fmin</span><span class="o">=</span><span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_l_bfgs_b</span><span class="p">)</span>
+    <span class="n">mu</span><span class="p">,</span> <span class="n">sds</span><span class="p">,</span> <span class="n">elbo</span> <span class="o">=</span> <span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">sp500_model</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">sds</span><span class="p">),</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-    <span class="n">step</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-
-    <span class="c1"># Start next run at the last sampled position.</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">trace</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">gamma</span><span class="o">=.</span><span class="mi">25</span><span class="p">)</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">trace</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1294,18 +1294,29 @@ case it leads to faster sampling due to better scaling.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 2001 of 2000 complete in 125.4 sec
+Iteration 0 [0%]: ELBO = -127849.75
+Iteration 10000 [10%]: Average ELBO = -27053.48
+Iteration 20000 [20%]: Average ELBO = -260.14
+Iteration 30000 [30%]: Average ELBO = 138.48
+Iteration 40000 [40%]: Average ELBO = 526.77
+Iteration 50000 [50%]: Average ELBO = 769.68
+Iteration 60000 [60%]: Average ELBO = 854.39
+Iteration 70000 [70%]: Average ELBO = 874.18
+Iteration 80000 [80%]: Average ELBO = 879.55
+Iteration 90000 [90%]: Average ELBO = 881.36
+Finished [100%]: Average ELBO = 882.48
+ [-----------------100%-----------------] 2000 of 2000 complete in 111.2 sec
 </pre></div></div>
 </div>
 <p>We can check our samples by looking at the traceplot for <code class="docutils literal"><span class="pre">nu</span></code> and
 <code class="docutils literal"><span class="pre">sigma</span></code>.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<span></span>In [18]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="p">[</span><span class="n">nu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">]);</span>
+<span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">200</span><span class="p">:],</span> <span class="p">[</span><span class="n">nu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -1313,7 +1324,7 @@ case it leads to faster sampling due to better scaling.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_getting_started_39_0.png" src="../_images/notebooks_getting_started_39_0.png" />
+<img alt="../_images/notebooks_getting_started_40_0.png" src="../_images/notebooks_getting_started_40_0.png" />
 </div>
 </div>
 <p>Finally we plot the distribution of volatility paths by plotting many of
@@ -1323,13 +1334,13 @@ partially transparent (via the <code class="docutils literal"><span class="pre">
 more darkly.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<span></span>In [19]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
 <span class="n">returns</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">returns</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;s&#39;</span><span class="p">,::</span><span class="mi">30</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">03</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">returns</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;s&#39;</span><span class="p">,::</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mo">03</span><span class="p">);</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;volatility_process&#39;</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;volatility&#39;</span><span class="p">);</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">([</span><span class="s1">&#39;S&amp;P500&#39;</span><span class="p">,</span> <span class="s1">&#39;stochastic volatility process&#39;</span><span class="p">])</span>
 </pre></div>
@@ -1337,11 +1348,11 @@ more darkly.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[18]:
+<span></span>Out[19]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x7fa8264da400&gt;
+<span></span>&lt;matplotlib.legend.Legend at 0x122a2ea20&gt;
 </pre></div>
 </div>
 </div>
@@ -1349,7 +1360,7 @@ more darkly.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_getting_started_41_1.png" src="../_images/notebooks_getting_started_41_1.png" />
+<img alt="../_images/notebooks_getting_started_42_1.png" src="../_images/notebooks_getting_started_42_1.png" />
 </div>
 </div>
 <p>As you can see, the model correctly infers the increase in volatility
@@ -1372,7 +1383,7 @@ the change occurred. At the same time, we will see how to handle missing
 data, use multiple samplers and sample from discrete random variables.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [19]:
+<span></span>In [20]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1393,11 +1404,11 @@ data, use multiple samplers and sample from discrete random variables.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[19]:
+<span></span>Out[20]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x7fa82611ba58&gt;
+<span></span>&lt;matplotlib.text.Text at 0x11f59ef98&gt;
 </pre></div>
 </div>
 </div>
@@ -1405,7 +1416,7 @@ data, use multiple samplers and sample from discrete random variables.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_getting_started_44_1.png" src="../_images/notebooks_getting_started_44_1.png" />
+<img alt="../_images/notebooks_getting_started_45_1.png" src="../_images/notebooks_getting_started_45_1.png" />
 </div>
 </div>
 <p>Occurrences of disasters in the time series is thought to follow a
@@ -1437,7 +1448,7 @@ discrete-uniform priors and the novel form of the deterministic random
 variable <code class="docutils literal"><span class="pre">rate</span></code>.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [20]:
+<span></span>In [21]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1463,8 +1474,8 @@ variable <code class="docutils literal"><span class="pre">rate</span></code>.</p
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Applied log-transform to early_rate and added transformed early_rate_log to model.
-Applied log-transform to late_rate and added transformed late_rate_log to model.
+Applied log-transform to early_rate and added transformed early_rate_log_ to model.
+Applied log-transform to late_rate and added transformed late_rate_log_ to model.
 </pre></div></div>
 </div>
 <p>The logic for the rate random variable,</p>
@@ -1490,7 +1501,7 @@ function in a list. Each new sample is generated by first applying
 <code class="docutils literal"><span class="pre">step1</span></code> then <code class="docutils literal"><span class="pre">step2</span></code>.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [21]:
+<span></span>In [22]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1511,7 +1522,7 @@ function in a list. Each new sample is generated by first applying
 </div>
 <div class="container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 10000 of 10000 complete in 7.9 sec
+ [-----------------100%-----------------] 10000 of 10000 complete in 7.1 sec
 </pre></div></div>
 </div>
 <p>In the trace plot below we can see that there&#8217;s about a 10 year span
@@ -1521,7 +1532,7 @@ because of the jumpy relationship between the year switchpoint and the
 likelihood and not due to sampling error.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [22]:
+<span></span>In [23]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1533,7 +1544,7 @@ likelihood and not due to sampling error.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_getting_started_51_0.png" src="../_images/notebooks_getting_started_51_0.png" />
+<img alt="../_images/notebooks_getting_started_52_0.png" src="../_images/notebooks_getting_started_52_0.png" />
 </div>
 </div>
 </div>
@@ -1553,7 +1564,7 @@ of the available
 types</a>.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [23]:
+<span></span>In [24]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1619,7 +1630,7 @@ shown below, along with a sub-function using the <code class="docutils literal">
 though this is not strictly necessary.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [24]:
+<span></span>In [25]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1658,7 +1669,7 @@ implemented via the <code class="docutils literal"><span class="pre">patsy</span
 <code class="docutils literal"><span class="pre">DataFrame</span></code>. Hence, for our linear regression example:</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [25]:
+<span></span>In [26]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1672,7 +1683,7 @@ implemented via the <code class="docutils literal"><span class="pre">patsy</span
 <p>The model can then be very concisely specified in one line of code.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [26]:
+<span></span>In [27]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1689,12 +1700,12 @@ implemented via the <code class="docutils literal"><span class="pre">patsy</span
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Applied log-transform to sd and added transformed sd_log to model.
+Applied log-transform to sd and added transformed sd_log_ to model.
 Assigned NUTS to Intercept
 Assigned NUTS to x1
 Assigned NUTS to x2
-Assigned NUTS to sd_log
- [-----------------100%-----------------] 5000 of 5000 complete in 3.7 sec
+Assigned NUTS to sd_log_
+ [-----------------100%-----------------] 5000 of 5000 complete in 4.1 sec
 </pre></div></div>
 </div>
 <p>The error distribution, if not specified via the <code class="docutils literal"><span class="pre">family</span></code> argument, is
@@ -1702,7 +1713,7 @@ assumed to be normal. In the case of logistic regression, this can be
 modified by passing in a <code class="docutils literal"><span class="pre">Binomial</span></code> family object.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [27]:
+<span></span>In [28]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1720,7 +1731,7 @@ modified by passing in a <code class="docutils literal"><span class="pre">Binomi
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Applied logodds-transform to p and added transformed p_logodds to model.
+Applied logodds-transform to p and added transformed p_logodds_ to model.
 </pre></div></div>
 </div>
 </div>
@@ -1733,7 +1744,7 @@ file, and SQLite. These can be found in <code class="docutils literal"><span cla
 get too large to be held in memory we could use the <code class="docutils literal"><span class="pre">sqlite</span></code> backend:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [28]:
+<span></span>In [29]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1754,13 +1765,13 @@ get too large to be held in memory we could use the <code class="docutils litera
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Applied logodds-transform to p and added transformed p_logodds to model.
- [-----------------100%-----------------] 5001 of 5000 complete in 4.0 sec
+Applied logodds-transform to p and added transformed p_logodds_ to model.
+ [-----------------100%-----------------] 5000 of 5000 complete in 3.4 sec
 </pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [29]:
+<span></span>In [30]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1779,20 +1790,20 @@ x1:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  -0.987           198.135          0.986            [-0.883, 0.891]
+  0.001            0.125            0.002            [-0.239, 0.257]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  -0.880         -0.185         0.001          0.189          0.895
+  -0.252         -0.083         0.004          0.087          0.247
 
 </pre></div></div>
 </div>
 <p>The stored trace can then later be loaded using the <code class="docutils literal"><span class="pre">load</span></code> command:</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [30]:
+<span></span>In [31]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1933,7 +1944,7 @@ Biometrika, 66:191–193, 1979.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0',
+            VERSION:'3.0.rc1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
