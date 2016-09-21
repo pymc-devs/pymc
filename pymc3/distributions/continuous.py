@@ -17,7 +17,7 @@ from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
-           'Bound', 'StudentTpos', 'Lognormal', 'ChiSquared', 'HalfNormal',
+           'Bound', 'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal',
            'Wald', 'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises']
 
 
@@ -1106,7 +1106,7 @@ class Bound(object):
                             *args, **kwargs)
 
 
-StudentTpos = Bound(StudentT, lower=0)
+HalfStudentT = Bound(StudentT, lower=0)
 
 
 class ExGaussian(Continuous):
