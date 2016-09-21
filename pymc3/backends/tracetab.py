@@ -22,13 +22,15 @@ def trace_to_dataframe(trace, chains=None, flat_names=None):
     var_shapes = trace._straces[0].var_shapes
     if flat_names is None:
         flat_names = {v: create_flat_names(v, shape)
-                      for v, shape in var_shapes.items()}
+                      for v, shape in var_shapes.items()
+                      if not v.endswith('_')}
 
     var_dfs = []
     for varname, shape in var_shapes.items():
-        vals = trace.get_values(varname, combine=True, chains=chains)
-        flat_vals = vals.reshape(vals.shape[0], -1)
-        var_dfs.append(pd.DataFrame(flat_vals, columns=flat_names[varname]))
+        if not varname.endswith('_'):
+            vals = trace.get_values(varname, combine=True, chains=chains)
+            flat_vals = vals.reshape(vals.shape[0], -1)
+            var_dfs.append(pd.DataFrame(flat_vals, columns=flat_names[varname]))
     return pd.concat(var_dfs, axis=1)
 
 
