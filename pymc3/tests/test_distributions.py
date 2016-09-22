@@ -8,7 +8,7 @@ from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
 from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
                              MvStudentT, MvNormal, ZeroInflatedPoisson,
                              ZeroInflatedNegativeBinomial, ConstantDist, Poisson, Bernoulli, Beta,
-                             BetaBinomial, StudentTpos, StudentT, Weibull, Pareto, InverseGamma,
+                             BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto, InverseGamma,
                              Gamma, Cauchy, HalfCauchy, Lognormal, Laplace, NegativeBinomial,
                              Geometric, Exponential, ExGaussian, Normal, Flat, LKJCorr, Wald,
                              ChiSquared, HalfNormal, DiscreteUniform, Bound, Uniform,
@@ -454,7 +454,7 @@ class TestMatchesScipy(SeededTest):
 
     def test_student_tpos(self):
         # TODO: this actually shouldn't pass
-        self.pymc3_matches_scipy(StudentTpos, Rplus, {'nu': Rplus, 'mu': R, 'lam': Rplus},
+        self.pymc3_matches_scipy(HalfStudentT, Rplus, {'nu': Rplus, 'mu': R, 'lam': Rplus},
                                  lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5))
 
     def test_binomial(self):

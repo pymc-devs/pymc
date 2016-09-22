@@ -13,10 +13,11 @@ from .continuous import HalfCauchy
 from .continuous import Gamma
 from .continuous import Weibull
 from .continuous import Bound
-from .continuous import StudentTpos
+from .continuous import HalfStudentT
 from .continuous import Lognormal
 from .continuous import ChiSquared
 from .continuous import HalfNormal
+from .continuous import StudentTpos
 from .continuous import Wald
 from .continuous import Pareto
 from .continuous import InverseGamma
@@ -73,8 +74,9 @@ __all__ = ['Uniform',
            'Gamma',
            'Weibull',
            'Bound',
+           'Lognormal',     
+           'HalfStudentT', 
            'StudentTpos',
-           'Lognormal',
            'ChiSquared',
            'HalfNormal',
            'Wald',
