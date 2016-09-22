@@ -10,6 +10,7 @@ from __future__ import division
 import numpy as np
 import theano.tensor as tt
 from scipy import stats
+import warnings
 
 from . import transforms
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
@@ -17,7 +18,7 @@ from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
-           'Bound', 'HalfStudentT', 'Lognormal', 'ChiSquared', 'HalfNormal',
+           'Bound', 'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared', 'HalfNormal',
            'Wald', 'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises']
 
 
@@ -1105,6 +1106,11 @@ class Bound(object):
         return Bounded.dist(self.distribution, self.lower, self.upper,
                             *args, **kwargs)
 
+
+def StudentTpos(*args, **kwargs):
+    warnings.warn("StudentTpos has been deprecated. In future, use HalfStudentT instead.",
+                DeprecationWarning)
+    return HalfStudentT(*args, **kwargs)
 
 HalfStudentT = Bound(StudentT, lower=0)
 
