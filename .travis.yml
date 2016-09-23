@@ -14,14 +14,15 @@ before_install:
 
 install:
   - . ./scripts/create_testenv.sh
+  - pip install coveralls
 
 env:
-  - TESTCMD=" -vv --with-timer -e test_examples -e test_distributions" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
-  - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
-  - TESTCMD=" -vv --with-timer pymc3.tests.test_distributions_random" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
+  - TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 -e test_examples -e test_distributions" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
+  - TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
+  - TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions_random" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
 
 script:
   - . ./scripts/test.sh $TESTCMD
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - coveralls
