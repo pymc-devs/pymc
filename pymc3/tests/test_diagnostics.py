@@ -8,19 +8,20 @@ from ..distributions import Normal
 from ..tuning import find_MAP
 from ..sampling import sample
 from ..diagnostics import effective_n, geweke, gelman_rubin
-from pymc3.examples import disaster_model as dm
+from .test_examples import build_disaster_model
 
 
 class TestGelmanRubin(unittest.TestCase):
     good_ratio = 1.1
 
     def get_ptrace(self, n_samples):
-        with dm.model:
+        model = build_disaster_model()
+        with model:
             # Run sampler
-            step1 = Slice([dm.early_mean, dm.late_mean])
-            step2 = Metropolis([dm.switchpoint])
+            step1 = Slice([model.early_mean_log_, model.late_mean_log_])
+            step2 = Metropolis([model.switchpoint])
             start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
-            ptrace = sample(n_samples, [step1, step2], start, njobs=2,
+            ptrace = sample(n_samples, [step1, step2], start, njobs=2, progressbar=False,
                             random_seed=[1, 3])
         return ptrace
 
@@ -42,12 +43,12 @@ class TestGelmanRubin(unittest.TestCase):
 class TestDiagnostics(unittest.TestCase):
 
     def get_switchpoint(self, n_samples):
-        with dm.model:
+        model = build_disaster_model()
+        with model:
             # Run sampler
-            step1 = Slice([dm.early_mean, dm.late_mean])
-            step2 = Metropolis([dm.switchpoint])
-            trace = sample(n_samples, [step1, step2], progressbar=False,
-                           random_seed=1)
+            step1 = Slice([model.early_mean_log_, model.late_mean_log_])
+            step2 = Metropolis([model.switchpoint])
+            trace = sample(n_samples, [step1, step2], progressbar=False, random_seed=1)
         return trace['switchpoint']
 
     def test_geweke_negative(self):

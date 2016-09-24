@@ -1,9 +1,5 @@
-
-from pymc3 import Normal, sample, Model, traceplot, plots, NUTS, Potential, variational, Cauchy, find_MAP, Slice, HalfCauchy
+from pymc3 import Normal, sample, Model, plots, Potential, variational, HalfCauchy
 from theano import scan, shared
-from scipy import optimize
-import theano.tensor as tt
-
 
 import numpy as np
 """
@@ -53,46 +49,39 @@ err ~ normal(0,sigma);
 Ported to PyMC3 by Peadar Coyle and Chris Fonnesbeck (c) 2016.
 """
 
-t = np.array([1, 2, 4, 5, 6, 8, 19, 18, 12])
 
-y = shared(np.array([15, 10, 16, 11, 9, 11, 10, 18], dtype=np.float32))
+def build_model():
+    y = shared(np.array([15, 10, 16, 11, 9, 11, 10, 18], dtype=np.float32))
+    with Model() as arma_model:
+        sigma = HalfCauchy('sigma', 5)
+        theta = Normal('theta', 0, sd=2)
+        phi = Normal('phi', 0, sd=2)
+        mu = Normal('mu', 0, sd=10)
 
+        err0 = y[0] - (mu + phi * mu)
 
-with Model() as arma_model:
+        def calc_next(last_y, this_y, err, mu, phi, theta):
+            nu_t = mu + phi * last_y + theta * err
+            return this_y - nu_t
 
-    sigma = HalfCauchy('sigma', 5)
-    theta = Normal('theta', 0, sd=2)
-    phi = Normal('phi', 0, sd=2)
-    mu = Normal('mu', 0, sd=10)
+        err, _ = scan(fn=calc_next,
+                      sequences=dict(input=y, taps=[-1, 0]),
+                      outputs_info=[err0],
+                      non_sequences=[mu, phi, theta])
 
-    err0 = y[0] - (mu + phi * mu)
-
-    def calc_next(last_y, this_y, err, mu, phi, theta):
-        nu_t = mu + phi * last_y + theta * err
-        return this_y - nu_t
-
-    err, _ = scan(fn=calc_next,
-                  sequences=dict(input=y, taps=[-1, 0]),
-                  outputs_info=[err0],
-                  non_sequences=[mu, phi, theta])
-
-    like = Potential('like', Normal.dist(0, sd=sigma).logp(err))
-
-with arma_model:
-    mu, sds, elbo = variational.advi(n=2000)
+        Potential('like', Normal.dist(0, sd=sigma).logp(err))
+        mu, sds, elbo = variational.advi(n=2000)
+    return arma_model
 
 
-def run(n=1000):
-    if n == "short":
-        n = 50
-    with arma_model:
+def run(n_samples=1000):
+    model = build_model()
+    with model:
+        trace = sample(draws=n_samples)
 
-        trace = sample(1000)
-
-    burn = n / 10
-
-    traceplot(trace[burn:])
-    plots.summary(trace[burn:])
+    burn = n_samples // 10
+    plots.traceplot(trace[burn:])
+    plots.forestplot(trace[burn:])
 
 
 if __name__ == '__main__':

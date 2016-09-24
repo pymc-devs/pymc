@@ -9,12 +9,13 @@ from ..plots import traceplot, forestplot, autocorrplot, make_2d
 from ..step_methods import Slice, Metropolis
 from ..sampling import sample
 from ..tuning.scaling import find_hessian
-from pymc3.examples import disaster_model as dm, arbitrary_stochastic as asmod
+from .test_examples import build_disaster_model
+from pymc3.examples import arbitrary_stochastic as asmod
 
 
 def test_plots():
     # Test single trace
-    with asmod.model as model:
+    with asmod.build_model() as model:
         start = model.test_point
         h = find_hessian(start)
         step = Metropolis(model.vars, h)
@@ -40,10 +41,11 @@ def test_plots_multidimensional():
 
 
 def test_multichain_plots():
-    with dm.model:
+    model = build_disaster_model()
+    with model:
         # Run sampler
-        step1 = Slice([dm.early_mean, dm.late_mean])
-        step2 = Metropolis([dm.switchpoint])
+        step1 = Slice([model.early_mean_log_, model.late_mean_log_])
+        step2 = Metropolis([model.switchpoint])
         start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
         ptrace = sample(1000, [step1, step2], start, njobs=2)
 
