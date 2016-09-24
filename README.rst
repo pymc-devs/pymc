@@ -1,12 +1,7 @@
 PyMC3
 =====
 
-|Gitter|
-
-|Build Status|
-
-.. image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master
-    :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master
+|Gitter| |Build Status| |Coverage|
 
 PyMC3 is a python module for Bayesian statistical modeling and model
 fitting which focuses on advanced Markov chain Monte Carlo fitting
@@ -154,3 +149,5 @@ page <https://github.com/pymc-devs/pymc3/graphs/contributors>`__
    :target: https://gitter.im/pymc-devs/pymc?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 .. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.png?branch=master
    :target: https://travis-ci.org/pymc-devs/pymc3
+.. |Coverage| image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master
+   :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master 
