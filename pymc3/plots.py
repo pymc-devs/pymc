@@ -56,7 +56,10 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
     """
 
     if varnames is None:
-        varnames = [name for name in trace.varnames if not name.endswith('_')]
+        if plot_transformed:
+            varnames = [name for name in trace.varnames]
+        else:
+            varnames = [name for name in trace.varnames if not name.endswith('_')]
 
     n = len(varnames)
 
@@ -217,7 +220,10 @@ def autocorrplot(trace, varnames=None, max_lag=100, burn=0, plot_transformed=Fal
             yield varname
 
     if varnames is None:
-        varnames = [name for name in trace.varnames if not name.endswith('_')]
+        if plot_transformed:
+            varnames = [name for name in trace.varnames]
+        else:
+            varnames = [name for name in trace.varnames if not name.endswith('_')]
 
     varnames = [item for sub in [[i for i in _handle_array_varnames(v)]
                                  for v in varnames] for item in sub]
@@ -758,8 +764,10 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
         plot_posterior_op(transform(trace), ax)
     else:
         if varnames is None:
-            varnames = [
-                name for name in trace.varnames if not name.endswith('_')]
+            if plot_transformed:
+                varnames = [name for name in trace.varnames]
+            else:
+                varnames = [name for name in trace.varnames if not name.endswith('_')]
 
         if ax is None:
             ax, fig = create_axes_grid(figsize, varnames)
