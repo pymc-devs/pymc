@@ -24,7 +24,7 @@ def test_plots():
 
         traceplot(trace)
         forestplot(trace)
-
+        plot_posterior(trace)
         autocorrplot(trace)
 
 
@@ -52,6 +52,7 @@ def test_multichain_plots():
 
     forestplot(ptrace, varnames=['early_mean', 'late_mean'])
     autocorrplot(ptrace, varnames=['switchpoint'])
+    plot_posterior(ptrace)
 
 
 def test_make_2d():
