@@ -6,7 +6,7 @@ PyMC3
 |Build Status|
 
 .. image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master
-:target: https://coveralls.io/github/pymc-devs/pymc3?branch=master
+    :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master
 
 PyMC3 is a python module for Bayesian statistical modeling and model
 fitting which focuses on advanced Markov chain Monte Carlo fitting
