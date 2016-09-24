@@ -314,7 +314,7 @@ def _soft_update(a, b):
     a.update({k: v for k, v in b.items() if k not in a})
 
 
-def sample_ppc(trace, samples=None, model=None, vars=None, size=None):
+def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_seed=None):
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -346,6 +346,8 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None):
 
     if vars is None:
         vars = model.observed_RVs
+
+    seed(random_seed)
 
     ppc = defaultdict(list)
     for idx in randint(0, len(trace), samples):
