@@ -2,10 +2,11 @@ import matplotlib
 matplotlib.use('Agg', warn=False)
 
 import numpy as np
+import pymc3 as pm
 from .checks import close_to
 
 from .models import multidimensional_model
-from ..plots import traceplot, forestplot, autocorrplot, make_2d
+from ..plots import traceplot, forestplot, autocorrplot, plot_posterior, make_2d
 from ..step_methods import Slice, Metropolis
 from ..sampling import sample
 from ..tuning.scaling import find_hessian
@@ -64,3 +65,17 @@ def test_make_2d():
     assert res.shape == (n, 20)
     close_to(a[:, 0, 0], res[:, 0], 0)
     close_to(a[:, 3, 2], res[:, 2 * 4 + 3], 0)
+
+
+def test_plots_transformed():
+    with pm.Model() as model:
+        pm.Uniform('x', 0, 1)
+        step = pm.Metropolis()
+        trace = pm.sample(100, step=step)
+
+    assert traceplot(trace).shape == (1, 2)
+    assert traceplot(trace, plot_transformed=True).shape == (2, 2)
+    assert autocorrplot(trace).shape == (1, 1)
+    assert autocorrplot(trace, plot_transformed=True).shape == (2, 1)
+    assert plot_posterior(trace).shape == (1, )
+    assert plot_posterior(trace, plot_transformed=True).shape == (2, )
