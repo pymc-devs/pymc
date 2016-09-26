@@ -12,7 +12,7 @@ from ..distributions import (Categorical, Multinomial, VonMises, Dirichlet,
                              ZeroInflatedNegativeBinomial, ConstantDist, Poisson, Bernoulli, Beta,
                              BetaBinomial, StudentT, Weibull, Pareto, InverseGamma, Gamma, Cauchy,
                              HalfCauchy, Lognormal, Laplace, NegativeBinomial, Geometric,
-                             Exponential, ExGaussian, Normal, Flat, Wald, ChiSquared,
+                             Exponential, ExGaussian, Normal, SkewNormal, Flat, Wald, ChiSquared,
                              HalfNormal, DiscreteUniform, Bound, Uniform, Binomial, draw_values)
 from ..model import Model, Point
 
@@ -257,6 +257,9 @@ class ScalarShape(SeededTest):
 
     def test_normal(self):
         self.check(Normal, mu=0., tau=1.)
+        
+    def test_skew_normal(self):
+        self.check(SkewNormal, mu=0., sd=1., alpha=5.)
 
     def test_uniform(self):
         self.check(Uniform, lower=0., upper=1.)
@@ -359,6 +362,9 @@ class Parameters1dShape(SeededTest):
 
     def test_normal(self):
         self.check(Normal, mu=self.zeros, tau=self.ones)
+        
+    def test_skew_normal(self):
+        self.check(SkewNormal, mu=self.zeros, sd=self.ones, alpha=self.ones * 5)
 
     def test_uniform(self):
         self.check(Uniform, lower=self.zeros, upper=self.ones)
@@ -475,6 +481,9 @@ class BroadcastShape(SeededTest):
 
     def test_normal(self):
         self.check(Normal, mu=self.zeros, tau=self.ones)
+        
+    def test_skew_normal(self):
+        self.check(SkewNormal, mu=self.zeros, sd=self.ones, alpha=self.ones * 5)
 
     def test_uniform(self):
         self.check(Uniform, lower=self.zeros, upper=self.ones)
@@ -592,6 +601,11 @@ class ScalarParameterSamples(SeededTest):
         def ref_rand(size, mu, sd):
             return st.norm.rvs(size=size, loc=mu, scale=sd)
         pymc3_random(Normal, {'mu': R, 'sd': Rplus}, ref_rand=ref_rand)
+
+    def test_skew_normal(self):
+        def ref_rand(size, alpha, mu, sd):
+            return st.skewnorm.rvs(size=size, a=alpha, loc=mu, scale=sd)
+        pymc3_random(SkewNormal, {'mu': R, 'sd': Rplus, 'alpha': R}, ref_rand=ref_rand)
 
     def test_half_normal(self):
         def ref_rand(size, tau):

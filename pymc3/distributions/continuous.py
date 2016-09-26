@@ -18,8 +18,9 @@ from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
-           'Bound', 'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared', 'HalfNormal',
-           'Wald', 'Pareto', 'InverseGamma', 'ExGaussian', 'VonMises']
+           'Bound', 'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
+           'HalfNormal', 'Wald', 'Pareto', 'InverseGamma', 'ExGaussian',
+           'VonMises', 'SkewNormal']
 
 
 class PositiveContinuous(Continuous):
@@ -1237,3 +1238,66 @@ class VonMises(Continuous):
         mu = self.mu
         kappa = self.kappa
         return bound(kappa * tt.cos(mu - value) - tt.log(2 * np.pi * i0(kappa)), value >= -np.pi, value <= np.pi, kappa >= 0)
+
+
+class SkewNormal(Continuous):
+    R"""
+    Univariate skew-normal log-likelihood.
+    .. math::
+       f(x \mid \mu, \tau, \alpha) = 
+       2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu + \sigma \sqrt{\frac{2}{\pi}} \frac {\alpha }{{\sqrt {1+\alpha ^{2}}}}`
+    Variance  :math:`\sigma^2 \left(  1-\frac{2\alpha^2}{(\alpha^2+1) \pi} \right)`
+    ========  ==========================================
+    Skew-normal distribution can be parameterized either in terms of precision
+    or standard deviation. The link between the two parametrizations is
+    given by
+    .. math::
+       \tau = \dfrac{1}{\sigma^2}
+    Parameters
+    ----------
+    mu : float
+        Location parameter.
+    sd : float
+        Scale parameter (sd > 0).
+    tau : float
+        Alternative scale parameter (tau > 0).
+    alpha : float
+        Skewness parameter.
+    
+    Notes
+    -----
+    When alpha=0 we recover the Normal distribution and mu becomes the mean, 
+    tau the precision and sd the standard deviation. In the limit of alpha 
+    approaching plus/minus infinite we get a half-normal distribution.       
+        
+    """
+    def __init__(self, mu=0.0, sd=None, tau=None, alpha=1,  *args, **kwargs):
+        super(SkewNormal, self).__init__(*args, **kwargs)
+        self.mu = mu
+        self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
+        self.alpha = alpha
+        self.mean = mu + self.sd * (2 / np.pi)**0.5 * alpha / (1 + alpha**2)**0.5
+        self.variance = self.sd**2 * (1 - (2 * alpha**2) / ((1 + alpha**2) * np.pi))
+
+    def random(self, point=None, size=None, repeat=None):
+        mu, tau, sd, alpha = draw_values(
+            [self.mu, self.tau, self.sd, self.alpha], point=point)
+        return generate_samples(stats.skewnorm.rvs,
+                                a=alpha, loc=mu, scale=tau**-0.5,
+                                dist_shape=self.shape,
+                                size=size)
+
+    def logp(self, value):
+        tau = self.tau
+        sd = self.sd
+        mu = self.mu
+        alpha = self.alpha
+        return bound(
+            tt.log(1 +
+            tt.erf(((value - mu) * tt.sqrt(tau) * alpha) / tt.sqrt(2)))
+            + (-tau * (value - mu)**2
+            + tt.log(tau / np.pi / 2.)) / 2.,
+            tau > 0, sd > 0)
