@@ -23,6 +23,7 @@ from .continuous import Pareto
 from .continuous import InverseGamma
 from .continuous import ExGaussian
 from .continuous import VonMises
+from .continuous import SkewNormal
 
 from .discrete import Binomial
 from .discrete import BetaBinomial
@@ -110,5 +111,6 @@ __all__ = ['Uniform',
            'LKJCorr',
            'AR1',
            'GaussianRandomWalk',
-           'GARCH11'
+           'GARCH11',
+           'SkewNormal'
            ]

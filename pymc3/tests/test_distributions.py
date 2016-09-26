@@ -12,7 +12,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              Gamma, Cauchy, HalfCauchy, Lognormal, Laplace, NegativeBinomial,
                              Geometric, Exponential, ExGaussian, Normal, Flat, LKJCorr, Wald,
                              ChiSquared, HalfNormal, DiscreteUniform, Bound, Uniform,
-                             Binomial, Wishart)
+                             Binomial, Wishart, SkewNormal)
 from ..distributions import continuous
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal
@@ -456,6 +456,10 @@ class TestMatchesScipy(SeededTest):
         # TODO: this actually shouldn't pass
         self.pymc3_matches_scipy(HalfStudentT, Rplus, {'nu': Rplus, 'mu': R, 'lam': Rplus},
                                  lambda value, nu, mu, lam: sp.t.logpdf(value, nu, mu, lam**-.5))
+
+    def test_skew_normal(self):
+        self.pymc3_matches_scipy(SkewNormal, R, {'mu': R, 'sd': Rplusbig, 'alpha': R},
+                                 lambda value, alpha, mu, sd: sp.skewnorm.logpdf(value, alpha, mu, sd))
 
     def test_binomial(self):
         self.pymc3_matches_scipy(Binomial, Nat, {'n': NatSmall, 'p': Unit},
