@@ -24,6 +24,15 @@ class TestSample(SeededTest):
         super(TestSample, self).setUp()
         self.model, self.start, self.step, _ = simple_init()
 
+    def test_sample_does_not_set_seed(self):
+        random_numbers = []
+        for _ in range(2):
+            np.random.seed(1)
+            with self.model:
+                pm.sample(1)
+                random_numbers.append(np.random.random())
+        self.assertEqual(random_numbers[0], random_numbers[1])
+
     def test_sample(self):
         test_njobs = [1]
         with self.model:

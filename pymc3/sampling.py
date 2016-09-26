@@ -80,7 +80,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
 
 
 def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None,
-           progressbar=True, model=None, random_seed=None):
+           progressbar=True, model=None, random_seed=-1):
     """
     Draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -116,8 +116,8 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     tune : int
         Number of iterations to tune, if applicable (defaults to None)
     progressbar : bool
-        Whether or not to display a progress bar in the command line. The 
-        bar shows the percentage of completion, the sampling speed in 
+        Whether or not to display a progress bar in the command line. The
+        bar shows the percentage of completion, the sampling speed in
         samples per second (SPS), and the estimated remaining time until
         completion ("expected time of arrival"; ETA).
     model : Model (optional if in `with` context)
@@ -156,7 +156,7 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
 
 
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
-            progressbar=True, model=None, random_seed=None):
+            progressbar=True, model=None, random_seed=-1):
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
     progress = progress_bar(draws)
@@ -170,7 +170,7 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
 
 
 def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
-                model=None, random_seed=None):
+                model=None, random_seed=-1):
     """
     Generator that returns a trace on each iteration using the given
     step method.  Multiple step methods supported via compound step
@@ -215,10 +215,11 @@ def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
 
 
 def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
-                 model=None, random_seed=None):
+                 model=None, random_seed=-1):
     model = modelcontext(model)
     draws = int(draws)
-    seed(random_seed)
+    if random_seed != -1:
+        seed(random_seed)
     if draws < 1:
         raise ValueError('Argument `draws` should be above 0.')
 
