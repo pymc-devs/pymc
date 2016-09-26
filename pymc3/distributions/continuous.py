@@ -1260,10 +1260,10 @@ class SkewNormal(Continuous):
     ----------
     mu : float
         Location parameter.
-    tau : float
-        Scale parameter (tau > 0).
     sd : float
-        Alternative scale parameter (sd > 0).
+        Scale parameter (sd > 0).
+    tau : float
+        Alternative scale parameter (tau > 0).
     alpha : float
         Skewness parameter.
     
