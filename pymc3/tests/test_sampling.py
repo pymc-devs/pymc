@@ -5,9 +5,9 @@ except ImportError:
     import mock
 import unittest
 
-import pymc3
-from pymc3 import sampling
-from pymc3.sampling import sample
+import pymc3 as pm
+import theano.tensor as tt
+from theano import shared
 from .models import simple_init
 from .helpers import SeededTest
 
@@ -15,99 +15,89 @@ from .helpers import SeededTest
 import multiprocessing
 try:
     multiprocessing.Pool(2)
-    test_parallel = False
 except:
-    test_parallel = False
+    pass
 
 
-def test_sample():
-    model, start, step, _ = simple_init()
-    test_njobs = [1]
-    with model:
-        for njobs in test_njobs:
-            for n in [1, 10, 300]:
-                yield sample, n, step, {}, None, njobs
+class TestSample(SeededTest):
+    def setUp(self):
+        super(TestSample, self).setUp()
+        self.model, self.start, self.step, _ = simple_init()
 
+    def test_sample(self):
+        test_njobs = [1]
+        with self.model:
+            for njobs in test_njobs:
+                for steps in [1, 10, 300]:
+                    pm.sample(steps, self.step, {}, None, njobs=njobs, random_seed=self.random_seed)
 
-def test_iter_sample():
-    model, start, step, _ = simple_init()
-    samps = sampling.iter_sample(5, step, start, model=model)
-    for i, trace in enumerate(samps):
-        assert i == len(trace) - 1, "Trace does not have correct length."
+    def test_iter_sample(self):
+        with self.model:
+            samps = pm.sampling.iter_sample(5, self.step, self.start, random_seed=self.random_seed)
+            for i, trace in enumerate(samps):
+                self.assertEqual(i, len(trace) - 1, "Trace does not have correct length.")
 
-
-class TestParallelStart(SeededTest):
     def test_parallel_start(self):
-        model, _, _, _ = simple_init()
-        with model:
-            tr = sample(5, njobs=2, start=[{'x': [10, 10]}, {'x': [-10, -10]}])
+        with self.model:
+            tr = pm.sample(5, njobs=2, start=[{'x': [10, 10]}, {'x': [-10, -10]}],
+                           random_seed=self.random_seed)
         self.assertGreater(tr.get_values('x', chains=0)[0][0], 0)
         self.assertLess(tr.get_values('x', chains=1)[0][0], 0)
 
 
-def test_soft_update_all_present():
-    start = {'a': 1, 'b': 2}
-    test_point = {'a': 3, 'b': 4}
-    sampling._soft_update(start, test_point)
-    assert start == {'a': 1, 'b': 2}
+class SoftUpdate(SeededTest):
+    def test_soft_update_all_present(self):
+        start = {'a': 1, 'b': 2}
+        test_point = {'a': 3, 'b': 4}
+        pm.sampling._soft_update(start, test_point)
+        self.assertDictEqual(start, {'a': 1, 'b': 2})
 
+    def test_soft_update_one_missing(self):
+        start = {'a': 1, }
+        test_point = {'a': 3, 'b': 4}
+        pm.sampling._soft_update(start, test_point)
+        self.assertDictEqual(start, {'a': 1, 'b': 4})
 
-def test_soft_update_one_missing():
-    start = {'a': 1, }
-    test_point = {'a': 3, 'b': 4}
-    sampling._soft_update(start, test_point)
-    assert start == {'a': 1, 'b': 4}
-
-
-def test_soft_update_empty():
-    start = {}
-    test_point = {'a': 3, 'b': 4}
-    sampling._soft_update(start, test_point)
-    assert start == test_point
+    def test_soft_update_empty(self):
+        start = {}
+        test_point = {'a': 3, 'b': 4}
+        pm.sampling._soft_update(start, test_point)
+        self.assertDictEqual(start, test_point)
 
 
 class TestNamedSampling(SeededTest):
     def test_shared_named(self):
-        from theano import shared
-        import theano.tensor as tt
-
         G_var = shared(value=np.atleast_2d(1.), broadcastable=(True, False),
                        name="G")
 
-        with pymc3.Model():
-            theta0 = pymc3.Normal('theta0', mu=np.atleast_2d(0),
-                                  tau=np.atleast_2d(1e20), shape=(1, 1),
-                                  testval=np.atleast_2d(0))
-            theta = pymc3.Normal('theta', mu=tt.dot(G_var, theta0),
-                                 tau=np.atleast_2d(1e20), shape=(1, 1))
-
+        with pm.Model():
+            theta0 = pm.Normal('theta0', mu=np.atleast_2d(0),
+                               tau=np.atleast_2d(1e20), shape=(1, 1),
+                               testval=np.atleast_2d(0))
+            theta = pm.Normal('theta', mu=tt.dot(G_var, theta0),
+                              tau=np.atleast_2d(1e20), shape=(1, 1))
             res = theta.random()
             assert np.isclose(res, 0.)
 
     def test_shared_unnamed(self):
-        from theano import shared
-        import theano.tensor as tt
         G_var = shared(value=np.atleast_2d(1.), broadcastable=(True, False))
-        with pymc3.Model():
-            theta0 = pymc3.Normal('theta0', mu=np.atleast_2d(0),
-                                  tau=np.atleast_2d(1e20), shape=(1, 1),
-                                  testval=np.atleast_2d(0))
-            theta = pymc3.Normal('theta', mu=tt.dot(G_var, theta0),
-                                 tau=np.atleast_2d(1e20), shape=(1, 1))
-
+        with pm.Model():
+            theta0 = pm.Normal('theta0', mu=np.atleast_2d(0),
+                               tau=np.atleast_2d(1e20), shape=(1, 1),
+                               testval=np.atleast_2d(0))
+            theta = pm.Normal('theta', mu=tt.dot(G_var, theta0),
+                              tau=np.atleast_2d(1e20), shape=(1, 1))
             res = theta.random()
             assert np.isclose(res, 0.)
 
     def test_constant_named(self):
-        import theano.tensor as tt
-
         G_var = tt.constant(np.atleast_2d(1.), name="G")
-        with pymc3.Model():
-            theta0 = pymc3.Normal('theta0', mu=np.atleast_2d(0),
-                                  tau=np.atleast_2d(1e20), shape=(1, 1),
-                                  testval=np.atleast_2d(0))
-            theta = pymc3.Normal('theta', mu=tt.dot(G_var, theta0),
-                                 tau=np.atleast_2d(1e20), shape=(1, 1))
+        with pm.Model():
+            theta0 = pm.Normal('theta0', mu=np.atleast_2d(0),
+                               tau=np.atleast_2d(1e20), shape=(1, 1),
+                               testval=np.atleast_2d(0))
+            theta = pm.Normal('theta', mu=tt.dot(G_var, theta0),
+                              tau=np.atleast_2d(1e20), shape=(1, 1))
 
             res = theta.random()
             assert np.isclose(res, 0.)
@@ -116,22 +106,22 @@ class TestNamedSampling(SeededTest):
 class TestChooseBackend(unittest.TestCase):
     def test_choose_backend_none(self):
         with mock.patch('pymc3.sampling.NDArray') as nd:
-            sampling._choose_backend(None, 'chain')
+            pm.sampling._choose_backend(None, 'chain')
         self.assertTrue(nd.called)
 
     def test_choose_backend_list_of_variables(self):
         with mock.patch('pymc3.sampling.NDArray') as nd:
-            sampling._choose_backend(['var1', 'var2'], 'chain')
+            pm.sampling._choose_backend(['var1', 'var2'], 'chain')
         nd.assert_called_with(vars=['var1', 'var2'])
 
     def test_choose_backend_invalid(self):
         self.assertRaises(ValueError,
-                          sampling._choose_backend,
+                          pm.sampling._choose_backend,
                           'invalid', 'chain')
 
     def test_choose_backend_shortcut(self):
         backend = mock.Mock()
         shortcuts = {'test_backend': {'backend': backend,
                                       'name': None}}
-        sampling._choose_backend('test_backend', 'chain', shortcuts=shortcuts)
+        pm.sampling._choose_backend('test_backend', 'chain', shortcuts=shortcuts)
         self.assertTrue(backend.called)
