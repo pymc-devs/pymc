@@ -19,8 +19,6 @@ try:
 except:
     test_parallel = False
 
-RSEED = 20090425
-
 
 def test_sample():
     model, start, step, _ = simple_init()
@@ -38,13 +36,13 @@ def test_iter_sample():
         assert i == len(trace) - 1, "Trace does not have correct length."
 
 
-def test_parallel_start():
-    model, _, _, _ = simple_init()
-    with model:
-        tr = sample(5, njobs=2, start=[{'x': [10, 10]}, {
-                    'x': [-10, -10]}], random_seed=RSEED)
-    assert tr.get_values('x', chains=0)[0][0] > 0
-    assert tr.get_values('x', chains=1)[0][0] < 0
+class TestParallelStart(SeededTest):
+    def test_parallel_start(self):
+        model, _, _, _ = simple_init()
+        with model:
+            tr = sample(5, njobs=2, start=[{'x': [10, 10]}, {'x': [-10, -10]}])
+        self.assertGreater(tr.get_values('x', chains=0)[0][0], 0)
+        self.assertLess(tr.get_values('x', chains=1)[0][0], 0)
 
 
 def test_soft_update_all_present():
