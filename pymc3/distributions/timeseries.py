@@ -4,7 +4,7 @@ from theano import scan
 from .continuous import Normal, Flat
 from .distribution import Continuous
 
-__all__ = ['AR1', 'GaussianRandomWalk', 'GARCH11']
+__all__ = ['AR1', 'GaussianRandomWalk', 'GARCH11', 'EulerMaruyama']
 
 
 class AR1(Continuous):
@@ -124,3 +124,30 @@ class GARCH11(Continuous):
         vol = self._get_volatility(x[:-1])
         return (Normal.dist(0., sd=self.initial_vol).logp(x[0]) +
                 tt.sum(Normal.dist(0, sd=vol).logp(x[1:])))
+
+
+class EulerMaruyama(Continuous):
+    """
+    Stochastic differential equation discretized with the Euler-Maruyama method.
+
+    Parameters
+    ----------
+    dt : float
+        time step of discretization
+    sde_fn : callable
+        function returning the drift and diffusion coefficients of SDE
+    sde_pars : tuple
+        parameters of the SDE, passed as *args to sde_fn
+    """
+    def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
+        super(EulerMaruyama, self).__init__(*args, **kwds)
+        self.dt = dt
+        self.sde_fn = sde_fn
+        self.sde_pars = sde_pars
+
+    def logp(self, x):
+        xt = x[:-1]
+        f, g = self.sde_fn(x[:-1], *self.sde_pars)
+        mu = xt + self.dt * f
+        sd = tt.sqrt(self.dt) * g
+        return tt.sum(Normal.dist(mu=mu, sd=sd).logp(x[1:]))
