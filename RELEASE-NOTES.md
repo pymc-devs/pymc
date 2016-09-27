@@ -3,9 +3,11 @@
 
 We are proud and excited to release the first stable version of PyMC3, the product of more than [5 years](https://github.com/pymc-devs/pymc3/commit/85c7e06b6771c0d99cbc09cb68885cda8f7785cb) of ongoing development and contributions from over 80 individuals. PyMC3 is a Python module for Bayesian modeling which focuses on modern Bayesian computational methods, primarily gradient-based (Hamiltonian) MCMC sampling and variational inference. Models are specified in Python, which allows for great flexibility. The main technological difference in PyMC3 relative to previous versions is the reliance on Theano for the computational backend, rather than on Fortran extensions.
 
+### New features
+
 Since the beta release last year, the following improvements have been implemented:
 
-* Added `variational` submodule, which features the automatic differentiation variational inference (ADVI) fitting method. Much of this work was due to the efforts of Taku Yoshioka, and important guidance was provided by the Stan team (specifically Alp Kucukelbir and Daniel Lee).
+* Added `variational` submodule, which features the automatic differentiation variational inference (ADVI) fitting method. Also supports mini-batch ADVI for large data sets. Much of this work was due to the efforts of Taku Yoshioka, and important guidance was provided by the Stan team (specifically Alp Kucukelbir and Daniel Lee).
 
 * Added model checking utility functions, including leave-one-out (LOO) cross-validation, BPIC, WAIC, and DIC.
 
@@ -21,15 +23,29 @@ Since the beta release last year, the following improvements have been implement
 
 * Refactored test suite for better efficiency.
 
-* Added von Mises, zero-inflated negative binomial, and Lewandowski, Kurowicka and Joe (LKJ)  distributions.
+* Added von Mises, zero-inflated negative binomial, and Lewandowski, Kurowicka and Joe (LKJ) distributions.
 
 * Adopted `joblib` for managing parallel computation of chains.
 
 * Added contributor guidelines, contributor code of conduct and governance document.
 
-We on the PyMC3 core team would like to thank everyone for contributing and now feel that this is ready for the big time. We look forward to hearing about all the cool stuff you use PyMC3 for, and look forward to continued development on the package. 
+### Deprecations
 
-## Contributors
+* Argument order of tau and sd was switched for distributions of the normal family:
+- `Normal()`
+- `Lognormal()`
+- `HalfNormal()`
+
+Old: `Normal(name, mu, tau)`
+New: `Normal(name, mu, sd)` (supplying keyword arguments is unaffected).
+
+* `MvNormal` calling signature changed: 
+Old: `MvNormal(name, mu, tau)`
+New: `MvNormal(name, mu, cov)` (supplying keyword arguments is unaffected).
+
+We on the PyMC3 core team would like to thank everyone for contributing and now feel that this is ready for the big time. We look forward to hearing about all the cool stuff you use PyMC3 for, and look forward to continued development on the package.
+
+### Contributors
 
 A Kuz <for.akuz@gmail.com>
 A. Flaxman <abie@alum.mit.edu>
@@ -38,48 +54,48 @@ Alexey Goldin <alexey.goldin@gmail.com>
 Anand Patil <anand.prabhakar.patil@gmail.com>
 Andrea Zonca <code@andreazonca.com>
 Andreas Klostermann <andreasklostermann@googlemail.com>
-Andres Asensio Ramos 
+Andres Asensio Ramos
 Andrew Clegg <andrew.clegg@pearson.com>
-Anjum48 
+Anjum48
 AustinRochford <arochford@monetate.com>
 Benjamin Edwards <bedwards@cs.unm.edu>
 Boris Avdeev <borisaqua@gmail.com>
 Brian Naughton <briannaughton@gmail.com>
-Byron Smith 
+Byron Smith
 Chad Heyne <chadheyne@gmail.com>
 Chris Fonnesbeck <chris.fonnesbeck@vanderbilt.edu>
-Colin 
+Colin
 Corey Farwell <coreyf@rwell.org>
 David Huard <david.huard@gmail.com>
 David Huard <huardda@angus.meteo.mcgill.ca>
 David Stück <dstuck@users.noreply.github.com>
 DeliciousHair <mshepit@gmail.com>
-Dustin Tran 
+Dustin Tran
 Eigenblutwurst <Hannes.Bathke@gmx.net>
 Gideon Wulfsohn <gideon.wulfsohn@gmail.com>
 Gil Raphaelli <g@raphaelli.com>
 Gogs <gogitservice@gmail.com>
-Ilan Man 
+Ilan Man
 Imri Sofer <imrisofer@gmail.com>
 Jake Biesinger <jake.biesinger@gmail.com>
 James Webber <jamestwebber@gmail.com>
 John McDonnell <john.v.mcdonnell@gmail.com>
 John Salvatier <jsalvatier@gmail.com>
-Jordi Diaz 
+Jordi Diaz
 Jordi Warmenhoven <jordi.warmenhoven@gmail.com>
 Karlson Pfannschmidt <kiudee@mail.uni-paderborn.de>
 Kyle Bishop <citizenphnix@gmail.com>
 Kyle Meyer <kyle@kyleam.com>
-Lin Xiao  
+Lin Xiao
 Mack Sweeney <mackenzie.sweeney@gmail.com>
 Matthew Emmett <memmett@unc.edu>
-Maxim 
+Maxim
 Michael Gallaspy <gallaspy.michael@gmail.com>
 Nick <nalourie@example.com>
 Osvaldo Martin <aloctavodia@gmail.com>
 Patricio Benavente <patbenavente@gmail.com>
 Peadar Coyle (springcoil) <peadarcoyle@googlemail.com>
-Raymond Roberts 
+Raymond Roberts
 Rodrigo Benenson <rodrigo.benenson@gmail.com>
 Sergei Lebedev <superbobry@gmail.com>
 Skipper Seabold <chris.fonnesbeck@vanderbilt.edu>
@@ -88,8 +104,8 @@ The Gitter Badger <badger@gitter.im>
 Thomas Kluyver <takowl@gmail.com>
 Thomas Wiecki <thomas.wiecki@gmail.com>
 Tobias Knuth <mail@tobiasknuth.de>
-Volodymyr 
-Volodymyr Kazantsev 
+Volodymyr
+Volodymyr Kazantsev
 Wes McKinney <wesmckinn@gmail.com>
 Zach Ploskey <zploskey@gmail.com>
 akuz <for.akuz@gmail.com>

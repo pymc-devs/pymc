@@ -36,7 +36,7 @@ with Model() as model:
                       beta[4] * age + beta[5] * mother_imp + beta[6] * early_ident)
 
     observed_score = Normal(
-        'observed_score', expected_score, s ** -2, observed=score)
+        'observed_score', expected_score, s, observed=score)
 
 
 with model:
