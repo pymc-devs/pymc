@@ -257,10 +257,20 @@ class Multinomial(Discrete):
     def logp(self, x):
         n = self.n
         p = self.p
-        # only defined for sum(p) == 1
+        
+        if x.ndim==2:
+            x_sum = x.sum(axis=0)
+            n_sum = n * x.shape[0]
+        else:
+            x_sum = x
+            n_sum = n
+
         return bound(
-            factln(n) + tt.sum(x * tt.log(p) - factln(x)),
-            tt.all(x >= 0), tt.all(x <= n), tt.eq(tt.sum(x), n),
+            factln(n_sum) + tt.sum(x_sum * tt.log(p) - factln(x_sum)),
+            tt.all(x >= 0), 
+            tt.all(x <= n), 
+            tt.eq(tt.sum(x_sum), n_sum),
+            tt.isclose(p.sum(), 1),
             n >= 0)
 
 
