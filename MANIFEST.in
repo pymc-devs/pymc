@@ -1,0 +1,5 @@
+recursive-include pymc3/examples/data *
+recursive-include source *
+include requirements.txt
+include *.md *.rst
+
