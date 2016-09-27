@@ -13,7 +13,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              Geometric, Exponential, ExGaussian, Normal, Flat, LKJCorr, Wald,
                              ChiSquared, HalfNormal, DiscreteUniform, Bound, Uniform,
                              Binomial, Wishart, SkewNormal)
-from ..distributions import continuous
+from ..distributions import continuous, multivariate
 from numpy import array, inf, log, exp
 from numpy.testing import assert_almost_equal
 import numpy.random as nr
@@ -495,6 +495,10 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(MvNormal, Vector(R, n),
                                  {'mu': Vector(R, n), 'tau': PdMatrix(n)}, normal_logpdf)
 
+    def check_mvnormal_cov(self, n):
+        self.pymc3_matches_scipy(MvNormal, Vector(R, n),
+                                 {'mu': Vector(R, n), 'cov': PdMatrix(n)}, normal_logpdf)
+
     def test_mvt(self):
         for n in [1, 2]:
             yield self.check_mvt, n
@@ -594,6 +598,21 @@ class TestMatchesScipy(SeededTest):
     def test_get_tau_sd(self):
         sd = np.array([2])
         assert_almost_equal(continuous.get_tau_sd(sd=sd), [1. / sd**2, sd])
+
+    def test_get_tau_cov(self):
+        cov = np.random.randn(3, 3)
+        cov = np.dot(cov, cov.T)
+        mu = np.ones(3)
+        tau, cov = multivariate.get_tau_cov(mu, cov=cov)
+        assert_almost_equal(tau.eval(),
+                            np.linalg.inv(cov)
+        )
+
+        tau, cov = multivariate.get_tau_cov(mu)
+        assert_almost_equal(cov,
+                            np.eye(3)
+        )
+
 
     def test_ex_gaussian(self):
         # Log probabilities calculated using the dexGAUS function from the R package gamlss.

@@ -257,7 +257,7 @@ class ScalarShape(SeededTest):
 
     def test_normal(self):
         self.check(Normal, mu=0., tau=1.)
-        
+
     def test_skew_normal(self):
         self.check(SkewNormal, mu=0., sd=1., alpha=5.)
 
@@ -362,7 +362,7 @@ class Parameters1dShape(SeededTest):
 
     def test_normal(self):
         self.check(Normal, mu=self.zeros, tau=self.ones)
-        
+
     def test_skew_normal(self):
         self.check(SkewNormal, mu=self.zeros, sd=self.ones, alpha=self.ones * 5)
 
@@ -481,7 +481,7 @@ class BroadcastShape(SeededTest):
 
     def test_normal(self):
         self.check(Normal, mu=self.zeros, tau=self.ones)
-        
+
     def test_skew_normal(self):
         self.check(SkewNormal, mu=self.zeros, sd=self.ones, alpha=self.ones * 5)
 
@@ -766,10 +766,10 @@ class ScalarParameterSamples(SeededTest):
         pymc3_random_discrete(ConstantDist, {'c': I}, ref_rand=ref_rand)
 
     def test_mv_normal(self):
-        def ref_rand(size, mu, tau):
-            return st.multivariate_normal.rvs(mean=mu, cov=tau, size=size)
+        def ref_rand(size, mu, cov):
+            return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
         for n in [2, 3]:
-            pymc3_random(MvNormal, {'mu': Vector(R, n), 'tau': PdMatrix(n)},
+            pymc3_random(MvNormal, {'mu': Vector(R, n), 'cov': PdMatrix(n)},
                          size=100, valuedomain=Vector(R, n), ref_rand=ref_rand)
 
     def test_mv_t(self):

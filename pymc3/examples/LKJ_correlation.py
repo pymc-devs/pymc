@@ -34,7 +34,7 @@ tri_index[np.triu_indices(n_var, k=1)[::-1]] = np.arange(n_elem)
 
 with Model() as model:
 
-    mu = Normal('mu', mu=0, tau=1 ** -2, shape=n_var)
+    mu = Normal('mu', mu=0, sd=1, shape=n_var)
 
     # We can specify separate priors for sigma and the correlation matrix:
     sigma = Uniform('sigma', shape=n_var)
@@ -44,7 +44,7 @@ with Model() as model:
 
     cov_matrix = tt.diag(sigma).dot(corr_matrix.dot(tt.diag(sigma)))
 
-    like = MvNormal('likelihood', mu=mu, tau=inv(cov_matrix), observed=dataset)
+    like = MvNormal('likelihood', mu=mu, cov=cov_matrix, observed=dataset)
 
 
 def run(n=1000):

@@ -9,8 +9,8 @@ dose = array([-.86, -.3, -.05, .73])
 with Model() as model:
 
     # Logit-linear model parameters
-    alpha = Normal('alpha', 0, 0.01)
-    beta = Normal('beta', 0, 0.01)
+    alpha = Normal('alpha', 0, tau=0.01)
+    beta = Normal('beta', 0, tau=0.01)
 
     # Calculate probabilities of death
     theta = Deterministic('theta', invlogit(alpha + beta * dose))

@@ -20,6 +20,41 @@ from .dist_math import bound, logpow, factln
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett', 'LKJCorr']
 
+def get_tau_cov(mu, tau=None, cov=None):
+    """
+    Find precision and standard deviation
+
+    .. math::
+        \Tau = \Sigma^-1
+
+    Parameters
+    ----------
+    mu : array-like
+    tau : array-like, optional
+    cov : array-like, optional
+
+    Results
+    -------
+    Returns tuple (tau, sd)
+
+    Notes
+    -----
+    If neither tau nor cov is provided, returns an identity matrix.
+    """
+    if tau is None:
+        if cov is None:
+            cov = np.eye(len(mu))
+            tau = np.eye(len(mu))
+        else:
+            tau = tt.nlinalg.matrix_inverse(cov)
+
+    else:
+        if cov is not None:
+            raise ValueError("Can't pass both tau and sd")
+        else:
+            cov = tt.nlinalg.matrix_inverse(tau)
+
+    return (tau, cov)
 
 class MvNormal(Continuous):
     R"""
@@ -41,25 +76,30 @@ class MvNormal(Continuous):
     ----------
     mu : array
         Vector of means.
-    tau : array
+    cov : array, optional
+        Covariance matrix.
+    tau : array, optional
         Precision matrix.
     """
 
-    def __init__(self, mu, tau, *args, **kwargs):
+    def __init__(self, mu, cov=None, tau=None, *args, **kwargs):
         super(MvNormal, self).__init__(*args, **kwargs)
+        warnings.warn(('The calling signature of MvNormal() has changed. The new signature is:\n'
+                       'MvNormal(name, mu, cov) instead of MvNormal(name, mu, tau).'
+                       'You do not need to explicitly invert the covariance matrix anymore.'),
+                      DeprecationWarning)
         self.mean = self.median = self.mode = self.mu = mu
-        self.tau = tau
+        self.tau, self.cov = get_tau_cov(mu, tau=tau, cov=cov)
 
     def random(self, point=None, size=None):
-        mu, tau = draw_values([self.mu, self.tau], point=point)
+        mu, cov = draw_values([self.mu, self.cov], point=point)
 
         def _random(mean, cov, size=None):
-            # FIXME: cov here is actually precision?
             return stats.multivariate_normal.rvs(
                 mean, cov, None if size == mean.shape else size)
 
         samples = generate_samples(_random,
-                                   mean=mu, cov=tau,
+                                   mean=mu, cov=cov,
                                    dist_shape=self.shape,
                                    broadcast_shape=mu.shape,
                                    size=size)
@@ -362,9 +402,9 @@ class Wishart(Continuous):
         warnings.warn('The Wishart distribution can currently not be used '
                       'for MCMC sampling. The probability of sampling a '
                       'symmetric matrix is basically zero. Instead, please '
-                      'use the LKJCorr prior. For more information on the '
-                      'issues surrounding the Wishart see here: '
-                      'https://github.com/pymc-devs/pymc3/issues/538.',
+                      'use WishartBartlett or better yet, LKJCorr.'
+                      'For more information on the issues surrounding the '
+                      'Wishart see here: https://github.com/pymc-devs/pymc3/issues/538.',
                       UserWarning)
         self.n = n
         self.p = p = V.shape[0]
