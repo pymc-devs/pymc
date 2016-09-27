@@ -561,7 +561,7 @@ class TestMatchesScipy(SeededTest):
         p = np.array([0.2, 0.3, 0.5])
         n = 10
         with Model() as model:
-            Multinomial('m', n=10, p=p, shape=len(p))
+            Multinomial('m', n=10, p=p, shape=vals.shape)
         pt = {'m': vals}
         with Model() as model_sum:
             Multinomial('m_sum', n=2*n, p=p, shape=len(p))
