@@ -1,32 +1,25 @@
+from collections import OrderedDict
+
 import numpy as np
-from ..model import modelcontext
-from ..blocking import ArrayOrdering, DictToArrayBijection
 import theano
-from ..theanof import reshape_t, inputvars
 import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
-from collections import OrderedDict
-from .advi import check_discrete_rvs, ADVIFit, adagrad_optimizer
+
+from pymc3 import modelcontext, ArrayOrdering, DictToArrayBijection
+from pymc3.theanof import reshape_t, inputvars
+from .advi import check_discrete_rvs, ADVIFit, adagrad_optimizer, gen_random_state
 
 __all__ = ['advi_minibatch']
 
-# Flatten list
-from itertools import chain
-flt = lambda l: list(chain.from_iterable(l))
-
 
 class Encoder(object):
-    """Encode vector into latent representation.
-    """
-
+    """Encode vector into latent representation."""
     def encode(self):
-        """Returns variational mean and std vectors. 
-        """
+        """Returns variational mean and std vectors."""
         pass
 
     def get_params(self):
-        """Returns list of parameters (shared variables) of the encoder. 
-        """
+        """Returns list of parameters (shared variables) of the encoder."""
         pass
 
 
@@ -45,10 +38,10 @@ def _check_minibatches(minibatch_tensors, minibatches):
 
 def _get_rvss(
         minibatch_RVs, local_RVs, observed_RVs, minibatch_tensors, total_size):
-    """Returns local_RVs and observed_RVs. 
+    """Returns local_RVs and observed_RVs.
 
-    This function is used for backward compatibility of how input arguments are 
-    given. 
+    This function is used for backward compatibility of how input arguments are
+    given.
     """
     if minibatch_RVs is not None:
         _value_error(isinstance(minibatch_RVs, list),
@@ -123,7 +116,7 @@ def _join_local_RVs(local_RVs, local_order):
 
 
 def _make_logpt(global_RVs, local_RVs, observed_RVs, model):
-    """Return expression of log probability. 
+    """Return expression of log probability.
     """
     # Scale log probability for mini-batches
     factors = [s * v.logpt for v, s in observed_RVs.items()] + \
@@ -138,7 +131,10 @@ def _make_logpt(global_RVs, local_RVs, observed_RVs, model):
 def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
     """Return expression of approximate ELBO based on Monte Carlo sampling.
     """
-    r = MRG_RandomStreams(seed=random_seed)
+    if random_seed is None:
+        r = MRG_RandomStreams(gen_random_state())
+    else:
+        r = MRG_RandomStreams(seed=random_seed)
 
     if uw_l is not None:
         l_g = (uw_g.size / 2).astype('int64')
@@ -147,10 +143,9 @@ def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
         l_l = (uw_l.size / 2).astype('int64')
         u_l = uw_l[:l_l]
         w_l = uw_l[l_l:]
-        logp_ = lambda z_g, z_l: theano.clone(
-            logp, {inarray_g: z_g, inarray_l: z_l}, strict=False
-        )
 
+        def logp_(z_g, z_l):
+            return theano.clone(logp, {inarray_g: z_g, inarray_l: z_l}, strict=False)
         if n_mcsamples == 1:
             n_g = r.normal(size=inarray_g.tag.test_value.shape)
             z_g = n_g * tt.exp(w_g) + u_g
@@ -175,7 +170,8 @@ def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
         u_g = uw_g[:l_g]
         w_g = uw_g[l_g:]
 
-        logp_ = lambda z_g: theano.clone(logp, {inarray_g: z_g}, strict=False)
+        def logp_(z_g):
+            return theano.clone(logp, {inarray_g: z_g}, strict=False)
 
         if n_mcsamples == 1:
             n_g = r.normal(size=inarray_g.tag.test_value.shape)
@@ -198,50 +194,50 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                    minibatch_RVs=None, minibatch_tensors=None, minibatches=None,
                    local_RVs=None, observed_RVs=None, encoder_params=[],
                    total_size=None, scales=None, optimizer=None, learning_rate=.001,
-                   epsilon=.1, random_seed=20090425, verbose=1, ):
-    """Run mini-batch ADVI. 
+                   epsilon=.1, random_seed=None, verbose=1):
+    """Run mini-batch ADVI.
 
-    minibatch_tensors and minibatches should be in the same order. 
+    minibatch_tensors and minibatches should be in the same order.
 
     Parameters
     ----------
     vars : object
-        Random variables. 
+        Random variables.
     start : Dict or None
-        Initial values of parameters (variational means). 
+        Initial values of parameters (variational means).
     model : Model
-        Probabilistic model. 
+        Probabilistic model.
     n : int
-        Number of interations updating parameters. 
+        Number of interations updating parameters.
     n_mcsamples : int
-        Number of Monte Carlo samples to approximate ELBO. 
+        Number of Monte Carlo samples to approximate ELBO.
     minibatch_RVs : list of ObservedRVs
-        Random variables for mini-batch. 
+        Random variables for mini-batch.
     minibatch_tensors : list of (tensors or shared variables)
-        Tensors used to create ObservedRVs in minibatch_RVs. 
+        Tensors used to create ObservedRVs in minibatch_RVs.
     minibatches : generator of list
-        Generates a set of minibatches when calling next(). 
-        The length of the returned list must be the same with the number of 
-        random variables in `minibatch_tensors`. 
+        Generates a set of minibatches when calling next().
+        The length of the returned list must be the same with the number of
+        random variables in `minibatch_tensors`.
     total_size : int
-        Total size of training samples. 
+        Total size of training samples.
     optimizer : (loss, tensor) -> dict or OrderedDict
-        A function that returns parameter updates given loss and parameter 
-        tensor. If :code:`None` (default), a default Adagrad optimizer is 
-        used with parameters :code:`learning_rate` and :code:`epsilon` below. 
+        A function that returns parameter updates given loss and parameter
+        tensor. If :code:`None` (default), a default Adagrad optimizer is
+        used with parameters :code:`learning_rate` and :code:`epsilon` below.
     learning_rate: float
         Base learning rate for adagrad. This parameter is ignored when
-        optimizer is given. 
+        optimizer is given.
     epsilon : float
         Offset in denominator of the scale of learning rate in Adagrad.
-        This parameter is ignored when optimizer is given. 
+        This parameter is ignored when optimizer is given.
     random_seed : int
-        Seed to initialize random state. 
+        Seed to initialize random state.
 
     Returns
     -------
     ADVIFit
-        Named tuple, which includes 'means', 'stds', and 'elbo_vals'. 
+        Named tuple, which includes 'means', 'stds', and 'elbo_vals'.
     """
     theano.config.compute_test_value = 'ignore'
 
@@ -261,14 +257,17 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
 
     # Replace local_RVs with transformed variables
     ds = model.deterministics
-    get_transformed = lambda v: v if v not in ds else v.transformed
+
+    def get_transformed(v):
+        if v in ds:
+            return v.transformed
+        return v
     local_RVs = OrderedDict(
         [(get_transformed(v), (uw, s)) for v, (uw, s) in local_RVs.items()]
     )
 
     # Get global variables
-    rvs = lambda x: [rv for rv in x]
-    global_RVs = list(set(vars) - set(rvs(local_RVs) + rvs(observed_RVs)))
+    global_RVs = list(set(vars) - set(list(local_RVs) + list(observed_RVs)))
 
     # Ordering for concatenation of random variables
     global_order = ArrayOrdering([v for v in global_RVs])
@@ -304,11 +303,11 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     elbo = theano.clone(elbo, updates, strict=False)
 
     # Replace input shared variables with tensors
-    isshared = lambda t: isinstance(
-        t, theano.compile.sharedvalue.SharedVariable)
-    tensors = [(t.type() if isshared(t) else t) for t in minibatch_tensors]
+    def is_shared(t):
+        return isinstance(t, theano.compile.sharedvalue.SharedVariable)
+    tensors = [(t.type() if is_shared(t) else t) for t in minibatch_tensors]
     updates = OrderedDict(
-        {t: t_ for t, t_ in zip(minibatch_tensors, tensors) if isshared(t)}
+        {t: t_ for t, t_ in zip(minibatch_tensors, tensors) if is_shared(t)}
     )
     elbo = theano.clone(elbo, updates, strict=False)
 
