@@ -566,7 +566,7 @@ class TestMatchesScipy(SeededTest):
         with Model() as model_sum:
             Multinomial('m_sum', n=2*n, p=p, shape=len(p))
         pt_sum = {'m_sum': vals.sum(0)}
-        assert_almost_equal(model.fastlogp(pt), model_sum.fastlogp(pt_sum))
+        assert_almost_equal(model.fastlogp(pt), model_sum.fastlogp(pt_sum), decimal=4)
 
     def test_categorical(self):
         for n in [2, 3, 4]:
