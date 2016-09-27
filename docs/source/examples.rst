@@ -6,6 +6,7 @@ Examples
 
 .. toctree::
    notebooks/BEST.ipynb
+   notebooks/LKJ.ipynb
    notebooks/stochastic_volatility.ipynb
    notebooks/GLM-linear.ipynb
    notebooks/GLM-robust.ipynb
