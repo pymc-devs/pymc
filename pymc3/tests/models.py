@@ -9,7 +9,7 @@ def simple_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        Normal('x', mu, tau, shape=2, testval=[.1] * 2)
+        Normal('x', mu, tau=tau, shape=2, testval=[.1] * 2)
 
     return model.test_point, model, (mu, tau ** -1)
 
@@ -18,7 +18,7 @@ def multidimensional_model():
     mu = -2.1
     tau = 1.3
     with Model() as model:
-        Normal('x', mu, tau, shape=(3, 2), testval=.1 * np.ones((3, 2)))
+        Normal('x', mu, tau=tau, shape=(3, 2), testval=.1 * np.ones((3, 2)))
 
     return model.test_point, model, (mu, tau ** -1)
 
@@ -34,7 +34,7 @@ def simple_2model():
     tau = 1.3
     p = .4
     with Model() as model:
-        x = pm.Normal('x', mu, tau, testval=.1)
+        x = pm.Normal('x', mu, tau=tau, testval=.1)
         pm.Deterministic('logx', log(x))
         pm.Bernoulli('y', p)
     return model.test_point, model
@@ -48,7 +48,8 @@ def mv_simple():
         [1., -0.05, 5.5]])
     tau = np.dot(p, p.T)
     with pm.Model() as model:
-        pm.MvNormal('x', pm.constant(mu), pm.constant(tau), shape=3, testval=np.array([.1, 1., .8]))
+        pm.MvNormal('x', pm.constant(mu), tau=pm.constant(tau),
+                    shape=3, testval=np.array([.1, 1., .8]))
     H = tau
     C = np.linalg.inv(H)
     return model.test_point, model, (mu, C)

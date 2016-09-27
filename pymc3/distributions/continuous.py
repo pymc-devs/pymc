@@ -174,17 +174,39 @@ class Normal(Continuous):
     ----------
     mu : float
         Mean.
-    tau : float
-        Precision (tau > 0).
     sd : float
         Standard deviation (sd > 0).
+    tau : float
+        Precision (tau > 0).
     """
 
-    def __init__(self, mu=0.0, tau=None, sd=None, *args, **kwargs):
-        super(Normal, self).__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        # FIXME In order to catch the case where Normal('x', 0, .1) is
+        # called to display a warning we have to fetch the args and
+        # kwargs manually.  After a certain period we should revert
+        # back to the old calling signature.
+
+        if len(args) == 1:
+            mu = args[0]
+            sd = kwargs.pop('sd', None)
+            tau = kwargs.pop('tau', None)
+        elif len(args) == 2:
+            warnings.warn(('The order of positional arguments to Normal()'
+                           'has changed. The new signature is:'
+                           'Normal(name, mu, sd) instead of Normal(name, mu, tau).'),
+                          DeprecationWarning)
+            mu, sd = args
+            tau = kwargs.pop('tau', None)
+        else:
+            mu = kwargs.pop('mu', 0.)
+            sd = kwargs.pop('sd', None)
+            tau = kwargs.pop('tau', None)
+
         self.mean = self.median = self.mode = self.mu = mu
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.variance = 1. / self.tau
+
+        super(Normal, self).__init__(**kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu, tau, sd = draw_values([self.mu, self.tau, self.sd],
@@ -219,21 +241,21 @@ class HalfNormal(PositiveContinuous):
 
     Parameters
     ----------
-    tau : float
-        Precision (tau > 0).
     sd : float
         Standard deviation (sd > 0).
+    tau : float
+        Precision (tau > 0).
     """
 
-    def __init__(self, tau=None, sd=None, *args, **kwargs):
+    def __init__(self, sd=None, tau=None, *args, **kwargs):
         super(HalfNormal, self).__init__(*args, **kwargs)
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.mean = tt.sqrt(2 / (np.pi * self.tau))
         self.variance = (1. - 2 / np.pi) / self.tau
 
     def random(self, point=None, size=None, repeat=None):
-        tau = draw_values([self.tau], point=point)
-        return generate_samples(stats.halfnorm.rvs, loc=0., scale=tau**-0.5,
+        sd = draw_values([self.sd], point=point)
+        return generate_samples(stats.halfnorm.rvs, loc=0., scale=sd,
                                 dist_shape=self.shape,
                                 size=size)
 
@@ -382,7 +404,7 @@ class Beta(UnitContinuous):
        \alpha &= \mu \kappa \\
        \beta  &= (1 - \mu) \kappa
 
-       \text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1 
+       \text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1
 
     Parameters
     ----------
@@ -554,15 +576,16 @@ class Lognormal(PositiveContinuous):
         Scale parameter (tau > 0).
     """
 
-    def __init__(self, mu=0, tau=1, *args, **kwargs):
+    def __init__(self, mu=0, sd=None, tau=None, *args, **kwargs):
         super(Lognormal, self).__init__(*args, **kwargs)
 
         self.mu = mu
-        self.tau = tau
-        self.mean = tt.exp(mu + 1. / (2 * tau))
+        self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
+
+        self.mean = tt.exp(mu + 1. / (2 * self.tau))
         self.median = tt.exp(mu)
-        self.mode = tt.exp(mu - 1. / tau)
-        self.variance = (tt.exp(1. / tau) - 1) * tt.exp(2 * mu + 1. / tau)
+        self.mode = tt.exp(mu - 1. / self.tau)
+        self.variance = (tt.exp(1. / self.tau) - 1) * tt.exp(2 * mu + 1. / self.tau)
 
     def _random(self, mu, tau, size=None):
         samples = np.random.normal(size=size)
@@ -1199,7 +1222,7 @@ class VonMises(Continuous):
     R"""
     Univariate VonMises log-likelihood.
     .. math::
-        f(x \mid \mu, \kappa) =  
+        f(x \mid \mu, \kappa) =
             \frac{e^{\kappa\cos(x-\mu)}}{2\pi I_0(\kappa)}
 
     where :I_0 is the modified Bessel function of order 0.
@@ -1244,7 +1267,7 @@ class SkewNormal(Continuous):
     R"""
     Univariate skew-normal log-likelihood.
     .. math::
-       f(x \mid \mu, \tau, \alpha) = 
+       f(x \mid \mu, \tau, \alpha) =
        2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
     ========  ==========================================
     Support   :math:`x \in \mathbb{R}`
@@ -1266,13 +1289,13 @@ class SkewNormal(Continuous):
         Alternative scale parameter (tau > 0).
     alpha : float
         Skewness parameter.
-    
+
     Notes
     -----
-    When alpha=0 we recover the Normal distribution and mu becomes the mean, 
-    tau the precision and sd the standard deviation. In the limit of alpha 
-    approaching plus/minus infinite we get a half-normal distribution.       
-        
+    When alpha=0 we recover the Normal distribution and mu becomes the mean,
+    tau the precision and sd the standard deviation. In the limit of alpha
+    approaching plus/minus infinite we get a half-normal distribution.
+
     """
     def __init__(self, mu=0.0, sd=None, tau=None, alpha=1,  *args, **kwargs):
         super(SkewNormal, self).__init__(*args, **kwargs)
