@@ -556,6 +556,16 @@ class TestMatchesScipy(SeededTest):
         self.pymc3_matches_scipy(Multinomial, Vector(Nat, n), {'p': Simplex(n), 'n': Nat},
                                  multinomial_logpdf)
 
+    def test_multinomial_vec(self):
+        vals = np.array([[2,4,4], [3,3,4]])
+        with Model() as model:
+            Multinomial('m', n=10, p=np.array([0.2, 0.3, 0.5]))
+        pt = {'vals': vals}
+        with Model() as model_sum:
+            Multinomial('m_sum', n=20, p=0.3)
+        pt_sum = {'vals_sum': vals.sum(0)}
+        assert_almost_equal(model.fastlogp(pt), model_sum.fastlogp(pt_sum))
+
     def test_categorical(self):
         for n in [2, 3, 4]:
             yield self.check_categorical, n
