@@ -562,10 +562,10 @@ class TestMatchesScipy(SeededTest):
         n = 10
         with Model() as model:
             Multinomial('m', n=10, p=p, shape=len(p))
-        pt = {'vals': vals}
+        pt = {'value': vals}
         with Model() as model_sum:
             Multinomial('m_sum', n=2*n, p=p, shape=len(p))
-        pt_sum = {'vals_sum': vals.sum(0)}
+        pt_sum = {'value': vals.sum(0)}
         assert_almost_equal(model.fastlogp(pt), model_sum.fastlogp(pt_sum))
 
     def test_categorical(self):
