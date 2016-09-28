@@ -206,7 +206,7 @@
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Flat" title="pymc3.distributions.continuous.Flat"><code class="xref py py-obj docutils literal"><span class="pre">Flat</span></code></a>(*args,&nbsp;**kwargs)</td>
 <td>Uninformative log-likelihood that returns 0 regardless of the passed value.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Normal" title="pymc3.distributions.continuous.Normal"><code class="xref py py-obj docutils literal"><span class="pre">Normal</span></code></a>([mu,&nbsp;tau,&nbsp;sd])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Normal" title="pymc3.distributions.continuous.Normal"><code class="xref py py-obj docutils literal"><span class="pre">Normal</span></code></a>(*args,&nbsp;**kwargs)</td>
 <td>Univariate normal log-likelihood.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Beta" title="pymc3.distributions.continuous.Beta"><code class="xref py py-obj docutils literal"><span class="pre">Beta</span></code></a>([alpha,&nbsp;beta,&nbsp;mu,&nbsp;sd])</td>
@@ -233,16 +233,16 @@
 <tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Weibull" title="pymc3.distributions.continuous.Weibull"><code class="xref py py-obj docutils literal"><span class="pre">Weibull</span></code></a>(alpha,&nbsp;beta,&nbsp;*args,&nbsp;**kwargs)</td>
 <td>Weibull log-likelihood.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">StudentTpos</span></code></td>
-<td>Creates a new upper, lower or upper+lower bounded distribution</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">StudentTpos</span></code>(*args,&nbsp;**kwargs)</td>
+<td></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Lognormal" title="pymc3.distributions.continuous.Lognormal"><code class="xref py py-obj docutils literal"><span class="pre">Lognormal</span></code></a>([mu,&nbsp;tau])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.Lognormal" title="pymc3.distributions.continuous.Lognormal"><code class="xref py py-obj docutils literal"><span class="pre">Lognormal</span></code></a>([mu,&nbsp;sd,&nbsp;tau])</td>
 <td>Log-normal log-likelihood.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.ChiSquared" title="pymc3.distributions.continuous.ChiSquared"><code class="xref py py-obj docutils literal"><span class="pre">ChiSquared</span></code></a>(nu,&nbsp;*args,&nbsp;**kwargs)</td>
 <td><span class="math">\(\chi^2\)</span> log-likelihood.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.HalfNormal" title="pymc3.distributions.continuous.HalfNormal"><code class="xref py py-obj docutils literal"><span class="pre">HalfNormal</span></code></a>([tau,&nbsp;sd])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.continuous.HalfNormal" title="pymc3.distributions.continuous.HalfNormal"><code class="xref py py-obj docutils literal"><span class="pre">HalfNormal</span></code></a>([sd,&nbsp;tau])</td>
 <td>Half-normal log-likelihood.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.continuous.Wald" title="pymc3.distributions.continuous.Wald"><code class="xref py py-obj docutils literal"><span class="pre">Wald</span></code></a>([mu,&nbsp;lam,&nbsp;phi,&nbsp;alpha])</td>
@@ -312,7 +312,7 @@ the passed value.</p>
 
 <dl class="class">
 <dt id="pymc3.distributions.continuous.Normal">
-<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Normal</code><span class="sig-paren">(</span><em>mu=0.0</em>, <em>tau=None</em>, <em>sd=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Normal" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Normal</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Normal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Univariate normal log-likelihood.</p>
 <div class="math">
 \[f(x \mid \mu, \tau) =
@@ -348,13 +348,13 @@ given by</p>
 <blockquote>
 <div><p>Mean.</p>
 </div></blockquote>
-<p><strong>tau</strong> : float</p>
-<blockquote>
-<div><p>Precision (tau &gt; 0).</p>
-</div></blockquote>
 <p><strong>sd</strong> : float</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Standard deviation (sd &gt; 0).</p>
+</div></blockquote>
+<p><strong>tau</strong> : float</p>
+<blockquote class="last">
+<div><p>Precision (tau &gt; 0).</p>
 </div></blockquote>
 </td>
 </tr>
@@ -391,7 +391,7 @@ beta or mean and standard deviation. The link between the two
 parametrizations is given by</p>
 <div class="math">
 \[ \begin{align}\begin{aligned}\begin{split}\alpha &amp;= \mu \kappa \\
-\beta  &amp;= (1 - \mu) \kappa\end{split}\\\text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1 \end{aligned}\end{align} \]</div>
+\beta  &amp;= (1 - \mu) \kappa\end{split}\\\text{where } \kappa = \frac{\mu(1-\mu)}{\sigma^2} - 1\end{aligned}\end{align} \]</div>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -757,7 +757,7 @@ parametrizations is given by</p>
 
 <dl class="class">
 <dt id="pymc3.distributions.continuous.Lognormal">
-<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Lognormal</code><span class="sig-paren">(</span><em>mu=0</em>, <em>tau=1</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Lognormal" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">Lognormal</code><span class="sig-paren">(</span><em>mu=0</em>, <em>sd=None</em>, <em>tau=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.Lognormal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Log-normal log-likelihood.</p>
 <p>Distribution of any random variable whose logarithm is normally
 distributed. A variable might be modeled as log-normal if it can
@@ -841,7 +841,7 @@ independent factors.</p>
 
 <dl class="class">
 <dt id="pymc3.distributions.continuous.HalfNormal">
-<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">HalfNormal</code><span class="sig-paren">(</span><em>tau=None</em>, <em>sd=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.HalfNormal" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">HalfNormal</code><span class="sig-paren">(</span><em>sd=None</em>, <em>tau=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.HalfNormal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Half-normal log-likelihood.</p>
 <div class="math">
 \[f(x \mid \tau) =
@@ -868,13 +868,13 @@ independent factors.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>tau</strong> : float</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>sd</strong> : float</p>
 <blockquote>
-<div><p>Precision (tau &gt; 0).</p>
-</div></blockquote>
-<p><strong>sd</strong> : float</p>
-<blockquote class="last">
 <div><p>Standard deviation (sd &gt; 0).</p>
+</div></blockquote>
+<p><strong>tau</strong> : float</p>
+<blockquote class="last">
+<div><p>Precision (tau &gt; 0).</p>
 </div></blockquote>
 </td>
 </tr>
@@ -1128,7 +1128,7 @@ Vol. 4, No. 1, pp 35-45.</td></tr>
 <em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">VonMises</code><span class="sig-paren">(</span><em>mu=0.0</em>, <em>kappa=None</em>, <em>transform='circular'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.VonMises" title="Permalink to this definition">¶</a></dt>
 <dd><p>Univariate VonMises log-likelihood.
 .. math:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">f</span><span class="p">(</span><span class="n">x</span> \<span class="n">mid</span> \<span class="n">mu</span><span class="p">,</span> \<span class="n">kappa</span><span class="p">)</span> <span class="o">=</span>  
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">f</span><span class="p">(</span><span class="n">x</span> \<span class="n">mid</span> \<span class="n">mu</span><span class="p">,</span> \<span class="n">kappa</span><span class="p">)</span> <span class="o">=</span>
     \<span class="n">frac</span><span class="p">{</span><span class="n">e</span><span class="o">^</span><span class="p">{</span>\<span class="n">kappa</span>\<span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="o">-</span>\<span class="n">mu</span><span class="p">)}}{</span><span class="mi">2</span>\<span class="n">pi</span> <span class="n">I_0</span><span class="p">(</span>\<span class="n">kappa</span><span class="p">)}</span>
 </pre></div>
 </div>
@@ -1139,6 +1139,38 @@ Vol. 4, No. 1, pp 35-45.</td></tr>
 <dt>kappa</dt>
  <span class="classifier-delimiter">:</span> <span class="classifier">float</span><dd>Concentration (frac{1}{kappa} is analogous to sigma^2).</dd>
 </dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.continuous.SkewNormal">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.continuous.</code><code class="descname">SkewNormal</code><span class="sig-paren">(</span><em>mu=0.0</em>, <em>sd=None</em>, <em>tau=None</em>, <em>alpha=1</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.continuous.SkewNormal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Univariate skew-normal log-likelihood.
+.. math:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">f</span><span class="p">(</span><span class="n">x</span> \<span class="n">mid</span> \<span class="n">mu</span><span class="p">,</span> \<span class="n">tau</span><span class="p">,</span> \<span class="n">alpha</span><span class="p">)</span> <span class="o">=</span>
+<span class="mi">2</span> \<span class="n">Phi</span><span class="p">((</span><span class="n">x</span><span class="o">-</span>\<span class="n">mu</span><span class="p">)</span>\<span class="n">sqrt</span><span class="p">{</span>\<span class="n">tau</span><span class="p">}</span>\<span class="n">alpha</span><span class="p">)</span> \<span class="n">phi</span><span class="p">(</span><span class="n">x</span><span class="p">,</span>\<span class="n">mu</span><span class="p">,</span>\<span class="n">tau</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Skew-normal distribution can be parameterized either in terms of precision
+or standard deviation. The link between the two parametrizations is
+given by
+.. math:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>\<span class="n">tau</span> <span class="o">=</span> \<span class="n">dfrac</span><span class="p">{</span><span class="mi">1</span><span class="p">}{</span>\<span class="n">sigma</span><span class="o">^</span><span class="mi">2</span><span class="p">}</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>mu</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">float</span><dd>Location parameter.</dd>
+<dt>sd</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">float</span><dd>Scale parameter (sd &gt; 0).</dd>
+<dt>tau</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">float</span><dd>Alternative scale parameter (tau &gt; 0).</dd>
+<dt>alpha</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">float</span><dd>Skewness parameter.</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>When alpha=0 we recover the Normal distribution and mu becomes the mean,
+tau the precision and sd the standard deviation. In the limit of alpha
+approaching plus/minus infinite we get a half-normal distribution.</p>
 </dd></dl>
 
 </div>
@@ -1637,7 +1669,7 @@ rescaled otherwise.</p>
 <col width="90%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.MvNormal" title="pymc3.distributions.multivariate.MvNormal"><code class="xref py py-obj docutils literal"><span class="pre">MvNormal</span></code></a>(mu,&nbsp;tau,&nbsp;*args,&nbsp;**kwargs)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.multivariate.MvNormal" title="pymc3.distributions.multivariate.MvNormal"><code class="xref py py-obj docutils literal"><span class="pre">MvNormal</span></code></a>(mu[,&nbsp;cov,&nbsp;tau])</td>
 <td>Multivariate normal log-likelihood.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.multivariate.Wishart" title="pymc3.distributions.multivariate.Wishart"><code class="xref py py-obj docutils literal"><span class="pre">Wishart</span></code></a>(n,&nbsp;V,&nbsp;*args,&nbsp;**kwargs)</td>
@@ -1656,7 +1688,7 @@ rescaled otherwise.</p>
 </table>
 <span class="target" id="module-pymc3.distributions.multivariate"></span><dl class="class">
 <dt id="pymc3.distributions.multivariate.MvNormal">
-<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">MvNormal</code><span class="sig-paren">(</span><em>mu</em>, <em>tau</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.MvNormal" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.distributions.multivariate.</code><code class="descname">MvNormal</code><span class="sig-paren">(</span><em>mu</em>, <em>cov=None</em>, <em>tau=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.multivariate.MvNormal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Multivariate normal log-likelihood.</p>
 <div class="math">
 \[f(x \mid \pi, T) =
@@ -1687,7 +1719,11 @@ rescaled otherwise.</p>
 <blockquote>
 <div><p>Vector of means.</p>
 </div></blockquote>
-<p><strong>tau</strong> : array</p>
+<p><strong>cov</strong> : array, optional</p>
+<blockquote>
+<div><p>Covariance matrix.</p>
+</div></blockquote>
+<p><strong>tau</strong> : array, optional</p>
 <blockquote class="last">
 <div><p>Precision matrix.</p>
 </div></blockquote>
@@ -2577,7 +2613,7 @@ meaningful when <cite>stat_funcs</cite> is None.</p>
 <h3>Sampling<a class="headerlink" href="#sampling" title="Permalink to this headline">¶</a></h3>
 <span class="target" id="module-pymc3.sampling"></span><dl class="function">
 <dt id="pymc3.sampling.sample">
-<code class="descclassname">pymc3.sampling.</code><code class="descname">sample</code><span class="sig-paren">(</span><em>draws</em>, <em>step=None</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>njobs=1</em>, <em>tune=None</em>, <em>progressbar=True</em>, <em>model=None</em>, <em>random_seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.sample" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.sampling.</code><code class="descname">sample</code><span class="sig-paren">(</span><em>draws</em>, <em>step=None</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>njobs=1</em>, <em>tune=None</em>, <em>progressbar=True</em>, <em>model=None</em>, <em>random_seed=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.sample" title="Permalink to this definition">¶</a></dt>
 <dd><p>Draw a number of samples using the given step method.
 Multiple step methods supported via compound step method
 returns the amount of time taken.</p>
@@ -2627,8 +2663,8 @@ in the system - 2.</p>
 </div></blockquote>
 <p><strong>progressbar</strong> : bool</p>
 <blockquote>
-<div><p>Whether or not to display a progress bar in the command line. The 
-bar shows the percentage of completion, the sampling speed in 
+<div><p>Whether or not to display a progress bar in the command line. The
+bar shows the percentage of completion, the sampling speed in
 samples per second (SPS), and the estimated remaining time until
 completion (&#8220;expected time of arrival&#8221;; ETA).</p>
 </div></blockquote>
@@ -2648,7 +2684,7 @@ completion (&#8220;expected time of arrival&#8221;; ETA).</p>
 
 <dl class="function">
 <dt id="pymc3.sampling.iter_sample">
-<code class="descclassname">pymc3.sampling.</code><code class="descname">iter_sample</code><span class="sig-paren">(</span><em>draws</em>, <em>step</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>tune=None</em>, <em>model=None</em>, <em>random_seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.iter_sample" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.sampling.</code><code class="descname">iter_sample</code><span class="sig-paren">(</span><em>draws</em>, <em>step</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>tune=None</em>, <em>model=None</em>, <em>random_seed=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.iter_sample" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generator that returns a trace on each iteration using the given
 step method.  Multiple step methods supported via compound step
 method returns the amount of time taken.</p>
@@ -2699,7 +2735,7 @@ greater than one, chain numbers will start here.</p>
 
 <dl class="function">
 <dt id="pymc3.sampling.sample_ppc">
-<code class="descclassname">pymc3.sampling.</code><code class="descname">sample_ppc</code><span class="sig-paren">(</span><em>trace</em>, <em>samples=None</em>, <em>model=None</em>, <em>vars=None</em>, <em>size=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.sample_ppc" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.sampling.</code><code class="descname">sample_ppc</code><span class="sig-paren">(</span><em>trace</em>, <em>samples=None</em>, <em>model=None</em>, <em>vars=None</em>, <em>size=None</em>, <em>random_seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.sample_ppc" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate posterior predictive samples from a model given a trace.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2745,7 +2781,7 @@ parameters in each sample of the trace.</p>
 <h4>NUTS<a class="headerlink" href="#nuts" title="Permalink to this headline">¶</a></h4>
 <span class="target" id="module-pymc3.step_methods.nuts"></span><dl class="class">
 <dt id="pymc3.step_methods.nuts.NUTS">
-<em class="property">class </em><code class="descclassname">pymc3.step_methods.nuts.</code><code class="descname">NUTS</code><span class="sig-paren">(</span><em>vars=None</em>, <em>scaling=None</em>, <em>step_scale=0.25</em>, <em>is_cov=False</em>, <em>state=None</em>, <em>Emax=1000</em>, <em>target_accept=0.8</em>, <em>gamma=0.05</em>, <em>k=0.75</em>, <em>t0=10</em>, <em>model=None</em>, <em>profile=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.nuts.NUTS" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.step_methods.nuts.</code><code class="descname">NUTS</code><span class="sig-paren">(</span><em>vars=None</em>, <em>scaling=None</em>, <em>step_scale=0.25</em>, <em>is_cov=False</em>, <em>state=None</em>, <em>max_energy=1000</em>, <em>target_accept=0.8</em>, <em>gamma=0.05</em>, <em>k=0.75</em>, <em>t0=10</em>, <em>model=None</em>, <em>profile=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.nuts.NUTS" title="Permalink to this definition">¶</a></dt>
 <dd><p>Automatically tunes step size and adjust number of steps for good performance.</p>
 <p>Implements &#8220;Algorithm 6: Efficient No-U-Turn Sampler with Dual Averaging&#8221; in:</p>
 <p>Hoffman, Matthew D., &amp; Gelman, Andrew. (2011).
@@ -2857,7 +2893,7 @@ and Categorical variables with k=1.</p>
 <h4>Slice<a class="headerlink" href="#slice" title="Permalink to this headline">¶</a></h4>
 <span class="target" id="module-pymc3.step_methods.slicer"></span><dl class="class">
 <dt id="pymc3.step_methods.slicer.Slice">
-<em class="property">class </em><code class="descclassname">pymc3.step_methods.slicer.</code><code class="descname">Slice</code><span class="sig-paren">(</span><em>vars=None</em>, <em>w=1</em>, <em>tune=True</em>, <em>model=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.slicer.Slice" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.step_methods.slicer.</code><code class="descname">Slice</code><span class="sig-paren">(</span><em>vars=None</em>, <em>w=1.0</em>, <em>tune=True</em>, <em>model=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.slicer.Slice" title="Permalink to this definition">¶</a></dt>
 <dd><p>Univariate slice sampler step method</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2893,230 +2929,6 @@ and Categorical variables with k=1.</p>
 </div>
 <div class="section" id="atmcmc">
 <h4>ATMCMC<a class="headerlink" href="#atmcmc" title="Permalink to this headline">¶</a></h4>
-<span class="target" id="module-pymc3.step_methods.ATMCMC"></span><p>Created on March, 2016</p>
-<p>&#64;author: Hannes Vasyura-Bathke</p>
-<dl class="class">
-<dt id="pymc3.step_methods.ATMCMC.ATMCMC">
-<em class="property">class </em><code class="descclassname">pymc3.step_methods.ATMCMC.</code><code class="descname">ATMCMC</code><span class="sig-paren">(</span><em>vars=None</em>, <em>covariance=None</em>, <em>scaling=1.0</em>, <em>n_chains=100</em>, <em>tune=True</em>, <em>tune_interval=100</em>, <em>model=None</em>, <em>check_bound=True</em>, <em>likelihood_name='like'</em>, <em>proposal_dist=&lt;class 'pymc3.step_methods.metropolis.MultivariateNormalProposal'&gt;</em>, <em>coef_variation=1.0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.ATMCMC.ATMCMC" title="Permalink to this definition">¶</a></dt>
-<dd><p>Adaptive Transitional Markov-Chain Monte-Carlo
-following: Ching &amp; Chen 2007: Transitional Markov chain Monte Carlo method</p>
-<blockquote>
-<div>for Bayesian model updating, model class selection and model
-averaging
-Journal of Engineering Mechanics 2007
-DOI:10.1016/(ASCE)0733-9399(2007)133:7(816)</div></blockquote>
-<p><a class="reference external" href="http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399%282007%29133:7%28816%29">http://ascelibrary.org/doi/abs/10.1061/%28ASCE%290733-9399%282007%29133:7%28816%29</a></p>
-<p>Creates initial samples and framework around the (C)ATMIP parameters</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>vars</strong> : list</p>
-<blockquote>
-<div><p>List of variables for sampler</p>
-</div></blockquote>
-<p><strong>n_chains</strong> : (integer) Number of chains per stage has to be a large number</p>
-<blockquote>
-<div><p>of number of njobs (processors to be used) on the machine.</p>
-</div></blockquote>
-<p><strong>covariance</strong> : (n_chains x n_chains) Numpy array</p>
-<blockquote>
-<div><p>Initial Covariance matrix for proposal distribution,
-if None - identity matrix taken</p>
-</div></blockquote>
-<p><strong>likelihood_name</strong> : string</p>
-<blockquote>
-<div><p>name of the determinsitic variable that contains the
-model likelihood - defaults to &#8216;like&#8217;</p>
-</div></blockquote>
-<p><strong>proposal_dist</strong> : pymc3 object</p>
-<blockquote>
-<div><p>Type of proposal distribution, see metropolis.py for
-options</p>
-</div></blockquote>
-<p><strong>coef_variation</strong> : scalar, float</p>
-<blockquote>
-<div><p>Coefficient of variation, determines the change of beta
-from stage to stage, i.e.indirectly the number of stages,
-low coef_variation &#8211;&gt; slow beta change,</p>
-<blockquote>
-<div><p>results in many stages and vice verca</p>
-</div></blockquote>
-<p>(default: 1.)</p>
-</div></blockquote>
-<p><strong>check_bound</strong> : boolean</p>
-<blockquote>
-<div><p>check if current sample lies outside of variable definition
-speeds up computation as the forward model wont be executed
-default: True</p>
-</div></blockquote>
-<p><strong>model</strong> : PyMC Model</p>
-<blockquote class="last">
-<div><p>Optional model for sampling step.
-Defaults to None (taken from context).</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-<dl class="method">
-<dt id="pymc3.step_methods.ATMCMC.ATMCMC.calc_beta">
-<code class="descname">calc_beta</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.ATMCMC.ATMCMC.calc_beta" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate next tempering beta and importance weights based on
-current beta and sample likelihoods.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>beta(m+1)</strong> : scalar float tempering parameter of the next stage</p>
-<p><strong>beta(m)</strong> : scalar float tempering parameter of the current stage</p>
-<p class="last"><strong>weights</strong> : NdArray of importance weights (floats)</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="pymc3.step_methods.ATMCMC.ATMCMC.calc_covariance">
-<code class="descname">calc_covariance</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.ATMCMC.ATMCMC.calc_covariance" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate trace covariance matrix based on importance weights.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Ndarray of weighted covariances (NumPy &gt; 1.10. required)</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="pymc3.step_methods.ATMCMC.ATMCMC.resample">
-<code class="descname">resample</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.ATMCMC.ATMCMC.resample" title="Permalink to this definition">¶</a></dt>
-<dd><p>Resample pdf based on importance weights.
-based on Kitagawas deterministic resampling algorithm.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>outindex</strong> : Ndarray of resampled trace indexes</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="pymc3.step_methods.ATMCMC.ATMCMC.select_end_points">
-<code class="descname">select_end_points</code><span class="sig-paren">(</span><em>mtrace</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.ATMCMC.ATMCMC.select_end_points" title="Permalink to this definition">¶</a></dt>
-<dd><p>Read trace results and take end points for each chain and set as
-start population for the next stage.
-Parameters
-&#8212;&#8212;-</p>
-<p>mtrace : Multitrace pymc3 object</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>population</strong> : List of pymc3.Point - objects,</p>
-<p><strong>array_population</strong> : Ndarray of trace end-points</p>
-<p class="last"><strong>likelihoods</strong> : Ndarray of likelihoods of the trace end-points</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="function">
-<dt id="pymc3.step_methods.ATMCMC.ATMIP_sample">
-<code class="descclassname">pymc3.step_methods.ATMCMC.</code><code class="descname">ATMIP_sample</code><span class="sig-paren">(</span><em>n_steps</em>, <em>step=None</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>stage=None</em>, <em>njobs=1</em>, <em>tune=None</em>, <em>progressbar=False</em>, <em>model=None</em>, <em>random_seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.ATMCMC.ATMIP_sample" title="Permalink to this definition">¶</a></dt>
-<dd><p>(C)ATMIP sampling algorithm from Minson et al. 2013:
-Bayesian inversion for finite fault earthquake source models I-</p>
-<blockquote>
-<div>Theory and algorithm</div></blockquote>
-<p>(without cascading- C)
-<a class="reference external" href="https://gji.oxfordjournals.org/content/194/3/1701.full">https://gji.oxfordjournals.org/content/194/3/1701.full</a>
-Samples the solution space with n_chains of Metropolis chains, where each
-chain has n_steps iterations. Once finished, the sampled traces are
-evaluated:
-(1) Based on the likelihoods of the final samples, chains are weighted
-(2) the weighted covariance of the ensemble is calculated and set as new</p>
-<blockquote>
-<div>proposal distribution</div></blockquote>
-<ol class="arabic simple" start="3">
-<li>the variation in the ensemble is calculated and the next tempering
-parameter (beta) calculated</li>
-<li>New n_chains Metropolis chains are seeded on the traces with high
-weight for n_steps iterations</li>
-<li>Repeat until beta &gt; 1.</li>
-</ol>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n_steps</strong> : int</p>
-<blockquote>
-<div><p>The number of samples to draw for each Markov-chain per stage</p>
-</div></blockquote>
-<p><strong>step</strong> : function from TMCMC initialisation</p>
-<p><strong>start</strong> : List of dicts with length(n_chains)</p>
-<blockquote>
-<div><p>Starting points in parameter space (or partial point)
-Defaults to random draws from variables (defaults to empty dict)</p>
-</div></blockquote>
-<p><strong>trace</strong> : backend</p>
-<blockquote>
-<div><p>This should be a backend instance.
-Passing either &#8220;text&#8221; or &#8220;sqlite&#8221; is taken as a shortcut to set
-up the corresponding backend (with &#8220;mcmc&#8221; used as the base
-name).</p>
-</div></blockquote>
-<p><strong>chain</strong> : int</p>
-<blockquote>
-<div><p>Chain number used to store sample in backend. If <cite>njobs</cite> is
-greater than one, chain numbers will start here.</p>
-</div></blockquote>
-<p><strong>stage</strong> : int</p>
-<blockquote>
-<div><p>Stage where to start or continue the calculation. If None the start
-will be at stage = 0.</p>
-</div></blockquote>
-<p><strong>njobs</strong> : int</p>
-<blockquote>
-<div><p>The number of cores to be used in parallel. Be aware that theano has
-internal parallelisation. Sometimes this is more efficient especially
-for simple models.
-step.n_chains / njobs has to be an integer number!</p>
-</div></blockquote>
-<p><strong>tune</strong> : int</p>
-<blockquote>
-<div><p>Number of iterations to tune, if applicable (defaults to None)</p>
-</div></blockquote>
-<p><strong>trace</strong> : result_folder for storing stages, will be created if not existing</p>
-<p><strong>progressbar</strong> : bool</p>
-<blockquote>
-<div><p>Flag for progress bar</p>
-</div></blockquote>
-<p><strong>model</strong> : Model (optional if in <cite>with</cite> context) has to contain deterministic</p>
-<blockquote>
-<div><p>variable &#8216;name defined under step.likelihood_name&#8217; that contains
-model likelihood</p>
-</div></blockquote>
-<p><strong>random_seed</strong> : int or list of ints</p>
-<blockquote>
-<div><p>A list is accepted if more if <cite>njobs</cite> is greater than one.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">MultiTrace object with access to sampling values</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
 </div>
 </div>
 <div class="section" id="variational">
@@ -3128,27 +2940,27 @@ model likelihood</p>
 </ol>
 <dl class="function">
 <dt id="pymc3.variational.advi.advi">
-<code class="descclassname">pymc3.variational.advi.</code><code class="descname">advi</code><span class="sig-paren">(</span><em>vars=None</em>, <em>start=None</em>, <em>model=None</em>, <em>n=5000</em>, <em>accurate_elbo=False</em>, <em>optimizer=None</em>, <em>learning_rate=0.001</em>, <em>epsilon=0.1</em>, <em>random_seed=20090425</em>, <em>verbose=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi.advi" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.variational.advi.</code><code class="descname">advi</code><span class="sig-paren">(</span><em>vars=None</em>, <em>start=None</em>, <em>model=None</em>, <em>n=5000</em>, <em>accurate_elbo=False</em>, <em>optimizer=None</em>, <em>learning_rate=0.001</em>, <em>epsilon=0.1</em>, <em>random_seed=None</em>, <em>verbose=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi.advi" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform automatic differentiation variational inference (ADVI).</p>
-<p>This function implements the meanfield ADVI, where the variational 
-posterior distribution is assumed to be spherical Gaussian without 
-correlation of parameters and fit to the true posterior distribution. 
-The means and standard deviations of the variational posterior are referred 
+<p>This function implements the meanfield ADVI, where the variational
+posterior distribution is assumed to be spherical Gaussian without
+correlation of parameters and fit to the true posterior distribution.
+The means and standard deviations of the variational posterior are referred
 to as variational parameters.</p>
-<p>The return value of this function is an <code class="code docutils literal"><span class="pre">ADVIfit</span></code> object, which has 
-variational parameters. If you want to draw samples from the variational 
-posterior, you need to pass the <code class="code docutils literal"><span class="pre">ADVIfit</span></code> object to 
+<p>The return value of this function is an <code class="code docutils literal"><span class="pre">ADVIfit</span></code> object, which has
+variational parameters. If you want to draw samples from the variational
+posterior, you need to pass the <code class="code docutils literal"><span class="pre">ADVIfit</span></code> object to
 <code class="code docutils literal"><span class="pre">pymc3.variational.sample_vp()</span></code>.</p>
-<p>The variational parameters are defined on the transformed space, which is 
-required to do ADVI on an unconstrained parameter space as described in 
-[KTR+2016]. The parameters in the <code class="code docutils literal"><span class="pre">ADVIfit</span></code> object are in the 
-transformed space, while traces returned by <code class="code docutils literal"><span class="pre">sample_vp()</span></code> are in 
+<p>The variational parameters are defined on the transformed space, which is
+required to do ADVI on an unconstrained parameter space as described in
+[KTR+2016]. The parameters in the <code class="code docutils literal"><span class="pre">ADVIfit</span></code> object are in the
+transformed space, while traces returned by <code class="code docutils literal"><span class="pre">sample_vp()</span></code> are in
 the original space as obtained by MCMC sampling methods in PyMC3.</p>
-<p>The variational parameters are optimized with given optimizer, which is a 
-function that returns a dictionary of parameter updates as provided to 
-Theano function. If no optimizer is provided, optimization is performed 
-with a modified version of adagrad, where only the last (n_window) gradient 
-vectors are used to control the learning rate and older gradient vectors 
+<p>The variational parameters are optimized with given optimizer, which is a
+function that returns a dictionary of parameter updates as provided to
+Theano function. If no optimizer is provided, optimization is performed
+with a modified version of adagrad, where only the last (n_window) gradient
+vectors are used to control the learning rate and older gradient vectors
 are ignored. n_window denotes the size of time window and fixed to 10.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -3176,8 +2988,8 @@ are ignored. n_window denotes the size of time window and fixed to 10.</p>
 </div></blockquote>
 <p><strong>optimizer</strong> : (loss, tensor) -&gt; dict or OrderedDict</p>
 <blockquote>
-<div><p>A function that returns parameter updates given loss and parameter 
-tensor. If <code class="code docutils literal"><span class="pre">None</span></code> (default), a default Adagrad optimizer is 
+<div><p>A function that returns parameter updates given loss and parameter
+tensor. If <code class="code docutils literal"><span class="pre">None</span></code> (default), a default Adagrad optimizer is
 used with parameters <code class="code docutils literal"><span class="pre">learning_rate</span></code> and <code class="code docutils literal"><span class="pre">epsilon</span></code> below.</p>
 </div></blockquote>
 <p><strong>learning_rate: float</strong></p>
@@ -3190,9 +3002,9 @@ optimizer is given.</p>
 <div><p>Offset in denominator of the scale of learning rate in Adagrad.
 This parameter is ignored when optimizer is given.</p>
 </div></blockquote>
-<p><strong>random_seed</strong> : int</p>
+<p><strong>random_seed</strong> : int or None</p>
 <blockquote>
-<div><p>Seed to initialize random state.</p>
+<div><p>Seed to initialize random state. None uses current seed.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -3210,8 +3022,8 @@ This parameter is ignored when optimizer is given.</p>
 <table class="docutils citation" frame="void" id="ktr-2016" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label">[KTR+2016]</td><td>Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A., 
-and Blei, D. M. (2016). Automatic Differentiation Variational Inference. 
+<tr><td class="label">[KTR+2016]</td><td>Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
+and Blei, D. M. (2016). Automatic Differentiation Variational Inference.
 arXiv preprint arXiv:1603.00788.</td></tr>
 </tbody>
 </table>
@@ -3219,7 +3031,7 @@ arXiv preprint arXiv:1603.00788.</td></tr>
 
 <dl class="function">
 <dt id="pymc3.variational.advi.sample_vp">
-<code class="descclassname">pymc3.variational.advi.</code><code class="descname">sample_vp</code><span class="sig-paren">(</span><em>vparams</em>, <em>draws=1000</em>, <em>model=None</em>, <em>local_RVs=None</em>, <em>random_seed=20090425</em>, <em>hide_transformed=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi.sample_vp" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.variational.advi.</code><code class="descname">sample_vp</code><span class="sig-paren">(</span><em>vparams</em>, <em>draws=1000</em>, <em>model=None</em>, <em>local_RVs=None</em>, <em>random_seed=None</em>, <em>hide_transformed=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi.sample_vp" title="Permalink to this definition">¶</a></dt>
 <dd><p>Draw samples from variational posterior.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -3237,9 +3049,9 @@ arXiv preprint arXiv:1603.00788.</td></tr>
 <blockquote>
 <div><p>Probabilistic model.</p>
 </div></blockquote>
-<p><strong>random_seed</strong> : int</p>
+<p><strong>random_seed</strong> : int or None</p>
 <blockquote>
-<div><p>Seed of random number generator.</p>
+<div><p>Seed of random number generator.  None to use current seed.</p>
 </div></blockquote>
 <p><strong>hide_transformed</strong> : bool</p>
 <blockquote>

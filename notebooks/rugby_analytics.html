@@ -86,9 +86,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="LKJ.html">Fitting a Multivariate Normal Model in PyMC3 with an LKJ Prior</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">Table of Contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html#GLM:-Robust-Linear-Regression">GLM: Robust Linear Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
@@ -535,10 +537,10 @@ and the team-specific parameters and the likelihood function</li>
 <span></span><span class="n">model</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span>
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="c1"># global model parameters</span>
-    <span class="n">home</span>        <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;home&#39;</span><span class="p">,</span>      <span class="mi">0</span><span class="p">,</span> <span class="o">.</span><span class="mo">0001</span><span class="p">)</span>
+    <span class="n">home</span>        <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;home&#39;</span><span class="p">,</span>      <span class="mi">0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=.</span><span class="mo">0001</span><span class="p">)</span>
     <span class="n">tau_att</span>     <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau_att&#39;</span><span class="p">,</span>   <span class="o">.</span><span class="mi">1</span><span class="p">,</span> <span class="o">.</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">tau_def</span>     <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;tau_def&#39;</span><span class="p">,</span>   <span class="o">.</span><span class="mi">1</span><span class="p">,</span> <span class="o">.</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">intercept</span>   <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;intercept&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">.</span><span class="mo">0001</span><span class="p">)</span>
+    <span class="n">intercept</span>   <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;intercept&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=.</span><span class="mo">0001</span><span class="p">)</span>
 
     <span class="c1"># team-specific model parameters</span>
     <span class="n">atts_star</span>   <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s2">&quot;atts_star&quot;</span><span class="p">,</span>

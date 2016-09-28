@@ -580,8 +580,8 @@
     "\n",
     "    tau = pm.Gamma('tau', 1., 1., shape=K)\n",
     "    lambda_ = pm.Uniform('lambda', 0, 5, shape=K)\n",
-    "    mu = pm.Normal('mu', 0, lambda_ * tau, shape=K)\n",
-    "    obs = pm.Normal('obs', mu[component], lambda_[component] * tau[component],\n",
+    "    mu = pm.Normal('mu', 0, tau=lambda_ * tau, shape=K)\n",
+    "    obs = pm.Normal('obs', mu[component], tau=lambda_[component] * tau[component],\n",
     "                    observed=old_faithful_df.std_waiting.values)"
    ]
   },
@@ -1188,8 +1188,9 @@
   }
  ],
  "metadata": {
+  "anaconda-cloud": {},
   "kernelspec": {
-   "display_name": "Python 3",
+   "display_name": "Python [default]",
    "language": "python",
    "name": "python3"
   },
