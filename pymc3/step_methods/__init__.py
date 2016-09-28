@@ -17,7 +17,4 @@ from .slicer import Slice
 
 from .nuts import NUTS
 
-from .ATMCMC import ATMCMC
-from .ATMCMC import ATMIP_sample
-
 from .arraystep import Constant
