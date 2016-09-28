@@ -44,7 +44,7 @@ with Model() as model:
 
     cov_matrix = tt.diag(sigma).dot(corr_matrix.dot(tt.diag(sigma)))
 
-    like = MvNormal('likelihood', mu=mu, cov=cov_matrix, observed=dataset)
+    like = MvNormal('likelihood', mu=mu, tau=matrix_inverse(cov_matrix), observed=dataset)
 
 
 def run(n=1000):
