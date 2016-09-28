@@ -127,124 +127,94 @@ class TestDrawValues(SeededTest):
 class ScalarParameterShape(SeededTest):
 
     def check(self, dist, **kwargs):
-        nr.seed(20090425)
         test_cases = [(None, (1,)), (5, (5,)), ((4, 5), (4, 5))]
         check_dist((dist, kwargs), test_cases)
 
     def test_normal(self):
-        nr.seed(20090425)
         self.check(Normal, mu=0., tau=1.)
 
     def test_uniform(self):
-        nr.seed(20090425)
         self.check(Uniform, lower=0., upper=1.)
 
     def test_half_normal(self):
-        nr.seed(20090425)
         self.check(HalfNormal, tau=1.)
 
     def test_wald(self):
-        nr.seed(20090425)
         self.check(Wald, mu=1., lam=1., alpha=0.)
 
     def test_beta(self):
-        nr.seed(20090425)
         self.check(Beta, alpha=1., beta=1.)
 
     def test_exponential(self):
-        nr.seed(20090425)
         self.check(Exponential, lam=1.)
 
     def test_laplace(self):
-        nr.seed(20090425)
         self.check(Laplace, mu=1., b=1)
 
     def test_lognormal(self):
-        nr.seed(20090425)
         self.check(Lognormal, mu=1., tau=1.)
 
     def test_student_t(self):
-        nr.seed(20090425)
         self.check(StudentT, nu=5, mu=0., lam=1.)
 
     def test_pareto(self):
-        nr.seed(20090425)
         self.check(Pareto, alpha=0.5, m=1.)
 
     def test_cauchy(self):
-        nr.seed(20090425)
         self.check(Cauchy, alpha=1., beta=1.)
 
     def test_half_cauchy(self):
-        nr.seed(20090425)
         self.check(HalfCauchy, beta=1.)
 
     def test_gamma(self):
-        nr.seed(20090425)
         self.check(Gamma, alpha=1., beta=1.)
 
     def test_inverse_gamma(self):
-        nr.seed(20090425)
         self.check(InverseGamma, alpha=0.5, beta=0.5)
 
     def test_chi_squared(self):
-        nr.seed(20090425)
         self.check(ChiSquared, nu=2)
 
     def test_weibull(self):
-        nr.seed(20090425)
         self.check(Weibull, alpha=1., beta=1.)
 
     def test_ex_gaussian(self):
-        nr.seed(20090425)
         self.check(ExGaussian, mu=0., sigma=1., nu=1.)
 
     def test_vonmises(self):
-        nr.seed(20090425)
         self.check(VonMises, mu=0., kappa=1.)
 
     def test_binomial(self):
-        nr.seed(20090425)
         self.check(Binomial, n=5, p=0.5)
 
     def test_beta_binomial(self):
-        nr.seed(20090425)
         self.check(BetaBinomial, alpha=1., beta=1., n=1)
 
     def test_bernoulli(self):
-        nr.seed(20090425)
         self.check(Bernoulli, p=0.5)
 
     def test_poisson(self):
-        nr.seed(20090425)
         self.check(Poisson, mu=1.)
 
     def test_negative_binomial(self):
-        nr.seed(20090425)
         self.check(NegativeBinomial, mu=1., alpha=1.)
 
     def test_constant_dist(self):
-        nr.seed(20090425)
         self.check(ConstantDist, c=3)
 
     def test_zero_inflated_poisson(self):
-        nr.seed(20090425)
         self.check(ZeroInflatedPoisson, theta=1, psi=0.3)
 
     def test_zero_inflated_negative_binomial(self):
-        nr.seed(20090425)
         self.check(ZeroInflatedNegativeBinomial, mu=1., alpha=1., psi=0.3)
 
     def test_discrete_uniform(self):
-        nr.seed(20090425)
         self.check(DiscreteUniform, lower=0., upper=10)
 
     def test_geometric(self):
-        nr.seed(20090425)
         self.check(Geometric, p=0.5)
 
     def test_categorical(self):
-        nr.seed(20090425)
         self.check(Categorical, p=np.array([0.2, 0.3, 0.5]))
 
 
@@ -404,9 +374,6 @@ class Parameters1dShape(SeededTest):
         self.check(Gamma, alpha=self.ones, beta=self.ones)
 
     def test_inverse_gamma(self):
-        # InverseGamma fails due to calculation of self.mean in __init__
-        raise SkipTest(
-            'InverseGamma fails due to calculation of self.mean in __init__')
         self.check(InverseGamma, alpha=self.ones / 2, beta=self.ones / 2)
 
     def test_chi_squared(self):
@@ -456,9 +423,6 @@ class Parameters1dShape(SeededTest):
         self.check(Geometric, p=self.ones / 2)
 
     def test_categorical(self):
-        # Categorical cannot be initialised with >1D probabilities
-        # raise SkipTest(
-        #     'Categorical cannot be initialised with >1D probabilities')
         self.check(Categorical, p=self.ones / len(self.ones))
 
 
@@ -523,9 +487,6 @@ class BroadcastShape(SeededTest):
         self.check(Gamma, alpha=self.ones, beta=self.ones)
 
     def test_inverse_gamma(self):
-        # InverseGamma fails due to calculation of self.mean in __init__
-        raise SkipTest(
-            'InverseGamma fails due to calculation of self.mean in __init__')
         self.check(InverseGamma, alpha=self.ones / 2, beta=self.ones / 2)
 
     def test_chi_squared(self):
@@ -574,9 +535,6 @@ class BroadcastShape(SeededTest):
         self.check(Geometric, p=self.ones / 2)
 
     def test_categorical(self):
-        # Categorical cannot be initialised with >1D probabilities
-        raise SkipTest(
-            'Categorical cannot be initialised with >1D probabilities')
         self.check(Categorical, p=self.ones / self.n)
 
 
@@ -635,13 +593,11 @@ class ScalarParameterSamples(SeededTest):
     def test_laplace(self):
         def ref_rand(size, mu, b):
             return st.laplace.rvs(mu, b, size=size)
-
         pymc3_random(Laplace, {'mu': R, 'b': Rplus}, ref_rand=ref_rand)
 
     def test_lognormal(self):
         def ref_rand(size, mu, tau):
             return np.exp(mu + (tau ** -0.5) * st.norm.rvs(loc=0., scale=1., size=size))
-
         pymc3_random(Lognormal, {'mu': R, 'tau': Rplusbig}, ref_rand=ref_rand)
 
     def test_student_t(self):
@@ -660,16 +616,15 @@ class ScalarParameterSamples(SeededTest):
             return st.halfcauchy.rvs(scale=beta, size=size)
         pymc3_random(HalfCauchy, {'beta': Rplusbig}, ref_rand=ref_rand)
 
-    def test_gamma(self):
+    def test_gamma_alpha_beta(self):
         def ref_rand(size, alpha, beta):
             return st.gamma.rvs(alpha, scale=1. / beta, size=size)
-        pymc3_random(Gamma, {'alpha': Rplusbig,
-                             'beta': Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(Gamma, {'alpha': Rplusbig, 'beta': Rplusbig}, ref_rand=ref_rand)
 
+    def test_gamma_mu_sd(self):
         def ref_rand(size, mu, sd):
             return st.gamma.rvs(mu**2 / sd**2, scale=sd ** 2 / mu, size=size)
-        pymc3_random(
-            Gamma, {'mu': Rplusbig, 'sd': Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(Gamma, {'mu': Rplusbig, 'sd': Rplusbig}, ref_rand=ref_rand)
 
     def test_inverse_gamma(self):
         def ref_rand(size, alpha, beta):
@@ -705,8 +660,7 @@ class ScalarParameterSamples(SeededTest):
             Binomial, {'n': Nat, 'p': Unit}, ref_rand=st.binom.rvs)
 
     def test_beta_binomial(self):
-        pymc3_random_discrete(BetaBinomial,
-                              {'n': Nat, 'alpha': Rplus, 'beta': Rplus},
+        pymc3_random_discrete(BetaBinomial, {'n': Nat, 'alpha': Rplus, 'beta': Rplus},
                               ref_rand=self._beta_bin)
 
     def _beta_bin(self, n, alpha, beta, size=None):
@@ -717,31 +671,16 @@ class ScalarParameterSamples(SeededTest):
                               ref_rand=lambda size, p=None: st.bernoulli.rvs(p, size=size))
 
     def test_poisson(self):
-        pymc3_random_discrete(Poisson, {'mu': Rplusbig},
-                              # Test always fails with larger sample sizes.
-                              size=500,
-                              ref_rand=st.poisson.rvs)
-
-    def poisson_gamma_random(alpha, mu, size):
-        g = st.gamma.rvs(alpha, scale=alpha / mu, size=size)
-        g[g == 0] = np.finfo(float).eps
-        return st.poisson.rvs(g)
+        pymc3_random_discrete(Poisson, {'mu': Rplusbig}, size=500, ref_rand=st.poisson.rvs)
 
     def test_negative_binomial(self):
-        # TODO: fix this so test passes
-        #   pymc3_random_discrete(NegativeBinomial, {'mu':Rplusbig, 'alpha':Rplusbig},
-        #                          size=1000,
-        #                          ref_rand=lambda size, mu=None,
-        # alpha=None: poisson_gamma_random(alpha, mu, size))
-        raise SkipTest(
-            'NegativeBinomial test always fails for unknown reason.')
+        def ref_rand(size, alpha, mu):
+            return st.nbinom.rvs(alpha, alpha / (mu + alpha), size=size)
+        pymc3_random_discrete(NegativeBinomial, {'mu': Rplusbig, 'alpha': Rplusbig},
+                              size=100, fails=50, ref_rand=ref_rand)
 
     def test_geometric(self):
-        pymc3_random_discrete(Geometric, {'p': Unit},
-                              # Test always fails with larger sample sizes.
-                              size=500,
-                              fails=50,  # Be a bit more generous.
-                              ref_rand=nr.geometric)
+        pymc3_random_discrete(Geometric, {'p': Unit}, size=500, fails=50, ref_rand=nr.geometric)
 
     def test_discrete_uniform(self):
         def ref_rand(size, lower, upper):
@@ -810,5 +749,5 @@ class ScalarParameterSamples(SeededTest):
         #                           st.wishart(V, df=n, size=size))
 
     def test_lkj(self):
-        # To do: generate random numbers.
+        # TODO: generate random numbers.
         raise SkipTest('LJK random sampling not implemented yet.')
