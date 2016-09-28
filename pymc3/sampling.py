@@ -1,14 +1,16 @@
+from collections import defaultdict
+
+from joblib import Parallel, delayed
+from numpy.random import randint, seed
+from numpy import shape, asarray
+
 from . import backends
 from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
-from joblib import Parallel, delayed
 from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, Slice, ElemwiseCategorical, CompoundStep)
-from .progressbar import progress_bar
-from numpy.random import randint, seed
-from numpy import shape, asarray
-from collections import defaultdict
+from tqdm import tqdm
 
 import sys
 sys.setrecursionlimit(10000)
@@ -159,11 +161,11 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
             progressbar=True, model=None, random_seed=-1):
     sampling = _iter_sample(draws, step, start, trace, chain,
                             tune, model, random_seed)
-    progress = progress_bar(draws)
+    if progressbar:
+        sampling = tqdm(sampling, total=draws)
     try:
-        for i, strace in enumerate(sampling):
-            if progressbar:
-                progress.update(i)
+        for strace in sampling:
+            pass
     except KeyboardInterrupt:
         strace.close()
     return MultiTrace([strace])
