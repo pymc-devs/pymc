@@ -195,7 +195,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                    local_RVs=None, observed_RVs=None, encoder_params=[],
                    total_size=None, optimizer=None, learning_rate=.001,
                    epsilon=.1, random_seed=None, verbose=1):
-    """Perfoem mini-batch ADVI. 
+    """Perform mini-batch ADVI. 
 
     This function implements a mini-batch ADVI with the meanfield 
     approximation. Autoencoding variational inference is also supported. 
