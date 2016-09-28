@@ -2,15 +2,12 @@
 A simple progress bar to monitor MCMC sampling progress.
 Modified from original code by Corey Goldberg (2010)
 """
-
 from __future__ import print_function
 
-import warnings
-warnings.simplefilter(action="ignore", category=FutureWarning)
 import sys
 import time
-import datetime
 import uuid
+
 try:
     __IPYTHON__
     from IPython.core.display import HTML, Javascript, display
@@ -34,7 +31,6 @@ class ProgressBar(object):
     def update(self, i):
         elapsed = time.time() - self.start
         i += 1
-
         if elapsed - self.last > self.animation_interval:
             self.animate(i, elapsed)
             self.last = elapsed
@@ -80,8 +76,8 @@ class TextProgressBar(ProgressBar):
         return replace_at(bar, info, loc, loc + len(info))
 
 
-def replace_at(str, new, start, stop):
-    return(str[:start] + new + str[stop:])
+def replace_at(string, new, start, stop):
+    return string[:start] + new + string[stop:]
 
 
 def consoleprint(s):
@@ -119,7 +115,7 @@ class IPythonNotebookPB(ProgressBar):
         display(Javascript(
             "$('div#%s').width('%i%%')" % (self.divid, percentage)))
         display(Javascript("$('label#%s').text('%i%% in %.1f sec')" %
-                           (self.sec_id, fraction, round(elapsed, 1))))
+                           (self.sec_id, self.fraction, round(elapsed, 1))))
 
 
 def run_from_ipython():
@@ -133,7 +129,7 @@ def run_from_ipython():
 def progress_bar(iters):
     if run_from_ipython():
         if None:
-            return NotebookProgressBar(iters)
+            return IPythonNotebookPB(iters)
         else:
             return TextProgressBar(iters, ipythonprint)
     else:
