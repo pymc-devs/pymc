@@ -13,6 +13,7 @@ if [ ${PYTHON_VERSION} == "2.7" ]; then
   conda install --yes mock enum34;
 fi
 
+pip install tqdm
 pip install --no-deps numdifftools
 pip install git+https://github.com/Theano/Theano.git
 pip install git+https://github.com/mahmoudimus/nose-timer.git
