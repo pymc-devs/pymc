@@ -195,7 +195,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                    local_RVs=None, observed_RVs=None, encoder_params=[],
                    total_size=None, optimizer=None, learning_rate=.001,
                    epsilon=.1, random_seed=None, verbose=1):
-    """Perform mini-batch ADVI. 
+    """Perform mini-batch ADVI.
 
     This function implements a mini-batch ADVI with the meanfield 
     approximation. Autoencoding variational inference is also supported. 
@@ -243,11 +243,11 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         List of random variables. If None, variational posteriors (normal 
         distribution) are fit for all RVs in the given model. 
     start : Dict or None
-        Initial values of parameters (variational means). 
+        Initial values of parameters (variational means).
     model : Model
-        Probabilistic model. 
+        Probabilistic model.
     n : int
-        Number of interations updating parameters. 
+        Number of interations updating parameters.
     n_mcsamples : int
         Number of Monte Carlo samples to approximate ELBO. 
     minibatch_RVs : list of ObservedRVs
@@ -255,11 +255,11 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         When this argument is given, both of arguments local_RVs and global_RVs 
         must be None. 
     minibatch_tensors : list of (tensors or shared variables)
-        Tensors used to create ObservedRVs in minibatch_RVs. 
+        Tensors used to create ObservedRVs in minibatch_RVs.
     minibatches : generator of list
-        Generates a set of minibatches when calling next(). 
-        The length of the returned list must be the same with the number of 
-        random variables in `minibatch_tensors`. 
+        Generates a set of minibatches when calling next().
+        The length of the returned list must be the same with the number of
+        random variables in `minibatch_tensors`.
     total_size : int
         Total size of training samples. This is used to appropriately scale the 
         log likelihood terms corresponding to mini-batches in ELBO. 
@@ -272,22 +272,22 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     encoder_params : list of theano shared variables
         Parameters of encoder. 
     optimizer : (loss, tensor) -> dict or OrderedDict
-        A function that returns parameter updates given loss and parameter 
-        tensor. If :code:`None` (default), a default Adagrad optimizer is 
-        used with parameters :code:`learning_rate` and :code:`epsilon` below. 
+        A function that returns parameter updates given loss and parameter
+        tensor. If :code:`None` (default), a default Adagrad optimizer is
+        used with parameters :code:`learning_rate` and :code:`epsilon` below.
     learning_rate: float
         Base learning rate for adagrad. This parameter is ignored when
-        an optimizer is given. 
+        an optimizer is given.
     epsilon : float
         Offset in denominator of the scale of learning rate in Adagrad.
         This parameter is ignored when an optimizer is given. 
     random_seed : int
-        Seed to initialize random state. 
+        Seed to initialize random state.
 
     Returns
     -------
     ADVIFit
-        Named tuple, which includes 'means', 'stds', and 'elbo_vals'. 
+        Named tuple, which includes 'means', 'stds', and 'elbo_vals'.
     """
     theano.config.compute_test_value = 'ignore'
 
