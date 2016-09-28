@@ -249,7 +249,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     n : int
         Number of interations updating parameters.
     n_mcsamples : int
-        Number of Monte Carlo samples to approximate ELBO. 
+        Number of Monte Carlo samples to approximate ELBO.
     minibatch_RVs : list of ObservedRVs
         Random variables in the model for which mini-batch tensors are set. 
         When this argument is given, both of arguments local_RVs and global_RVs 
@@ -280,7 +280,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         an optimizer is given.
     epsilon : float
         Offset in denominator of the scale of learning rate in Adagrad.
-        This parameter is ignored when an optimizer is given. 
+        This parameter is ignored when an optimizer is given.
     random_seed : int
         Seed to initialize random state.
 
