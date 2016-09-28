@@ -193,16 +193,55 @@ def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
 def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                    minibatch_RVs=None, minibatch_tensors=None, minibatches=None,
                    local_RVs=None, observed_RVs=None, encoder_params=[],
-                   total_size=None, scales=None, optimizer=None, learning_rate=.001,
+                   total_size=None, optimizer=None, learning_rate=.001,
                    epsilon=.1, random_seed=None, verbose=1):
-    """Run mini-batch ADVI.
+    """Perform mini-batch ADVI.
 
-    minibatch_tensors and minibatches should be in the same order.
+    This function implements a mini-batch ADVI with the meanfield 
+    approximation. Autoencoding variational inference is also supported. 
+
+    The log probability terms for mini-batches, corresponding to RVs in 
+    minibatch_RVs, are scaled to (total_size) / (the number of samples in each 
+    mini-batch), where total_size is an argument for the total data size. 
+
+    minibatch_tensors is a list of tensors (can be shared variables) to which 
+    mini-batch samples are set during the optimization. In most cases, these 
+    tensors are observations for RVs in the model. 
+
+    local_RVs and observed_RVs are used for autoencoding variational Bayes. 
+    Both of these RVs are associated with each of given samples. 
+    The difference is that local_RVs are unkown and their posterior 
+    distributions are approximated. 
+
+    local_RVs are Ordered dict, whose keys and values are RVs and a tuple of 
+    two objects. The first is the theano expression of variational parameters 
+    (mean and log of std) of the approximate posterior, which are encoded from 
+    given samples by an arbitrary deterministic function, e.g., MLP. The other 
+    one is a scaling constant to be multiplied to the log probability term 
+    corresponding to the RV. 
+
+    observed_RVs are also Ordered dict with RVs as the keys, but whose values 
+    are only the scaling constant as in local_RVs. In this case, total_size is 
+    ignored. 
+
+    If local_RVs is None (thus not using autoencoder), the following two 
+    settings are equivalent: 
+
+    - observed_RVs=OrderedDict([(rv, total_size / minibatch_size)])
+    - minibatch_RVs=[rv], total_size=total_size
+
+    where minibatch_size is minibatch_tensors[0].shape[0]. 
+
+    The variational parameters and the parameters of the autoencoder are 
+    simultaneously optimized with given optimizer, which is a function that 
+    returns a dictionary of parameter updates as provided to Theano function. 
+    See the docstring of pymc3.variational.advi(). 
 
     Parameters
     ----------
     vars : object
-        Random variables.
+        List of random variables. If None, variational posteriors (normal 
+        distribution) are fit for all RVs in the given model. 
     start : Dict or None
         Initial values of parameters (variational means).
     model : Model
@@ -212,7 +251,9 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     n_mcsamples : int
         Number of Monte Carlo samples to approximate ELBO.
     minibatch_RVs : list of ObservedRVs
-        Random variables for mini-batch.
+        Random variables in the model for which mini-batch tensors are set. 
+        When this argument is given, both of arguments local_RVs and global_RVs 
+        must be None. 
     minibatch_tensors : list of (tensors or shared variables)
         Tensors used to create ObservedRVs in minibatch_RVs.
     minibatches : generator of list
@@ -220,17 +261,26 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         The length of the returned list must be the same with the number of
         random variables in `minibatch_tensors`.
     total_size : int
-        Total size of training samples.
+        Total size of training samples. This is used to appropriately scale the 
+        log likelihood terms corresponding to mini-batches in ELBO. 
+    local_RVs : Ordered dict
+        Include encoded variational parameters and a scaling constant for 
+        the corresponding RV. See the above description. 
+    observed_RVs : Ordered dict
+        Include a scaling constant for the corresponding RV. See the above 
+        description
+    encoder_params : list of theano shared variables
+        Parameters of encoder. 
     optimizer : (loss, tensor) -> dict or OrderedDict
         A function that returns parameter updates given loss and parameter
         tensor. If :code:`None` (default), a default Adagrad optimizer is
         used with parameters :code:`learning_rate` and :code:`epsilon` below.
     learning_rate: float
         Base learning rate for adagrad. This parameter is ignored when
-        optimizer is given.
+        an optimizer is given.
     epsilon : float
         Offset in denominator of the scale of learning rate in Adagrad.
-        This parameter is ignored when optimizer is given.
+        This parameter is ignored when an optimizer is given.
     random_seed : int
         Seed to initialize random state.
 
