@@ -926,11 +926,19 @@ class InverseGamma(PositiveContinuous):
         super(InverseGamma, self).__init__(*args, **kwargs)
         self.alpha = alpha
         self.beta = beta
-        self.mean = (alpha > 1) * beta / (alpha - 1.) or np.inf
+        self.mean = self._calculate_mean()
         self.mode = beta / (alpha + 1.)
         self.variance = tt.switch(tt.gt(alpha, 2),
                                   (beta**2) / (alpha * (alpha - 1.)**2),
                                   np.inf)
+
+    def _calculate_mean(self):
+        m = self.beta / (self.alpha - 1.)
+        try:
+            return (self.alpha > 1) * m or np.inf
+        except ValueError:  # alpha is an array
+            m[self.alpha <= 1] = np.inf
+            return m
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
