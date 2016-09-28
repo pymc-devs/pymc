@@ -4,7 +4,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# Fitting a Multivariate Normal Model in PyMC3 with an LKJ Prior\n",
+    "# LKJ Prior for fitting a Multivariate Normal Model\n",
     "\n",
     "Author: [Austin Rochford](www.austinrochford.com)"
    ]
