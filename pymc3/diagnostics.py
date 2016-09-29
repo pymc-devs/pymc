@@ -259,7 +259,7 @@ def effective_n(mtrace):
 
             t += 1
 
-        return int(m * n / (1. + 2 * rho[1:t].sum()))
+        return min(m * n, int(m * n / (1. + 2 * rho[1:t].sum())))
 
     n_eff = {}
     for var in mtrace.varnames:
