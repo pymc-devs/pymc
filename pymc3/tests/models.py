@@ -2,7 +2,7 @@ from pymc3 import Model, Normal, Metropolis
 import numpy as np
 import pymc3 as pm
 from itertools import product
-from theano.tensor import log
+import theano.tensor as tt
 
 
 def simple_model():
@@ -35,7 +35,7 @@ def simple_2model():
     p = .4
     with Model() as model:
         x = pm.Normal('x', mu, tau=tau, testval=.1)
-        pm.Deterministic('logx', log(x))
+        pm.Deterministic('logx', tt.log(x))
         pm.Bernoulli('y', p)
     return model.test_point, model
 
@@ -48,7 +48,7 @@ def mv_simple():
         [1., -0.05, 5.5]])
     tau = np.dot(p, p.T)
     with pm.Model() as model:
-        pm.MvNormal('x', pm.constant(mu), tau=pm.constant(tau),
+        pm.MvNormal('x', tt.constant(mu), tau=tt.constant(tau),
                     shape=3, testval=np.array([.1, 1., .8]))
     H = tau
     C = np.linalg.inv(H)
@@ -60,7 +60,7 @@ def mv_simple_discrete():
     n = 5
     p = np.array([.15, .85])
     with pm.Model() as model:
-        pm.Multinomial('x', n, pm.constant(p), shape=d, testval=np.array([1, 4]))
+        pm.Multinomial('x', n, tt.constant(p), shape=d, testval=np.array([1, 4]))
         mu = n * p
         # covariance matrix
         C = np.zeros((d, d))

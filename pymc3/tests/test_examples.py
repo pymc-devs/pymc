@@ -41,7 +41,7 @@ class ARM5_4(SeededTest):
 
         with pm.Model() as model:
             effects = pm.Normal('effects', mu=0, tau=100. ** -2, shape=len(P.columns))
-            p = pm.sigmoid(pm.dot(np.array(P), effects))
+            p = tt.nnet.sigmoid(tt.dot(np.array(P), effects))
             pm.Bernoulli('s', p, observed=np.array(data.switch))
         return model
 
@@ -154,7 +154,7 @@ def build_disaster_model(masked=False):
         # Allocate appropriate Poisson rates to years before and after current
         # switchpoint location
         idx = np.arange(years)
-        rate = pm.switch(switchpoint >= idx, early_mean, late_mean)
+        rate = tt.switch(switchpoint >= idx, early_mean, late_mean)
         # Data likelihood
         pm.Poisson('disasters', rate, observed=disasters_data)
     return model
