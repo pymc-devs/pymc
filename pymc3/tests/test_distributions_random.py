@@ -2,23 +2,14 @@ from __future__ import division
 
 from nose import SkipTest
 from nose.plugins.attrib import attr
-
-from .helpers import SeededTest
-from .test_distributions import (build_model, Domain, product, R, Rplus, Rplusbig, Unit, Nat,
-                                 NatSmall, I, Simplex, Vector, PdMatrix)
-
-from ..distributions import (Categorical, Multinomial, VonMises, Dirichlet,
-                             MvStudentT, MvNormal, ZeroInflatedPoisson,
-                             ZeroInflatedNegativeBinomial, ConstantDist, Poisson, Bernoulli, Beta,
-                             BetaBinomial, StudentT, Weibull, Pareto, InverseGamma, Gamma, Cauchy,
-                             HalfCauchy, Lognormal, Laplace, NegativeBinomial, Geometric,
-                             Exponential, ExGaussian, Normal, SkewNormal, Flat, Wald, ChiSquared,
-                             HalfNormal, DiscreteUniform, Bound, Uniform, Binomial, draw_values)
-from ..model import Model, Point
-
 import numpy as np
 import scipy.stats as st
 import numpy.random as nr
+
+import pymc3 as pm
+from .helpers import SeededTest
+from .test_distributions import (build_model, Domain, product, R, Rplus, Rplusbig, Unit, Nat,
+                                 NatSmall, I, Simplex, Vector, PdMatrix)
 
 
 def pymc3_random(dist, paramdomains, ref_rand, valuedomain=Domain([0]),
@@ -26,7 +17,7 @@ def pymc3_random(dist, paramdomains, ref_rand, valuedomain=Domain([0]),
     model = build_model(dist, valuedomain, paramdomains)
     domains = paramdomains.copy()
     for pt in product(domains, n_samples=100):
-        pt = Point(pt, model=model)
+        pt = pm.Point(pt, model=model)
         p = alpha
         # Allow KS test to fail (i.e., the samples be different)
         # a certain number of times. Crude, but necessary.
@@ -46,7 +37,7 @@ def pymc3_random_discrete(dist, paramdomains,
     model = build_model(dist, valuedomain, paramdomains)
     domains = paramdomains.copy()
     for pt in product(domains, n_samples=100):
-        pt = Point(pt, model=model)
+        pt = pm.Point(pt, model=model)
         p = alpha
         # Allow Chisq test to fail (i.e., the samples be different)
         # a certain number of times.
@@ -69,480 +60,265 @@ def pymc3_random_discrete(dist, paramdomains,
         assert p > alpha, str(pt)
 
 
-def check_dist(dist_case, test_cases, shape=None):
-    dist, dist_kwargs = dist_case
-    with Model():
-        if shape is None:
-            rv = dist(dist.__name__, transform=None, **dist_kwargs)
-        else:
-            rv = dist(dist.__name__, shape=shape, transform=None,
-                      **dist_kwargs)
-        for size, expected in test_cases:
-            check_shape(rv, size=size, expected=expected)
-
-
-def check_shape(rv, size=None, expected=None):
-    try:
-        sample = rv.random(size=size)
-    except AttributeError:
-        sample = rv.distribution.random(size=size)
-    actual = np.atleast_1d(sample).shape
-    expected = np.atleast_1d(expected)
-    assert np.all(actual == expected), \
-        'Expected shape `{0}` but got `{1}` using `(size={2})`' \
-        ' with `{3}` rv'.format(expected, actual, size,
-                                rv.distribution.__class__.__name__)
-
-
 class TestDrawValues(SeededTest):
     def test_draw_scalar_parameters(self):
-        with Model():
-            y = Normal('y1', mu=0., sd=1.)
-            mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
+        with pm.Model():
+            y = pm.Normal('y1', mu=0., sd=1.)
+            mu, tau = pm.distributions.draw_values([y.distribution.mu, y.distribution.tau])
         self.assertAlmostEqual(mu, 0.)
         self.assertAlmostEqual(tau, 1.)
 
     def test_draw_point_replacement(self):
-        with Model():
-            mu = Normal('mu', mu=0., tau=1e-3)
-            sigma = Gamma('sigma', alpha=1., beta=1., transform=None)
-            y = Normal('y', mu=mu, sd=sigma)
-            mu2, tau2 = draw_values([y.distribution.mu, y.distribution.tau],
-                                    point={'mu': 5., 'sigma': 2.})
+        with pm.Model():
+            mu = pm.Normal('mu', mu=0., tau=1e-3)
+            sigma = pm.Gamma('sigma', alpha=1., beta=1., transform=None)
+            y = pm.Normal('y', mu=mu, sd=sigma)
+            mu2, tau2 = pm.distributions.draw_values([y.distribution.mu, y.distribution.tau],
+                                                     point={'mu': 5., 'sigma': 2.})
         self.assertAlmostEqual(mu2, 5.)
         self.assertAlmostEqual(tau2, 1 / 2.**2)
 
     def test_random_sample_returns_nd_array(self):
-        with Model():
-            mu = Normal('mu', mu=0., tau=1e-3)
-            sigma = Gamma('sigma', alpha=1., beta=1., transform=None)
-            y = Normal('y', mu=mu, sd=sigma)
-            mu, tau = draw_values([y.distribution.mu, y.distribution.tau])
+        with pm.Model():
+            mu = pm.Normal('mu', mu=0., tau=1e-3)
+            sigma = pm.Gamma('sigma', alpha=1., beta=1., transform=None)
+            y = pm.Normal('y', mu=mu, sd=sigma)
+            mu, tau = pm.distributions.draw_values([y.distribution.mu, y.distribution.tau])
         self.assertIsInstance(mu, np.ndarray)
         self.assertIsInstance(tau, np.ndarray)
 
 
-# TODO: factor out a base class to avoid copy/paste.
-@attr('scalar_parameter_shape')
-class ScalarParameterShape(SeededTest):
+class BaseTestCases(object):
+    class BaseTestCase(SeededTest):
+        shape = 5
+
+        def __init__(self, *args, **kwargs):
+            super(BaseTestCases.BaseTestCase, self).__init__(*args, **kwargs)
+            self.model = pm.Model()
+
+        def get_random_variable(self, shape, with_vector_params=False):
+            if with_vector_params:
+                params = {key: value * np.ones(self.shape, dtype=np.dtype(type(value))) for
+                          key, value in self.params.items()}
+            else:
+                params = self.params
+            name = self.distribution.__name__
+            with self.model:
+                if shape is None:
+                    return self.distribution(name, transform=None, **params)
+                else:
+                    return self.distribution(name, shape=shape, transform=None, **params)
+
+        def sample_random_variable(self, random_variable, size):
+            try:
+                return random_variable.random(size=size)
+            except AttributeError:
+                return random_variable.distribution.random(size=size)
+
+        def test_scalar_parameter_shape(self):
+            rv = self.get_random_variable(None)
+            for size in (None, 5, (4, 5)):
+                if size is None:
+                    expected = 1,
+                else:
+                    expected = np.atleast_1d(size).tolist()
+                actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
+                self.assertSequenceEqual(expected, actual)
+
+        def test_scalar_shape(self):
+            shape = 10
+            rv = self.get_random_variable(shape)
+            for size in (None, 5, (4, 5)):
+                if size is None:
+                    expected = []
+                else:
+                    expected = np.atleast_1d(size).tolist()
+                expected.append(shape)
+                actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
+                self.assertSequenceEqual(expected, actual)
 
-    def check(self, dist, **kwargs):
-        test_cases = [(None, (1,)), (5, (5,)), ((4, 5), (4, 5))]
-        check_dist((dist, kwargs), test_cases)
+        def test_parameters_1d_shape(self):
+            rv = self.get_random_variable(self.shape, with_vector_params=True)
+            for size in (None, 5, (4, 5)):
+                if size is None:
+                    expected = []
+                else:
+                    expected = np.atleast_1d(size).tolist()
+                expected.append(self.shape)
+                actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
+                self.assertSequenceEqual(expected, actual)
 
-    def test_normal(self):
-        self.check(Normal, mu=0., tau=1.)
+        def test_broadcast_shape(self):
+            broadcast_shape = (2 * self.shape, self.shape)
+            rv = self.get_random_variable(broadcast_shape, with_vector_params=True)
+            for size in (None, 5, (4, 5)):
+                if size is None:
+                    expected = []
+                else:
+                    expected = np.atleast_1d(size).tolist()
+                expected.extend(broadcast_shape)
+                actual = np.atleast_1d(self.sample_random_variable(rv, size)).shape
+                self.assertSequenceEqual(expected, actual)
 
-    def test_uniform(self):
-        self.check(Uniform, lower=0., upper=1.)
 
-    def test_half_normal(self):
-        self.check(HalfNormal, tau=1.)
+class TestNormal(BaseTestCases.BaseTestCase):
+    distribution = pm.Normal
+    params = {'mu': 0., 'tau': 1.}
 
-    def test_wald(self):
-        self.check(Wald, mu=1., lam=1., alpha=0.)
 
-    def test_beta(self):
-        self.check(Beta, alpha=1., beta=1.)
+class TestSkewNormal(BaseTestCases.BaseTestCase):
+    distribution = pm.SkewNormal
+    params = {'mu': 0., 'sd': 1., 'alpha': 5.}
 
-    def test_exponential(self):
-        self.check(Exponential, lam=1.)
 
-    def test_laplace(self):
-        self.check(Laplace, mu=1., b=1)
+class TestHalfNormal(BaseTestCases.BaseTestCase):
+    distribution = pm.HalfNormal
+    params = {'tau': 1.}
 
-    def test_lognormal(self):
-        self.check(Lognormal, mu=1., tau=1.)
 
-    def test_student_t(self):
-        self.check(StudentT, nu=5, mu=0., lam=1.)
+class TestUniform(BaseTestCases.BaseTestCase):
+    distribution = pm.Uniform
+    params = {'lower': 0., 'upper': 1.}
 
-    def test_pareto(self):
-        self.check(Pareto, alpha=0.5, m=1.)
 
-    def test_cauchy(self):
-        self.check(Cauchy, alpha=1., beta=1.)
+class TestWald(BaseTestCases.BaseTestCase):
+    distribution = pm.Wald
+    params = {'mu': 1., 'lam': 1., 'alpha': 0.}
 
-    def test_half_cauchy(self):
-        self.check(HalfCauchy, beta=1.)
 
-    def test_gamma(self):
-        self.check(Gamma, alpha=1., beta=1.)
+class TestBeta(BaseTestCases.BaseTestCase):
+    distribution = pm.Beta
+    params = {'alpha': 1., 'beta': 1.}
 
-    def test_inverse_gamma(self):
-        self.check(InverseGamma, alpha=0.5, beta=0.5)
 
-    def test_chi_squared(self):
-        self.check(ChiSquared, nu=2)
+class TestExponential(BaseTestCases.BaseTestCase):
+    distribution = pm.Exponential
+    params = {'lam': 1.}
 
-    def test_weibull(self):
-        self.check(Weibull, alpha=1., beta=1.)
 
-    def test_ex_gaussian(self):
-        self.check(ExGaussian, mu=0., sigma=1., nu=1.)
+class TestLaplace(BaseTestCases.BaseTestCase):
+    distribution = pm.Laplace
+    params = {'mu': 1., 'b': 1.}
 
-    def test_vonmises(self):
-        self.check(VonMises, mu=0., kappa=1.)
 
-    def test_binomial(self):
-        self.check(Binomial, n=5, p=0.5)
+class TestLognormal(BaseTestCases.BaseTestCase):
+    distribution = pm.Lognormal
+    params = {'mu': 1., 'tau': 1.}
 
-    def test_beta_binomial(self):
-        self.check(BetaBinomial, alpha=1., beta=1., n=1)
 
-    def test_bernoulli(self):
-        self.check(Bernoulli, p=0.5)
+class TestStudentT(BaseTestCases.BaseTestCase):
+    distribution = pm.StudentT
+    params = {'nu': 5., 'mu': 0., 'lam': 1.}
 
-    def test_poisson(self):
-        self.check(Poisson, mu=1.)
 
-    def test_negative_binomial(self):
-        self.check(NegativeBinomial, mu=1., alpha=1.)
+class TestPareto(BaseTestCases.BaseTestCase):
+    distribution = pm.Pareto
+    params = {'alpha': 0.5, 'm': 1.}
 
-    def test_constant_dist(self):
-        self.check(ConstantDist, c=3)
 
-    def test_zero_inflated_poisson(self):
-        self.check(ZeroInflatedPoisson, theta=1, psi=0.3)
+class TestCauchy(BaseTestCases.BaseTestCase):
+    distribution = pm.Cauchy
+    params = {'alpha': 1., 'beta': 1.}
 
-    def test_zero_inflated_negative_binomial(self):
-        self.check(ZeroInflatedNegativeBinomial, mu=1., alpha=1., psi=0.3)
 
-    def test_discrete_uniform(self):
-        self.check(DiscreteUniform, lower=0., upper=10)
+class TestHalfCauchy(BaseTestCases.BaseTestCase):
+    distribution = pm.HalfCauchy
+    params = {'beta': 1.}
 
-    def test_geometric(self):
-        self.check(Geometric, p=0.5)
 
-    def test_categorical(self):
-        self.check(Categorical, p=np.array([0.2, 0.3, 0.5]))
+class TestGamma(BaseTestCases.BaseTestCase):
+    distribution = pm.Gamma
+    params = {'alpha': 1., 'beta': 1.}
 
 
-@attr('scalar_shape')
-class ScalarShape(SeededTest):
-    def check(self, dist, **kwargs):
-        n = 10
-        test_cases = [(None, (n,)), (5, (5, n,)), ((4, 5), (4, 5, n,))]
-        check_dist((dist, kwargs), test_cases, n)
+class TestInverseGamma(BaseTestCases.BaseTestCase):
+    distribution = pm.InverseGamma
+    params = {'alpha': 0.5, 'beta': 0.5}
 
-    def test_normal(self):
-        self.check(Normal, mu=0., tau=1.)
 
-    def test_skew_normal(self):
-        self.check(SkewNormal, mu=0., sd=1., alpha=5.)
+class TestChiSquared(BaseTestCases.BaseTestCase):
+    distribution = pm.ChiSquared
+    params = {'nu': 2.}
 
-    def test_uniform(self):
-        self.check(Uniform, lower=0., upper=1.)
 
-    def test_half_normal(self):
-        self.check(HalfNormal, tau=1.)
+class TestWeibull(BaseTestCases.BaseTestCase):
+    distribution = pm.Weibull
+    params = {'alpha': 1., 'beta': 1.}
 
-    def test_wald(self):
-        self.check(Wald, mu=1., lam=1., alpha=0.)
 
-    def test_beta(self):
-        self.check(Beta, alpha=1., beta=1.)
+class TestExGaussian(BaseTestCases.BaseTestCase):
+    distribution = pm.ExGaussian
+    params = {'mu': 0., 'sigma': 1., 'nu': 1.}
 
-    def test_exponential(self):
-        self.check(Exponential, lam=1.)
 
-    def test_laplace(self):
-        self.check(Laplace, mu=1., b=1)
+class TestVonMises(BaseTestCases.BaseTestCase):
+    distribution = pm.VonMises
+    params = {'mu': 0., 'kappa': 1.}
 
-    def test_lognormal(self):
-        self.check(Lognormal, mu=1., tau=1.)
 
-    def test_student_t(self):
-        self.check(StudentT, nu=5, mu=0., lam=1.)
+class TestBinomial(BaseTestCases.BaseTestCase):
+    distribution = pm.Binomial
+    params = {'n': 5, 'p': 0.5}
 
-    def test_pareto(self):
-        self.check(Pareto, alpha=0.5, m=1.)
 
-    def test_cauchy(self):
-        self.check(Cauchy, alpha=1., beta=1.)
+class TestBetaBinomial(BaseTestCases.BaseTestCase):
+    distribution = pm.BetaBinomial
+    params = {'n': 5, 'alpha': 1., 'beta': 1.}
 
-    def test_half_cauchy(self):
-        self.check(HalfCauchy, beta=1.)
 
-    def test_gamma(self):
-        self.check(Gamma, alpha=1., beta=1.)
+class TestBernoulli(BaseTestCases.BaseTestCase):
+    distribution = pm.Bernoulli
+    params = {'p': 0.5}
 
-    def test_inverse_gamma(self):
-        self.check(InverseGamma, alpha=0.5, beta=0.5)
 
-    def test_chi_squared(self):
-        self.check(ChiSquared, nu=2)
+class TestPoisson(BaseTestCases.BaseTestCase):
+    distribution = pm.Poisson
+    params = {'mu': 1.}
 
-    def test_weibull(self):
-        self.check(Weibull, alpha=1., beta=1.)
 
-    def test_ex_gaussian(self):
-        self.check(ExGaussian, mu=0., sigma=1., nu=1.)
+class TestNegativeBinomial(BaseTestCases.BaseTestCase):
+    distribution = pm.NegativeBinomial
+    params = {'mu': 1., 'alpha': 1.}
 
-    def test_vonmises(self):
-        self.check(VonMises, mu=0., kappa=1.)
 
-    def test_binomial(self):
-        self.check(Binomial, n=5, p=0.5)
+class TestConstantDist(BaseTestCases.BaseTestCase):
+    distribution = pm.ConstantDist
+    params = {'c': 3}
 
-    def test_beta_binomial(self):
-        self.check(BetaBinomial, alpha=1., beta=1., n=1)
 
-    def test_bernoulli(self):
-        self.check(Bernoulli, p=0.5)
+class TestZeroInflatedPoisson(BaseTestCases.BaseTestCase):
+    distribution = pm.ZeroInflatedPoisson
+    params = {'theta': 1., 'psi': 0.3}
 
-    def test_poisson(self):
-        self.check(Poisson, mu=1.)
 
-    def test_negative_binomial(self):
-        self.check(NegativeBinomial, mu=1., alpha=1.)
+class TestZeroInflatedNegativeBinomial(BaseTestCases.BaseTestCase):
+    distribution = pm.ZeroInflatedNegativeBinomial
+    params = {'mu': 1., 'alpha': 1., 'psi': 0.3}
 
-    def test_constant_dist(self):
-        self.check(ConstantDist, c=3)
 
-    def test_zero_inflated_poisson(self):
-        self.check(ZeroInflatedPoisson, theta=1, psi=0.3)
+class TestDiscreteUniform(BaseTestCases.BaseTestCase):
+    distribution = pm.DiscreteUniform
+    params = {'lower': 0., 'upper': 10.}
 
-    def test_zero_inflated_negative_binomial(self):
-        self.check(ZeroInflatedNegativeBinomial, mu=1., alpha=1., psi=0.3)
 
-    def test_discrete_uniform(self):
-        self.check(DiscreteUniform, lower=0., upper=10)
+class TestGeometric(BaseTestCases.BaseTestCase):
+    distribution = pm.Geometric
+    params = {'p': 0.5}
 
-    def test_geometric(self):
-        self.check(Geometric, p=0.5)
 
-    def test_categorical(self):
-        self.check(Categorical, p=np.array([0.2, 0.3, 0.5]))
+class TestCategorical(BaseTestCases.BaseTestCase):
+    distribution = pm.Categorical
+    params = {'p': np.ones(BaseTestCases.BaseTestCase.shape)}
 
-
-@attr('parameters_1d_shape')
-class Parameters1dShape(SeededTest):
-
-    def setUp(self):
-        super(Parameters1dShape, self).setUp()
-        self.n = 5
-        self.zeros = np.zeros(self.n)
-        self.ones = np.ones(self.n)
-
-    def check(self, dist, **kwargs):
-        n = self.n
-        test_cases = [(None, (n,)), (5, (5, n,)), ((4, 5), (4, 5, n,))]
-        check_dist((dist, kwargs), test_cases, n)
-
-    def test_normal(self):
-        self.check(Normal, mu=self.zeros, tau=self.ones)
-
-    def test_skew_normal(self):
-        self.check(SkewNormal, mu=self.zeros, sd=self.ones, alpha=self.ones * 5)
-
-    def test_uniform(self):
-        self.check(Uniform, lower=self.zeros, upper=self.ones)
-
-    def test_half_normal(self):
-        self.check(HalfNormal, tau=self.ones)
-
-    def test_wald(self):
-        self.check(Wald, mu=self.ones, lam=self.ones, alpha=self.zeros)
-
-    def test_beta(self):
-        self.check(Beta, alpha=self.ones, beta=self.ones)
-
-    def test_exponential(self):
-        self.check(Exponential, lam=self.ones)
-
-    def test_laplace(self):
-        self.check(Laplace, mu=self.ones, b=self.ones)
-
-    def test_lognormal(self):
-        self.check(Lognormal, mu=self.ones, tau=self.ones)
-
-    def test_student_t(self):
-        self.check(StudentT, nu=self.ones.astype(int), mu=self.zeros,
-                   lam=self.ones)
-
-    def test_pareto(self):
-        self.check(Pareto, alpha=self.ones / 2, m=self.ones)
-
-    def test_cauchy(self):
-        self.check(Cauchy, alpha=self.ones, beta=self.ones)
-
-    def test_half_cauchy(self):
-        self.check(HalfCauchy, beta=self.ones)
-
-    def test_gamma(self):
-        self.check(Gamma, alpha=self.ones, beta=self.ones)
-
-    def test_inverse_gamma(self):
-        self.check(InverseGamma, alpha=self.ones / 2, beta=self.ones / 2)
-
-    def test_chi_squared(self):
-        self.check(ChiSquared, nu=(self.ones * 2).astype(int))
-
-    def test_weibull(self):
-        self.check(Weibull, alpha=self.ones, beta=self.ones)
-
-    def test_ex_gaussian(self):
-        self.check(ExGaussian, mu=self.zeros, sigma=self.ones, nu=self.ones)
-
-    def test_vonmises(self):
-        self.check(VonMises, mu=self.zeros, kappa=self.ones)
-
-    def test_binomial(self):
-        self.check(Binomial, n=(self.ones * 5).astype(int), p=self.ones / 5)
-
-    def test_beta_binomial(self):
-        self.check(BetaBinomial, alpha=self.ones, beta=self.ones,
-                   n=self.ones.astype(int))
-
-    def test_bernoulli(self):
-        self.check(Bernoulli, p=self.ones / 2)
-
-    def test_poisson(self):
-        self.check(Poisson, mu=self.ones)
-
-    def test_negative_binomial(self):
-        self.check(NegativeBinomial, mu=self.ones, alpha=self.ones)
-
-    def test_constantDist(self):
-        self.check(ConstantDist, c=(self.ones * 3).astype(int))
-
-    def test_zero_inflated_poisson(self):
-        self.check(ZeroInflatedPoisson, theta=self.ones, psi=self.ones / 2)
-
-    def test_zero_inflated_negative_binomial(self):
-        self.check(ZeroInflatedNegativeBinomial, mu=self.ones,
-                   alpha=self.ones, psi=self.ones / 2)
-
-    def test_discrete_uniform(self):
-        self.check(DiscreteUniform,
-                   lower=self.zeros.astype(int),
-                   upper=(self.ones * 10).astype(int))
-
-    def test_geometric(self):
-        self.check(Geometric, p=self.ones / 2)
-
-    def test_categorical(self):
-        self.check(Categorical, p=self.ones / len(self.ones))
-
-
-@attr('broadcast_shape')
-class BroadcastShape(SeededTest):
-
-    def setUp(self):
-        super(BroadcastShape, self).setUp()
-        self.n = 6
-        self.zeros = np.zeros(self.n)
-        self.ones = np.ones(self.n)
-        self.twos = 2 * self.ones
-
-    def check(self, dist, **kwargs):
-        n = self.n
-        shape = (2 * n, n)
-        test_cases = [(None, shape), (5, (5,) + shape),
-                      ((4, 5), (4, 5) + shape)]
-        check_dist((dist, kwargs), test_cases, shape)
-
-    def test_normal(self):
-        self.check(Normal, mu=self.zeros, tau=self.ones)
-
-    def test_skew_normal(self):
-        self.check(SkewNormal, mu=self.zeros, sd=self.ones, alpha=self.ones * 5)
-
-    def test_uniform(self):
-        self.check(Uniform, lower=self.zeros, upper=self.ones)
-
-    def test_half_normal(self):
-        self.check(HalfNormal, tau=self.ones)
-
-    def test_wald(self):
-        self.check(Wald, mu=self.ones, lam=self.ones, alpha=self.zeros)
-
-    def test_beta(self):
-        self.check(Beta, alpha=self.ones, beta=self.ones)
-
-    def test_exponential(self):
-        self.check(Exponential, lam=self.ones)
-
-    def test_laplace(self):
-        self.check(Laplace, mu=self.ones, b=self.ones)
-
-    def test_lognormal(self):
-        self.check(Lognormal, mu=self.ones, tau=self.ones)
-
-    def test_student_t(self):
-        self.check(StudentT, nu=self.ones.astype(int), mu=self.zeros,
-                   lam=self.ones)
-
-    def test_pareto(self):
-        self.check(Pareto, alpha=self.ones / 2, m=self.ones)
-
-    def test_cauchy(self):
-        self.check(Cauchy, alpha=self.ones, beta=self.ones)
-
-    def test_half_cauchy(self):
-        self.check(HalfCauchy, beta=self.ones)
-
-    def test_gamma(self):
-        self.check(Gamma, alpha=self.ones, beta=self.ones)
-
-    def test_inverse_gamma(self):
-        self.check(InverseGamma, alpha=self.ones / 2, beta=self.ones / 2)
-
-    def test_chi_squared(self):
-        self.check(ChiSquared, nu=(self.twos).astype(int))
-
-    def test_weibull(self):
-        self.check(Weibull, alpha=self.ones, beta=self.ones)
-
-    def test_ex_gaussian(self):
-        self.check(ExGaussian, mu=self.zeros, sigma=self.ones, nu=self.ones)
-
-    def test_vonmises(self):
-        self.check(VonMises, mu=self.zeros, kappa=self.ones)
-
-    def test_binomial(self):
-        self.check(Binomial, n=(self.ones * 5).astype(int), p=self.ones / 5)
-
-    def test_beta_binomial(self):
-        self.check(BetaBinomial, alpha=self.ones, beta=self.ones,
-                   n=self.ones.astype(int))
-
-    def test_bernoulli(self):
-        self.check(Bernoulli, p=self.ones / 2)
-
-    def test_poisson(self):
-        self.check(Poisson, mu=self.ones)
-
-    def test_negative_binomial(self):
-        self.check(NegativeBinomial, mu=self.ones, alpha=self.ones)
-
-    def test_constantDist(self):
-        self.check(ConstantDist, c=(self.ones * 3).astype(int))
-
-    def test_zero_inflated_poisson(self):
-        self.check(ZeroInflatedPoisson, theta=self.twos, psi=self.ones / 3)
-
-    def test_zero_inflated_negative_binomial(self):
-        self.check(ZeroInflatedNegativeBinomial, mu=self.twos,
-                   alpha=self.twos, psi=self.ones / 3)
-
-    def test_discrete_uniform(self):
-        self.check(DiscreteUniform, lower=self.zeros.astype(int),
-                   upper=(self.ones * 10).astype(int))
-
-    def test_geometric(self):
-        self.check(Geometric, p=self.ones / 2)
-
-    def test_categorical(self):
-        self.check(Categorical, p=self.ones / self.n)
+    def get_random_variable(self, shape, with_vector_params=False):  # don't transform categories
+        return super(TestCategorical, self).get_random_variable(shape, with_vector_params=False)
 
 
 @attr('scalar_parameter_samples')
 class ScalarParameterSamples(SeededTest):
     def test_bounded(self):
         # A bit crude...
-        BoundedNormal = Bound(Normal, upper=0)
+        BoundedNormal = pm.Bound(pm.Normal, upper=0)
 
         def ref_rand(size, tau):
             return -st.halfnorm.rvs(size=size, loc=0, scale=tau ** -0.5)
@@ -552,30 +328,29 @@ class ScalarParameterSamples(SeededTest):
         def ref_rand(size, lower, upper):
             return st.uniform.rvs(size=size, loc=lower, scale=upper - lower)
 
-        pymc3_random(Uniform, {'lower': -Rplus,
-                               'upper': Rplus}, ref_rand=ref_rand)
+        pymc3_random(pm.Uniform, {'lower': -Rplus, 'upper': Rplus}, ref_rand=ref_rand)
 
     def test_normal(self):
         def ref_rand(size, mu, sd):
             return st.norm.rvs(size=size, loc=mu, scale=sd)
-        pymc3_random(Normal, {'mu': R, 'sd': Rplus}, ref_rand=ref_rand)
+        pymc3_random(pm.Normal, {'mu': R, 'sd': Rplus}, ref_rand=ref_rand)
 
     def test_skew_normal(self):
         def ref_rand(size, alpha, mu, sd):
             return st.skewnorm.rvs(size=size, a=alpha, loc=mu, scale=sd)
-        pymc3_random(SkewNormal, {'mu': R, 'sd': Rplus, 'alpha': R}, ref_rand=ref_rand)
+        pymc3_random(pm.SkewNormal, {'mu': R, 'sd': Rplus, 'alpha': R}, ref_rand=ref_rand)
 
     def test_half_normal(self):
         def ref_rand(size, tau):
             return st.halfnorm.rvs(size=size, loc=0, scale=tau ** -0.5)
-        pymc3_random(HalfNormal, {'tau': Rplus}, ref_rand=ref_rand)
+        pymc3_random(pm.HalfNormal, {'tau': Rplus}, ref_rand=ref_rand)
 
     def test_wald(self):
         # Cannot do anything too exciting as scipy wald is a
         # location-scale model of the *standard* wald with mu=1 and lam=1
         def ref_rand(size, mu, lam, alpha):
             return st.wald.rvs(size=size, loc=alpha)
-        pymc3_random(Wald,
+        pymc3_random(pm.Wald,
                      {'mu': Domain([1., 1., 1.]), 'lam': Domain(
                          [1., 1., 1.]), 'alpha': Rplus},
                      ref_rand=ref_rand)
@@ -583,109 +358,104 @@ class ScalarParameterSamples(SeededTest):
     def test_beta(self):
         def ref_rand(size, alpha, beta):
             return st.beta.rvs(a=alpha, b=beta, size=size)
-        pymc3_random(Beta, {'alpha': Rplus, 'beta': Rplus}, ref_rand=ref_rand)
+        pymc3_random(pm.Beta, {'alpha': Rplus, 'beta': Rplus}, ref_rand=ref_rand)
 
     def test_exponential(self):
         def ref_rand(size, lam):
             return nr.exponential(scale=1. / lam, size=size)
-        pymc3_random(Exponential, {'lam': Rplus}, ref_rand=ref_rand)
+        pymc3_random(pm.Exponential, {'lam': Rplus}, ref_rand=ref_rand)
 
     def test_laplace(self):
         def ref_rand(size, mu, b):
             return st.laplace.rvs(mu, b, size=size)
-        pymc3_random(Laplace, {'mu': R, 'b': Rplus}, ref_rand=ref_rand)
+        pymc3_random(pm.Laplace, {'mu': R, 'b': Rplus}, ref_rand=ref_rand)
 
     def test_lognormal(self):
         def ref_rand(size, mu, tau):
             return np.exp(mu + (tau ** -0.5) * st.norm.rvs(loc=0., scale=1., size=size))
-        pymc3_random(Lognormal, {'mu': R, 'tau': Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(pm.Lognormal, {'mu': R, 'tau': Rplusbig}, ref_rand=ref_rand)
 
     def test_student_t(self):
         def ref_rand(size, nu, mu, lam):
             return st.t.rvs(nu, mu, lam**-.5, size=size)
-        pymc3_random(StudentT, {'nu': Rplus, 'mu': R,
-                                'lam': Rplus}, ref_rand=ref_rand)
+        pymc3_random(pm.StudentT, {'nu': Rplus, 'mu': R, 'lam': Rplus}, ref_rand=ref_rand)
 
     def test_cauchy(self):
         def ref_rand(size, alpha, beta):
             return st.cauchy.rvs(alpha, beta, size=size)
-        pymc3_random(Cauchy, {'alpha': R, 'beta': Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(pm.Cauchy, {'alpha': R, 'beta': Rplusbig}, ref_rand=ref_rand)
 
     def test_half_cauchy(self):
         def ref_rand(size, beta):
             return st.halfcauchy.rvs(scale=beta, size=size)
-        pymc3_random(HalfCauchy, {'beta': Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(pm.HalfCauchy, {'beta': Rplusbig}, ref_rand=ref_rand)
 
     def test_gamma_alpha_beta(self):
         def ref_rand(size, alpha, beta):
             return st.gamma.rvs(alpha, scale=1. / beta, size=size)
-        pymc3_random(Gamma, {'alpha': Rplusbig, 'beta': Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(pm.Gamma, {'alpha': Rplusbig, 'beta': Rplusbig}, ref_rand=ref_rand)
 
     def test_gamma_mu_sd(self):
         def ref_rand(size, mu, sd):
             return st.gamma.rvs(mu**2 / sd**2, scale=sd ** 2 / mu, size=size)
-        pymc3_random(Gamma, {'mu': Rplusbig, 'sd': Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(pm.Gamma, {'mu': Rplusbig, 'sd': Rplusbig}, ref_rand=ref_rand)
 
     def test_inverse_gamma(self):
         def ref_rand(size, alpha, beta):
             return st.invgamma.rvs(a=alpha, scale=beta, size=size)
-        pymc3_random(InverseGamma, {'alpha': Rplus,
-                                    'beta': Rplus}, ref_rand=ref_rand)
+        pymc3_random(pm.InverseGamma, {'alpha': Rplus, 'beta': Rplus}, ref_rand=ref_rand)
 
     def test_pareto(self):
         def ref_rand(size, alpha, m):
             return st.pareto.rvs(alpha, scale=m, size=size)
-        pymc3_random(Pareto, {'alpha': Rplusbig,
-                              'm': Rplusbig}, ref_rand=ref_rand)
+        pymc3_random(pm.Pareto, {'alpha': Rplusbig, 'm': Rplusbig}, ref_rand=ref_rand)
 
     def test_ex_gaussian(self):
         def ref_rand(size, mu, sigma, nu):
             return nr.normal(mu, sigma, size=size) + nr.exponential(scale=nu, size=size)
-        pymc3_random(
-            ExGaussian, {'mu': R, 'sigma': Rplus, 'nu': Rplus}, ref_rand=ref_rand)
+        pymc3_random(pm.ExGaussian, {'mu': R, 'sigma': Rplus, 'nu': Rplus}, ref_rand=ref_rand)
 
     def test_vonmises(self):
         def ref_rand(size, mu, kappa):
             return st.vonmises.rvs(size=size, loc=mu, kappa=kappa)
-        pymc3_random(VonMises, {'mu': R, 'kappa': Rplus}, ref_rand=ref_rand)
+        pymc3_random(pm.VonMises, {'mu': R, 'kappa': Rplus}, ref_rand=ref_rand)
 
     def test_flat(self):
-        with Model():
-            f = Flat('f')
+        with pm.Model():
+            f = pm.Flat('f')
             with self.assertRaises(ValueError):
                 f.random(1)
 
     def test_binomial(self):
-        pymc3_random_discrete(
-            Binomial, {'n': Nat, 'p': Unit}, ref_rand=st.binom.rvs)
+        pymc3_random_discrete(pm.Binomial, {'n': Nat, 'p': Unit}, ref_rand=st.binom.rvs)
 
     def test_beta_binomial(self):
-        pymc3_random_discrete(BetaBinomial, {'n': Nat, 'alpha': Rplus, 'beta': Rplus},
+        pymc3_random_discrete(pm.BetaBinomial, {'n': Nat, 'alpha': Rplus, 'beta': Rplus},
                               ref_rand=self._beta_bin)
 
     def _beta_bin(self, n, alpha, beta, size=None):
         return st.binom.rvs(n, st.beta.rvs(a=alpha, b=beta, size=size))
 
     def test_bernoulli(self):
-        pymc3_random_discrete(Bernoulli, {'p': Unit},
+        pymc3_random_discrete(pm.Bernoulli, {'p': Unit},
                               ref_rand=lambda size, p=None: st.bernoulli.rvs(p, size=size))
 
     def test_poisson(self):
-        pymc3_random_discrete(Poisson, {'mu': Rplusbig}, size=500, ref_rand=st.poisson.rvs)
+        pymc3_random_discrete(pm.Poisson, {'mu': Rplusbig}, size=500, ref_rand=st.poisson.rvs)
 
     def test_negative_binomial(self):
         def ref_rand(size, alpha, mu):
             return st.nbinom.rvs(alpha, alpha / (mu + alpha), size=size)
-        pymc3_random_discrete(NegativeBinomial, {'mu': Rplusbig, 'alpha': Rplusbig},
+        pymc3_random_discrete(pm.NegativeBinomial, {'mu': Rplusbig, 'alpha': Rplusbig},
                               size=100, fails=50, ref_rand=ref_rand)
 
     def test_geometric(self):
-        pymc3_random_discrete(Geometric, {'p': Unit}, size=500, fails=50, ref_rand=nr.geometric)
+        pymc3_random_discrete(pm.Geometric, {'p': Unit}, size=500, fails=50, ref_rand=nr.geometric)
 
     def test_discrete_uniform(self):
         def ref_rand(size, lower, upper):
             return st.randint.rvs(lower, upper, size=size)
-        pymc3_random_discrete(DiscreteUniform, {'lower': -NatSmall, 'upper': NatSmall},
+        pymc3_random_discrete(pm.DiscreteUniform, {'lower': -NatSmall, 'upper': NatSmall},
                               ref_rand=ref_rand)
 
     def test_categorical(self):
@@ -696,19 +466,18 @@ class ScalarParameterSamples(SeededTest):
     def checks_categorical_random(self, s):
         def ref_rand(size, p):
             return nr.choice(np.arange(p.shape[0]), p=p, size=size)
-        pymc3_random_discrete(
-            Categorical, {'p': Simplex(s)}, ref_rand=ref_rand)
+        pymc3_random_discrete(pm.Categorical, {'p': Simplex(s)}, ref_rand=ref_rand)
 
     def test_constant_dist(self):
         def ref_rand(size, c):
             return c * np.ones(size, dtype=int)
-        pymc3_random_discrete(ConstantDist, {'c': I}, ref_rand=ref_rand)
+        pymc3_random_discrete(pm.ConstantDist, {'c': I}, ref_rand=ref_rand)
 
     def test_mv_normal(self):
         def ref_rand(size, mu, cov):
             return st.multivariate_normal.rvs(mean=mu, cov=cov, size=size)
         for n in [2, 3]:
-            pymc3_random(MvNormal, {'mu': Vector(R, n), 'cov': PdMatrix(n)},
+            pymc3_random(pm.MvNormal, {'mu': Vector(R, n), 'cov': PdMatrix(n)},
                          size=100, valuedomain=Vector(R, n), ref_rand=ref_rand)
 
     def test_mv_t(self):
@@ -717,7 +486,7 @@ class ScalarParameterSamples(SeededTest):
             chi2 = st.chi2.rvs(df=nu, size=size)
             return mu + np.sqrt(nu) * (normal / chi2).T
         for n in [2, 3]:
-            pymc3_random(MvStudentT,
+            pymc3_random(pm.MvStudentT,
                          {'nu': Domain([5, 10, 25, 50]), 'Sigma': PdMatrix(
                              n), 'mu': Vector(R, n)},
                          size=100, valuedomain=Vector(R, n), ref_rand=ref_rand)
@@ -726,14 +495,14 @@ class ScalarParameterSamples(SeededTest):
         def ref_rand(size, a):
             return st.dirichlet.rvs(a, size=size)
         for n in [2, 3]:
-            pymc3_random(Dirichlet, {'a': Vector(Rplus, n)},
+            pymc3_random(pm.Dirichlet, {'a': Vector(Rplus, n)},
                          valuedomain=Simplex(n), size=100, ref_rand=ref_rand)
 
     def test_multinomial(self):
         def ref_rand(size, p, n):
             return nr.multinomial(pvals=p, n=n, size=size)
         for n in [2, 3]:
-            pymc3_random_discrete(Multinomial, {'p': Simplex(n), 'n': Nat},
+            pymc3_random_discrete(pm.Multinomial, {'p': Simplex(n), 'n': Nat},
                                   valuedomain=Vector(Nat, n), size=100, ref_rand=ref_rand)
 
     def test_wishart(self):
