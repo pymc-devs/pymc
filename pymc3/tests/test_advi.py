@@ -1,6 +1,6 @@
 import numpy as np
 import pymc3 as pm
-from pymc3 import Model, Normal, DiscreteUniform, Poisson, switch, Exponential
+from pymc3 import Model, Normal, DiscreteUniform, Poisson, Exponential
 from pymc3.theanof import inputvars
 from pymc3.variational import advi, advi_minibatch, sample_vp
 from pymc3.variational.advi import _calc_elbo, adagrad_optimizer
@@ -66,7 +66,7 @@ class TestADVI(SeededTest):
             late_rate = Exponential('late_rate', 1)
 
             # Allocate appropriate Poisson rates to years before and after current
-            rate = switch(switchpoint >= self.year, early_rate, late_rate)
+            rate = tt.switch(switchpoint >= self.year, early_rate, late_rate)
             Poisson('disasters', rate, observed=self.disaster_data)
 
             # This should raise ValueError
@@ -90,7 +90,7 @@ class TestADVI(SeededTest):
             late_rate = Exponential('late_rate', 1)
 
             # Allocate appropriate Poisson rates to years before and after current
-            rate = switch(switchpoint >= self.year, early_rate, late_rate)
+            rate = tt.switch(switchpoint >= self.year, early_rate, late_rate)
             disasters = Poisson('disasters', rate, observed=disaster_data_t)
 
             with self.assertRaises(ValueError):

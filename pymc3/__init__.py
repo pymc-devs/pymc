@@ -2,7 +2,7 @@ __version__ = "3.0.rc1"
 
 from .blocking import *
 from .distributions import *
-from .math import *
+from .math import logsumexp, logit, invlogit
 from .model import *
 from .stats import *
 from .sampling import *
