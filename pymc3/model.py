@@ -3,6 +3,7 @@ import theano
 import theano.tensor as tt
 from theano.tensor.var import TensorVariable
 
+import pymc3 as pm
 from .memoize import memoize
 from .theanof import gradient, hessian, inputvars
 from .vartypes import typefilter, discrete_types, continuous_types
@@ -81,7 +82,7 @@ def get_named_nodes(graph):
 
 
 def _get_named_nodes(graph, nodes):
-    if graph.owner == None:
+    if graph.owner is None:
         if graph.name is not None:
             nodes.update({graph.name: graph})
     else:
@@ -287,11 +288,11 @@ class Model(Context, Factor):
                 var = TransformedRV(name=name, distribution=dist, model=self,
                                     transform=dist.transform)
                 if self.verbose:
-                    print('Applied {transform}-transform to {name}'
-                          ' and added transformed {orig_name} to model.'.format(
-                              transform=dist.transform.name,
-                              name=name,
-                              orig_name='{}_{}_'.format(name, dist.transform.name)))
+                    pm._log.info('Applied {transform}-transform to {name}'
+                                 ' and added transformed {orig_name} to model.'.format(
+                                    transform=dist.transform.name,
+                                    name=name,
+                                    orig_name='{}_{}_'.format(name, dist.transform.name)))
                 self.deterministics.append(var)
                 return var
         elif isinstance(data, dict):

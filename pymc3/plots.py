@@ -1,8 +1,9 @@
 import numpy as np
 from scipy.stats import kde, mode
-from .stats import autocorr, quantiles, hpd
 from numpy.linalg import LinAlgError
 import matplotlib.pyplot as plt
+import pymc3 as pm
+from .stats import quantiles, hpd
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot',
            'forestplot', 'autocorrplot', 'plot_posterior']
@@ -69,7 +70,7 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
     if ax is None:
         fig, ax = plt.subplots(n, 2, squeeze=False, figsize=figsize)
     elif ax.shape != (n, 2):
-        print('traceplot requires n*2 subplots')
+        pm._log.warning('traceplot requires n*2 subplots')
         return None
 
     for i, v in enumerate(varnames):
@@ -168,14 +169,14 @@ def kde2plot_op(ax, x, y, grid=200):
 
 def kdeplot(data, ax=None):
     if ax is None:
-        f, ax = subplots(1, 1, squeeze=True)
+        f, ax = plt.subplots(1, 1, squeeze=True)
     kdeplot_op(ax, data)
     return ax
 
 
 def kde2plot(x, y, grid=200, ax=None):
     if ax is None:
-        f, ax = subplots(1, 1, squeeze=True)
+        f, ax = plt.subplots(1, 1, squeeze=True)
     kde2plot_op(ax, x, y, grid)
     return ax
 

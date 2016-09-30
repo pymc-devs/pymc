@@ -4,7 +4,7 @@ from joblib import Parallel, delayed
 from numpy.random import randint, seed
 from numpy import shape, asarray
 
-from . import backends
+import pymc3 as pm
 from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point
@@ -69,7 +69,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
         if var not in assigned_vars:
             selected = max(methods, key=lambda method: method._competence(var))
             if model.verbose:
-                print('Assigned {0} to {1}'.format(selected.__name__, var))
+                pm._log.info('Assigned {0} to {1}'.format(selected.__name__, var))
             selected_steps[selected].append(var)
 
     # Instantiate all selected step methods
@@ -262,7 +262,7 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
         return NDArray(**kwds)
 
     if shortcuts is None:
-        shortcuts = backends._shortcuts
+        shortcuts = pm.backends._shortcuts
 
     try:
         backend = shortcuts[trace]['backend']

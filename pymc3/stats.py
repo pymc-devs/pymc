@@ -9,6 +9,7 @@ from .model import modelcontext
 
 from scipy.stats.distributions import pareto
 
+import pymc3 as pm
 from .backends import tracetab as ttab
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',
@@ -114,7 +115,7 @@ def waic(trace, model=None, n_eff=False):
     model : PyMC Model
         Optional model. Default None, taken from context.
     n_eff: bool
-        if True the effective number parameters will be returned. 
+        if True the effective number parameters will be returned.
         Default False
 
     Returns
@@ -131,8 +132,8 @@ def waic(trace, model=None, n_eff=False):
 
     vars_lpd = np.var(log_py, axis=0)
     if np.any(vars_lpd > 0.4):
-        warnings.warn("""For one or more samples the posterior variance of the 
-        log predictive densities exceeds 0.4. This could be indication of 
+        warnings.warn("""For one or more samples the posterior variance of the
+        log predictive densities exceeds 0.4. This could be indication of
         WAIC starting to fail see http://arxiv.org/abs/1507.04544 for details
         """)
     p_waic = np.sum(vars_lpd)
@@ -155,7 +156,7 @@ def loo(trace, model=None, n_eff=False):
     model : PyMC Model
         Optional model. Default None, taken from context.
     n_eff: bool
-        if True the effective number parameters will be computed and returned. 
+        if True the effective number parameters will be computed and returned.
         Default False
 
     Returns
@@ -189,7 +190,7 @@ def loo(trace, model=None, n_eff=False):
     if np.any(pareto_fit[0] > 0.5):
         warnings.warn("""Estimated shape parameter of Pareto distribution
         is for one or more samples is greater than 0.5. This may indicate
-        that the variance of the Pareto smoothed importance sampling estimate 
+        that the variance of the Pareto smoothed importance sampling estimate
         is very large.""")
 
     # Calculate expected values of the order statistics of the fitted Pareto
@@ -404,7 +405,7 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
         return dict(zip(qlist, quants))
 
     except IndexError:
-        print("Too few elements for quantile calculation")
+        _log.warning("Too few elements for quantile calculation")
 
 
 def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_transformed=False,
@@ -438,7 +439,7 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
         addition to, rather than in place of, the default statistics.
         This is only meaningful when `stat_funcs` is not None.
     include_transformed : bool
-        Flag for reporting automatically transformed variables in addition to 
+        Flag for reporting automatically transformed variables in addition to
         original variables (defaults to False).
     alpha : float
         The alpha level for generating posterior intervals. Defaults
@@ -545,7 +546,7 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
       The number of digits to round posterior statistics.
 
     include_transformed : bool
-      Flag for summarizing automatically transformed variables in addition to 
+      Flag for summarizing automatically transformed variables in addition to
       original variables (defaults to False).
 
     tofile : None or string

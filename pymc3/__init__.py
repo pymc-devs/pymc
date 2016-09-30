@@ -25,3 +25,10 @@ from .tests import test
 
 from . import glm
 from .data import *
+
+import logging
+_log = logging.getLogger('pymc3')
+if not logging.root.handlers:
+    _log.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    _log.addHandler(handler)

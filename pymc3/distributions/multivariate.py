@@ -8,8 +8,9 @@ import theano
 import theano.tensor as tt
 
 from scipy import stats
-from theano.tensor.nlinalg import det, matrix_inverse, trace, eigh
+from theano.tensor.nlinalg import det, matrix_inverse, trace
 
+import pymc3 as pm
 from . import transforms
 from .distribution import Continuous, Discrete, draw_values, generate_samples
 from ..model import Deterministic
@@ -19,6 +20,7 @@ from .dist_math import bound, logpow, factln
 
 __all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett', 'LKJCorr']
+
 
 def get_tau_cov(mu, tau=None, cov=None):
     """
@@ -165,7 +167,6 @@ class MvStudentT(Continuous):
         mu = self.mu
 
         d = S.shape[0]
-        n = value.shape[0]
 
         X = value - mu
 
@@ -297,7 +298,7 @@ class Multinomial(Discrete):
     def logp(self, x):
         n = self.n
         p = self.p
-        
+
         if x.ndim==2:
             x_sum = x.sum(axis=0)
             n_sum = n * x.shape[0]
@@ -307,8 +308,8 @@ class Multinomial(Discrete):
 
         return bound(
             factln(n_sum) + tt.sum(x_sum * tt.log(p) - factln(x_sum)),
-            tt.all(x >= 0), 
-            tt.all(x <= n), 
+            tt.all(x >= 0),
+            tt.all(x <= n),
             tt.eq(tt.sum(x_sum), n_sum),
             tt.isclose(p.sum(), 1),
             n >= 0)
@@ -316,7 +317,7 @@ class Multinomial(Discrete):
 
 def posdef(AA):
     try:
-        fct = np.linalg.cholesky(AA)
+        np.linalg.cholesky(AA)
         return 1
     except np.linalg.LinAlgError:
         return 0
@@ -347,7 +348,7 @@ class PosDefMatrix(theano.Op):
         try:
             z[0] = np.array(posdef(x), dtype='int8')
         except Exception:
-            print('Failed to check if positive definite', x)
+            pm._log.exception('Failed to check if positive definite', x)
             raise
 
     def infer_shape(self, node, shapes):
@@ -488,9 +489,9 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
 
     c = tt.sqrt(ChiSquared('c', nu - np.arange(2, 2 + n_diag), shape=n_diag,
                            testval=diag_testval))
-    print('Added new variable c to model diagonal of Wishart.')
+    pm._log.info('Added new variable c to model diagonal of Wishart.')
     z = Normal('z', 0, 1, shape=n_tril, testval=tril_testval)
-    print('Added new variable z to model off-diagonals of Wishart.')
+    pm._log.info('Added new variable z to model off-diagonals of Wishart.')
     # Construct A matrix
     A = tt.zeros(S.shape, dtype=np.float32)
     A = tt.set_subtensor(A[diag_idx], c)

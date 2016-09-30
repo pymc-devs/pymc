@@ -6,6 +6,7 @@ Created on Mar 12, 2011
 from scipy import optimize
 import numpy as np
 from numpy import isfinite, nan_to_num, logical_not
+import pymc3 as pm
 from ..vartypes import discrete_types, typefilter
 from ..model import modelcontext, Point
 from ..theanof import inputvars
@@ -51,10 +52,10 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     kwargs["disp"] = model.verbose > 1
 
     if disc_vars and kwargs["disp"]:
-        print("Warning: vars contains discrete variables. MAP " +
-              "estimates may not be accurate for the default " +
-              "parameters. Defaulting to non-gradient minimization " +
-              "fmin_powell.")
+        pm._log.warning("Warning: vars contains discrete variables. MAP " +
+                        "estimates may not be accurate for the default " +
+                        "parameters. Defaulting to non-gradient minimization " +
+                        "fmin_powell.")
         fmin = optimize.fmin_powell
 
     if fmin is None:
