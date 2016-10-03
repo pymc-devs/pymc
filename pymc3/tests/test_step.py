@@ -125,17 +125,19 @@ class TestSampleEstimates(unittest.TestCase):
         X1 = np.random.randn(size)
         X2 = np.random.randn(size) * 0.2
         Y = alpha_true + beta_true[0] * X1 + beta_true[1] * X2 + np.random.randn(size) * sigma_true
+        
+        with step_method in (NUTS(), Metropolis(), Slice()):
 
-        with Model() as model:
-            alpha = Normal('alpha', mu=0, sd=10)
-            beta = Normal('beta', mu=0, sd=10, shape=2)
-            sigma = Uniform('sigma', lower=0.0, upper=1.0)
-            mu = alpha + beta[0]*X1 + beta[1]*X2
-            Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
+            with Model() as model:
+                alpha = Normal('alpha', mu=0, sd=10)
+                beta = Normal('beta', mu=0, sd=10, shape=2)
+                sigma = Uniform('sigma', lower=0.0, upper=1.0)
+                mu = alpha + beta[0]*X1 + beta[1]*X2
+                Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
             
-            trace = sample(1000)
+                trace = sample(1000, step=step_method)
             
         
-        assert np.isclose(np.median(trace.beta, 0), beta_true, rtol=0.1).all()
-        assert np.isclose(np.median(trace.alpha), alpha_true, rtol=0.1)
-        assert np.isclose(np.median(trace.sigma), sigma_true, rtol=0.1)
+            assert np.isclose(np.median(trace.beta, 0), beta_true, rtol=0.1).all()
+            assert np.isclose(np.median(trace.alpha), alpha_true, rtol=0.1)
+            assert np.isclose(np.median(trace.sigma), sigma_true, rtol=0.1)
