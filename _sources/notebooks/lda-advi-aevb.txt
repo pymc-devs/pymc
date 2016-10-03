@@ -813,7 +813,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# Summary\n",
+    "## Summary\n",
     "We have seen that PyMC3 allows us to estimate random variables of LDA, a probabilistic model with latent variables, based on automatic variational inference. Variational parameters of the local latent variables in the probabilistic model are encoded from observations. The parameters of the encoding model, MLP in this example, are optimized with variational parameters of the global latent variables. Once the probabilistic and the encoding models are defined, parameter optimization is done just by invoking a function (`advi_minibatch()`) without need to derive complex update equations. \n",
     "\n",
     "Unfortunately, the estimation result was not accurate compared to LDA in sklearn, which is based on the conjugate priors and thus not relying on the mean field approximation. To improve the estimation accuracy, some researchers proposed post processings that moves Monte Carlo samples to improve variational lower bound (e.g., Rezende and Mohamed, 2015; Salinams et al., 2015). By implementing such methods on PyMC3, we may achieve more accurate estimation while automated as shown in this notebook. "
@@ -825,7 +825,7 @@
     "collapsed": true
    },
    "source": [
-    "# References\n",
+    "## References\n",
     "* Kingma, D. P., & Welling, M. (2014). Auto-Encoding Variational Bayes. stat, 1050, 1.\n",
     "* Kucukelbir, A., Ranganath, R., Gelman, A., & Blei, D. (2015). Automatic variational inference in Stan. In Advances in neural information processing systems (pp. 568-576).\n",
     "* Blei, D. M., Ng, A. Y., & Jordan, M. I. (2003). Latent dirichlet allocation. Journal of machine Learning research, 3(Jan), 993-1022.\n",

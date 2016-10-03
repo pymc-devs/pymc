@@ -4,7 +4,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# Inference of Gaussian mixture model with ADVI"
+    "# Gaussian Mixture Model with ADVI"
    ]
   },
   {
