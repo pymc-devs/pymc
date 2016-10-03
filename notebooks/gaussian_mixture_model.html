@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Mixture Model in PyMC3 &mdash; PyMC3 3.0.rc1 documentation</title>
+  <title>Gaussian Mixture Model &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -30,7 +30,10 @@
   
 
   
-    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="Gaussian Mixture Model with ADVI" href="gaussian-mixture-model-advi.html"/>
+        <link rel="prev" title="Variational Inference: Bayesian Neural Networks" href="bayesian_neural_network_advi.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -79,9 +82,33 @@
           
             
             
-                <ul>
+                <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Gaussian Mixture Model</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Full-trace">Full trace</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#After-convergence">After convergence</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Sampling-of-cluster-for-individual-data-point">Sampling of cluster for individual data point</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="gaussian-mixture-model-advi.html">Gaussian Mixture Model with ADVI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
 
@@ -113,7 +140,9 @@
   <ul class="wy-breadcrumbs">
     <li><a href="../index.html">Docs</a> &raquo;</li>
       
-    <li>Mixture Model in PyMC3</li>
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>Gaussian Mixture Model</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -292,6 +321,9 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
+<div class="section" id="Gaussian-Mixture-Model">
+<h1>Gaussian Mixture Model<a class="headerlink" href="#Gaussian-Mixture-Model" title="Permalink to this headline">¶</a></h1>
+<p>Original NB by Abe Flaxman, modified by Thomas Wiecki</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
@@ -314,9 +346,6 @@ div.nboutput  > :nth-child(2).stderr {
 Thu Jul 14 09:50:30 CEST 2016
 </pre></div></div>
 </div>
-<div class="section" id="Mixture-Model-in-PyMC3">
-<h1>Mixture Model in PyMC3<a class="headerlink" href="#Mixture-Model-in-PyMC3" title="Permalink to this headline">¶</a></h1>
-<p>Original NB by Abe Flaxman, modified by Thomas Wiecki</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
@@ -566,6 +595,15 @@ true cluster: 2
            </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="gaussian-mixture-model-advi.html" class="btn btn-neutral float-right" title="Gaussian Mixture Model with ADVI" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="bayesian_neural_network_advi.html" class="btn btn-neutral" title="Variational Inference: Bayesian Neural Networks" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>

@@ -33,7 +33,7 @@
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="GLM: Mini-batch ADVI on hierarchical regression model" href="GLM-hierarchical-advi-minibatch.html"/>
-        <link rel="prev" title="GLM: Hierarchical Linear Regression" href="GLM-hierarchical.html"/> 
+        <link rel="prev" title="GLM: Poisson Regression" href="GLM-poisson-regression.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -88,33 +88,24 @@
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM: Model Selection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">GLM: Hierarchical Linear Regression with ADVI</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Posterior-Predictive-Check">Posterior Predictive Check</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#The-Root-Mean-Square-Deviation">The Root Mean Square Deviation</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#Summary">Summary</a></li>
-<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#References">References</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gaussian_mixture_model.html">Mixture Model in PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gaussian-mixture-model-advi.html">Inference of Gaussian mixture model with ADVI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#advi">ADVI</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">GLM: Hierarchical Linear Regression with ADVI</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Posterior-Predictive-Check">Posterior Predictive Check</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -503,11 +494,10 @@ there is quite some differences in radon levels between counties (each
 &#8216;rainbow&#8217; color corresponds to a single county); the different widths
 are related to how much confidence we have in each paramter estimate &#8211;
 the more measurements per county, the higher our confidence will be.</p>
-</div>
 <div class="section" id="Posterior-Predictive-Check">
-<h1>Posterior Predictive Check<a class="headerlink" href="#Posterior-Predictive-Check" title="Permalink to this headline">¶</a></h1>
+<h2>Posterior Predictive Check<a class="headerlink" href="#Posterior-Predictive-Check" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="The-Root-Mean-Square-Deviation">
-<h2>The Root Mean Square Deviation<a class="headerlink" href="#The-Root-Mean-Square-Deviation" title="Permalink to this headline">¶</a></h2>
+<h3>The Root Mean Square Deviation<a class="headerlink" href="#The-Root-Mean-Square-Deviation" title="Permalink to this headline">¶</a></h3>
 <p>To find out which of the models explains the data better we can
 calculate the Root Mean Square Deviaton (RMSD). This posterior
 predictive check revolves around recreating the data based on the
@@ -646,6 +636,7 @@ constrain the coefficients we get meaningful estimates in all cases as
 we apply what we learn from the group to the individuals and vice-versa.</p>
 </div>
 </div>
+</div>
 
 
            </div>
@@ -657,7 +648,7 @@ we apply what we learn from the group to the individuals and vice-versa.</p>
         <a href="GLM-hierarchical-advi-minibatch.html" class="btn btn-neutral float-right" title="GLM: Mini-batch ADVI on hierarchical regression model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="GLM-hierarchical.html" class="btn btn-neutral" title="GLM: Hierarchical Linear Regression" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="GLM-poisson-regression.html" class="btn btn-neutral" title="GLM: Poisson Regression" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
