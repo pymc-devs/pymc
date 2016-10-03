@@ -6,7 +6,7 @@ from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, Metropolis, Constant, Slice,
                                 CompoundStep, MultivariateNormalProposal, HamiltonianMC)
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
+from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Uniform
 from numpy.testing import assert_almost_equal
 import numpy as np
 
@@ -113,3 +113,29 @@ class TestAssignStepMethods(unittest.TestCase):
             Binomial('x', 10, 0.5)
             steps = assign_step_methods(model, [])
         self.assertIsInstance(steps, Metropolis)
+
+class TestSampleEstimates(unittest.TestCase):
+    def test_parameter_estimate(self):
+        
+        alpha, sigma = 1, 0.5
+        beta = [1, 2.5]
+
+        size = 100
+
+        X1 = np.random.randn(size)
+        X2 = np.random.randn(size) * 0.2
+        Y = alpha + beta[0] * X1 + beta[1] * X2 + np.random.randn(size) * sigma
+
+        with Model() as model:
+            alpha = Normal('alpha', mu=0, sd=10)
+            beta = Normal('beta', mu=0, sd=10, shape=2)
+            sigma = Uniform('sigma', lower=0.0, upper=1.0)
+            mu = alpha + beta[0]*X1 + beta[1]*X2
+            Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
+            
+            trace = sample(1000)
+            
+        
+        assert np.isclose(np.median(trace.beta, 0), beta, rtol=0.1)
+        assert np.isclose(np.median(trace.alpha), alpha, rtol=0.1)
+        assert np.isclose(np.median(trace.sigma), sigma, rtol=0.1)
