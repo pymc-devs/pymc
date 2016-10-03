@@ -2,6 +2,7 @@ import unittest
 
 from .checks import close_to
 from .models import mv_simple, mv_simple_discrete, simple_2model
+from .helpers import SeededTest
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, Metropolis, Constant, Slice,
@@ -114,7 +115,7 @@ class TestAssignStepMethods(unittest.TestCase):
             steps = assign_step_methods(model, [])
         self.assertIsInstance(steps, Metropolis)
 
-class TestSampleEstimates(unittest.TestCase):
+class TestSampleEstimates(SeededTest):
     def test_parameter_estimate(self):
         
         alpha_true, sigma_true = 1, 0.5
