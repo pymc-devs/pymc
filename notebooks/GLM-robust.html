@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Table of Contents &mdash; PyMC3 3.0.rc1 documentation</title>
+  <title>GLM: Robust Linear Regression &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -32,7 +32,7 @@
   
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="GLM Robust Regression with Outlier Detection" href="GLM-robust-with-outlier-detection.html"/>
+        <link rel="next" title="GLM: Robust Regression with Outlier Detection" href="GLM-robust-with-outlier-detection.html"/>
         <link rel="prev" title="GLM: Linear regression" href="GLM-linear.html"/> 
 
   
@@ -86,28 +86,35 @@
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
-<li class="toctree-l2"><a class="reference internal" href="LKJ.html">Fitting a Multivariate Normal Model in PyMC3 with an LKJ Prior</a></li>
+<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Table of Contents</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#GLM:-Robust-Linear-Regression">GLM: Robust Linear Regression</a><ul>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">GLM: Robust Linear Regression</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#Robust-Regression">Robust Regression</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Summary">Summary</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM: Model Selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html#Posterior-Predictive-Check">Posterior Predictive Check</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a></li>
 <li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#Summary">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#References">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gaussian_mixture_model.html">Mixture Model in PyMC3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gaussian-mixture-model-advi.html">Inference of Gaussian mixture model with ADVI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
 </ul>
 </li>
@@ -144,7 +151,7 @@
       
           <li><a href="../examples.html">Examples</a> &raquo;</li>
       
-    <li>Table of Contents</li>
+    <li>GLM: Robust Linear Regression</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -323,15 +330,9 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="Table-of-Contents">
-<h1>Table of Contents<a class="headerlink" href="#Table-of-Contents" title="Permalink to this headline">¶</a></h1>
-<p><div class="lev1"><p>1&nbsp;&nbsp;GLM: Robust Linear Regression</p>
-</div><div class="lev2"><p>1.1&nbsp;&nbsp;Robust Regression</p>
-</div><div class="lev2"><p>1.2&nbsp;&nbsp;Summary</p>
-</div></div>
 <div class="section" id="GLM:-Robust-Linear-Regression">
 <h1>GLM: Robust Linear Regression<a class="headerlink" href="#GLM:-Robust-Linear-Regression" title="Permalink to this headline">¶</a></h1>
-<p>Author: Thomas Wiecki</p>
+<p>Author: <a class="reference external" href="https://twitter.com/twiecki">Thomas Wiecki</a></p>
 <p>This tutorial first appeard as a post in small series on Bayesian GLMs
 on my blog:</p>
 <ol class="arabic simple">
@@ -428,7 +429,7 @@ in the upper left corner are the outliers we added).</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-robust_7_0.png" src="../_images/notebooks_GLM-robust_7_0.png" />
+<img alt="../_images/notebooks_GLM-robust_6_0.png" src="../_images/notebooks_GLM-robust_6_0.png" />
 </div>
 </div>
 <div class="section" id="Robust-Regression">
@@ -487,7 +488,7 @@ and plotting a regression line for each (this is all done inside of
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-robust_11_0.png" src="../_images/notebooks_GLM-robust_11_0.png" />
+<img alt="../_images/notebooks_GLM-robust_10_0.png" src="../_images/notebooks_GLM-robust_10_0.png" />
 </div>
 </div>
 <p>As you can see, the fit is quite skewed and we have a fair amount of
@@ -529,7 +530,7 @@ formulate this).</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-robust_13_0.png" src="../_images/notebooks_GLM-robust_13_0.png" />
+<img alt="../_images/notebooks_GLM-robust_12_0.png" src="../_images/notebooks_GLM-robust_12_0.png" />
 </div>
 </div>
 <p>As you can see, the probability of values far away from the mean (0 in
@@ -566,7 +567,7 @@ the same syntax as <code class="docutils literal"><span class="pre">R</span></co
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-robust_15_0.png" src="../_images/notebooks_GLM-robust_15_0.png" />
+<img alt="../_images/notebooks_GLM-robust_14_0.png" src="../_images/notebooks_GLM-robust_14_0.png" />
 </div>
 </div>
 <p>There, much better! The outliers are barely influencing our estimation
@@ -609,7 +610,7 @@ by Allen Downey.</li>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="GLM-robust-with-outlier-detection.html" class="btn btn-neutral float-right" title="GLM Robust Regression with Outlier Detection" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="GLM-robust-with-outlier-detection.html" class="btn btn-neutral float-right" title="GLM: Robust Regression with Outlier Detection" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="GLM-linear.html" class="btn btn-neutral" title="GLM: Linear regression" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Mini-batch ADVI on hierarchical regression model &mdash; PyMC3 3.0.rc1 documentation</title>
+  <title>GLM: Mini-batch ADVI on hierarchical regression model &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -30,7 +30,10 @@
   
 
   
-    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="GLM: Poisson Regression" href="GLM-poisson-regression.html"/>
+        <link rel="prev" title="GLM: Hierarchical Linear Regression with ADVI" href="GLM-hierarchical-ADVI.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -79,9 +82,38 @@
           
             
             
-                <ul>
+                <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM: Model Selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html#Posterior-Predictive-Check">Posterior Predictive Check</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#Summary">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#References">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gaussian_mixture_model.html">Mixture Model in PyMC3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gaussian-mixture-model-advi.html">Inference of Gaussian mixture model with ADVI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
 
@@ -113,7 +145,9 @@
   <ul class="wy-breadcrumbs">
     <li><a href="../index.html">Docs</a> &raquo;</li>
       
-    <li>Mini-batch ADVI on hierarchical regression model</li>
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>GLM: Mini-batch ADVI on hierarchical regression model</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -292,8 +326,8 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="Mini-batch-ADVI-on-hierarchical-regression-model">
-<h1>Mini-batch ADVI on hierarchical regression model<a class="headerlink" href="#Mini-batch-ADVI-on-hierarchical-regression-model" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="GLM:-Mini-batch-ADVI-on-hierarchical-regression-model">
+<h1>GLM: Mini-batch ADVI on hierarchical regression model<a class="headerlink" href="#GLM:-Mini-batch-ADVI-on-hierarchical-regression-model" title="Permalink to this headline">¶</a></h1>
 <p>Unlike Gaussian mixture models, (hierarchical) regression models have
 independent variables. These variables affect the likelihood function,
 but are not random variables. When using mini-batch, we should take care
@@ -303,7 +337,7 @@ of that.</p>
 <span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
@@ -325,7 +359,7 @@ of that.</p>
 <span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
 
 <span class="n">log_radon_t</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">vector</span><span class="p">()</span>
@@ -344,7 +378,7 @@ of that.</p>
 <span></span>In [3]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">hierarchical_model</span><span class="p">:</span>
     <span class="c1"># Hyperpriors for group nodes</span>
     <span class="n">mu_a</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;mu_alpha&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
@@ -392,7 +426,7 @@ likelihood term.</p>
 <span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">minibatch_RVs</span> <span class="o">=</span> <span class="p">[</span><span class="n">radon_like</span><span class="p">]</span>
 </pre></div>
 </div>
@@ -404,7 +438,7 @@ above.</p>
 <span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">def</span> <span class="nf">minibatch_gen</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
     <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
@@ -426,7 +460,7 @@ above.</p>
 <span></span>In [6]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">means</span><span class="p">,</span> <span class="n">sds</span><span class="p">,</span> <span class="n">elbos</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi_minibatch</span><span class="p">(</span>
     <span class="n">model</span><span class="o">=</span><span class="n">hierarchical_model</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">40000</span><span class="p">,</span> <span class="n">minibatch_tensors</span><span class="o">=</span><span class="n">minibatch_tensors</span><span class="p">,</span>
     <span class="n">minibatch_RVs</span><span class="o">=</span><span class="n">minibatch_RVs</span><span class="p">,</span> <span class="n">minibatches</span><span class="o">=</span><span class="n">minibatches</span><span class="p">,</span>
@@ -459,7 +493,7 @@ Finished [100%]: Average ELBO = -1112.83
 <span></span>In [7]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">elbos</span><span class="p">)</span>
@@ -479,7 +513,7 @@ Finished [100%]: Average ELBO = -1112.83
 <span></span>In [8]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Inference button (TM)!</span>
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">():</span>
     <span class="c1"># Hyperpriors for group nodes</span>
@@ -530,7 +564,7 @@ Applied interval-transform to eps and added transformed eps_interval to model.
 <span></span>In [9]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">stats</span>
 <span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
 <span class="n">varnames</span> <span class="o">=</span> <span class="n">means</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
@@ -566,6 +600,15 @@ Applied interval-transform to eps and added transformed eps_interval to model.
            </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="GLM-poisson-regression.html" class="btn btn-neutral float-right" title="GLM: Poisson Regression" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="GLM-hierarchical-ADVI.html" class="btn btn-neutral" title="GLM: Hierarchical Linear Regression with ADVI" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>

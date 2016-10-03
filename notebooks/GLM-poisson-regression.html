@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>PyMC3 Examples &mdash; PyMC3 3.0.rc1 documentation</title>
+  <title>GLM: Poisson Regression &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -30,7 +30,10 @@
   
 
   
-    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="Probabilistic Matrix Factorization for Making Personalized Recommendations" href="pmf-pymc.html"/>
+        <link rel="prev" title="GLM: Mini-batch ADVI on hierarchical regression model" href="GLM-hierarchical-advi-minibatch.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -79,9 +82,57 @@
           
             
             
-                <ul>
+                <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM: Model Selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html#Posterior-Predictive-Check">Posterior Predictive Check</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">GLM: Poisson Regression</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#A-minimal-reproducable-example-of-poisson-regression-to-predict-counts-using-dummy-data.">A minimal reproducable example of poisson regression to predict counts using dummy data.</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Contents">Contents</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Package-Requirements-(shown-as-a-conda-env-YAML):">Package Requirements (shown as a conda-env YAML):</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#Setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Local-Functions">Local Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Generate-Data">Generate Data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Poisson-Regression">Poisson Regression</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Create-Model">Create Model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Sample-Model">Sample Model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#View-Diagnostics">View Diagnostics</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Create-Model">Create Model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Sample-Model">Sample Model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#View-Traces">View Traces</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#Summary">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#References">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gaussian_mixture_model.html">Mixture Model in PyMC3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gaussian-mixture-model-advi.html">Inference of Gaussian mixture model with ADVI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
 
@@ -113,7 +164,9 @@
   <ul class="wy-breadcrumbs">
     <li><a href="../index.html">Docs</a> &raquo;</li>
       
-    <li>PyMC3 Examples</li>
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>GLM: Poisson Regression</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -292,12 +345,10 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="PyMC3-Examples">
-<h1>PyMC3 Examples<a class="headerlink" href="#PyMC3-Examples" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="GLM-Poisson-Regression">
-<h2>GLM Poisson Regression<a class="headerlink" href="#GLM-Poisson-Regression" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="GLM:-Poisson-Regression">
+<h1>GLM: Poisson Regression<a class="headerlink" href="#GLM:-Poisson-Regression" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="A-minimal-reproducable-example-of-poisson-regression-to-predict-counts-using-dummy-data.">
-<h3>A minimal reproducable example of poisson regression to predict counts using dummy data.<a class="headerlink" href="#A-minimal-reproducable-example-of-poisson-regression-to-predict-counts-using-dummy-data." title="Permalink to this headline">¶</a></h3>
+<h2>A minimal reproducable example of poisson regression to predict counts using dummy data.<a class="headerlink" href="#A-minimal-reproducable-example-of-poisson-regression-to-predict-counts-using-dummy-data." title="Permalink to this headline">¶</a></h2>
 <p>This Notebook is basically an excuse to demo poisson regression using
 PyMC3, both manually and using the <code class="docutils literal"><span class="pre">glm</span></code> library to demo interactions
 using the <code class="docutils literal"><span class="pre">patsy</span></code> library. We will create some dummy data, poisson
@@ -317,7 +368,6 @@ Ford</a></li>
 Osvald</a>,
 which is concerend with understanding the various effects of external
 environmental factors upon the allergic sneezing of a test subject.</p>
-</div>
 <div class="section" id="Contents">
 <h3>Contents<a class="headerlink" href="#Contents" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
@@ -424,10 +474,6 @@ Installed watermark.py. To use it, type:
   %load_ext watermark
 </pre></div></div>
 </div>
-</div>
-</div>
-<div class="section" id="What-versions-are-we-running?">
-<h1>What versions are we running?<a class="headerlink" href="#What-versions-are-we-running?" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
@@ -468,6 +514,9 @@ Git hash   : 687d17856f894aaa0c2b42d30b7ff151b9289856
 Recursion limit 10000
 </pre></div></div>
 </div>
+</div>
+<div class="section" id="Local-Functions">
+<h2>Local Functions<a class="headerlink" href="#Local-Functions" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
@@ -501,6 +550,9 @@ Recursion limit 10000
 </pre></div>
 </div>
 </div>
+</div>
+<div class="section" id="Generate-Data">
+<h2>Generate Data<a class="headerlink" href="#Generate-Data" title="Permalink to this headline">¶</a></h2>
 <p>This dummy dataset is created to emulate some data created as part of a
 study into quantified self, and the real data is more complicated than
 this. Ask Ian Osvald if you&#8217;d like to know more
@@ -519,9 +571,6 @@ that day, with a boolean flag for alcohol and antihistamine usage,
 with the big assumption that nsneezes have a direct causal
 relationship.</li>
 </ul>
-</div>
-<div class="section" id="Create-4000-days-of-data:-daily-counts-of-sneezes-which-are-poisson-distributed-w.r.t-alcohol-consumption-and-antihistamine-usage">
-<h1>Create 4000 days of data: daily counts of sneezes which are poisson distributed w.r.t alcohol consumption and antihistamine usage<a class="headerlink" href="#Create-4000-days-of-data:-daily-counts-of-sneezes-which-are-poisson-distributed-w.r.t-alcohol-consumption-and-antihistamine-usage" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
@@ -613,9 +662,6 @@ relationship.</li>
 </table>
 </div></div>
 </div>
-</div>
-<div class="section" id="View-means-of-the-various-combinations-(poisson-mean-values)">
-<h1>View means of the various combinations (poisson mean values)<a class="headerlink" href="#View-means-of-the-various-combinations-(poisson-mean-values)" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
@@ -697,6 +743,7 @@ poisson distribution of sneeze counts is low.</li>
 increases the sneeze count <code class="docutils literal"><span class="pre">nsneeze</span></code> a lot, increasing both the
 mean and variance.</li>
 </ul>
+</div>
 <hr class="docutils" />
 <div class="section" id="Poisson-Regression">
 <h2>Poisson Regression<a class="headerlink" href="#Poisson-Regression" title="Permalink to this headline">¶</a></h2>
@@ -706,10 +753,6 @@ interaction of terms:</p>
 \[\theta = exp(\beta X)\]</div>
 <div class="math">
 \[Y_{sneeze\_count} ~ Poisson(\theta)\]</div>
-</div>
-</div>
-<div class="section" id="Create-linear-model-for-interaction-of-terms">
-<h1>Create linear model for interaction of terms<a class="headerlink" href="#Create-linear-model-for-interaction-of-terms" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [9]:
@@ -730,9 +773,6 @@ interaction of terms:</p>
 </pre></div>
 </div>
 </div>
-</div>
-<div class="section" id="Create-Design-Matrices">
-<h1>Create Design Matrices<a class="headerlink" href="#Create-Design-Matrices" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
@@ -817,6 +857,8 @@ interaction of terms:</p>
 </table>
 </div></div>
 </div>
+<div class="section" id="Create-Model">
+<h3>Create Model<a class="headerlink" href="#Create-Model" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [13]:
@@ -842,6 +884,9 @@ interaction of terms:</p>
 </pre></div>
 </div>
 </div>
+</div>
+<div class="section" id="Sample-Model">
+<h3>Sample Model<a class="headerlink" href="#Sample-Model" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [14]:
@@ -863,6 +908,9 @@ interaction of terms:</p>
  [-----------------100%-----------------] 2001 of 2000 complete in 34.7 sec
 </pre></div></div>
 </div>
+</div>
+<div class="section" id="View-Diagnostics">
+<h3>View Diagnostics<a class="headerlink" href="#View-Diagnostics" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
@@ -885,6 +933,8 @@ interaction of terms:</p>
 <ul class="simple">
 <li>The model converges quickly and traceplots looks pretty well mixed</li>
 </ul>
+<div class="section" id="Transform-coeffs-and-recover-theta-values">
+<h4>Transform coeffs and recover theta values<a class="headerlink" href="#Transform-coeffs-and-recover-theta-values" title="Permalink to this headline">¶</a></h4>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [16]:
@@ -976,10 +1026,14 @@ exp(b2_nomeds * b3_alcohol:nomeds) = 1 * 3 * 6 * 2 = 36</p>
 </ol>
 </li>
 </ul>
-<hr class="docutils" />
 </div>
-<div class="section" id="Alternative-automatic-formulation-using-pmyc.glm">
-<h1>Alternative automatic formulation using <code class="docutils literal"><span class="pre">pmyc.glm</span></code><a class="headerlink" href="#Alternative-automatic-formulation-using-pmyc.glm" title="Permalink to this headline">¶</a></h1>
+<hr class="docutils" />
+<div class="section" id="2.-Alternative-method,-using-pymc.glm">
+<h4>2. Alternative method, using <code class="docutils literal"><span class="pre">pymc.glm</span></code><a class="headerlink" href="#2.-Alternative-method,-using-pymc.glm" title="Permalink to this headline">¶</a></h4>
+</div>
+</div>
+<div class="section" id="Create-Model">
+<h3>Create Model<a class="headerlink" href="#Create-Model" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
@@ -1000,6 +1054,9 @@ exp(b2_nomeds * b3_alcohol:nomeds) = 1 * 3 * 6 * 2 = 36</p>
 Applied log-transform to mu and added transformed mu_log to model.
 </pre></div></div>
 </div>
+</div>
+<div class="section" id="Sample-Model">
+<h3>Sample Model<a class="headerlink" href="#Sample-Model" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [18]:
@@ -1021,6 +1078,9 @@ Applied log-transform to mu and added transformed mu_log to model.
  [-----------------100%-----------------] 4000 of 4000 complete in 48.4 sec
 </pre></div></div>
 </div>
+</div>
+<div class="section" id="View-Traces">
+<h3>View Traces<a class="headerlink" href="#View-Traces" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
@@ -1039,6 +1099,8 @@ Applied log-transform to mu and added transformed mu_log to model.
 <img alt="../_images/notebooks_GLM-poisson-regression_46_0.png" src="../_images/notebooks_GLM-poisson-regression_46_0.png" />
 </div>
 </div>
+<div class="section" id="Transform-coeffs">
+<h4>Transform coeffs<a class="headerlink" href="#Transform-coeffs" title="Permalink to this headline">¶</a></h4>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [25]:
@@ -1154,11 +1216,23 @@ pretty close to the overall mean of:</p>
 <p>Example originally contributed by Jonathan Sedar 2016-05-15
 <a class="reference external" href="https://github.com/jonsedar">github.com/jonsedar</a></p>
 </div>
+</div>
+</div>
+</div>
 
 
            </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="pmf-pymc.html" class="btn btn-neutral float-right" title="Probabilistic Matrix Factorization for Making Personalized Recommendations" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="GLM-hierarchical-advi-minibatch.html" class="btn btn-neutral" title="GLM: Mini-batch ADVI on hierarchical regression model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>

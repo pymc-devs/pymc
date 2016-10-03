@@ -311,7 +311,7 @@ a simple model, and present a few possible work arounds.</p>
 <span class="math">\(Beta\)</span> distribution for the <span class="math">\(p\)</span> parameter in a binomial. We
 would like to know both the posterior distribution for p, as well as the
 predictive posterior distribution over the survey parameter.</p>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
@@ -328,6 +328,14 @@ predictive posterior distribution over the survey parameter.</p>
     <span class="n">surv</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">Binomial</span><span class="p">(</span><span class="s1">&#39;surv&#39;</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">yes</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Applied logodds-transform to p and added transformed p_logodds_ to model.
+</pre></div></div>
 </div>
 <p>First let&#8217;s try and use <code class="docutils literal"><span class="pre">find_MAP</span></code>.</p>
 <div class="nbinput container">
@@ -346,7 +354,7 @@ predictive posterior distribution over the survey parameter.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-{&#39;p&#39;: array(0.6086956533498806)}
+{&#39;surv_sim&#39;: array(10), &#39;p_logodds_&#39;: array(0.42285684671251805)}
 </pre></div></div>
 </div>
 <p><code class="docutils literal"><span class="pre">find_map</span></code> defaults to find the MAP for only the continuous variables
@@ -367,12 +375,7 @@ we have to specify if we would like to use the discrete variables.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Warning: vars contains discrete variables. MAP estimates may not be accurate for the default parameters. Defaulting to non-gradient minimization fmin_powell.
-Optimization terminated successfully.
-         Current function value: 3.111511
-         Iterations: 3
-         Function evaluations: 95
-{&#39;surv_sim&#39;: 14.0, &#39;p&#39;: array(0.695652178810167)}
+{&#39;surv_sim&#39;: array(14), &#39;p_logodds_&#39;: array(0.7884573537909452)}
 </pre></div></div>
 </div>
 <p>We set the <code class="docutils literal"><span class="pre">disp</span></code> variable to display a warning that we are using a
@@ -403,27 +406,30 @@ that the map does not converge.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-surv_sim: 0-&gt;-1, p: 0.500000-&gt;0.391133, LogP:-inf
-surv_sim: 1-&gt;1, p: 0.500000-&gt;0.500000, LogP:-14.298540
-surv_sim: 2-&gt;2, p: 0.500000-&gt;0.500000, LogP:-12.047249
-surv_sim: 3-&gt;3, p: 0.500000-&gt;0.500000, LogP:-10.255489
-surv_sim: 4-&gt;4, p: 0.500000-&gt;0.500000, LogP:-8.808570
-surv_sim: 5-&gt;5, p: 0.500000-&gt;0.500000, LogP:-7.645419
-surv_sim: 6-&gt;6, p: 0.500000-&gt;0.500000, LogP:-6.729129
-surv_sim: 7-&gt;7, p: 0.500000-&gt;0.500000, LogP:-6.035981
-surv_sim: 8-&gt;8, p: 0.500000-&gt;0.500000, LogP:-5.550474
-surv_sim: 9-&gt;8, p: 0.500000-&gt;0.558888, LogP:-5.161793
-surv_sim: 10-&gt;9, p: 0.500000-&gt;0.587384, LogP:-4.563607
-surv_sim: 11-&gt;10, p: 0.500000-&gt;0.500000, LogP:-5.167477
-surv_sim: 12-&gt;11, p: 0.500000-&gt;0.500000, LogP:-5.262785
-surv_sim: 13-&gt;12, p: 0.500000-&gt;0.500000, LogP:-5.550465
-surv_sim: 14-&gt;13, p: 0.500000-&gt;0.500000, LogP:-6.035970
-surv_sim: 15-&gt;14, p: 0.500000-&gt;0.681157, LogP:-3.133947
-surv_sim: 16-&gt;16, p: 0.500000-&gt;0.500000, LogP:-8.808570
-surv_sim: 17-&gt;17, p: 0.500000-&gt;0.500000, LogP:-10.255489
-surv_sim: 18-&gt;18, p: 0.500000-&gt;0.500000, LogP:-12.047249
-surv_sim: 19-&gt;19, p: 0.500000-&gt;0.500000, LogP:-14.298540
-surv_sim: 20-&gt;20, p: 0.500000-&gt;0.500000, LogP:-17.294273
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">KeyError</span>                                  Traceback (most recent call last)
+<span class="ansi-green-fg">&lt;ipython-input-5-299cdf766633&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-intense-fg ansi-bold">      2</span>     <span class="ansi-green-fg">for</span> i <span class="ansi-green-fg">in</span> range<span class="ansi-blue-fg">(</span>n<span class="ansi-blue-fg">+</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">      3</span>         s <span class="ansi-blue-fg">=</span> <span class="ansi-blue-fg">{</span><span class="ansi-blue-fg">&#39;p&#39;</span><span class="ansi-blue-fg">:</span><span class="ansi-cyan-fg">0.5</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">&#39;surv_sim&#39;</span><span class="ansi-blue-fg">:</span>i<span class="ansi-blue-fg">}</span>
+<span class="ansi-green-fg">----&gt; 4</span><span class="ansi-red-fg">         </span>map_est <span class="ansi-blue-fg">=</span> mc<span class="ansi-blue-fg">.</span>find_MAP<span class="ansi-blue-fg">(</span>start<span class="ansi-blue-fg">=</span>s<span class="ansi-blue-fg">,</span> vars<span class="ansi-blue-fg">=</span>model<span class="ansi-blue-fg">.</span>vars<span class="ansi-blue-fg">,</span> fmin<span class="ansi-blue-fg">=</span>mc<span class="ansi-blue-fg">.</span>starting<span class="ansi-blue-fg">.</span>optimize<span class="ansi-blue-fg">.</span>fmin_bfgs<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">      5</span>         print(&#39;surv_sim: %i-&gt;%i, p: %f-&gt;%f, LogP:%f&#39;%(s[&#39;surv_sim&#39;],
+<span class="ansi-green-intense-fg ansi-bold">      6</span>                                                       map_est<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">&#39;surv_sim&#39;</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span>
+
+<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/tuning/starting.py</span> in <span class="ansi-cyan-fg">find_MAP</span><span class="ansi-blue-fg">(start, vars, fmin, return_raw, model, *args, **kwargs)</span>
+<span class="ansi-green-intense-fg ansi-bold">     82</span>     <span class="ansi-green-fg">if</span> <span class="ansi-blue-fg">&#39;fprime&#39;</span> <span class="ansi-green-fg">in</span> getargspec<span class="ansi-blue-fg">(</span>fmin<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">.</span>args<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     83</span>         r = fmin(logp_o, bij.map(
+<span class="ansi-green-fg">---&gt; 84</span><span class="ansi-red-fg">             start), fprime=grad_logp_o, *args, **kwargs)
+</span><span class="ansi-green-intense-fg ansi-bold">     85</span>     <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     86</span>         r <span class="ansi-blue-fg">=</span> fmin<span class="ansi-blue-fg">(</span>logp_o<span class="ansi-blue-fg">,</span> bij<span class="ansi-blue-fg">.</span>map<span class="ansi-blue-fg">(</span>start<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwargs<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/blocking.py</span> in <span class="ansi-cyan-fg">map</span><span class="ansi-blue-fg">(self, dpt)</span>
+<span class="ansi-green-intense-fg ansi-bold">     50</span>         apt <span class="ansi-blue-fg">=</span> np<span class="ansi-blue-fg">.</span>empty<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>ordering<span class="ansi-blue-fg">.</span>dimensions<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     51</span>         <span class="ansi-green-fg">for</span> var<span class="ansi-blue-fg">,</span> slc<span class="ansi-blue-fg">,</span> _<span class="ansi-blue-fg">,</span> _ <span class="ansi-green-fg">in</span> self<span class="ansi-blue-fg">.</span>ordering<span class="ansi-blue-fg">.</span>vmap<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 52</span><span class="ansi-red-fg">             </span>apt<span class="ansi-blue-fg">[</span>slc<span class="ansi-blue-fg">]</span> <span class="ansi-blue-fg">=</span> dpt<span class="ansi-blue-fg">[</span>var<span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">.</span>ravel<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     53</span>         <span class="ansi-green-fg">return</span> apt
+<span class="ansi-green-intense-fg ansi-bold">     54</span>
+
+<span class="ansi-red-fg">KeyError</span>: &#39;p_logodds_&#39;
 </pre></div></div>
 </div>
 <p>Once again because the gradient of <code class="docutils literal"><span class="pre">surv_sim</span></code> provides no information
@@ -433,9 +439,9 @@ see that the maximum is somewhere around <code class="docutils literal"><span cl
 <code class="docutils literal"><span class="pre">p</span></code><span class="math">\(=0.7\)</span>. If we employ a non-gradient minimization, such as
 <code class="docutils literal"><span class="pre">fmin_powell</span></code> (the default when discrete variables are detected), we
 might be able to get a better estimate.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [ ]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -451,34 +457,6 @@ might be able to get a better estimate.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-surv_sim: 0-&gt;2, p: 0.500000-&gt;0.434783, LogP:-11.654827
-surv_sim: 1-&gt;3, p: 0.500000-&gt;0.456522, LogP:-10.081356
-surv_sim: 2-&gt;6, p: 0.500000-&gt;0.521739, LogP:-6.685637
-surv_sim: 3-&gt;7, p: 0.500000-&gt;0.543478, LogP:-5.861849
-surv_sim: 4-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 5-&gt;14, p: 0.500000-&gt;0.674290, LogP:-3.159870
-surv_sim: 6-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 7-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 8-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 9-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 10-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 11-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 12-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 13-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 14-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 15-&gt;15, p: 0.500000-&gt;0.717392, LogP:-3.149062
-surv_sim: 16-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 17-&gt;15, p: 0.500000-&gt;0.717391, LogP:-3.149062
-surv_sim: 18-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 19-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 20-&gt;14, p: 0.500000-&gt;0.712421, LogP:-3.142725
-</pre></div></div>
-</div>
 <p>For most starting values this converges to the maximum log likelihood of
 <span class="math">\(\approx -3.15\)</span>, but for particularly low starting values of
 <code class="docutils literal"><span class="pre">surv_sim</span></code>, or values near <code class="docutils literal"><span class="pre">surv_sim</span></code><span class="math">\(=14\)</span> there is still
@@ -487,9 +465,9 @@ some noise. The scipy optimize package contains some more general
 <code class="docutils literal"><span class="pre">basinhopping</span></code> algorithm restarts the optimization at places near
 found minimums. Because it has a slightly different interface to other
 minimization schemes we have to define a wrapper function.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [ ]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -510,41 +488,13 @@ minimization schemes we have to define a wrapper function.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-surv_sim: 0-&gt;5, p: 0.500000-&gt;0.500000, LogP:-7.645419
-surv_sim: 1-&gt;7, p: 0.500000-&gt;0.543478, LogP:-5.861849
-surv_sim: 2-&gt;10, p: 0.500000-&gt;0.608696, LogP:-4.071797
-surv_sim: 3-&gt;8, p: 0.500000-&gt;0.565217, LogP:-5.158052
-surv_sim: 4-&gt;10, p: 0.500000-&gt;0.608696, LogP:-4.071797
-surv_sim: 5-&gt;7, p: 0.500000-&gt;0.543478, LogP:-5.861849
-surv_sim: 6-&gt;12, p: 0.500000-&gt;0.652174, LogP:-3.385867
-surv_sim: 7-&gt;8, p: 0.500000-&gt;0.565217, LogP:-5.158052
-surv_sim: 8-&gt;11, p: 0.500000-&gt;0.630435, LogP:-3.679320
-surv_sim: 9-&gt;10, p: 0.500000-&gt;0.608696, LogP:-4.071797
-surv_sim: 10-&gt;12, p: 0.500000-&gt;0.652174, LogP:-3.385867
-surv_sim: 11-&gt;13, p: 0.500000-&gt;0.673913, LogP:-3.194359
-surv_sim: 12-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 13-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 14-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 15-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 16-&gt;15, p: 0.500000-&gt;0.717391, LogP:-3.149062
-surv_sim: 17-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 18-&gt;15, p: 0.500000-&gt;0.717391, LogP:-3.149062
-surv_sim: 19-&gt;18, p: 0.500000-&gt;0.782609, LogP:-4.247450
-surv_sim: 20-&gt;18, p: 0.500000-&gt;0.782609, LogP:-4.247450
-</pre></div></div>
-</div>
 <p>By default <code class="docutils literal"><span class="pre">basinhopping</span></code> uses a gradient minimization technique,
 <code class="docutils literal"><span class="pre">fmin_bfgs</span></code>, resulting in inaccurate predictions many times. If we
 force <code class="docutils literal"><span class="pre">basinhoping</span></code> to use a non-gradient technique we get much better
 results</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [ ]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -560,39 +510,11 @@ results</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-surv_sim: 0-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 1-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 2-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 3-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 4-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 5-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 6-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 7-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 8-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 9-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 10-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 11-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 12-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 13-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 14-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 15-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 16-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 17-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 18-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 19-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-surv_sim: 20-&gt;14, p: 0.500000-&gt;0.695652, LogP:-3.111511
-</pre></div></div>
-</div>
 <p>Confident in our MAP estimate we can sample from the posterior, making
 sure we use the <code class="docutils literal"><span class="pre">Metropolis</span></code> method for our discrete variables.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [ ]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -602,9 +524,9 @@ sure we use the <code class="docutils literal"><span class="pre">Metropolis</spa
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [ ]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -613,29 +535,14 @@ sure we use the <code class="docutils literal"><span class="pre">Metropolis</spa
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
- [-----------------100%-----------------] 25000 of 25000 complete in 37.4 sec
-</pre></div></div>
-</div>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [ ]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">mc</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
 </pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="../_images/notebooks_discrete_find_MAP_20_0.png" src="../_images/notebooks_discrete_find_MAP_20_0.png" />
 </div>
 </div>
 <div class="nbinput nblast container">

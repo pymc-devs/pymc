@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Hierarchical Linear Regression &mdash; PyMC3 3.0.rc1 documentation</title>
+  <title>GLM: Hierarchical Linear Regression &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -32,7 +32,7 @@
   
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="Probabilistic Matrix Factorization for Making Personalized Recommendations" href="pmf-pymc.html"/>
+        <link rel="next" title="GLM: Hierarchical Linear Regression with ADVI" href="GLM-hierarchical-ADVI.html"/>
         <link rel="prev" title="GLM: Logistic Regression" href="GLM-logistic.html"/> 
 
   
@@ -86,14 +86,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM: Model Selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Hierarchical Linear Regression</a><ul>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">GLM: Hierarchical Linear Regression</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#The-data-set">The data set</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#The-Models">The Models</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#Pooling-of-measurements">Pooling of measurements</a></li>
@@ -121,14 +122,22 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html#Posterior-Predictive-Check">Posterior Predictive Check</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a></li>
 <li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#Summary">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#References">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gaussian_mixture_model.html">Mixture Model in PyMC3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gaussian-mixture-model-advi.html">Inference of Gaussian mixture model with ADVI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
 </ul>
 </li>
@@ -165,7 +174,7 @@
       
           <li><a href="../examples.html">Examples</a> &raquo;</li>
       
-    <li>Hierarchical Linear Regression</li>
+    <li>GLM: Hierarchical Linear Regression</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -344,8 +353,8 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="Hierarchical-Linear-Regression">
-<h1>Hierarchical Linear Regression<a class="headerlink" href="#Hierarchical-Linear-Regression" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="GLM:-Hierarchical-Linear-Regression">
+<h1>GLM: Hierarchical Linear Regression<a class="headerlink" href="#GLM:-Hierarchical-Linear-Regression" title="Permalink to this headline">¶</a></h1>
 <ol class="loweralpha simple" start="3">
 <li>2016 by Danne Elbers, Thomas Wiecki</li>
 </ol>
@@ -980,7 +989,7 @@ for useful comments on an earlier draft.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="pmf-pymc.html" class="btn btn-neutral float-right" title="Probabilistic Matrix Factorization for Making Personalized Recommendations" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="GLM-hierarchical-ADVI.html" class="btn btn-neutral float-right" title="GLM: Hierarchical Linear Regression with ADVI" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="GLM-logistic.html" class="btn btn-neutral" title="GLM: Logistic Regression" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

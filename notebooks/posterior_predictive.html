@@ -86,18 +86,23 @@
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM: Model Selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html#Posterior-Predictive-Check">Posterior Predictive Check</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a><ul>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Posterior Predictive Checks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Prediction">Prediction</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#Mean-predicted-values-plus-error-bars-to-give-sense-of-uncertainty-in-prediction">Mean predicted values plus error bars to give sense of uncertainty in prediction</a></li>
 </ul>
@@ -108,6 +113,11 @@
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#Summary">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#References">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gaussian_mixture_model.html">Mixture Model in PyMC3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gaussian-mixture-model-advi.html">Inference of Gaussian mixture model with ADVI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
 </ul>
 </li>
@@ -478,12 +488,11 @@ inferred means to the actual sample mean:</p>
 <img alt="../_images/notebooks_posterior_predictive_11_0.png" src="../_images/notebooks_posterior_predictive_11_0.png" />
 </div>
 </div>
-</div>
 <div class="section" id="Comparison-between-PPC-and-other-model-evaluation-methods.">
-<h1>Comparison between PPC and other model evaluation methods.<a class="headerlink" href="#Comparison-between-PPC-and-other-model-evaluation-methods." title="Permalink to this headline">¶</a></h1>
+<h2>Comparison between PPC and other model evaluation methods.<a class="headerlink" href="#Comparison-between-PPC-and-other-model-evaluation-methods." title="Permalink to this headline">¶</a></h2>
 <p>An excellent introduction to this is given on
 <a class="reference external" href="http://edwardlib.org/tut_PPC">Edward</a> and since I can&#8217;t write this
-acny better I&#8217;ll just quote this. &#8220;PPCs are an excellent tool for
+any better I&#8217;ll just quote this. &#8220;PPCs are an excellent tool for
 revising models, simplifying or expanding the current model as one
 examines how well it fits the data. They are inspired by prior checks
 and classical hypothesis testing, under the philosophy that models
@@ -499,6 +508,7 @@ model fit.&#8221;</p>
 <p>An important lesson to learn as someone using Probabilistic Programming
 is to not overfit your understanding or your criticism of models to only
 one metric. Model evaluation is a skill that can be honed with practice.</p>
+</div>
 <div class="section" id="Prediction">
 <h2>Prediction<a class="headerlink" href="#Prediction" title="Permalink to this headline">¶</a></h2>
 <p>The same pattern can be used for prediction. Here we&#8217;re building a

@@ -550,7 +550,7 @@ explain each part line-by-line.</p>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Applied log-transform to sigma and added transformed sigma_log_ to model.
 </pre></div></div>
@@ -655,10 +655,10 @@ class Normal(pymc3.distributions.distribution.Continuous)
  |  ----------
  |  mu : float
  |      Mean.
- |  tau : float
- |      Precision (tau &gt; 0).
  |  sd : float
  |      Standard deviation (sd &gt; 0).
+ |  tau : float
+ |      Precision (tau &gt; 0).
  |
  |  Method resolution order:
  |      Normal
@@ -668,7 +668,7 @@ class Normal(pymc3.distributions.distribution.Continuous)
  |
  |  Methods defined here:
  |
- |  __init__(self, mu=0.0, tau=None, sd=None, *args, **kwargs)
+ |  __init__(self, *args, **kwargs)
  |      Initialize self.  See help(type(self)) for accurate signature.
  |
  |  logp(self, value)
@@ -785,7 +785,7 @@ of variable names to NumPy arrays of parameter values.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-{&#39;beta&#39;: array([ 0.948486  ,  2.60705513]), &#39;alpha&#39;: array(0.9065985664354854), &#39;sigma_log_&#39;: array(-0.032781468548420796)}
+{&#39;sigma_log_&#39;: array(-0.03278147017403066), &#39;alpha&#39;: array(0.9065985497559482), &#39;beta&#39;: array([ 0.94848602,  2.60705514])}
 </pre></div></div>
 </div>
 <p>By default, <code class="docutils literal"><span class="pre">find_MAP</span></code> uses the Broyden–Fletcher–Goldfarb–Shanno
@@ -812,7 +812,7 @@ find the MAP.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-{&#39;beta&#39;: array([ 0.95140146,  2.61437458]), &#39;alpha&#39;: array(0.9090521898978398), &#39;sigma_log_&#39;: array(-0.03000977520318259)}
+{&#39;sigma_log_&#39;: array(-0.030009775203258385), &#39;alpha&#39;: array(0.9090521898977764), &#39;beta&#39;: array([ 0.95140146,  2.61437458])}
 </pre></div></div>
 </div>
 <p>It is important to note that the MAP estimate is not always reasonable,
@@ -905,6 +905,7 @@ context of the model.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">NUTS</span><span class="p">,</span> <span class="n">sample</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
 
 <span class="k">with</span> <span class="n">basic_model</span><span class="p">:</span>
 
@@ -919,12 +920,12 @@ context of the model.</p>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Assigned NUTS to alpha
 Assigned NUTS to beta
 Assigned NUTS to sigma_log_
- [-----------------100%-----------------] 2000 of 2000 complete in 1.4 sec
+100%|██████████| 2000/2000 [00:01&lt;00:00, 1486.43it/s]
 </pre></div></div>
 </div>
 <p>The <code class="docutils literal"><span class="pre">sample</span></code> function runs the step method(s) assigned (or passed) to
@@ -951,7 +952,7 @@ match the shape of the variable. We can see the last 5 values for the
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([ 0.79115469,  0.84196267,  0.8183097 ,  0.9622195 ,  0.82890068])
+<span></span>array([ 0.64715832,  0.85798378,  0.9764047 ,  0.94322879,  0.95066821])
 </pre></div>
 </div>
 </div>
@@ -983,11 +984,11 @@ the <code class="docutils literal"><span class="pre">step</span></code> argument
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Assigned NUTS to alpha
 Assigned NUTS to beta
- [-----------------100%-----------------] 5000 of 5000 complete in 10.4 sec
+100%|██████████| 5000/5000 [00:05&lt;00:00, 890.21it/s]
 </pre></div></div>
 </div>
 </div>
@@ -1047,13 +1048,13 @@ alpha:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.906            0.099            0.001            [0.714, 1.104]
+  0.906            0.104            0.001            [0.708, 1.112]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.710          0.842          0.906          0.971          1.103
+  0.703          0.837          0.907          0.977          1.110
 
 
 beta:
@@ -1061,15 +1062,15 @@ beta:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.947            0.088            0.001            [0.778, 1.120]
-  2.611            0.496            0.005            [1.649, 3.594]
+  0.949            0.091            0.001            [0.773, 1.127]
+  2.604            0.535            0.007            [1.562, 3.652]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.776          0.889          0.946          1.006          1.119
-  1.650          2.276          2.604          2.934          3.598
+  0.773          0.888          0.949          1.011          1.127
+  1.563          2.231          2.598          2.972          3.662
 
 
 sigma:
@@ -1077,13 +1078,13 @@ sigma:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.988            0.071            0.001            [0.857, 1.130]
+  0.992            0.071            0.001            [0.853, 1.129]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.862          0.938          0.982          1.033          1.141
+  0.864          0.941          0.988          1.036          1.141
 
 </pre></div></div>
 </div>
@@ -1185,9 +1186,9 @@ data from Yahoo!-Finance; it can be installed with
 <p>As with the linear regression example, specifying the model in PyMC3
 mirrors its statistical specification. This model employs several new
 distributions: the <code class="docutils literal"><span class="pre">Exponential</span></code> distribution for the $
-<a href="#id2"><span class="problematic" id="id3">:raw-latex:`\nu `$ and :math:`</span></a>sigma` priors, the student-t (<code class="docutils literal"><span class="pre">T</span></code>)
-distribution for distribution of returns, and the <code class="docutils literal"><span class="pre">GaussianRandomWalk</span></code>
-for the prior for the latent volatilities.</p>
+<a href="#id2"><span class="problematic" id="id3">:raw-latex:`\nu `$ and :math:`</span></a>sigma` priors, the Student-T
+(<code class="docutils literal"><span class="pre">StudentT</span></code>) distribution for distribution of returns, and the
+<code class="docutils literal"><span class="pre">GaussianRandomWalk</span></code> for the prior for the latent volatilities.</p>
 <p>In PyMC3, variables with purely positive priors like <code class="docutils literal"><span class="pre">Exponential</span></code> are
 transformed with a log transform. This makes sampling more robust.
 Behind the scenes, a variable in the unconstrained space (named
@@ -1219,7 +1220,8 @@ be a scalar or vector.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Exponential</span><span class="p">,</span> <span class="n">StudentT</span><span class="p">,</span> <span class="n">exp</span><span class="p">,</span> <span class="n">Deterministic</span>
+<span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Exponential</span><span class="p">,</span> <span class="n">StudentT</span><span class="p">,</span> <span class="n">Deterministic</span>
+<span class="kn">from</span> <span class="nn">pymc3.math</span> <span class="kn">import</span> <span class="n">exp</span>
 <span class="kn">from</span> <span class="nn">pymc3.distributions.timeseries</span> <span class="kn">import</span> <span class="n">GaussianRandomWalk</span>
 
 <span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">sp500_model</span><span class="p">:</span>
@@ -1239,7 +1241,7 @@ be a scalar or vector.</p>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Applied log-transform to nu and added transformed nu_log_ to model.
 Applied log-transform to sigma and added transformed sigma_log_ to model.
@@ -1289,23 +1291,30 @@ to achieve faster sampling due to better scaling.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -127849.75
-Iteration 10000 [10%]: Average ELBO = -27053.48
-Iteration 20000 [20%]: Average ELBO = -260.14
-Iteration 30000 [30%]: Average ELBO = 138.48
-Iteration 40000 [40%]: Average ELBO = 526.77
-Iteration 50000 [50%]: Average ELBO = 769.68
-Iteration 60000 [60%]: Average ELBO = 854.39
-Iteration 70000 [70%]: Average ELBO = 874.18
-Iteration 80000 [80%]: Average ELBO = 879.55
-Iteration 90000 [90%]: Average ELBO = 881.36
-Finished [100%]: Average ELBO = 882.48
- [-----------------100%-----------------] 2000 of 2000 complete in 111.2 sec
+Iteration 0 [0%]: ELBO = -588731.82
+Iteration 10000 [10%]: Average ELBO = -26455.28
+Iteration 20000 [20%]: Average ELBO = -266.21
+Iteration 30000 [30%]: Average ELBO = 129.92
+Iteration 40000 [40%]: Average ELBO = 519.16
+Iteration 50000 [50%]: Average ELBO = 766.41
+Iteration 60000 [60%]: Average ELBO = 853.22
+Iteration 70000 [70%]: Average ELBO = 874.06
+Iteration 80000 [80%]: Average ELBO = 879.66
+Iteration 90000 [90%]: Average ELBO = 881.47
+Finished [100%]: Average ELBO = 882.19
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 2000/2000 [00:36&lt;00:00, 54.18it/s]
 </pre></div></div>
 </div>
 <p>We can check our samples by looking at the traceplot for <code class="docutils literal"><span class="pre">nu</span></code> and
@@ -1352,7 +1361,7 @@ more darkly.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x122a2ea20&gt;
+<span></span>&lt;matplotlib.legend.Legend at 0x7f042858f5c0&gt;
 </pre></div>
 </div>
 </div>
@@ -1408,7 +1417,7 @@ data, use multiple samplers and sample from discrete random variables.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x11f59ef98&gt;
+<span></span>&lt;matplotlib.text.Text at 0x7f04241441d0&gt;
 </pre></div>
 </div>
 </div>
@@ -1452,7 +1461,8 @@ variable <code class="docutils literal"><span class="pre">rate</span></code>.</p
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">DiscreteUniform</span><span class="p">,</span> <span class="n">Poisson</span><span class="p">,</span> <span class="n">switch</span>
+<span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">DiscreteUniform</span><span class="p">,</span> <span class="n">Poisson</span>
+<span class="kn">from</span> <span class="nn">pymc3.math</span> <span class="kn">import</span> <span class="n">switch</span>
 
 <span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">disaster_model</span><span class="p">:</span>
 
@@ -1472,7 +1482,7 @@ variable <code class="docutils literal"><span class="pre">rate</span></code>.</p
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Applied log-transform to early_rate and added transformed early_rate_log_ to model.
 Applied log-transform to late_rate and added transformed late_rate_log_ to model.
@@ -1511,7 +1521,7 @@ function in a list. Each new sample is generated by first applying
     <span class="n">step1</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">([</span><span class="n">early_rate</span><span class="p">,</span> <span class="n">late_rate</span><span class="p">])</span>
 
     <span class="c1"># Use Metropolis for switchpoint, and missing values since it accommodates discrete variables</span>
-    <span class="n">step2</span> <span class="o">=</span> <span class="n">Metropolis</span><span class="p">([</span><span class="n">switchpoint</span><span class="p">,</span> <span class="n">disasters</span><span class="o">.</span><span class="n">missing_values</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="p">)</span>
+    <span class="n">step2</span> <span class="o">=</span> <span class="n">Metropolis</span><span class="p">([</span><span class="n">switchpoint</span><span class="p">,</span> <span class="n">disasters</span><span class="o">.</span><span class="n">missing_values</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
 
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="p">[</span><span class="n">step1</span><span class="p">,</span> <span class="n">step2</span><span class="p">])</span>
 </pre></div>
@@ -1520,9 +1530,9 @@ function in a list. Each new sample is generated by first applying
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 10000 of 10000 complete in 7.1 sec
+100%|██████████| 10000/10000 [00:07&lt;00:00, 1250.58it/s]
 </pre></div></div>
 </div>
 <p>In the trace plot below we can see that there&#8217;s about a 10 year span
@@ -1698,14 +1708,14 @@ implemented via the <code class="docutils literal"><span class="pre">patsy</span
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Applied log-transform to sd and added transformed sd_log_ to model.
 Assigned NUTS to Intercept
 Assigned NUTS to x1
 Assigned NUTS to x2
 Assigned NUTS to sd_log_
- [-----------------100%-----------------] 5000 of 5000 complete in 4.1 sec
+100%|██████████| 5000/5000 [00:04&lt;00:00, 1213.37it/s]
 </pre></div></div>
 </div>
 <p>The error distribution, if not specified via the <code class="docutils literal"><span class="pre">family</span></code> argument, is
@@ -1729,7 +1739,7 @@ modified by passing in a <code class="docutils literal"><span class="pre">Binomi
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Applied logodds-transform to p and added transformed p_logodds_ to model.
 </pre></div></div>
@@ -1763,10 +1773,10 @@ get too large to be held in memory we could use the <code class="docutils litera
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Applied logodds-transform to p and added transformed p_logodds_ to model.
- [-----------------100%-----------------] 5000 of 5000 complete in 3.4 sec
+100%|██████████| 5000/5000 [00:03&lt;00:00, 1419.70it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -1790,13 +1800,13 @@ x1:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.001            0.125            0.002            [-0.239, 0.257]
+  0.001            0.133            0.002            [-0.251, 0.261]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  -0.252         -0.083         0.004          0.087          0.247
+  -0.253         -0.090         0.001          0.091          0.260
 
 </pre></div></div>
 </div>

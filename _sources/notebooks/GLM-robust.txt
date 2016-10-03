@@ -2,21 +2,11 @@
  "cells": [
   {
    "cell_type": "markdown",
-   "metadata": {
-    "toc": "true"
-   },
-   "source": [
-    "# Table of Contents\n",
-    " <p><div class=\"lev1\"><a href=\"#GLM:-Robust-Linear-Regression\"><span class=\"toc-item-num\">1&nbsp;&nbsp;</span>GLM: Robust Linear Regression</a></div><div class=\"lev2\"><a href=\"#Robust-Regression\"><span class=\"toc-item-num\">1.1&nbsp;&nbsp;</span>Robust Regression</a></div><div class=\"lev2\"><a href=\"#Summary\"><span class=\"toc-item-num\">1.2&nbsp;&nbsp;</span>Summary</a></div>"
-   ]
-  },
-  {
-   "cell_type": "markdown",
    "metadata": {},
    "source": [
     "# GLM: Robust Linear Regression\n",
     "\n",
-    "Author: Thomas Wiecki\n",
+    "Author: [Thomas Wiecki](https://twitter.com/twiecki)\n",
     "\n",
     "This tutorial first appeard as a post in small series on Bayesian GLMs on my blog:\n",
     "\n",

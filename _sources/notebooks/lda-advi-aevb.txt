@@ -4,7 +4,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3\n",
+    "# Automatic autoencoding variational Bayes for latent dirichlet allocation\n",
     "\n",
     "(c) 2016 by Taku Yoshioka\n",
     "\n",
@@ -845,8 +845,9 @@
   }
  ],
  "metadata": {
+  "anaconda-cloud": {},
   "kernelspec": {
-   "display_name": "Python 3",
+   "display_name": "Python [default]",
    "language": "python",
    "name": "python3"
   },
@@ -860,7 +861,7 @@
    "name": "python",
    "nbconvert_exporter": "python",
    "pygments_lexer": "ipython3",
-   "version": "3.5.1"
+   "version": "3.5.2"
   },
   "nav_menu": {},
   "toc": {
@@ -871,10 +872,6 @@
    "toc_cell": false,
    "toc_section_display": "block",
    "toc_window_display": false
-  },
-  "widgets": {
-   "state": {},
-   "version": "1.1.1"
   }
  },
  "nbformat": 4,
