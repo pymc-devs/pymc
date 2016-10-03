@@ -1,11 +1,11 @@
 from .quadpotential import quad_potential
-from .arraystep import ArrayStepShared, SamplerHist, Competence
+from .arraystep import ArrayStepShared, ArrayStep, SamplerHist, Competence
 from ..model import modelcontext, Point
 from ..vartypes import continuous_types
-from .hmc import leapfrog, Hamiltonian, energy, bern
+from numpy import exp, log, array
+from numpy.random import uniform
+from .hmc import leapfrog, Hamiltonian, bern, energy
 from ..tuning import guess_scaling
-import numpy as np
-import numpy.random as nr
 import theano
 from ..theanof import (make_shared_replacements, join_nonshared_inputs, CallableTensor,
                        gradient, inputvars)
@@ -26,7 +26,7 @@ class NUTS(ArrayStepShared):
     default_blocked = True
 
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False, state=None,
-                 max_energy=1000,
+                 Emax=1000,
                  target_accept=0.8,
                  gamma=0.05,
                  k=0.75,
@@ -42,11 +42,10 @@ class NUTS(ArrayStepShared):
             step_scale : float, default=.25
                 Size of steps to take, automatically scaled down by 1/n**(1/4)
             is_cov : bool, default=False
-                Treat C as a covariance matrix/vector if True, else treat it as a
-                precision matrix/vector
+                Treat C as a covariance matrix/vector if True, else treat it as a precision matrix/vector
             state
                 state to start from
-            max_energy : float, default 1000
+            Emax : float, default 1000
                 maximum energy
             target_accept : float (0,1) default .8
                 target for avg accept probability between final branch and initial position
@@ -69,19 +68,27 @@ class NUTS(ArrayStepShared):
             scaling = model.test_point
 
         if isinstance(scaling, dict):
-            scaling = guess_scaling(Point(scaling, model=model), model=model, vars=vars)
-        self.step_size = step_scale / scaling.shape[0]**0.25
+            scaling = guess_scaling(
+                Point(scaling, model=model), model=model, vars=vars)
+
+        n = scaling.shape[0]
+
+        self.step_size = step_scale / n**(1 / 4.)
+
         self.potential = quad_potential(scaling, is_cov, as_cov=False)
+
         if state is None:
             state = SamplerHist()
         self.state = state
-        self.max_energy = max_energy
+        self.Emax = Emax
+
         self.target_accept = target_accept
         self.gamma = gamma
         self.t0 = t0
         self.k = k
-        self.h_bar = 0
-        self.u = np.log(self.step_size * 10)
+
+        self.Hbar = 0
+        self.u = log(self.step_size * 10)
         self.m = 1
 
         shared = make_shared_replacements(vars, model)
@@ -90,80 +97,97 @@ class NUTS(ArrayStepShared):
 
         super(NUTS, self).__init__(vars, shared, **kwargs)
 
+    def astep(self, q0):
+        # Hamiltonian(self.logp, self.dlogp, self.potential)
+        H = self.leapfrog1_dE
+        Emax = self.Emax
+        e = self.step_size
+
+        p0 = self.potential.random()
+        u = uniform()
+        q = qn = qp = q0
+        p = pn = pp = p0
+
+        n, s, j = 1, 1, 0
+
+        while s == 1:
+            v = bern(.5) * 2 - 1
+
+            if v == -1:
+                qn, pn, _, _, q1, n1, s1, a, na = buildtree(
+                    H, qn, pn, u, v, j, e, Emax, q0, p0)
+            else:
+                _, _, qp, pp, q1, n1, s1, a, na = buildtree(
+                    H, qp, pp, u, v, j, e, Emax, q0, p0)
+
+            if s1 == 1 and bern(min(1, n1 * 1. / n)):
+                q = q1
+
+            n = n + n1
+
+            span = qp - qn
+            s = s1 * (span.dot(pn) >= 0) * (span.dot(pp) >= 0)
+            j = j + 1
+
+        p = -p
+
+        w = 1. / (self.m + self.t0)
+        self.Hbar = (1 - w) * self.Hbar + w * \
+            (self.target_accept - a * 1. / na)
+
+        self.step_size = exp(self.u - (self.m**.5 / self.gamma) * self.Hbar)
+        self.m += 1
+
+        return q
+
     @staticmethod
     def competence(var):
         if var.dtype in continuous_types:
             return Competence.IDEAL
         return Competence.INCOMPATIBLE
 
-    def astep(self, initial_position):
-        log_slice_var = np.log(nr.uniform())
-        initial_momentum = self.potential.random()
-        position = back_position = forward_position = initial_position
-        back_momentum = forward_momentum = initial_momentum
-        should_continue = True
-        trials = 1
-        depth = 0
-        while should_continue:
-            direction = nr.choice((-1, 1))
-            step = np.array(direction * self.step_size)
-            new_trials = 0
-            metropolis_acceptance = 0
-            steps = 0
-            for _ in range(2 ** depth):
-                if not should_continue:
-                    break
-                if direction == 1:
-                    forward_position, forward_momentum, energy_change = self.leapfrog1_dE(
-                        forward_position, forward_momentum, step,
-                        initial_position, initial_momentum)
-                else:
-                    back_position, back_momentum, energy_change = self.leapfrog1_dE(
-                        back_position, back_momentum, step, initial_position, initial_momentum)
-                new_trials += int(log_slice_var + energy_change <= 0)
-                if should_update_position(new_trials, trials):
-                    if direction == 1:
-                        position = forward_position
-                    else:
-                        position = back_position
 
-                should_continue = (self._energy_is_bounded(log_slice_var, energy_change) and
-                                   no_u_turns(forward_position, forward_momentum,
-                                              back_position, back_momentum))
-                metropolis_acceptance += min(1., np.exp(-energy_change))
-                steps += 1
-            trials += new_trials
-            depth += 1
-        w = 1. / (self.m + self.t0)
-        self.h_bar = (1 - w) * self.h_bar + w * (self.target_accept - metropolis_acceptance / steps)
-        self.step_size = np.exp(self.u - (self.m ** 0.5 / self.gamma) * self.h_bar)
-        self.m += 1
-        return position
+def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):
+    if j == 0:
+        leapfrog1_dE = H
+        q1, p1, dE = leapfrog1_dE(q, p, array(v * e), q0, p0)
 
-    def _energy_is_bounded(self, log_slice_var, energy_change):
-        return log_slice_var + energy_change < self.max_energy
+        n1 = int(log(u) + dE <= 0)
+        s1 = int(log(u) + dE < Emax)
+        return q1, p1, q1, p1, q1, n1, s1, min(1, exp(-dE)), 1
+    else:
+        qn, pn, qp, pp, q1, n1, s1, a1, na1 = buildtree(
+            H, q, p, u, v, j - 1, e, Emax, q0, p0)
+        if s1 == 1:
+            if v == -1:
+                qn, pn, _, _, q11, n11, s11, a11, na11 = buildtree(
+                    H, qn, pn, u, v, j - 1, e, Emax, q0, p0)
+            else:
+                _, _, qp, pp, q11, n11, s11, a11, na11 = buildtree(
+                    H, qp, pp, u, v, j - 1, e, Emax, q0, p0)
+
+            if bern(n11 * 1. / (max(n1 + n11, 1))):
+                q1 = q11
+
+            a1 = a1 + a11
+            na1 = na1 + na11
+
+            span = qp - qn
+            s1 = s11 * (span.dot(pn) >= 0) * (span.dot(pp) >= 0)
+            n1 = n1 + n11
+        return qn, pn, qp, pp, q1, n1, s1, a1, na1
+    return
 
 
-def no_u_turns(forward_position, forward_momentum, back_position, back_momentum):
-    span = forward_position - back_position
-    return span.dot(back_momentum) >= 0 and span.dot(forward_momentum) >= 0
-
-
-def should_update_position(new_trials, trials):
-    return bern(float(new_trials) / max(trials, 1.))
-
-
-def leapfrog1_dE(logp, vars, shared, quad_potential, profile):
-    """Computes a theano function that computes one leapfrog step and the energy
-    difference between the beginning and end of the trajectory.
-
+def leapfrog1_dE(logp, vars, shared, pot, profile):
+    """Computes a theano function that computes one leapfrog step and the energy difference between the beginning and end of the trajectory.
     Parameters
     ----------
     logp : TensorVariable
     vars : list of tensor variables
     shared : list of shared variables not to compute leapfrog over
-    quad_potential : quadpotential
-    profile : Boolean
+    pot : quadpotential
+    porifle : Boolean
 
     Returns
     -------
@@ -175,7 +199,7 @@ def leapfrog1_dE(logp, vars, shared, quad_potential, profile):
     logp = CallableTensor(logp)
     dlogp = CallableTensor(dlogp)
 
-    hamiltonian = Hamiltonian(logp, dlogp, quad_potential)
+    H = Hamiltonian(logp, dlogp, pot)
 
     p = tt.dvector('p')
     p.tag.test_value = q.tag.test_value
@@ -188,9 +212,11 @@ def leapfrog1_dE(logp, vars, shared, quad_potential, profile):
     e = tt.dscalar('e')
     e.tag.test_value = 1
 
-    q1, p1 = leapfrog(hamiltonian, q, p, 1, e)
-    energy_change = energy(hamiltonian, q1, p1) - energy(hamiltonian, q0, p0)
+    q1, p1 = leapfrog(H, q, p, 1, e)
+    E = energy(H, q1, p1)
+    E0 = energy(H, q0, p0)
+    dE = E - E0
 
-    f = theano.function([q, p, e, q0, p0], [q1, p1, energy_change], profile=profile)
+    f = theano.function([q, p, e, q0, p0], [q1, p1, dE], profile=profile)
     f.trust_input = True
     return f
