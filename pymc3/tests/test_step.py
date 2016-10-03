@@ -117,14 +117,14 @@ class TestAssignStepMethods(unittest.TestCase):
 class TestSampleEstimates(unittest.TestCase):
     def test_parameter_estimate(self):
         
-        alpha, sigma = 1, 0.5
-        beta = [1, 2.5]
+        alpha_true, sigma_true = 1, 0.5
+        beta_true = np.array([1, 2.5])
 
         size = 100
 
         X1 = np.random.randn(size)
         X2 = np.random.randn(size) * 0.2
-        Y = alpha + beta[0] * X1 + beta[1] * X2 + np.random.randn(size) * sigma
+        Y = alpha_true + beta_true[0] * X1 + beta_true[1] * X2 + np.random.randn(size) * sigma_true
 
         with Model() as model:
             alpha = Normal('alpha', mu=0, sd=10)
@@ -136,6 +136,6 @@ class TestSampleEstimates(unittest.TestCase):
             trace = sample(1000)
             
         
-        assert np.isclose(np.median(trace.beta, 0), beta, rtol=0.1)
-        assert np.isclose(np.median(trace.alpha), alpha, rtol=0.1)
-        assert np.isclose(np.median(trace.sigma), sigma, rtol=0.1)
+        assert np.isclose(np.median(trace.beta, 0), beta_true, rtol=0.1)
+        assert np.isclose(np.median(trace.alpha), alpha_true, rtol=0.1)
+        assert np.isclose(np.median(trace.sigma), sigma_true, rtol=0.1)
