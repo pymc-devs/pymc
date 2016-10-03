@@ -126,7 +126,7 @@ class TestSampleEstimates(unittest.TestCase):
         X2 = np.random.randn(size) * 0.2
         Y = alpha_true + beta_true[0] * X1 + beta_true[1] * X2 + np.random.randn(size) * sigma_true
         
-        with step_method in (NUTS(), Metropolis(), Slice()):
+        for step_method in (NUTS(), Metropolis(), Slice()):
 
             with Model() as model:
                 alpha = Normal('alpha', mu=0, sd=10)
