@@ -37,7 +37,8 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                     HamiltonianMC(scaling=C, is_cov=True, blocked=False)]),
             )
         for step in steps:
-            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
+            trace = sample(8000, step=step, start=start, model=model, 
+                    random_seed=1, progressbar=False)
             yield self.check_stat, check, trace
 
     def test_step_discrete(self):
@@ -50,14 +51,15 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
                 Metropolis(S=C, proposal_dist=MultivariateNormalProposal),
             )
         for step in steps:
-            trace = sample(20000, step=step, start=start, model=model, random_seed=1)
+            trace = sample(20000, step=step, start=start, model=model, 
+                    random_seed=1, progressbar=False)
             self.check_stat(check, trace)
 
     def test_constant_step(self):
         with Model():
             x = Normal('x', 0, 1)
             start = {'x': -1}
-            tr = sample(10, step=Constant([x]), start=start)
+            tr = sample(10, step=Constant([x]), start=start, progressbar=False)
         assert_almost_equal(tr['x'], start['x'], decimal=10)
 
 
@@ -102,12 +104,6 @@ class TestAssignStepMethods(unittest.TestCase):
             steps = assign_step_methods(model, [])
         self.assertIsInstance(steps, BinaryGibbsMetropolis)
 
-    # with Model() as model:
-    #     x = Categorical('x', np.array([0.25, 0.70, 0.05]))
-    #     steps = assign_step_methods(model, [])
-    #
-    #     assert isinstance(steps, ElemwiseCategoricalStep)
-
     def test_binomial(self):
         """Test binomial distribution is assigned metropolis method."""
         with Model() as model:
@@ -137,9 +133,7 @@ class TestSampleEstimates(SeededTest):
             for step_method in (NUTS(), Metropolis(), 
                             [Slice([alpha, sigma]), Metropolis([beta])]):
             
-                trace = sample(1000, step=step_method, start={'alpha':0,
-                                                            'beta':np.zeros(2),
-                                                            'sigma':0.5})
+                trace = sample(1000, step=step_method, progressbar=False)
             
         
                 assert np.isclose(np.median(trace.beta, 0), beta_true, rtol=0.1).all()
