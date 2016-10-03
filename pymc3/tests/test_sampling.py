@@ -112,6 +112,7 @@ class TestNamedSampling(SeededTest):
             assert np.isclose(res, 0.)
 
 
+
 class TestChooseBackend(unittest.TestCase):
     def test_choose_backend_none(self):
         with mock.patch('pymc3.sampling.NDArray') as nd:
