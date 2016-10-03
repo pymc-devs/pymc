@@ -136,6 +136,6 @@ class TestSampleEstimates(unittest.TestCase):
             trace = sample(1000)
             
         
-        assert np.isclose(np.median(trace.beta, 0), beta_true, rtol=0.1)
+        assert np.isclose(np.median(trace.beta, 0), beta_true, rtol=0.1).all()
         assert np.isclose(np.median(trace.alpha), alpha_true, rtol=0.1)
         assert np.isclose(np.median(trace.sigma), sigma_true, rtol=0.1)
