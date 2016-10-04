@@ -40,39 +40,50 @@ class TestGelmanRubin(unittest.TestCase):
         self.assertFalse(all(1 / self.good_ratio < r <
                              self.good_ratio for r in rhat.values()))
 
-    def test_right_shape_tesnor(self):
+    def test_right_shape_python_float(self, shape=None, test_shape=None):
+        """Check shape is correct w/ python float"""
+        n_jobs = 3
+        n_samples = 10
+
+        with Model():
+            if shape is not None:
+                Normal('x', 0, 1., shape=shape)
+            else:
+                Normal('x', 0, 1.)
+
+            # start sampling at the MAP
+            start = find_MAP()
+            step = NUTS(scaling=start)
+            ptrace = sample(n_samples, step, start,
+                            njobs=n_jobs, random_seed=42)
+
+        rhat = gelman_rubin(ptrace)['x']
+
+        if test_shape is None:
+            test_shape = shape
+
+        if shape is None or shape == ():
+            self.assertTrue(isinstance(rhat, float))
+        else:
+            self.assertTrue(isinstance(rhat, np.ndarray))
+            self.assertEqual(rhat.shape, test_shape)
+
+    def test_right_shape_scalar_tuple(self):
+        """Check shape is correct w/ scalar as shape=()"""
+        self.test_right_shape_python_float(shape=())
+
+    def test_right_shape_tensor(self, shape=(5, 3, 2), test_shape=None):
         """Check shape is correct w/ tensor variable"""
-        n_jobs = 3
-        n_samples = 100
+        self.test_right_shape_python_float(shape=(5, 3, 2))
 
-        with Model():
-            Normal('x', 0, 1., shape=(5, 3, 2))
+    def test_right_shape_scalar_array(self):
+        """Check shape is correct w/ scalar as shape=(1,)"""
+        self.test_right_shape_python_float(shape=(1,))
 
-            # start sampling at the MAP
-            start = find_MAP()
-            step = NUTS(scaling=start)
-            ptrace = sample(n_samples, step, start,
-                            njobs=n_jobs, random_seed=42)
+    def test_right_shape_scalar_one(self):
+        """Check shape is correct w/ scalar as shape=1"""
+        self.test_right_shape_python_float(shape=1, test_shape=(1,))
 
-        rhat = gelman_rubin(ptrace)['x']
-        self.assertEqual(rhat.shape, (5, 3, 2))
-
-    def test_right_shape_scalar(self):
-        """Check shape is correct w/ scalar variable"""
-        n_jobs = 3
-        n_samples = 100
-
-        with Model():
-            Normal('x', 0, 1.)
-
-            # start sampling at the MAP
-            start = find_MAP()
-            step = NUTS(scaling=start)
-            ptrace = sample(n_samples, step, start,
-                            njobs=n_jobs, random_seed=42)
-
-        rhat = gelman_rubin(ptrace)['x']
-        self.assertEqual(np.array(rhat).shape, ())
 
 class TestDiagnostics(unittest.TestCase):
 
@@ -149,13 +160,16 @@ class TestDiagnostics(unittest.TestCase):
         n_effective = effective_n(ptrace)['x']
         assert_allclose(n_effective, n_jobs * n_samples, 2)
 
-    def test_effective_n_right_shape_tesnor(self):
-        """Check effective sample shape is correct w/ tensor variable"""
+    def test_effective_n_right_shape_python_float(self, shape=None, test_shape=None):
+        """Check shape is correct w/ python float"""
         n_jobs = 3
-        n_samples = 100
+        n_samples = 10
 
         with Model():
-            Normal('x', 0, 1., shape=(5, 3, 2))
+            if shape is not None:
+                Normal('x', 0, 1., shape=shape)
+            else:
+                Normal('x', 0, 1.)
 
             # start sampling at the MAP
             start = find_MAP()
@@ -164,21 +178,28 @@ class TestDiagnostics(unittest.TestCase):
                             njobs=n_jobs, random_seed=42)
 
         n_effective = effective_n(ptrace)['x']
-        self.assertEqual(n_effective.shape, (5, 3, 2))
 
-    def test_effective_n_right_shape_scalar(self):
-        """Check effective sample shape is correct w/ scalar variable"""
-        n_jobs = 3
-        n_samples = 100
+        if test_shape is None:
+            test_shape = shape
 
-        with Model():
-            Normal('x', 0, 1.)
+        if shape is None or shape == ():
+            self.assertTrue(isinstance(n_effective, float))
+        else:
+            self.assertTrue(isinstance(n_effective, np.ndarray))
+            self.assertEqual(n_effective.shape, test_shape)
 
-            # start sampling at the MAP
-            start = find_MAP()
-            step = NUTS(scaling=start)
-            ptrace = sample(n_samples, step, start,
-                            njobs=n_jobs, random_seed=42)
+    def test_effective_n_right_shape_scalar_tuple(self):
+        """Check shape is correct w/ scalar as shape=()"""
+        self.test_right_shape_python_float(shape=())
 
-        n_effective = effective_n(ptrace)['x']
-        self.assertEqual(np.array(n_effective).shape, ())
+    def test_effective_n_right_shape_tensor(self, shape=(5, 3, 2), test_shape=None):
+        """Check shape is correct w/ tensor variable"""
+        self.test_right_shape_python_float(shape=(5, 3, 2))
+
+    def test_effective_n_right_shape_scalar_array(self):
+        """Check shape is correct w/ scalar as shape=(1,)"""
+        self.test_right_shape_python_float(shape=(1,))
+
+    def test_effective_n_right_shape_scalar_one(self):
+        """Check shape is correct w/ scalar as shape=1"""
+        self.test_right_shape_python_float(shape=1, test_shape=(1,))

@@ -143,34 +143,18 @@ def gelman_rubin(mtrace):
     Rhat = {}
     for var in mtrace.varnames:
         x = np.array(mtrace.get_values(var, combine=False))
-
-        # make sure to handle scalars correctly - add extra dim if needed
-        if len(x.shape) == 2:
-            is_scalar = True
-            x = np.atleast_3d(mtrace.get_values(var, combine=False))
-        else:
-            is_scalar = False
-
-        # chain samples are second dim
-        n = x.shape[1]
+        num_samples = x.shape[1]
 
         # Calculate between-chain variance
-        B = n * np.var(np.mean(x, axis=1), axis=0, ddof=1)
+        B = num_samples * np.var(np.mean(x, axis=1), axis=0, ddof=1)
 
         # Calculate within-chain variance
         W = np.mean(np.var(x, axis=1, ddof=1), axis=0)
 
         # Estimate of marginal posterior variance
-        Vhat = W * (n - 1) / n + B / n
+        Vhat = W * (num_samples - 1) / num_samples + B / num_samples
 
-        _rhat = np.sqrt(Vhat / W)
-
-        # we could be using np.squeeze here, but I don't want to squeeze
-        # out dummy dimensions that a user inputs
-        if is_scalar:
-            Rhat[var] = _rhat[0]
-        else:
-            Rhat[var] = _rhat
+        Rhat[var] = np.sqrt(Vhat / W)
 
     return Rhat
 
@@ -212,45 +196,41 @@ def effective_n(mtrace):
     def get_vhat(x):
         # number of chains is last dim (-1)
         # chain samples are second to last dim (-2)
-        n = x.shape[-2]
+        num_samples = x.shape[-2]
 
         # Calculate between-chain variance
-        B = n * np.var(np.mean(x, axis=-2), axis=-1, ddof=1)
+        B = num_samples * np.var(np.mean(x, axis=-2), axis=-1, ddof=1)
 
         # Calculate within-chain variance
         W = np.mean(np.var(x, axis=-2, ddof=1), axis=-1)
 
         # Estimate of marginal posterior variance
-        Vhat = W * (n - 1) / n + B / n
+        Vhat = W * (num_samples - 1) / num_samples + B / num_samples
 
         return Vhat
 
     def get_neff(x, Vhat):
-        # number of chains is last dim
-        # chain samples are second to last dim
-        m = x.shape[-1]
-        n = x.shape[-2]
+        num_chains = x.shape[-1]
+        num_samples = x.shape[-2]
 
         negative_autocorr = False
         t = 1
 
-        def variogram(_t):
-            return sum(sum((x[i][j] - x[i - _t][j])**2 for i in range(_t, n))
-                       for j in range(m)) / (m * (n - _t))
-
-        rho = np.ones(n)
+        rho = np.ones(num_samples)
         # Iterate until the sum of consecutive estimates of autocorrelation is
         # negative
-        while not negative_autocorr and (t < n):
+        while not negative_autocorr and (t < num_samples):
 
-            rho[t] = 1. - variogram(t) / (2. * Vhat)
+            variogram = np.mean((x[t:, :] - x[:-t, :])**2)
+            rho[t] = 1. - variogram / (2. * Vhat)
 
             if not t % 2:
                 negative_autocorr = sum(rho[t - 1:t + 1]) < 0
 
             t += 1
 
-        return min(m * n, int(m * n / (1. + 2 * rho[1:t].sum())))
+        return min(num_chains * num_samples,
+                   int(num_chains * num_samples / (1. + 2 * rho[1:t].sum())))
 
     n_eff = {}
     for var in mtrace.varnames:
@@ -278,7 +258,7 @@ def effective_n(mtrace):
         for tup in zip(*inds):  # iterate with zip
             _n_eff[tup] = get_neff(x[tup], Vhat[tup])
 
-        # we could be using np.squeeze here, but I don't want to squeeze
+        # we could be using np.squeeze here, but we don't want to squeeze
         # out dummy dimensions that a user inputs
         if is_scalar:
             n_eff[var] = _n_eff[0]
