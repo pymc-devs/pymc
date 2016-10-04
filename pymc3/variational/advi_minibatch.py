@@ -7,7 +7,8 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 from pymc3 import modelcontext, ArrayOrdering, DictToArrayBijection
 from pymc3.theanof import reshape_t, inputvars
-from .advi import check_discrete_rvs, ADVIFit, adagrad_optimizer, gen_random_state
+from .advi import check_discrete_rvs, ADVIFit, adagrad_optimizer, \
+                  gen_random_state, get_transformed
 
 __all__ = ['advi_minibatch']
 
@@ -169,11 +170,11 @@ def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
         l_g = (uw_g.size / 2).astype('int64')
         u_g = uw_g[:l_g]
         w_g = uw_g[l_g:]
-
         def logp_(z_g):
             return theano.clone(logp, {inarray_g: z_g}, strict=False)
 
         if n_mcsamples == 1:
+            elbo = 0
             n_g = r.normal(size=inarray_g.tag.test_value.shape)
             z_g = n_g * tt.exp(w_g) + u_g
             elbo = logp_(z_g) + \
@@ -192,7 +193,7 @@ def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
 
 def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                    minibatch_RVs=None, minibatch_tensors=None, minibatches=None,
-                   local_RVs=None, observed_RVs=None, encoder_params=[],
+                   local_RVs=None, observed_RVs=None, encoder_params=[],  
                    total_size=None, optimizer=None, learning_rate=.001,
                    epsilon=.1, random_seed=None, verbose=1):
     """Perform mini-batch ADVI.
@@ -306,14 +307,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                                         minibatch_tensors, total_size)
 
     # Replace local_RVs with transformed variables
-    ds = model.deterministics
-
-    def get_transformed(v):
-        if v in ds:
-            return v.transformed
-        return v
     local_RVs = OrderedDict(
-        [(get_transformed(v), (uw, s)) for v, (uw, s) in local_RVs.items()]
+        [(get_transformed(v, model), (uw, s)) for v, (uw, s) in local_RVs.items()]
     )
 
     # Get global variables
@@ -362,7 +357,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     elbo = theano.clone(elbo, updates, strict=False)
 
     # Create parameter update function used in the training loop
-    params = [uw_global_shared] + encoder_params
+    params = [uw_global_shared] # Variational parameters for global variables
+    params += encoder_params # Encoder parameters for local variables
     updates = OrderedDict()
     for param in params:
         # g = tt.grad(elbo, wrt=param)
@@ -373,7 +369,11 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     # Optimization loop
     elbos = np.empty(n)
     for i in range(n):
-        e = f(*next(minibatches))
+        if len(tensors) == 0: 
+            # without mini-batches
+            e = f()
+        else:
+            e = f(*next(minibatches))
         elbos[i] = e
         if verbose and not i % (n // 10):
             if not i:
