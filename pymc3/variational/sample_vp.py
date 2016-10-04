@@ -7,13 +7,16 @@ from .advi import ADVIFit, gen_random_state, get_transformed
 
 __all__ = ['sample_vp']
 
-def _make_sampling_updates(vs, us, ws, rng):
+def _make_sampling_updates(vs, us, ws, rng, nfs):
     updates = {}
 
     # Concatenate RVs in the order of vs
     u = np.hstack(us)
     w = np.hstack(ws)
     z = w * rng.normal(size=u.shape) + u
+
+    for nf in nfs:
+        z = nf.trans(z)
 
     ixs = 0
     for v, u in zip(vs, us):
@@ -26,7 +29,7 @@ def _make_sampling_updates(vs, us, ws, rng):
 
 def sample_vp(
         vparams, draws=1000, model=None, local_RVs=None, random_seed=None,
-        hide_transformed=True, nfs=None):
+        hide_transformed=True, local_NFs=[], global_NFs=[]):
     """Draw samples from variational posterior.
 
     Parameters
@@ -49,7 +52,6 @@ def sample_vp(
         Samples drawn from the variational posterior.
     """
     local_RVs = list() if local_RVs is None else local_RVs
-    nfs = list() if nfs is None else nfs
 
     model = pm.modelcontext(model)
 
@@ -76,7 +78,8 @@ def sample_vp(
         vs=global_RVs, 
         us=[vparams['means'][str(v)].ravel() for v in global_RVs], 
         ws=[vparams['stds'][str(v)].ravel() for v in global_RVs], 
-        rng=rng
+        rng=rng, 
+        nfs=global_NFs
     )
 
     # Make dict for sampling local RVs
@@ -85,7 +88,8 @@ def sample_vp(
             vs=[get_transformed(v, model) for v, _ in local_RVs.items()], 
             us=[uw[0].ravel() for _, (uw, _) in local_RVs.items()], 
             ws=[uw[1].ravel() for _, (uw, _) in local_RVs.items()], 
-            rng=rng
+            rng=rng, 
+            nfs=local_NFs
         )
         updates.update(updates_local)
 

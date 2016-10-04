@@ -129,7 +129,9 @@ def _make_logpt(global_RVs, local_RVs, observed_RVs, model):
     return logpt
 
 
-def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
+def _elbo_t(
+    logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed,
+    local_NFs, global_NFs):
     """Return expression of approximate ELBO based on Monte Carlo sampling.
     """
     if random_seed is None:
@@ -147,19 +149,25 @@ def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
     local_and_global = (uw_l is not None)
     logp_ = logp_gl if local_and_global else logp_g
 
+    # ELBO
+    elbo = 0
+
     # Sampling global RVs
     l_g = (uw_g.size / 2).astype('int64')
     u_g = uw_g[:l_g]
     w_g = uw_g[l_g:]
     ns_g = r.normal(size=(n_mcsamples, inarray_g.tag.test_value.shape[0]))
     zs_g = ns_g * tt.exp(w_g) + u_g
+    for nf_g in global_NFs:
+        zs_g = nf_g.trans(zs_g)
+        elbo += nf_g.ldj(zs_g)
 
     # (Sampling local RVs and) define ELBO
     if uw_l is None:
         logps, _ = theano.scan(fn=lambda q: logp_(q),
                                outputs_info=None,
                                sequences=[zs_g])
-        elbo = tt.mean(logps) + \
+        elbo += tt.mean(logps) + \
             tt.sum(w_g) + 0.5 * l_g * (1 + np.log(2.0 * np.pi))
     else:
         l_l = (uw_l.size / 2).astype('int64')
@@ -171,7 +179,7 @@ def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
         logps, _ = theano.scan(fn=lambda z_g, z_l: logp_(z_g, z_l),
                                outputs_info=None,
                                sequences=zip(zs_g, zs_l))
-        elbo = tt.mean(logps) + \
+        elbo += tt.mean(logps) + \
             tt.sum(w_g) + 0.5 * l_g * (1 + np.log(2.0 * np.pi)) + \
             tt.sum(w_l) + 0.5 * l_l * (1 + np.log(2.0 * np.pi))
 
@@ -182,7 +190,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                    minibatch_RVs=None, minibatch_tensors=None, minibatches=None,
                    local_RVs=None, observed_RVs=None, encoder_params=[],  
                    total_size=None, optimizer=None, learning_rate=.001,
-                   epsilon=.1, random_seed=None, verbose=1):
+                   epsilon=.1, random_seed=None, verbose=1, local_NFs=[], 
+                   global_NFs=[]):
     """Perform mini-batch ADVI.
 
     This function implements a mini-batch ADVI with the meanfield 
@@ -314,7 +323,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         replace.update(replace_l)
     logp = theano.clone(logpt, replace, strict=False)
     elbo = _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l,
-                   n_mcsamples, random_seed)
+                   n_mcsamples, random_seed, local_NFs, global_NFs)
     del logpt
 
     # Variational parameters for global RVs
@@ -346,10 +355,10 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     # Create parameter update function used in the training loop
     params = [uw_global_shared] # Variational parameters for global variables
     params += encoder_params # Encoder parameters for local variables
+    params += [nf.get_params() for nf in global_NFs] # Parameters for normalizing flows
+    params += [nf.get_params() for nf in local_NFs] # Parameters for normalizing flows
     updates = OrderedDict()
     for param in params:
-        # g = tt.grad(elbo, wrt=param)
-        # updates.update(adagrad(g, param, learning_rate, epsilon, n=10))
         updates.update(optimizer(loss=-1 * elbo, param=param))
     f = theano.function(tensors, elbo, updates=updates)
 
