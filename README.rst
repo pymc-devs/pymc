@@ -145,9 +145,22 @@ Contributors
 See the `GitHub contributor
 page <https://github.com/pymc-devs/pymc3/graphs/contributors>`__
 
+Sponsors
+--------
+
+|NumFOCUS|
+
+|Quantopian|
+
 .. |Gitter| image:: https://badges.gitter.im/Join%20Chat.svg
    :target: https://gitter.im/pymc-devs/pymc?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 .. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.png?branch=master
    :target: https://travis-ci.org/pymc-devs/pymc3
 .. |Coverage| image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master
    :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master 
+.. |NumFOCUS| image:: http://www.numfocus.org/uploads/6/0/6/9/60696727/1457562110.png
+   :target: http://www.numfocus.org/
+.. |Quantopian| image:: docs/quantopian_logo.png
+   :target: https://quantopian.com
+
+
