@@ -137,56 +137,43 @@ def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
     else:
         r = MRG_RandomStreams(seed=random_seed)
 
-    if uw_l is not None:
-        l_g = (uw_g.size / 2).astype('int64')
-        u_g = uw_g[:l_g]
-        w_g = uw_g[l_g:]
+    def logp_gl(z_g, z_l):
+        return theano.clone(logp, {inarray_g: z_g, inarray_l: z_l}, strict=False)
+
+    def logp_g(z_g):
+        return theano.clone(logp, {inarray_g: z_g}, strict=False)
+
+    # Log-probability function
+    local_and_global = (uw_l is not None)
+    logp_ = logp_gl if local_and_global else logp_g
+
+    # Sampling global RVs
+    l_g = (uw_g.size / 2).astype('int64')
+    u_g = uw_g[:l_g]
+    w_g = uw_g[l_g:]
+    ns_g = r.normal(size=(n_mcsamples, inarray_g.tag.test_value.shape[0]))
+    zs_g = ns_g * tt.exp(w_g) + u_g
+
+    # (Sampling local RVs and) define ELBO
+    if uw_l is None:
+        logps, _ = theano.scan(fn=lambda q: logp_(q),
+                               outputs_info=None,
+                               sequences=[zs_g])
+        elbo = tt.mean(logps) + \
+            tt.sum(w_g) + 0.5 * l_g * (1 + np.log(2.0 * np.pi))
+    else:
         l_l = (uw_l.size / 2).astype('int64')
         u_l = uw_l[:l_l]
         w_l = uw_l[l_l:]
+        ns_l = r.normal(size=(n_mcsamples, inarray_l.tag.test_value.shape[0]))
+        zs_l = ns_l * tt.exp(w_l) + u_l
 
-        def logp_(z_g, z_l):
-            return theano.clone(logp, {inarray_g: z_g, inarray_l: z_l}, strict=False)
-        if n_mcsamples == 1:
-            n_g = r.normal(size=inarray_g.tag.test_value.shape)
-            z_g = n_g * tt.exp(w_g) + u_g
-            n_l = r.normal(size=inarray_l.tag.test_value.shape)
-            z_l = n_l * tt.exp(w_l) + u_l
-            elbo = logp_(z_g, z_l) + \
-                tt.sum(w_g) + 0.5 * l_g * (1 + np.log(2.0 * np.pi)) + \
-                tt.sum(w_l) + 0.5 * l_l * (1 + np.log(2.0 * np.pi))
-        else:
-            ns_g = r.normal(size=inarray_g.tag.test_value.shape)
-            zs_g = ns_g * tt.exp(w_g) + u_g
-            ns_l = r.normal(size=inarray_l.tag.test_value.shape)
-            zs_l = ns_l * tt.exp(w_l) + u_l
-            logps, _ = theano.scan(fn=lambda z_g, z_l: logp_(z_g, z_l),
-                                   outputs_info=None,
-                                   sequences=zip(zs_g, zs_l))
-            elbo = tt.mean(logps) + \
-                tt.sum(w_g) + 0.5 * l_g * (1 + np.log(2.0 * np.pi)) + \
-                tt.sum(w_l) + 0.5 * l_l * (1 + np.log(2.0 * np.pi))
-    else:
-        l_g = (uw_g.size / 2).astype('int64')
-        u_g = uw_g[:l_g]
-        w_g = uw_g[l_g:]
-        def logp_(z_g):
-            return theano.clone(logp, {inarray_g: z_g}, strict=False)
-
-        if n_mcsamples == 1:
-            elbo = 0
-            n_g = r.normal(size=inarray_g.tag.test_value.shape)
-            z_g = n_g * tt.exp(w_g) + u_g
-            elbo = logp_(z_g) + \
-                tt.sum(w_g) + 0.5 * l_g * (1 + np.log(2.0 * np.pi))
-        else:
-            n_g = r.normal(size=(n_mcsamples, u_g.tag.test_value.shape[0]))
-            zs_g = n_g * tt.exp(w_g) + u_g
-            logps, _ = theano.scan(fn=lambda q: logp_(q),
-                                   outputs_info=None,
-                                   sequences=[zs_g])
-            elbo = tt.mean(logps) + \
-                tt.sum(w_g) + 0.5 * l_g * (1 + np.log(2.0 * np.pi))
+        logps, _ = theano.scan(fn=lambda z_g, z_l: logp_(z_g, z_l),
+                               outputs_info=None,
+                               sequences=zip(zs_g, zs_l))
+        elbo = tt.mean(logps) + \
+            tt.sum(w_g) + 0.5 * l_g * (1 + np.log(2.0 * np.pi)) + \
+            tt.sum(w_l) + 0.5 * l_l * (1 + np.log(2.0 * np.pi))
 
     return elbo
 
