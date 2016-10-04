@@ -41,7 +41,7 @@ class TestGelmanRubin(unittest.TestCase):
                              self.good_ratio for r in rhat.values()))
 
     def test_right_shape_python_float(self, shape=None, test_shape=None):
-        """Check shape is correct w/ python float"""
+        """Check Gelman-Rubin statistic shape is correct w/ python float"""
         n_jobs = 3
         n_samples = 10
 
@@ -69,19 +69,19 @@ class TestGelmanRubin(unittest.TestCase):
             self.assertEqual(rhat.shape, test_shape)
 
     def test_right_shape_scalar_tuple(self):
-        """Check shape is correct w/ scalar as shape=()"""
+        """Check Gelman-Rubin statistic shape is correct w/ scalar as shape=()"""
         self.test_right_shape_python_float(shape=())
 
     def test_right_shape_tensor(self, shape=(5, 3, 2), test_shape=None):
-        """Check shape is correct w/ tensor variable"""
+        """Check Gelman-Rubin statistic shape is correct w/ tensor variable"""
         self.test_right_shape_python_float(shape=(5, 3, 2))
 
     def test_right_shape_scalar_array(self):
-        """Check shape is correct w/ scalar as shape=(1,)"""
+        """Check Gelman-Rubin statistic shape is correct w/ scalar as shape=(1,)"""
         self.test_right_shape_python_float(shape=(1,))
 
     def test_right_shape_scalar_one(self):
-        """Check shape is correct w/ scalar as shape=1"""
+        """Check Gelman-Rubin statistic shape is correct w/ scalar as shape=1"""
         self.test_right_shape_python_float(shape=1, test_shape=(1,))
 
 
@@ -160,8 +160,9 @@ class TestDiagnostics(unittest.TestCase):
         n_effective = effective_n(ptrace)['x']
         assert_allclose(n_effective, n_jobs * n_samples, 2)
 
-    def test_effective_n_right_shape_python_float(self, shape=None, test_shape=None):
-        """Check shape is correct w/ python float"""
+    def test_effective_n_right_shape_python_float(self,
+                                                  shape=None, test_shape=None):
+        """Check effective sample size shape is correct w/ python float"""
         n_jobs = 3
         n_samples = 10
 
@@ -189,17 +190,18 @@ class TestDiagnostics(unittest.TestCase):
             self.assertEqual(n_effective.shape, test_shape)
 
     def test_effective_n_right_shape_scalar_tuple(self):
-        """Check shape is correct w/ scalar as shape=()"""
-        self.test_right_shape_python_float(shape=())
+        """Check effective sample size shape is correct w/ scalar as shape=()"""
+        self.test_effective_n_right_shape_python_float(shape=())
 
-    def test_effective_n_right_shape_tensor(self, shape=(5, 3, 2), test_shape=None):
-        """Check shape is correct w/ tensor variable"""
-        self.test_right_shape_python_float(shape=(5, 3, 2))
+    def test_effective_n_right_shape_tensor(self):
+        """Check effective sample size shape is correct w/ tensor variable"""
+        self.test_effective_n_right_shape_python_float(shape=(5, 3, 2))
 
     def test_effective_n_right_shape_scalar_array(self):
-        """Check shape is correct w/ scalar as shape=(1,)"""
-        self.test_right_shape_python_float(shape=(1,))
+        """Check effective sample size shape is correct w/ scalar as shape=(1,)"""
+        self.test_effective_n_right_shape_python_float(shape=(1,))
 
     def test_effective_n_right_shape_scalar_one(self):
-        """Check shape is correct w/ scalar as shape=1"""
-        self.test_right_shape_python_float(shape=1, test_shape=(1,))
+        """Check effective sample size shape is correct w/ scalar as shape=1"""
+        self.test_effective_n_right_shape_python_float(shape=1,
+                                                       test_shape=(1,))
