@@ -254,8 +254,7 @@ def effective_n(mtrace):
         _n_eff = np.zeros(x.shape[:-2])
 
         # iterate over tuples of indices of the shape of var
-        inds = [y.ravel().tolist() for y in np.indices(x.shape[:-2])]
-        for tup in zip(*inds):  # iterate with zip
+        for tup in np.ndindex(*list(x.shape[:-2])):
             _n_eff[tup] = get_neff(x[tup], Vhat[tup])
 
         # we could be using np.squeeze here, but we don't want to squeeze
