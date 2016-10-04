@@ -1,3 +1,4 @@
+import numpy as np
 import theano
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 import pymc3 as pm
@@ -8,10 +9,17 @@ __all__ = ['sample_vp']
 
 def _make_sampling_updates(vs, us, ws, rng):
     updates = {}
-    for v, u, w in zip(vs, us, ws):
-        # n = rng.normal(size=u.tag.test_value.shape)
-        n = rng.normal(size=u.shape)
-        updates.update({v: (n * w + u).reshape(v.tag.test_value.shape)})
+
+    # Concatenate RVs in the order of vs
+    u = np.hstack(us)
+    w = np.hstack(ws)
+    z = w * rng.normal(size=u.shape) + u
+
+    ixs = 0
+    for v, u in zip(vs, us):
+        z_v = z[slice(ixs, ixs + len(u))]
+        updates.update({v: z_v.reshape(v.tag.test_value.shape)})
+        ixs += len(u)
 
     return updates
 
