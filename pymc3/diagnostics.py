@@ -114,7 +114,8 @@ def gelman_rubin(mtrace):
     Returns
     -------
     Rhat : dict
-      Returns dictionary of the potential scale reduction factors, :math:`\hat{R}`
+      Returns dictionary of the potential scale reduction
+      factors, :math:`\hat{R}`
 
     Notes
     -----
@@ -136,43 +137,24 @@ def gelman_rubin(mtrace):
 
     if mtrace.nchains < 2:
         raise ValueError(
-            'Gelman-Rubin diagnostic requires multiple chains of the same length.')
-
-    def calc_rhat(x):
-
-        try:
-            # When the variable is multidimensional, this assignment will fail, triggering
-            # a ValueError that will handle the multidimensional case
-            m, n = x.shape
-
-            # Calculate between-chain variance
-            B = n * np.var(np.mean(x, axis=1), ddof=1)
-
-            # Calculate within-chain variance
-            W = np.mean(np.var(x, axis=1, ddof=1))
-
-            # Estimate of marginal posterior variance
-            Vhat = W * (n - 1) / n + B / n
-
-            return np.sqrt(Vhat / W)
-
-        except ValueError:
-
-            # Tricky transpose here, shifting the last dimension to the first
-            rotated_indices = np.roll(np.arange(x.ndim), 1)
-            # Now iterate over the dimension of the variable
-            return np.squeeze([calc_rhat(xi) for xi in x.transpose(rotated_indices)])
+            'Gelman-Rubin diagnostic requires multiple chains '
+            'of the same length.')
 
     Rhat = {}
     for var in mtrace.varnames:
-
-        # Get all traces for var
         x = np.array(mtrace.get_values(var, combine=False))
+        num_samples = x.shape[1]
 
-        try:
-            Rhat[var] = calc_rhat(x)
-        except ValueError:
-            Rhat[var] = [calc_rhat(y.transpose()) for y in x.transpose()]
+        # Calculate between-chain variance
+        B = num_samples * np.var(np.mean(x, axis=1), axis=0, ddof=1)
+
+        # Calculate within-chain variance
+        W = np.mean(np.var(x, axis=1, ddof=1), axis=0)
+
+        # Estimate of marginal posterior variance
+        Vhat = W * (num_samples - 1) / num_samples + B / num_samples
+
+        Rhat[var] = np.sqrt(Vhat / W)
 
     return Rhat
 
@@ -199,8 +181,8 @@ def effective_n(mtrace):
       .. math:: \hat{n}_{eff} = \frac{mn}}{1 + 2 \sum_{t=1}^T \hat{\rho}_t}
 
     where :math:`\hat{\rho}_t` is the estimated autocorrelation at lag t, and T
-    is the first odd positive integer for which the sum :math:`\hat{\rho}_{T+1} + \hat{\rho}_{T+1}`
-    is negative.
+    is the first odd positive integer for which the sum
+    :math:`\hat{\rho}_{T+1} + \hat{\rho}_{T+1}` is negative.
 
     References
     ----------
@@ -208,68 +190,79 @@ def effective_n(mtrace):
 
     if mtrace.nchains < 2:
         raise ValueError(
-            'Calculation of effective sample size requires multiple chains of the same length.')
+            'Calculation of effective sample size requires multiple chains '
+            'of the same length.')
 
-    def calc_vhat(x):
+    def get_vhat(x):
+        # number of chains is last dim (-1)
+        # chain samples are second to last dim (-2)
+        num_samples = x.shape[-2]
 
-        try:
-            # When the variable is multidimensional, this assignment will fail, triggering
-            # a ValueError that will handle the multidimensional case
-            m, n = x.shape
+        # Calculate between-chain variance
+        B = num_samples * np.var(np.mean(x, axis=-2), axis=-1, ddof=1)
 
-            # Calculate between-chain variance
-            B = n * np.var(np.mean(x, axis=1), ddof=1)
+        # Calculate within-chain variance
+        W = np.mean(np.var(x, axis=-2, ddof=1), axis=-1)
 
-            # Calculate within-chain variance
-            W = np.mean(np.var(x, axis=1, ddof=1))
+        # Estimate of marginal posterior variance
+        Vhat = W * (num_samples - 1) / num_samples + B / num_samples
 
-            # Estimate of marginal posterior variance
-            Vhat = W * (n - 1) / n + B / n
+        return Vhat
 
-            return Vhat
-
-        except ValueError:
-
-            # Tricky transpose here, shifting the last dimension to the first
-            rotated_indices = np.roll(np.arange(x.ndim), 1)
-            # Now iterate over the dimension of the variable
-            return np.squeeze([calc_vhat(xi) for xi in x.transpose(rotated_indices)])
-
-    def calc_n_eff(x):
-
-        m, n = x.shape
+    def get_neff(x, Vhat):
+        num_chains = x.shape[-1]
+        num_samples = x.shape[-2]
 
         negative_autocorr = False
         t = 1
 
-        Vhat = calc_vhat(x)
-
-        variogram = lambda t: (sum(sum((x[j][i] - x[j][i - t])**2
-                                       for i in range(t, n)) for j in range(m)) / (m * (n - t)))
-
-        rho = np.ones(n)
+        rho = np.ones(num_samples)
         # Iterate until the sum of consecutive estimates of autocorrelation is
         # negative
-        while not negative_autocorr and (t < n):
+        while not negative_autocorr and (t < num_samples):
 
-            rho[t] = 1. - variogram(t) / (2. * Vhat)
+            variogram = np.mean((x[t:, :] - x[:-t, :])**2)
+            rho[t] = 1. - variogram / (2. * Vhat)
 
             if not t % 2:
                 negative_autocorr = sum(rho[t - 1:t + 1]) < 0
 
             t += 1
 
-        return min(m * n, int(m * n / (1. + 2 * rho[1:t].sum())))
+        return min(num_chains * num_samples,
+                   int(num_chains * num_samples / (1. + 2 * rho[1:t].sum())))
 
     n_eff = {}
     for var in mtrace.varnames:
-
-        # Get all traces for var
         x = np.array(mtrace.get_values(var, combine=False))
 
-        try:
-            n_eff[var] = calc_n_eff(x)
-        except ValueError:
-            n_eff[var] = [calc_n_eff(y.transpose()) for y in x.transpose()]
+        # make sure to handle scalars correctly - add extra dim if needed
+        if len(x.shape) == 2:
+            is_scalar = True
+            x = np.atleast_3d(mtrace.get_values(var, combine=False))
+        else:
+            is_scalar = False
+
+        # now we are going to transpose all dims - makes the loop below
+        # easier by moving the axes of the variable to the front instead
+        # of the chain and sample axes
+        x = x.transpose()
+
+        Vhat = get_vhat(x)
+
+        # get an array the same shape as the var
+        _n_eff = np.zeros(x.shape[:-2])
+
+        # iterate over tuples of indices of the shape of var
+        for tup in np.ndindex(*list(x.shape[:-2])):
+            _n_eff[tup] = get_neff(x[tup], Vhat[tup])
+
+        # we could be using np.squeeze here, but we don't want to squeeze
+        # out dummy dimensions that a user inputs
+        if is_scalar:
+            n_eff[var] = _n_eff[0]
+        else:
+            # make sure to transpose the dims back
+            n_eff[var] = np.transpose(_n_eff)
 
     return n_eff

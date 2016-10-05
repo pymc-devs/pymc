@@ -1,5 +1,6 @@
 import unittest
 
+import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
 
 from ..model import Model
@@ -38,6 +39,50 @@ class TestGelmanRubin(unittest.TestCase):
         rhat = gelman_rubin(self.get_ptrace(n_samples))
         self.assertFalse(all(1 / self.good_ratio < r <
                              self.good_ratio for r in rhat.values()))
+
+    def test_right_shape_python_float(self, shape=None, test_shape=None):
+        """Check Gelman-Rubin statistic shape is correct w/ python float"""
+        n_jobs = 3
+        n_samples = 10
+
+        with Model():
+            if shape is not None:
+                Normal('x', 0, 1., shape=shape)
+            else:
+                Normal('x', 0, 1.)
+
+            # start sampling at the MAP
+            start = find_MAP()
+            step = NUTS(scaling=start)
+            ptrace = sample(n_samples, step, start,
+                            njobs=n_jobs, random_seed=42)
+
+        rhat = gelman_rubin(ptrace)['x']
+
+        if test_shape is None:
+            test_shape = shape
+
+        if shape is None or shape == ():
+            self.assertTrue(isinstance(rhat, float))
+        else:
+            self.assertTrue(isinstance(rhat, np.ndarray))
+            self.assertEqual(rhat.shape, test_shape)
+
+    def test_right_shape_scalar_tuple(self):
+        """Check Gelman-Rubin statistic shape is correct w/ scalar as shape=()"""
+        self.test_right_shape_python_float(shape=())
+
+    def test_right_shape_tensor(self, shape=(5, 3, 2), test_shape=None):
+        """Check Gelman-Rubin statistic shape is correct w/ tensor variable"""
+        self.test_right_shape_python_float(shape=(5, 3, 2))
+
+    def test_right_shape_scalar_array(self):
+        """Check Gelman-Rubin statistic shape is correct w/ scalar as shape=(1,)"""
+        self.test_right_shape_python_float(shape=(1,))
+
+    def test_right_shape_scalar_one(self):
+        """Check Gelman-Rubin statistic shape is correct w/ scalar as shape=1"""
+        self.test_right_shape_python_float(shape=1, test_shape=(1,))
 
 
 class TestDiagnostics(unittest.TestCase):
@@ -114,3 +159,49 @@ class TestDiagnostics(unittest.TestCase):
 
         n_effective = effective_n(ptrace)['x']
         assert_allclose(n_effective, n_jobs * n_samples, 2)
+
+    def test_effective_n_right_shape_python_float(self,
+                                                  shape=None, test_shape=None):
+        """Check effective sample size shape is correct w/ python float"""
+        n_jobs = 3
+        n_samples = 10
+
+        with Model():
+            if shape is not None:
+                Normal('x', 0, 1., shape=shape)
+            else:
+                Normal('x', 0, 1.)
+
+            # start sampling at the MAP
+            start = find_MAP()
+            step = NUTS(scaling=start)
+            ptrace = sample(n_samples, step, start,
+                            njobs=n_jobs, random_seed=42)
+
+        n_effective = effective_n(ptrace)['x']
+
+        if test_shape is None:
+            test_shape = shape
+
+        if shape is None or shape == ():
+            self.assertTrue(isinstance(n_effective, float))
+        else:
+            self.assertTrue(isinstance(n_effective, np.ndarray))
+            self.assertEqual(n_effective.shape, test_shape)
+
+    def test_effective_n_right_shape_scalar_tuple(self):
+        """Check effective sample size shape is correct w/ scalar as shape=()"""
+        self.test_effective_n_right_shape_python_float(shape=())
+
+    def test_effective_n_right_shape_tensor(self):
+        """Check effective sample size shape is correct w/ tensor variable"""
+        self.test_effective_n_right_shape_python_float(shape=(5, 3, 2))
+
+    def test_effective_n_right_shape_scalar_array(self):
+        """Check effective sample size shape is correct w/ scalar as shape=(1,)"""
+        self.test_effective_n_right_shape_python_float(shape=(1,))
+
+    def test_effective_n_right_shape_scalar_one(self):
+        """Check effective sample size shape is correct w/ scalar as shape=1"""
+        self.test_effective_n_right_shape_python_float(shape=1,
+                                                       test_shape=(1,))
