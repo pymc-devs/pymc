@@ -160,7 +160,7 @@ Sponsors
    :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master 
 .. |NumFOCUS| image:: http://www.numfocus.org/uploads/6/0/6/9/60696727/1457562110.png
    :target: http://www.numfocus.org/
-.. |Quantopian| image:: docs/quantopian_logo.png
+.. |Quantopian| image:: docs/quantopianlogo.jpg
    :target: https://quantopian.com
 
 
