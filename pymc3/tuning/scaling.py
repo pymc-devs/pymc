@@ -126,7 +126,7 @@ def adjust_scaling(s):
 def adjust_precision(tau):
     mag = sqrt(abs(tau))
 
-    bounded = bound(log(mag), log(1e-10), log(1e10))
+    bounded = bound(log(mag), log(0.1), log(10))
     return exp(bounded)**2
 
 
