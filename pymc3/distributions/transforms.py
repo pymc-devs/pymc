@@ -109,19 +109,18 @@ class Interval(ElemwiseTransform):
 
     name = "interval"
 
-    def __init__(self, a, b, eps=1e-6):
+    def __init__(self, a, b):
         self.a = a
         self.b = b
-        self.eps = eps
 
     def backward(self, x):
         a, b = self.a, self.b
-        r = (b - a) / (1 + tt.exp(-x)) + a
+        r = (b - a) * tt.exp(x) / (1 + tt.exp(x)) + a
         return r
 
     def forward(self, x):
-        a, b, e = self.a, self.b, self.eps
-        r = tt.log(tt.maximum((x - a) / tt.maximum(b - x, e), e))
+        a, b = self.a, self.b
+        r = tt.log((x - a) / (b - x))
         return r
 
 interval = Interval
