@@ -26,7 +26,6 @@ class Mixture(Continuous):
         
     def logp(self, value):
         w = self.w
-        comp_dists = self.comp_dists
         
         return bound(logsumexp(tt.log(w) + self._comp_logp(value), axis=1).sum(),
                      tt.all(w >= 0), tt.all(w <= 1), tt.eq(w.sum(), 1))
