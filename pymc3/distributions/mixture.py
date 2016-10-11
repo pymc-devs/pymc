@@ -1,6 +1,7 @@
 import theano.tensor as tt
 
 from .distribution import Continuous
+from .distributions.continuous import get_tau_sd
 
 class Mixture(Continuous):
     def __init__(self, w, comp_dists, *args, **kwargs):
@@ -35,7 +36,8 @@ class Mixture(Continuous):
     
 class NormalMixture(Mixture):
     def __init__(self, w, mu, *args, **kwargs):
-        _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
-                           sd=kwargs.pop('sd', None))
+        tau, sd = get_tau_sd(tau=kwargs.pop('tau', None),
+                             sd=kwargs.pop('sd', None))
         
-        super(NormalMixture, self).__init__(w, pm.Normal.dist(mu, sd), *args, **kwargs)
+        super(NormalMixture, self).__init__(w, pm.Normal.dist(mu, sd=sd, tau=tau),
+                                            *args, **kwargs)
