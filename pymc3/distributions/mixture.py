@@ -18,7 +18,9 @@ class Mixture(Continuous):
         comp_dists = self.comp_dists
         
         try:
-            return comp_dists.logp(value)
+            value_ = value if value.ndim > 1 else value[:, np.newaxis]
+
+            return comp_dists.logp(value_)
         except AttributeError:
             return tt.stack([comp_dist.logp(value) for comp_dist in comp_dists],
                             axis=1)
