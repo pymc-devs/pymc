@@ -746,16 +746,28 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
         if rope is not None:
             display_rope(rope)
 
-    def create_axes_grid(figsize, varnames):
-        n = np.ceil(len(varnames) / 2.0).astype(int)
+    def create_axes_grid(figsize, traces):
+        n = np.ceil(len(traces) / 2.0).astype(int)
         if figsize is None:
             figsize = (12, n * 2.5)
         fig, ax = plt.subplots(n, 2, figsize=figsize)
         ax = ax.reshape(2 * n)
-        if len(varnames) % 2 == 1:
+        if len(traces) % 2 == 1:
             ax[-1].set_axis_off()
             ax = ax[:-1]
         return ax, fig
+        
+    def get_trace_dict(tr, varnames):
+        traces = {}
+        for v in varnames:
+            vals = tr.get_values(v, combine=True, squeeze=True)
+            if vals.ndim>1:
+                vals_flat = vals.reshape(vals.shape[0], -1).T
+                for i,vi in enumerate(vals_flat):
+                    traces['_'.join([v,str(i)])] = vi
+            else:
+                traces[v] = vals
+        return traces
 
     if isinstance(trace, np.ndarray):
         if figsize is None:
@@ -770,12 +782,13 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
             else:
                 varnames = [name for name in trace.varnames if not name.endswith('_')]
 
-        if ax is None:
-            ax, fig = create_axes_grid(figsize, varnames)
+        trace_dict = get_trace_dict(trace, varnames)
 
-        for a, v in zip(ax, varnames):
-            tr_values = transform(trace.get_values(
-                v, combine=True, squeeze=True))
+        if ax is None:
+            ax, fig = create_axes_grid(figsize, trace_dict)
+
+        for a, v in zip(ax, trace_dict):
+            tr_values = transform(trace_dict[v])
             plot_posterior_op(tr_values, ax=a)
             a.set_title(v)
 
