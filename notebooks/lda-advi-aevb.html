@@ -30,10 +30,13 @@
   
 
   
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="Mixture Model in PyMC3" href="gaussian_mixture_model.html"/>
-        <link rel="prev" title="Variational Inference: Bayesian Neural Networks" href="bayesian_neural_network_advi.html"/> 
+        <link rel="next" title="Variational Inference: Bayesian Neural Networks" href="bayesian_neural_network_advi.html"/>
+        <link rel="prev" title="GLM: Mini-batch ADVI on hierarchical regression model" href="GLM-hierarchical-advi-minibatch.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -88,40 +91,33 @@
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM: Model Selection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html#Posterior-Predictive-Check">Posterior Predictive Check</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Automatic autoencoding variational Bayes for latent dirichlet allocation</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#Dataset">Dataset</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Log-likelihood-of-documents-for-LDA">Log-likelihood of documents for LDA</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#LDA-model">LDA model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Mini-batch">Mini-batch</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Encoder">Encoder</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#AEVB-with-ADVI">AEVB with ADVI</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Extraction-of-characteristic-words-of-topics-based-on-posterior-samples">Extraction of characteristic words of topics based on posterior samples</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Predictive-distribution">Predictive distribution</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Summary">Summary</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#References">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#advi">ADVI</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Automatic autoencoding variational Bayes for latent dirichlet allocation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Dataset">Dataset</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Log-likelihood-of-documents-for-LDA">Log-likelihood of documents for LDA</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#LDA-model">LDA model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Mini-batch">Mini-batch</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Encoder">Encoder</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AEVB-with-ADVI">AEVB with ADVI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Extraction-of-characteristic-words-of-topics-based-on-posterior-samples">Extraction of characteristic words of topics based on posterior samples</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Predictive-distribution">Predictive distribution</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Summary">Summary</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#References">References</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="gaussian_mixture_model.html">Mixture Model in PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gaussian-mixture-model-advi.html">Gaussian Mixture Model with ADVI</a></li>
-<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -515,9 +511,9 @@ Sparsity = 0.0253837
 <p>For a document <span class="math">\(d\)</span> consisting of tokens <span class="math">\(w\)</span>, the
 log-likelihood of the LDA model with <span class="math">\(K\)</span> topics is given as</p>
 <div class="math">
-\[\begin{eqnarray}
+\begin{eqnarray}
     \log p\left(d|\theta_{d},\beta\right) &amp; = &amp; \sum_{w\in d}\log\left[\sum_{k=1}^{K}\exp\left(\log\theta_{d,k} + \log \beta_{k,w}\right)\right]+const,
-\end{eqnarray}\]</div><p>where <span class="math">\(\theta_{d}\)</span> is the topic distribution for document
+\end{eqnarray}</div><p>where <span class="math">\(\theta_{d}\)</span> is the topic distribution for document
 <span class="math">\(d\)</span> and <span class="math">\(\beta\)</span> is the word distribution for the <span class="math">\(K\)</span>
 topics. We define a function that returns a tensor of the log-likelihood
 of documents given <span class="math">\(\theta_{d}\)</span> and <span class="math">\(\beta\)</span>.</p>
@@ -1166,10 +1162,10 @@ Conference on Machine Learning (pp. 1218-1226).</li>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="gaussian_mixture_model.html" class="btn btn-neutral float-right" title="Mixture Model in PyMC3" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="bayesian_neural_network_advi.html" class="btn btn-neutral float-right" title="Variational Inference: Bayesian Neural Networks" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="bayesian_neural_network_advi.html" class="btn btn-neutral" title="Variational Inference: Bayesian Neural Networks" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="GLM-hierarchical-advi-minibatch.html" class="btn btn-neutral" title="GLM: Mini-batch ADVI on hierarchical regression model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

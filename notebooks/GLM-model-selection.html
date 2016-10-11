@@ -30,6 +30,9 @@
   
 
   
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Rolling Regression" href="GLM-rolling-regression.html"/>
@@ -88,62 +91,36 @@
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">GLM: Model Selection</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#Setup">Setup</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Local-Functions">Local Functions</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#Generate-Toy-Datasets">Generate Toy Datasets</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Interactively-Draft-Data">Interactively Draft Data</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Create-Datasets-for-Modelling">Create Datasets for Modelling</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Standardize">Standardize</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#Demonstrate-Simple-Linear-Model">Demonstrate Simple Linear Model</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Define-model-using-ordinary-pymc3-method">Define model using ordinary pymc3 method</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Define-model-using-pymc3-GLM-method">Define model using pymc3 GLM method</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#Create-Higher-Order-Linear-Models">Create Higher-Order Linear Models</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Create-and-run-polynomial-models">Create and run polynomial models</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#A-really-bad-method-for-model-selection:-compare-likelihoods">A really bad method for model selection: compare likelihoods</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#View-posterior-predictive-fit">View posterior predictive fit</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#Compare-Deviance-Information-Criterion-[DIC]">Compare Deviance Information Criterion [DIC]</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Compare-Watanabe---Akaike-Information-Criterion-[WAIC]">Compare Watanabe - Akaike Information Criterion [WAIC]</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#TODO">TODO</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#K-Fold-Cross-Validation-and/or-Leave-One-Out-(LOO)">K-Fold Cross Validation and/or Leave-One-Out (LOO)</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#Bayes-Factor">Bayes Factor</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-ADVI.html#Posterior-Predictive-Check">Posterior Predictive Check</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#Summary">Summary</a></li>
-<li class="toctree-l2"><a class="reference internal" href="lda-advi-aevb.html#References">References</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gaussian_mixture_model.html">Mixture Model in PyMC3</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gaussian-mixture-model-advi.html">Inference of Gaussian mixture model with ADVI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#glm">GLM</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">GLM: Model Selection</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Setup">Setup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Generate-Toy-Datasets">Generate Toy Datasets</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Demonstrate-Simple-Linear-Model">Demonstrate Simple Linear Model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Create-Higher-Order-Linear-Models">Create Higher-Order Linear Models</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#A-really-bad-method-for-model-selection:-compare-likelihoods">A really bad method for model selection: compare likelihoods</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Compare-Deviance-Information-Criterion-[DIC]">Compare Deviance Information Criterion [DIC]</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Compare-Watanabe---Akaike-Information-Criterion-[WAIC]">Compare Watanabe - Akaike Information Criterion [WAIC]</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#TODO">TODO</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Bayes-Factor">Bayes Factor</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>

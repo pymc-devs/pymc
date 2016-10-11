@@ -30,6 +30,9 @@
   
 
   
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Posterior Predictive Checks" href="posterior_predictive.html"/>
@@ -488,13 +491,13 @@ rate</a>,
 that the event occurs at time <span class="math">\(t\)</span> given that it has not yet
 occured. That is,</p>
 <div class="math">
-\[\begin{align*}
+\begin{align*}
 \lambda(t)
     &amp; = \lim_{\Delta t \to 0} \frac{P(t &lt; T &lt; t + \Delta t\ |\ T &gt; t)}{\Delta t} \\
     &amp; = \lim_{\Delta t \to 0} \frac{P(t &lt; T &lt; t + \Delta t)}{\Delta t \cdot P(T &gt; t)} \\
     &amp; = \frac{1}{S(t)} \cdot \lim_{\Delta t \to 0} \frac{S(t + \Delta t) - S(t)}{\Delta t}
       = -\frac{S'(t)}{S(t)}.
-\end{align*}\]</div><p>Solving this differential equation for the survival function shows that</p>
+\end{align*}</div><p>Solving this differential equation for the survival function shows that</p>
 <div class="math">
 \[S(t) = \exp\left(-\int_0^s \lambda(s)\ ds\right).\]</div>
 <p>This representation of the survival function shows that the cumulative
@@ -692,10 +695,10 @@ notes</a>.)</p>
 <p>We define indicator variables based on whether or the <span class="math">\(i\)</span>-th
 suject died in the <span class="math">\(j\)</span>-th interval,</p>
 <div class="math">
-\[d_{i, j} = \begin{cases}
+d_{i, j} = \begin{cases}
     1 &amp; \textrm{if subject } i \textrm{ died in interval } j \\
     0 &amp; \textrm{otherwise}
-\end{cases}.\]</div><div class="nbinput nblast container">
+\end{cases}.</div><div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [10]:
 </pre></div>

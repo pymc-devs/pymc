@@ -30,10 +30,13 @@
   
 
   
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="How to debug a model" href="howto_debugging.html"/>
-        <link rel="prev" title="Dirichlet process mixtures for density estimation" href="dp_mix.html"/> 
+        <link rel="next" title="Gaussian Mixture Model" href="gaussian_mixture_model.html"/>
+        <link rel="prev" title="Automatic autoencoding variational Bayes for latent dirichlet allocation" href="lda-advi-aevb.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -86,46 +89,32 @@
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM Robust Regression with Outlier Detection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-model-selection.html">GLM Model Selection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rolling_regression.html">Rolling Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GLM-hierarchical.html">Hierarchical Linear Regression</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a></li>
 <li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Variational Inference: Bayesian Neural Networks</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#Current-trends-in-Machine-Learning">Current trends in Machine Learning</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Probabilistic-Programming-at-scale">Probabilistic Programming at scale</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Deep-Learning">Deep Learning</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Bridging-Deep-Learning-and-Probabilistic-Programming">Bridging Deep Learning and Probabilistic Programming</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#Bayesian-Neural-Networks-in-PyMC3">Bayesian Neural Networks in PyMC3</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Generating-data">Generating data</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Model-specification">Model specification</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Variational-Inference:-Scaling-model-complexity">Variational Inference: Scaling model complexity</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#Lets-look-at-what-the-classifier-has-learned">Lets look at what the classifier has learned</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Probability-surface">Probability surface</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Uncertainty-in-predicted-value">Uncertainty in predicted value</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#Mini-batch-ADVI:-Scaling-data-size">Mini-batch ADVI: Scaling data size</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Summary">Summary</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Next-steps">Next steps</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Acknowledgements">Acknowledgements</a></li>
-</ul>
-</li>
 <li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#advi">ADVI</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Variational Inference: Bayesian Neural Networks</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Current-trends-in-Machine-Learning">Current trends in Machine Learning</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Bayesian-Neural-Networks-in-PyMC3">Bayesian Neural Networks in PyMC3</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Lets-look-at-what-the-classifier-has-learned">Lets look at what the classifier has learned</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Mini-batch-ADVI:-Scaling-data-size">Mini-batch ADVI: Scaling data size</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Summary">Summary</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Next-steps">Next steps</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Acknowledgements">Acknowledgements</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -1058,10 +1047,10 @@ earlier draft.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="howto_debugging.html" class="btn btn-neutral float-right" title="How to debug a model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="gaussian_mixture_model.html" class="btn btn-neutral float-right" title="Gaussian Mixture Model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="dp_mix.html" class="btn btn-neutral" title="Dirichlet process mixtures for density estimation" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="lda-advi-aevb.html" class="btn btn-neutral" title="Automatic autoencoding variational Bayes for latent dirichlet allocation" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

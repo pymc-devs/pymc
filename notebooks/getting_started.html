@@ -30,6 +30,9 @@
   
 
   
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Getting started" href="../getting_started.html"/>
         <link rel="next" title="Examples" href="../examples.html"/>
@@ -431,10 +434,10 @@ as normally-distributed observations with an expected value <span class="math">\
 that is a linear function of two predictor variables, <span class="math">\(X_1\)</span> and
 <span class="math">\(X_2\)</span>.</p>
 <div class="math">
-\[\begin{aligned}
+\begin{aligned}
 Y  &amp;\sim \mathcal{N}(\mu, \sigma^2) \\
 \mu &amp;= \alpha + \beta_1 X_1 + \beta_2 X_2
-\end{aligned}\]</div><p>where <span class="math">\(\alpha\)</span> is the intercept, and <span class="math">\(\beta_i\)</span> is the
+\end{aligned}</div><p>where <span class="math">\(\alpha\)</span> is the intercept, and <span class="math">\(\beta_i\)</span> is the
 coefficient for covariate <span class="math">\(X_i\)</span>, while <span class="math">\(\sigma\)</span> represents
 the observation error. Since we are constructing a Bayesian model, the
 unknown variables in the model must be assigned a prior distribution. We
@@ -443,11 +446,11 @@ coefficients, which corresponds to <em>weak</em> information regarding the true
 parameter values. We choose a half-normal distribution (normal
 distribution bounded at zero) as the prior for <span class="math">\(\sigma\)</span>.</p>
 <div class="math">
-\[\begin{aligned}
+\begin{aligned}
 \alpha &amp;\sim \mathcal{N}(0, 100) \\
 \beta_i &amp;\sim \mathcal{N}(0, 100) \\
 \sigma &amp;\sim \lvert\mathcal{N}(0, 1){\rvert}
-\end{aligned}\]</div><div class="section" id="Generating-data">
+\end{aligned}</div><div class="section" id="Generating-data">
 <h3>Generating data<a class="headerlink" href="#Generating-data" title="Permalink to this headline">¶</a></h3>
 <p>We can simulate some artificial data from this model using only NumPy&#8217;s
 <code class="docutils literal"><span class="pre">random</span></code> module, and then use PyMC3 to try to recover the
@@ -1109,12 +1112,12 @@ with a latent volatility variable, which changes over time. The
 following model is similar to the one described in the NUTS paper
 (Hoffman 2014, p. 21).</p>
 <div class="math">
-\[\begin{aligned}
+\begin{aligned}
   \sigma &amp;\sim exp(50) \\
   \nu &amp;\sim exp(.1) \\
   s_i &amp;\sim \mathcal{N}(s_{i-1}, \sigma^{-2}) \\
   log(y_i) &amp;\sim t(\nu, 0, exp(-2 s_i))
-\end{aligned}\]</div><p>Here, <span class="math">\(y\)</span> is the daily return series which is modeled with a
+\end{aligned}</div><p>Here, <span class="math">\(y\)</span> is the daily return series which is modeled with a
 Student-t distribution with an unknown degrees of freedom parameter, and
 a scale parameter determined by a latent process <span class="math">\(s\)</span>. The
 individual <span class="math">\(s_i\)</span> are the individual daily log volatilities in the
