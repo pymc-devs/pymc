@@ -159,8 +159,9 @@ def _elbo_t(
     ns_g = r.normal(size=(n_mcsamples, inarray_g.tag.test_value.shape[0]))
     zs_g = ns_g * tt.exp(w_g) + u_g
     for nf_g in global_NFs:
-        zs_g = nf_g.trans(zs_g)
-        elbo += nf_g.ldj(zs_g)
+        nf_g.init_model_params(zs_g.tag.test_value.shape[-1])
+        zs_g, ldj = nf_g.trans(zs_g)
+        elbo += tt.sum(ldj)
 
     # (Sampling local RVs and) define ELBO
     if uw_l is None:
@@ -175,6 +176,10 @@ def _elbo_t(
         w_l = uw_l[l_l:]
         ns_l = r.normal(size=(n_mcsamples, inarray_l.tag.test_value.shape[0]))
         zs_l = ns_l * tt.exp(w_l) + u_l
+        for nf_l in local_NFs:
+            nf_l.init_model_params(zs_l.tag.test_value.shape[-1])
+            zs_l, ldj = nf_l.trans(zs_l)
+            elbo += tt.sum(ldj)
 
         logps, _ = theano.scan(fn=lambda z_g, z_l: logp_(z_g, z_l),
                                outputs_info=None,
@@ -355,8 +360,10 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     # Create parameter update function used in the training loop
     params = [uw_global_shared] # Variational parameters for global variables
     params += encoder_params # Encoder parameters for local variables
-    params += [nf.get_params() for nf in global_NFs] # Parameters for normalizing flows
-    params += [nf.get_params() for nf in local_NFs] # Parameters for normalizing flows
+    for nf in global_NFs: # Parameters for normalizing flows
+        params += nf.get_params()
+    for nf in local_NFs: # Parameters for normalizing flows
+        params += nf.get_params()
     updates = OrderedDict()
     for param in params:
         updates.update(optimizer(loss=-1 * elbo, param=param))

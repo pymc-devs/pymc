@@ -16,7 +16,7 @@ def _make_sampling_updates(vs, us, ws, rng, nfs):
     z = w * rng.normal(size=u.shape) + u
 
     for nf in nfs:
-        z = nf.trans(z)
+        z, _ = nf.trans(z)
 
     ixs = 0
     for v, u in zip(vs, us):
