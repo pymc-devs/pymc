@@ -9,7 +9,8 @@ from .backends.base import merge_traces, BaseTrace, MultiTrace
 from .backends.ndarray import NDArray
 from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
-                           BinaryGibbsMetropolis, Slice, ElemwiseCategorical, CompoundStep)
+                           BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
+                           Slice, CompoundStep)
 from tqdm import tqdm
 
 import sys
@@ -20,7 +21,7 @@ __all__ = ['sample', 'iter_sample', 'sample_ppc']
 
 def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropolis,
                                                    BinaryMetropolis, BinaryGibbsMetropolis,
-                                                   Slice, ElemwiseCategorical)):
+                                                   Slice, CategoricalGibbsMetropolis)):
     '''
     Assign model variables to appropriate step methods. Passing a specified
     model will auto-assign its constituent stochastic variables to step methods
