@@ -106,9 +106,10 @@ def log_post_trace(trace, model):
 
 def waic(trace, model=None, n_eff=False):
     """
-    Calculate the widely available information criterion and the effective number of parameters of the samples in trace from model.
-    Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353
-
+    Calculate the widely available information criterion, its standard error 
+    and the effective number of parameters of the samples in trace from model.
+    Read more theory here - in a paper by some of the leading authorities on 
+    Model Selection - dx.doi.org/10.1111/1467-9868.00353
     Parameters
     ----------
     trace : result of MCMC run
@@ -117,18 +118,17 @@ def waic(trace, model=None, n_eff=False):
     n_eff: bool
         if True the effective number parameters will be returned.
         Default False
-
     Returns
     -------
     waic: widely available information criterion
+    waic_se: standard error of waic
     p_waic: effective number parameters, only if n_eff True
-
     """
     model = modelcontext(model)
 
     log_py = log_post_trace(trace, model)
 
-    lppd = np.sum(np.log(np.mean(np.exp(log_py), axis=0)))
+    lppd_i = np.log(np.mean(np.exp(log_py), axis=0))
 
     vars_lpd = np.var(log_py, axis=0)
     if np.any(vars_lpd > 0.4):
@@ -136,12 +136,19 @@ def waic(trace, model=None, n_eff=False):
         log predictive densities exceeds 0.4. This could be indication of
         WAIC starting to fail see http://arxiv.org/abs/1507.04544 for details
         """)
+    waic_i = - 2 * (lppd_i - vars_lpd)
+
+    waic_se = np.sqrt(len(waic_i) * np.var(waic_i))
+
+    waic = np.sum(waic_i)
+    
     p_waic = np.sum(vars_lpd)
+    
 
     if n_eff:
-        return -2 * lppd + 2 * p_waic, p_waic
+        return waic, waic_se, p_waic
     else:
-        return -2 * lppd + 2 * p_waic
+        return waic, waic_se
 
 
 def loo(trace, model=None, n_eff=False):
@@ -149,7 +156,6 @@ def loo(trace, model=None, n_eff=False):
     Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
     Pareto-smoothed importance sampling (PSIS).
-
     Parameters
     ----------
     trace : result of MCMC run
@@ -158,10 +164,10 @@ def loo(trace, model=None, n_eff=False):
     n_eff: bool
         if True the effective number parameters will be computed and returned.
         Default False
-
     Returns
     -------
     elpd_loo: log pointwise predictive density calculated via approximated LOO cross-validation
+    elpd_loo_se: standard error of waic elpd_loo
     p_loo: effective number parameters, only if n_eff True
     """
     model = modelcontext(model)
@@ -208,13 +214,18 @@ def loo(trace, model=None, n_eff=False):
     # Truncate weights to guarantee finite variance
     w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
 
-    loo_lppd = np.sum(np.log(np.sum(w * py, axis=0) / np.sum(w, axis=0)))
-
+    loo_lppd_i = -2 * np.log(np.sum(w * py, axis=0) / np.sum(w, axis=0))
+    
+    loo_lppd_se = np.sqrt(len(loo_lppd_i) * np.var(loo_lppd_i))
+    
+    loo_lppd = np.sum(loo_lppd_i)
+    
+    
     if n_eff:
         p_loo = np.sum(np.log(np.mean(py, axis=0))) - loo_lppd
-        return -2 * loo_lppd, p_loo
+        return loo_lppd, loo_lppd_se, p_loo
     else:
-        return -2 * loo_lppd
+        return loo_lppd, loo_lppd_se
 
 
 def bpic(trace, model=None):
