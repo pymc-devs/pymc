@@ -37,8 +37,7 @@ def test_plots_multidimensional():
         trace = sample(3000, step, start)
 
         traceplot(trace)
-        # forestplot(trace)
-        # autocorrplot(trace)
+        plot_posterior(trace)
 
 
 def test_multichain_plots():
