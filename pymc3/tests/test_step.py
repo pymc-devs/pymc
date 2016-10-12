@@ -114,10 +114,12 @@ class TestAssignStepMethods(unittest.TestCase):
         """Test categorical distribution is assigned categorical gibbs metropolis method"""
         with Model() as model:
             Categorical('x', np.array([0.25, 0.75]))
+            steps = assign_step_methods(model, [])
+        self.assertIsInstance(steps, BinaryGibbsMetropolis)
+        with Model() as model:
             Categorical('y', np.array([0.25, 0.70, 0.05]))
             steps = assign_step_methods(model, [])
-        self.assertIsInstance(steps[0], BinaryGibbsMetropolis)
-        self.assertIsInstance(steps[1], CategoricalGibbsMetropolis)
+        self.assertIsInstance(steps, CategoricalGibbsMetropolis)
 
     def test_binomial(self):
         """Test binomial distribution is assigned metropolis method."""
