@@ -241,7 +241,7 @@ class BinaryMetropolis(ArrayStep):
 
 
 class BinaryGibbsMetropolis(ArrayStep):
-    """Metropolis-Hastings optimized for binary variables"""
+    """A Metropolis-within-Gibbs step method optimized for binary variables"""
 
     def __init__(self, vars, order='random', model=None):
 
@@ -296,9 +296,12 @@ class BinaryGibbsMetropolis(ArrayStep):
         return Competence.INCOMPATIBLE
 
 class CategoricalGibbsMetropolis(ArrayStep):
-    """Metropolis-Hastings optimized for categorical variables. This step
-       method works for Bernoulli variables as well, but it is not optimized
-       for them, like BinaryGibbsMetropolis is.
+    """A Metropolis-within-Gibbs step method optimized for categorical variables.
+       This step method works for Bernoulli variables as well, but it is not
+       optimized for them, like BinaryGibbsMetropolis is. Step method supports
+       two types of proposals: A uniform proposal and a proportional proposal,
+       which was introduced by Liu in his 1996 technical report
+       "Metropolized Gibbs Sampler: An Improvement".
     """
 
     def __init__(self, vars, proposal='uniform', order='random', model=None):
@@ -366,25 +369,32 @@ class CategoricalGibbsMetropolis(ArrayStep):
             nr.shuffle(dimcats)
 
         q = np.copy(q0)
+        logp_curr = logp(q)
 
         for dim, k in dimcats:
-            self.metropolis_proportional(q, logp, dim, k)
+            logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
 
         return q
 
-    def metropolis_proportional(self, q, logp, dim, k):
+    def metropolis_proportional(self, q, logp, logp_curr, dim, k):
         given_cat = int(q[dim])
-        log_probs = -np.inf * np.ones(k)
+        log_probs = np.zeros(k)
+        log_probs[given_cat] = logp_curr
         candidates = list(range(k))
         for candidate_cat in candidates:
             if candidate_cat != given_cat:
                 q[dim] = candidate_cat
                 log_probs[candidate_cat] = logp(q)
         probs = softmax(log_probs)
-        q[dim] = nr.choice(candidates, p = probs)
-        accept_ratio = (1.0 - probs[given_cat]) / (1.0 - probs[int(q[dim])])
+        prob_curr, probs[given_cat] = probs[given_cat], 0.0
+        probs /= (1.0 - prob_curr)
+        proposed_cat = nr.choice(candidates, p = probs)
+        accept_ratio = (1.0 - prob_curr) / (1.0 - probs[proposed_cat])
         if not np.isfinite(accept_ratio) or nr.uniform() >= accept_ratio:
             q[dim] = given_cat
+            return logp_curr
+        q[dim] = proposed_cat
+        return log_probs[proposed_cat]
 
     @staticmethod
     def competence(var):

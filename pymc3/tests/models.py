@@ -1,4 +1,4 @@
-from pymc3 import Model, Normal, Metropolis
+from pymc3 import Model, Normal, Categorical, Metropolis
 import numpy as np
 import pymc3 as pm
 from itertools import product
@@ -12,6 +12,17 @@ def simple_model():
         Normal('x', mu, tau=tau, shape=2, testval=[.1] * 2)
 
     return model.test_point, model, (mu, tau ** -1)
+
+
+def simple_categorical():
+    p = np.array([0.1, 0.2, 0.3, 0.4])
+    v = np.array([0.0, 1.0, 2.0, 3.0])
+    with Model() as model:
+        Categorical('x', p, shape = 3, testval = [1, 2, 3])
+
+    mu = np.dot(p, v)
+    var = np.dot(p, (v - mu) ** 2)
+    return model.test_point, model, (mu, var)
 
 
 def multidimensional_model():
