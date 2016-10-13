@@ -25,14 +25,16 @@ def bound(logp, *conditions):
     logp if all conditions are true
     -inf if some are false
     """
-    return tt.switch(alltrue(conditions), logp, -np.inf)
+    alltrue = tt.all([eval_condition(cond) for cond in conditions])
+
+    return tt.switch(alltrue, logp, -np.inf)
 
 
-def alltrue(vals):
-    ret = 1
-    for c in vals:
-        ret = ret * (1 * c)
-    return ret
+def eval_condition(cond):
+    try:
+        return tt.all(cond)
+    except tt.AsTensorError:
+        return tt.all(1 * cond)
 
 
 def logpow(x, m):
