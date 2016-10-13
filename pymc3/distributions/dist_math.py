@@ -33,8 +33,8 @@ def bound(logp, *conditions):
 def eval_condition(cond):
     try:
         return tt.all(cond)
-    except AsTensorError:
-        return bool(cond)
+    except tt.AsTensorError:
+        return tt.all(1 * cond)
 
 
 def logpow(x, m):
