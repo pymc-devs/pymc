@@ -1,11 +1,12 @@
 import unittest
 
 from .checks import close_to
-from .models import mv_simple, mv_simple_discrete, simple_2model
+from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
-from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, Metropolis, Constant, Slice,
-                                CompoundStep, MultivariateNormalProposal, HamiltonianMC)
+from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
+                                Metropolis, Constant, Slice, CompoundStep,
+                                MultivariateNormalProposal, HamiltonianMC)
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
 from numpy.testing import assert_almost_equal
 import numpy as np
@@ -52,6 +53,21 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
             trace = sample(20000, step=step, start=start, model=model, random_seed=1)
             self.check_stat(check, trace)
 
+    def test_step_categorical(self):
+        start, model, (mu, C) = simple_categorical()
+        unc = C ** .5
+        check = (('x', np.mean, mu, unc / 10.),
+                 ('x', np.std, unc, unc / 10.))
+        with model:
+            steps = (
+                CategoricalGibbsMetropolis(model.x, proposal = 'uniform'),
+                CategoricalGibbsMetropolis(model.x, proposal = 'proportional'),
+            )
+        for step in steps:
+            trace = sample(8000, step=step, start=start, model=model, random_seed=1)
+            self.check_stat(check, trace)
+
+
     def test_constant_step(self):
         with Model():
             x = Normal('x', 0, 1)
@@ -95,17 +111,15 @@ class TestAssignStepMethods(unittest.TestCase):
         self.assertIsInstance(steps, NUTS)
 
     def test_categorical(self):
-        """Test categorical distribution is assigned binary gibbs metropolis method"""
+        """Test categorical distribution is assigned categorical gibbs metropolis method"""
         with Model() as model:
             Categorical('x', np.array([0.25, 0.75]))
             steps = assign_step_methods(model, [])
         self.assertIsInstance(steps, BinaryGibbsMetropolis)
-
-    # with Model() as model:
-    #     x = Categorical('x', np.array([0.25, 0.70, 0.05]))
-    #     steps = assign_step_methods(model, [])
-    #
-    #     assert isinstance(steps, ElemwiseCategoricalStep)
+        with Model() as model:
+            Categorical('y', np.array([0.25, 0.70, 0.05]))
+            steps = assign_step_methods(model, [])
+        self.assertIsInstance(steps, CategoricalGibbsMetropolis)
 
     def test_binomial(self):
         """Test binomial distribution is assigned metropolis method."""
