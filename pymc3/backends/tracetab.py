@@ -23,7 +23,7 @@ def trace_to_dataframe(trace, chains=None, flat_names=None, hide_transformed_var
     if flat_names is None:
         flat_names = {v: create_flat_names(v, shape)
                       for v, shape in var_shapes.items()
-                      if not hide_transformed_vars or not v.endswith('_')}
+                      if not (hide_transformed_vars and v.endswith('_'))}
 
     var_dfs = []
     for varname, shape in var_shapes.items():
