@@ -2344,30 +2344,24 @@ Read more theory here - in a paper by some of the leading authorities on Model S
 <dl class="function">
 <dt id="pymc3.stats.waic">
 <code class="descclassname">pymc3.stats.</code><code class="descname">waic</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em>, <em>n_eff=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.waic" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculate the widely available information criterion and the effective number of parameters of the samples in trace from model.
-Read more theory here - in a paper by some of the leading authorities on Model Selection - dx.doi.org/10.1111/1467-9868.00353</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>trace</strong> : result of MCMC run</p>
-<p><strong>model</strong> : PyMC Model</p>
+<dd><p>Calculate the widely available information criterion, its standard error 
+and the effective number of parameters of the samples in trace from model.
+Read more theory here - in a paper by some of the leading authorities on 
+Model Selection - dx.doi.org/10.1111/1467-9868.00353
+Parameters
+&#8212;&#8212;&#8212;-
+trace : result of MCMC run
+model : PyMC Model</p>
 <blockquote>
-<div><p>Optional model. Default None, taken from context.</p>
-</div></blockquote>
-<p><strong>n_eff: bool</strong></p>
-<blockquote>
-<div><p>if True the effective number parameters will be returned.
-Default False</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">waic: widely available information criterion</p>
-<p class="last">p_waic: effective number parameters, only if n_eff True</p>
-</td>
-</tr>
-</tbody>
-</table>
+<div>Optional model. Default None, taken from context.</div></blockquote>
+<dl class="docutils">
+<dt>n_eff: bool</dt>
+<dd>if True the effective number parameters will be returned.
+Default False</dd>
+</dl>
+<p>waic: widely available information criterion
+waic_se: standard error of waic
+p_waic: effective number parameters, only if n_eff True</p>
 </dd></dl>
 
 <dl class="function">
@@ -2375,29 +2369,21 @@ Default False</p>
 <code class="descclassname">pymc3.stats.</code><code class="descname">loo</code><span class="sig-paren">(</span><em>trace</em>, <em>model=None</em>, <em>n_eff=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.stats.loo" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculates leave-one-out (LOO) cross-validation for out of sample predictive
 model fit, following Vehtari et al. (2015). Cross-validation is computed using
-Pareto-smoothed importance sampling (PSIS).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>trace</strong> : result of MCMC run</p>
-<p><strong>model</strong> : PyMC Model</p>
+Pareto-smoothed importance sampling (PSIS).
+Parameters
+&#8212;&#8212;&#8212;-
+trace : result of MCMC run
+model : PyMC Model</p>
 <blockquote>
-<div><p>Optional model. Default None, taken from context.</p>
-</div></blockquote>
-<p><strong>n_eff: bool</strong></p>
-<blockquote>
-<div><p>if True the effective number parameters will be computed and returned.
-Default False</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">elpd_loo: log pointwise predictive density calculated via approximated LOO cross-validation</p>
-<p class="last">p_loo: effective number parameters, only if n_eff True</p>
-</td>
-</tr>
-</tbody>
-</table>
+<div>Optional model. Default None, taken from context.</div></blockquote>
+<dl class="docutils">
+<dt>n_eff: bool</dt>
+<dd>if True the effective number parameters will be computed and returned.
+Default False</dd>
+</dl>
+<p>elpd_loo: log pointwise predictive density calculated via approximated LOO cross-validation
+elpd_loo_se: standard error of waic elpd_loo
+p_loo: effective number parameters, only if n_eff True</p>
 </dd></dl>
 
 <dl class="function">
@@ -2881,12 +2867,30 @@ and Categorical variables with k=1.</p>
 <dl class="class">
 <dt id="pymc3.step_methods.metropolis.BinaryGibbsMetropolis">
 <em class="property">class </em><code class="descclassname">pymc3.step_methods.metropolis.</code><code class="descname">BinaryGibbsMetropolis</code><span class="sig-paren">(</span><em>vars</em>, <em>order='random'</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.metropolis.BinaryGibbsMetropolis" title="Permalink to this definition">¶</a></dt>
-<dd><p>Metropolis-Hastings optimized for binary variables</p>
+<dd><p>A Metropolis-within-Gibbs step method optimized for binary variables</p>
 <dl class="staticmethod">
 <dt id="pymc3.step_methods.metropolis.BinaryGibbsMetropolis.competence">
 <em class="property">static </em><code class="descname">competence</code><span class="sig-paren">(</span><em>var</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.metropolis.BinaryGibbsMetropolis.competence" title="Permalink to this definition">¶</a></dt>
-<dd><p>BinaryMetropolis is only suitable for binary (bool)
-and Categorical variables with k=1.</p>
+<dd><p>BinaryMetropolis is only suitable for Bernoulli
+and Categorical variables with k=2.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.step_methods.metropolis.CategoricalGibbsMetropolis">
+<em class="property">class </em><code class="descclassname">pymc3.step_methods.metropolis.</code><code class="descname">CategoricalGibbsMetropolis</code><span class="sig-paren">(</span><em>vars</em>, <em>proposal='uniform'</em>, <em>order='random'</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.metropolis.CategoricalGibbsMetropolis" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Metropolis-within-Gibbs step method optimized for categorical variables.
+This step method works for Bernoulli variables as well, but it is not
+optimized for them, like BinaryGibbsMetropolis is. Step method supports
+two types of proposals: A uniform proposal and a proportional proposal,
+which was introduced by Liu in his 1996 technical report
+&#8220;Metropolized Gibbs Sampler: An Improvement&#8221;.</p>
+<dl class="staticmethod">
+<dt id="pymc3.step_methods.metropolis.CategoricalGibbsMetropolis.competence">
+<em class="property">static </em><code class="descname">competence</code><span class="sig-paren">(</span><em>var</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.step_methods.metropolis.CategoricalGibbsMetropolis.competence" title="Permalink to this definition">¶</a></dt>
+<dd><p>CategoricalGibbsMetropolis is only suitable for Bernoulli and
+Categorical variables.</p>
 </dd></dl>
 
 </dd></dl>

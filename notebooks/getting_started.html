@@ -788,7 +788,7 @@ of variable names to NumPy arrays of parameter values.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-{&#39;sigma_log_&#39;: array(-0.03278147017403066), &#39;alpha&#39;: array(0.9065985497559482), &#39;beta&#39;: array([ 0.94848602,  2.60705514])}
+{&#39;beta&#39;: array([ 0.94848602,  2.60705514]), &#39;alpha&#39;: array(0.9065985497559482), &#39;sigma_log_&#39;: array(-0.03278147017403066)}
 </pre></div></div>
 </div>
 <p>By default, <code class="docutils literal"><span class="pre">find_MAP</span></code> uses the Broyden–Fletcher–Goldfarb–Shanno
@@ -815,7 +815,7 @@ find the MAP.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-{&#39;sigma_log_&#39;: array(-0.030009775203258385), &#39;alpha&#39;: array(0.9090521898977764), &#39;beta&#39;: array([ 0.95140146,  2.61437458])}
+{&#39;beta&#39;: array([ 0.95140146,  2.61437458]), &#39;alpha&#39;: array(0.9090521898977764), &#39;sigma_log_&#39;: array(-0.030009775203258385)}
 </pre></div></div>
 </div>
 <p>It is important to note that the MAP estimate is not always reasonable,
@@ -928,7 +928,7 @@ context of the model.</p>
 Assigned NUTS to alpha
 Assigned NUTS to beta
 Assigned NUTS to sigma_log_
-100%|██████████| 2000/2000 [00:01&lt;00:00, 1486.43it/s]
+100%|██████████| 2000/2000 [00:01&lt;00:00, 1314.85it/s]
 </pre></div></div>
 </div>
 <p>The <code class="docutils literal"><span class="pre">sample</span></code> function runs the step method(s) assigned (or passed) to
@@ -955,7 +955,7 @@ match the shape of the variable. We can see the last 5 values for the
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([ 0.64715832,  0.85798378,  0.9764047 ,  0.94322879,  0.95066821])
+<span></span>array([ 0.94673726,  0.77287768,  1.03487944,  0.78195843,  1.03158494])
 </pre></div>
 </div>
 </div>
@@ -991,7 +991,7 @@ the <code class="docutils literal"><span class="pre">step</span></code> argument
 <div class="highlight"><pre>
 Assigned NUTS to alpha
 Assigned NUTS to beta
-100%|██████████| 5000/5000 [00:05&lt;00:00, 890.21it/s]
+100%|██████████| 5000/5000 [00:05&lt;00:00, 894.31it/s]
 </pre></div></div>
 </div>
 </div>
@@ -1051,13 +1051,13 @@ alpha:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.906            0.104            0.001            [0.708, 1.112]
+  0.907            0.099            0.001            [0.713, 1.105]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.703          0.837          0.907          0.977          1.110
+  0.711          0.839          0.906          0.972          1.104
 
 
 beta:
@@ -1065,15 +1065,15 @@ beta:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.949            0.091            0.001            [0.773, 1.127]
-  2.604            0.535            0.007            [1.562, 3.652]
+  0.948            0.086            0.001            [0.781, 1.114]
+  2.614            0.513            0.005            [1.624, 3.659]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.773          0.888          0.949          1.011          1.127
-  1.563          2.231          2.598          2.972          3.662
+  0.780          0.890          0.949          1.009          1.114
+  1.591          2.279          2.613          2.959          3.633
 
 
 sigma:
@@ -1081,13 +1081,13 @@ sigma:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.992            0.071            0.001            [0.853, 1.129]
+  0.990            0.072            0.001            [0.852, 1.130]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.864          0.941          0.988          1.036          1.141
+  0.861          0.938          0.985          1.038          1.143
 
 </pre></div></div>
 </div>
@@ -1275,8 +1275,8 @@ random variables (mostly from <code class="docutils literal"><span class="pre">s
 scaling. The MAP as found by <code class="docutils literal"><span class="pre">find_MAP()</span></code> is in our experience a poor
 choice. Instead, we run automatic differentiation variational inference
 (ADVI) to get a variational estimate of the posterior mean as well as
-the posterior variances. We can use these estimates to initialize NUTS
-to achieve faster sampling due to better scaling.</p>
+the posterior standard deviations. We can use these estimates to
+initialize NUTS to achieve faster sampling due to better scaling.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
@@ -1288,7 +1288,7 @@ to achieve faster sampling due to better scaling.</p>
 <span class="kn">import</span> <span class="nn">scipy</span>
 <span class="k">with</span> <span class="n">sp500_model</span><span class="p">:</span>
     <span class="n">mu</span><span class="p">,</span> <span class="n">sds</span><span class="p">,</span> <span class="n">elbo</span> <span class="o">=</span> <span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">sp500_model</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">sds</span><span class="p">),</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">sp500_model</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">sds</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
@@ -1299,17 +1299,17 @@ to achieve faster sampling due to better scaling.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -588731.82
-Iteration 10000 [10%]: Average ELBO = -26455.28
-Iteration 20000 [20%]: Average ELBO = -266.21
-Iteration 30000 [30%]: Average ELBO = 129.92
-Iteration 40000 [40%]: Average ELBO = 519.16
-Iteration 50000 [50%]: Average ELBO = 766.41
-Iteration 60000 [60%]: Average ELBO = 853.22
-Iteration 70000 [70%]: Average ELBO = 874.06
-Iteration 80000 [80%]: Average ELBO = 879.66
-Iteration 90000 [90%]: Average ELBO = 881.47
-Finished [100%]: Average ELBO = 882.19
+Iteration 0 [0%]: ELBO = -60151.01
+Iteration 10000 [10%]: Average ELBO = -32763.07
+Iteration 20000 [20%]: Average ELBO = -266.02
+Iteration 30000 [30%]: Average ELBO = 130.94
+Iteration 40000 [40%]: Average ELBO = 520.74
+Iteration 50000 [50%]: Average ELBO = 767.25
+Iteration 60000 [60%]: Average ELBO = 853.8
+Iteration 70000 [70%]: Average ELBO = 874.46
+Iteration 80000 [80%]: Average ELBO = 879.28
+Iteration 90000 [90%]: Average ELBO = 881.4
+Finished [100%]: Average ELBO = 882.11
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
@@ -1317,7 +1317,7 @@ Finished [100%]: Average ELBO = 882.19
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 2000/2000 [00:36&lt;00:00, 54.18it/s]
+100%|██████████| 2000/2000 [02:09&lt;00:00, 11.58it/s]
 </pre></div></div>
 </div>
 <p>We can check our samples by looking at the traceplot for <code class="docutils literal"><span class="pre">nu</span></code> and
@@ -1364,7 +1364,7 @@ more darkly.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x7f042858f5c0&gt;
+<span></span>&lt;matplotlib.legend.Legend at 0x7f7ca5a0b438&gt;
 </pre></div>
 </div>
 </div>
@@ -1420,7 +1420,7 @@ data, use multiple samplers and sample from discrete random variables.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x7f04241441d0&gt;
+<span></span>&lt;matplotlib.text.Text at 0x7f7ca087aac8&gt;
 </pre></div>
 </div>
 </div>
@@ -1535,7 +1535,7 @@ function in a list. Each new sample is generated by first applying
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 10000/10000 [00:07&lt;00:00, 1250.58it/s]
+100%|██████████| 10000/10000 [00:07&lt;00:00, 1277.29it/s]
 </pre></div></div>
 </div>
 <p>In the trace plot below we can see that there&#8217;s about a 10 year span
@@ -1718,7 +1718,7 @@ Assigned NUTS to Intercept
 Assigned NUTS to x1
 Assigned NUTS to x2
 Assigned NUTS to sd_log_
-100%|██████████| 5000/5000 [00:04&lt;00:00, 1213.37it/s]
+100%|██████████| 5000/5000 [00:04&lt;00:00, 1203.77it/s]
 </pre></div></div>
 </div>
 <p>The error distribution, if not specified via the <code class="docutils literal"><span class="pre">family</span></code> argument, is
@@ -1779,7 +1779,7 @@ get too large to be held in memory we could use the <code class="docutils litera
 <div class="stderr container">
 <div class="highlight"><pre>
 Applied logodds-transform to p and added transformed p_logodds_ to model.
-100%|██████████| 5000/5000 [00:03&lt;00:00, 1419.70it/s]
+100%|██████████| 5000/5000 [00:04&lt;00:00, 1138.49it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -1803,13 +1803,13 @@ x1:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.001            0.133            0.002            [-0.251, 0.261]
+  0.001            0.130            0.001            [-0.244, 0.263]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  -0.253         -0.090         0.001          0.091          0.260
+  -0.251         -0.088         0.001          0.090          0.257
 
 </pre></div></div>
 </div>

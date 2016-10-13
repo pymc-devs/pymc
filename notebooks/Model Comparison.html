@@ -363,10 +363,11 @@ deviations in the 8 schools.</p>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Assigned NUTS to mu
- [-----------------100%-----------------] 2000 of 2000 complete in 0.5 sec
+WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
+WARNING:theano.tensor.blas:We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
+100%|██████████| 2000/2000 [00:00&lt;00:00, 3510.88it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -389,7 +390,7 @@ Assigned NUTS to mu
 </div>
 <div class="section" id="Hierarchical-model">
 <h2>Hierarchical model<a class="headerlink" href="#Hierarchical-model" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
@@ -407,14 +408,6 @@ Assigned NUTS to mu
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied log-transform to tau and added transformed tau_log to model.
-</pre></div></div>
-</div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
@@ -429,12 +422,9 @@ Applied log-transform to tau and added transformed tau_log to model.
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Assigned NUTS to eta
-Assigned NUTS to mu
-Assigned NUTS to tau_log
- [-----------------100%-----------------] 2000 of 2000 complete in 2.8 sec
+100%|██████████| 2000/2000 [00:02&lt;00:00, 679.76it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -499,7 +489,7 @@ parameters to correct for bias.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>90.820836187192754
+<span></span>90.928576354546024
 </pre></div>
 </div>
 </div>
@@ -516,27 +506,13 @@ parameters to correct for bias.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-/Users/fonnescj/Repositories/pymc3/pymc3/stats.py:92: UserWarning:
-            DIC estimates are biased for models that include transformed random variables.
-            See https://github.com/pymc-devs/pymc3/issues/789.
-            The following random variables are the result of transformations:
-            tau_log
-
-  &#34;&#34;&#34;.format(&#39;, &#39;.join(rv.name for rv in transformed_rvs)))
-</pre></div></div>
-</div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[11]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>129.09933793995285
+<span></span>124.78826230698768
 </pre></div>
 </div>
 </div>
@@ -554,9 +530,9 @@ parameters to adjust for overfitting.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
-    <span class="n">pooled_waic</span> <span class="o">=</span> <span class="n">waic</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
+    <span class="n">pooled_waic</span><span class="p">,</span> <span class="n">pooled_waic_se</span> <span class="o">=</span> <span class="n">waic</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
 
-<span class="n">pooled_waic</span>
+<span class="n">pooled_waic</span><span class="p">,</span> <span class="n">pooled_waic_se</span>
 </pre></div>
 </div>
 </div>
@@ -566,7 +542,7 @@ parameters to adjust for overfitting.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>61.079357411617409
+<span></span>(61.19519094778147, 2.1980669582811139)
 </pre></div>
 </div>
 </div>
@@ -577,25 +553,11 @@ parameters to adjust for overfitting.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
-    <span class="n">hierarchical_waic</span> <span class="o">=</span> <span class="n">waic</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
+    <span class="n">hierarchical_waic</span><span class="p">,</span> <span class="n">hierarchical_waic_se</span> <span class="o">=</span> <span class="n">waic</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
 
-<span class="n">hierarchical_waic</span>
+<span class="n">hierarchical_waic</span><span class="p">,</span> <span class="n">hierarchical_waic_se</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-/Users/fonnescj/Repositories/pymc3/pymc3/stats.py:121: UserWarning:
-            WAIC estimates are biased for models that include transformed random variables.
-            See https://github.com/pymc-devs/pymc3/issues/789.
-            The following random variables are the result of transformations:
-            tau_log
-
-  &#34;&#34;&#34;.format(&#39;, &#39;.join(rv.name for rv in transformed_rvs)))
-</pre></div></div>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -603,8 +565,34 @@ parameters to adjust for overfitting.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>61.54556775762817
+<span></span>(61.503344897536387, 2.0280476219107615)
 </pre></div>
+</div>
+</div>
+<p>For WAIC PyMC3 reports a point estimate together its standard error. The
+standard error can be useful to assess the uncertainty of the WAIC
+estimates. Nevertheless, caution need to be taken because the estimation
+of the standard error assumes normality and hence could be problematic
+when the sample size is low.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">pooled_waic</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">pooled_waic_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">hierarchical_waic</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">hierarchical_waic_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;WAIC&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;pooled&#39;</span><span class="p">,</span> <span class="s1">&#39;hierarchical&#39;</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_20_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_20_0.png" />
 </div>
 </div>
 </div>
@@ -619,49 +607,14 @@ corrected using Pareto-smoothed importance sampling (PSIS) to provide an
 estimate of pointwise out-of-sample prediction accuracy.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
-    <span class="n">pooled_loo</span> <span class="o">=</span> <span class="n">loo</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
-
-<span class="n">pooled_loo</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-/Users/fonnescj/Repositories/pymc3/pymc3/stats.py:158: UserWarning: Estimated shape parameter of Pareto distribution
-        is for one or more samples is greater than 0.5. This may indicate
-        that the variance of the Pareto smoothed importance sampling estimate
-        is very large.
-  is very large.&#34;&#34;&#34;)
-</pre></div></div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[14]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>-29.885359174300234
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [15]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
-    <span class="n">hierarchical_loo</span> <span class="o">=</span> <span class="n">loo</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
+<span></span><span class="k">with</span> <span class="n">pooled</span><span class="p">:</span>
+    <span class="n">pooled_loo</span><span class="p">,</span> <span class="n">pooled_loo_se</span> <span class="o">=</span> <span class="n">loo</span><span class="p">(</span><span class="n">trace_p</span><span class="p">)</span>
 
-<span class="n">hierarchical_loo</span>
+<span class="n">pooled_loo</span><span class="p">,</span> <span class="n">pooled_loo_se</span>
 </pre></div>
 </div>
 </div>
@@ -670,7 +623,7 @@ estimate of pointwise out-of-sample prediction accuracy.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-/Users/fonnescj/Repositories/pymc3/pymc3/stats.py:158: UserWarning: Estimated shape parameter of Pareto distribution
+/home/osvaldo/anaconda3/lib/python3.5/site-packages/pymc3/stats.py:192: UserWarning: Estimated shape parameter of Pareto distribution
         is for one or more samples is greater than 0.5. This may indicate
         that the variance of the Pareto smoothed importance sampling estimate
         is very large.
@@ -683,8 +636,65 @@ estimate of pointwise out-of-sample prediction accuracy.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>-29.781009435144412
+<span></span>(59.796215810927023, 2.0067514127136565)
 </pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">hierarchical</span><span class="p">:</span>
+    <span class="n">hierarchical_loo</span><span class="p">,</span> <span class="n">hierarchical_loo_se</span>  <span class="o">=</span> <span class="n">loo</span><span class="p">(</span><span class="n">trace_h</span><span class="p">)</span>
+
+<span class="n">hierarchical_loo</span><span class="p">,</span> <span class="n">hierarchical_loo_se</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/home/osvaldo/anaconda3/lib/python3.5/site-packages/pymc3/stats.py:192: UserWarning: Estimated shape parameter of Pareto distribution
+        is for one or more samples is greater than 0.5. This may indicate
+        that the variance of the Pareto smoothed importance sampling estimate
+        is very large.
+  is very large.&#34;&#34;&#34;)
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[16]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>(59.411244130649877, 1.8240316214171435)
+</pre></div>
+</div>
+</div>
+<p>For LOO we can also make a similar plot to the one we did for WAIC</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">pooled_loo</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">pooled_loo_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="n">hierarchical_loo</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xerr</span><span class="o">=</span><span class="n">hierarchical_loo_se</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;LOO&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;pooled&#39;</span><span class="p">,</span> <span class="s1">&#39;hierarchical&#39;</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_25_0.png" src="notebooks/../_build/doctrees/nbsphinx/notebooks_ModelComparison_25_0.png" />
 </div>
 </div>
 </div>

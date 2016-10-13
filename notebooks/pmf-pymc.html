@@ -492,7 +492,7 @@ what it looks like and a sense for what sort of patterns it might
 contain.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [1]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -500,20 +500,22 @@ contain.</p>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="n">DATA_DIR</span> <span class="o">=</span> <span class="s1">&#39;../data/pmf&#39;</span>
 
-
-<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;../data/jester-dataset-v1-dense-first-1000.csv&#39;</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="s1">&#39;jester-dataset-v1-dense-first-1000.csv&#39;</span><span class="p">))</span>
 <span class="n">data</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[14]:
+<span></span>Out[1]:
 </pre></div>
 </div>
 <div class="container">
-<div style="max-height:1000px;max-width:1500px;overflow:auto;">
+<div>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -544,33 +546,33 @@ contain.</p>
   <tbody>
     <tr>
       <th>0</th>
-      <td> 4.08</td>
+      <td>4.08</td>
       <td>-0.29</td>
-      <td> 6.36</td>
-      <td> 4.37</td>
+      <td>6.36</td>
+      <td>4.37</td>
       <td>-2.38</td>
       <td>-9.66</td>
       <td>-0.73</td>
       <td>-5.34</td>
-      <td> 8.88</td>
-      <td> 9.22</td>
+      <td>8.88</td>
+      <td>9.22</td>
       <td>...</td>
-      <td> 2.82</td>
+      <td>2.82</td>
       <td>-4.95</td>
       <td>-0.29</td>
-      <td> 7.86</td>
+      <td>7.86</td>
       <td>-0.19</td>
       <td>-2.14</td>
-      <td> 3.06</td>
-      <td> 0.34</td>
+      <td>3.06</td>
+      <td>0.34</td>
       <td>-4.32</td>
-      <td> 1.07</td>
+      <td>1.07</td>
     </tr>
     <tr>
       <th>1</th>
       <td>-6.17</td>
       <td>-3.54</td>
-      <td> 0.44</td>
+      <td>0.44</td>
       <td>-8.50</td>
       <td>-7.09</td>
       <td>-4.32</td>
@@ -585,34 +587,34 @@ contain.</p>
       <td>-2.96</td>
       <td>-2.18</td>
       <td>-3.35</td>
-      <td> 0.05</td>
+      <td>0.05</td>
       <td>-9.08</td>
       <td>-5.05</td>
       <td>-3.45</td>
     </tr>
     <tr>
       <th>2</th>
-      <td> 6.84</td>
-      <td> 3.16</td>
-      <td> 9.17</td>
+      <td>6.84</td>
+      <td>3.16</td>
+      <td>9.17</td>
       <td>-6.21</td>
       <td>-8.16</td>
       <td>-1.70</td>
-      <td> 9.27</td>
-      <td> 1.41</td>
+      <td>9.27</td>
+      <td>1.41</td>
       <td>-5.19</td>
       <td>-4.42</td>
       <td>...</td>
-      <td> 7.23</td>
+      <td>7.23</td>
       <td>-1.12</td>
       <td>-0.10</td>
       <td>-5.68</td>
       <td>-3.16</td>
       <td>-3.35</td>
-      <td> 2.14</td>
+      <td>2.14</td>
       <td>-0.05</td>
-      <td> 1.31</td>
-      <td> 0.00</td>
+      <td>1.31</td>
+      <td>0.00</td>
     </tr>
     <tr>
       <th>3</th>
@@ -627,9 +629,9 @@ contain.</p>
       <td>-7.86</td>
       <td>-1.60</td>
       <td>...</td>
-      <td> 4.37</td>
+      <td>4.37</td>
       <td>-0.29</td>
-      <td> 4.17</td>
+      <td>4.17</td>
       <td>-0.29</td>
       <td>-0.29</td>
       <td>-0.29</td>
@@ -640,27 +642,27 @@ contain.</p>
     </tr>
     <tr>
       <th>4</th>
-      <td> 1.31</td>
-      <td> 1.80</td>
-      <td> 2.57</td>
+      <td>1.31</td>
+      <td>1.80</td>
+      <td>2.57</td>
       <td>-2.38</td>
-      <td> 0.73</td>
-      <td> 0.73</td>
+      <td>0.73</td>
+      <td>0.73</td>
       <td>-0.97</td>
-      <td> 5.00</td>
+      <td>5.00</td>
       <td>-7.23</td>
       <td>-1.36</td>
       <td>...</td>
-      <td> 1.46</td>
-      <td> 1.70</td>
-      <td> 0.29</td>
+      <td>1.46</td>
+      <td>1.70</td>
+      <td>0.29</td>
       <td>-3.30</td>
-      <td> 3.45</td>
-      <td> 5.44</td>
-      <td> 4.08</td>
-      <td> 2.48</td>
-      <td> 4.51</td>
-      <td> 4.66</td>
+      <td>3.45</td>
+      <td>5.44</td>
+      <td>4.08</td>
+      <td>2.48</td>
+      <td>4.51</td>
+      <td>4.66</td>
     </tr>
   </tbody>
 </table>
@@ -669,7 +671,7 @@ contain.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [63]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -699,7 +701,7 @@ contain.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [64]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -709,7 +711,7 @@ contain.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[64]:
+<span></span>Out[3]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -731,7 +733,7 @@ more likely than negative ratings. Let&#8217;s look at the means for each joke
 to see if we have any particularly good (or bad) humor here.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [120]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -743,11 +745,11 @@ to see if we have any particularly good (or bad) humor here.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[120]:
+<span></span>Out[4]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7fc46a3c5fd0&gt;
+<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x10dd34470&gt;
 </pre></div>
 </div>
 </div>
@@ -763,30 +765,21 @@ users, there are definitely a few that stand out as poor humor. Let&#8217;s
 take a look at the worst and best joke, just for fun.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [66]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">os</span>
-
+<span></span><span class="kn">import</span> <span class="nn">json</span>
 <span class="c1"># Worst and best joke?</span>
 <span class="n">worst_joke_id</span> <span class="o">=</span> <span class="n">joke_means</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span>
 <span class="n">best_joke_id</span> <span class="o">=</span> <span class="n">joke_means</span><span class="o">.</span><span class="n">argmax</span><span class="p">()</span>
 
 <span class="c1"># Let&#39;s see for ourselves. Load the jokes.</span>
-<span class="n">joke_dir</span> <span class="o">=</span> <span class="s1">&#39;../data/jokes&#39;</span>
-<span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">joke_dir</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span> <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">joke_dir</span><span class="p">)]</span>
-<span class="n">jokes</span> <span class="o">=</span> <span class="p">[</span><span class="n">fname</span> <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="n">fname</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;txt&#39;</span><span class="p">)]</span>
-<span class="n">nums</span> <span class="o">=</span> <span class="p">[</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">isdigit</span><span class="p">(),</span> <span class="n">fname</span><span class="p">)</span> <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">jokes</span><span class="p">]</span>
-<span class="n">joke_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nums</span><span class="p">,</span> <span class="n">jokes</span><span class="p">)}</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="s1">&#39;jokes.json&#39;</span><span class="p">))</span> <span class="k">as</span> <span class="n">buff</span><span class="p">:</span>
+    <span class="n">joke_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">buff</span><span class="p">)</span>
 
-<span class="k">def</span> <span class="nf">read_joke</span><span class="p">(</span><span class="n">joke_id</span><span class="p">):</span>
-    <span class="n">fname</span> <span class="o">=</span> <span class="n">joke_dict</span><span class="p">[</span><span class="n">joke_id</span><span class="p">]</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-
-<span class="k">print</span> <span class="s1">&#39;The worst joke:</span><span class="se">\n</span><span class="s1">---------------</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">read_joke</span><span class="p">(</span><span class="n">worst_joke_id</span><span class="p">)</span>
-<span class="k">print</span> <span class="s1">&#39;The best joke:</span><span class="se">\n</span><span class="s1">--------------</span><span class="se">\n</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">read_joke</span><span class="p">(</span><span class="n">best_joke_id</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;The worst joke:</span><span class="se">\n</span><span class="s1">---------------</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">joke_dict</span><span class="p">[</span><span class="n">worst_joke_id</span><span class="p">])</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;The best joke:</span><span class="se">\n</span><span class="s1">--------------</span><span class="se">\n</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">joke_dict</span><span class="p">[</span><span class="n">best_joke_id</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
@@ -797,21 +790,30 @@ take a look at the worst and best joke, just for fun.</p>
 <div class="highlight"><pre>
 The worst joke:
 ---------------
-A Joke
 How many teddybears does it take to change a lightbulb?
+
 It takes only one teddybear, but it takes a whole lot of lightbulbs.
+
 
 The best joke:
 --------------
-A Joke
-A radio conversation of a US naval ship with Canadian authorities ...
+*A radio conversation of a US naval
+ship with Canadian authorities ... *
 
-Americans: Please divert your course 15 degrees to the North to avoid a collision.
-Canadians: Recommend you divert YOUR course 15 degrees to the South to avoid a collision.
-Americans: This is the Captain of a US Navy ship.  I say again, divert YOUR course.
-Canadians: No. I say again, you divert YOUR course.
+Americans: Please divert your course 15 degrees to the North to avoid a
+collision.
+
+Canadians: Recommend you divert YOUR course 15 degrees to the South to
+avoid a collision.
+
+Americans: This is the Captain of a US Navy ship.  I say again, divert
+YOUR course.
+
+Canadians: No.  I say again, you divert YOUR course.
+
 Americans: This is the aircraft carrier USS LINCOLN, the second largest ship in the United States&#39; Atlantic Fleet. We are accompanied by three destroyers, three cruisers and numerous support vessels. I demand that you change your course 15 degrees north, that&#39;s ONE FIVE DEGREES NORTH, or counter-measures will be undertaken to ensure the safety of this ship.
-Canadians: This is a lighthouse. Your call.
+
+Canadians: *This is a lighthouse.  Your call*.
 
 </pre></div></div>
 </div>
@@ -823,16 +825,25 @@ might be the case that some users are simply more easily humored than
 others. Let&#8217;s take a look.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [119]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">user_means</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 <span class="n">user_means</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
                 <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Mean Ratings for All 1000 Users&quot;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>  <span class="c1"># 1000 labels is nonsensical</span>
-<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[6]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>[]
 </pre></div>
 </div>
 </div>
@@ -840,7 +851,7 @@ others. Let&#8217;s take a look.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_pmf-pymc_11_0.png" src="../_images/notebooks_pmf-pymc_11_0.png" />
+<img alt="../_images/notebooks_pmf-pymc_11_1.png" src="../_images/notebooks_pmf-pymc_11_1.png" />
 </div>
 </div>
 <p>We see even more significant trends here. Some users rate nearly
@@ -899,12 +910,11 @@ in.</p>
 \[R_{ij}^* = \frac{1}{3} \left(\text{user_means}_i + \text{ joke_means}_j + \text{ global_mean} \right)\]</div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
-
 
 <span class="c1"># Create a base class with scaffolding for our 3 baselines.</span>
 
@@ -977,8 +987,8 @@ in.</p>
         <span class="n">item_means</span> <span class="o">=</span> <span class="n">masked_train</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">predicted</span> <span class="o">=</span> <span class="n">train_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="n">train_data</span><span class="o">.</span><span class="n">shape</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">isMA</span><span class="p">(</span><span class="n">item_means</span><span class="p">[</span><span class="n">j</span><span class="p">]):</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">predicted</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
                         <span class="p">(</span><span class="n">global_mean</span><span class="p">,</span> <span class="n">user_means</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
@@ -1043,9 +1053,9 @@ weight-sharing methods discussed by <a class="reference external" href="http://w
 1992</a> [4].
 However, for the purposes of this analysis, we will stick to using point
 estimates obtained from our data.</p>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1116,6 +1126,14 @@ estimates obtained from our data.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up with strange g++/OSX bugs.
+</pre></div></div>
+</div>
 <p>We&#8217;ll also need functions for calculating the MAP and performing
 sampling on our PMF model. When the observation noise variance
 <span class="math">\(\alpha\)</span> and the prior variances <span class="math">\(\alpha_U\)</span> and
@@ -1143,7 +1161,7 @@ PMF class is defined in pieces this way so I can say a few things
 between each piece to make it clearer.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1161,7 +1179,8 @@ between each piece to make it clearer.</p>
 <span class="sd">    the directory does not exist; an OSError will be raised if it does.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;writing numpy vars to directory: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">savedir</span><span class="p">)</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">savedir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">savedir</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">savedir</span><span class="p">)</span>
     <span class="n">shapes</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">varname</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">:</span>
         <span class="n">data</span> <span class="o">=</span> <span class="nb">vars</span><span class="p">[</span><span class="n">varname</span><span class="p">]</span>
@@ -1192,7 +1211,7 @@ between each piece to make it clearer.</p>
 <span class="c1"># Now define the MAP estimation infrastructure.</span>
 <span class="k">def</span> <span class="nf">_map_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="n">basename</span> <span class="o">=</span> <span class="s1">&#39;pmf-map-d</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span>
-    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">basename</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="n">basename</span><span class="p">)</span>
 
 <span class="k">def</span> <span class="nf">_find_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Find mode of posterior using Powell optimization.&quot;&quot;&quot;</span>
@@ -1236,20 +1255,19 @@ sampler. We&#8217;ll need a sampling function in order to draw MCMC samples to
 approximate the posterior distribution of the PMF model.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Draw MCMC samples.</span>
 <span class="k">def</span> <span class="nf">_trace_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="n">basename</span> <span class="o">=</span> <span class="s1">&#39;pmf-mcmc-d</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span>
-    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">basename</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="n">basename</span><span class="p">)</span>
 
 <span class="k">def</span> <span class="nf">_draw_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nsamples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
     <span class="c1"># First make sure the trace_dir does not already exist.</span>
     <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trace_dir</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span>
-            <span class="s1">&#39;trace directory </span><span class="si">%s</span><span class="s1"> already exists. Please move or delete.&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">trace_dir</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trace_dir</span><span class="p">)</span>
     <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">map</span>  <span class="c1"># use our MAP as the starting point</span>
     <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">:</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;drawing </span><span class="si">%d</span><span class="s1"> samples using </span><span class="si">%d</span><span class="s1"> jobs&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">nsamples</span><span class="p">,</span> <span class="n">njobs</span><span class="p">))</span>
@@ -1291,7 +1309,7 @@ matrix given a <span class="math">\(U\)</span> and <span class="math">\(V\)</spa
 stored in the PMF object.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1300,8 +1318,8 @@ stored in the PMF object.</p>
     <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">V</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
     <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">shape</span>
     <span class="n">sample_R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
-        <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">std</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">m</span><span class="p">)]</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">std</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
     <span class="p">])</span>
 
     <span class="c1"># bound ratings</span>
@@ -1340,7 +1358,7 @@ RMSE = \sqrt{ \frac{ \sum_{i=1}^N \sum_{j=1}^M I_{ij} (R_{ij} - R_{ij}^*)^2 }
 our predictions from the actual user preferences.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1373,7 +1391,7 @@ to be able to idenfity which split is which, so we&#8217;ll take a hash of the
 indices selected for testing and use that to save the data.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1413,7 +1431,7 @@ indices selected for testing and use that to save the data.</p>
     <span class="c1"># Finally, hash the indices and save the train/test sets.</span>
     <span class="n">index_string</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">sample</span><span class="p">)))</span>
     <span class="n">name</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">index_string</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
-    <span class="n">savedir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="n">savedir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
     <span class="n">save_np_vars</span><span class="p">({</span><span class="s1">&#39;train&#39;</span><span class="p">:</span> <span class="n">train</span><span class="p">,</span> <span class="s1">&#39;test&#39;</span><span class="p">:</span> <span class="n">test</span><span class="p">},</span> <span class="n">savedir</span><span class="p">)</span>
 
     <span class="c1"># Return train set, test set, and unique hash of indices.</span>
@@ -1422,7 +1440,7 @@ indices selected for testing and use that to save the data.</p>
 
 <span class="k">def</span> <span class="nf">load_train_test</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Load the train/test sets.&quot;&quot;&quot;</span>
-    <span class="n">savedir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="n">savedir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
     <span class="nb">vars</span> <span class="o">=</span> <span class="n">load_np_vars</span><span class="p">(</span><span class="n">savedir</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">vars</span><span class="p">[</span><span class="s1">&#39;train&#39;</span><span class="p">],</span> <span class="nb">vars</span><span class="p">[</span><span class="s1">&#39;test&#39;</span><span class="p">]</span>
 
@@ -1434,7 +1452,7 @@ indices selected for testing and use that to save the data.</p>
 using the code above which we&#8217;ll now use for all the evaluations below.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<span></span>In [14]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1448,7 +1466,7 @@ using the code above which we&#8217;ll now use for all the evaluations below.</p
 <h2>Results<a class="headerlink" href="#Results" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<span></span>In [15]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1458,7 +1476,7 @@ using the code above which we&#8217;ll now use for all the evaluations below.</p
     <span class="n">Method</span> <span class="o">=</span> <span class="n">baseline_methods</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
     <span class="n">method</span> <span class="o">=</span> <span class="n">Method</span><span class="p">(</span><span class="n">train</span><span class="p">)</span>
     <span class="n">baselines</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="n">rmse</span><span class="p">(</span><span class="n">test</span><span class="p">)</span>
-    <span class="k">print</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> RMSE:</span><span class="se">\t</span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">baselines</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> RMSE:</span><span class="se">\t</span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">baselines</span><span class="p">[</span><span class="n">name</span><span class="p">]))</span>
 
 </pre></div>
 </div>
@@ -1468,7 +1486,7 @@ using the code above which we&#8217;ll now use for all the evaluations below.</p
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Uniform Random Baseline RMSE:   7.77062
+Uniform Random Baseline RMSE:   7.73126
 Global Mean Baseline RMSE:      5.25004
 Mean Of Means Baseline RMSE:    4.79832
 </pre></div></div>
@@ -1478,7 +1496,7 @@ mean baseline is next best, and the mean of means method is our best
 baseline. Now let&#8217;s see how PMF stacks up.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<span></span>In [16]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1515,34 +1533,23 @@ INFO:root:done building the PMF model
 <h3>Predictions Using MAP<a class="headerlink" href="#Predictions-Using-MAP" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [81]:
+<span></span>In [17]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Find MAP for PMF.</span>
 <span class="n">pmf</span><span class="o">.</span><span class="n">find_map</span><span class="p">()</span>
-<span class="c1"># pmf.load_map()</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-INFO:root:finding MAP using Powell optimization...
-INFO:root:found MAP in 2575 seconds
-</pre></div></div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Optimization terminated successfully.
-         Current function value: 1553644.881552
-         Iterations: 33
-         Function evaluations: 1644948
+INFO:root:finding PMF MAP using Powell optimization...
+INFO:root:found PMF MAP in 400 seconds
+INFO:root:writing numpy vars to directory: ../data/pmf/pmf-map-d5
 </pre></div></div>
 </div>
 <p>Excellent. The first thing we want to do is make sure the MAP estimate
@@ -1558,7 +1565,7 @@ Some difference is always expected, but a very low RMSE on the training
 set with a high RMSE on the test set is a definite sign of overfitting.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [20]:
+<span></span>In [18]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1573,9 +1580,9 @@ set with a high RMSE on the test set is a definite sign of overfitting.</p>
     <span class="n">overfit</span> <span class="o">=</span> <span class="n">test_rmse</span> <span class="o">-</span> <span class="n">train_rmse</span>
 
     <span class="c1"># Print report.</span>
-    <span class="k">print</span> <span class="s1">&#39;PMF MAP training RMSE: </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">train_rmse</span>
-    <span class="k">print</span> <span class="s1">&#39;PMF MAP testing RMSE:  </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">test_rmse</span>
-    <span class="k">print</span> <span class="s1">&#39;Train/test difference: </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">overfit</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;PMF MAP training RMSE: </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">train_rmse</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;PMF MAP testing RMSE:  </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">test_rmse</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Train/test difference: </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">overfit</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">test_rmse</span>
 
@@ -1587,14 +1594,14 @@ set with a high RMSE on the test set is a definite sign of overfitting.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [21]:
+<span></span>In [19]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Evaluate PMF MAP estimates.</span>
 <span class="n">pmf_map_rmse</span> <span class="o">=</span> <span class="n">pmf</span><span class="o">.</span><span class="n">eval_map</span><span class="p">(</span><span class="n">train</span><span class="p">,</span> <span class="n">test</span><span class="p">)</span>
 <span class="n">pmf_improvement</span> <span class="o">=</span> <span class="n">baselines</span><span class="p">[</span><span class="s1">&#39;mom&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">pmf_map_rmse</span>
-<span class="k">print</span> <span class="s1">&#39;PMF MAP Improvement:   </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">pmf_improvement</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;PMF MAP Improvement:   </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">pmf_improvement</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1603,10 +1610,10 @@ set with a high RMSE on the test set is a definite sign of overfitting.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-PMF MAP training RMSE: 4.00824
-PMF MAP testing RMSE:  4.02974
-Train/test difference: 0.02150
-PMF MAP Improvement:   0.76858
+PMF MAP training RMSE: 3.98666
+PMF MAP testing RMSE:  4.24167
+Train/test difference: 0.25501
+PMF MAP Improvement:   0.55665
 </pre></div></div>
 </div>
 <p>So we see a pretty nice improvement here when compared to our best
@@ -1623,35 +1630,26 @@ sampling. We&#8217;ll draw 1000 samples and back them up using the
 <h3>Predictions using MCMC<a class="headerlink" href="#Predictions-using-MCMC" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [23]:
+<span></span>In [20]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Draw MCMC samples.</span>
-<span class="n">pmf</span><span class="o">.</span><span class="n">draw_samples</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">pmf</span><span class="o">.</span><span class="n">draw_samples</span><span class="p">(</span><span class="mi">300</span><span class="p">)</span>
 
 <span class="c1"># uncomment to load previous trace rather than drawing new samples.</span>
 <span class="c1"># pmf.load_trace()</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
+<div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-INFO:root:drawing 5000 samples using 3 jobs
-/home/mack/anaconda/lib/python2.7/site-packages/theano/scan_module/scan_perform_ext.py:133: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
-  from scan_perform.scan_perform import *
-INFO:root:backing up trace to directory: data/pmf-mcmc-d5
-</pre></div></div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
- [-----------------100%-----------------] 5001 of 5000 complete in 7506.2 sec
+INFO:root:drawing 300 samples using 2 jobs
+INFO:root:backing up trace to directory: ../data/pmf/pmf-mcmc-d5
+100%|██████████| 300/300 [12:42&lt;00:00,  4.79s/it]
 </pre></div></div>
 </div>
 </div>
@@ -1672,7 +1670,7 @@ below. We will use <code class="docutils literal"><span class="pre">numpy</span>
 \|U\|_{Fro}^2 = \sqrt{\sum_{i=1}^N \sum_{d=1}^D |U_{id}|^2}, \hspace{40pt}
 \|V\|_{Fro}^2 = \sqrt{\sum_{j=1}^M \sum_{d=1}^D |V_{jd}|^2}</div><div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [35]:
+<span></span>In [21]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1710,7 +1708,7 @@ below. We will use <code class="docutils literal"><span class="pre">numpy</span>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [36]:
+<span></span>In [22]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1736,7 +1734,7 @@ train/test sets to see how aggregate performance improves or decreases
 as we continue to sample.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [42]:
+<span></span>In [23]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1773,7 +1771,7 @@ as we continue to sample.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [43]:
+<span></span>In [24]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1790,18 +1788,18 @@ as we continue to sample.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [45]:
+<span></span>In [25]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># And our final RMSE?</span>
 <span class="n">final_test_rmse</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;running-test&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 <span class="n">final_train_rmse</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;running-train&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-<span class="k">print</span> <span class="s1">&#39;Posterior predictive train RMSE: </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">final_train_rmse</span>
-<span class="k">print</span> <span class="s1">&#39;Posterior predictive test RMSE:  </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">final_test_rmse</span>
-<span class="k">print</span> <span class="s1">&#39;Train/test difference:           </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">final_test_rmse</span> <span class="o">-</span> <span class="n">final_train_rmse</span><span class="p">)</span>
-<span class="k">print</span> <span class="s1">&#39;Improvement from MAP:            </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pmf_map_rmse</span> <span class="o">-</span> <span class="n">final_test_rmse</span><span class="p">)</span>
-<span class="k">print</span> <span class="s1">&#39;Improvement from Mean of Means:  </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">baselines</span><span class="p">[</span><span class="s1">&#39;mom&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">final_test_rmse</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Posterior predictive train RMSE: </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">final_train_rmse</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Posterior predictive test RMSE:  </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">final_test_rmse</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Train/test difference:           </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">final_test_rmse</span> <span class="o">-</span> <span class="n">final_train_rmse</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Improvement from MAP:            </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pmf_map_rmse</span> <span class="o">-</span> <span class="n">final_test_rmse</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Improvement from Mean of Means:  </span><span class="si">%.5f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">baselines</span><span class="p">[</span><span class="s1">&#39;mom&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">final_test_rmse</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -1810,11 +1808,11 @@ as we continue to sample.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Posterior predictive train RMSE: 3.92230
-Posterior predictive test RMSE:  4.18027
-Train/test difference:           0.25797
-Improvement from MAP:            -0.15052
-Improvement from Mean of Means:  0.61806
+Posterior predictive train RMSE: 3.92281
+Posterior predictive test RMSE:  4.18080
+Train/test difference:           0.25799
+Improvement from MAP:            0.06087
+Improvement from Mean of Means:  0.61752
 </pre></div></div>
 </div>
 <p>We have some interesting results here. As expected, our MCMC sampler
@@ -1835,7 +1833,7 @@ precision <span class="math">\(\alpha\)</span> is likely different as well.</p>
 <p>Let&#8217;s summarize our results.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [67]:
+<span></span>In [26]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1857,11 +1855,11 @@ precision <span class="math">\(\alpha\)</span> is likely different as well.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[67]:
+<span></span>Out[26]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x7f5327451a10&gt;
+<span></span>&lt;matplotlib.text.Text at 0x14c703588&gt;
 </pre></div>
 </div>
 </div>
@@ -1938,6 +1936,16 @@ Factorization Using Markov Chain Monte Carlo,” in Proceedings of the
 25th International Conference on Machine Learning, New York, NY, USA,
 2008, pp. 880–887.</li>
 </ol>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
 </div>
 </div>
 
