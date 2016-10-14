@@ -1,8 +1,7 @@
-import unittest
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
 
+from .helpers import SeededTest
 from ..model import Model
 from ..step_methods import Slice, Metropolis, NUTS
 from ..distributions import Normal
@@ -12,7 +11,7 @@ from ..diagnostics import effective_n, geweke, gelman_rubin
 from .test_examples import build_disaster_model
 
 
-class TestGelmanRubin(unittest.TestCase):
+class TestGelmanRubin(SeededTest):
     good_ratio = 1.1
 
     def get_ptrace(self, n_samples):
@@ -85,7 +84,7 @@ class TestGelmanRubin(unittest.TestCase):
         self.test_right_shape_python_float(shape=1, test_shape=(1,))
 
 
-class TestDiagnostics(unittest.TestCase):
+class TestDiagnostics(SeededTest):
 
     def get_switchpoint(self, n_samples):
         model = build_disaster_model()
