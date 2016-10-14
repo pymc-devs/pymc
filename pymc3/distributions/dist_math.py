@@ -29,10 +29,7 @@ def bound(logp, *conditions):
 
 
 def alltrue(vals):
-    ret = 1
-    for c in vals:
-        ret = ret * (1 * c)
-    return ret
+    return tt.all([tt.all(1 * val) for val in vals])
 
 
 def logpow(x, m):
