@@ -1,21 +1,41 @@
 import numpy as np
 import theano.tensor as tt
 
-from .distribution import Continuous
+from ..math import logsumexp
+from .dist_math import bound
+from .distribution import Discrete, Distribution
 from .distributions.continuous import get_tau_sd
 
 
-class Mixture(Continuous):
+def all_discrete(comp_dists):
+    if isinstance(comp_dists, Distribution):
+        return isinstance(comp_dists, Discrete)
+    else:
+        return all(isinstance(comp_dist, Discrete) for comp_dist in comp_dists)
+
+
+class Mixture(Distribution):
     def __init__(self, w, comp_dists, *args, **kwargs):
-        super(Mixture, self).__init__(*args, **kwargs)
+        shape = kwargs.pop('shape', ())
+
+        if all_discrete(comp_dists):
+            dtype = kwargs.pop('dtype', 'int64')
+            defaults = kwargs.pop('defaults', ['mode'])
+        else:
+            dtype = kwargs.pop('dtype', 'float64')
+            defaults = kwargs.pop('defaults', ['mean', 'mode'])
+
+            self.mean = (w * comp_dists.mean).sum(axis=-1)
+
+        super(Mixture, self).__init__(shape, dtype, defaults=defaults,
+                                      *args, **kwargs)
         
         self.w = w
         self.comp_dists = comp_dists
-        
-        try:
-            self.mean = (w * comp_dists.mean).sum()
-        except AttributeError:
-            pass
+
+        comp_modes = self._comp_modes()
+        comp_mode_logps = self.logp(comp_modes)
+        self.mode = comp_modes[tt.argmax(comp_modes, axis=-1)]
     
     def _comp_logp(self, value):
         comp_dists = self.comp_dists
@@ -26,6 +46,13 @@ class Mixture(Continuous):
             return comp_dists.logp(value_)
         except AttributeError:
             return tt.stack([comp_dist.logp(value) for comp_dist in comp_dists],
+                            axis=1)
+
+    def _comp_modes(self):
+        try:
+            return self.comp_dists.mode()
+        except AttributeError:
+            return tt.stack([comp_dist.mode for comp_dist in comp_dists],
                             axis=1)
 
     def _comp_samples(self, point=None, size=None, repeat=None):
