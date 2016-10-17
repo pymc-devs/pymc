@@ -1,5 +1,6 @@
-PyMC3
-=====
+.. image:: https://github.com/pymc-devs/pymc3/blob/master/docs/pymc3_logo.jpg
+    :alt: PyMC3 logo
+    :align: center
 
 |Gitter| |Build Status| |Coverage|
 
