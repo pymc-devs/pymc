@@ -8,6 +8,9 @@ from .distributions.continuous import get_tau_sd
 
 
 def all_discrete(comp_dists):
+    """
+    Determine if all distributions in comp_dists are discrete
+    """
     if isinstance(comp_dists, Distribution):
         return isinstance(comp_dists, Discrete)
     else:
@@ -15,6 +18,26 @@ def all_discrete(comp_dists):
 
 
 class Mixture(Distribution):
+    R"""
+    Mixture log-likelihood
+
+    Often used to model subpopulation heterogeneity
+
+    .. math:: f(x \mid w, \theta) = \sum_{i = 1}^n w_i f_i(x \mid \theta_i)
+
+    ========  ============================================
+    Support   :math:`\cap_{i = 1}^n \textrm{support}(f_i)`
+    Mean      :math:`\sum_{i = 1}^n w_i \mu_i`
+    ========  ============================================
+
+    Parameters
+    ----------
+    w : array of floats
+        w >= 0 and w <= 1
+        the mixutre weights
+    comp_dists : multidimensional PyMC3 distribution or iterable of one-dimensional PyMC3 distributions
+        the component distributions :math:`f_1, \ldots, f_n`
+    """
     def __init__(self, w, comp_dists, *args, **kwargs):
         shape = kwargs.pop('shape', ())
 
@@ -48,8 +71,6 @@ class Mixture(Distribution):
 
         super(Mixture, self).__init__(shape, dtype, defaults=defaults,
                                       *args, **kwargs)
-        
-
     
     def _comp_logp(self, value):
         comp_dists = self.comp_dists
@@ -118,6 +139,28 @@ class Mixture(Distribution):
 
     
 class NormalMixture(Mixture):
+    R"""
+    Normal mixture log-likelihood
+
+    .. math:: f(x \mid w, \mu, \sigma^2) = \sum_{i = 1}^n w_i N(x \mid \mu_i, \sigma^2_i
+
+    ========  =======================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\sum_{i = 1}^n w_i \mu_i`
+    Variance  :math:`\sum_{i = 1}^n w_i^2 \sigma^2_i`
+    ========  =======================================
+
+    Parameters
+    w : array of floats
+        w >= 0 and w <= 1
+        the mixutre weights
+    mu : array of floats
+        the component means
+    sd : array of floats
+        the component standard deviations
+    tau : array of floats
+        the component precisions
+    """
     def __init__(self, w, mu, *args, **kwargs):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
                            sd=kwargs.pop('sd', None))
