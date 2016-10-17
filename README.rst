@@ -1,11 +1,8 @@
-PyMC3
-=====
-
-|Gitter| |Build Status| |Coverage|
-
 .. image:: https://github.com/pymc-devs/pymc3/blob/logo/docs/pymc3_logo.jpg
     :alt: PyMC3 logo
     :align: center
+
+|Gitter| |Build Status| |Coverage|
 
 PyMC3 is a python module for Bayesian statistical modeling and model
 fitting which focuses on advanced Markov chain Monte Carlo fitting
