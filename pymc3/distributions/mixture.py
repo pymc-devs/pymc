@@ -18,24 +18,38 @@ class Mixture(Distribution):
     def __init__(self, w, comp_dists, *args, **kwargs):
         shape = kwargs.pop('shape', ())
 
+        self.w = w
+        self.comp_dists = comp_dists
+
+        defaults = kwargs.pop('defaults', [])
+
         if all_discrete(comp_dists):
             dtype = kwargs.pop('dtype', 'int64')
-            defaults = kwargs.pop('defaults', ['mode'])
         else:
             dtype = kwargs.pop('dtype', 'float64')
-            defaults = kwargs.pop('defaults', ['mean', 'mode'])
 
-            self.mean = (w * comp_dists.mean).sum(axis=-1)
+            try:
+                self.mean = (w * self._comp_means()).sum(axis=-1)
+
+                if 'mean' not in defaults:
+                    defaults.append('mean')
+            except AttributeError:
+                pass
+
+        try:
+            comp_modes = self._comp_modes()
+            comp_mode_logps = self.logp(comp_modes)
+            self.mode = comp_modes[tt.argmax(comp_modes, axis=-1)]
+
+            if 'mode' not in defaults:
+                defaults.append('mode')
+        except AttributeError:
+            pass
 
         super(Mixture, self).__init__(shape, dtype, defaults=defaults,
                                       *args, **kwargs)
         
-        self.w = w
-        self.comp_dists = comp_dists
 
-        #comp_modes = self._comp_modes()
-        #comp_mode_logps = self.logp(comp_modes)
-        #self.mode = comp_modes[tt.argmax(comp_modes, axis=-1)]
     
     def _comp_logp(self, value):
         comp_dists = self.comp_dists
@@ -46,6 +60,13 @@ class Mixture(Distribution):
             return comp_dists.logp(value_)
         except AttributeError:
             return tt.stack([comp_dist.logp(value) for comp_dist in comp_dists],
+                            axis=1)
+
+    def _comp_means(self):
+        try:
+            return self.comp_dists.mean
+        except AttributeError:
+            return tt.stack([comp_dist.mean for comp_dist in comp_dists],
                             axis=1)
 
     def _comp_modes(self):
