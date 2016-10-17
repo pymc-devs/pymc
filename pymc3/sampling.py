@@ -318,7 +318,7 @@ def _soft_update(a, b):
     a.update({k: v for k, v in b.items() if k not in a})
 
 
-def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_seed=None):
+def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_seed=None, progressbar=True):
     """Generate posterior predictive samples from a model given a trace.
 
     Parameters
@@ -353,8 +353,13 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
 
     seed(random_seed)
 
+    if progressbar:
+        indices = tqdm(randint(0, len(trace), samples), total=samples)
+    else:
+        indices = randint(0, len(trace), samples)
+
     ppc = defaultdict(list)
-    for idx in randint(0, len(trace), samples):
+    for idx in indices:
         param = trace[idx]
         for var in vars:
             ppc[var.name].append(var.distribution.random(point=param,

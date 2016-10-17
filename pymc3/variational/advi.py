@@ -12,6 +12,8 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams
 import pymc3 as pm
 from pymc3.backends.base import MultiTrace
 
+from tqdm import trange
+
 __all__ = ['advi', 'sample_vp']
 
 ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
@@ -272,7 +274,7 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
 
 def sample_vp(
         vparams, draws=1000, model=None, local_RVs=None, random_seed=None,
-        hide_transformed=True):
+        hide_transformed=True, progressbar=True):
     """Draw samples from variational posterior.
 
     Parameters
@@ -344,7 +346,9 @@ def sample_vp(
     trace = pm.sampling.NDArray(model=model, vars=vars_sampled)
     trace.setup(draws=draws, chain=0)
 
-    for i in range(draws):
+    range_ = trange(draws) if progressbar else range(draws)
+
+    for i in range_:
         # 'point' is like {'var1': np.array(0.1), 'var2': np.array(0.2), ...}
         point = {varname: value for varname, value in zip(varnames, f())}
         trace.record(point)
