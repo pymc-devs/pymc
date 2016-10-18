@@ -8,7 +8,7 @@ __all__ = ['geweke', 'gelman_rubin', 'effective_n']
 
 @statfunc
 def geweke(x, first=.1, last=.5, intervals=20):
-    """Return z-scores for convergence diagnostics.
+    R"""Return z-scores for convergence diagnostics.
 
     Compare the mean of the first % of series with the mean of the last % of
     series. x is divided into a number of segments for which this difference is
@@ -96,7 +96,7 @@ def geweke(x, first=.1, last=.5, intervals=20):
 
 
 def gelman_rubin(mtrace):
-    """ Returns estimate of R for a set of traces.
+    R"""Returns estimate of R for a set of traces.
 
     The Gelman-Rubin diagnostic tests for lack of convergence by comparing
     the variance between multiple chains to the variance within each chain.
@@ -160,25 +160,24 @@ def gelman_rubin(mtrace):
 
 
 def effective_n(mtrace):
-    """ Returns estimate of the effective sample size of a set of traces.
+    R"""Returns estimate of the effective sample size of a set of traces.
 
     Parameters
     ----------
     mtrace : MultiTrace
-      A MultiTrace object containing parallel traces (minimum 2)
-      of one or more stochastic parameters.
+        A MultiTrace object containing parallel traces (minimum 2)
+        of one or more stochastic parameters.
 
     Returns
     -------
     n_eff : float
-      Return the effective sample size, :math:`\hat{n}_{eff}`
+        Return the effective sample size, :math:`\hat{n}_{eff}`
 
     Notes
     -----
-
     The diagnostic is computed by:
 
-      .. math:: \hat{n}_{eff} = \frac{mn}}{1 + 2 \sum_{t=1}^T \hat{\rho}_t}
+    .. math:: \hat{n}_{eff} = \frac{mn}{1 + 2 \sum_{t=1}^T \hat{\rho}_t}
 
     where :math:`\hat{\rho}_t` is the estimated autocorrelation at lag t, and T
     is the first odd positive integer for which the sum

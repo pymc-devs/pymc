@@ -142,7 +142,7 @@ class NormalMixture(Mixture):
     R"""
     Normal mixture log-likelihood
 
-    .. math:: f(x \mid w, \mu, \sigma^2) = \sum_{i = 1}^n w_i N(x \mid \mu_i, \sigma^2_i
+    .. math:: f(x \mid w, \mu, \sigma^2) = \sum_{i = 1}^n w_i N(x \mid \mu_i, \sigma^2_i)
 
     ========  =======================================
     Support   :math:`x \in \mathbb{R}`

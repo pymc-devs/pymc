@@ -71,6 +71,17 @@ Multivariate
 .. automodule:: pymc3.distributions.multivariate
    :members:
 
+Mixture
+^^^^^^^
+
+.. currentmodule:: pymc3.distributions.mixture
+.. autosummary::
+   Mixture
+   NormalMixture
+
+.. automodule:: pymc3.distributions.mixture
+   :members:
+
 Plots
 -----
 
@@ -88,6 +99,16 @@ Stats
 
 .. automodule:: pymc3.stats
    :members:
+
+Diagnostics
+-----------
+
+.. currentmodule:: pymc3.diagnostics
+   :members:
+
+.. automodule:: pymc3.diagnostics
+   :members:
+
 
 
 Inference
@@ -142,14 +163,6 @@ Hamiltonian Monte Carlo
 .. automodule:: pymc3.step_methods.hmc
    :members:
 
-ATMCMC
-""""""
-
-.. currentmodule:: pymc3.step_methods.ATMCMC
-   :members:
-
-.. automodule:: pymc3.step_methods.ATMCMC
-   :members:
 
 Variational
 ^^^^^^^^^^^
@@ -162,3 +175,26 @@ ADVI
 
 .. automodule:: pymc3.variational.advi
    :members:
+
+ADVI minibatch
+""""""""""""""
+
+.. currentmodule:: pymc3.variational.advi_minibatch
+   :members:
+
+.. automodule:: pymc3.variational.advi_minibatch
+   :members:
+
+Backends
+--------
+
+.. currentmodule:: pymc3.backends
+   :members:
+
+.. automodule:: pymc3.backends
+   :members:
+
+
+
+
+
