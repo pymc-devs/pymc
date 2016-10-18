@@ -4,7 +4,7 @@ import theano.tensor as tt
 from ..math import logsumexp
 from .dist_math import bound
 from .distribution import Discrete, Distribution
-from .distributions.continuous import get_tau_sd
+from .continuous import get_tau_sd, Normal
 
 
 def all_discrete(comp_dists):
@@ -165,5 +165,5 @@ class NormalMixture(Mixture):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
                            sd=kwargs.pop('sd', None))
         
-        super(NormalMixture, self).__init__(w, pm.Normal.dist(mu, sd=sd),
+        super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd),
                                             *args, **kwargs)
