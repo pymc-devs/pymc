@@ -5,7 +5,7 @@
 |Gitter| |Build Status| |Coverage|
 
 PyMC3 is a python module for Bayesian statistical modeling and model
-fitting which focuses on advanced Markov chain Monte Carlo fitting
+fitting which focuses on advanced Markov chain Monte Carlo and variational fitting
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.
 
@@ -25,11 +25,11 @@ Features
    for fast approximate posterior estimation as well as mini-batch ADVI
    for large data sets.
 -  Easy optimization for finding the *maximum a posteriori* (MAP) point
--  `Theano <http://deeplearning.net/software/theano/>`__ features
--  Numpy broadcasting and advanced indexing
--  Linear algebra operators
--  Computation optimization and dynamic C compilation
--  Simple extensibility
+-  Relies on `Theano <http://deeplearning.net/software/theano/>`__ which provides:
+    *  Numpy broadcasting and advanced indexing
+    *  Linear algebra operators
+    *  Computation optimization and dynamic C compilation
+    *  Simple extensibility
 -  Transparent support for missing value imputation
 
 Getting started
@@ -40,6 +40,7 @@ Getting started
    `journal publication <https://peerj.com/articles/cs-55/>`__
 -  `PyMC3 examples <http://pymc-devs.github.io/pymc3/examples.html>`__
    and the `API reference <http://pymc-devs.github.io/pymc3/api.html>`__
+-  `Probabilistic Programming and Bayesian Methods for Hackers <https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers>`__
 -  `Bayesian Modelling in Python -- tutorials on Bayesian statistics and
    PyMC3 as Jupyter Notebooks by Mark
    Dregan <https://github.com/markdregan/Bayesian-Modelling-in-Python>`__
@@ -48,10 +49,8 @@ Getting started
 -  `PyMC3 port of the models presented in the book "Doing Bayesian Data
    Analysis" by John
    Kruschke <https://github.com/aloctavodia/Doing_bayesian_data_analysis>`__
--  Coal Mining Disasters model in `PyMC
-   2 <https://github.com/pymc-devs/pymc/blob/master/pymc/examples/disaster_model.py>`__
-   and `PyMC
-   3 <https://github.com/pymc-devs/pymc3/blob/master/pymc3/examples/disaster_model.py>`__
+-  `Coyle P. (2016) Probabilistic programming and PyMC3. European Scientific Python Conference 2015 (Cambridge, UK) <http://adsabs.harvard.edu/abs/2016arXiv160700379C>`__
+
 
 Installation
 ------------
@@ -64,6 +63,12 @@ The latest release of PyMC3 can be installed from PyPI using ``pip``:
 
 **Note:** Running ``pip install pymc`` will install PyMC 2.3, not PyMC3,
 from PyPI.
+
+Or via conda-forge:
+
+::
+
+    conda install -c conda-forge pymc3
 
 The current development branch of PyMC3 can be installed from GitHub, also using ``pip``:
 
@@ -91,7 +96,7 @@ Another option is to clone the repository and install PyMC3 using
 Dependencies
 ------------
 
-PyMC3 is tested on Python 2.7 and 3.4 and depends on Theano, NumPy,
+PyMC3 is tested on Python 2.7 and 3.5 and depends on Theano, NumPy,
 SciPy, Pandas, and Matplotlib (see ``requirements.txt`` for version
 information).
 
@@ -99,27 +104,10 @@ Optional
 ~~~~~~~~
 
 In addtion to the above dependencies, the GLM submodule relies on
-``Patsy``\ [http://patsy.readthedocs.io/en/latest/].
+`Patsy <http://patsy.readthedocs.io/en/latest/>`__.
 
-```scikits.sparse`` <https://github.com/njsmith/scikits-sparse>`__
+`scikits.sparse <https://github.com/njsmith/scikits-sparse>`__
 enables sparse scaling matrices which are useful for large problems.
-Installation on Ubuntu is easy:
-
-::
-
-    sudo apt-get install libsuitesparse-dev
-    pip install git+https://github.com/njsmith/scikits-sparse.git
-
-On Mac OS X you can install libsuitesparse 4.2.1 via homebrew (see
-http://brew.sh/ to install homebrew), manually add a link so the include
-files are where scikits-sparse expects them, and then install
-scikits-sparse:
-
-::
-
-    brew install suite-sparse
-    ln -s /usr/local/Cellar/suite-sparse/4.2.1/include/ /usr/local/include/suitesparse
-    pip install git+https://github.com/njsmith/scikits-sparse.git
 
 
 Citing PyMC3
@@ -128,10 +116,6 @@ Citing PyMC3
 Salvatier J, Wiecki TV, Fonnesbeck C. (2016) Probabilistic programming
 in Python using PyMC3. PeerJ Computer Science 2:e55
 https://doi.org/10.7717/peerj-cs.55
-
-Coyle P. (2016) Probabilistic programming
-and PyMC3. European Scientific Python Conference 2015 (Cambridge, UK)
-http://adsabs.harvard.edu/abs/2016arXiv160700379C
 
 License
 -------
@@ -163,5 +147,4 @@ Sponsors
    :target: http://www.numfocus.org/
 .. |Quantopian| image:: docs/quantopianlogo.jpg
    :target: https://quantopian.com
-
 
