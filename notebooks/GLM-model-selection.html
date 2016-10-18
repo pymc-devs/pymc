@@ -88,15 +88,8 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
-<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied-examples">Applied examples</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../examples.html#glm">GLM</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="GLM-linear.html">GLM: Linear regression</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-robust.html">GLM: Robust Linear Regression</a></li>
@@ -119,8 +112,8 @@
 <li class="toctree-l3"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -428,14 +421,13 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
-<span class="o">%</span><span class="k">qtconsole</span> --colors=linux
 
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
@@ -465,6 +457,14 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <span class="n">rndst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up with strange g++/OSX bugs.
+</pre></div></div>
 </div>
 <div class="section" id="Local-Functions">
 <h3>Local Functions<a class="headerlink" href="#Local-Functions" title="Permalink to this headline">¶</a></h3>
@@ -784,14 +784,14 @@ will be shown in Blue and the quadratic in Green.</li>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">dfs_lin_xlims</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span>
-                 <span class="p">,</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span>
+<span></span><span class="n">dfs_lin_xlims</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">,</span>
+                 <span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span>
 
-<span class="n">dfs_lin_ylims</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span>
-                 <span class="p">,</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">dfs_lin_ylims</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">,</span>
+                 <span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_lin</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span>
 
-<span class="n">dfs_quad_ylims</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfs_quad</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_quad</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span>
-                 <span class="p">,</span><span class="n">dfs_quad</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_quad</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">dfs_quad_ylims</span> <span class="o">=</span> <span class="p">(</span><span class="n">dfs_quad</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_quad</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">,</span>
+                  <span class="n">dfs_quad</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">dfs_quad</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span><span class="o">/</span><span class="mi">10</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -813,7 +813,6 @@ constraints (Ridge Regression):</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_ols</span><span class="p">:</span>
-
     <span class="c1">## define Normal priors to give Ridge regression</span>
     <span class="n">b0</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b0&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
     <span class="n">b1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b1&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
@@ -834,13 +833,10 @@ constraints (Ridge Regression):</p>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Optimization terminated successfully.
-         Current function value: 75.099693
-         Iterations: 8
-         Function evaluations: 303
- [-----------------100%-----------------] 2000 of 2000 complete in 2.5 sec
+Applied log-transform to sigma_y and added transformed sigma_y_log_ to model.
+100%|██████████| 2000/2000 [00:02&lt;00:00, 812.87it/s]
 </pre></div></div>
 </div>
 <div class="section" id="View-Traces-after-burn-in">
@@ -886,7 +882,6 @@ OLS model as above, defined using <code class="docutils literal"><span class="pr
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl_ols_glm</span><span class="p">:</span>
-
     <span class="c1"># setup model with Normal likelihood (which uses HalfCauchy for error prior)</span>
     <span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ 1 + x&#39;</span><span class="p">,</span> <span class="n">df_lin</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">glm</span><span class="o">.</span><span class="n">families</span><span class="o">.</span><span class="n">Normal</span><span class="p">())</span>
 
@@ -899,13 +894,10 @@ OLS model as above, defined using <code class="docutils literal"><span class="pr
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Optimization terminated successfully.
-         Current function value: 93.518364
-         Iterations: 7
-         Function evaluations: 273
- [-----------------100%-----------------] 2000 of 2000 complete in 4.7 sec
+Applied log-transform to sd and added transformed sd_log_ to model.
+100%|██████████| 2000/2000 [00:03&lt;00:00, 653.23it/s]
 </pre></div></div>
 </div>
 <div class="section" id="View-Traces-after-burn-in">
@@ -971,22 +963,101 @@ toy datasets. By default this is for models of order 1 to 5.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Applied log-transform to sd and added transformed sd_log_ to model.
+</pre></div></div>
+</div>
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
 
 Running: k1
- [-----------------100%-----------------] 2000 of 2000 complete in 2.6 sec
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 2000/2000 [00:01&lt;00:00, 1030.77it/s]
+Applied log-transform to sd and added transformed sd_log_ to model.
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
 Running: k2
- [-----------------100%-----------------] 2000 of 2000 complete in 4.7 sec
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 2000/2000 [00:03&lt;00:00, 603.57it/s]
+Applied log-transform to sd and added transformed sd_log_ to model.
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
 Running: k3
- [-----------------100%-----------------] 2000 of 2000 complete in 6.3 sec
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 2000/2000 [00:05&lt;00:00, 366.64it/s]
+Applied log-transform to sd and added transformed sd_log_ to model.
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
 Running: k4
- [-----------------100%-----------------] 2000 of 2000 complete in 13.3 sec
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 2000/2000 [00:10&lt;00:00, 189.87it/s]
+Applied log-transform to sd and added transformed sd_log_ to model.
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
 Running: k5
- [-----------------100%-----------------] 2000 of 2000 complete in 26.4 sec
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 2000/2000 [00:21&lt;00:00, 93.20it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -999,22 +1070,101 @@ Running: k5
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Applied log-transform to sd and added transformed sd_log_ to model.
+</pre></div></div>
+</div>
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
 
 Running: k1
- [-----------------100%-----------------] 2000 of 2000 complete in 36.6 sec
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 2000/2000 [00:12&lt;00:00, 164.97it/s]
+Applied log-transform to sd and added transformed sd_log_ to model.
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
 Running: k2
- [-----------------100%-----------------] 2000 of 2000 complete in 9.8 sec
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 2000/2000 [00:09&lt;00:00, 207.26it/s]
+Applied log-transform to sd and added transformed sd_log_ to model.
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
 Running: k3
- [-----------------100%-----------------] 2000 of 2000 complete in 16.6 sec
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 2000/2000 [00:11&lt;00:00, 177.61it/s]
+Applied log-transform to sd and added transformed sd_log_ to model.
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
 Running: k4
- [-----------------100%-----------------] 2000 of 2000 complete in 64.1 sec
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 2000/2000 [00:11&lt;00:00, 178.15it/s]
+Applied log-transform to sd and added transformed sd_log_ to model.
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+
 Running: k5
- [-----------------100%-----------------] 2000 of 2000 complete in 74.4 sec
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 2000/2000 [00:36&lt;00:00, 54.30it/s]
 </pre></div></div>
 </div>
 </div>
@@ -1031,11 +1181,10 @@ Running: k5
 <span class="n">dfll</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span>
 
 <span class="k">for</span> <span class="n">nm</span> <span class="ow">in</span> <span class="n">dfll</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
-    <span class="n">dfll</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nm</span><span class="p">,</span><span class="s1">&#39;lin&#39;</span><span class="p">]</span> <span class="o">=-</span><span class="n">models_lin</span><span class="p">[</span><span class="n">nm</span><span class="p">]</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces_lin</span><span class="p">[</span><span class="n">nm</span><span class="p">])[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
-    <span class="n">dfll</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nm</span><span class="p">,</span><span class="s1">&#39;quad&#39;</span><span class="p">]</span> <span class="o">=-</span><span class="n">models_quad</span><span class="p">[</span><span class="n">nm</span><span class="p">]</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces_quad</span><span class="p">[</span><span class="n">nm</span><span class="p">])[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+    <span class="n">dfll</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nm</span><span class="p">,</span><span class="s1">&#39;lin&#39;</span><span class="p">]</span> <span class="o">=-</span><span class="n">models_lin</span><span class="p">[</span><span class="n">nm</span><span class="p">]</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces_lin</span><span class="p">[</span><span class="n">nm</span><span class="p">],</span> <span class="n">varnames</span><span class="o">=</span><span class="n">traces_lin</span><span class="p">[</span><span class="n">nm</span><span class="p">]</span><span class="o">.</span><span class="n">varnames</span><span class="p">)[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+    <span class="n">dfll</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nm</span><span class="p">,</span><span class="s1">&#39;quad&#39;</span><span class="p">]</span> <span class="o">=-</span><span class="n">models_quad</span><span class="p">[</span><span class="n">nm</span><span class="p">]</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces_quad</span><span class="p">[</span><span class="n">nm</span><span class="p">],</span> <span class="n">varnames</span><span class="o">=</span><span class="n">traces_quad</span><span class="p">[</span><span class="n">nm</span><span class="p">]</span><span class="o">.</span><span class="n">varnames</span><span class="p">)[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
 
-<span class="n">dfll</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">melt</span><span class="p">(</span><span class="n">dfll</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(),</span> <span class="n">id_vars</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span> <span class="n">var_name</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span>
-               <span class="p">,</span><span class="n">value_name</span><span class="o">=</span><span class="s1">&#39;log_likelihood&#39;</span><span class="p">)</span>
+<span class="n">dfll</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">melt</span><span class="p">(</span><span class="n">dfll</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(),</span> <span class="n">id_vars</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span> <span class="n">var_name</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">value_name</span><span class="o">=</span><span class="s1">&#39;log_likelihood&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1108,11 +1257,11 @@ good results in a variety of cases, see the discussion worth reading in
 our model fits for both datasets.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<span></span>In [19]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">dftrc_lin</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">traces_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">])</span>
+<span></span><span class="n">dftrc_lin</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">trace_to_dataframe</span><span class="p">(</span><span class="n">traces_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">],</span> <span class="n">hide_transformed_vars</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 <span class="n">trc_lin_logp</span> <span class="o">=</span> <span class="n">dftrc_lin</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">models_lin</span><span class="p">[</span><span class="s1">&#39;k1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">logp</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="n">mean_deviance</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">trc_lin_logp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 <span class="n">mean_deviance</span>
@@ -1121,17 +1270,17 @@ our model fits for both datasets.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[18]:
+<span></span>Out[19]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>191.16310801115768
+<span></span>190.65836757543818
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [19]:
+<span></span>In [20]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1142,17 +1291,17 @@ our model fits for both datasets.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[19]:
+<span></span>Out[20]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>188.03386766667467
+<span></span>187.48427413489733
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [20]:
+<span></span>In [21]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1163,17 +1312,17 @@ our model fits for both datasets.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[20]:
+<span></span>Out[21]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>194.29234835564068
+<span></span>193.83246101597902
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [21]:
+<span></span>In [22]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1183,11 +1332,11 @@ our model fits for both datasets.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[21]:
+<span></span>Out[22]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>194.29234835564063
+<span></span>193.832461015978
 </pre></div>
 </div>
 </div>
@@ -1198,7 +1347,7 @@ package method</li>
 </ul>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [22]:
+<span></span>In [23]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1252,7 +1401,7 @@ for details.</p>
 about our model fits for both datasets.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [23]:
+<span></span>In [24]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1262,11 +1411,11 @@ about our model fits for both datasets.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[23]:
+<span></span>Out[24]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>130.93585669884246
+<span></span>(131.33729925439721, 1.2960759203188537)
 </pre></div>
 </div>
 </div>
@@ -1277,7 +1426,68 @@ lets compare all models</li>
 </ul>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [24]:
+<span></span>In [26]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">dfwaic</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[26]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>model</th>
+      <th>poly</th>
+      <th>waic</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>k1</td>
+      <td>lin</td>
+      <td>(131.337299254, 1.29607592032)</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>k2</td>
+      <td>lin</td>
+      <td>(131.692218927, 1.3007404228)</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>k3</td>
+      <td>lin</td>
+      <td>(131.888736191, 1.15031855977)</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>k4</td>
+      <td>lin</td>
+      <td>(127.699168809, 1.30155529561)</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>k5</td>
+      <td>lin</td>
+      <td>(130.693116576, 1.19204751955)</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [27]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1285,8 +1495,8 @@ lets compare all models</li>
 <span class="n">dfwaic</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;model&#39;</span>
 
 <span class="k">for</span> <span class="n">nm</span> <span class="ow">in</span> <span class="n">dfwaic</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
-    <span class="n">dfwaic</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nm</span><span class="p">,</span> <span class="s1">&#39;lin&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">waic</span><span class="p">(</span><span class="n">traces_lin</span><span class="p">[</span><span class="n">nm</span><span class="p">],</span><span class="n">models_lin</span><span class="p">[</span><span class="n">nm</span><span class="p">])</span>
-    <span class="n">dfwaic</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nm</span><span class="p">,</span> <span class="s1">&#39;quad&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">waic</span><span class="p">(</span><span class="n">traces_quad</span><span class="p">[</span><span class="n">nm</span><span class="p">],</span><span class="n">models_quad</span><span class="p">[</span><span class="n">nm</span><span class="p">])</span>
+    <span class="n">dfwaic</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nm</span><span class="p">,</span> <span class="s1">&#39;lin&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">waic</span><span class="p">(</span><span class="n">traces_lin</span><span class="p">[</span><span class="n">nm</span><span class="p">],</span> <span class="n">models_lin</span><span class="p">[</span><span class="n">nm</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">dfwaic</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nm</span><span class="p">,</span> <span class="s1">&#39;quad&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">waic</span><span class="p">(</span><span class="n">traces_quad</span><span class="p">[</span><span class="n">nm</span><span class="p">],</span> <span class="n">models_quad</span><span class="p">[</span><span class="n">nm</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
 
 <span class="n">dfwaic</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">melt</span><span class="p">(</span><span class="n">dfwaic</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(),</span> <span class="n">id_vars</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span> <span class="n">var_name</span><span class="o">=</span><span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">value_name</span><span class="o">=</span><span class="s1">&#39;waic&#39;</span><span class="p">)</span>
 
@@ -1298,7 +1508,7 @@ lets compare all models</li>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-model-selection_65_0.png" src="../_images/notebooks_GLM-model-selection_65_0.png" />
+<img alt="../_images/notebooks_GLM-model-selection_66_0.png" src="../_images/notebooks_GLM-model-selection_66_0.png" />
 </div>
 </div>
 <p><strong>Observe</strong></p>

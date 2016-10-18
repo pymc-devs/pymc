@@ -34,7 +34,7 @@
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="index.html"/>
-        <link rel="next" title="Bayesian Estimation Supersedes the T-Test" href="notebooks/BEST.html"/>
+        <link rel="next" title="Posterior Predictive Checks" href="notebooks/posterior_predictive.html"/>
         <link rel="prev" title="Getting started with PyMC3" href="notebooks/getting_started.html"/> 
 
   
@@ -87,15 +87,30 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/survival_analysis.html">Bayesian Survival Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#howto">Howto</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html">PyMC3 Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-traces">View traces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Model-Coeffs">View Model Coeffs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Traces">View Traces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Model-Coeffs">View Model Coeffs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Traces">View Traces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Model-Coeffs">View Model Coeffs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Traces">View Traces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Model-Coeffs">View Model Coeffs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/howto_debugging.html">How to debug a model</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#applied-examples">Applied examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/stochastic_volatility.html">Stochastic Volatility model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#glm">GLM</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-linear.html">GLM: Linear regression</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-robust.html">GLM: Robust Linear Regression</a></li>
@@ -107,17 +122,18 @@
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#mixture-models">Mixture Models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/gaussian_mixture_model.html">Gaussian Mixture Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/marginalized_gaussian_mixture_model.html">Marginalized Gaussian Mixture Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/gaussian-mixture-model-advi.html">Gaussian Mixture Model with ADVI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#advi">ADVI</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="notebooks/bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#mixture-models">Mixture Models</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/gaussian_mixture_model.html">Gaussian Mixture Model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/gaussian-mixture-model-advi.html">Gaussian Mixture Model with ADVI</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
 </ul>
 </li>
 </ul>
@@ -203,6 +219,50 @@
 </style>
 <div class="section" id="examples">
 <span id="id1"></span><h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="howto">
+<h2>Howto<a class="headerlink" href="#howto" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/posterior_predictive.html">Posterior Predictive Checks</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/posterior_predictive.html#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/posterior_predictive.html#Prediction">Prediction</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/posterior_predictive.html#Mean-predicted-values-plus-error-bars-to-give-sense-of-uncertainty-in-prediction">Mean predicted values plus error bars to give sense of uncertainty in prediction</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html">PyMC3 Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#NUTS-scaling-using-ADVI-Outputs">NUTS scaling using ADVI Outputs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#A-minimal-reproducable-example-of-using-the-stdevs-of-ADVI-to-set-the-scaling-matrix-of-the-NUTS-sampler.">A minimal reproducable example of using the stdevs of ADVI to set the scaling matrix of the NUTS sampler.</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#Overview">Overview</a></li>
+<li class="toctree-l4"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#Results-Summary">Results Summary</a></li>
+<li class="toctree-l4"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#Contents">Contents</a></li>
+<li class="toctree-l4"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#Package-Requirements-(shown-as-a-conda-env-YAML):">Package Requirements (shown as a conda-env YAML):</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#Setup">Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#Create-and-Run-Linear-Model">Create and Run Linear Model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-traces">View traces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Model-Coeffs">View Model Coeffs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#Test-NUTS-Sampling">Test NUTS Sampling</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Traces">View Traces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Model-Coeffs">View Model Coeffs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Traces">View Traces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Model-Coeffs">View Model Coeffs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Traces">View Traces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/NUTS_scaling_using_ADVI.html#View-Model-Coeffs">View Model Coeffs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/howto_debugging.html">How to debug a model</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="applied-examples">
+<h2>Applied examples<a class="headerlink" href="#applied-examples" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/BEST.html">Bayesian Estimation Supersedes the T-Test</a><ul>
@@ -270,14 +330,6 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/posterior_predictive.html">Posterior Predictive Checks</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/posterior_predictive.html#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/posterior_predictive.html#Prediction">Prediction</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/posterior_predictive.html#Mean-predicted-values-plus-error-bars-to-give-sense-of-uncertainty-in-prediction">Mean predicted values plus error bars to give sense of uncertainty in prediction</a></li>
-</ul>
-</li>
-</ul>
-</li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/GP-smoothing.html">Gaussian Process (GP) smoothing</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Let's-try-a-linear-regression-first">Let&#8217;s try a linear regression first</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Linear-regression-model-recap">Linear regression model recap</a></li>
@@ -288,8 +340,8 @@
 <li class="toctree-l2"><a class="reference internal" href="notebooks/GP-smoothing.html#Interactive-smoothing">Interactive smoothing</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/howto_debugging.html">How to debug a model</a></li>
 </ul>
+</div>
 </div>
 <div class="section" id="glm">
 <h2>GLM<a class="headerlink" href="#glm" title="Permalink to this headline">¶</a></h2>
@@ -448,6 +500,26 @@
 </ul>
 </div>
 </div>
+<div class="section" id="mixture-models">
+<h2>Mixture Models<a class="headerlink" href="#mixture-models" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/gaussian_mixture_model.html">Gaussian Mixture Model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/gaussian_mixture_model.html#Full-trace">Full trace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/gaussian_mixture_model.html#After-convergence">After convergence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/gaussian_mixture_model.html#Sampling-of-cluster-for-individual-data-point">Sampling of cluster for individual data point</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/marginalized_gaussian_mixture_model.html">Marginalized Gaussian Mixture Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/gaussian-mixture-model-advi.html">Gaussian Mixture Model with ADVI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/dp_mix.html">Dirichlet process mixtures for density estimation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/dp_mix.html#Dirichlet-processes">Dirichlet processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/dp_mix.html#Dirichlet-process-mixtures">Dirichlet process mixtures</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
 <div class="section" id="advi">
 <h2>ADVI<a class="headerlink" href="#advi" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
@@ -500,25 +572,6 @@
 </ul>
 </div>
 </div>
-<div class="section" id="mixture-models">
-<h2>Mixture Models<a class="headerlink" href="#mixture-models" title="Permalink to this headline">¶</a></h2>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/gaussian_mixture_model.html">Gaussian Mixture Model</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/gaussian_mixture_model.html#Full-trace">Full trace</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/gaussian_mixture_model.html#After-convergence">After convergence</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/gaussian_mixture_model.html#Sampling-of-cluster-for-individual-data-point">Sampling of cluster for individual data point</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/gaussian-mixture-model-advi.html">Gaussian Mixture Model with ADVI</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/dp_mix.html">Dirichlet process mixtures for density estimation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/dp_mix.html#Dirichlet-processes">Dirichlet processes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/dp_mix.html#Dirichlet-process-mixtures">Dirichlet process mixtures</a></li>
-</ul>
-</li>
-</ul>
-</div>
-</div>
 </div>
 
 
@@ -528,7 +581,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="notebooks/BEST.html" class="btn btn-neutral float-right" title="Bayesian Estimation Supersedes the T-Test" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="notebooks/posterior_predictive.html" class="btn btn-neutral float-right" title="Posterior Predictive Checks" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="notebooks/getting_started.html" class="btn btn-neutral" title="Getting started with PyMC3" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

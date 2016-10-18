@@ -295,9 +295,9 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [1]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -306,6 +306,14 @@ div.nboutput  > :nth-child(2).stderr {
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up with strange g++/OSX bugs.
+</pre></div></div>
 </div>
 <div class="section" id="Model">
 <h1>Model<a class="headerlink" href="#Model" title="Permalink to this headline">¶</a></h1>
@@ -321,7 +329,7 @@ length 2, and <span class="math">\(z_{data}\)</span> is a <span class="math">\(2
 <p>We can simulate this using Numpy:</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -361,13 +369,13 @@ shape of the random variable. We can specify that a random variable is
 observed by specifying the data that was observed.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">y</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">sd</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">ndims</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="c1"># here, shape is telling us it&#39;s a vector rather than a scalar.</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">sd</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">ndims</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="c1"># here, shape is telling us it&#39;s a vector rather than a scalar.</span>
     <span class="n">z</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span><span class="p">,</span> <span class="n">sd</span><span class="o">=.</span><span class="mi">75</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">zdata</span><span class="p">)</span> <span class="c1"># shape is inferred from zdata</span>
 </pre></div>
 </div>
@@ -393,7 +401,7 @@ context. <code class="docutils literal"><span class="pre">with</span></code> act
 block.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -406,7 +414,7 @@ block.</p>
 names as they keys and the value of the parameters as the values.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -426,20 +434,20 @@ names as they keys and the value of the parameters as the values.</p>
 <div class="container">
 <div class="highlight"><pre>
 MAP found:
-(&#39;x:&#39;, array(0.0168254102897249))
-(&#39;y:&#39;, array([[ 0.05477064],
-       [ 2.01253261]]))
+x: 1.0679746963606171
+y: [[ 3.33702529]
+ [ 3.57463881]]
 Compare with true values:
-(&#39;ytrue&#39;, array([[ 0.64815904],
-       [ 2.52039628]]))
-(&#39;xtrue&#39;, array([-0.60377919]))
+ytrue [[ 3.09049121]
+ [ 3.4475357 ]]
+xtrue [ 1.17545009]
 </pre></div></div>
 </div>
 <p>We will use NUTS to sample from the posterior as implemented by the
 <code class="docutils literal"><span class="pre">NUTS</span></code> step method class.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -448,21 +456,12 @@ Compare with true values:
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-/Library/Python/2.7/site-packages/theano/scan_module/scan_perform_ext.py:85: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
-  from scan_perform.scan_perform import *
-</pre></div></div>
-</div>
 <p>The <code class="docutils literal"><span class="pre">sample</span></code> function takes a number of steps to sample, a step
 method, a starting point. It returns a trace object which contains our
 samples.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -474,9 +473,9 @@ samples.</p>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 3000 of 3000 complete in 7.8 sec
+100%|██████████| 3000/3000 [00:01&lt;00:00, 1991.89it/s]
 </pre></div></div>
 </div>
 <p>To use more than one sampler, pass a list of step methods to <code class="docutils literal"><span class="pre">sample</span></code>.</p>
@@ -485,7 +484,7 @@ an array with the first index being the sample index and the other
 indexes the shape of the parameter. Thus for this example:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -495,7 +494,7 @@ indexes the shape of the parameter. Thus for this example:</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[9]:
+<span></span>Out[8]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -505,7 +504,7 @@ indexes the shape of the parameter. Thus for this example:</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -552,183 +551,15 @@ distrubtion object as the prior distribution and inserts this random
 variable into the current model. Then the constructor returns the
 random variable.</li>
 </ul>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [ ]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">help</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+<span></span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Help on Model in module pymc3.model object:
-
-class Model(Context, Factor)
- |  Encapsulates the variables and likelihood factors of a model.
- |
- |  Method resolution order:
- |      Model
- |      Context
- |      Factor
- |      __builtin__.object
- |
- |  Methods defined here:
- |
- |  TransformedVar(self, name, dist, trans)
- |      Create random variable that after being transformed has the given prior.
- |
- |      Parameters
- |      ----------
- |      name : str
- |      dist : Distribution
- |      trans : Transform
- |
- |      Returns
- |      -------
- |      Random Variable
- |
- |  Var(self, name, dist, data=None)
- |      Create and add (un)observed random variable to the model with an appropriate prior distribution.
- |
- |      Parameters
- |      ----------
- |          name : str
- |          dist : distribution for the random variable
- |          data : arraylike (optional)
- |             if data is provided, the variable is observed. If None, the variable is unobserved.
- |      Returns
- |      -------
- |          FreeRV or ObservedRV
- |
- |  __getitem__(self, key)
- |
- |  __init__(self)
- |
- |  add_random_variable(self, var)
- |      Add a random variable to the named variables of the model.
- |
- |  fastfn(self, outs, mode=None)
- |      Compiles a Theano function which returns `outs` and takes values of model
- |      vars as a dict as an argument.
- |
- |      Parameters
- |      ----------
- |      outs : Theano variable or iterable of Theano variables
- |      mode : Theano compilation mode
- |
- |      Returns
- |      -------
- |      Compiled Theano function as point function.
- |
- |  fn(self, outs, mode=None)
- |      Compiles a Theano function which returns the values of `outs` and takes values of model
- |      vars as arguments.
- |
- |      Parameters
- |      ----------
- |      outs : Theano variable or iterable of Theano variables
- |      mode : Theano compilation mode
- |
- |      Returns
- |      -------
- |      Compiled Theano function
- |
- |  makefn(*args, **kwargs)
- |      Compiles a Theano function which returns `outs` and takes the variable
- |      ancestors of `outs` as inputs.
- |
- |      Parameters
- |      ----------
- |      outs : Theano variable or iterable of Theano variables
- |      mode : Theano compilation mode
- |
- |      Returns
- |      -------
- |      Compiled Theano function
- |
- |  ----------------------------------------------------------------------
- |  Data descriptors defined here:
- |
- |  basic_RVs
- |      List of random variables the model is defined in terms of (which excludes deterministics).
- |
- |  cont_vars
- |      All the continuous variables in the model
- |
- |  logpt
- |      Theano scalar of log-probability of the model
- |
- |  test_point
- |      Test point used to check that the model doesn&#39;t generate errors
- |
- |  unobserved_RVs
- |      List of all random variable, including deterministic ones.
- |
- |  vars
- |      List of unobserved random variables the model is defined in terms of (which excludes deterministics).
- |
- |  ----------------------------------------------------------------------
- |  Data and other attributes defined here:
- |
- |  contexts = []
- |
- |  ----------------------------------------------------------------------
- |  Methods inherited from Context:
- |
- |  __enter__(self)
- |
- |  __exit__(self, typ, value, traceback)
- |
- |  ----------------------------------------------------------------------
- |  Class methods inherited from Context:
- |
- |  get_context(cls) from __builtin__.type
- |      Return the deepest context on the stack.
- |
- |  get_contexts(cls) from __builtin__.type
- |
- |  ----------------------------------------------------------------------
- |  Data descriptors inherited from Context:
- |
- |  __dict__
- |      dictionary for instance variables (if defined)
- |
- |  __weakref__
- |      list of weak references to the object (if defined)
- |
- |  ----------------------------------------------------------------------
- |  Methods inherited from Factor:
- |
- |  d2logp(self, vars=None)
- |      Compiled log probability density hessian function
- |
- |  dlogp(self, vars=None)
- |      Compiled log probability density gradient function
- |
- |  fastd2logp(self, vars=None)
- |      Compiled log probability density hessian function
- |
- |  fastdlogp(self, vars=None)
- |      Compiled log probability density gradient function
- |
- |  ----------------------------------------------------------------------
- |  Data descriptors inherited from Factor:
- |
- |  fastlogp
- |      Compiled log probability density function
- |
- |  logp
- |      Compiled log probability density function
- |
- |  logp_elemwise
-
-</pre></div></div>
 </div>
 </div>
 </div>

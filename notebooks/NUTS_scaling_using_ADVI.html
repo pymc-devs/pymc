@@ -1,0 +1,1127 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>PyMC3 Examples &mdash; PyMC3 3.0.rc1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
+        <link rel="up" title="Examples" href="../examples.html"/>
+        <link rel="next" title="How to debug a model" href="howto_debugging.html"/>
+        <link rel="prev" title="Posterior Predictive Checks" href="posterior_predictive.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#howto">Howto</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">PyMC3 Examples</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#NUTS-scaling-using-ADVI-Outputs">NUTS scaling using ADVI Outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Setup">Setup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Create-and-Run-Linear-Model">Create and Run Linear Model</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#View-traces">View traces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#View-Model-Coeffs">View Model Coeffs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Test-NUTS-Sampling">Test NUTS Sampling</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#View-Traces">View Traces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#View-Model-Coeffs">View Model Coeffs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#View-Traces">View Traces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#View-Model-Coeffs">View Model Coeffs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#View-Traces">View Traces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#View-Model-Coeffs">View Model Coeffs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied-examples">Applied examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../examples.html">Examples</a> &raquo;</li>
+      
+    <li>PyMC3 Examples</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/NUTS_scaling_using_ADVI.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 11ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="PyMC3-Examples">
+<h1>PyMC3 Examples<a class="headerlink" href="#PyMC3-Examples" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="NUTS-scaling-using-ADVI-Outputs">
+<h2>NUTS scaling using ADVI Outputs<a class="headerlink" href="#NUTS-scaling-using-ADVI-Outputs" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="A-minimal-reproducable-example-of-using-the-stdevs-of-ADVI-to-set-the-scaling-matrix-of-the-NUTS-sampler.">
+<h3>A minimal reproducable example of using the stdevs of ADVI to set the scaling matrix of the NUTS sampler.<a class="headerlink" href="#A-minimal-reproducable-example-of-using-the-stdevs-of-ADVI-to-set-the-scaling-matrix-of-the-NUTS-sampler." title="Permalink to this headline">¶</a></h3>
+<p>I caught up with <a class="reference external" href="https://twiecki.github.io">Thomas Wiecki</a> after his
+talk at <a class="reference external" href="https://www.odsc.com/london">ODSC London</a> and he mentioned a
+potential speed increase for NUTS sampling by using ADVI outputs to set
+the covariance scaling matrix.</p>
+<p>This seems like a great idea and there&#8217;s already a <a class="reference external" href="http://pymc-devs.github.io/pymc3/notebooks/stochastic_volatility.html#Fit-Model">good example in the
+docs</a>
+but I wanted to try it myself, and get a feel for the speed increase.</p>
+<div class="section" id="Overview">
+<h4>Overview<a class="headerlink" href="#Overview" title="Permalink to this headline">¶</a></h4>
+<p>In this Notebook I generate a small, noisy dataset according to a simple
+linear model, and attempt to recover the parameters comparing 3
+techniques:</p>
+<ol class="arabic simple">
+<li>NUTS, initialised at model test point (zero, the basic choice)</li>
+<li>NUTS, initialised at mean ADVI (my default choice to date)</li>
+<li>NUTS, initialised at mean ADVI, and scaling the covariance with the
+ADVI stdev (hopefully a speed increase)</li>
+</ol>
+</div>
+<div class="section" id="Results-Summary">
+<h4>Results Summary<a class="headerlink" href="#Results-Summary" title="Permalink to this headline">¶</a></h4>
+<p>The final estimates of the model parameter coeffs look quite similar,
+and close to the correct values. Each NUTS sampler was run for the same
+count of traces, yet they took quite different times to sample, since
+the quality of exploration was different:</p>
+<ol class="arabic simple">
+<li>NUTS, initialised at test point zero: 9 sec,</li>
+<li>NUTS, initialised at mean ADVI: 163 sec</li>
+<li>NUTS, initialised at mean ADVI, and scaled using ADVI stdevs: 3 sec</li>
+</ol>
+<p>The scaling really seems to help speed up the NUTS sampling: the traces
+appear to converge much more quickly and seem more settled. The
+parameter estimates are good too.</p>
+<p><strong>*In general, it seems worth trying to set the NUTS scaling using ADVI
+stdevs.*</strong></p>
+</div>
+<div class="section" id="Contents">
+<h4>Contents<a class="headerlink" href="#Contents" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li><a class="reference external" href="#Setup">Setup</a><ul>
+<li><a class="reference external" href="#Local-Functions">Local Functions</a></li>
+<li><a class="reference external" href="#Generate-Data">Generate Data</a></li>
+</ul>
+</li>
+<li><a class="reference external" href="#Create-and-Test-Linear-Model">Create and Test Linear Model</a><ul>
+<li><a class="reference external" href="#Metropolis-Sampling">Metropolis Sampling</a></li>
+<li><a class="reference external" href="#ADVI-Estimation">ADVI Estimation</a></li>
+</ul>
+</li>
+<li><a class="reference external" href="#Test-NUTS-Sampling">Test NUTS Sampling</a><ul>
+<li><a class="reference external" href="#1.-NUTS-initialise-MAP-using-Powell">1. NUTS initialise MAP using
+Powell</a></li>
+<li><a class="reference external" href="#2.-NUTS-initialise-MAP-using-ADVI-mean">2. NUTS initialise MAP using ADVI
+mean</a></li>
+<li><a class="reference external" href="#3.-NUTS-initialise-MAP-using-ADVI-mean-and-scale-using-ADVI-stdevs">3. NUTS initialise MAP using ADVI mean and scale using ADVI
+stdevs</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="Package-Requirements-(shown-as-a-conda-env-YAML):">
+<h4>Package Requirements (shown as a conda-env YAML):<a class="headerlink" href="#Package-Requirements-(shown-as-a-conda-env-YAML):" title="Permalink to this headline">¶</a></h4>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$&gt; less conda_env_pymc3_examples.yml
+
+name: pymc3_examples
+channels:
+  - defaults
+dependencies:
+    - python=3.5
+    - jupyter
+    - ipywidgets
+    - numpy
+    - scipy
+    - matplotlib
+    - pandas
+    - pip
+    - pip:
+        - watermark
+        - pymc3
+
+$&gt; conda env create --file conda_env_pymc3_examples.yml
+$&gt; source activate pymc3_examples
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Setup">
+<h2>Setup<a class="headerlink" href="#Setup" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="o">%</span><span class="k">qtconsole</span> --colors=Linux
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.mpl_style&#39;</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">4</span>
+<span class="n">rndst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="o">%</span><span class="k">load_ext</span> watermark
+<span class="o">%</span><span class="k">watermark</span> -dmvgp numpy,pandas,matplotlib,pymc3,theano,joblib
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+2016-10-18
+
+CPython 3.5.2
+IPython 5.1.0
+
+numpy 1.11.1
+pandas 0.18.1
+matplotlib 1.5.2
+pymc3 3.0.rc1
+theano 0.8.2
+joblib 0.10.2
+
+compiler   : GCC 4.2.1 Compatible Apple LLVM 4.2 (clang-425.0.28)
+system     : Darwin
+release    : 14.5.0
+machine    : x86_64
+processor  : i386
+CPU cores  : 4
+interpreter: 64bit
+Git hash   : f737bf97f29670725f5ef2824e70585ee3feefd6
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">generate_data</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Create a toy dataset based on a very simple model that we might</span>
+<span class="sd">    imagine is a noisy physical process:</span>
+<span class="sd">        1. random x values within a range</span>
+<span class="sd">        2. latent error aka inherent noise in y</span>
+<span class="sd">        3. optionally create labelled outliers with larger noise</span>
+
+<span class="sd">    Model form: y ~ a + bx + cx^2 + e</span>
+
+<span class="sd">    NOTE: latent_sigma_y is used to create a normally distributed,</span>
+<span class="sd">    &#39;latent error&#39; aka &#39;inherent noise&#39; in the &#39;physical process&#39;</span>
+<span class="sd">    generating thses values, rather than experimental measurement error.</span>
+<span class="sd">    Please don&#39;t use the returned `latent_error` values in inferential</span>
+<span class="sd">    models, it&#39;s returned in e dataframe for interest only.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">rndst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span><span class="n">rndst</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">n</span><span class="p">)),</span> <span class="n">n</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="bp">False</span><span class="p">)})</span>
+
+    <span class="c1">## create linear or quadratic model</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">*</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span> <span class="o">+</span> <span class="n">c</span><span class="o">*</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span>
+
+    <span class="c1">## create latent noise and marked outliers</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;latent_error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rndst</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;outlier_error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rndst</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="o">*</span><span class="mi">10</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;outlier&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rndst</span><span class="o">.</span><span class="n">binomial</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+
+    <span class="c1">## add noise, with extreme noise for marked outliers</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="p">((</span><span class="mi">1</span><span class="o">-</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;outlier&#39;</span><span class="p">])</span> <span class="o">*</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;latent_error&#39;</span><span class="p">])</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;outlier&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;outlier_error&#39;</span><span class="p">])</span>
+
+    <span class="c1">## round</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">,</span><span class="s1">&#39;latent_error&#39;</span><span class="p">,</span><span class="s1">&#39;outlier_error&#39;</span><span class="p">,</span><span class="s1">&#39;x&#39;</span><span class="p">]:</span>
+        <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">],</span><span class="mi">3</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">df</span>
+
+</pre></div>
+</div>
+</div>
+<p><strong>NOTE:</strong></p>
+<ul class="simple">
+<li>Dataset is 1000 rows for publishing (<code class="docutils literal"><span class="pre">n=1000</span></code>), which is small but
+still just about large enough to warrant a fast technique.</li>
+<li>For your own usage, please feel free to increase <code class="docutils literal"><span class="pre">n</span></code>. Also try
+different model parameters <code class="docutils literal"><span class="pre">p,</span> <span class="pre">a,</span> <span class="pre">b,</span> <span class="pre">c,</span> <span class="pre">latent_sigma_y</span></code>.</li>
+</ul>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">generate_data</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">a</span><span class="o">=-</span><span class="mi">30</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">latent_sigma_y</span><span class="o">=</span><span class="mi">40</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[4]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>x</th>
+      <th>y</th>
+      <th>latent_error</th>
+      <th>outlier_error</th>
+      <th>outlier</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>405</td>
+      <td>331682.422</td>
+      <td>17.422</td>
+      <td>-190.070</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1190</td>
+      <td>2842856.031</td>
+      <td>-23.969</td>
+      <td>509.181</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1132</td>
+      <td>2573007.324</td>
+      <td>1.324</td>
+      <td>-678.453</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>731</td>
+      <td>1075236.834</td>
+      <td>-34.166</td>
+      <td>292.073</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1754</td>
+      <td>6168759.202</td>
+      <td>-28.798</td>
+      <td>-742.993</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="Create-and-Run-Linear-Model">
+<h2>Create and Run Linear Model<a class="headerlink" href="#Create-and-Run-Linear-Model" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">mdl</span><span class="p">:</span>
+
+    <span class="c1">## define Normal priors to give Ridge regression</span>
+    <span class="n">b0</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b0&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">b1</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b1&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">b2</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;b2&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1">## define Linear model</span>
+    <span class="n">yest</span> <span class="o">=</span> <span class="n">b0</span> <span class="o">+</span> <span class="n">b1</span> <span class="o">*</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">b2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1">## define Normal likelihood with HalfCauchy noise (fat tails, equiv to HalfT 1DoF)</span>
+    <span class="n">sigma_y</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfCauchy</span><span class="p">(</span><span class="s1">&#39;sigma_y&#39;</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">likelihood</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;likelihood&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">yest</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma_y</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span>
+
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Applied log-transform to sigma_y and added transformed sigma_y_log_ to model.
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">mdl</span><span class="p">:</span>
+    <span class="n">trc_met</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+ [-----------------100%-----------------] 10000 of 10000 complete in 10.6 sec
+</pre></div></div>
+</div>
+</div>
+</div>
+<div class="section" id="View-traces">
+<h1>View traces<a class="headerlink" href="#View-traces" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trc_met</span><span class="p">[:],</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">4</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span> <span class="n">combined</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_15_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_15_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>Great, the model seems reasonably well specified</li>
+<li>Metropolis, as ever, takes a while to converge</li>
+</ul>
+</div>
+<div class="section" id="View-Model-Coeffs">
+<h1>View Model Coeffs<a class="headerlink" href="#View-Model-Coeffs" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">gs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trc_met</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;b0&#39;</span><span class="p">,</span> <span class="s1">&#39;b1&#39;</span><span class="p">,</span> <span class="s1">&#39;b2&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_18_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_18_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>This simple model took only 10 sec to sample using Metropolis.</li>
+<li>Parameter estimates for b1 and b2 seem good, b0 seems a little off,
+but in general parameters are good.</li>
+</ul>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">mdl</span><span class="p">:</span>
+    <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+<span class="n">_</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="o">-</span><span class="n">v_params</span><span class="o">.</span><span class="n">elbo_vals</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_21_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_21_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>ADVI takes many iterations to converge for this model, but it gets
+there in the end</li>
+<li>NOTE: I&#8217;ve plotted the ELBO on a log scale since the values swept
+through more than 10 orders of magnitude, and on a linear scale it
+becomes very hard to see convergence</li>
+</ul>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">df_v_means</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">v_params</span><span class="o">.</span><span class="n">means</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">])</span>
+<span class="n">df_v_stds</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">v_params</span><span class="o">.</span><span class="n">stds</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;std&#39;</span><span class="p">])</span>
+<span class="n">df_v_params</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df_v_means</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">df_v_stds</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">left_index</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">right_index</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">df_v_params</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[10]:
+</pre></div>
+</div>
+<div class="container">
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>mean</th>
+      <th>std</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>b0</th>
+      <td>14.491795</td>
+      <td>18.010402</td>
+    </tr>
+    <tr>
+      <th>b1</th>
+      <td>8.712273</td>
+      <td>0.019617</td>
+    </tr>
+    <tr>
+      <th>b2</th>
+      <td>2.000189</td>
+      <td>0.000013</td>
+    </tr>
+    <tr>
+      <th>sigma_y_log_</th>
+      <td>5.872786</td>
+      <td>0.028040</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>The fitted parameter values don&#8217;t look too horrible, but there seems
+to be an issue with b0 in particular.</li>
+<li>However, I don&#8217;t really want to report these values anyhow, instead,
+I&#8217;ll use them to parameterise the NUTS sampler.</li>
+</ul>
+<hr class="docutils" />
+<div class="section" id="Test-NUTS-Sampling">
+<h2>Test NUTS Sampling<a class="headerlink" href="#Test-NUTS-Sampling" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">mdl</span><span class="p">:</span>
+    <span class="n">trc_nuts</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+ [-----------------100%-----------------] 300 of 300 complete in 9.2 sec
+</pre></div></div>
+</div>
+</div>
+</div>
+<div class="section" id="View-Traces">
+<h1>View Traces<a class="headerlink" href="#View-Traces" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trc_nuts</span><span class="p">[:],</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">4</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span> <span class="n">combined</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_30_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_30_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="View-Model-Coeffs">
+<h1>View Model Coeffs<a class="headerlink" href="#View-Model-Coeffs" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">gs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trc_nuts</span><span class="p">[</span><span class="o">-</span><span class="mi">10</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;b0&#39;</span><span class="p">,</span> <span class="s1">&#39;b1&#39;</span><span class="p">,</span> <span class="s1">&#39;b2&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_32_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_32_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>The model took 9.2 sec to sample</li>
+<li>We didn&#8217;t hit convergence until after 100 samples, with some slight
+movement remaining.</li>
+<li>The estimated model coeffs look pretty good.</li>
+</ul>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">mdl</span><span class="p">:</span>
+    <span class="n">trc_nuts_map</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(),</span> <span class="n">start</span><span class="o">=</span><span class="n">v_params</span><span class="o">.</span><span class="n">means</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+ [-----------------100%-----------------] 300 of 300 complete in 163.4 sec
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="View-Traces">
+<h1>View Traces<a class="headerlink" href="#View-Traces" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trc_nuts_map</span><span class="p">[:],</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">4</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span> <span class="n">combined</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_37_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_37_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="View-Model-Coeffs">
+<h1>View Model Coeffs<a class="headerlink" href="#View-Model-Coeffs" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">gs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trc_nuts_map</span><span class="p">[</span><span class="o">-</span><span class="mi">100</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;b0&#39;</span><span class="p">,</span> <span class="s1">&#39;b1&#39;</span><span class="p">,</span> <span class="s1">&#39;b2&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_39_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_39_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>The model took 163 sec to sample</li>
+<li>We hit a sort of convergence quickly after ~50 samples, but the
+traces afterwards appear to vary a lot - never truly settling.</li>
+<li>The estimated model coeffs for b1 and b2 look fine, but b0 has a very
+wide variance.</li>
+</ul>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [17]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">mdl</span><span class="p">:</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">mdl</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">v_params</span><span class="o">.</span><span class="n">stds</span><span class="p">),</span><span class="mi">2</span><span class="p">),</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="n">trc_nuts_scale</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">v_params</span><span class="o">.</span><span class="n">means</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+ [-----------------100%-----------------] 300 of 300 complete in 2.8 sec
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="View-Traces">
+<h1>View Traces<a class="headerlink" href="#View-Traces" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">plot_traces</span><span class="p">(</span><span class="n">traces</span><span class="p">,</span> <span class="n">varnames</span><span class="p">,</span> <span class="n">flatten_chains</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Conv fn: plot traces with overlaid means and values &quot;&quot;&quot;</span>
+
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">traces</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="n">varnames</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">varnames</span><span class="p">)</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span>
+            <span class="n">lines</span><span class="o">=</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span>
+                <span class="n">traces</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="n">varnames</span><span class="p">)</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()},</span> <span class="n">combined</span><span class="o">=</span><span class="n">flatten_chains</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">mn</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="n">varnames</span><span class="p">)[</span><span class="s1">&#39;mean&#39;</span><span class="p">]):</span>
+        <span class="n">ax</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;{:.2f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mn</span><span class="p">),</span> <span class="n">xy</span><span class="o">=</span><span class="p">(</span><span class="n">mn</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="n">xycoords</span><span class="o">=</span><span class="s1">&#39;data&#39;</span>
+                    <span class="p">,</span><span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span> <span class="n">textcoords</span><span class="o">=</span><span class="s1">&#39;offset points&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span>
+                    <span class="p">,</span><span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;large&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#AA0022&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trc_nuts_scale</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">4</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span> <span class="n">combined</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_45_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_45_0.png" />
+</div>
+</div>
+</div>
+<div class="section" id="View-Model-Coeffs">
+<h1>View Model Coeffs<a class="headerlink" href="#View-Model-Coeffs" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [20]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">gs</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trc_nuts_scale</span><span class="p">[</span><span class="o">-</span><span class="mi">100</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;b0&#39;</span><span class="p">,</span> <span class="s1">&#39;b1&#39;</span><span class="p">,</span> <span class="s1">&#39;b2&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_47_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_47_0.png" />
+</div>
+</div>
+<p><strong>Observe:</strong></p>
+<ul class="simple">
+<li>The model took ~3 sec to sample - far quicker than #4 without the
+scaling, and quicker than #3 initialised at the test point.</li>
+<li>The traces appear to have converged after ~50 samples, and yielded
+consistent trace values since: the traces look very settled.</li>
+<li>The estimated model coeffs look good.</li>
+</ul>
+<p>The final estimates of the model parameter coeffs look quite similar,
+and close to the correct values. Each NUTS sampler was run for the same
+count of traces, yet they took quite different times to sample, since
+the quality of exploration was different:</p>
+<ol class="arabic simple">
+<li>NUTS, initialised at test point zero: 9 sec,</li>
+<li>NUTS, initialised at mean ADVI: 163 sec</li>
+<li>NUTS, initialised at mean ADVI, and scaled using ADVI stdevs: 3 sec</li>
+</ol>
+<p>The scaling really seems to help speed up the NUTS sampling: the traces
+appear to converge much more quickly and seem more settled. The
+parameter estimates are good too.</p>
+<p><strong>*In general, it seems worth trying to set the NUTS scaling using ADVI
+stdevs.*</strong></p>
+<hr class="docutils" />
+<div class="line-block">
+<div class="line">Example originally contributed by Jonathan Sedar 2016-10-16</div>
+<div class="line"><a class="reference external" href="https://github.com/jonsedar">github.com/jonsedar</a></div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="howto_debugging.html" class="btn btn-neutral float-right" title="How to debug a model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="posterior_predictive.html" class="btn btn-neutral" title="Posterior Predictive Checks" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0.rc1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

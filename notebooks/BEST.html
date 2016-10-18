@@ -36,7 +36,7 @@
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="LKJ Prior for fitting a Multivariate Normal Model" href="LKJ.html"/>
-        <link rel="prev" title="Examples" href="../examples.html"/> 
+        <link rel="prev" title="How to debug a model" href="howto_debugging.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -88,25 +88,23 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Bayesian Estimation Supersedes the T-Test</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#The-Problem">The Problem</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Example:-Drug-trial-evaluation">Example: Drug trial evaluation</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#References">References</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#applied-examples">Applied examples</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Bayesian Estimation Supersedes the T-Test</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#The-Problem">The Problem</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -372,7 +370,7 @@ intelligence by comparing IQ scores of individuals in a treatment arm
 (those receiving the drug) to those in a control arm (those recieving a
 placebo). There are 47 individuals and 42 individuals in the treatment
 and control arms, respectively.</p>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
@@ -388,6 +386,14 @@ and control arms, respectively.</p>
 <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">20090425</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up with strange g++/OSX bugs.
+</pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -460,7 +466,6 @@ does not favor one or the other <em>a priori</em>).</p>
 <span class="err">μ</span><span class="n">_s</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="o">*</span> <span class="mi">2</span>
 
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
-
     <span class="n">group1_mean</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;group1_mean&#39;</span><span class="p">,</span> <span class="err">μ</span><span class="n">_m</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="err">μ</span><span class="n">_s</span><span class="p">)</span>
     <span class="n">group2_mean</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;group2_mean&#39;</span><span class="p">,</span> <span class="err">μ</span><span class="n">_m</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="err">μ</span><span class="n">_s</span><span class="p">)</span>
 </pre></div>
@@ -493,7 +498,6 @@ parameterization of prior distributions.</p>
 <span class="err">σ</span><span class="n">_high</span> <span class="o">=</span> <span class="mi">10</span>
 
 <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-
     <span class="n">group1_std</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;group1_std&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="err">σ</span><span class="n">_low</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="err">σ</span><span class="n">_high</span><span class="p">)</span>
     <span class="n">group2_std</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;group2_std&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="err">σ</span><span class="n">_low</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="err">σ</span><span class="n">_high</span><span class="p">)</span>
 </pre></div>
@@ -502,10 +506,10 @@ parameterization of prior distributions.</p>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Applied interval-transform to group1_std and added transformed group1_std_interval to model.
-Applied interval-transform to group2_std and added transformed group2_std_interval to model.
+Applied interval-transform to group1_std and added transformed group1_std_interval_ to model.
+Applied interval-transform to group2_std and added transformed group2_std_interval_ to model.
 </pre></div></div>
 </div>
 <p>We follow Kruschke by making the prior for <span class="math">\(\mu\)</span> exponentially
@@ -519,7 +523,6 @@ heavy-tailed data under the Student-T distribution.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-
     <span class="err">ν</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Exponential</span><span class="p">(</span><span class="s1">&#39;ν_minus_one&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="mf">29.</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
 
 <span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">exponential</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">10000</span><span class="p">),</span> <span class="n">kde</span><span class="o">=</span><span class="bp">False</span><span class="p">);</span>
@@ -529,9 +532,9 @@ heavy-tailed data under the Student-T distribution.</p>
 <div class="nboutput container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Applied log-transform to ν_minus_one and added transformed ν_minus_one_log to model.
+Applied log-transform to ν_minus_one and added transformed ν_minus_one_log_ to model.
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
@@ -551,7 +554,6 @@ before specifying our likelihoods.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-
     <span class="err">λ</span><span class="mi">1</span> <span class="o">=</span> <span class="n">group1_std</span><span class="o">**-</span><span class="mi">2</span>
     <span class="err">λ</span><span class="mi">2</span> <span class="o">=</span> <span class="n">group2_std</span><span class="o">**-</span><span class="mi">2</span>
 
@@ -579,11 +581,10 @@ function of all four estimated parameters.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-
     <span class="n">diff_of_means</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;difference of means&#39;</span><span class="p">,</span> <span class="n">group1_mean</span> <span class="o">-</span> <span class="n">group2_mean</span><span class="p">)</span>
     <span class="n">diff_of_stds</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;difference of stds&#39;</span><span class="p">,</span> <span class="n">group1_std</span> <span class="o">-</span> <span class="n">group2_std</span><span class="p">)</span>
     <span class="n">effect_size</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="s1">&#39;effect size&#39;</span><span class="p">,</span>
-                                   <span class="n">diff_of_means</span> <span class="o">/</span> <span class="n">pm</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">group1_std</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">group2_std</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
+                                   <span class="n">diff_of_means</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">group1_std</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">group2_std</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
 
 </pre></div>
 </div>
@@ -603,14 +604,14 @@ function of all four estimated parameters.</p>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
 Assigned NUTS to group1_mean
 Assigned NUTS to group2_mean
-Assigned NUTS to group1_std_interval
-Assigned NUTS to group2_std_interval
-Assigned NUTS to ν_minus_one_log
- [-----------------100%-----------------] 2000 of 2000 complete in 22.8 sec
+Assigned NUTS to group1_std_interval_
+Assigned NUTS to group2_std_interval_
+Assigned NUTS to ν_minus_one_log_
+100%|██████████| 2000/2000 [00:17&lt;00:00, 113.25it/s]
 </pre></div></div>
 </div>
 <p>We can plot the stochastic parameters of the model. PyMC&#8217;s
@@ -643,7 +644,7 @@ meaningful differences between the two groups for all three measures.
 For these comparisons, it is useful to use zero as a reference value
 (<code class="docutils literal"><span class="pre">ref_val</span></code>); providing this reference value yields cumulative
 probabilities for the posterior distribution on either side of the
-value. Thus, for the difference in means, 98.9% of the posterior
+value. Thus, for the difference in means, 99.4% of the posterior
 probability is greater than zero, which suggests the group means are
 credibly different. The effect size and differences in standard
 deviation are similarly positive.</p>
@@ -691,7 +692,7 @@ here, suggest that the model has converged.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.gridspec.GridSpec at 0x129d48be0&gt;
+<span></span>&lt;matplotlib.gridspec.GridSpec at 0x144328e48&gt;
 </pre></div>
 </div>
 </div>
@@ -724,13 +725,13 @@ difference of means:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  1.023            0.449            0.009            [0.188, 1.938]
+  1.023            0.402            0.008            [0.270, 1.808]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.128          0.726          1.032          1.333          1.892
+  0.236          0.757          1.016          1.284          1.797
 
 
 difference of stds:
@@ -738,13 +739,13 @@ difference of stds:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.897            0.453            0.019            [0.024, 1.775]
+  0.921            0.412            0.015            [-0.011, 1.631]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.097          0.586          0.868          1.195          1.859
+  0.121          0.631          0.905          1.206          1.820
 
 
 effect size:
@@ -752,13 +753,13 @@ effect size:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.618            0.288            0.008            [0.024, 1.165]
+  0.605            0.255            0.006            [0.129, 1.118]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.067          0.419          0.609          0.813          1.218
+  0.131          0.429          0.604          0.772          1.129
 
 </pre></div></div>
 </div>
@@ -774,6 +775,16 @@ Journal of Wildlife Management. 1999;63(3):763-772.</li>
 <li>Kruschke JK. Bayesian estimation supersedes the t test. J Exp Psychol
 Gen. 2013;142(2):573-603. doi:10.1037/a0029146.</li>
 </ol>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -788,7 +799,7 @@ Gen. 2013;142(2):573-603. doi:10.1037/a0029146.</li>
         <a href="LKJ.html" class="btn btn-neutral float-right" title="LKJ Prior for fitting a Multivariate Normal Model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../examples.html" class="btn btn-neutral" title="Examples" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="howto_debugging.html" class="btn btn-neutral" title="How to debug a model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

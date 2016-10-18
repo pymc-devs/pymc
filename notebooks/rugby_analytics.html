@@ -88,28 +88,30 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
-<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">A Hierarchical model for Rugby prediction</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#Motivation">Motivation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#What-do-we-want-to-infer?">What do we want to infer?</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#What-do-we-want?">What do we want?</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#What-assumptions-do-we-know-for-our-'generative-story'?">What assumptions do we know for our &#8216;generative story&#8217;?</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#The-model.">The model.</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Building-of-the-model">Building of the model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Results">Results</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Covariates">Covariates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#applied-examples">Applied examples</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">A Hierarchical model for Rugby prediction</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Motivation">Motivation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#What-do-we-want-to-infer?">What do we want to infer?</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#What-do-we-want?">What do we want?</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#What-assumptions-do-we-know-for-our-'generative-story'?">What assumptions do we know for our &#8216;generative story&#8217;?</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#The-model.">The model.</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Building-of-the-model">Building of the model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Results">Results</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Covariates">Covariates</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -360,7 +362,7 @@ a team. * Probabilistic Programming is a brilliant paradigm for
 modeling these <strong>latent</strong> parameters</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [1]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -377,18 +379,26 @@ modeling these <strong>latent</strong> parameters</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Sat Apr  2 16:40:04 BST 2016
+Thu Oct 13 10:10:40 EDT 2016
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up with strange g++/OSX bugs.
 </pre></div></div>
 </div>
 <p>This is a Rugby prediction exercise. So we&#8217;ll input some data</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -479,7 +489,7 @@ modelled as exchangeable from a common distribution:</li>
 </ul>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -525,7 +535,7 @@ and the team-specific parameters and the likelihood function</li>
 </ul>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -561,10 +571,10 @@ and the team-specific parameters and the likelihood function</li>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Applied log-transform to tau_att and added transformed tau_att_log to model.
-Applied log-transform to tau_def and added transformed tau_def_log to model.
+Applied log-transform to tau_att and added transformed tau_att_log_ to model.
+Applied log-transform to tau_def and added transformed tau_def_log_ to model.
 </pre></div></div>
 </div>
 <ul class="simple">
@@ -575,7 +585,7 @@ to decide where to start out No U Turn Sampler</li>
 </ul>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -592,9 +602,9 @@ to decide where to start out No U Turn Sampler</li>
 <div class="nboutput container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 2000 of 2000 complete in 5.3 sec
+100%|██████████| 2000/2000 [00:05&lt;00:00, 393.48it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
@@ -613,7 +623,7 @@ estimates and help us better understand the uncertainty in sports
 analytics</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -623,11 +633,11 @@ analytics</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[8]:
+<span></span>Out[6]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.gridspec.GridSpec at 0x1205adc50&gt;
+<span></span>&lt;matplotlib.gridspec.GridSpec at 0x150176f28&gt;
 </pre></div>
 </div>
 </div>
@@ -640,7 +650,7 @@ analytics</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -650,11 +660,11 @@ analytics</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[9]:
+<span></span>Out[7]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.gridspec.GridSpec at 0x125972438&gt;
+<span></span>&lt;matplotlib.gridspec.GridSpec at 0x14df88c50&gt;
 </pre></div>
 </div>
 </div>
@@ -671,7 +681,7 @@ analytics</p>
 <p>We should do some exploration of the variables.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -683,7 +693,7 @@ analytics</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -707,7 +717,7 @@ analytics</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-/Users/peadarcoyle/anaconda/envs/pymc3_examples/lib/python3.5/site-packages/pandas/core/frame.py:2697: SettingWithCopyWarning:
+/usr/local/var/pyenv/versions/miniconda3-4.0.5/envs/testenv/lib/python3.5/site-packages/pandas/core/frame.py:2754: SettingWithCopyWarning:
 A value is trying to be set on a copy of a slice from a DataFrame
 
 See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy

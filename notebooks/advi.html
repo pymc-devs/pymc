@@ -310,12 +310,20 @@ div.nboutput  > :nth-child(2).stderr {
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
 Populating the interactive namespace from numpy and matplotlib
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up with strange g++/OSX bugs.
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
@@ -344,9 +352,9 @@ Populating the interactive namespace from numpy and matplotlib
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Applied log-transform to sd and added transformed sd_log to model.
+Applied log-transform to sd and added transformed sd_log_ to model.
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -364,17 +372,17 @@ Applied log-transform to sd and added transformed sd_log to model.
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -785.37
-Iteration 2000 [10%]: Average ELBO = -416.12
-Iteration 4000 [20%]: Average ELBO = -165.55
-Iteration 6000 [30%]: Average ELBO = -146.29
-Iteration 8000 [40%]: Average ELBO = -141.42
-Iteration 10000 [50%]: Average ELBO = -140.72
-Iteration 12000 [60%]: Average ELBO = -140.71
-Iteration 14000 [70%]: Average ELBO = -140.71
-Iteration 16000 [80%]: Average ELBO = -140.71
-Iteration 18000 [90%]: Average ELBO = -140.71
-Finished [100%]: Average ELBO = -140.71
+Iteration 0 [0%]: ELBO = -586.43
+Iteration 2000 [10%]: Average ELBO = -386.82
+Iteration 4000 [20%]: Average ELBO = -157.07
+Iteration 6000 [30%]: Average ELBO = -136.69
+Iteration 8000 [40%]: Average ELBO = -131.44
+Iteration 10000 [50%]: Average ELBO = -130.67
+Iteration 12000 [60%]: Average ELBO = -130.66
+Iteration 14000 [70%]: Average ELBO = -130.67
+Iteration 16000 [80%]: Average ELBO = -130.66
+Iteration 18000 [90%]: Average ELBO = -130.66
+Finished [100%]: Average ELBO = -130.66
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -385,16 +393,16 @@ Finished [100%]: Average ELBO = -140.71
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">()</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 500 of 500 complete in 0.2 sec
+100%|██████████| 1000/1000 [00:00&lt;00:00, 2698.98it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -404,9 +412,9 @@ Finished [100%]: Average ELBO = -140.71
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">print</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
-<span class="k">print</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;sd_log&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+<span class="k">print</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;sd_log_&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
 <span class="k">print</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
-<span class="k">print</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;sd_log&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
+<span class="k">print</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;sd_log_&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
@@ -415,10 +423,10 @@ Finished [100%]: Average ELBO = -140.71
 </div>
 <div class="container">
 <div class="highlight"><pre>
-0.00630037984074
--0.112134450899
-0.0861106628944
-0.0725504593946
+0.00766113915397
+-0.146682044436
+0.0897388737967
+0.0773784687122
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -438,12 +446,21 @@ Finished [100%]: Average ELBO = -140.71
 </div>
 </div>
 <div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/usr/local/var/pyenv/versions/miniconda3-4.0.5/envs/testenv/lib/python3.5/site-packages/statsmodels/nonparametric/kdetools.py:20: VisibleDeprecationWarning: using a non-integer number instead of an integer will result in an error in the future
+  y = X[:m/2+1] + np.r_[0,X[m/2+1:],0]*1j
+</pre></div></div>
+</div>
+<div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[7]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x7f3c167bcd30&gt;
+<span></span>&lt;matplotlib.legend.Legend at 0x14339a7b8&gt;
 </pre></div>
 </div>
 </div>
@@ -451,7 +468,7 @@ Finished [100%]: Average ELBO = -140.71
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_advi_6_1.png" src="../_images/notebooks_advi_6_1.png" />
+<img alt="../_images/notebooks_advi_6_2.png" src="../_images/notebooks_advi_6_2.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -460,10 +477,10 @@ Finished [100%]: Average ELBO = -140.71
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;sd_log&#39;</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;NUTS&#39;</span><span class="p">)</span>
+<span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;sd_log_&#39;</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;NUTS&#39;</span><span class="p">)</span>
 <span class="n">xlim</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_xlim</span><span class="p">()</span>
 <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">xlim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">xlim</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">100</span><span class="p">)</span>
-<span class="n">y</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">means</span><span class="p">[</span><span class="s1">&#39;sd_log&#39;</span><span class="p">],</span> <span class="n">sds</span><span class="p">[</span><span class="s1">&#39;sd_log&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">means</span><span class="p">[</span><span class="s1">&#39;sd_log_&#39;</span><span class="p">],</span> <span class="n">sds</span><span class="p">[</span><span class="s1">&#39;sd_log_&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;ADVI&#39;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;log(sigma)&#39;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -471,12 +488,21 @@ Finished [100%]: Average ELBO = -140.71
 </div>
 </div>
 <div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/usr/local/var/pyenv/versions/miniconda3-4.0.5/envs/testenv/lib/python3.5/site-packages/statsmodels/nonparametric/kdetools.py:20: VisibleDeprecationWarning: using a non-integer number instead of an integer will result in an error in the future
+  y = X[:m/2+1] + np.r_[0,X[m/2+1:],0]*1j
+</pre></div></div>
+</div>
+<div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>Out[8]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x10ea6f990&gt;
+<span></span>&lt;matplotlib.legend.Legend at 0x1434bb278&gt;
 </pre></div>
 </div>
 </div>
@@ -484,12 +510,12 @@ Finished [100%]: Average ELBO = -140.71
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_advi_7_1.png" src="../_images/notebooks_advi_7_1.png" />
+<img alt="../_images/notebooks_advi_7_2.png" src="../_images/notebooks_advi_7_2.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -500,11 +526,11 @@ Finished [100%]: Average ELBO = -140.71
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[8]:
+<span></span>Out[9]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x7f3c15e12e48&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x1437d35f8&gt;]
 </pre></div>
 </div>
 </div>
