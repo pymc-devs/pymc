@@ -4,17 +4,26 @@
 Examples
 ********
 
+Howto
+=====
+
+.. toctree::
+   notebooks/posterior_predictive.ipynb
+   notebooks/NUTS_scaling_using_ADVI.ipynb
+   notebooks/howto_debugging.ipynb
+   notebooks/LKJ.ipynb
+
+Applied
+=======
+
 .. toctree::
    notebooks/BEST.ipynb
-   notebooks/LKJ.ipynb
    notebooks/stochastic_volatility.ipynb
    notebooks/pmf-pymc.ipynb
    notebooks/rugby_analytics.ipynb
    notebooks/survival_analysis.ipynb
-   notebooks/posterior_predictive.ipynb
    notebooks/GP-smoothing.ipynb
-   notebooks/howto_debugging.ipynb
- 
+
 GLM
 ===
 
@@ -28,6 +37,15 @@ GLM
    notebooks/GLM-hierarchical.ipynb
    notebooks/GLM-poisson-regression.ipynb
 
+Mixture Models
+==============
+
+.. toctree::
+   notebooks/gaussian_mixture_model.ipynb
+   notebooks/marginalized_gaussian_mixture_model.ipynb
+   notebooks/gaussian-mixture-model-advi.ipynb
+   notebooks/dp_mix.ipynb
+
 ADVI
 ====
 
@@ -37,12 +55,4 @@ ADVI
    notebooks/lda-advi-aevb.ipynb
    notebooks/bayesian_neural_network_advi.ipynb
 
-Mixture Models
-==============
-
-.. toctree::
-   notebooks/gaussian_mixture_model.ipynb
-   notebooks/marginalized_gaussian_mixture_model.ipynb
-   notebooks/gaussian-mixture-model-advi.ipynb
-   notebooks/dp_mix.ipynb
 
