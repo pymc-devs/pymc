@@ -45,6 +45,9 @@ from .distribution import NoDistribution
 from .distribution import TensorType
 from .distribution import draw_values
 
+from .mixture import Mixture
+from .mixture import NormalMixture
+
 from .multivariate import MvNormal
 from .multivariate import MvStudentT
 from .multivariate import Dirichlet
@@ -112,5 +115,7 @@ __all__ = ['Uniform',
            'AR1',
            'GaussianRandomWalk',
            'GARCH11',
-           'SkewNormal'
+           'SkewNormal',
+           'Mixture',
+           'NormalMixture'
            ]

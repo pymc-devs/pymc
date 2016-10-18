@@ -42,6 +42,7 @@ Mixture Models
 
 .. toctree::
    notebooks/gaussian_mixture_model.ipynb
+   notebooks/marginalized_gaussian_mixture_model.ipynb
    notebooks/gaussian-mixture-model-advi.ipynb
    notebooks/dp_mix.ipynb
 
