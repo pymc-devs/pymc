@@ -114,19 +114,19 @@ def guess_scaling(point, vars=None, model=None, scaling_bound=1e-3):
     return adjust_scaling(h, scaling_bound)
 
 
-def adjust_scaling(s, bound):
+def adjust_scaling(s, scaling_bound):
     if s.ndim < 2:
-        return adjust_precision(s, bound)
+        return adjust_precision(s, scaling_bound)
     else:
         val, vec = np.linalg.eigh(s)
-        val = adjust_precision(val, bound)
+        val = adjust_precision(val, scaling_bound)
         return eig_recompose(val, vec)
 
 
-def adjust_precision(tau, bound):
+def adjust_precision(tau, scaling_bound):
     mag = sqrt(abs(tau))
 
-    bounded = bound(log(mag), log(1/bound), log(bound))
+    bounded = bound(log(mag), log(1/scaling_bound), log(scaling_bound))
     return exp(bounded)**2
 
 
