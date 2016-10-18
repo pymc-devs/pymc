@@ -123,7 +123,7 @@ def adjust_scaling(s, scaling_bound):
         return eig_recompose(val, vec)
 
 
-def adjust_precision(tau, scaling_bound):
+def adjust_precision(tau, scaling_bound=1e-3):
     mag = sqrt(abs(tau))
 
     bounded = bound(log(mag), log(1/scaling_bound), log(scaling_bound))
