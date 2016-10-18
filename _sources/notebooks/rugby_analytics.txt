@@ -15,11 +15,14 @@
    "metadata": {},
    "source": [
     "I came across the following blog post on http://danielweitzenfeld.github.io/passtheroc/blog/2014/10/28/bayes-premier-league/\n",
+    "\n",
     "* Based on the work of [Baio and Blangiardo](www.statistica.it/gianluca/Research/BaioBlangiardo.pdf)\n",
+    "\n",
     "In this example, we're going to reproduce the first model described in the paper using PyMC3.\n",
     "\n",
     "Since I am a rugby fan I decide to apply the results of the paper Bayesian Football to the Six Nations.\n",
     "Rugby is a physical sport popular worldwide.\n",
+    "\n",
     "* Six Nations consists of Italy, Ireland, Scotland, England, France and Wales\n",
     "* Game consists of scoring tries (similar to touch downs) or kicking the goal.\n",
     "* Average player is something like 100kg and 1.82m tall.\n",
@@ -43,8 +46,7 @@
     "Ireland are a stronger team than Italy for example - but by how much?\n",
     "\n",
     "Source for Results 2014 are Wikipedia.\n",
-    "I handcrafted these results\n",
-    "Small data\n",
+    "\n",
     "* We want to infer a latent parameter - that is the 'strength' of a team based only on their **scoring intensity**, and all we have are their scores and results, we can't accurately measure the 'strength' of a team. \n",
     "* Probabilistic Programming is a brilliant paradigm for modeling these **latent** parameters"
    ]
@@ -124,16 +126,16 @@
    "metadata": {},
    "source": [
     "## What do we want to infer?\n",
+    "\n",
     "* We want to infer the latent paremeters (every team's strength) that are generating the data we observe (the scorelines).\n",
     "* Moreover, we know that the scorelines are a noisy measurement of team strength, so ideally, we want a model that makes it easy to quantify our uncertainty about the underlying strengths.\n",
-    "\n",
     "* Often we don't know what the Bayesian Model is explicitly, so we have to 'estimate' the Bayesian Model'\n",
     "* If we can't solve something, approximate it.\n",
-    "\n",
     "* Markov-Chain Monte Carlo (MCMC) instead draws samples from the posterior.\n",
     "* Fortunately, this algorithm can be applied to almost any model.\n",
     "\n",
     "## What do we want?\n",
+    "\n",
     "* We want to quantify our uncertainty\n",
     "* We want to also use this to generate a model\n",
     "* We want the answers as distributions not point estimates"
@@ -144,6 +146,7 @@
    "metadata": {},
    "source": [
     "## What assumptions do we know for our 'generative story'?\n",
+    "\n",
     "* We know that the Six Nations in Rugby only has 6 teams - they each play each other once\n",
     "* We have data from last year!\n",
     "* We also know that in sports scoring is modelled as a Poisson distribution\n",

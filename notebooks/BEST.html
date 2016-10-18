@@ -326,7 +326,8 @@ div.nboutput  > :nth-child(2).stderr {
 Psychology</em>: General.</p>
 <p>The original pymc2 implementation was written by Andrew Straw and can be
 found here: <a class="reference external" href="https://github.com/strawlab/best">https://github.com/strawlab/best</a></p>
-<p>Ported to PyMC3 by Thomas Wiecki (c) 2015, updated by Chris Fonnesbeck.</p>
+<p>Ported to PyMC3 by <a class="reference external" href="https://twitter.com/twiecki">Thomas Wiecki</a> (c)
+2015, updated by Chris Fonnesbeck.</p>
 <div class="section" id="The-Problem">
 <h2>The Problem<a class="headerlink" href="#The-Problem" title="Permalink to this headline">¶</a></h2>
 <p>Several statistical inference procedures involve the comparison of two
@@ -433,10 +434,8 @@ Student-t distribution allows for the specification of a mean
 <span class="math">\(\mu\)</span>, a precision (inverse-variance) <span class="math">\(\lambda\)</span> and a
 degrees-of-freedom parameter <span class="math">\(\nu\)</span>:</p>
 <div class="math">
- f(x|\mu,\lambda,\nu) =
-           \frac{\Gamma(\frac{\nu + 1}{2})}{\Gamma(\frac{\nu}{2})}
-           \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}}
-           \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}</div><p>the degrees-of-freedom parameter essentially specifies the &#8220;normality&#8221;
+\[f(x|\mu,\lambda,\nu) = \frac{\Gamma(\frac{\nu + 1}{2})}{\Gamma(\frac{\nu}{2})} \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}} \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}\]</div>
+<p>the degrees-of-freedom parameter essentially specifies the &#8220;normality&#8221;
 of the data, since larger values of <span class="math">\(\nu\)</span> make the distribution
 converge to a normal distribution, while small values (close to zero)
 result in heavier tails.</p>

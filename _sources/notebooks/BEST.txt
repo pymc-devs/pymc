@@ -16,7 +16,7 @@
     "\n",
     "The original pymc2 implementation was written by Andrew Straw and can be found here: https://github.com/strawlab/best\n",
     "\n",
-    "Ported to PyMC3 by Thomas Wiecki (c) 2015, updated by Chris Fonnesbeck."
+    "Ported to PyMC3 by [Thomas Wiecki](https://twitter.com/twiecki) (c) 2015, updated by Chris Fonnesbeck."
    ]
   },
   {
@@ -108,10 +108,7 @@
    "source": [
     "The first step in a Bayesian approach to inference is to specify the full probability model that corresponds to the problem. For this example, Kruschke chooses a Student-t distribution to describe the distributions of the scores in each group. This choice adds robustness to the analysis, as a T distribution is less sensitive to outlier observations, relative to a normal distribution. The three-parameter Student-t distribution allows for the specification of a mean $\\mu$, a precision (inverse-variance) $\\lambda$ and a degrees-of-freedom parameter $\\nu$:\n",
     "\n",
-    "$$ f(x|\\mu,\\lambda,\\nu) =\n",
-    "           \\frac{\\Gamma(\\frac{\\nu + 1}{2})}{\\Gamma(\\frac{\\nu}{2})}\n",
-    "           \\left(\\frac{\\lambda}{\\pi\\nu}\\right)^{\\frac{1}{2}}\n",
-    "           \\left[1+\\frac{\\lambda(x-\\mu)^2}{\\nu}\\right]^{-\\frac{\\nu+1}{2}}$$\n",
+    "$$f(x|\\mu,\\lambda,\\nu) = \\frac{\\Gamma(\\frac{\\nu + 1}{2})}{\\Gamma(\\frac{\\nu}{2})} \\left(\\frac{\\lambda}{\\pi\\nu}\\right)^{\\frac{1}{2}} \\left[1+\\frac{\\lambda(x-\\mu)^2}{\\nu}\\right]^{-\\frac{\\nu+1}{2}}$$\n",
     "           \n",
     "the degrees-of-freedom parameter essentially specifies the \"normality\" of the data, since larger values of $\\nu$ make the distribution converge to a normal distribution, while small values (close to zero) result in heavier tails.\n",
     "\n",
@@ -485,6 +482,7 @@
   }
  ],
  "metadata": {
+  "anaconda-cloud": {},
   "kernelspec": {
    "display_name": "Python [default]",
    "language": "python",

@@ -334,18 +334,25 @@ div.nboutput  > :nth-child(2).stderr {
 <li>&#64;date: 31/12/15</li>
 </ul>
 <p>I came across the following blog post on
-<a class="reference external" href="http://danielweitzenfeld.github.io/passtheroc/blog/2014/10/28/bayes-premier-league/">http://danielweitzenfeld.github.io/passtheroc/blog/2014/10/28/bayes-premier-league/</a>
-* Based on the work of <a class="reference external" href="www.statistica.it/gianluca/Research/BaioBlangiardo.pdf">Baio and
-Blangiardo</a>
-In this example, we&#8217;re going to reproduce the first model described in
+<a class="reference external" href="http://danielweitzenfeld.github.io/passtheroc/blog/2014/10/28/bayes-premier-league/">http://danielweitzenfeld.github.io/passtheroc/blog/2014/10/28/bayes-premier-league/</a></p>
+<ul class="simple">
+<li>Based on the work of <a class="reference external" href="www.statistica.it/gianluca/Research/BaioBlangiardo.pdf">Baio and
+Blangiardo</a></li>
+</ul>
+<p>In this example, we&#8217;re going to reproduce the first model described in
 the paper using PyMC3.</p>
 <p>Since I am a rugby fan I decide to apply the results of the paper
 Bayesian Football to the Six Nations. Rugby is a physical sport popular
-worldwide. * Six Nations consists of Italy, Ireland, Scotland, England,
-France and Wales * Game consists of scoring tries (similar to touch
-downs) or kicking the goal. * Average player is something like 100kg
-and 1.82m tall. * Paul O&#8217;Connell the Irish captain is Height: 6&#8217; 6&#8221;
-(1.98 m) Weight: 243 lbs (110 kg)</p>
+worldwide.</p>
+<ul class="simple">
+<li>Six Nations consists of Italy, Ireland, Scotland, England, France and
+Wales</li>
+<li>Game consists of scoring tries (similar to touch downs) or kicking
+the goal.</li>
+<li>Average player is something like 100kg and 1.82m tall.</li>
+<li>Paul O&#8217;Connell the Irish captain is Height: 6&#8217; 6&#8221; (1.98 m) Weight:
+243 lbs (110 kg)</li>
+</ul>
 <p>We will use a data set only consisting of the Six Nations 2014 data, and
 use this to build a generative and explainable model about the Six
 Nations 2015.</p>
@@ -354,12 +361,15 @@ Nations 2015.</p>
 <p>Your estimate of the strength of a team depends on your estimates of the
 other strengths</p>
 <p>Ireland are a stronger team than Italy for example - but by how much?</p>
-<p>Source for Results 2014 are Wikipedia. I handcrafted these results Small
-data * We want to infer a latent parameter - that is the &#8216;strength&#8217; of
-a team based only on their <strong>scoring intensity</strong>, and all we have are
-their scores and results, we can&#8217;t accurately measure the &#8216;strength&#8217; of
-a team. * Probabilistic Programming is a brilliant paradigm for
-modeling these <strong>latent</strong> parameters</p>
+<p>Source for Results 2014 are Wikipedia.</p>
+<ul class="simple">
+<li>We want to infer a latent parameter - that is the &#8216;strength&#8217; of a
+team based only on their <strong>scoring intensity</strong>, and all we have are
+their scores and results, we can&#8217;t accurately measure the &#8216;strength&#8217;
+of a team.</li>
+<li>Probabilistic Programming is a brilliant paradigm for modeling these
+<strong>latent</strong> parameters</li>
+</ul>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:

@@ -11,13 +11,13 @@ Howto
    notebooks/posterior_predictive.ipynb
    notebooks/NUTS_scaling_using_ADVI.ipynb
    notebooks/howto_debugging.ipynb
+   notebooks/LKJ.ipynb
  
-Applied examples
-================
+Applied
+=======
 
 .. toctree::
    notebooks/BEST.ipynb
-   notebooks/LKJ.ipynb
    notebooks/stochastic_volatility.ipynb
    notebooks/pmf-pymc.ipynb
    notebooks/rugby_analytics.ipynb
