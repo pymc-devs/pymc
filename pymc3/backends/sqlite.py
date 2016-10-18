@@ -293,7 +293,7 @@ def load(name, model=None):
     db = _SQLiteDB(name)
     db.connect()
     varnames = _get_table_list(db.cursor)
-    if not varnames:
+    if len(varnames) == 0:
         raise ValueError(('Can not get variable list for database'
                           '`{}`'.format(name)))
     chains = _get_chain_list(db.cursor, varnames[0])

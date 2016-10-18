@@ -162,7 +162,7 @@ def load(name, model=None):
     """
     files = glob(os.path.join(name, 'chain-*.csv'))
 
-    if not files:
+    if len(files) == 0:
         raise ValueError('No files present in directory {}'.format(name))
 
     straces = []
