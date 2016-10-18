@@ -171,7 +171,7 @@ class NormalMixture(Mixture):
                                             *args, **kwargs)
 
 
-class Zero(pm.Discrete):
+class Zero(Discrete):
     def __init__(self, *args, **kwargs):
         super(Zero, self).__init__(*args, **kwargs)
         
@@ -186,9 +186,9 @@ class Zero(pm.Discrete):
                                 size=size).astype(self.dtype)
 
 
-class ZeroInflatedPoisson(pm.Mixture):
+class ZeroInflatedPoisson(Mixture):
     def __init__(self, theta, psi, *args, **kwargs):
         w = tt.stack([psi, 1 - psi])
-        comp_dists = [Zero.dist(), pm.Poisson.dist(theta)]
+        comp_dists = [Zero.dist(), Poisson.dist(theta)]
 
         super(ZeroInflatedPoisson, self).__init__(w, comp_dists, *args, **kwargs)
