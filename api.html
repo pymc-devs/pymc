@@ -91,10 +91,12 @@
 <li class="toctree-l3"><a class="reference internal" href="#continuous">Continuous</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#discrete">Discrete</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#multivariate">Multivariate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mixture">Mixture</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#plots">Plots</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#stats">Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#diagnostics">Diagnostics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#inference">Inference</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#sampling">Sampling</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#step-methods">Step-methods</a><ul>
@@ -102,13 +104,21 @@
 <li class="toctree-l4"><a class="reference internal" href="#metropolis">Metropolis</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#slice">Slice</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#hamiltonian-monte-carlo">Hamiltonian Monte Carlo</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#atmcmc">ATMCMC</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#variational">Variational</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#advi">ADVI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#advi-minibatch">ADVI minibatch</a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#backends">Backends</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#available-backends">Available backends</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#selecting-a-backend">Selecting a backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#selecting-values-from-a-backend">Selecting values from a backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loading-a-saved-backend">Loading a saved backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#writing-custom-backends">Writing custom backends</a></li>
 </ul>
 </li>
 </ul>
@@ -2047,6 +2057,107 @@ extended onion method.&#8221; Journal of multivariate analysis,
 </dd></dl>
 
 </div>
+<div class="section" id="mixture">
+<h3>Mixture<a class="headerlink" href="#mixture" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#pymc3.distributions.mixture.Mixture" title="pymc3.distributions.mixture.Mixture"><code class="xref py py-obj docutils literal"><span class="pre">Mixture</span></code></a>(w,&nbsp;comp_dists,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Mixture log-likelihood</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#pymc3.distributions.mixture.NormalMixture" title="pymc3.distributions.mixture.NormalMixture"><code class="xref py py-obj docutils literal"><span class="pre">NormalMixture</span></code></a>(w,&nbsp;mu,&nbsp;\*args,&nbsp;\*\*kwargs)</td>
+<td>Normal mixture log-likelihood</td>
+</tr>
+</tbody>
+</table>
+<span class="target" id="module-pymc3.distributions.mixture"></span><dl class="class">
+<dt id="pymc3.distributions.mixture.Mixture">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.mixture.</code><code class="descname">Mixture</code><span class="sig-paren">(</span><em>w</em>, <em>comp_dists</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.mixture.Mixture" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mixture log-likelihood</p>
+<p>Often used to model subpopulation heterogeneity</p>
+<div class="math">
+\[f(x \mid w, \theta) = \sum_{i = 1}^n w_i f_i(x \mid \theta_i)\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="15%" />
+<col width="85%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(\cap_{i = 1}^n \textrm{support}(f_i)\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\sum_{i = 1}^n w_i \mu_i\)</span></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>w</strong> : array of floats</p>
+<blockquote>
+<div><p>w &gt;= 0 and w &lt;= 1
+the mixutre weights</p>
+</div></blockquote>
+<p><strong>comp_dists</strong> : multidimensional PyMC3 distribution or iterable of one-dimensional PyMC3 distributions</p>
+<blockquote class="last">
+<div><p>the component distributions <span class="math">\(f_1, \ldots, f_n\)</span></p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="pymc3.distributions.mixture.NormalMixture">
+<em class="property">class </em><code class="descclassname">pymc3.distributions.mixture.</code><code class="descname">NormalMixture</code><span class="sig-paren">(</span><em>w</em>, <em>mu</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.mixture.NormalMixture" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normal mixture log-likelihood</p>
+<div class="math">
+\[f(x \mid w, \mu, \sigma^2) = \sum_{i = 1}^n w_i N(x \mid \mu_i, \sigma^2_i)\]</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="17%" />
+<col width="83%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Support</td>
+<td><span class="math">\(x \in \mathbb{R}\)</span></td>
+</tr>
+<tr class="row-even"><td>Mean</td>
+<td><span class="math">\(\sum_{i = 1}^n w_i \mu_i\)</span></td>
+</tr>
+<tr class="row-odd"><td>Variance</td>
+<td><span class="math">\(\sum_{i = 1}^n w_i^2 \sigma^2_i\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Parameters
+w : array of floats</p>
+<blockquote>
+<div>w &gt;= 0 and w &lt;= 1
+the mixutre weights</div></blockquote>
+<dl class="docutils">
+<dt>mu</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">array of floats</span><dd>the component means</dd>
+<dt>sd</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">array of floats</span><dd>the component standard deviations</dd>
+<dt>tau</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">array of floats</span><dd>the component precisions</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.distributions.mixture.all_discrete">
+<code class="descclassname">pymc3.distributions.mixture.</code><code class="descname">all_discrete</code><span class="sig-paren">(</span><em>comp_dists</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.distributions.mixture.all_discrete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine if all distributions in comp_dists are discrete</p>
+</dd></dl>
+
+</div>
 </div>
 <div class="section" id="plots">
 <h2>Plots<a class="headerlink" href="#plots" title="Permalink to this headline">¶</a></h2>
@@ -2596,6 +2707,143 @@ meaningful when <cite>stat_funcs</cite> is None.</p>
 </dd></dl>
 
 </div>
+<div class="section" id="diagnostics">
+<h2>Diagnostics<a class="headerlink" href="#diagnostics" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-pymc3.diagnostics"></span><p>Convergence diagnostics and model validation</p>
+<dl class="function">
+<dt id="pymc3.diagnostics.geweke">
+<code class="descclassname">pymc3.diagnostics.</code><code class="descname">geweke</code><span class="sig-paren">(</span><em>pymc3_obj</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.diagnostics.geweke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return z-scores for convergence diagnostics.</p>
+<p>Compare the mean of the first % of series with the mean of the last % of
+series. x is divided into a number of segments for which this difference is
+computed. If the series is converged, this score should oscillate between
+-1 and 1.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : array-like</p>
+<blockquote>
+<div><p>The trace of some stochastic parameter.</p>
+</div></blockquote>
+<p><strong>first</strong> : float</p>
+<blockquote>
+<div><p>The fraction of series at the beginning of the trace.</p>
+</div></blockquote>
+<p><strong>last</strong> : float</p>
+<blockquote>
+<div><p>The fraction of series at the end to be compared with the section
+at the beginning.</p>
+</div></blockquote>
+<p><strong>intervals</strong> : int</p>
+<blockquote>
+<div><p>The number of segments.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>scores</strong> : list [[]]</p>
+<blockquote class="last">
+<div><p>Return a list of [i, score], where i is the starting index for each
+interval and score the Geweke score on the interval.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The Geweke score on some series x is computed by:</p>
+<blockquote>
+<div><div class="math">
+\[\frac{E[x_s] - E[x_e]}{\sqrt{V[x_s] + V[x_e]}}\]</div>
+</div></blockquote>
+<p>where <span class="math">\(E\)</span> stands for the mean, <span class="math">\(V\)</span> the variance,
+<span class="math">\(x_s\)</span> a section at the start of the series and
+<span class="math">\(x_e\)</span> a section at the end of the series.</p>
+<p class="rubric">References</p>
+<p>Geweke (1992)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.diagnostics.gelman_rubin">
+<code class="descclassname">pymc3.diagnostics.</code><code class="descname">gelman_rubin</code><span class="sig-paren">(</span><em>mtrace</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.diagnostics.gelman_rubin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns estimate of R for a set of traces.</p>
+<p>The Gelman-Rubin diagnostic tests for lack of convergence by comparing
+the variance between multiple chains to the variance within each chain.
+If convergence has been achieved, the between-chain and within-chain
+variances should be identical. To be most effective in detecting evidence
+for nonconvergence, each chain should have been initialized to starting
+values that are dispersed relative to the target distribution.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>mtrace</strong> : MultiTrace</p>
+<blockquote>
+<div><p>A MultiTrace object containing parallel traces (minimum 2)
+of one or more stochastic parameters.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Rhat</strong> : dict</p>
+<blockquote class="last">
+<div><p>Returns dictionary of the potential scale reduction
+factors, <span class="math">\(\hat{R}\)</span></p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The diagnostic is computed by:</p>
+<blockquote>
+<div><div class="math">
+\[\hat{R} = \frac{\hat{V}}{W}\]</div>
+</div></blockquote>
+<p>where <span class="math">\(W\)</span> is the within-chain variance and <span class="math">\(\hat{V}\)</span> is
+the posterior variance estimate for the pooled traces. This is the
+potential scale reduction factor, which converges to unity when each
+of the traces is a sample from the target posterior. Values greater
+than one indicate that one or more chains have not yet converged.</p>
+<p class="rubric">References</p>
+<p>Brooks and Gelman (1998)
+Gelman and Rubin (1992)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.diagnostics.effective_n">
+<code class="descclassname">pymc3.diagnostics.</code><code class="descname">effective_n</code><span class="sig-paren">(</span><em>mtrace</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.diagnostics.effective_n" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns estimate of the effective sample size of a set of traces.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>mtrace</strong> : MultiTrace</p>
+<blockquote>
+<div><p>A MultiTrace object containing parallel traces (minimum 2)
+of one or more stochastic parameters.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>n_eff</strong> : float</p>
+<blockquote class="last">
+<div><p>Return the effective sample size, <span class="math">\(\hat{n}_{eff}\)</span></p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The diagnostic is computed by:</p>
+<div class="math">
+\[\hat{n}_{eff} = \frac{mn}{1 + 2 \sum_{t=1}^T \hat{\rho}_t}\]</div>
+<p>where <span class="math">\(\hat{\rho}_t\)</span> is the estimated autocorrelation at lag t, and T
+is the first odd positive integer for which the sum
+<span class="math">\(\hat{\rho}_{T+1} + \hat{\rho}_{T+1}\)</span> is negative.</p>
+<p class="rubric">References</p>
+<p>Gelman et al. (2014)</p>
+</dd></dl>
+
+</div>
 <div class="section" id="inference">
 <h2>Inference<a class="headerlink" href="#inference" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="sampling">
@@ -2934,9 +3182,6 @@ Categorical variables.</p>
 <span class="target" id="module-pymc3.step_methods.hmc"></span><p>Created on Mar 7, 2011</p>
 <p>&#64;author: johnsalvatier</p>
 </div>
-<div class="section" id="atmcmc">
-<h4>ATMCMC<a class="headerlink" href="#atmcmc" title="Permalink to this headline">¶</a></h4>
-</div>
 </div>
 <div class="section" id="variational">
 <h3>Variational<a class="headerlink" href="#variational" title="Permalink to this headline">¶</a></h3>
@@ -3077,6 +3322,243 @@ arXiv preprint arXiv:1603.00788.</td></tr>
 </dd></dl>
 
 </div>
+<div class="section" id="advi-minibatch">
+<h4>ADVI minibatch<a class="headerlink" href="#advi-minibatch" title="Permalink to this headline">¶</a></h4>
+<span class="target" id="module-pymc3.variational.advi_minibatch"></span><dl class="function">
+<dt id="pymc3.variational.advi_minibatch.advi_minibatch">
+<code class="descclassname">pymc3.variational.advi_minibatch.</code><code class="descname">advi_minibatch</code><span class="sig-paren">(</span><em>vars=None</em>, <em>start=None</em>, <em>model=None</em>, <em>n=5000</em>, <em>n_mcsamples=1</em>, <em>minibatch_RVs=None</em>, <em>minibatch_tensors=None</em>, <em>minibatches=None</em>, <em>local_RVs=None</em>, <em>observed_RVs=None</em>, <em>encoder_params=[]</em>, <em>total_size=None</em>, <em>optimizer=None</em>, <em>learning_rate=0.001</em>, <em>epsilon=0.1</em>, <em>random_seed=None</em>, <em>verbose=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi_minibatch.advi_minibatch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform mini-batch ADVI.</p>
+<p>This function implements a mini-batch ADVI with the meanfield 
+approximation. Autoencoding variational inference is also supported.</p>
+<p>The log probability terms for mini-batches, corresponding to RVs in 
+minibatch_RVs, are scaled to (total_size) / (the number of samples in each 
+mini-batch), where total_size is an argument for the total data size.</p>
+<p>minibatch_tensors is a list of tensors (can be shared variables) to which 
+mini-batch samples are set during the optimization. In most cases, these 
+tensors are observations for RVs in the model.</p>
+<p>local_RVs and observed_RVs are used for autoencoding variational Bayes. 
+Both of these RVs are associated with each of given samples. 
+The difference is that local_RVs are unkown and their posterior 
+distributions are approximated.</p>
+<p>local_RVs are Ordered dict, whose keys and values are RVs and a tuple of 
+two objects. The first is the theano expression of variational parameters 
+(mean and log of std) of the approximate posterior, which are encoded from 
+given samples by an arbitrary deterministic function, e.g., MLP. The other 
+one is a scaling constant to be multiplied to the log probability term 
+corresponding to the RV.</p>
+<p>observed_RVs are also Ordered dict with RVs as the keys, but whose values 
+are only the scaling constant as in local_RVs. In this case, total_size is 
+ignored.</p>
+<p>If local_RVs is None (thus not using autoencoder), the following two 
+settings are equivalent:</p>
+<ul class="simple">
+<li>observed_RVs=OrderedDict([(rv, total_size / minibatch_size)])</li>
+<li>minibatch_RVs=[rv], total_size=total_size</li>
+</ul>
+<p>where minibatch_size is minibatch_tensors[0].shape[0].</p>
+<p>The variational parameters and the parameters of the autoencoder are 
+simultaneously optimized with given optimizer, which is a function that 
+returns a dictionary of parameter updates as provided to Theano function. 
+See the docstring of pymc3.variational.advi().</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>vars</strong> : object</p>
+<blockquote>
+<div><p>List of random variables. If None, variational posteriors (normal 
+distribution) are fit for all RVs in the given model.</p>
+</div></blockquote>
+<p><strong>start</strong> : Dict or None</p>
+<blockquote>
+<div><p>Initial values of parameters (variational means).</p>
+</div></blockquote>
+<p><strong>model</strong> : Model</p>
+<blockquote>
+<div><p>Probabilistic model.</p>
+</div></blockquote>
+<p><strong>n</strong> : int</p>
+<blockquote>
+<div><p>Number of interations updating parameters.</p>
+</div></blockquote>
+<p><strong>n_mcsamples</strong> : int</p>
+<blockquote>
+<div><p>Number of Monte Carlo samples to approximate ELBO.</p>
+</div></blockquote>
+<p><strong>minibatch_RVs</strong> : list of ObservedRVs</p>
+<blockquote>
+<div><p>Random variables in the model for which mini-batch tensors are set. 
+When this argument is given, both of arguments local_RVs and global_RVs 
+must be None.</p>
+</div></blockquote>
+<p><strong>minibatch_tensors</strong> : list of (tensors or shared variables)</p>
+<blockquote>
+<div><p>Tensors used to create ObservedRVs in minibatch_RVs.</p>
+</div></blockquote>
+<p><strong>minibatches</strong> : generator of list</p>
+<blockquote>
+<div><p>Generates a set of minibatches when calling next().
+The length of the returned list must be the same with the number of
+random variables in <cite>minibatch_tensors</cite>.</p>
+</div></blockquote>
+<p><strong>total_size</strong> : int</p>
+<blockquote>
+<div><p>Total size of training samples. This is used to appropriately scale the 
+log likelihood terms corresponding to mini-batches in ELBO.</p>
+</div></blockquote>
+<p><strong>local_RVs</strong> : Ordered dict</p>
+<blockquote>
+<div><p>Include encoded variational parameters and a scaling constant for 
+the corresponding RV. See the above description.</p>
+</div></blockquote>
+<p><strong>observed_RVs</strong> : Ordered dict</p>
+<blockquote>
+<div><p>Include a scaling constant for the corresponding RV. See the above 
+description</p>
+</div></blockquote>
+<p><strong>encoder_params</strong> : list of theano shared variables</p>
+<blockquote>
+<div><p>Parameters of encoder.</p>
+</div></blockquote>
+<p><strong>optimizer</strong> : (loss, tensor) -&gt; dict or OrderedDict</p>
+<blockquote>
+<div><p>A function that returns parameter updates given loss and parameter
+tensor. If <code class="code docutils literal"><span class="pre">None</span></code> (default), a default Adagrad optimizer is
+used with parameters <code class="code docutils literal"><span class="pre">learning_rate</span></code> and <code class="code docutils literal"><span class="pre">epsilon</span></code> below.</p>
+</div></blockquote>
+<p><strong>learning_rate: float</strong></p>
+<blockquote>
+<div><p>Base learning rate for adagrad. This parameter is ignored when
+an optimizer is given.</p>
+</div></blockquote>
+<p><strong>epsilon</strong> : float</p>
+<blockquote>
+<div><p>Offset in denominator of the scale of learning rate in Adagrad.
+This parameter is ignored when an optimizer is given.</p>
+</div></blockquote>
+<p><strong>random_seed</strong> : int</p>
+<blockquote>
+<div><p>Seed to initialize random state.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">ADVIFit</p>
+<blockquote class="last">
+<div><p>Named tuple, which includes &#8216;means&#8217;, &#8216;stds&#8217;, and &#8216;elbo_vals&#8217;.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+</div>
+<div class="section" id="backends">
+<h2>Backends<a class="headerlink" href="#backends" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-pymc3.backends"></span><p>Backends for traces</p>
+<div class="section" id="available-backends">
+<h3>Available backends<a class="headerlink" href="#available-backends" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li>NumPy array (pymc3.backends.NDArray)</li>
+<li>Text files (pymc3.backends.Text)</li>
+<li>SQLite (pymc3.backends.SQLite)</li>
+</ol>
+<p>The NDArray backend holds the entire trace in memory, whereas the Text
+and SQLite backends store the values while sampling.</p>
+</div>
+<div class="section" id="selecting-a-backend">
+<h3>Selecting a backend<a class="headerlink" href="#selecting-a-backend" title="Permalink to this headline">¶</a></h3>
+<p>By default, a NumPy array is used as the backend. To specify a different
+backend, pass a backend instance to <cite>sample</cite>.</p>
+<p>For example, the following would save the sampling values to CSV files
+in the directory &#8216;test&#8217;.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pymc3</span> <span class="k">as</span> <span class="nn">pm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">Text</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">trace</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="selecting-values-from-a-backend">
+<h3>Selecting values from a backend<a class="headerlink" href="#selecting-values-from-a-backend" title="Permalink to this headline">¶</a></h3>
+<p>After a backend is finished sampling, it returns a MultiTrace object.
+Values can be accessed in a few ways. The easiest way is to index the
+backend object with a variable or variable name.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>  <span class="c1"># or trace.x or trace[x]</span>
+</pre></div>
+</div>
+<p>The call will return the sampling values of <cite>x</cite>, with the values for
+all chains concatenated. (For a single call to <cite>sample</cite>, the number of
+chains will correspond to the <cite>njobs</cite> argument.)</p>
+<p>To discard the first N values of each chain, slicing syntax can be
+used.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="mi">1000</span><span class="p">:]</span>
+</pre></div>
+</div>
+<p>The <cite>get_values</cite> method offers more control over which values are
+returned. The call below will discard the first 1000 iterations
+from each chain and keep the values for each chain as separate arrays.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">burn</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">combine</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <cite>chains</cite> parameter of <cite>get_values</cite> can be used to limit the chains
+that are retrieved.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span><span class="o">.</span><span class="n">get_values</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">burn</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">chains</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>MultiTrace objects also support slicing. For example, the following
+call would return a new trace object without the first 1000 sampling
+iterations for all traces and variables.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sliced_trace</span> <span class="o">=</span> <span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:]</span>
+</pre></div>
+</div>
+<p>The backend for the new trace is always NDArray, regardless of the
+type of original trace.  Only the NDArray backend supports a stop
+value in the slice.</p>
+</div>
+<div class="section" id="loading-a-saved-backend">
+<h3>Loading a saved backend<a class="headerlink" href="#loading-a-saved-backend" title="Permalink to this headline">¶</a></h3>
+<p>Saved backends can be loaded using <cite>load</cite> function in the module for the
+specific backend.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="writing-custom-backends">
+<h3>Writing custom backends<a class="headerlink" href="#writing-custom-backends" title="Permalink to this headline">¶</a></h3>
+<p>Backends consist of a class that handles sampling storage and value
+selection. Three sampling methods of backend will be called:</p>
+<ul class="simple">
+<li>setup: Before sampling is started, the <cite>setup</cite> method will be called
+with two arguments: the number of draws and the chain number. This is
+useful setting up any structure for storing the sampling values that
+require the above information.</li>
+<li>record: Record the sampling results for the current draw. This method
+will be called with a dictionary of values mapped to the variable
+names. This is the only sampling function that <em>must</em> do something to
+have a meaningful backend.</li>
+<li>close: This method is called following sampling and should perform any
+actions necessary for finalizing and cleaning up the backend.</li>
+</ul>
+<p>The base storage class <cite>backends.base.BaseTrace</cite> provides common model
+setup that is used by all the PyMC backends.</p>
+<p>Several selection methods must also be defined:</p>
+<ul class="simple">
+<li>get_values: This is the core method for selecting values from the
+backend. It can be called directly and is used by __getitem__ when the
+backend is indexed with a variable name or object.</li>
+<li>_slice: Defines how the backend returns a slice of itself. This
+is called if the backend is indexed with a slice range.</li>
+<li>point: Returns values for each variable at a single iteration. This is
+called if the backend is indexed with a single integer.</li>
+<li>__len__: This should return the number of draws.</li>
+</ul>
+<p>When <cite>pymc3.sample</cite> finishes, it wraps all trace objects in a MultiTrace
+object that provides a consistent selection interface for all backends.
+If the traces are stored on disk, then a <cite>load</cite> function should also be
+defined that returns a MultiTrace object.</p>
+<p>For specific examples, see pymc3.backends.{ndarray,text,sqlite}.py.</p>
 </div>
 </div>
 </div>

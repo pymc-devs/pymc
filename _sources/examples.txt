@@ -12,7 +12,7 @@ Howto
    notebooks/NUTS_scaling_using_ADVI.ipynb
    notebooks/howto_debugging.ipynb
    notebooks/LKJ.ipynb
- 
+
 Applied
 =======
 
