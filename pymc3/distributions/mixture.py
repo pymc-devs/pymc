@@ -3,7 +3,7 @@ import theano.tensor as tt
 
 from ..math import logsumexp
 from .dist_math import bound
-from .distribution import Discrete, Distribution
+from .distribution import Discrete, Distribution, draw_values, generate_samples
 from .continuous import get_tau_sd, Normal
 
 
