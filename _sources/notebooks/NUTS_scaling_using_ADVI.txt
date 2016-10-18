@@ -6,13 +6,9 @@
     "collapsed": true
    },
    "source": [
-    "##### PyMC3 Examples\n",
-    "\n",
-    "# NUTS scaling using ADVI Outputs\n",
+    "# NUTS scaling using ADVI\n",
     "\n",
     "#### A minimal reproducable example of using the stdevs of ADVI to set the scaling matrix of the NUTS sampler.\n",
-    "\n",
-    "\n",
     "\n",
     "I caught up with [Thomas Wiecki](https://twiecki.github.io) after his talk at [ODSC London](https://www.odsc.com/london) and he mentioned a potential speed increase for NUTS sampling by using ADVI outputs to set the covariance scaling matrix.\n",
     "\n",
@@ -90,7 +86,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# Setup"
+    "## Setup"
    ]
   },
   {
@@ -161,7 +157,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "## Local Functions"
+    "### Local Functions"
    ]
   },
   {
@@ -215,7 +211,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "## Generate Data"
+    "### Generate Data"
    ]
   },
   {
@@ -326,7 +322,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# Create and Run Linear Model"
+    "## Create and Run Linear Model"
    ]
   },
   {
@@ -364,7 +360,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "## Metropolis Sampling"
+    "### Metropolis Sampling"
    ]
   },
   {
@@ -471,7 +467,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "## ADVI Estimation"
+    "### ADVI Estimation"
    ]
   },
   {
@@ -596,14 +592,14 @@
     "collapsed": true
    },
    "source": [
-    "# Test NUTS Sampling"
+    "## Test NUTS Sampling"
    ]
   },
   {
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "## 1. NUTS initialise MAP at test_point"
+    "### 1. NUTS initialise MAP at test_point"
    ]
   },
   {
@@ -699,7 +695,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "## 2. NUTS initialise MAP using ADVI mean"
+    "### 2. NUTS initialise MAP using ADVI mean"
    ]
   },
   {
@@ -795,7 +791,7 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "## 3. NUTS initialise MAP using ADVI mean and scale using ADVI stdevs"
+    "### 3. NUTS initialise MAP using ADVI mean and scale using ADVI stdevs"
    ]
   },
   {
