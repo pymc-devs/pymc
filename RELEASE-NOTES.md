@@ -1,5 +1,5 @@
 # Release Notes
-## PyMC3 3.0 (September xx, 2016)
+## PyMC3 3.0 (October xx, 2016)
 
 We are proud and excited to release the first stable version of PyMC3, the product of more than [5 years](https://github.com/pymc-devs/pymc3/commit/85c7e06b6771c0d99cbc09cb68885cda8f7785cb) of ongoing development and contributions from over 80 individuals. PyMC3 is a Python module for Bayesian modeling which focuses on modern Bayesian computational methods, primarily gradient-based (Hamiltonian) MCMC sampling and variational inference. Models are specified in Python, which allows for great flexibility. The main technological difference in PyMC3 relative to previous versions is the reliance on Theano for the computational backend, rather than on Fortran extensions.
 
@@ -29,6 +29,8 @@ Since the beta release last year, the following improvements have been implement
 
 * Added contributor guidelines, contributor code of conduct and governance document.
 
+* New marginalized mixture distributions including NormalMixture.
+
 ### Deprecations
 
 * Argument order of tau and sd was switched for distributions of the normal family:
@@ -42,6 +44,8 @@ New: `Normal(name, mu, sd)` (supplying keyword arguments is unaffected).
 * `MvNormal` calling signature changed: 
 Old: `MvNormal(name, mu, tau)`
 New: `MvNormal(name, mu, cov)` (supplying keyword arguments is unaffected).
+
+* pymc3.math does not get automatically imported anymore when you import pymc3.
 
 We on the PyMC3 core team would like to thank everyone for contributing and now feel that this is ready for the big time. We look forward to hearing about all the cool stuff you use PyMC3 for, and look forward to continued development on the package.
 
