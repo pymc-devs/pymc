@@ -194,7 +194,53 @@ Backends
 .. automodule:: pymc3.backends
    :members:
 
+ndarray
+^^^^^^^
+
+.. currentmodule:: pymc3.backends.ndarray
+   :members:
+
+.. automodule:: pymc3.backends.ndarray
+   :members:
+
+sqlite
+^^^^^^
+
+.. currentmodule:: pymc3.backends.sqlite
+   :members:
+
+.. automodule:: pymc3.backends.sqlite
+   :members:
+
+text
+^^^^
+
+.. currentmodule:: pymc3.backends.text
+   :members:
+
+.. automodule:: pymc3.backends.text
+   :members:
+
+tracetab
+^^^^^^^^
+
+.. currentmodule:: pymc3.backends.tracetab
+   :members:
+
+.. automodule:: pymc3.backends.tracetab
+   :members:
 
 
 
+
+
+
+GLM
+---
+
+.. currentmodule:: pymc3.glm.glm
+   :members:
+
+.. automodule:: pymc3.glm.glm
+   :members:
 

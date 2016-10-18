@@ -119,8 +119,19 @@
 <li class="toctree-l3"><a class="reference internal" href="#selecting-values-from-a-backend">Selecting values from a backend</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#loading-a-saved-backend">Loading a saved backend</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#writing-custom-backends">Writing custom backends</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ndarray">ndarray</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sqlite">sqlite</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#database-format">Database format</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#text">text</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#file-format">File format</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#tracetab">tracetab</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#glm">GLM</a></li>
 </ul>
 </li>
 </ul>
@@ -3560,6 +3571,562 @@ If the traces are stored on disk, then a <cite>load</cite> function should also 
 defined that returns a MultiTrace object.</p>
 <p>For specific examples, see pymc3.backends.{ndarray,text,sqlite}.py.</p>
 </div>
+<div class="section" id="ndarray">
+<h3>ndarray<a class="headerlink" href="#ndarray" title="Permalink to this headline">¶</a></h3>
+<span class="target" id="module-pymc3.backends.ndarray"></span><p>NumPy array trace backend</p>
+<p>Store sampling values in memory as a NumPy array.</p>
+<dl class="class">
+<dt id="pymc3.backends.ndarray.NDArray">
+<em class="property">class </em><code class="descclassname">pymc3.backends.ndarray.</code><code class="descname">NDArray</code><span class="sig-paren">(</span><em>name=None</em>, <em>model=None</em>, <em>vars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray" title="Permalink to this definition">¶</a></dt>
+<dd><p>NDArray trace object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>name</strong> : str</p>
+<blockquote>
+<div><p>Name of backend. This has no meaning for the NDArray backend.</p>
+</div></blockquote>
+<p><strong>model</strong> : Model</p>
+<blockquote>
+<div><p>If None, the model is taken from the <cite>with</cite> context.</p>
+</div></blockquote>
+<p><strong>vars</strong> : list of variables</p>
+<blockquote class="last">
+<div><p>Sampling values will be stored for these variables. If None,
+<cite>model.unobserved_RVs</cite> is used.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pymc3.backends.ndarray.NDArray.get_values">
+<code class="descname">get_values</code><span class="sig-paren">(</span><em>varname</em>, <em>burn=0</em>, <em>thin=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.get_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get values from trace.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>varname</strong> : str</p>
+<p><strong>burn</strong> : int</p>
+<p><strong>thin</strong> : int</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A NumPy array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.ndarray.NDArray.point">
+<code class="descname">point</code><span class="sig-paren">(</span><em>idx</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.point" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return dictionary of point values at <cite>idx</cite> for current chain
+with variables names as keys.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.ndarray.NDArray.record">
+<code class="descname">record</code><span class="sig-paren">(</span><em>point</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record results of a sampling iteration.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>point</strong> : dict</p>
+<blockquote class="last">
+<div><p>Values mapped to variable names</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.ndarray.NDArray.setup">
+<code class="descname">setup</code><span class="sig-paren">(</span><em>draws</em>, <em>chain</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.ndarray.NDArray.setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform chain-specific setup.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>draws</strong> : int</p>
+<blockquote>
+<div><p>Expected number of draws</p>
+</div></blockquote>
+<p><strong>chain</strong> : int</p>
+<blockquote class="last">
+<div><p>Chain number</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="sqlite">
+<h3>sqlite<a class="headerlink" href="#sqlite" title="Permalink to this headline">¶</a></h3>
+<span class="target" id="module-pymc3.backends.sqlite"></span><p>SQLite trace backend</p>
+<p>Store and retrieve sampling values in SQLite database file.</p>
+<div class="section" id="database-format">
+<h4>Database format<a class="headerlink" href="#database-format" title="Permalink to this headline">¶</a></h4>
+<p>For each variable, a table is created with the following format:</p>
+<blockquote>
+<div>recid (INT), draw (INT), chain (INT),  v0 (FLOAT), v1 (FLOAT), v2 (FLOAT) ...</div></blockquote>
+<p>The variable column names are extended to reflect additional dimensions.
+For example, a variable with the shape (2, 2) would be stored as</p>
+<blockquote>
+<div>key (INT), draw (INT), chain (INT),  v0_0 (FLOAT), v0_1 (FLOAT), v1_0 (FLOAT) ...</div></blockquote>
+<p>The key is autoincremented each time a new row is added to the table.
+The chain column denotes the chain index and starts at 0.</p>
+<dl class="class">
+<dt id="pymc3.backends.sqlite.SQLite">
+<em class="property">class </em><code class="descclassname">pymc3.backends.sqlite.</code><code class="descname">SQLite</code><span class="sig-paren">(</span><em>name</em>, <em>model=None</em>, <em>vars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.sqlite.SQLite" title="Permalink to this definition">¶</a></dt>
+<dd><p>SQLite trace object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>name</strong> : str</p>
+<blockquote>
+<div><p>Name of database file</p>
+</div></blockquote>
+<p><strong>model</strong> : Model</p>
+<blockquote>
+<div><p>If None, the model is taken from the <cite>with</cite> context.</p>
+</div></blockquote>
+<p><strong>vars</strong> : list of variables</p>
+<blockquote class="last">
+<div><p>Sampling values will be stored for these variables. If None,
+<cite>model.unobserved_RVs</cite> is used.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pymc3.backends.sqlite.SQLite.get_values">
+<code class="descname">get_values</code><span class="sig-paren">(</span><em>varname</em>, <em>burn=0</em>, <em>thin=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.sqlite.SQLite.get_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get values from trace.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>varname</strong> : str</p>
+<p><strong>burn</strong> : int</p>
+<p><strong>thin</strong> : int</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A NumPy array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.sqlite.SQLite.point">
+<code class="descname">point</code><span class="sig-paren">(</span><em>idx</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.sqlite.SQLite.point" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return dictionary of point values at <cite>idx</cite> for current chain
+with variables names as keys.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.sqlite.SQLite.record">
+<code class="descname">record</code><span class="sig-paren">(</span><em>point</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.sqlite.SQLite.record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record results of a sampling iteration.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>point</strong> : dict</p>
+<blockquote class="last">
+<div><p>Values mapped to variable names</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.sqlite.SQLite.setup">
+<code class="descname">setup</code><span class="sig-paren">(</span><em>draws</em>, <em>chain</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.sqlite.SQLite.setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform chain-specific setup.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>draws</strong> : int</p>
+<blockquote>
+<div><p>Expected number of draws</p>
+</div></blockquote>
+<p><strong>chain</strong> : int</p>
+<blockquote class="last">
+<div><p>Chain number</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.backends.sqlite.load">
+<code class="descclassname">pymc3.backends.sqlite.</code><code class="descname">load</code><span class="sig-paren">(</span><em>name</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.sqlite.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load SQLite database.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>name</strong> : str</p>
+<blockquote>
+<div><p>Path to SQLite database file</p>
+</div></blockquote>
+<p><strong>model</strong> : Model</p>
+<blockquote>
+<div><p>If None, the model is taken from the <cite>with</cite> context.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A MultiTrace instance</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="text">
+<h3>text<a class="headerlink" href="#text" title="Permalink to this headline">¶</a></h3>
+<span class="target" id="module-pymc3.backends.text"></span><p>Text file trace backend</p>
+<p>Store sampling values as CSV files.</p>
+<div class="section" id="file-format">
+<h4>File format<a class="headerlink" href="#file-format" title="Permalink to this headline">¶</a></h4>
+<p>Sampling values for each chain are saved in a separate file (under a
+directory specified by the <cite>name</cite> argument).  The rows correspond to
+sampling iterations.  The column names consist of variable names and
+index labels.  For example, the heading</p>
+<blockquote>
+<div>x,y__0_0,y__0_1,y__1_0,y__1_1,y__2_0,y__2_1</div></blockquote>
+<p>represents two variables, x and y, where x is a scalar and y has a
+shape of (3, 2).</p>
+<dl class="class">
+<dt id="pymc3.backends.text.Text">
+<em class="property">class </em><code class="descclassname">pymc3.backends.text.</code><code class="descname">Text</code><span class="sig-paren">(</span><em>name</em>, <em>model=None</em>, <em>vars=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.Text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Text trace object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>name</strong> : str</p>
+<blockquote>
+<div><p>Name of directory to store text files</p>
+</div></blockquote>
+<p><strong>model</strong> : Model</p>
+<blockquote>
+<div><p>If None, the model is taken from the <cite>with</cite> context.</p>
+</div></blockquote>
+<p><strong>vars</strong> : list of variables</p>
+<blockquote class="last">
+<div><p>Sampling values will be stored for these variables. If None,
+<cite>model.unobserved_RVs</cite> is used.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pymc3.backends.text.Text.get_values">
+<code class="descname">get_values</code><span class="sig-paren">(</span><em>varname</em>, <em>burn=0</em>, <em>thin=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.Text.get_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get values from trace.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>varname</strong> : str</p>
+<p><strong>burn</strong> : int</p>
+<p><strong>thin</strong> : int</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A NumPy array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.text.Text.point">
+<code class="descname">point</code><span class="sig-paren">(</span><em>idx</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.Text.point" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return dictionary of point values at <cite>idx</cite> for current chain
+with variables names as keys.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.text.Text.record">
+<code class="descname">record</code><span class="sig-paren">(</span><em>point</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.Text.record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record results of a sampling iteration.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>point</strong> : dict</p>
+<blockquote class="last">
+<div><p>Values mapped to variable names</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymc3.backends.text.Text.setup">
+<code class="descname">setup</code><span class="sig-paren">(</span><em>draws</em>, <em>chain</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.Text.setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform chain-specific setup.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>draws</strong> : int</p>
+<blockquote>
+<div><p>Expected number of draws</p>
+</div></blockquote>
+<p><strong>chain</strong> : int</p>
+<blockquote class="last">
+<div><p>Chain number</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.backends.text.dump">
+<code class="descclassname">pymc3.backends.text.</code><code class="descname">dump</code><span class="sig-paren">(</span><em>name</em>, <em>trace</em>, <em>chains=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.dump" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store values from NDArray trace as CSV files.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>name</strong> : str</p>
+<blockquote>
+<div><p>Name of directory to store CSV files in</p>
+</div></blockquote>
+<p><strong>trace</strong> : MultiTrace of NDArray traces</p>
+<blockquote>
+<div><p>Result of MCMC run with default NDArray backend</p>
+</div></blockquote>
+<p><strong>chains</strong> : list</p>
+<blockquote class="last">
+<div><p>Chains to dump. If None, all chains are dumped.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.backends.text.load">
+<code class="descclassname">pymc3.backends.text.</code><code class="descname">load</code><span class="sig-paren">(</span><em>name</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.text.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load Text database.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>name</strong> : str</p>
+<blockquote>
+<div><p>Name of directory with files (one per chain)</p>
+</div></blockquote>
+<p><strong>model</strong> : Model</p>
+<blockquote>
+<div><p>If None, the model is taken from the <cite>with</cite> context.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A MultiTrace instance</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="tracetab">
+<h3>tracetab<a class="headerlink" href="#tracetab" title="Permalink to this headline">¶</a></h3>
+<span class="target" id="module-pymc3.backends.tracetab"></span><p>Functions for converting traces into a table-like format</p>
+<dl class="function">
+<dt id="pymc3.backends.tracetab.trace_to_dataframe">
+<code class="descclassname">pymc3.backends.tracetab.</code><code class="descname">trace_to_dataframe</code><span class="sig-paren">(</span><em>trace</em>, <em>chains=None</em>, <em>flat_names=None</em>, <em>hide_transformed_vars=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.backends.tracetab.trace_to_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert trace to Pandas DataFrame.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>trace</strong> : NDarray trace</p>
+<p><strong>chains</strong> : int or list of ints</p>
+<blockquote>
+<div><p>Chains to include. If None, all chains are used. A single
+chain value can also be given.</p>
+</div></blockquote>
+<p><strong>flat_names</strong> : dict or None</p>
+<blockquote class="last">
+<div><p>A dictionary that maps each variable name in <cite>trace</cite> to a list</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="glm">
+<h2>GLM<a class="headerlink" href="#glm" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-pymc3.glm.glm"></span><dl class="function">
+<dt id="pymc3.glm.glm.glm">
+<code class="descclassname">pymc3.glm.glm.</code><code class="descname">glm</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.glm.glm.glm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create GLM after Patsy model specification string.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>formula</strong> : str</p>
+<blockquote>
+<div><p>Patsy linear model descriptor.</p>
+</div></blockquote>
+<p><strong>data</strong> : array</p>
+<blockquote>
+<div><p>Labeled array (e.g. pandas DataFrame, recarray).</p>
+</div></blockquote>
+<p><strong>priors</strong> : dict</p>
+<blockquote>
+<div><p>Mapping prior name to prior distribution.
+E.g. {&#8216;Intercept&#8217;: Normal.dist(mu=0, sd=1)}</p>
+</div></blockquote>
+<p><strong>intercept_prior</strong> : pymc3 distribution</p>
+<blockquote>
+<div><p>Prior to use for the intercept.
+Default: Normal.dist(mu=0, tau=1.0E-12)</p>
+</div></blockquote>
+<p><strong>regressor_prior</strong> : pymc3 distribution</p>
+<blockquote>
+<div><p>Prior to use for all regressor(s).
+Default: Normal.dist(mu=0, tau=1.0E-12)</p>
+</div></blockquote>
+<p><strong>init_vals</strong> : dict</p>
+<blockquote>
+<div><p>Set starting values externally: parameter -&gt; value
+Default: None</p>
+</div></blockquote>
+<p><strong>family</strong> : Family object</p>
+<blockquote class="last">
+<div><p>Distribution of likelihood, see pymc3.glm.families
+(init has to be True).</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.glm.glm.linear_component">
+<code class="descclassname">pymc3.glm.glm.</code><code class="descname">linear_component</code><span class="sig-paren">(</span><em>formula</em>, <em>data</em>, <em>priors=None</em>, <em>intercept_prior=None</em>, <em>regressor_prior=None</em>, <em>init_vals=None</em>, <em>family=None</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.glm.glm.linear_component" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create linear model according to patsy specification.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>formula</strong> : str</p>
+<blockquote>
+<div><p>Patsy linear model descriptor.</p>
+</div></blockquote>
+<p><strong>data</strong> : array</p>
+<blockquote>
+<div><p>Labeled array (e.g. pandas DataFrame, recarray).</p>
+</div></blockquote>
+<p><strong>priors</strong> : dict</p>
+<blockquote>
+<div><p>Mapping prior name to prior distribution.
+E.g. {&#8216;Intercept&#8217;: Normal.dist(mu=0, sd=1)}</p>
+</div></blockquote>
+<p><strong>intercept_prior</strong> : pymc3 distribution</p>
+<blockquote>
+<div><p>Prior to use for the intercept.
+Default: Normal.dist(mu=0, tau=1.0E-12)</p>
+</div></blockquote>
+<p><strong>regressor_prior</strong> : pymc3 distribution</p>
+<blockquote>
+<div><p>Prior to use for all regressor(s).
+Default: Normal.dist(mu=0, tau=1.0E-12)</p>
+</div></blockquote>
+<p><strong>init_vals</strong> : dict</p>
+<blockquote>
+<div><p>Set starting values externally: parameter -&gt; value
+Default: None</p>
+</div></blockquote>
+<p><strong>family</strong> : statsmodels.family</p>
+<blockquote>
+<div><p>Link function to pass to statsmodels (init has to be True).</p>
+</div></blockquote>
+<p><strong>See `statsmodels.api.families`</strong></p>
+<blockquote class="last">
+<div><p>Default: identity</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.glm.glm.plot_posterior_predictive">
+<code class="descclassname">pymc3.glm.glm.</code><code class="descname">plot_posterior_predictive</code><span class="sig-paren">(</span><em>trace</em>, <em>eval=None</em>, <em>lm=None</em>, <em>samples=30</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.glm.glm.plot_posterior_predictive" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot posterior predictive of a linear model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><dl class="first last docutils">
+<dt>trace</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">&lt;array&gt;</span><dd><p class="first last">Array of posterior samples with columns</p>
+</dd>
+<dt>eval</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">&lt;array&gt;</span><dd><p class="first last">Array over which to evaluate lm</p>
+</dd>
+<dt>lm</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">function &lt;default: linear function&gt;</span><dd><p class="first last">Function mapping parameters at different points
+to their respective outputs.
+input: point, sample
+output: estimated value</p>
+</dd>
+<dt>samples</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">int &lt;default=30&gt;</span><dd><p class="first last">How many posterior samples to draw.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Additional keyword arguments are passed to pylab.plot().</p>
+</dd></dl>
+
 </div>
 </div>
 
