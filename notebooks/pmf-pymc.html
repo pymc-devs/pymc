@@ -88,43 +88,31 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
-<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Probabilistic Matrix Factorization for Making Personalized Recommendations</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#Motivation">Motivation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Intuition">Intuition</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Formalization">Formalization</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Data">Data</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Methods">Methods</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Baselines">Baselines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#applied">Applied</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Probabilistic Matrix Factorization for Making Personalized Recommendations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Motivation">Motivation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Intuition">Intuition</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Formalization">Formalization</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Data">Data</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Methods">Methods</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Probabilistic-Matrix-Factorization">Probabilistic Matrix Factorization</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Evaluation">Evaluation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Results">Results</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Summary">Summary</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#References">References</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#Probabilistic-Matrix-Factorization">Probabilistic Matrix Factorization</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Evaluation">Evaluation</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Metrics">Metrics</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Training-Data-vs.-Test-Data">Training Data vs. Test Data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#Results">Results</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Predictions-Using-MAP">Predictions Using MAP</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Predictions-using-MCMC">Predictions using MCMC</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Diagnostics-and-Posterior-Predictive-Check">Diagnostics and Posterior Predictive Check</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Summary-of-Results">Summary of Results</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#Summary">Summary</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#References">References</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -469,8 +457,8 @@ prediction function, we would calculate 0.575 as the ranking for that
 item, which is more or less a neutral preference given our -10 to 10
 rating scale.</p>
 <div class="math">
-0.2 \times 0.5 + 0.1 \times 0.5 + 0.3 \times 0.25 + 0.1 \times 0.8 + 0.3
-\times 0.9 = 0.575</div></div>
+\[0.2 \times 0.5 + 0.1 \times 0.5 + 0.3 \times 0.25 + 0.1 \times 0.8 + 0.3 \times 0.9 = 0.575\]</div>
+</div>
 <div class="section" id="Data">
 <h2>Data<a class="headerlink" href="#Data" title="Permalink to this headline">¶</a></h2>
 <p>The <a class="reference external" href="http://eigentaste.berkeley.edu/dataset/">v1 Jester dataset</a>
@@ -1141,9 +1129,8 @@ sampling on our PMF model. When the observation noise variance
 equivalent to minimizing the sum-of-squared-errors objective function
 with quadratic regularization terms.</p>
 <div class="math">
-E = \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^M I_{ij} (R_{ij} - U_i V_j^T)^2 +
-    \frac{\lambda_U}{2} \sum_{i=1}^N \|U\|_{Fro}^2 +
-    \frac{\lambda_V}{2} \sum_{j=1}^M \|V\|_{Fro}^2,</div><p>where <span class="math">\(\lambda_U = \alpha_U / \alpha\)</span>,
+\[E = \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^M I_{ij} (R_{ij} - U_i V_j^T)^2 + \frac{\lambda_U}{2} \sum_{i=1}^N \|U\|_{Fro}^2 + \frac{\lambda_V}{2} \sum_{j=1}^M \|V\|_{Fro}^2,\]</div>
+<p>where <span class="math">\(\lambda_U = \alpha_U / \alpha\)</span>,
 <span class="math">\(\lambda_V = \alpha_V / \alpha\)</span>, and <span class="math">\(\|\cdot\|_{Fro}^2\)</span>
 denotes the Frobenius norm [3]. Minimizing this objective function gives
 a local minimum, which is essentially a maximum a posteriori (MAP)
@@ -1667,8 +1654,8 @@ when the average magnitude of the latent variables is stabilizing. The
 equations for the Frobenius norms of <span class="math">\(U\)</span> and <span class="math">\(V\)</span> are shown
 below. We will use <code class="docutils literal"><span class="pre">numpy</span></code>&#8216;s <code class="docutils literal"><span class="pre">linalg</span></code> package to calculate these.</p>
 <div class="math">
-\|U\|_{Fro}^2 = \sqrt{\sum_{i=1}^N \sum_{d=1}^D |U_{id}|^2}, \hspace{40pt}
-\|V\|_{Fro}^2 = \sqrt{\sum_{j=1}^M \sum_{d=1}^D |V_{jd}|^2}</div><div class="nbinput nblast container">
+\[\|U\|_{Fro}^2 = \sqrt{\sum_{i=1}^N \sum_{d=1}^D |U_{id}|^2}, \hspace{40pt} \|V\|_{Fro}^2 = \sqrt{\sum_{j=1}^M \sum_{d=1}^D |V_{jd}|^2}\]</div>
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [21]:
 </pre></div>

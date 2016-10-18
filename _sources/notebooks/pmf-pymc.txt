@@ -35,8 +35,7 @@
     "\n",
     "To better understand CF techniques, let us explore a particular example. Imagine we are seeking to recommend jokes using a model which infers five latent factors, $V_j$, for $j = 1,2,3,4,5$. In reality, the latent factors are often unexplainable in a straightforward manner, and most models make no attempt to understand what information is being captured by each factor.  However, for the purposes of explanation, let us assume the five latent factors might end up capturing the humor profile we were discussing above. So our five latent factors are: dry, sarcastic, crude, sexual, and political. Then for a particular user $i$, imagine we infer a preference vector $U_i = <0.2, 0.1, 0.3, 0.1, 0.3>$. Also, for a particular item $j$, we infer these values for the latent factors: $V_j = <0.5, 0.5, 0.25, 0.8, 0.9>$. Using the dot product as the prediction function, we would calculate 0.575 as the ranking for that item, which is more or less a neutral preference given our -10 to 10 rating scale.\n",
     "\n",
-    "$$0.2 \\times 0.5 + 0.1 \\times 0.5 + 0.3 \\times 0.25 + 0.1 \\times 0.8 + 0.3\n",
-    "\\times 0.9 = 0.575$$\n"
+    "$$ 0.2 \\times 0.5 + 0.1 \\times 0.5 + 0.3 \\times 0.25 + 0.1 \\times 0.8 + 0.3 \\times 0.9 = 0.575 $$"
    ]
   },
   {
@@ -722,11 +721,7 @@
    "source": [
     "We'll also need functions for calculating the MAP and performing sampling on our PMF model. When the observation noise variance $\\alpha$ and the prior variances $\\alpha_U$ and $\\alpha_V$ are all kept fixed, maximizing the log posterior is equivalent to minimizing the sum-of-squared-errors objective function with quadratic regularization terms.\n",
     "\n",
-    "$$\n",
-    "E = \\frac{1}{2} \\sum_{i=1}^N \\sum_{j=1}^M I_{ij} (R_{ij} - U_i V_j^T)^2 +\n",
-    "    \\frac{\\lambda_U}{2} \\sum_{i=1}^N \\|U\\|_{Fro}^2 +\n",
-    "    \\frac{\\lambda_V}{2} \\sum_{j=1}^M \\|V\\|_{Fro}^2,\n",
-    "$$\n",
+    "$$ E = \\frac{1}{2} \\sum_{i=1}^N \\sum_{j=1}^M I_{ij} (R_{ij} - U_i V_j^T)^2 + \\frac{\\lambda_U}{2} \\sum_{i=1}^N \\|U\\|_{Fro}^2 + \\frac{\\lambda_V}{2} \\sum_{j=1}^M \\|V\\|_{Fro}^2, $$\n",
     "\n",
     "where $\\lambda_U = \\alpha_U / \\alpha$, $\\lambda_V = \\alpha_V / \\alpha$, and $\\|\\cdot\\|_{Fro}^2$ denotes the Frobenius norm [3]. Minimizing this objective function gives a local minimum, which is essentially a maximum a posteriori (MAP) estimate. While it is possible to use a fast Stochastic Gradient Descent procedure to find this MAP, we'll be finding it using the utilities built into `pymc3`. In particular, we'll use `find_MAP` with Powell optimization (`scipy.optimize.fmin_powell`). Having found this MAP estimate, we can use it as our starting point for MCMC sampling.\n",
     "\n",
@@ -1254,10 +1249,7 @@
     "\n",
     "The next step is to check how many samples we should discard as burn-in. Normally, we'd do this using a traceplot to get some idea of where the sampled variables start to converge. In this case, we have high-dimensional samples, so we need to find a way to approximate them. One way was proposed by [Salakhutdinov and Mnih, p.886](https://www.cs.toronto.edu/~amnih/papers/bpmf.pdf). We can calculate the Frobenius norms of $U$ and $V$ at each step and monitor those for convergence. This essentially gives us some idea when the average magnitude of the latent variables is stabilizing. The equations for the Frobenius norms of $U$ and $V$ are shown below. We will use `numpy`'s `linalg` package to calculate these.\n",
     "\n",
-    "$$\n",
-    "\\|U\\|_{Fro}^2 = \\sqrt{\\sum_{i=1}^N \\sum_{d=1}^D |U_{id}|^2}, \\hspace{40pt}\n",
-    "\\|V\\|_{Fro}^2 = \\sqrt{\\sum_{j=1}^M \\sum_{d=1}^D |V_{jd}|^2}\n",
-    "$$"
+    "$$ \\|U\\|_{Fro}^2 = \\sqrt{\\sum_{i=1}^N \\sum_{d=1}^D |U_{id}|^2}, \\hspace{40pt} \\|V\\|_{Fro}^2 = \\sqrt{\\sum_{j=1}^M \\sum_{d=1}^D |V_{jd}|^2} $$"
    ]
   },
   {
