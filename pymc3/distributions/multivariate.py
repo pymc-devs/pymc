@@ -305,13 +305,13 @@ class Multinomial(Discrete):
         else:
             x_sum = x
             n_sum = n
-
         return bound(
             factln(n_sum) + tt.sum(x_sum * tt.log(p) - factln(x_sum)),
             tt.all(x >= 0),
             tt.all(x <= n),
             tt.eq(tt.sum(x_sum), n_sum),
-            tt.isclose(p.sum(), 1),
+            tt.all(p <= 1),
+            tt.eq(p.sum(), 1),
             n >= 0)
 
 
