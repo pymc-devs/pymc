@@ -87,14 +87,14 @@ class Mixture(Distribution):
         try:
             return self.comp_dists.mean
         except AttributeError:
-            return tt.stack([comp_dist.mean for comp_dist in comp_dists],
+            return tt.stack([comp_dist.mean for comp_dist in self.comp_dists],
                             axis=1)
 
     def _comp_modes(self):
         try:
             return self.comp_dists.mode
         except AttributeError:
-            return tt.stack([comp_dist.mode for comp_dist in comp_dists],
+            return tt.stack([comp_dist.mode for comp_dist in self.comp_dists],
                             axis=1)
 
     def _comp_samples(self, point=None, size=None, repeat=None):
