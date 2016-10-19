@@ -141,7 +141,7 @@ class Text(base.BaseTrace):
         self._load_df()
         pt = {}
         for varname in self.varnames:
-            vals = self.df[self.flat_names[varname]].iloc[idx]
+            vals = self.df[self.flat_names[varname]].iloc[idx].values
             pt[varname] = vals.reshape(self.var_shapes[varname])
         return pt
 
@@ -161,6 +161,9 @@ def load(name, model=None):
     A MultiTrace instance
     """
     files = glob(os.path.join(name, 'chain-*.csv'))
+
+    if len(files) == 0:
+        raise ValueError('No files present in directory {}'.format(name))
 
     straces = []
     for f in files:

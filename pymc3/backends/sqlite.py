@@ -110,7 +110,7 @@ class SQLite(base.BaseTrace):
                               for varname, shape in self.var_shapes.items()}
             self._create_table()
             self._is_setup = True
-        self._create_insert_queries(chain)
+        self._create_insert_queries()
 
     def _create_table(self):
         template = TEMPLATES['table']
@@ -125,7 +125,7 @@ class SQLite(base.BaseTrace):
                                             value_cols=colnames)
                 self.db.cursor.execute(statement)
 
-    def _create_insert_queries(self, chain):
+    def _create_insert_queries(self):
         template = TEMPLATES['insert']
         for varname, var_cols in self._var_cols.items():
             # Create insert statement for each variable.
@@ -239,7 +239,7 @@ class SQLite(base.BaseTrace):
         """
         idx = int(idx)
         if idx < 0:
-            idx = self._get_max_draw(self.chain) - idx - 1
+            idx = self._get_max_draw(self.chain) + idx + 1
         statement = TEMPLATES['select_point']
         self.db.connect()
         var_values = {}
@@ -293,13 +293,17 @@ def load(name, model=None):
     db = _SQLiteDB(name)
     db.connect()
     varnames = _get_table_list(db.cursor)
+    if len(varnames) == 0:
+        raise ValueError(('Can not get variable list for database'
+                          '`{}`'.format(name)))
     chains = _get_chain_list(db.cursor, varnames[0])
 
     straces = []
     for chain in chains:
         strace = SQLite(name, model=model)
-        strace.varnames = varnames
         strace.chain = chain
+        strace._var_cols = {varname: ttab.create_flat_names('v', shape)
+                            for varname, shape in strace.var_shapes.items()}
         strace._is_setup = True
         strace.db = db  # Share the db with all traces.
         straces.append(strace)
