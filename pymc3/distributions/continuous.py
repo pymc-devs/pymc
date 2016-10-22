@@ -38,6 +38,23 @@ class UnitContinuous(Continuous):
         super(UnitContinuous, self).__init__(
             transform=transform, *args, **kwargs)
 
+def assert_nonpos_support(var, label):
+    # Checks for evidence of positive support for a variable
+    try:
+        # Transformed distribution
+        support = np.isfinite(var.transformed.distribution.dist.logp(0).tag.test_value)
+    except AttributeError:
+        try:
+            # Untransformed distribution
+            support = np.isfinite(var.distribution.logp(0).tag.test_value)
+        except AttributeError:
+            # Otherwise no direct evidence of non-positive support
+            support = False
+                        
+    if np.any(support):
+        warnings.warn(('The variable specified for {} has non-positive support,'.format(label),
+                        'likely making it unsuitable for this parameter.'))
+    
 
 def get_tau_sd(tau=None, sd=None):
     """
@@ -185,7 +202,7 @@ class Normal(Continuous):
         # called to display a warning we have to fetch the args and
         # kwargs manually.  After a certain period we should revert
         # back to the old calling signature.
-
+        
         if len(args) == 1:
             mu = args[0]
             sd = kwargs.pop('sd', None)
@@ -205,6 +222,8 @@ class Normal(Continuous):
         self.mean = self.median = self.mode = self.mu = mu
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.variance = 1. / self.tau
+        
+        assert_nonpos_support(self.tau, 'tau (sd)')
 
         super(Normal, self).__init__(**kwargs)
 
@@ -252,6 +271,8 @@ class HalfNormal(PositiveContinuous):
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.mean = tt.sqrt(2 / (np.pi * self.tau))
         self.variance = (1. - 2 / np.pi) / self.tau
+        
+        assert_nonpos_support(self.tau, 'tau (sd)')
 
     def random(self, point=None, size=None, repeat=None):
         sd = draw_values([self.sd], point=point)
@@ -331,6 +352,8 @@ class Wald(PositiveContinuous):
         self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam)**2)
                                - 1.5 * self.mu / self.lam) + alpha
         self.variance = (self.mu**3) / self.lam
+        
+        assert_nonpos_support(self.phi, 'phi (or mu, lam)')
 
     def get_mu_lam_phi(self, mu, lam, phi):
         if mu is None:
@@ -433,6 +456,9 @@ class Beta(UnitContinuous):
         self.mean = alpha / (alpha + beta)
         self.variance = alpha * beta / (
             (alpha + beta)**2 * (alpha + beta + 1))
+            
+        assert_nonpos_support(self.alpha, 'alpha')
+        assert_nonpos_support(self.beta, 'beta')
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
@@ -492,6 +518,8 @@ class Exponential(PositiveContinuous):
         self.mode = 0
 
         self.variance = lam**-2
+        
+        assert_nonpos_support(self.lam, 'lam')
 
     def random(self, point=None, size=None, repeat=None):
         lam = draw_values([self.lam], point=point)
@@ -533,6 +561,8 @@ class Laplace(Continuous):
         self.mean = self.median = self.mode = self.mu = mu
 
         self.variance = 2 * b**2
+        
+        assert_nonpos_support(self.b, 'b')
 
     def random(self, point=None, size=None, repeat=None):
         mu, b = draw_values([self.mu, self.b], point=point)
@@ -586,6 +616,8 @@ class Lognormal(PositiveContinuous):
         self.median = tt.exp(mu)
         self.mode = tt.exp(mu - 1. / self.tau)
         self.variance = (tt.exp(1. / self.tau) - 1) * tt.exp(2 * mu + 1. / self.tau)
+        
+        assert_nonpos_support(self.tau, 'tau (sd)')
 
     def _random(self, mu, tau, size=None):
         samples = np.random.normal(size=size)
@@ -644,6 +676,9 @@ class StudentT(Continuous):
         self.variance = tt.switch((nu > 2) * 1,
                                   (1 / self.lam) * (nu / (nu - 2)),
                                   np.inf)
+                                  
+        assert_nonpos_support(self.lam, 'lam (sd)')
+        assert_nonpos_support(self.nu, 'nu')
 
     def random(self, point=None, size=None, repeat=None):
         nu, mu, lam = draw_values([self.nu, self.mu, self.lam],
@@ -702,6 +737,10 @@ class Pareto(PositiveContinuous):
             tt.gt(alpha, 2),
             (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2),
             np.inf)
+            
+        assert_nonpos_support(self.alpha, 'alpha')
+        assert_nonpos_support(self.m, 'm')
+        
 
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
@@ -752,6 +791,8 @@ class Cauchy(Continuous):
         super(Cauchy, self).__init__(*args, **kwargs)
         self.median = self.mode = self.alpha = alpha
         self.beta = beta
+        
+        assert_nonpos_support(self.beta, 'beta')
 
     def _random(self, alpha, beta, size=None):
         u = np.random.uniform(size=size)
@@ -798,6 +839,8 @@ class HalfCauchy(PositiveContinuous):
         self.mode = 0
         self.median = beta
         self.beta = beta
+        
+        assert_nonpos_support(self.beta, 'beta')
 
     def _random(self, beta, size=None):
         u = np.random.uniform(size=size)
@@ -864,6 +907,9 @@ class Gamma(PositiveContinuous):
         self.mean = alpha / beta
         self.mode = tt.maximum((alpha - 1) / beta, 0)
         self.variance = alpha / beta**2
+        
+        assert_nonpos_support(self.alpha, 'alpha')
+        assert_nonpos_support(self.beta, 'beta')
 
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
@@ -931,6 +977,8 @@ class InverseGamma(PositiveContinuous):
         self.variance = tt.switch(tt.gt(alpha, 2),
                                   (beta**2) / (alpha * (alpha - 1.)**2),
                                   np.inf)
+        assert_nonpos_support(self.alpha, 'alpha')
+        assert_nonpos_support(self.beta, 'beta')
 
     def _calculate_mean(self):
         m = self.beta / (self.alpha - 1.)
@@ -1013,6 +1061,9 @@ class Weibull(PositiveContinuous):
         self.median = beta * tt.exp(gammaln(tt.log(2)))**(1. / alpha)
         self.variance = (beta**2) * \
             tt.exp(gammaln(1 + 2. / alpha - self.mean**2))
+            
+        assert_nonpos_support(self.alpha, 'alpha')
+        assert_nonpos_support(self.beta, 'beta')
 
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
@@ -1199,6 +1250,9 @@ class ExGaussian(Continuous):
         self.nu = nu
         self.mean = mu + nu
         self.variance = (sigma**2) + (nu**2)
+        
+        assert_nonpos_support(self.sigma, 'sigma')
+        assert_nonpos_support(self.nu, 'nu')
 
     def random(self, point=None, size=None, repeat=None):
         mu, sigma, nu = draw_values([self.mu, self.sigma, self.nu],
@@ -1257,6 +1311,8 @@ class VonMises(Continuous):
 
         if transform == 'circular':
             self.transform = transforms.Circular()
+            
+        assert_nonpos_support(self.kappa, 'kappa')
 
     def random(self, point=None, size=None, repeat=None):
         mu, kappa = draw_values([self.mu, self.kappa],
@@ -1312,6 +1368,8 @@ class SkewNormal(Continuous):
         self.alpha = alpha
         self.mean = mu + self.sd * (2 / np.pi)**0.5 * alpha / (1 + alpha**2)**0.5
         self.variance = self.sd**2 * (1 - (2 * alpha**2) / ((1 + alpha**2) * np.pi))
+        
+        assert_nonpos_support(self.tau, 'tau (sd)')
 
     def random(self, point=None, size=None, repeat=None):
         mu, tau, sd, alpha = draw_values(
