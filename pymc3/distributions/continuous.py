@@ -216,11 +216,11 @@ class Normal(Continuous):
                                 size=size)
 
     def logp(self, value):
-        tau = self.tau
         sd = self.sd
+        tau = self.tau
         mu = self.mu
         return bound((-tau * (value - mu)**2 + tt.log(tau / np.pi / 2.)) / 2.,
-                     tau > 0, sd > 0)
+                     sd > 0)
 
 
 class HalfNormal(PositiveContinuous):

@@ -105,28 +105,28 @@ def find_hessian_diag(point, vars=None, model=None):
     return H(Point(point, model=model))
 
 
-def guess_scaling(point, vars=None, model=None):
+def guess_scaling(point, vars=None, model=None, scaling_bound=1e-3):
     model = modelcontext(model)
     try:
         h = find_hessian_diag(point, vars, model=model)
     except NotImplementedError:
         h = fixed_hessian(point, vars, model=model)
-    return adjust_scaling(h)
+    return adjust_scaling(h, scaling_bound)
 
 
-def adjust_scaling(s):
+def adjust_scaling(s, scaling_bound):
     if s.ndim < 2:
-        return adjust_precision(s)
+        return adjust_precision(s, scaling_bound)
     else:
         val, vec = np.linalg.eigh(s)
-        val = adjust_precision(val)
+        val = adjust_precision(val, scaling_bound)
         return eig_recompose(val, vec)
 
 
-def adjust_precision(tau):
+def adjust_precision(tau, scaling_bound=1e-3):
     mag = sqrt(abs(tau))
 
-    bounded = bound(log(mag), log(1e-10), log(1e10))
+    bounded = bound(log(mag), log(1/scaling_bound), log(scaling_bound))
     return exp(bounded)**2
 
 
