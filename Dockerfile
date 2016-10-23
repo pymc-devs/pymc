@@ -8,4 +8,4 @@ RUN wget -O /tmp/requirements.txt https://raw.githubusercontent.com/pymc-devs/py
 RUN pip3 install -r /tmp/requirements.txt
 RUN conda install --quiet --yes icu=56.1
 
-ENV PYTHONPATH $PYTHONPATH:/home/jovyan/pymc3
+ENV PYTHONPATH $PYTHONPATH:$HOME/pymc3
