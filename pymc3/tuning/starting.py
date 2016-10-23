@@ -83,7 +83,11 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
         r = fmin(logp_o, bij.map(
             start), fprime=grad_logp_o, *args, **kwargs)
     else:
-        r = fmin(logp_o, bij.map(start), *args, **kwargs)
+        # Check to see if minimization function uses a starting value
+        if 'x0' in getargspec(fmin).args:
+            r = fmin(logp_o, bij.map(start), *args, **kwargs)
+        else:
+            r = fmin(logp_o, *args, **kwargs)
 
     if isinstance(r, tuple):
         mx0 = r[0]
