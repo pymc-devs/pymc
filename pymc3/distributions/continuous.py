@@ -38,7 +38,7 @@ class UnitContinuous(Continuous):
         super(UnitContinuous, self).__init__(
             transform=transform, *args, **kwargs)
 
-def assert_negative_support(var, label, distname, value=1e-6):
+def assert_negative_support(var, label, distname, value=-1e-6):
     # Checks for evidence of positive support for a variable
     if var is None:
         return
