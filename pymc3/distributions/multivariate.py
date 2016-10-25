@@ -301,15 +301,15 @@ class Multinomial(Discrete):
 
         if x.ndim==2:
             x_sum = x.sum(axis=0)
-            n_sum = n * x.shape[0]
+            k = x.shape[0]
         else:
             x_sum = x
-            n_sum = n
+            k = 1
         return bound(
-            factln(n_sum) + tt.sum(x_sum * tt.log(p) - factln(x_sum)),
+            k * factln(n) - tt.sum(factln(x)) + tt.sum(x_sum * tt.log(p)),
             tt.all(x >= 0),
             tt.all(x <= n),
-            tt.eq(tt.sum(x_sum), n_sum),
+            tt.eq(tt.sum(x_sum), k * n),
             tt.all(p <= 1),
             tt.eq(p.sum(), 1),
             n >= 0)
