@@ -1,3 +1,4 @@
+from itertools import combinations
 import numpy as np
 try:
     import unittest.mock as mock  # py3
@@ -32,6 +33,23 @@ class TestSample(SeededTest):
                 pm.sample(1)
                 random_numbers.append(np.random.random())
         self.assertEqual(random_numbers[0], random_numbers[1])
+
+    def test_parallel_sample_does_not_reuse_seed(self):
+        njobs = 4
+        random_numbers = []
+        for _ in range(3):
+            np.random.seed(1)  # seeds in other processes don't effect main process
+            with self.model:
+                trace = pm.sample(100, njobs=njobs)
+            # numpy thread mentioned race condition.  might as well check none are equal
+            for first, second in combinations(range(njobs), 2):
+                first_chain = trace.get_values('x', chains=first)
+                second_chain = trace.get_values('x', chains=second)
+                self.assertFalse((first_chain == second_chain).all())
+            random_numbers.append(np.random.random())
+
+        # Make sure future random processes aren't effected by this
+        self.assertTrue(all(x == random_numbers[0] for x in random_numbers))
 
     def test_sample(self):
         test_njobs = [1]

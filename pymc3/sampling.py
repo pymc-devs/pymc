@@ -281,13 +281,21 @@ def _make_parallel(arg, njobs):
     return arg
 
 
+def _parallel_random_seed(random_seed, njobs):
+    if random_seed == -1 and njobs > 1:
+        pm._log.warning('Multithreading without specifying random seeds: pymc will reseed each '
+                        'process, which will break reproducibility.')
+        random_seed = None
+    return _make_parallel(random_seed, njobs)
+
+
 def _mp_sample(**kwargs):
     njobs = kwargs.pop('njobs')
     chain = kwargs.pop('chain')
     random_seed = kwargs.pop('random_seed')
     start = kwargs.pop('start')
 
-    rseed = _make_parallel(random_seed, njobs)
+    rseed = _parallel_random_seed(random_seed, njobs)
     start_vals = _make_parallel(start, njobs)
 
     chains = list(range(chain, chain + njobs))
