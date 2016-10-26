@@ -579,7 +579,7 @@ class TestMatchesScipy(SeededTest):
                             model_many.fastlogp({'m': vals}),
                             decimal=4)
 
-    def test_multinomial_vec_2d_n(self):
+    def test_multinomial_vec_1d_n(self):
         vals = np.array([[2,4,4], [4,3,4]])
         p = np.array([0.2, 0.3, 0.5])
         ns = np.array([10, 11])
@@ -591,7 +591,7 @@ class TestMatchesScipy(SeededTest):
                             model.fastlogp({'m': vals}),
                             decimal=4)
 
-    def test_multinomial_vec_2d_n_2d_p(self):
+    def test_multinomial_vec_1d_n_2d_p(self):
         vals = np.array([[2,4,4], [4,3,4]])
         ps = np.array([[0.2, 0.3, 0.5],
                        [0.9, 0.09, 0.01]])
