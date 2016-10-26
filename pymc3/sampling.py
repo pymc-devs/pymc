@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from joblib import Parallel, delayed
 from numpy.random import randint, seed
-from numpy import shape, asarray
+import numpy as np
 
 import pymc3 as pm
 from .backends.base import merge_traces, BaseTrace, MultiTrace
@@ -276,17 +276,17 @@ def _choose_backend(trace, chain, shortcuts=None, **kwds):
 
 
 def _make_parallel(arg, njobs):
-    if not shape(arg):
+    if not np.shape(arg):
         return [arg] * njobs
     return arg
 
 
 def _parallel_random_seed(random_seed, njobs):
     if random_seed == -1 and njobs > 1:
-        pm._log.warning('Multithreading without specifying random seeds: pymc will reseed each '
-                        'process, which will break reproducibility.')
-        random_seed = None
-    return _make_parallel(random_seed, njobs)
+        max_int = np.iinfo(np.int32).max
+        return [randint(max_int) for _ in range(njobs)]
+    else:
+        return _make_parallel(random_seed, njobs)
 
 
 def _mp_sample(**kwargs):
@@ -373,4 +373,4 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
             ppc[var.name].append(var.distribution.random(point=param,
                                                          size=size))
 
-    return {k: asarray(v) for k, v in ppc.items()}
+    return {k: np.asarray(v) for k, v in ppc.items()}

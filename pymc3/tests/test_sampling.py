@@ -37,7 +37,8 @@ class TestSample(SeededTest):
     def test_parallel_sample_does_not_reuse_seed(self):
         njobs = 4
         random_numbers = []
-        for _ in range(3):
+        draws = []
+        for _ in range(2):
             np.random.seed(1)  # seeds in other processes don't effect main process
             with self.model:
                 trace = pm.sample(100, njobs=njobs)
@@ -46,10 +47,12 @@ class TestSample(SeededTest):
                 first_chain = trace.get_values('x', chains=first)
                 second_chain = trace.get_values('x', chains=second)
                 self.assertFalse((first_chain == second_chain).all())
+            draws.append(trace.get_values('x'))
             random_numbers.append(np.random.random())
 
         # Make sure future random processes aren't effected by this
-        self.assertTrue(all(x == random_numbers[0] for x in random_numbers))
+        self.assertEqual(*random_numbers)
+        self.assertTrue((draws[0] == draws[1]).all())
 
     def test_sample(self):
         test_njobs = [1]
