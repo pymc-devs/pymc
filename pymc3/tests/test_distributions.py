@@ -579,6 +579,44 @@ class TestMatchesScipy(SeededTest):
                             model_many.fastlogp({'m': vals}),
                             decimal=4)
 
+    def test_multinomial_vec_2d_n(self):
+        vals = np.array([[2,4,4], [4,3,4]])
+        p = np.array([0.2, 0.3, 0.5])
+        ns = np.array([10, 11])
+
+        with Model() as model:
+            Multinomial('m', n=ns, p=p, shape=vals.shape)
+
+        assert_almost_equal(sum([multinomial_logpdf(val, n, p) for val, n in zip(vals, ns)]),
+                            model.fastlogp({'m': vals}),
+                            decimal=4)
+
+    def test_multinomial_vec_2d_n_2d_p(self):
+        vals = np.array([[2,4,4], [4,3,4]])
+        ps = np.array([[0.2, 0.3, 0.5],
+                       [0.9, 0.09, 0.01]])
+        ns = np.array([10, 11])
+
+        with Model() as model:
+            Multinomial('m', n=ns, p=ps, shape=vals.shape)
+
+        assert_almost_equal(sum([multinomial_logpdf(val, n, p) for val, n, p in zip(vals, ns, ps)]),
+                            model.fastlogp({'m': vals}),
+                            decimal=4)
+
+    def test_multinomial_vec_2d_p(self):
+        vals = np.array([[2,4,4], [3,3,4]])
+        ps = np.array([[0.2, 0.3, 0.5],
+                       [0.3, 0.3, 0.4]])
+        n = 10
+
+        with Model() as model:
+            Multinomial('m', n=n, p=ps, shape=vals.shape)
+
+        assert_almost_equal(sum([multinomial_logpdf(val, n, p) for val, p in zip(vals, ps)]),
+                            model.fastlogp({'m': vals}),
+                            decimal=4)
+
     def test_categorical(self):
         for n in [2, 3, 4]:
             yield self.check_categorical, n

@@ -269,19 +269,34 @@ class Multinomial(Discrete):
 
     Parameters
     ----------
-    n : int
+    n : int or array
         Number of trials (n > 0).
-    p : array
+    p : one- or two-dimensional array
         Probability of each one of the different outcomes. Elements must
-        be non-negative and sum to 1. They will be automatically rescaled otherwise.
+        be non-negative and sum to 1 along the last axis. They will be automatically
+        rescaled otherwise.
     """
 
     def __init__(self, n, p, *args, **kwargs):
         super(Multinomial, self).__init__(*args, **kwargs)
-        self.n = n
-        self.p = p / tt.sum(p)
-        self.mean = n * p
-        self.mode = tt.cast(tt.round(n * p), 'int32')
+
+        p = p / tt.sum(p, axis=-1, keepdims=True)
+
+        if len(self.shape) == 2:
+            try:
+                assert n.shape == (self.shape[0],)
+            except AttributeError:
+                # this occurs when n is a scalar Python int or float
+                n *= tt.ones(self.shape[0])
+
+            self.n = tt.shape_padright(n)
+            self.p = p if p.ndim == 2 else tt.shape_padleft(p)
+        else:
+            self.n = n
+            self.p = p
+
+        self.mean = self.n * self.p
+        self.mode = tt.cast(tt.round(self.mean), 'int32')
 
     def _random(self, n, p, size=None):
         if size == p.shape:
@@ -299,20 +314,13 @@ class Multinomial(Discrete):
         n = self.n
         p = self.p
 
-        if x.ndim==2:
-            x_sum = x.sum(axis=0)
-            k = x.shape[0]
-        else:
-            x_sum = x
-            k = 1
         return bound(
-            k * factln(n) - tt.sum(factln(x)) + tt.sum(x_sum * tt.log(p)),
+            tt.sum(factln(n)) - tt.sum(factln(x)) + tt.sum(x * tt.log(p)),
             tt.all(x >= 0),
-            tt.all(x <= n),
-            tt.eq(tt.sum(x_sum), k * n),
+            tt.all(tt.eq(tt.sum(x, axis=-1, keepdims=True), n)),
             tt.all(p <= 1),
-            tt.eq(p.sum(), 1),
-            n >= 0)
+            tt.all(tt.eq(tt.sum(p, axis=-1), 1)),
+            tt.all(tt.ge(n, 0)))
 
 
 def posdef(AA):
