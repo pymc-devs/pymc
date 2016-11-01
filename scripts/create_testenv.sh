@@ -17,7 +17,7 @@ fi
 
 pip install tqdm
 pip install --no-deps numdifftools
-pip install git+https://github.com/Theano/Theano.git
+pip install https://github.com/Theano/Theano/archive/rel-0.8.2.zip
 pip install git+https://github.com/mahmoudimus/nose-timer.git
 
 python setup.py build_ext --inplace
