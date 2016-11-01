@@ -7,9 +7,11 @@ do
     case "$1" in
         --global)
             GLOBAL=1
+            shift
             ;;
         --no-setup)
             NO_SETUP=1
+            shift
             ;;
     esac
 done
