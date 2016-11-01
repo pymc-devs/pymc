@@ -43,6 +43,12 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     if start is None:
         start = model.test_point
 
+    if not set(start.keys()).issubset(model.named_vars.keys()):
+        extra_keys = ', '.join(set(start.keys()) - set(model.named_vars.keys()))
+        valid_keys = ', '.join(model.named_vars.keys())
+        raise KeyError('Some start parameters do not appear in the model!\n'
+                       'Valid keys are: {}, but {} was supplied'.format(valid_keys, extra_keys))
+
     if vars is None:
         vars = model.cont_vars
     vars = inputvars(vars)
