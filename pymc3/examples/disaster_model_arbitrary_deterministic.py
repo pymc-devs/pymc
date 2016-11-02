@@ -7,6 +7,7 @@ Note that gradient based samplers will not work.
 
 from pymc3 import *
 import theano.tensor as tt
+from theano import as_op
 from numpy import arange, array, empty
 
 __all__ = ['disasters_data', 'switchpoint', 'early_mean', 'late_mean', 'rate',
@@ -25,7 +26,7 @@ years = len(disasters_data)
 # here is the trick
 
 
-@theano.compile.ops.as_op(itypes=[tt.lscalar, tt.dscalar, tt.dscalar], otypes=[tt.dvector])
+@as_op(itypes=[tt.lscalar, tt.dscalar, tt.dscalar], otypes=[tt.dvector])
 def rateFunc(switchpoint, early_mean, late_mean):
     ''' Concatenate Poisson means '''
     out = empty(years)
