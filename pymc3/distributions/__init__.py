@@ -31,6 +31,7 @@ from .discrete import Bernoulli
 from .discrete import Poisson
 from .discrete import NegativeBinomial
 from .discrete import ConstantDist
+from .discrete import Constant
 from .discrete import ZeroInflatedPoisson
 from .discrete import ZeroInflatedNegativeBinomial
 from .discrete import DiscreteUniform
@@ -94,6 +95,7 @@ __all__ = ['Uniform',
            'Poisson',
            'NegativeBinomial',
            'ConstantDist',
+           'Constant',
            'ZeroInflatedPoisson',
            'ZeroInflatedNegativeBinomial',
            'DiscreteUniform',
