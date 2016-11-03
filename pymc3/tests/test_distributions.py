@@ -7,7 +7,7 @@ from ..model import Model, Point, Potential
 from ..blocking import DictToVarBijection, DictToArrayBijection, ArrayOrdering
 from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Dirichlet,
                              MvStudentT, MvNormal, ZeroInflatedPoisson,
-                             ZeroInflatedNegativeBinomial, ConstantDist, Poisson, Bernoulli, Beta,
+                             ZeroInflatedNegativeBinomial, ConstantDist, Constant, Poisson, Bernoulli, Beta,
                              BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto, InverseGamma,
                              Gamma, Cauchy, HalfCauchy, Lognormal, Laplace, NegativeBinomial,
                              Geometric, Exponential, ExGaussian, Normal, Flat, LKJCorr, Wald,
@@ -477,7 +477,7 @@ class TestMatchesScipy(SeededTest):
                                  lambda value, mu: sp.poisson.logpmf(value, mu))
 
     def test_constantdist(self):
-        self.pymc3_matches_scipy(ConstantDist, I, {'c': I},
+        self.pymc3_matches_scipy(Constant, I, {'c': I},
                                  lambda value, c: np.log(c == value))
 
     def test_zeroinflatedpoisson(self):
