@@ -78,19 +78,25 @@ def _init_uw_global_shared(start, global_RVs, global_order):
 
 
 def _join_global_RVs(global_RVs, global_order):
-    joined_global = tt.concatenate([v.ravel() for v in global_RVs])
-    uw_global = tt.dvector('uw_global')
-    uw_global.tag.test_value = np.concatenate([joined_global.tag.test_value,
-                                               joined_global.tag.test_value])
+    if len(global_RVs) == 0:
+        inarray_global = None
+        uw_global = None
+        replace_global = {}
+    else:
+        joined_global = tt.concatenate([v.ravel() for v in global_RVs])
+        uw_global = tt.vector('uw_global')
+        uw_global.tag.test_value = np.concatenate(
+            [joined_global.tag.test_value, joined_global.tag.test_value]
+        )
 
-    inarray_global = joined_global.type('inarray_global')
-    inarray_global.tag.test_value = joined_global.tag.test_value
+        inarray_global = joined_global.type('inarray_global')
+        inarray_global.tag.test_value = joined_global.tag.test_value
 
-    get_var = {var.name: var for var in global_RVs}
-    replace_global = {
-        get_var[var]: reshape_t(inarray_global[slc], shp).astype(dtyp)
-        for var, slc, shp, dtyp in global_order.vmap
-    }
+        get_var = {var.name: var for var in global_RVs}
+        replace_global = {
+            get_var[var]: reshape_t(inarray_global[slc], shp).astype(dtyp)
+            for var, slc, shp, dtyp in global_order.vmap
+        }
 
     return inarray_global, uw_global, replace_global
 
@@ -337,16 +343,20 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     inarray_l, uw_l, replace_l = _join_local_RVs(local_RVs, local_order)
     logpt = _make_logpt(global_RVs, local_RVs, observed_RVs, model)
     replace = replace_g
-    if replace_l is not None:
-        replace.update(replace_l)
+    replace.update(replace_l)
     logp = theano.clone(logpt, replace, strict=False)
     elbo = _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l,
                    n_mcsamples, random_seed)
     del logpt
 
+    # Replacements tensors of variational parameters in the graph
+    replaces = dict()
+
     # Variational parameters for global RVs
-    uw_global_shared, bij = _init_uw_global_shared(start, global_RVs,
-                                                   global_order)
+    if 0 < len(global_RVs):
+        uw_global_shared, bij = _init_uw_global_shared(start, global_RVs,
+                                                       global_order)
+        replaces.update({uw_g: uw_global_shared})
 
     # Variational parameters for local RVs, encoded from samples in
     # mini-batches
@@ -354,12 +364,10 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         uws = [uw for _, (uw, _) in local_RVs.items()]
         uw_local_encoded = tt.concatenate([uw[0].ravel() for uw in uws] +
                                           [uw[1].ravel() for uw in uws])
+        replaces.update({uw_l: uw_local_encoded})
 
-    # Replace tensors in ELBO
-    updates = {uw_g: uw_global_shared, uw_l: uw_local_encoded} \
-        if 0 < len(local_RVs) else \
-              {uw_g: uw_global_shared}
-    elbo = theano.clone(elbo, updates, strict=False)
+    # Replace tensors of variational parameters in ELBO
+    elbo = theano.clone(elbo, OrderedDict(replaces), strict=False)
 
     # Replace input shared variables with tensors
     def is_shared(t):
@@ -394,11 +402,16 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     if verbose:
         print('Finished [100%]: ELBO = {}'.format(elbos[-1].round(2)))
 
-    l = int(uw_global_shared.get_value(borrow=True).size / 2)
+    # Variational parameters of global RVs
+    if 0 < len(global_RVs):
+        l = int(uw_global_shared.get_value(borrow=True).size / 2)
+        u = bij.rmap(uw_global_shared.get_value(borrow=True)[:l])
+        w = bij.rmap(uw_global_shared.get_value(borrow=True)[l:])
+        # w is in log space
+        for var in w.keys():
+            w[var] = np.exp(w[var])
+    else:
+        u = dict()
+        w = dict()
 
-    u = bij.rmap(uw_global_shared.get_value(borrow=True)[:l])
-    w = bij.rmap(uw_global_shared.get_value(borrow=True)[l:])
-    # w is in log space
-    for var in w.keys():
-        w[var] = np.exp(w[var])
     return ADVIFit(u, w, elbos)
