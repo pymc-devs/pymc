@@ -13,7 +13,17 @@ from .advi import check_discrete_rvs, ADVIFit, adagrad_optimizer, \
 __all__ = ['advi_minibatch']
 
 
+if theano.config.floatX == 'float32':
+    floatX = np.float32
+    floatX_str = 'float32'
+elif theano.config.floatX == 'float64':
+    floatX = np.float64
+    floatX_str = 'float64'
+else:
+    raise ValueError('float16 is not supported.')
 
+
+nan_ = floatX(np.nan)
 
 
 def _value_error(cond, str):
@@ -44,7 +54,7 @@ def _get_rvss(
                      'When minibatch_RVs is given, local_RVs and ' +
                      'observed_RVs must be None.')
 
-        s = np.float32(total_size) / minibatch_tensors[0].shape[0]
+        s = floatX(total_size) / minibatch_tensors[0].shape[0]
         local_RVs = OrderedDict()
         observed_RVs = OrderedDict([(v, s) for v in minibatch_RVs])
 
@@ -61,7 +71,7 @@ def _init_uw_global_shared(start, global_RVs, global_order):
     bij = DictToArrayBijection(global_order, start)
     u_start = bij.map(start)
     w_start = np.zeros_like(u_start)
-    uw_start = np.concatenate([u_start, w_start])
+    uw_start = np.concatenate([u_start, w_start]).astype(floatX_str)
     uw_global_shared = theano.shared(uw_start, 'uw_global_shared')
 
     return uw_global_shared, bij
@@ -92,7 +102,7 @@ def _join_local_RVs(local_RVs, local_order):
         replace_local = {}
     else:
         joined_local = tt.concatenate([v.ravel() for v in local_RVs])
-        uw_local = tt.dvector('uw_local')
+        uw_local = tt.vector('uw_local')
         uw_local.tag.test_value = np.concatenate([joined_local.tag.test_value,
                                                   joined_local.tag.test_value])
 
