@@ -201,7 +201,7 @@ class TestADVI(SeededTest):
             mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
             x = Normal('x', mu=mu_, sd=sd, observed=data_t)
             advi_fit = advi_minibatch(
-                n=1000, minibatch_tensors=[data_t],
+                n=1000, minibatch_tensors=[data_t], encoder_params=[], 
                 minibatch_RVs=[x], minibatches=create_minibatches(data),
                 total_size=n, learning_rate=1e-1)
             np.testing.assert_allclose(advi_fit.means['mu'], mu_post, rtol=0.1)

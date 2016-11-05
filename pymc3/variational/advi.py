@@ -136,7 +136,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     # Create parameter update function used in the training loop
     uw_shared = theano.shared(uw, 'uw_shared')
     elbo = pm.CallableTensor(elbo)(uw_shared)
-    updates = optimizer(loss=-1 * elbo, param=uw_shared)
+    updates = optimizer(loss=-1 * elbo, param=[uw_shared])
     f = theano.function([], [uw_shared, elbo], updates=updates)
 
     # Optimization loop

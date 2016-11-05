@@ -266,8 +266,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         Number of Monte Carlo samples to approximate ELBO.
     minibatch_RVs : list of ObservedRVs
         Random variables in the model for which mini-batch tensors are set.
-        When this argument is given, both of arguments local_RVs and global_RVs
-        must be None.
+        When this argument is given, both of arguments local_RVs and 
+        observed_RVs must be None.
     minibatch_tensors : list of (tensors or shared variables)
         Tensors used to create ObservedRVs in minibatch_RVs.
     minibatches : generator of list
