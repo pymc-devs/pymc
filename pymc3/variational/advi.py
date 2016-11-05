@@ -247,32 +247,36 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
 
     loss : Theano scalar
         Loss function to be minimized (e.g., negative ELBO).
-    param : Theano tensor
+    param : List of shared variables
         Parameters to be optimized.
     updates : OrderedDict
         Parameter updates used in Theano functions.
     """
     def optimizer(loss, param):
-        i = theano.shared(np.array(0))
-        value = param.get_value(borrow=True)
-        accu = theano.shared(
-            np.zeros(value.shape + (n_win,), dtype=value.dtype))
-        # grad = tt.grad(loss, wrt=param)
-        grad = tt.grad(loss, param)
-
-        # Append squared gradient vector to accu_new
-        accu_new = tt.set_subtensor(accu[:, i], grad ** 2)
-        i_new = tt.switch((i + 1) < n_win, i + 1, 0)
-
         updates = OrderedDict()
-        updates[accu] = accu_new
-        updates[i] = i_new
+        if param is not list:
+            param = list(param)
 
-        accu_sum = accu_new.sum(axis=1)
-        updates[param] = param - (learning_rate * grad /
-                                  tt.sqrt(accu_sum + epsilon))
+        for param_ in param:
+            i = theano.shared(np.array(0))
+            value = param_.get_value(borrow=True)
+            accu = theano.shared(
+                np.zeros(value.shape + (n_win,), dtype=value.dtype))
+            grad = tt.grad(loss, param_)
+
+            # Append squared gradient vector to accu_new
+            accu_new = tt.set_subtensor(accu[:, i], grad ** 2)
+            i_new = tt.switch((i + 1) < n_win, i + 1, 0)
+
+            updates[accu] = accu_new
+            updates[i] = i_new
+
+            accu_sum = accu_new.sum(axis=1)
+            updates[param_] = param_ - (learning_rate * grad /
+                                        tt.sqrt(accu_sum + epsilon))
 
         return updates
+
     return optimizer
 
 

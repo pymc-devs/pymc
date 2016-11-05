@@ -361,12 +361,10 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     elbo = theano.clone(elbo, updates, strict=False)
 
     # Create parameter update function used in the training loop
-    params = [uw_global_shared] + encoder_params
-    updates = OrderedDict()
-    for param in params:
-        # g = tt.grad(elbo, wrt=param)
-        # updates.update(adagrad(g, param, learning_rate, epsilon, n=10))
-        updates.update(optimizer(loss=-1 * elbo, param=param))
+    params = encoder_params
+    if 0 < len(global_RVs):
+        params += [uw_global_shared]
+    updates = OrderedDict(optimizer(loss=-1 * elbo, param=params))
     f = theano.function(tensors, elbo, updates=updates)
 
     # Optimization loop
