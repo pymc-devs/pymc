@@ -31,7 +31,8 @@ def gen_random_state():
     """Helper to generate a random state for MRG_RandomStreams"""
     M1 = 2147483647
     M2 = 2147462579
-    return np.random.randint(0, M1, 3).tolist() + np.random.randint(0, M2, 3).tolist()
+    return np.random.randint(0, M1, 3).tolist() + \
+        np.random.randint(0, M2, 3).tolist()
 
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
@@ -99,8 +100,8 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     References
     ----------
     .. [KTR+2016] Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
-        and Blei, D. M. (2016). Automatic Differentiation Variational Inference.
-        arXiv preprint arXiv:1603.00788.
+        and Blei, D. M. (2016). Automatic Differentiation Variational
+        Inference. arXiv preprint arXiv:1603.00788.
     """
     model = pm.modelcontext(model)
     if start is None:
@@ -135,7 +136,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     # Create parameter update function used in the training loop
     uw_shared = theano.shared(uw, 'uw_shared')
     elbo = pm.CallableTensor(elbo)(uw_shared)
-    updates = optimizer(loss=-1 * elbo, param=uw_shared)
+    updates = optimizer(loss=-1 * elbo, param=[uw_shared])
     f = theano.function([], [uw_shared, elbo], updates=updates)
 
     # Optimization loop
@@ -161,7 +162,9 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     else:
         if verbose:
             avg_elbo = elbos[-n // 10:].mean()
-            print('Finished [100%]: Average ELBO = {}'.format(avg_elbo.round(2)))
+            print(
+                'Finished [100%]: Average ELBO = {}'.format(avg_elbo.round(2))
+            )
 
     # Estimated parameters
     l = int(uw_i.size / 2)
@@ -202,7 +205,8 @@ def _elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
     w = uw[l:]
 
     # Callable tensor
-    logp_ = lambda input: theano.clone(logp, {inarray: input}, strict=False)
+    def logp_(input):
+        return theano.clone(logp, {inarray: input}, strict=False)
 
     # Naive Monte-Carlo
     if random_seed is None:
@@ -243,32 +247,36 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
 
     loss : Theano scalar
         Loss function to be minimized (e.g., negative ELBO).
-    param : Theano tensor
+    param : List of shared variables
         Parameters to be optimized.
     updates : OrderedDict
         Parameter updates used in Theano functions.
     """
     def optimizer(loss, param):
-        i = theano.shared(np.array(0))
-        value = param.get_value(borrow=True)
-        accu = theano.shared(
-            np.zeros(value.shape + (n_win,), dtype=value.dtype))
-        # grad = tt.grad(loss, wrt=param)
-        grad = tt.grad(loss, param)
-
-        # Append squared gradient vector to accu_new
-        accu_new = tt.set_subtensor(accu[:, i], grad ** 2)
-        i_new = tt.switch((i + 1) < n_win, i + 1, 0)
-
         updates = OrderedDict()
-        updates[accu] = accu_new
-        updates[i] = i_new
+        if param is not list:
+            param = list(param)
 
-        accu_sum = accu_new.sum(axis=1)
-        updates[param] = param - (learning_rate * grad /
-                                  tt.sqrt(accu_sum + epsilon))
+        for param_ in param:
+            i = theano.shared(np.array(0))
+            value = param_.get_value(borrow=True)
+            accu = theano.shared(
+                np.zeros(value.shape + (n_win,), dtype=value.dtype))
+            grad = tt.grad(loss, param_)
+
+            # Append squared gradient vector to accu_new
+            accu_new = tt.set_subtensor(accu[:, i], grad ** 2)
+            i_new = tt.switch((i + 1) < n_win, i + 1, 0)
+
+            updates[accu] = accu_new
+            updates[i] = i_new
+
+            accu_sum = accu_new.sum(axis=1)
+            updates[param_] = param_ - (learning_rate * grad /
+                                        tt.sqrt(accu_sum + epsilon))
 
         return updates
+
     return optimizer
 
 
@@ -304,8 +312,12 @@ def sample_vp(
         }
 
     ds = model.deterministics
-    get_transformed = lambda v: v if v not in ds else v.transformed
-    rvs = lambda x: [get_transformed(v) for v in x] if x is not None else []
+
+    def get_transformed(v):
+        return v if v not in ds else v.transformed
+
+    def rvs(x):
+        return [get_transformed(v) for v in x] if x is not None else []
 
     global_RVs = list(set(model.free_RVs) - set(rvs(local_RVs)))
 
@@ -322,8 +334,6 @@ def sample_vp(
         updates.update({v: (n * w + u).reshape(v.tag.test_value.shape)})
 
     if local_RVs is not None:
-        ds = model.deterministics
-        get_transformed = lambda v: v if v not in ds else v.transformed
         for v_, (uw, _) in local_RVs.items():
             v = get_transformed(v_)
             u = uw[0].ravel()
@@ -338,9 +348,11 @@ def sample_vp(
     f = theano.function([], samples)
 
     # Random variables which will be sampled
-    vars_sampled = [v for v in model.unobserved_RVs if not str(v).endswith('_')] \
-        if hide_transformed else \
-                   [v for v in model.unobserved_RVs]
+    if hide_transformed:
+        vars_sampled = [v_ for v_ in model.unobserved_RVs
+                        if not str(v_).endswith('_')]
+    else:
+        vars_sampled = [v_ for v_ in model.unobserved_RVs]
 
     varnames = [str(var) for var in model.unobserved_RVs]
     trace = pm.sampling.NDArray(model=model, vars=vars_sampled)
