@@ -10,11 +10,11 @@ import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 import pymc3 as pm
-from pymc3.backends.base import MultiTrace
 
 from tqdm import trange
 
-__all__ = ['advi', 'sample_vp']
+__all__ = ['advi']
+
 
 ADVIFit = namedtuple('ADVIFit', 'means, stds, elbo_vals')
 
@@ -32,6 +32,14 @@ def gen_random_state():
     M1 = 2147483647
     M2 = 2147462579
     return np.random.randint(0, M1, 3).tolist() + np.random.randint(0, M2, 3).tolist()
+
+
+def get_transformed(v, model):
+    """Returns transformed variable"""
+    if v in model.deterministics:
+        return v.transformed
+    else:
+        return v
 
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
@@ -271,86 +279,3 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
         return updates
     return optimizer
 
-
-def sample_vp(
-        vparams, draws=1000, model=None, local_RVs=None, random_seed=None,
-        hide_transformed=True, progressbar=True):
-    """Draw samples from variational posterior.
-
-    Parameters
-    ----------
-    vparams : dict or pymc3.variational.ADVIFit
-        Estimated variational parameters of the model.
-    draws : int
-        Number of random samples.
-    model : pymc3.Model
-        Probabilistic model.
-    random_seed : int or None
-        Seed of random number generator.  None to use current seed.
-    hide_transformed : bool
-        If False, transformed variables are also sampled. Default is True.
-
-    Returns
-    -------
-    trace : pymc3.backends.base.MultiTrace
-        Samples drawn from the variational posterior.
-    """
-    model = pm.modelcontext(model)
-
-    if isinstance(vparams, ADVIFit):
-        vparams = {
-            'means': vparams.means,
-            'stds': vparams.stds
-        }
-
-    ds = model.deterministics
-    get_transformed = lambda v: v if v not in ds else v.transformed
-    rvs = lambda x: [get_transformed(v) for v in x] if x is not None else []
-
-    global_RVs = list(set(model.free_RVs) - set(rvs(local_RVs)))
-
-    # Make dict for replacements of random variables
-    if random_seed is None:
-        r = MRG_RandomStreams(gen_random_state())
-    else:
-        r = MRG_RandomStreams(seed=random_seed)
-    updates = {}
-    for v in global_RVs:
-        u = theano.shared(vparams['means'][str(v)]).ravel()
-        w = theano.shared(vparams['stds'][str(v)]).ravel()
-        n = r.normal(size=u.tag.test_value.shape)
-        updates.update({v: (n * w + u).reshape(v.tag.test_value.shape)})
-
-    if local_RVs is not None:
-        ds = model.deterministics
-        get_transformed = lambda v: v if v not in ds else v.transformed
-        for v_, (uw, _) in local_RVs.items():
-            v = get_transformed(v_)
-            u = uw[0].ravel()
-            w = uw[1].ravel()
-            n = r.normal(size=u.tag.test_value.shape)
-            updates.update(
-                {v: (n * tt.exp(w) + u).reshape(v.tag.test_value.shape)})
-
-    # Replace some nodes of the graph with variational distributions
-    vars = model.free_RVs
-    samples = theano.clone(vars, updates)
-    f = theano.function([], samples)
-
-    # Random variables which will be sampled
-    vars_sampled = [v for v in model.unobserved_RVs if not str(v).endswith('_')] \
-        if hide_transformed else \
-                   [v for v in model.unobserved_RVs]
-
-    varnames = [str(var) for var in model.unobserved_RVs]
-    trace = pm.sampling.NDArray(model=model, vars=vars_sampled)
-    trace.setup(draws=draws, chain=0)
-
-    range_ = trange(draws) if progressbar else range(draws)
-
-    for i in range_:
-        # 'point' is like {'var1': np.array(0.1), 'var2': np.array(0.2), ...}
-        point = {varname: value for varname, value in zip(varnames, f())}
-        trace.record(point)
-
-    return MultiTrace([trace])
