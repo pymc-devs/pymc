@@ -54,5 +54,5 @@ ADVI
    notebooks/GLM-hierarchical-advi-minibatch.ipynb
    notebooks/lda-advi-aevb.ipynb
    notebooks/bayesian_neural_network_advi.ipynb
-
+   notebooks/convolutional_vae_keras_advi.ipynb
 
