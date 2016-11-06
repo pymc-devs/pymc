@@ -150,7 +150,11 @@ def make_2d(a):
     return a
 
 
-def kde2plot_op(ax, x, y, grid=200):
+def kde2plot_op(ax, x, y, grid=200, cmap=None):
+
+    if cmap is None:
+        cmap =plt.cm.gist_earth_r
+
     xmin = x.min()
     xmax = x.max()
     ymin = y.min()
@@ -163,7 +167,7 @@ def kde2plot_op(ax, x, y, grid=200):
     kernel = kde.gaussian_kde(values)
     Z = np.reshape(kernel(positions).T, X.shape)
 
-    ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
+    ax.imshow(np.rot90(Z), cmap=cmap,
               extent=[xmin, xmax, ymin, ymax])
 
 
@@ -174,10 +178,10 @@ def kdeplot(data, ax=None):
     return ax
 
 
-def kde2plot(x, y, grid=200, ax=None):
+def kde2plot(x, y, grid=200, ax=None, cmap=None):
     if ax is None:
         f, ax = plt.subplots(1, 1, squeeze=True)
-    kde2plot_op(ax, x, y, grid)
+    kde2plot_op(ax, x, y, grid, cmap)
     return ax
 
 
