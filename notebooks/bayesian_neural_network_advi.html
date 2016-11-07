@@ -35,8 +35,8 @@
         <link rel="search" title="Search" href="../search.html"/>
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="Gaussian Mixture Model" href="gaussian_mixture_model.html"/>
-        <link rel="prev" title="Automatic autoencoding variational Bayes for latent dirichlet allocation" href="lda-advi-aevb.html"/> 
+        <link rel="next" title="Convolutional variational autoencoder with PyMC3 and Keras" href="convolutional_vae_keras_advi.html"/>
+        <link rel="prev" title="Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3" href="lda-advi-aevb.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -88,20 +88,14 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
-<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../examples.html#advi">ADVI</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">Variational Inference: Bayesian Neural Networks</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#Current-trends-in-Machine-Learning">Current trends in Machine Learning</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#Bayesian-Neural-Networks-in-PyMC3">Bayesian Neural Networks in PyMC3</a></li>
@@ -112,9 +106,9 @@
 <li class="toctree-l4"><a class="reference internal" href="#Acknowledgements">Acknowledgements</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="convolutional_vae_keras_advi.html">Convolutional variational autoencoder with PyMC3 and Keras</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -222,7 +216,7 @@ div.nboutput > :first-child pre {
 div.nbinput > :first-child[class^=highlight],
 div.nboutput > :first-child[class^=highlight],
 div.nboutput > :first-child {
-    min-width: 11ex;
+    min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
@@ -481,14 +475,15 @@ hyper-parameter optimization and a lot of tribal knowledge.</p>
 problem that&#8217;s not linearly separable.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [20]:
+<span></span>In [1]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">theano</span>
+<span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span> <span class="o">=</span> <span class="s1">&#39;float64&#39;</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
-<span class="kn">import</span> <span class="nn">theano</span>
 <span class="kn">import</span> <span class="nn">sklearn</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
@@ -626,24 +621,32 @@ with neural_network:
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -234.43
-Iteration 5000 [10%]: Average ELBO = -431.23
-Iteration 10000 [20%]: Average ELBO = -279.25
-Iteration 15000 [30%]: Average ELBO = -238.32
-Iteration 20000 [40%]: Average ELBO = -217.37
-Iteration 25000 [50%]: Average ELBO = -188.57
-Iteration 30000 [60%]: Average ELBO = -158.14
-Iteration 35000 [70%]: Average ELBO = -140.24
-Iteration 40000 [80%]: Average ELBO = -132.38
-Iteration 45000 [90%]: Average ELBO = -129.07
-Finished [100%]: Average ELBO = -126.53
-CPU times: user 13 s, sys: 252 ms, total: 13.3 s
-Wall time: 12.2 s
+Iteration 0 [0%]: ELBO = -555.77
+Iteration 5000 [10%]: Average ELBO = -542.19
+Iteration 10000 [20%]: Average ELBO = -263.19
+Iteration 15000 [30%]: Average ELBO = -217.94
+Iteration 20000 [40%]: Average ELBO = -201.32
+Iteration 25000 [50%]: Average ELBO = -186.01
+Iteration 30000 [60%]: Average ELBO = -168.42
+Iteration 35000 [70%]: Average ELBO = -149.66
+Iteration 40000 [80%]: Average ELBO = -138.55
+Iteration 45000 [90%]: Average ELBO = -132.01
+Finished [100%]: Average ELBO = -129.52
+CPU times: user 18.6 s, sys: 330 ms, total: 18.9 s
+Wall time: 18.8 s
 </pre></div></div>
 </div>
 <p>&lt; 40 seconds on my older laptop. That&#8217;s pretty good considering that
@@ -654,7 +657,7 @@ Network on the GPU.</p>
 samples from the variational posterior using <code class="docutils literal"><span class="pre">sample_vp()</span></code> (this is
 just sampling from Normal distributions, so not at all the same like
 MCMC):</p>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
@@ -664,6 +667,14 @@ MCMC):</p>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">sample_vp</span><span class="p">(</span><span class="n">v_params</span><span class="p">,</span> <span class="n">draws</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 5000/5000 [00:00&lt;00:00, 9470.43it/s]
+</pre></div></div>
 </div>
 <p>Plotting the objective function (ELBO) we can see that the optimization
 slowly improves the fit over time.</p>
@@ -685,7 +696,7 @@ slowly improves the fit over time.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x7f1f600ad4e0&gt;
+<span></span>&lt;matplotlib.text.Text at 0x7f9e90bf3908&gt;
 </pre></div>
 </div>
 </div>
@@ -701,7 +712,7 @@ posterior predictive check (PPC). We use
 <code class="docutils literal"><span class="pre">`sample_ppc()</span></code> &lt;<a class="reference external" href="http://pymc-devs.github.io/pymc3/api.html#pymc3.sampling.sample_ppc">http://pymc-devs.github.io/pymc3/api.html#pymc3.sampling.sample_ppc</a>&gt;`__
 to generate new data (in this case class predictions) from the posterior
 (sampled from the variational estimation).</p>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
@@ -718,6 +729,14 @@ to generate new data (in this case class predictions) from the posterior
 <span class="n">pred</span> <span class="o">=</span> <span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;out&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.5</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 500/500 [00:02&lt;00:00, 171.97it/s]
+</pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -755,7 +774,7 @@ to generate new data (in this case class predictions) from the posterior
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Accuracy = 97.2%
+Accuracy = 96.2%
 </pre></div></div>
 </div>
 <p>Hey, our neural network did all right!</p>
@@ -777,7 +796,7 @@ the whole input space.</p>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
 </pre></div>
@@ -790,6 +809,14 @@ the whole input space.</p>
 <span class="n">ppc</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample_ppc</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">neural_network</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 500/500 [00:05&lt;00:00, 84.08it/s]
+</pre></div></div>
 </div>
 <div class="section" id="Probability-surface">
 <h3>Probability surface<a class="headerlink" href="#Probability-surface" title="Permalink to this headline">¶</a></h3>
@@ -926,22 +953,22 @@ with neural_network:
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -293.85
-Iteration 5000 [10%]: Average ELBO = -212.06
-Iteration 10000 [20%]: Average ELBO = -124.48
-Iteration 15000 [30%]: Average ELBO = -123.01
-Iteration 20000 [40%]: Average ELBO = -123.54
-Iteration 25000 [50%]: Average ELBO = -122.92
-Iteration 30000 [60%]: Average ELBO = -122.51
-Iteration 35000 [70%]: Average ELBO = -123.11
-Iteration 40000 [80%]: Average ELBO = -122.96
-Iteration 45000 [90%]: Average ELBO = -123.66
-Finished [100%]: Average ELBO = -123.71
-CPU times: user 6.23 s, sys: 168 ms, total: 6.4 s
-Wall time: 5.4 s
+Iteration 0 [0%]: ELBO = -1696.08
+Iteration 5000 [10%]: Average ELBO = -218.26
+Iteration 10000 [20%]: Average ELBO = -125.75
+Iteration 15000 [30%]: Average ELBO = -119.31
+Iteration 20000 [40%]: Average ELBO = -117.92
+Iteration 25000 [50%]: Average ELBO = -118.06
+Iteration 30000 [60%]: Average ELBO = -118.14
+Iteration 35000 [70%]: Average ELBO = -118.09
+Iteration 40000 [80%]: Average ELBO = -118.57
+Iteration 45000 [90%]: Average ELBO = -118.22
+Finished [100%]: ELBO = -97.24
+CPU times: user 21.9 s, sys: 30 ms, total: 21.9 s
+Wall time: 22.4 s
 </pre></div></div>
 </div>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
@@ -951,6 +978,14 @@ Wall time: 5.4 s
     <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">sample_vp</span><span class="p">(</span><span class="n">v_params</span><span class="p">,</span> <span class="n">draws</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 5000/5000 [00:00&lt;00:00, 9245.25it/s]
+</pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -1047,10 +1082,10 @@ earlier draft.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="gaussian_mixture_model.html" class="btn btn-neutral float-right" title="Gaussian Mixture Model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="convolutional_vae_keras_advi.html" class="btn btn-neutral float-right" title="Convolutional variational autoencoder with PyMC3 and Keras" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="lda-advi-aevb.html" class="btn btn-neutral" title="Automatic autoencoding variational Bayes for latent dirichlet allocation" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="lda-advi-aevb.html" class="btn btn-neutral" title="Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Automatic autoencoding variational Bayes for latent dirichlet allocation &mdash; PyMC3 3.0.rc1 documentation</title>
+  <title>Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3 &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -88,20 +88,14 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
-<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../examples.html#advi">ADVI</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-advi-minibatch.html">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">Automatic autoencoding variational Bayes for latent dirichlet allocation</a><ul>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#Dataset">Dataset</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#Log-likelihood-of-documents-for-LDA">Log-likelihood of documents for LDA</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#LDA-model">LDA model</a></li>
@@ -115,9 +109,9 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="convolutional_vae_keras_advi.html">Convolutional variational autoencoder with PyMC3 and Keras</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -153,7 +147,7 @@
       
           <li><a href="../examples.html">Examples</a> &raquo;</li>
       
-    <li>Automatic autoencoding variational Bayes for latent dirichlet allocation</li>
+    <li>Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -225,7 +219,7 @@ div.nboutput > :first-child pre {
 div.nbinput > :first-child[class^=highlight],
 div.nboutput > :first-child[class^=highlight],
 div.nboutput > :first-child {
-    min-width: 11ex;
+    min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
@@ -332,11 +326,8 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
-<div class="section" id="Automatic-autoencoding-variational-Bayes-for-latent-dirichlet-allocation">
-<h1>Automatic autoencoding variational Bayes for latent dirichlet allocation<a class="headerlink" href="#Automatic-autoencoding-variational-Bayes-for-latent-dirichlet-allocation" title="Permalink to this headline">¶</a></h1>
-<ol class="loweralpha simple" start="3">
-<li>2016 by Taku Yoshioka</li>
-</ol>
+<div class="section" id="Automatic-autoencoding-variational-Bayes-for-latent-dirichlet-allocation-with-PyMC3">
+<h1>Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3<a class="headerlink" href="#Automatic-autoencoding-variational-Bayes-for-latent-dirichlet-allocation-with-PyMC3" title="Permalink to this headline">¶</a></h1>
 <p>For probabilistic models with latent variables, autoencoding variational
 Bayes (AEVB; Kingma and Welling, 2014) is an algorithm which allows us
 to perform inference efficiently for large datasets with an encoder. In
@@ -364,7 +355,7 @@ and ADVI allows us to quickly apply more complex probabilistic models
 than LDA to big data with the help of mini-batches. I hope this notebook
 will attract readers, especially practitioners working on a variety of
 machine learning tasks, to probabilistic programming and PyMC3.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
@@ -372,7 +363,9 @@ machine learning tasks, to probabilistic programming and PyMC3.</p>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">os</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s1">&#39;~/git/github/taku-y/pymc3&#39;</span><span class="p">))</span>
+
+<span class="kn">import</span> <span class="nn">theano</span>
+<span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span> <span class="o">=</span> <span class="s1">&#39;float64&#39;</span>
 
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
 <span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
@@ -382,7 +375,6 @@ machine learning tasks, to probabilistic programming and PyMC3.</p>
 <span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">fetch_20newsgroups</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
-<span class="kn">import</span> <span class="nn">theano</span>
 <span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">shared</span>
 <span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
 <span class="kn">from</span> <span class="nn">theano.sandbox.rng_mrg</span> <span class="kn">import</span> <span class="n">MRG_RandomStreams</span>
@@ -391,19 +383,8 @@ machine learning tasks, to probabilistic programming and PyMC3.</p>
 <span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Dirichlet</span>
 <span class="kn">from</span> <span class="nn">pymc3.distributions.transforms</span> <span class="kn">import</span> <span class="n">t_stick_breaking</span>
 <span class="kn">from</span> <span class="nn">pymc3.variational.advi</span> <span class="kn">import</span> <span class="n">advi</span><span class="p">,</span> <span class="n">sample_vp</span>
-
-<span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">compute_test_value</span> <span class="o">=</span> <span class="s1">&#39;ignore&#39;</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-/Users/taku-y/anaconda/anaconda/envs/py35con/lib/python3.5/site-packages/IPython/html.py:14: ShimWarning: The `IPython.html` package has been deprecated. You should import from `notebook` instead. `IPython.html.widgets` has moved to `ipywidgets`.
-  &#34;`IPython.html.widgets` has moved to `ipywidgets`.&#34;, ShimWarning)
-</pre></div></div>
 </div>
 <div class="section" id="Dataset">
 <h2>Dataset<a class="headerlink" href="#Dataset" title="Permalink to this headline">¶</a></h2>
@@ -446,9 +427,9 @@ We set the number of words in the vocabulary to 1000.</p>
 <div class="container">
 <div class="highlight"><pre>
 Loading dataset...
-done in 1.823s.
+done in 1.387s.
 Extracting tf features for LDA...
-done in 1.841s.
+done in 2.152s.
 </pre></div></div>
 </div>
 <p>Each document is represented by 1000-dimensional term-frequency vector.
@@ -580,7 +561,7 @@ a Python function which takes observations (a document matrix in this
 example) and returns the log-likelihood value. This function is given as
 a return value of <code class="docutils literal"><span class="pre">logp_lda_doc(beta,</span> <span class="pre">theta)</span></code>, which has been defined
 above.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [6]:
 </pre></div>
@@ -590,25 +571,16 @@ above.</p>
 <span class="n">minibatch_size</span> <span class="o">=</span> <span class="mi">128</span>
 
 <span class="c1"># Tensor for documents</span>
-<span class="n">doc_t</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">n_words</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;doc_t&#39;</span><span class="p">)</span>
+<span class="n">doc_t</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">n_words</span><span class="p">)),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;doc_t&#39;</span><span class="p">)</span>
 
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">theta</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_topics</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">n_topics</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_topics</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">n_topics</span><span class="p">)),</span>
                       <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="n">n_topics</span><span class="p">),</span> <span class="n">transform</span><span class="o">=</span><span class="n">t_stick_breaking</span><span class="p">(</span><span class="mf">1e-9</span><span class="p">))</span>
-    <span class="n">beta</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_topics</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">n_words</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_topics</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">n_words</span><span class="p">)),</span>
                      <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">n_words</span><span class="p">),</span> <span class="n">transform</span><span class="o">=</span><span class="n">t_stick_breaking</span><span class="p">(</span><span class="mf">1e-9</span><span class="p">))</span>
     <span class="n">doc</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">DensityDist</span><span class="p">(</span><span class="s1">&#39;doc&#39;</span><span class="p">,</span> <span class="n">logp_lda_doc</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">theta</span><span class="p">),</span> <span class="n">observed</span><span class="o">=</span><span class="n">doc_t</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied stickbreaking-transform to theta and added transformed theta_stickbreaking_ to model.
-Applied stickbreaking-transform to beta and added transformed beta_stickbreaking_ to model.
-</pre></div></div>
 </div>
 </div>
 <div class="section" id="Mini-batch">
@@ -632,7 +604,7 @@ mini-batches to the algorithm. Here is an example to make a generator.</p>
         <span class="n">ixs</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">size</span><span class="o">=</span><span class="n">minibatch_size</span><span class="p">)</span>
         <span class="k">yield</span> <span class="p">[</span><span class="n">data</span><span class="p">[</span><span class="n">ixs</span><span class="p">]]</span>
 
-<span class="n">minibatches</span> <span class="o">=</span> <span class="n">create_minibatch</span><span class="p">(</span><span class="n">docs_tr</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">))</span>
+<span class="n">minibatches</span> <span class="o">=</span> <span class="n">create_minibatch</span><span class="p">(</span><span class="n">docs_tr</span><span class="o">.</span><span class="n">toarray</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
@@ -776,9 +748,9 @@ function for ADVI.</p>
 <span></span><span class="k">def</span> <span class="nf">run_advi</span><span class="p">():</span>
     <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
         <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi_minibatch</span><span class="p">(</span>
-            <span class="n">n</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">minibatch_tensors</span><span class="o">=</span><span class="n">minibatch_tensors</span><span class="p">,</span> <span class="n">minibatches</span><span class="o">=</span><span class="n">minibatches</span><span class="p">,</span>
+            <span class="n">n</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span> <span class="n">minibatch_tensors</span><span class="o">=</span><span class="n">minibatch_tensors</span><span class="p">,</span> <span class="n">minibatches</span><span class="o">=</span><span class="n">minibatches</span><span class="p">,</span>
             <span class="n">local_RVs</span><span class="o">=</span><span class="n">local_RVs</span><span class="p">,</span> <span class="n">observed_RVs</span><span class="o">=</span><span class="n">observed_RVs</span><span class="p">,</span> <span class="n">encoder_params</span><span class="o">=</span><span class="n">encoder_params</span><span class="p">,</span>
-            <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">n_mcsamples</span><span class="o">=</span><span class="mi">1</span>
+            <span class="n">learning_rate</span><span class="o">=</span><span class="mf">2e-2</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">n_mcsamples</span><span class="o">=</span><span class="mi">1</span>
         <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">v_params</span>
@@ -793,19 +765,19 @@ function for ADVI.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -3722434.15
-Iteration 100 [10%]: Average ELBO = -3638038.51
-Iteration 200 [20%]: Average ELBO = -3564631.95
-Iteration 300 [30%]: Average ELBO = -3524136.65
-Iteration 400 [40%]: Average ELBO = -3501375.19
-Iteration 500 [50%]: Average ELBO = -3490198.31
-Iteration 600 [60%]: Average ELBO = -3486100.88
-Iteration 700 [70%]: Average ELBO = -3474677.82
-Iteration 800 [80%]: Average ELBO = -3474558.58
-Iteration 900 [90%]: Average ELBO = -3483356.59
-Finished [100%]: ELBO = -3408887.83
-CPU times: user 18.6 s, sys: 390 ms, total: 19 s
-Wall time: 17.4 s
+Iteration 0 [0%]: ELBO = -3747623.03
+Iteration 300 [10%]: Average ELBO = -3540248.71
+Iteration 600 [20%]: Average ELBO = -3452421.13
+Iteration 900 [30%]: Average ELBO = -3389025.84
+Iteration 1200 [40%]: Average ELBO = -3325097.22
+Iteration 1500 [50%]: Average ELBO = -3270771.76
+Iteration 1800 [60%]: Average ELBO = -3259855.19
+Iteration 2100 [70%]: Average ELBO = -3252920.66
+Iteration 2400 [80%]: Average ELBO = -3246246.51
+Iteration 2700 [90%]: Average ELBO = -3233193.11
+Finished [100%]: ELBO = -3216035.4
+CPU times: user 1min 58s, sys: 3min 16s, total: 5min 15s
+Wall time: 1min 35s
 </pre></div></div>
 </div>
 <div class="nboutput container">
@@ -814,7 +786,7 @@ Wall time: 17.4 s
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x1234b3320&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7feb85501588&gt;]
 </pre></div>
 </div>
 </div>
@@ -847,7 +819,7 @@ the 10 topics.</p>
         <span class="k">print</span><span class="p">((</span><span class="s2">&quot;Topic #</span><span class="si">%d</span><span class="s2">: &quot;</span> <span class="o">%</span> <span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">feature_names</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">beta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[:</span><span class="o">-</span><span class="n">n_top_words</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]))</span>
 
-<span class="n">doc_t</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">docs_te</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">)[:</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="p">:])</span>
+<span class="n">doc_t</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">docs_te</span><span class="o">.</span><span class="n">toarray</span><span class="p">()[:</span><span class="n">minibatch_size</span><span class="p">,</span> <span class="p">:])</span>
 
 <span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">samples</span> <span class="o">=</span> <span class="n">sample_vp</span><span class="p">(</span><span class="n">v_params</span><span class="p">,</span> <span class="n">draws</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">local_RVs</span><span class="o">=</span><span class="n">local_RVs</span><span class="p">)</span>
@@ -857,21 +829,37 @@ the 10 topics.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 100/100 [00:00&lt;00:00, 296.67it/s]
+</pre></div></div>
+</div>
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Topic #0: people just think know don time like way say said
-Topic #1: people like time know just use new don think right
-Topic #2: use using edu work new like windows time program key
-Topic #3: think people know like don god say just time way
-Topic #4: don think know just god people like time does believe
-Topic #5: use windows like used thanks work know edu using drive
-Topic #6: just like know good don think use people does time
-Topic #7: new just year time years know people like think way
-Topic #8: use like time just edu know good don new using
-Topic #9: use new like used know don just 10 time edu
+Topic #0: don think know ve just want like really sure ll
+Topic #1: people said world war armenian israel government president armenians years
+Topic #2: people state law gun case use used control right make
+Topic #3: edu space information com mail university list send research 1993
+Topic #4: year 10 00 team 20 game 15 12 30 50
+Topic #5: good like just time got better car didn did little
+Topic #6: god does believe people jesus true say life question way
+Topic #7: thanks drive card use scsi does memory problem work video
+Topic #8: key use chip encryption government keys clipper used security bit
+Topic #9: windows file use program window using version files code set
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+
 </pre></div></div>
 </div>
 <p>We compare these topics to those obtained by a standard LDA
@@ -901,8 +889,8 @@ words in the topics are qualitatively similar.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-CPU times: user 11.7 s, sys: 9.92 ms, total: 11.7 s
-Wall time: 11.7 s
+CPU times: user 12.5 s, sys: 70 ms, total: 12.6 s
+Wall time: 12.5 s
 Topic #0: government people law mr president gun state states public rights
 Topic #1: drive card scsi bit disk use mac hard memory does
 Topic #2: people armenian said armenians turkish did war killed saw russian
@@ -1000,19 +988,19 @@ and <span class="math">\(\beta\)</span>. The validity of this is explained in (H
 probabilistic model because the number of documents to be tested
 changes. Since variational parameters have already been obtained, we can
 reuse them for sampling from the approximate posterior distribution.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">n_docs_te</span> <span class="o">=</span> <span class="n">docs_te</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<span class="n">doc_t</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="n">docs_te</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;doc_t&#39;</span><span class="p">)</span>
+<span class="n">doc_t</span> <span class="o">=</span> <span class="n">shared</span><span class="p">(</span><span class="n">docs_te</span><span class="o">.</span><span class="n">toarray</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;doc_t&#39;</span><span class="p">)</span>
 
 <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">theta</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_topics</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_docs_te</span><span class="p">,</span> <span class="n">n_topics</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_topics</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_docs_te</span><span class="p">,</span> <span class="n">n_topics</span><span class="p">)),</span>
                       <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_docs_te</span><span class="p">,</span> <span class="n">n_topics</span><span class="p">),</span> <span class="n">transform</span><span class="o">=</span><span class="n">t_stick_breaking</span><span class="p">(</span><span class="mf">1e-9</span><span class="p">))</span>
-    <span class="n">beta</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_topics</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">n_words</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">),</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">Dirichlet</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_topics</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">n_words</span><span class="p">)),</span>
                      <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_topics</span><span class="p">,</span> <span class="n">n_words</span><span class="p">),</span> <span class="n">transform</span><span class="o">=</span><span class="n">t_stick_breaking</span><span class="p">(</span><span class="mf">1e-9</span><span class="p">))</span>
     <span class="n">doc</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">DensityDist</span><span class="p">(</span><span class="s1">&#39;doc&#39;</span><span class="p">,</span> <span class="n">logp_lda_doc</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">theta</span><span class="p">),</span> <span class="n">observed</span><span class="o">=</span><span class="n">doc_t</span><span class="p">)</span>
 
@@ -1021,15 +1009,6 @@ reuse them for sampling from the approximate posterior distribution.</p>
 <span class="n">local_RVs</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="n">theta</span><span class="p">,</span> <span class="p">(</span><span class="n">encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">doc_t</span><span class="p">),</span> <span class="mi">1</span><span class="p">))])</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied stickbreaking-transform to theta and added transformed theta_stickbreaking_ to model.
-Applied stickbreaking-transform to beta and added transformed beta_stickbreaking_ to model.
-</pre></div></div>
 </div>
 <p><code class="docutils literal"><span class="pre">transform()</span></code> function is defined with <code class="docutils literal"><span class="pre">sample_vp()</span></code> function. This
 function is an argument to the function for calculating log predictive
@@ -1049,26 +1028,141 @@ probabilities.</p>
 </pre></div>
 </div>
 </div>
-<p>The mean of the log predictive probability is -7.25.</p>
+<p>The mean of the log predictive probability is about -7.00.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [19]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">time</span> result_pymc3 = eval_lda(transform_pymc3, beta_pymc3, docs_te.toarray().astype(&#39;float32&#39;), np.arange(100))
+<span></span><span class="o">%</span><span class="k">time</span> result_pymc3 = eval_lda(transform_pymc3, beta_pymc3, docs_te.toarray(), np.arange(100))
 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Predictive log prob (pm3) = {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">result_pymc3</span><span class="p">[</span><span class="s1">&#39;lp&#39;</span><span class="p">]))</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 100/100 [00:01&lt;00:00, 57.44it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 56.27it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 44.11it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.48it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 41.60it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 41.95it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 44.60it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 39.53it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 35.36it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.88it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.77it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.39it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.63it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 35.19it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 43.64it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 46.20it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 40.46it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 41.38it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 31.07it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 26.47it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 40.46it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 43.50it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 35.46it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.88it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 39.95it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.40it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.92it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 35.45it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 37.71it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 26.75it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 29.48it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.79it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 36.83it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.89it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.45it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 37.27it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 42.19it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.24it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.50it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 37.49it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.75it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.94it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.05it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 35.26it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.38it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 41.06it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.68it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.12it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 37.51it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.95it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.94it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 35.11it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 41.57it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 44.58it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 54.76it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 35.29it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 41.83it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.99it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.99it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 41.38it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 35.52it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 40.28it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 37.57it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 50.80it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 52.25it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 55.96it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 36.15it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.99it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.33it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 40.34it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 37.11it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 41.08it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.24it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 38.11it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 35.06it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.47it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 37.35it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 29.76it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.66it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 38.16it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 39.21it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 46.72it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.91it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 36.46it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 28.80it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 28.68it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.57it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 39.27it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 32.83it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 38.76it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 32.88it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 40.43it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 40.20it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 37.56it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 41.12it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 37.95it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 33.10it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.42it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.11it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.52it/s]
+</pre></div></div>
+</div>
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
-CPU times: user 3min 55s, sys: 9.34 s, total: 4min 4s
-Wall time: 1min 46s
-Predictive log prob (pm3) = -7.251825504934308
+CPU times: user 5min 44s, sys: 13min 6s, total: 18min 50s
+Wall time: 5min 10s
+Predictive log prob (pm3) = -7.483045191781358
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+
 </pre></div></div>
 </div>
 <p>We compare the result with the scikit-learn LDA implemented The log
@@ -1097,8 +1191,8 @@ and/or word distributions) is less accurate. See
 </div>
 <div class="container">
 <div class="highlight"><pre>
-CPU times: user 25.4 s, sys: 27.3 ms, total: 25.5 s
-Wall time: 25.5 s
+CPU times: user 30.4 s, sys: 29.4 s, total: 59.8 s
+Wall time: 27.9 s
 Predictive log prob (sklearn) = -6.041000209921997
 </pre></div></div>
 </div>

@@ -35,7 +35,7 @@
         <link rel="search" title="Search" href="../search.html"/>
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="Automatic autoencoding variational Bayes for latent dirichlet allocation" href="lda-advi-aevb.html"/>
+        <link rel="next" title="Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3" href="lda-advi-aevb.html"/>
         <link rel="prev" title="GLM: Hierarchical Linear Regression with ADVI" href="GLM-hierarchical-ADVI.html"/> 
 
   
@@ -88,24 +88,18 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
-<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../examples.html#advi">ADVI</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical-ADVI.html">GLM: Hierarchical Linear Regression with ADVI</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">GLM: Mini-batch ADVI on hierarchical regression model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="lda-advi-aevb.html">Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3</a></li>
 <li class="toctree-l3"><a class="reference internal" href="bayesian_neural_network_advi.html">Variational Inference: Bayesian Neural Networks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="convolutional_vae_keras_advi.html">Convolutional variational autoencoder with PyMC3 and Keras</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -213,7 +207,7 @@ div.nboutput > :first-child pre {
 div.nbinput > :first-child[class^=highlight],
 div.nboutput > :first-child[class^=highlight],
 div.nboutput > :first-child {
-    min-width: 11ex;
+    min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
@@ -333,6 +327,8 @@ of that.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">theano</span>
+<span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span> <span class="o">=</span> <span class="s1">&#39;float64&#39;</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
@@ -367,7 +363,7 @@ of that.</p>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
@@ -401,16 +397,6 @@ of that.</p>
     <span class="n">radon_like</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;radon_like&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">radon_est</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">eps</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">log_radon_t</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied interval-transform to sigma_alpha and added transformed sigma_alpha_interval to model.
-Applied interval-transform to sigma_beta and added transformed sigma_beta_interval to model.
-Applied interval-transform to eps and added transformed eps_interval to model.
-</pre></div></div>
 </div>
 <p>Random variable &#8216;radon_like&#8217;, associated with &#8216;log_radon_t&#8217;, should
 be given to the function for ADVI to denote that as observations in the
@@ -468,17 +454,17 @@ above.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -3899.32
-Iteration 4000 [10%]: Average ELBO = -2568.57
-Iteration 8000 [20%]: Average ELBO = -1183.57
-Iteration 12000 [30%]: Average ELBO = -1116.86
-Iteration 16000 [40%]: Average ELBO = -1113.43
-Iteration 20000 [50%]: Average ELBO = -1112.3
-Iteration 24000 [60%]: Average ELBO = -1110.48
-Iteration 28000 [70%]: Average ELBO = -1110.03
-Iteration 32000 [80%]: Average ELBO = -1112.24
-Iteration 36000 [90%]: Average ELBO = -1113.54
-Finished [100%]: Average ELBO = -1112.83
+Iteration 0 [0%]: ELBO = -5226.58
+Iteration 4000 [10%]: Average ELBO = -2440.14
+Iteration 8000 [20%]: Average ELBO = -1177.3
+Iteration 12000 [30%]: Average ELBO = -1116.98
+Iteration 16000 [40%]: Average ELBO = -1112.3
+Iteration 20000 [50%]: Average ELBO = -1112.01
+Iteration 24000 [60%]: Average ELBO = -1111.11
+Iteration 28000 [70%]: Average ELBO = -1110.05
+Iteration 32000 [80%]: Average ELBO = -1112.58
+Iteration 36000 [90%]: Average ELBO = -1114.31
+Finished [100%]: ELBO = -1077.87
 </pre></div></div>
 </div>
 <p>Check the trace of ELBO and compare the result with MCMC.</p>
@@ -546,11 +532,9 @@ Finished [100%]: Average ELBO = -1112.83
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Applied interval-transform to sigma_alpha and added transformed sigma_alpha_interval to model.
-Applied interval-transform to sigma_beta and added transformed sigma_beta_interval to model.
-Applied interval-transform to eps and added transformed eps_interval to model.
+WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -597,7 +581,7 @@ Applied interval-transform to eps and added transformed eps_interval to model.
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="lda-advi-aevb.html" class="btn btn-neutral float-right" title="Automatic autoencoding variational Bayes for latent dirichlet allocation" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="lda-advi-aevb.html" class="btn btn-neutral float-right" title="Automatic autoencoding variational Bayes for latent dirichlet allocation with PyMC3" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="GLM-hierarchical-ADVI.html" class="btn btn-neutral" title="GLM: Hierarchical Linear Regression with ADVI" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

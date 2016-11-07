@@ -35,8 +35,8 @@
         <link rel="search" title="Search" href="../search.html"/>
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
-        <link rel="next" title="Gaussian Process (GP) smoothing" href="GP-smoothing.html"/>
-        <link rel="prev" title="Bayesian Survival Analysis" href="survival_analysis.html"/> 
+        <link rel="next" title="NUTS scaling using ADVI" href="NUTS_scaling_using_ADVI.html"/>
+        <link rel="prev" title="Examples" href="../examples.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -88,25 +88,21 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
-<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Posterior Predictive Checks</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Prediction">Prediction</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Mean-predicted-values-plus-error-bars-to-give-sense-of-uncertainty-in-prediction">Mean predicted values plus error bars to give sense of uncertainty in prediction</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#howto">Howto</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Posterior Predictive Checks</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Comparison-between-PPC-and-other-model-evaluation-methods.">Comparison between PPC and other model evaluation methods.</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Prediction">Prediction</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="NUTS_scaling_using_ADVI.html">NUTS scaling using ADVI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -214,7 +210,7 @@ div.nboutput > :first-child pre {
 div.nbinput > :first-child[class^=highlight],
 div.nboutput > :first-child[class^=highlight],
 div.nboutput > :first-child {
-    min-width: 11ex;
+    min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
@@ -661,10 +657,10 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="GP-smoothing.html" class="btn btn-neutral float-right" title="Gaussian Process (GP) smoothing" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="NUTS_scaling_using_ADVI.html" class="btn btn-neutral float-right" title="NUTS scaling using ADVI" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="survival_analysis.html" class="btn btn-neutral" title="Bayesian Survival Analysis" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../examples.html" class="btn btn-neutral" title="Examples" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

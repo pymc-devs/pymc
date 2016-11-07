@@ -34,7 +34,7 @@
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="index.html"/>
-        <link rel="prev" title="Variational Inference: Bayesian Neural Networks" href="notebooks/bayesian_neural_network_advi.html"/> 
+        <link rel="prev" title="Convolutional variational autoencoder with PyMC3 and Keras" href="notebooks/convolutional_vae_keras_advi.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -1893,14 +1893,15 @@ over the n trials.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n</strong> : int</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n</strong> : int or array</p>
 <blockquote>
 <div><p>Number of trials (n &gt; 0).</p>
 </div></blockquote>
-<p><strong>p</strong> : array</p>
+<p><strong>p</strong> : one- or two-dimensional array</p>
 <blockquote class="last">
 <div><p>Probability of each one of the different outcomes. Elements must
-be non-negative and sum to 1. They will be automatically rescaled otherwise.</p>
+be non-negative and sum to 1 along the last axis. They will be automatically
+rescaled otherwise.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -3286,8 +3287,8 @@ This parameter is ignored when optimizer is given.</p>
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
 <tr><td class="label">[KTR+2016]</td><td>Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
-and Blei, D. M. (2016). Automatic Differentiation Variational Inference.
-arXiv preprint arXiv:1603.00788.</td></tr>
+and Blei, D. M. (2016). Automatic Differentiation Variational
+Inference. arXiv preprint arXiv:1603.00788.</td></tr>
 </tbody>
 </table>
 </dd></dl>
@@ -3339,37 +3340,37 @@ arXiv preprint arXiv:1603.00788.</td></tr>
 <dt id="pymc3.variational.advi_minibatch.advi_minibatch">
 <code class="descclassname">pymc3.variational.advi_minibatch.</code><code class="descname">advi_minibatch</code><span class="sig-paren">(</span><em>vars=None</em>, <em>start=None</em>, <em>model=None</em>, <em>n=5000</em>, <em>n_mcsamples=1</em>, <em>minibatch_RVs=None</em>, <em>minibatch_tensors=None</em>, <em>minibatches=None</em>, <em>local_RVs=None</em>, <em>observed_RVs=None</em>, <em>encoder_params=[]</em>, <em>total_size=None</em>, <em>optimizer=None</em>, <em>learning_rate=0.001</em>, <em>epsilon=0.1</em>, <em>random_seed=None</em>, <em>verbose=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi_minibatch.advi_minibatch" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform mini-batch ADVI.</p>
-<p>This function implements a mini-batch ADVI with the meanfield 
+<p>This function implements a mini-batch ADVI with the meanfield
 approximation. Autoencoding variational inference is also supported.</p>
-<p>The log probability terms for mini-batches, corresponding to RVs in 
-minibatch_RVs, are scaled to (total_size) / (the number of samples in each 
+<p>The log probability terms for mini-batches, corresponding to RVs in
+minibatch_RVs, are scaled to (total_size) / (the number of samples in each
 mini-batch), where total_size is an argument for the total data size.</p>
-<p>minibatch_tensors is a list of tensors (can be shared variables) to which 
-mini-batch samples are set during the optimization. In most cases, these 
+<p>minibatch_tensors is a list of tensors (can be shared variables) to which
+mini-batch samples are set during the optimization. In most cases, these
 tensors are observations for RVs in the model.</p>
-<p>local_RVs and observed_RVs are used for autoencoding variational Bayes. 
-Both of these RVs are associated with each of given samples. 
-The difference is that local_RVs are unkown and their posterior 
+<p>local_RVs and observed_RVs are used for autoencoding variational Bayes.
+Both of these RVs are associated with each of given samples.
+The difference is that local_RVs are unkown and their posterior
 distributions are approximated.</p>
-<p>local_RVs are Ordered dict, whose keys and values are RVs and a tuple of 
-two objects. The first is the theano expression of variational parameters 
-(mean and log of std) of the approximate posterior, which are encoded from 
-given samples by an arbitrary deterministic function, e.g., MLP. The other 
-one is a scaling constant to be multiplied to the log probability term 
+<p>local_RVs are Ordered dict, whose keys and values are RVs and a tuple of
+two objects. The first is the theano expression of variational parameters
+(mean and log of std) of the approximate posterior, which are encoded from
+given samples by an arbitrary deterministic function, e.g., MLP. The other
+one is a scaling constant to be multiplied to the log probability term
 corresponding to the RV.</p>
-<p>observed_RVs are also Ordered dict with RVs as the keys, but whose values 
-are only the scaling constant as in local_RVs. In this case, total_size is 
+<p>observed_RVs are also Ordered dict with RVs as the keys, but whose values
+are only the scaling constant as in local_RVs. In this case, total_size is
 ignored.</p>
-<p>If local_RVs is None (thus not using autoencoder), the following two 
+<p>If local_RVs is None (thus not using autoencoder), the following two
 settings are equivalent:</p>
 <ul class="simple">
 <li>observed_RVs=OrderedDict([(rv, total_size / minibatch_size)])</li>
 <li>minibatch_RVs=[rv], total_size=total_size</li>
 </ul>
 <p>where minibatch_size is minibatch_tensors[0].shape[0].</p>
-<p>The variational parameters and the parameters of the autoencoder are 
-simultaneously optimized with given optimizer, which is a function that 
-returns a dictionary of parameter updates as provided to Theano function. 
+<p>The variational parameters and the parameters of the autoencoder are
+simultaneously optimized with given optimizer, which is a function that
+returns a dictionary of parameter updates as provided to Theano function.
 See the docstring of pymc3.variational.advi().</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -3377,7 +3378,7 @@ See the docstring of pymc3.variational.advi().</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>vars</strong> : object</p>
 <blockquote>
-<div><p>List of random variables. If None, variational posteriors (normal 
+<div><p>List of random variables. If None, variational posteriors (normal
 distribution) are fit for all RVs in the given model.</p>
 </div></blockquote>
 <p><strong>start</strong> : Dict or None</p>
@@ -3398,9 +3399,9 @@ distribution) are fit for all RVs in the given model.</p>
 </div></blockquote>
 <p><strong>minibatch_RVs</strong> : list of ObservedRVs</p>
 <blockquote>
-<div><p>Random variables in the model for which mini-batch tensors are set. 
-When this argument is given, both of arguments local_RVs and global_RVs 
-must be None.</p>
+<div><p>Random variables in the model for which mini-batch tensors are set.
+When this argument is given, both of arguments local_RVs and 
+observed_RVs must be None.</p>
 </div></blockquote>
 <p><strong>minibatch_tensors</strong> : list of (tensors or shared variables)</p>
 <blockquote>
@@ -3414,28 +3415,29 @@ random variables in <cite>minibatch_tensors</cite>.</p>
 </div></blockquote>
 <p><strong>total_size</strong> : int</p>
 <blockquote>
-<div><p>Total size of training samples. This is used to appropriately scale the 
+<div><p>Total size of training samples. This is used to appropriately scale the
 log likelihood terms corresponding to mini-batches in ELBO.</p>
 </div></blockquote>
 <p><strong>local_RVs</strong> : Ordered dict</p>
 <blockquote>
-<div><p>Include encoded variational parameters and a scaling constant for 
+<div><p>Include encoded variational parameters and a scaling constant for
 the corresponding RV. See the above description.</p>
 </div></blockquote>
 <p><strong>observed_RVs</strong> : Ordered dict</p>
 <blockquote>
-<div><p>Include a scaling constant for the corresponding RV. See the above 
+<div><p>Include a scaling constant for the corresponding RV. See the above
 description</p>
 </div></blockquote>
 <p><strong>encoder_params</strong> : list of theano shared variables</p>
 <blockquote>
 <div><p>Parameters of encoder.</p>
 </div></blockquote>
-<p><strong>optimizer</strong> : (loss, tensor) -&gt; dict or OrderedDict</p>
+<p><strong>optimizer</strong> : (loss, list of shared variables) -&gt; dict or OrderedDict</p>
 <blockquote>
-<div><p>A function that returns parameter updates given loss and parameter
-tensor. If <code class="code docutils literal"><span class="pre">None</span></code> (default), a default Adagrad optimizer is
-used with parameters <code class="code docutils literal"><span class="pre">learning_rate</span></code> and <code class="code docutils literal"><span class="pre">epsilon</span></code> below.</p>
+<div><p>A function that returns parameter updates given loss and shared
+variables of parameters. If <code class="code docutils literal"><span class="pre">None</span></code> (default), a default
+Adagrad optimizer is used with parameters <code class="code docutils literal"><span class="pre">learning_rate</span></code>
+and <code class="code docutils literal"><span class="pre">epsilon</span></code> below.</p>
 </div></blockquote>
 <p><strong>learning_rate: float</strong></p>
 <blockquote>
@@ -4138,7 +4140,7 @@ output: estimated value</p>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
       
-        <a href="notebooks/bayesian_neural_network_advi.html" class="btn btn-neutral" title="Variational Inference: Bayesian Neural Networks" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="notebooks/convolutional_vae_keras_advi.html" class="btn btn-neutral" title="Convolutional variational autoencoder with PyMC3 and Keras" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

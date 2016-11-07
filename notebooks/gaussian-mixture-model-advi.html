@@ -36,7 +36,7 @@
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Dirichlet process mixtures for density estimation" href="dp_mix.html"/>
-        <link rel="prev" title="Gaussian Mixture Model" href="gaussian_mixture_model.html"/> 
+        <link rel="prev" title="Marginalized Gaussian Mixture Model" href="marginalized_gaussian_mixture_model.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -88,23 +88,17 @@
                 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
-<li class="toctree-l2"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rugby_analytics.html">A Hierarchical model for Rugby prediction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="survival_analysis.html">Bayesian Survival Analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="GP-smoothing.html">Gaussian Process (GP) smoothing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#applied">Applied</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#glm">GLM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../examples.html#mixture-models">Mixture Models</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="gaussian_mixture_model.html">Gaussian Mixture Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="marginalized_gaussian_mixture_model.html">Marginalized Gaussian Mixture Model</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">Gaussian Mixture Model with ADVI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="dp_mix.html">Dirichlet process mixtures for density estimation</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html#advi">ADVI</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
@@ -212,7 +206,7 @@ div.nboutput > :first-child pre {
 div.nbinput > :first-child[class^=highlight],
 div.nboutput > :first-child[class^=highlight],
 div.nboutput > :first-child {
-    min-width: 11ex;
+    min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
@@ -336,6 +330,9 @@ components.</p>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 
+<span class="kn">import</span> <span class="nn">theano</span>
+<span class="n">theano</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">floatX</span> <span class="o">=</span> <span class="s1">&#39;float64&#39;</span>
+
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Normal</span><span class="p">,</span> <span class="n">Metropolis</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">MvNormal</span><span class="p">,</span> <span class="n">Dirichlet</span><span class="p">,</span> \
     <span class="n">DensityDist</span><span class="p">,</span> <span class="n">find_MAP</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">,</span> <span class="n">Slice</span>
@@ -368,7 +365,7 @@ components.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.collections.PathCollection at 0x7f4c45598588&gt;
+<span></span>&lt;matplotlib.collections.PathCollection at 0x7f77b9403dd8&gt;
 </pre></div>
 </div>
 </div>
@@ -389,7 +386,7 @@ for making this kind of calculation stable.</p>
 second argument, logp_gmix(mus, pi, np.eye(2)), is a python function
 which recieves observations (denoted by &#8216;value&#8217;) and returns the tensor
 representation of the log-likelihood.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
@@ -423,25 +420,6 @@ representation of the log-likelihood.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-INFO (theano.gof.compilelock): Waiting for existing lock by process &#39;30516&#39; (I am process &#39;30541&#39;)
-INFO (theano.gof.compilelock): To manually release the lock, delete /home/wiecki/.theano/compiledir_Linux-4.4--generic-x86_64-with-debian-stretch-sid-x86_64-3.5.2-64/lock_dir
-INFO (theano.gof.compilelock): Waiting for existing lock by process &#39;30557&#39; (I am process &#39;30541&#39;)
-INFO (theano.gof.compilelock): To manually release the lock, delete /home/wiecki/.theano/compiledir_Linux-4.4--generic-x86_64-with-debian-stretch-sid-x86_64-3.5.2-64/lock_dir
-</pre></div></div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied stickbreaking-transform to pi and added transformed pi_stickbreaking_ to model.
-</pre></div></div>
-</div>
 <p>For comparison with ADVI, run MCMC.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -459,9 +437,10 @@ Applied stickbreaking-transform to pi and added transformed pi_stickbreaking_ to
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 1000 of 1000 complete in 0.6 sec
+WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
+100%|██████████| 1000/1000 [00:00&lt;00:00, 1250.60it/s]
 </pre></div></div>
 </div>
 <p>Check posterior of component means and weights. We can see that the MCMC
@@ -518,7 +497,7 @@ clusters.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7f4bef32c2b0&gt;
+<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7f7790b0cbe0&gt;
 </pre></div>
 </div>
 </div>
@@ -552,20 +531,19 @@ clusters.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Applied stickbreaking-transform to pi and added transformed pi_stickbreaking_ to model.
-Iteration 0 [0%]: ELBO = -504.62
-Iteration 100 [10%]: Average ELBO = -358.19
-Iteration 200 [20%]: Average ELBO = -331.11
-Iteration 300 [30%]: Average ELBO = -324.29
-Iteration 400 [40%]: Average ELBO = -324.1
-Iteration 500 [50%]: Average ELBO = -324.14
-Iteration 600 [60%]: Average ELBO = -324.2
-Iteration 700 [70%]: Average ELBO = -324.26
-Iteration 800 [80%]: Average ELBO = -324.3
-Iteration 900 [90%]: Average ELBO = -324.05
-Finished [100%]: Average ELBO = -324.16
-CPU times: user 2.57 s, sys: 50 ms, total: 2.62 s
-Wall time: 2.69 s
+Iteration 0 [0%]: ELBO = -341.82
+Iteration 100 [10%]: Average ELBO = -352.28
+Iteration 200 [20%]: Average ELBO = -325.44
+Iteration 300 [30%]: Average ELBO = -324.36
+Iteration 400 [40%]: Average ELBO = -324.09
+Iteration 500 [50%]: Average ELBO = -324.46
+Iteration 600 [60%]: Average ELBO = -324.71
+Iteration 700 [70%]: Average ELBO = -324.57
+Iteration 800 [80%]: Average ELBO = -324.1
+Iteration 900 [90%]: Average ELBO = -324.52
+Finished [100%]: Average ELBO = -324.61
+CPU times: user 3.82 s, sys: 520 ms, total: 4.34 s
+Wall time: 10.2 s
 </pre></div></div>
 </div>
 <p>The function returns three variables. &#8216;means&#8217; and &#8216;sds&#8217; are the mean and
@@ -650,7 +628,7 @@ the algorithm.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x7f4be6af1a20&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7f778cba0ba8&gt;]
 </pre></div>
 </div>
 </div>
@@ -724,10 +702,9 @@ create 100,000 samples from the same mixture distribution.</p>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Applied stickbreaking-transform to pi and added transformed pi_stickbreaking to model.
- [-----------------100%-----------------] 1000 of 1000 complete in 50.0 sec
+100%|██████████| 1000/1000 [00:48&lt;00:00, 21.15it/s]
 </pre></div></div>
 </div>
 <p>Posterior samples are concentrated on the true means, so looks like
@@ -832,24 +809,32 @@ and it&#8217;s not a fair comparison.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -519968.54
-Iteration 100 [10%]: Average ELBO = -374040.73
-Iteration 200 [20%]: Average ELBO = -328077.93
-Iteration 300 [30%]: Average ELBO = -324690.29
-Iteration 400 [40%]: Average ELBO = -322209.52
-Iteration 500 [50%]: Average ELBO = -323077.02
-Iteration 600 [60%]: Average ELBO = -323936.5
-Iteration 700 [70%]: Average ELBO = -324239.14
-Iteration 800 [80%]: Average ELBO = -324799.07
-Iteration 900 [90%]: Average ELBO = -323471.43
-Finished [100%]: ELBO = -313584.87
-CPU times: user 2.52 s, sys: 60 ms, total: 2.58 s
-Wall time: 2.59 s
+Iteration 0 [0%]: ELBO = -681445.73
+Iteration 100 [10%]: Average ELBO = -380047.68
+Iteration 200 [20%]: Average ELBO = -328751.45
+Iteration 300 [30%]: Average ELBO = -324693.4
+Iteration 400 [40%]: Average ELBO = -322212.06
+Iteration 500 [50%]: Average ELBO = -323102.09
+Iteration 600 [60%]: Average ELBO = -323953.57
+Iteration 700 [70%]: Average ELBO = -324256.33
+Iteration 800 [80%]: Average ELBO = -324780.82
+Iteration 900 [90%]: Average ELBO = -323471.28
+Finished [100%]: ELBO = -313722.31
+CPU times: user 11.4 s, sys: 1.27 s, total: 12.6 s
+Wall time: 26.7 s
 </pre></div></div>
 </div>
 <p>The result is almost the same.</p>
@@ -902,20 +887,11 @@ because of the subsampling from the whole samples.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[16]:
-</pre></div>
-</div>
-<div class="container">
-<img alt="../_images/notebooks_gaussian-mixture-model-advi_32_0.png" src="../_images/notebooks_gaussian-mixture-model-advi_32_0.png" />
-</div>
-</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_gaussian-mixture-model-advi_32_1.png" src="../_images/notebooks_gaussian-mixture-model-advi_32_1.png" />
+<img alt="../_images/notebooks_gaussian-mixture-model-advi_32_0.png" src="../_images/notebooks_gaussian-mixture-model-advi_32_0.png" />
 </div>
 </div>
 </div>
@@ -930,7 +906,7 @@ because of the subsampling from the whole samples.</p>
         <a href="dp_mix.html" class="btn btn-neutral float-right" title="Dirichlet process mixtures for density estimation" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="gaussian_mixture_model.html" class="btn btn-neutral" title="Gaussian Mixture Model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="marginalized_gaussian_mixture_model.html" class="btn btn-neutral" title="Marginalized Gaussian Mixture Model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

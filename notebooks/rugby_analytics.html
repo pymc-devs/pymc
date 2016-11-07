@@ -89,9 +89,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../examples.html#howto">Howto</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#applied-examples">Applied examples</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../examples.html#applied">Applied</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
-<li class="toctree-l3"><a class="reference internal" href="LKJ.html">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">A Hierarchical model for Rugby prediction</a><ul>
@@ -219,7 +218,7 @@ div.nboutput > :first-child pre {
 div.nbinput > :first-child[class^=highlight],
 div.nboutput > :first-child[class^=highlight],
 div.nboutput > :first-child {
-    min-width: 11ex;
+    min-width: 8ex;
     padding-top: 0.4em;
     padding-right: 0.4em;
     text-align: right;
@@ -475,7 +474,7 @@ away team in the g-th game of the season (15 games) as <span class="math">\(y_{g
 and <span class="math">\(y_{g2}\)</span> respectively.</p>
 </p><p>The vector of observed counts <span class="math">\(\mathbb{y} = (y_{g1}, y_{g2})\)</span> is
 modelled as independent Poisson:
-<span class="math">\(y_{gi}| \theta_{gj} \tilde\;\; Poisson(\theta_{gj})\)</span> where the
+<span class="math">\(y_{gi}| \theta_{gj} \tilde\;\;  Poisson(\theta_{gj})\)</span> where the
 theta parameters represent the scoring intensity in the g-th game for
 the team playing at home (j=1) and away (j=2), respectively.</p>
 </p><p>We model these parameters according to a formulation that has been used
