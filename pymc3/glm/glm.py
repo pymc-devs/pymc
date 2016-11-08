@@ -1,12 +1,9 @@
 import numpy as np
 from ..distributions import Normal
-from ..tuning.starting import find_MAP
 from ..model import modelcontext
 import patsy
 import theano
-import pandas as pd
 from collections import defaultdict
-from pandas.tools.plotting import scatter_matrix
 
 from . import families
 
@@ -16,8 +13,9 @@ __all__ = ['glm', 'linear_component', 'plot_posterior_predictive']
 def linear_component(formula, data, priors=None,
                      intercept_prior=None,
                      regressor_prior=None,
-                     init_vals=None, family=None,
-                     model=None):
+                     init_vals=None,
+                     model=None,
+                     name=''):
     """Create linear model according to patsy specification.
 
     Parameters
@@ -55,6 +53,8 @@ def linear_component(formula, data, priors=None,
                         family=glm.families.Binomial(link=glm.family.logit))
     y_data = Bernoulli('y', y_est, observed=data.male)
     """
+    if name:
+        name = '{}_'.format(name)
     if intercept_prior is None:
         intercept_prior = Normal.dist(mu=0, tau=1.0E-12)
     if regressor_prior is None:
@@ -76,14 +76,14 @@ def linear_component(formula, data, priors=None,
 
     if reg_names[0] == 'Intercept':
         prior = priors.get('Intercept', intercept_prior)
-        coeff = model.Var(reg_names.pop(0), prior)
+        coeff = model.Var('{}{}'.format(name, reg_names.pop(0)), prior)
         if 'Intercept' in init_vals:
             coeff.tag.test_value = init_vals['Intercept']
         coeffs.append(coeff)
 
     for reg_name in reg_names:
         prior = priors.get(reg_name, regressor_prior)
-        coeff = model.Var(reg_name, prior)
+        coeff = model.Var('{}{}'.format(name, reg_name), prior)
         if reg_name in init_vals:
             coeff.tag.test_value = init_vals[reg_name]
         coeffs.append(coeff)
@@ -94,7 +94,13 @@ def linear_component(formula, data, priors=None,
     return y_est, coeffs
 
 
-def glm(*args, **kwargs):
+def glm(formula, data, priors=None,
+        intercept_prior=None,
+        regressor_prior=None,
+        init_vals=None,
+        family='normal',
+        model=None,
+        name=''):
     """Create GLM after Patsy model specification string.
 
     Parameters
@@ -121,7 +127,7 @@ def glm(*args, **kwargs):
 
     Output
     ------
-    vars : List of created random variables (y_est, coefficients etc)
+    (y_est, coeffs) : Estimate for y, list of coefficients
 
     Example
     -------
@@ -130,20 +136,30 @@ def glm(*args, **kwargs):
                data,
                family=glm.families.Binomial(link=glm.families.logit))
     """
+    _families = dict(
+        normal=families.Normal,
+        student=families.StudentT,
+        binomial=families.Binomial,
+        poisson=families.Poisson
+    )
+    if isinstance(family, str):
+        family = _families[family]()
 
-    model = modelcontext(kwargs.get('model'))
-
-    family = kwargs.pop('family', families.Normal())
-
-    call_find_map = kwargs.pop('find_MAP', True)
-    formula = args[0]
-    data = args[1]
     y_data = np.asarray(patsy.dmatrices(formula, data)[0]).T
 
-    y_est, coeffs = linear_component(*args, **kwargs)
-    family.create_likelihood(y_est, y_data)
+    y_est, coeffs = linear_component(
+        formula, data, priors=priors,
+        intercept_prior=intercept_prior,
+        regressor_prior=regressor_prior,
+        init_vals=init_vals,
+        model=model,
+        name=name
+        )
+    if name:
+        name = '{}_'.format(name)
+    family.create_likelihood(name, y_est, y_data, model=model)
 
-    return [y_est] + coeffs
+    return y_est, coeffs
 
 
 def plot_posterior_predictive(trace, eval=None, lm=None, samples=30, **kwargs):
