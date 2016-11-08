@@ -32,10 +32,6 @@ class linear_component(namedtuple('Estimate', 'y_est,coeffs')):
     init_vals : dict
         Set starting values externally: parameter -> value
         Default: None
-    family : statsmodels.family
-        Link function to pass to statsmodels (init has to be True).
-    See `statsmodels.api.families`
-        Default: identity
 
     Output
     ------
@@ -44,9 +40,10 @@ class linear_component(namedtuple('Estimate', 'y_est,coeffs')):
     Example
     -------
     # Logistic regression
-    y_est, coeffs = glm('male ~ height + weight',
+    y_est, coeffs = linear_component('male ~ height + weight',
                         htwt_data)
-    y_data = Bernoulli('y', y_est, observed=data.male)
+    probability = glm.families.logit(y_est)
+    y_data = Bernoulli('y', probability, observed=data.male)
     """
     __slots__ = ()
 
@@ -159,7 +156,7 @@ class glm(namedtuple('Estimate', 'y_est,coeffs')):
     # Logistic regression
     vars = glm('male ~ height + weight',
                data,
-               family=glm.families.Binomial(link=glm.families.logit))
+               family=glm.families.Binomial())
     """
     __slots__ = ()
 
