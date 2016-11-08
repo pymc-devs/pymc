@@ -53,8 +53,6 @@ def linear_component(formula, data, priors=None,
                         family=glm.families.Binomial(link=glm.family.logit))
     y_data = Bernoulli('y', y_est, observed=data.male)
     """
-    if name:
-        name = '{}_'.format(name)
     if intercept_prior is None:
         intercept_prior = Normal.dist(mu=0, tau=1.0E-12)
     if regressor_prior is None:
@@ -73,7 +71,8 @@ def linear_component(formula, data, priors=None,
     # Create individual coefficients
     model = modelcontext(model)
     coeffs = []
-
+    if name:
+        name = '{}_'.format(name)
     if reg_names[0] == 'Intercept':
         prior = priors.get('Intercept', intercept_prior)
         coeff = model.Var('{}{}'.format(name, reg_names.pop(0)), prior)
@@ -155,8 +154,6 @@ def glm(formula, data, priors=None,
         model=model,
         name=name
         )
-    if name:
-        name = '{}_'.format(name)
     family.create_likelihood(name, y_est, y_data, model=model)
 
     return y_est, coeffs
