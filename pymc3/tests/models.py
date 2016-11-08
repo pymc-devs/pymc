@@ -19,7 +19,7 @@ def simple_categorical():
     p = np.array([0.1, 0.2, 0.3, 0.4])
     v = np.array([0.0, 1.0, 2.0, 3.0])
     with Model() as model:
-        Categorical('x', p, shape = 3, testval = [1, 2, 3])
+        Categorical('x', p, shape=3, testval=[1, 2, 3])
 
     mu = np.dot(p, v)
     var = np.dot(p, (v - mu) ** 2)
