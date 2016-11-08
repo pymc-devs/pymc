@@ -68,3 +68,11 @@ class TestGLM(SeededTest):
             glm.glm('y ~ x', self.data_logistic,
                     family=glm.families.Binomial(link=glm.families.logit),
                     name='glm2')
+
+    def test_from_xy(self):
+        with Model():
+            glm.glm.from_xy(
+                self.data_logistic['x'],
+                self.data_logistic['y'],
+                family=glm.families.Binomial(link=glm.families.logit),
+                name='glm1')

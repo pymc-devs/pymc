@@ -2,20 +2,16 @@ import numpy as np
 from ..distributions import Normal
 from ..model import modelcontext
 import patsy
+import pandas as pd
 import theano
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 from . import families
 
 __all__ = ['glm', 'linear_component', 'plot_posterior_predictive']
 
 
-def linear_component(formula, data, priors=None,
-                     intercept_prior=None,
-                     regressor_prior=None,
-                     init_vals=None,
-                     model=None,
-                     name=''):
+class linear_component(namedtuple('Estimate', 'y_est,coeffs')):
     """Create linear model according to patsy specification.
 
     Parameters
@@ -49,57 +45,87 @@ def linear_component(formula, data, priors=None,
     -------
     # Logistic regression
     y_est, coeffs = glm('male ~ height + weight',
-                        htwt_data,
-                        family=glm.families.Binomial(link=glm.family.logit))
+                        htwt_data)
     y_data = Bernoulli('y', y_est, observed=data.male)
     """
-    if intercept_prior is None:
-        intercept_prior = Normal.dist(mu=0, tau=1.0E-12)
-    if regressor_prior is None:
-        regressor_prior = Normal.dist(mu=0, tau=1.0E-12)
+    __slots__ = ()
 
-    if priors is None:
-        priors = defaultdict(None)
+    def __new__(cls, formula, data, priors=None,
+                     intercept_prior=None,
+                     regressor_prior=None,
+                     init_vals=None,
+                     model=None,
+                     name=''):
+        if intercept_prior is None:
+            intercept_prior = Normal.dist(mu=0, tau=1.0E-12)
+        if regressor_prior is None:
+            regressor_prior = Normal.dist(mu=0, tau=1.0E-12)
 
-    # Build patsy design matrix and get regressor names.
-    _, dmatrix = patsy.dmatrices(formula, data)
-    reg_names = dmatrix.design_info.column_names
+        if priors is None:
+            priors = defaultdict(None)
 
-    if init_vals is None:
-        init_vals = {}
+        # Build patsy design matrix and get regressor names.
+        _, dmatrix = patsy.dmatrices(formula, data)
+        reg_names = dmatrix.design_info.column_names
 
-    # Create individual coefficients
-    model = modelcontext(model)
-    coeffs = []
-    if name:
-        name = '{}_'.format(name)
-    if reg_names[0] == 'Intercept':
-        prior = priors.get('Intercept', intercept_prior)
-        coeff = model.Var('{}{}'.format(name, reg_names.pop(0)), prior)
-        if 'Intercept' in init_vals:
-            coeff.tag.test_value = init_vals['Intercept']
-        coeffs.append(coeff)
+        if init_vals is None:
+            init_vals = {}
 
-    for reg_name in reg_names:
-        prior = priors.get(reg_name, regressor_prior)
-        coeff = model.Var('{}{}'.format(name, reg_name), prior)
-        if reg_name in init_vals:
-            coeff.tag.test_value = init_vals[reg_name]
-        coeffs.append(coeff)
+        # Create individual coefficients
+        model = modelcontext(model)
+        coeffs = []
+        if name:
+            name = '{}_'.format(name)
+        if reg_names[0] == 'Intercept':
+            prior = priors.get('Intercept', intercept_prior)
+            coeff = model.Var('{}{}'.format(name, reg_names.pop(0)), prior)
+            if 'Intercept' in init_vals:
+                coeff.tag.test_value = init_vals['Intercept']
+            coeffs.append(coeff)
 
-    y_est = theano.dot(np.asarray(dmatrix),
-                       theano.tensor.stack(*coeffs)).reshape((1, -1))
+        for reg_name in reg_names:
+            prior = priors.get(reg_name, regressor_prior)
+            coeff = model.Var('{}{}'.format(name, reg_name), prior)
+            if reg_name in init_vals:
+                coeff.tag.test_value = init_vals[reg_name]
+            coeffs.append(coeff)
 
-    return y_est, coeffs
+        y_est = theano.dot(np.asarray(dmatrix),
+                           theano.tensor.stack(*coeffs)).reshape((1, -1))
+
+        return super(linear_component, cls).__new__(cls, y_est, coeffs)
+
+    @classmethod
+    def from_xy(cls, X, y,
+                priors=None,
+                intercept_prior=None,
+                regressor_prior=None,
+                init_vals=None,
+                model=None,
+                name=''):
+        _name = 'y'
+        if hasattr(y, 'name'):
+            _name = y.name or _name
+        y = pd.Series(y, name=_name)
+        if not isinstance(X, pd.DataFrame):
+            cols = ['x%d' % i for i in range(X.shape[1])]
+            X = pd.DataFrame(X, columns=cols)
+        data = pd.concat([y, X], 1)
+        formula = patsy.ModelDesc(
+            [patsy.Term([patsy.LookupFactor(y.name)])],
+            [patsy.Term([patsy.LookupFactor(p)]) for p in X.columns]
+        )
+        return cls(formula, data,
+                   priors=priors,
+                   intercept_prior=intercept_prior,
+                   regressor_prior=regressor_prior,
+                   init_vals=init_vals,
+                   model=model,
+                   name=name
+                   )
 
 
-def glm(formula, data, priors=None,
-        intercept_prior=None,
-        regressor_prior=None,
-        init_vals=None,
-        family='normal',
-        model=None,
-        name=''):
+class glm(namedtuple('Estimate', 'y_est,coeffs')):
     """Create GLM after Patsy model specification string.
 
     Parameters
@@ -135,28 +161,69 @@ def glm(formula, data, priors=None,
                data,
                family=glm.families.Binomial(link=glm.families.logit))
     """
-    _families = dict(
-        normal=families.Normal,
-        student=families.StudentT,
-        binomial=families.Binomial,
-        poisson=families.Poisson
-    )
-    if isinstance(family, str):
-        family = _families[family]()
+    __slots__ = ()
 
-    y_data = np.asarray(patsy.dmatrices(formula, data)[0]).T
-
-    y_est, coeffs = linear_component(
-        formula, data, priors=priors,
-        intercept_prior=intercept_prior,
-        regressor_prior=regressor_prior,
-        init_vals=init_vals,
-        model=model,
-        name=name
+    def __new__(cls, formula, data, priors=None,
+            intercept_prior=None,
+            regressor_prior=None,
+            init_vals=None,
+            family='normal',
+            model=None,
+            name=''):
+        _families = dict(
+            normal=families.Normal,
+            student=families.StudentT,
+            binomial=families.Binomial,
+            poisson=families.Poisson
         )
-    family.create_likelihood(name, y_est, y_data, model=model)
+        if isinstance(family, str):
+            family = _families[family]()
 
-    return y_est, coeffs
+        y_data = np.asarray(patsy.dmatrices(formula, data)[0]).T
+
+        y_est, coeffs = linear_component(
+            formula, data, priors=priors,
+            intercept_prior=intercept_prior,
+            regressor_prior=regressor_prior,
+            init_vals=init_vals,
+            model=model,
+            name=name
+            )
+        family.create_likelihood(name, y_est, y_data, model=model)
+
+        return super(glm, cls).__new__(cls, y_est, coeffs)
+
+    @classmethod
+    def from_xy(cls, X, y,
+                priors=None,
+                intercept_prior=None,
+                regressor_prior=None,
+                init_vals=None,
+                family='normal',
+                model=None,
+                name=''):
+        label = 'y'
+        if hasattr(y, 'name'):
+            label = y.name or label
+        y = pd.Series(y, name=label)
+        if not isinstance(X, pd.DataFrame):
+            l = X.shape[1] if len(X.shape) > 1 else 1
+            cols = ['x%d' % i for i in range(l)]
+            X = pd.DataFrame(X, columns=cols)
+        data = pd.concat([y, X], 1)
+        formula = patsy.ModelDesc(
+            [patsy.Term([patsy.LookupFactor(y.name)])],
+            [patsy.Term([patsy.LookupFactor(p)]) for p in X.columns]
+        )
+        return cls(formula, data,
+                   priors=priors,
+                   intercept_prior=intercept_prior,
+                   regressor_prior=regressor_prior,
+                   init_vals=init_vals,
+                   model=model,
+                   family=family,
+                   name=name
+                   )
 
 
 def plot_posterior_predictive(trace, eval=None, lm=None, samples=30, **kwargs):
