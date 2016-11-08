@@ -11,6 +11,30 @@ from . import families
 __all__ = ['glm', 'linear_component', 'plot_posterior_predictive']
 
 
+def _xy_to_data_and_formula(X, y):
+    if not isinstance(y, pd.Series):
+        y = pd.Series(y, name='y')
+    else:
+        if not y.name:
+            y.name = 'y'
+    if not isinstance(X, (pd.DataFrame, pd.Series)):
+        if len(X.shape) > 1:
+            cols = ['x%d' % i for i in range(X.shape[1])]
+        else:
+            cols = ['x']
+        X = pd.DataFrame(X, columns=cols)
+    elif isinstance(X, pd.Series):
+        if not X.name:
+            X.name = 'x'
+    # else -> pd.DataFrame -> ok
+    data = pd.concat([y, X], 1)
+    formula = patsy.ModelDesc(
+        [patsy.Term([patsy.LookupFactor(y.name)])],
+        [patsy.Term([patsy.LookupFactor(p)]) for p in X.columns]
+    )
+    return data, formula
+
+
 class linear_component(namedtuple('Estimate', 'y_est,coeffs')):
     """Create linear model according to patsy specification.
 
@@ -100,18 +124,7 @@ class linear_component(namedtuple('Estimate', 'y_est,coeffs')):
                 init_vals=None,
                 model=None,
                 name=''):
-        _name = 'y'
-        if hasattr(y, 'name'):
-            _name = y.name or _name
-        y = pd.Series(y, name=_name)
-        if not isinstance(X, pd.DataFrame):
-            cols = ['x%d' % i for i in range(X.shape[1])]
-            X = pd.DataFrame(X, columns=cols)
-        data = pd.concat([y, X], 1)
-        formula = patsy.ModelDesc(
-            [patsy.Term([patsy.LookupFactor(y.name)])],
-            [patsy.Term([patsy.LookupFactor(p)]) for p in X.columns]
-        )
+        data, formula = _xy_to_data_and_formula(X, y)
         return cls(formula, data,
                    priors=priors,
                    intercept_prior=intercept_prior,
@@ -199,19 +212,7 @@ class glm(namedtuple('Estimate', 'y_est,coeffs')):
                 family='normal',
                 model=None,
                 name=''):
-        label = 'y'
-        if hasattr(y, 'name'):
-            label = y.name or label
-        y = pd.Series(y, name=label)
-        if not isinstance(X, pd.DataFrame):
-            l = X.shape[1] if len(X.shape) > 1 else 1
-            cols = ['x%d' % i for i in range(l)]
-            X = pd.DataFrame(X, columns=cols)
-        data = pd.concat([y, X], 1)
-        formula = patsy.ModelDesc(
-            [patsy.Term([patsy.LookupFactor(y.name)])],
-            [patsy.Term([patsy.LookupFactor(p)]) for p in X.columns]
-        )
+        data, formula = _xy_to_data_and_formula(X, y)
         return cls(formula, data,
                    priors=priors,
                    intercept_prior=intercept_prior,
