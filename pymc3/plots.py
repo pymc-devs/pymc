@@ -156,6 +156,9 @@ def kde2plot_op(ax, x, y, grid=200, **kwargs):
     xmax = x.max()
     ymin = y.min()
     ymax = y.max()
+    extent = kwargs.pop('extent', [])
+    if len(extent) != 4:
+        extent = [xmin, xmax, ymin, ymax]
 
     grid = grid * 1j
     X, Y = np.mgrid[xmin:xmax:grid, ymin:ymax:grid]
@@ -164,7 +167,7 @@ def kde2plot_op(ax, x, y, grid=200, **kwargs):
     kernel = kde.gaussian_kde(values)
     Z = np.reshape(kernel(positions).T, X.shape)
 
-    ax.imshow(np.rot90(Z), extent=[xmin, xmax, ymin, ymax], **kwargs)
+    ax.imshow(np.rot90(Z), extent=extent, **kwargs)
 
 
 def kdeplot(data, ax=None):
@@ -362,9 +365,6 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
 
     # Range for x-axis
     plotrange = None
-
-    # Number of chains
-    chains = None
 
     # Subplots
     interval_plot = None
@@ -648,26 +648,22 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
     """
 
     def plot_posterior_op(trace_values, ax):
-
         def format_as_percent(x, round_to=0):
-            value = np.round(100 * x, round_to)
-            if round_to == 0:
-                value = int(value)
-            return '{}%'.format(value)
+            return '{0:.{1:d}f}%'.format(100 * x, round_to)
 
         def display_ref_val(ref_val):
             less_than_ref_probability = (trace_values < ref_val).mean()
             greater_than_ref_probability = (trace_values >= ref_val).mean()
-            ref_in_posterior = format_as_percent(less_than_ref_probability, 1) + ' <{:g}< '.format(ref_val) + format_as_percent(
-                greater_than_ref_probability, 1)
+            ref_in_posterior = "{} <{:g}< {}".format(
+                format_as_percent(less_than_ref_probability, 1),
+                ref_val,
+                format_as_percent(greater_than_ref_probability, 1))
             ax.axvline(ref_val, ymin=0.02, ymax=.75, color='g',
                        linewidth=4, alpha=0.65)
             ax.text(trace_values.mean(), plot_height * 0.6, ref_in_posterior,
                     size=14, horizontalalignment='center')
 
         def display_rope(rope):
-            pc_in_rope = format_as_percent(np.sum((trace_values > rope[0]) &
-                                                  (trace_values < rope[1])) / len(trace_values), round_to)
             ax.plot(rope, (plot_height * 0.02, plot_height * 0.02),
                     linewidth=20, color='r', alpha=0.75)
             text_props = dict(size=16, horizontalalignment='center', color='r')
@@ -756,15 +752,15 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
             ax[-1].set_axis_off()
             ax = ax[:-1]
         return ax, fig
-        
+
     def get_trace_dict(tr, varnames):
         traces = {}
         for v in varnames:
             vals = tr.get_values(v, combine=True, squeeze=True)
-            if vals.ndim>1:
+            if vals.ndim > 1:
                 vals_flat = vals.reshape(vals.shape[0], -1).T
-                for i,vi in enumerate(vals_flat):
-                    traces['_'.join([v,str(i)])] = vi
+                for i, vi in enumerate(vals_flat):
+                    traces['_'.join([v, str(i)])] = vi
             else:
                 traces[v] = vals
         return traces
