@@ -287,7 +287,7 @@ class Model(Context, Factor):
             else:
                 var = TransformedRV(name=name, distribution=dist, model=self,
                                     transform=dist.transform)
-                if self.verbose:
+                if self.verbose > 1:
                     pm._log.info('Applied {transform}-transform to {name}'
                                  ' and added transformed {orig_name} to model.'.format(
                                     transform=dist.transform.name,
