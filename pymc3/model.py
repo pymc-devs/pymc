@@ -287,12 +287,11 @@ class Model(Context, Factor):
             else:
                 var = TransformedRV(name=name, distribution=dist, model=self,
                                     transform=dist.transform)
-                if self.verbose:
-                    pm._log.info('Applied {transform}-transform to {name}'
-                                 ' and added transformed {orig_name} to model.'.format(
-                                    transform=dist.transform.name,
-                                    name=name,
-                                    orig_name='{}_{}_'.format(name, dist.transform.name)))
+                pm._log.debug('Applied {transform}-transform to {name}'
+                             ' and added transformed {orig_name} to model.'.format(
+                                transform=dist.transform.name,
+                                name=name,
+                                orig_name='{}_{}_'.format(name, dist.transform.name)))
                 self.deterministics.append(var)
                 return var
         elif isinstance(data, dict):
