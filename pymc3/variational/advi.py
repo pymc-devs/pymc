@@ -36,8 +36,7 @@ def gen_random_state():
 
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
-         optimizer=None, learning_rate=.001, epsilon=.1, random_seed=None,
-         verbose=1):
+         optimizer=None, learning_rate=.001, epsilon=.1, random_seed=None):
     """Perform automatic differentiation variational inference (ADVI).
 
     This function implements the meanfield ADVI, where the variational
@@ -142,29 +141,21 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     # Optimization loop
     elbos = np.empty(n)
     try:
-        for i in range(n):
+        progress = trange(n)
+        for i in progress:
             uw_i, e = f()
             elbos[i] = e
-            if verbose and not i % (n // 10):
-                if not i:
-                    print('Iteration {0} [{1}%]: ELBO = {2}'.format(
-                        i, 100 * i // n, e.round(2)))
-                else:
-                    avg_elbo = elbos[i - n // 10:i].mean()
-                    print('Iteration {0} [{1}%]: Average ELBO = {2}'.format(
-                        i, 100 * i // n, avg_elbo.round(2)))
+            if i % (n // 10) == 0 and i > 0:
+                avg_elbo = elbos[i - n // 10:i].mean()
+                progress.set_description('Average ELBO = {:,.2f}'.format(avg_elbo))
     except KeyboardInterrupt:
-        if verbose:
-            elbos = elbos[:i]
-            avg_elbo = elbos[i - n // 10:].mean()
-            print('Interrupted at {0} [{1}%]: Average ELBO = {2}'.format(
-                i, 100 * i // n, avg_elbo.round(2)))
+        elbos = elbos[:i]
+        avg_elbo = elbos[i - n // 10:].mean()
+        pm._log.info('Interrupted at {:,d} [{:.0f}%]: Average ELBO = {:,.2f}'.format(
+            i, 100 * i // n, avg_elbo))
     else:
-        if verbose:
-            avg_elbo = elbos[-n // 10:].mean()
-            print(
-                'Finished [100%]: Average ELBO = {}'.format(avg_elbo.round(2))
-            )
+        avg_elbo = elbos[-n // 10:].mean()
+        pm._log.info('Finished [100%]: Average ELBO = {:,.2f}'.format(avg_elbo))
 
     # Estimated parameters
     l = int(uw_i.size / 2)
@@ -360,7 +351,7 @@ def sample_vp(
 
     range_ = trange(draws) if progressbar else range(draws)
 
-    for i in range_:
+    for _ in range_:
         # 'point' is like {'var1': np.array(0.1), 'var2': np.array(0.2), ...}
         point = {varname: value for varname, value in zip(varnames, f())}
         trace.record(point)
