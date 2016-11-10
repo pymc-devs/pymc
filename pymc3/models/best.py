@@ -51,8 +51,6 @@ class BEST(object):
         self.data['indices'] = self.data[self.sample_col].apply(
             lambda x: sample_names[x])
 
-        # print(self.data)
-
     def fit(self, n_steps=500000):
         """
         Creates a Bayesian Estimation model for replicate measurements of
