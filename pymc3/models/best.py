@@ -43,6 +43,10 @@ class BEST(object):
         self._convert_to_indices()
 
     def _convert_to_indices(self):
+        """
+        Adds the "indices" column to self.data (DataFrame). This is necessary
+        for the simplified model specification in the "fit" function below.
+        """
         sample_names = dict()
         for i, name in enumerate(
                 list(np.unique(self.data[self.sample_col].values))):
@@ -64,6 +68,9 @@ class BEST(object):
 
         sample_names = set(self.data[self.sample_col].values)
 
+        mean_test = self.data.groupby('indices').mean()[self.output_col].values
+        sd_test = self.data.groupby('indices').std()[self.output_col].values
+
         with Model() as model:
             # Hyperpriors
             upper = Exponential('upper', lam=0.05)
@@ -71,11 +78,12 @@ class BEST(object):
 
             # "fold", which is the estimated fold change.
             fold = Uniform('fold', lower=1E-10, upper=upper,
-                           shape=len(sample_names))
+                           shape=len(sample_names), testval=mean_test)
 
             # Assume that data have heteroskedastic (i.e. variable) error but
             # are drawn from the same HalfCauchy distribution.
-            sigma = HalfCauchy('sigma', beta=1, shape=len(sample_names))
+            sigma = HalfCauchy('sigma', beta=1, shape=len(sample_names),
+                               testval=sd_test)
 
             # Model prediction
             mu = fold[self.data['indices']]
