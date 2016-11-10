@@ -169,17 +169,9 @@ class Factor(object):
 
 
 class Model(Context, Factor):
-    """Encapsulates the variables and likelihood factors of a model.
+    """Encapsulates the variables and likelihood factors of a model."""
 
-    Parameters
-    ----------
-    verbose : int
-        Model verbosity setting, determining how much feedback various
-        operations provide. Normal verbosity is verbose=1 (default), silence
-        is verbose=0, high is any value greater than 1.
-    """
-
-    def __init__(self, verbose=1):
+    def __init__(self):
         self.named_vars = {}
         self.free_RVs = []
         self.observed_RVs = []
@@ -187,7 +179,6 @@ class Model(Context, Factor):
         self.potentials = []
         self.missing_values = []
         self.model = self
-        self.verbose = verbose
 
     @property
     @memoize
@@ -288,7 +279,7 @@ class Model(Context, Factor):
                 var = TransformedRV(name=name, distribution=dist, model=self,
                                     transform=dist.transform)
                 pm._log.debug('Applied {transform}-transform to {name}'
-                             ' and added transformed {orig_name} to model.'.format(
+                              ' and added transformed {orig_name} to model.'.format(
                                 transform=dist.transform.name,
                                 name=name,
                                 orig_name='{}_{}_'.format(name, dist.transform.name)))
@@ -623,8 +614,8 @@ class MultiObservedRV(Factor):
         self.data = {name: as_tensor(data, name, model, distribution)
                      for name, data in data.items()}
 
-        self.missing_values = [data.missing_values for data in self.data.values()
-                               if data.missing_values is not None]
+        self.missing_values = [datum.missing_values for datum in self.data.values()
+                               if datum.missing_values is not None]
         self.logp_elemwiset = distribution.logp(**self.data)
         self.model = model
         self.distribution = distribution
