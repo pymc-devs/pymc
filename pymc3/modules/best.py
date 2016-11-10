@@ -40,7 +40,20 @@ class BEST(object):
         self.baseline_name = baseline_name
         self.trace = None
 
-    def fit(self, n_steps=30000):
+        self._convert_to_indices()
+
+    def _convert_to_indices(self):
+        sample_names = dict()
+        for i, name in enumerate(
+                list(np.unique(self.data[self.sample_col].values))):
+            print('Sample name {0} has the index {1}'.format(name, i))
+            sample_names[name] = i
+        self.data['indices'] = self.data[self.sample_col].apply(
+            lambda x: sample_names[x])
+
+        # print(self.data)
+
+    def fit(self, n_steps=500000):
         """
         Creates a Bayesian Estimation model for replicate measurements of
         treatment(s) vs. control.
@@ -52,7 +65,6 @@ class BEST(object):
         """
 
         sample_names = set(self.data[self.sample_col].values)
-        sample_names.remove(self.baseline_name)
 
         with Model() as model:
             # Hyperpriors
@@ -75,15 +87,14 @@ class BEST(object):
             like = StudentT('like', nu=nu, mu=mu, sd=sig**-2,
                             observed=self.data[self.output_col])
 
-        self.model = model
-
-        with model:
             params = advi(n=n_steps)
             trace = sample_vp(params, draws=2000)
 
         self.trace = trace
+        self.params = params
+        self.model = model
 
-    def plot_posterior(self):
+    def plot_posterior(self, rotate_xticks=False):
         """
         Plots a swarm plot of the data overlaid on top of the 95% HPD and IQR
         of the posterior distribution.
@@ -105,14 +116,26 @@ class BEST(object):
         iqr_high = upper_q - summary_stats['mean']
 
         # 2. Plot the swarmplot and errorbars.
-        summary_stats['mean'].plot(rot=90, ls='', ax=ax,
+        summary_stats['mean'].plot(ls='', ax=ax,
                                    yerr=[err_low, err_high])
-        summary_stats['mean'].plot(rot=90, ls='', ax=ax,
+        summary_stats['mean'].plot(ls='', ax=ax,
                                    yerr=[iqr_low, iqr_high],
                                    elinewidth=4, color='red')
         sns.swarmplot(data=self.data, x=self.sample_col, y=self.output_col,
-                      orient='v', ax=ax, alpha=0.5)
-        plt.xticks(rotation='vertical')
+                      ax=ax, alpha=0.5)
+
+        if rotate_xticks:
+            print('rotating xticks')
+            plt.xticks(rotation='vertical')
         plt.ylabel(self.output_col)
+
+        return fig
+
+    def plot_elbo(self):
+        """
+        Plots the ELBO values to help check for convergence.
+        """
+        fig = plt.figure()
+        plt.plot(-np.log10(-self.params.elbo_vals))
 
         return fig
