@@ -386,18 +386,22 @@ def sample_init(draws=2000, init='advi', n_init=500000, sampler='nuts',
 
     Parameteres
     -----------
-    init : str {'advi', 'map', 'nuts'}
+    draws : int
+        Number of posterior samples to draw.
+    init : str {'advi', 'advi_map', 'map', 'nuts'}
         Initialization method to use.
+        * advi : Run ADVI to estimate posterior mean and diagonal covariance matrix.
+        * advi_map: Initialize ADVI with MAP and use MAP as starting point.
+        * map : Use the MAP as starting point.
+        * nuts : Run NUTS and estimate posterior mean and covariance matrix.
     n_init : int
         Number of iterations of initializer
         If 'advi', number of iterations, if 'metropolis', number of draws.
     sampler : str {'nuts', 'hmc', advi'}
         Sampler to use. Will be initialized using init algorithm.
-    draws : int
-        Number of posterior samples to draw.
-    njobs : int
-        Number of parallel jobs to start. If None, set to number of cpus
-        in the system - 2.
+        * nuts : Run NUTS sampler with the init covariance estimation as the scaling matrix.
+        * hmc : Run HamiltonianMC sampler with the init covariance estimation as the scaling matrix.
+        * advi : Sample from variational posterior, requires init='advi'.
     **kwargs : additional keyword argumemts
         Additional keyword argumemts are forwared to pymc3.sample()
 
@@ -411,9 +415,12 @@ def sample_init(draws=2000, init='advi', n_init=500000, sampler='nuts',
 
     if init == 'advi':
         v_params = pm.variational.advi(n=n_init)
-        start = v_params.means
+        start = pm.variational.sample_vp(v_params, 1)[0]
         cov = np.power(model.dict_to_array(v_params.stds), 2)
-
+    elif init == 'advi_map':
+        start = pm.find_MAP()
+        v_params = pm.variational.advi(n=n_init, start=start)
+        cov = np.power(model.dict_to_array(v_params.stds), 2)
     elif init == 'map':
         start = pm.find_MAP()
         cov = pm.find_hessian(point=start)
