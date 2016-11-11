@@ -199,16 +199,14 @@ def leapfrog1_dE(H, q, profile):
     """Computes a theano function that computes one leapfrog step and the energy difference between the beginning and end of the trajectory.
     Parameters
     ----------
-    logp : TensorVariable
-    vars : list of tensor variables
-    shared : list of shared variables not to compute leapfrog over
-    pot : quadpotential
-    porifle : Boolean
+    H : Hamiltonian
+    q : theano.tensor
+    proifle : Boolean
 
     Returns
     -------
     theano function which returns
-    q_new, p_new, E
+    q_new, p_new, dE
     """
     p = theano.tensor.dvector('p')
     p.tag.test_value = q.tag.test_value
