@@ -106,7 +106,7 @@ class NUTS(ArrayStepShared):
             p = theano.tensor.dvector('p')
             p.tag.test_value = q.tag.test_value
             E0 = energy(self.H, q, p)
-            E0_func = theano.function([q, p], [E0])
+            E0_func = theano.function([q, p], E0)
             E0_func.trust_input = True
 
             return E0_func
@@ -171,7 +171,7 @@ class NUTS(ArrayStepShared):
 
 def buildtree(leapfrog1_dE, q, p, u, v, j, e, Emax, q0, p0, E0):
     if j == 0:
-        q1, p1, dE = leapfrog1_dE(q, p, array(v * e), E0[0])
+        q1, p1, dE = leapfrog1_dE(q, p, array(v * e), E0)
 
         n1 = int(log(u) + dE <= 0)
         s1 = int(log(u) + dE < Emax)
