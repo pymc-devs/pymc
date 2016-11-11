@@ -206,7 +206,7 @@ def leapfrog1_dE(H, q, profile):
     ----------
     H : Hamiltonian
     q : theano.tensor
-    proifle : Boolean
+    profile : Boolean
 
     Returns
     -------
