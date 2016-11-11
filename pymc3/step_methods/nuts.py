@@ -13,7 +13,6 @@ import theano.tensor as tt
 
 __all__ = ['NUTS']
 
-
 class NUTS(ArrayStepShared):
     """
     Automatically tunes step size and adjust number of steps for good performance.
@@ -32,7 +31,7 @@ class NUTS(ArrayStepShared):
                  k=0.75,
                  t0=10,
                  model=None,
-                 profile=False, **kwargs):
+                 profile=False,**kwargs):
         """
         Parameters
         ----------
@@ -68,12 +67,14 @@ class NUTS(ArrayStepShared):
             scaling = model.test_point
 
         if isinstance(scaling, dict):
-            scaling = guess_scaling(
-                Point(scaling, model=model), model=model, vars=vars)
+            scaling = guess_scaling(Point(scaling, model=model), model=model, vars = vars)
+
+
 
         n = scaling.shape[0]
 
-        self.step_size = step_scale / n**(1 / 4.)
+        self.step_size = step_scale / n**(1/4.)
+
 
         self.potential = quad_potential(scaling, is_cov, as_cov=False)
 
@@ -88,22 +89,39 @@ class NUTS(ArrayStepShared):
         self.k = k
 
         self.Hbar = 0
-        self.u = log(self.step_size * 10)
+        self.u = log(self.step_size*10)
         self.m = 1
 
+        #self.H = Hamiltonian(model.fastlogp, model.fastdlogp(vars), self.potential)
+
         shared = make_shared_replacements(vars, model)
-        self.leapfrog1_dE = leapfrog1_dE(
-            model.logpt, vars, shared, self.potential, profile=profile)
+
+        dlogp = gradient(model.logpt, vars)
+        (logp, dlogp), q = join_nonshared_inputs([model.logpt, dlogp], vars, shared)
+        logp = CallableTensor(logp)
+        dlogp = CallableTensor(dlogp)
+
+
+        self.H = Hamiltonian(logp, dlogp, self.potential)
+
+        p = theano.tensor.dvector('p')
+        p.tag.test_value = q.tag.test_value
+        E0 = energy(self.H, q, p)
+        self.E0 = theano.function([q, p], [E0])
+        self.E0.trust_input = True
+
+        self.leapfrog1_dE = leapfrog1_dE(self.H, q, profile=profile)
 
         super(NUTS, self).__init__(vars, shared, **kwargs)
 
     def astep(self, q0):
-        # Hamiltonian(self.logp, self.dlogp, self.potential)
-        H = self.leapfrog1_dE
+        leapfrog = self.leapfrog1_dE
         Emax = self.Emax
         e = self.step_size
 
         p0 = self.potential.random()
+        E0 = self.E0(q0, p0)
+
         u = uniform()
         q = qn = qp = q0
         p = pn = pp = p0
@@ -114,13 +132,11 @@ class NUTS(ArrayStepShared):
             v = bern(.5) * 2 - 1
 
             if v == -1:
-                qn, pn, _, _, q1, n1, s1, a, na = buildtree(
-                    H, qn, pn, u, v, j, e, Emax, q0, p0)
+                qn, pn, _, _, q1, n1, s1, a, na = buildtree(leapfrog, qn, pn, u, v, j, e, Emax, q0, p0, E0)
             else:
-                _, _, qp, pp, q1, n1, s1, a, na = buildtree(
-                    H, qp, pp, u, v, j, e, Emax, q0, p0)
+                _, _, qp, pp, q1, n1, s1, a, na = buildtree(leapfrog, qp, pp, u, v, j, e, Emax, q0, p0, E0)
 
-            if s1 == 1 and bern(min(1, n1 * 1. / n)):
+            if s1 == 1 and bern(min(1, n1*1./n)):
                 q = q1
 
             n = n + n1
@@ -131,11 +147,10 @@ class NUTS(ArrayStepShared):
 
         p = -p
 
-        w = 1. / (self.m + self.t0)
-        self.Hbar = (1 - w) * self.Hbar + w * \
-            (self.target_accept - a * 1. / na)
+        w = 1./(self.m+self.t0)
+        self.Hbar = (1 - w) * self.Hbar + w*(self.target_accept - a*1./na)
 
-        self.step_size = exp(self.u - (self.m**.5 / self.gamma) * self.Hbar)
+        self.step_size = exp(self.u - (self.m**.5/self.gamma)*self.Hbar)
         self.m += 1
 
         return q
@@ -147,26 +162,22 @@ class NUTS(ArrayStepShared):
         return Competence.INCOMPATIBLE
 
 
-def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):
+def buildtree(leapfrog1_dE, q, p, u, v, j, e, Emax, q0, p0, E0):
     if j == 0:
-        leapfrog1_dE = H
-        q1, p1, dE = leapfrog1_dE(q, p, array(v * e), q0, p0)
+        q1, p1, dE = leapfrog1_dE(q, p, array(v*e), E0[0])
 
         n1 = int(log(u) + dE <= 0)
         s1 = int(log(u) + dE < Emax)
         return q1, p1, q1, p1, q1, n1, s1, min(1, exp(-dE)), 1
     else:
-        qn, pn, qp, pp, q1, n1, s1, a1, na1 = buildtree(
-            H, q, p, u, v, j - 1, e, Emax, q0, p0)
+        qn, pn, qp, pp, q1, n1, s1, a1, na1 = buildtree(leapfrog1_dE, q, p, u, v, j - 1, e, Emax, q0, p0, E0)
         if s1 == 1:
             if v == -1:
-                qn, pn, _, _, q11, n11, s11, a11, na11 = buildtree(
-                    H, qn, pn, u, v, j - 1, e, Emax, q0, p0)
+                qn, pn, _, _, q11, n11, s11, a11, na11 = buildtree(leapfrog1_dE, qn, pn, u, v, j - 1, e, Emax, q0, p0, E0)
             else:
-                _, _, qp, pp, q11, n11, s11, a11, na11 = buildtree(
-                    H, qp, pp, u, v, j - 1, e, Emax, q0, p0)
+                _, _, qp, pp, q11, n11, s11, a11, na11 = buildtree(leapfrog1_dE, qp, pp, u, v, j - 1, e, Emax, q0, p0, E0)
 
-            if bern(n11 * 1. / (max(n1 + n11, 1))):
+            if bern(n11*1./(max(n1 + n11, 1))):
                 q1 = q11
 
             a1 = a1 + a11
@@ -179,7 +190,7 @@ def buildtree(H, q, p, u, v, j, e, Emax, q0, p0):
     return
 
 
-def leapfrog1_dE(logp, vars, shared, pot, profile):
+def leapfrog1_dE(H, q, profile):
     """Computes a theano function that computes one leapfrog step and the energy difference between the beginning and end of the trajectory.
     Parameters
     ----------
@@ -192,31 +203,22 @@ def leapfrog1_dE(logp, vars, shared, pot, profile):
     Returns
     -------
     theano function which returns
-    q_new, p_new, delta_E
+    q_new, p_new, E
     """
-    dlogp = gradient(logp, vars)
-    (logp, dlogp), q = join_nonshared_inputs([logp, dlogp], vars, shared)
-    logp = CallableTensor(logp)
-    dlogp = CallableTensor(dlogp)
-
-    H = Hamiltonian(logp, dlogp, pot)
-
-    p = tt.dvector('p')
+    p = theano.tensor.dvector('p')
     p.tag.test_value = q.tag.test_value
 
-    q0 = tt.dvector('q0')
-    q0.tag.test_value = q.tag.test_value
-    p0 = tt.dvector('p0')
-    p0.tag.test_value = p.tag.test_value
-
-    e = tt.dscalar('e')
+    e = theano.tensor.dscalar('e')
     e.tag.test_value = 1
 
     q1, p1 = leapfrog(H, q, p, 1, e)
     E = energy(H, q1, p1)
-    E0 = energy(H, q0, p0)
+
+    E0 = theano.tensor.dscalar('E0')
+    E0.tag.test_value = 1
+
     dE = E - E0
 
-    f = theano.function([q, p, e, q0, p0], [q1, p1, dE], profile=profile)
+    f = theano.function([q, p, e, E0], [q1, p1, dE], profile=profile)
     f.trust_input = True
     return f
