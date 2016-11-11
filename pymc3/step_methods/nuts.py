@@ -92,27 +92,32 @@ class NUTS(ArrayStepShared):
         self.u = log(self.step_size*10)
         self.m = 1
 
-        #self.H = Hamiltonian(model.fastlogp, model.fastdlogp(vars), self.potential)
-
         shared = make_shared_replacements(vars, model)
 
-        dlogp = gradient(model.logpt, vars)
-        (logp, dlogp), q = join_nonshared_inputs([model.logpt, dlogp], vars, shared)
-        logp = CallableTensor(logp)
-        dlogp = CallableTensor(dlogp)
+        def create_hamiltonian(vars, shared, model):
+            dlogp = gradient(model.logpt, vars)
+            (logp, dlogp), q = join_nonshared_inputs([model.logpt, dlogp], vars, shared)
+            logp = CallableTensor(logp)
+            dlogp = CallableTensor(dlogp)
 
+            return Hamiltonian(logp, dlogp, self.potential), q
 
-        self.H = Hamiltonian(logp, dlogp, self.potential)
+        def create_energy_func(q):
+            p = theano.tensor.dvector('p')
+            p.tag.test_value = q.tag.test_value
+            E0 = energy(self.H, q, p)
+            E0_func = theano.function([q, p], [E0])
+            E0_func.trust_input = True
 
-        p = theano.tensor.dvector('p')
-        p.tag.test_value = q.tag.test_value
-        E0 = energy(self.H, q, p)
-        self.E0 = theano.function([q, p], [E0])
-        self.E0.trust_input = True
+            return E0_func
+
+        self.H, q = create_hamiltonian(vars, shared, model)
+        self.compute_energy = create_energy_func(q)
 
         self.leapfrog1_dE = leapfrog1_dE(self.H, q, profile=profile)
 
         super(NUTS, self).__init__(vars, shared, **kwargs)
+
 
     def astep(self, q0):
         leapfrog = self.leapfrog1_dE
@@ -120,7 +125,7 @@ class NUTS(ArrayStepShared):
         e = self.step_size
 
         p0 = self.potential.random()
-        E0 = self.E0(q0, p0)
+        E0 = self.compute_energy(q0, p0)
 
         u = uniform()
         q = qn = qp = q0
