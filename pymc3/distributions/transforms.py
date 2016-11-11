@@ -240,7 +240,7 @@ stick_breaking = StickBreaking()
 t_stick_breaking = lambda eps: StickBreaking(eps)
 
 
-class Circular(ElemwiseTransform):
+class Circular(Transform):
     """Transforms a linear space into a circular one.
     """
     name = "circular"
@@ -250,5 +250,8 @@ class Circular(ElemwiseTransform):
 
     def forward(self, x):
         return x
+        
+    def jacobian_det(self, x):
+        return 0
 
 circular = Circular()
