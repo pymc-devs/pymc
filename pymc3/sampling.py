@@ -16,7 +16,7 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_ppc']
+__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_init']
 
 
 def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropolis,
@@ -373,3 +373,80 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
                                                          size=size))
 
     return {k: np.asarray(v) for k, v in ppc.items()}
+
+
+def sample_init(draws=2000, init='advi', n_init=500000, sampler='nuts',
+                model=None, **kwargs):
+    """Initialize and sample from posterior of a continuous model.
+
+    This is a convenience function. NUTS convergence and sampling speed is extremely
+    dependent on the choice of mass/scaling matrix. In our experience, using ADVI
+    to estimate a diagonal covariance matrix and using this as the scaling matrix
+    produces robust results over a wide class of continuous models.
+
+    Parameteres
+    -----------
+    init : str {'advi', 'map', 'metropolis', 'nuts'}
+        Initialization method to use.
+    n_init : int
+        Number of iterations of initializer
+        If 'advi', number of iterations, if 'metropolis', number of draws.
+    sampler : str {'nuts', 'hmc', advi'}
+        Sampler to use. Will be initialized using init algorithm.
+    draws : int
+        Number of posterior samples to draw.
+    njobs : int
+        Number of parallel jobs to start. If None, set to number of cpus
+        in the system - 2.
+    **kwargs : additional keyword argumemts
+        Additional keyword argumemts are forwared to pymc3.sample()
+
+    Returns
+    -------
+    MultiTrace object with access to sampling values
+    """
+
+    model = pm.modelcontext(model)
+    pm._log.info('Initializing using {}...'.format(init))
+
+    if init == 'advi':
+        v_params = pm.variational.advi(n=n_init)
+        start = v_params.means
+        cov = np.diagflat(np.power(model.dict_to_array(v_params.stds), 2))
+
+    elif init == 'map':
+        start = pm.find_MAP()
+        cov = pm.find_hessian(point=start)
+
+    elif init == 'metropolis':
+        init_trace = pm.sample(step=pm.Metropolis(), draws=n_init)
+        cov = pm.trace_cov(init_trace)
+
+        start = {varname: np.mean(init_trace[varname]) for varname in init_trace.varnames}
+    elif init == 'nuts':
+        init_trace = pm.sample(step=pm.NUTS(), draws=n_init)
+        cov = pm.trace_cov(init_trace)
+
+        start = {varname: np.mean(init_trace[varname]) for varname in init_trace.varnames}
+    else:
+        raise NotImplemented('Initializer {} is not supported.'.format(init))
+
+    pm._log.info('Sampling using {}...'.format(sampler))
+    if sampler == 'nuts':
+        step = pm.NUTS(scaling=cov, is_cov=True)
+    elif sampler == 'hmc':
+        step = pm.HamiltonianMC(scaling=cov, is_cov=True)
+    elif sampler == 'metropolis':
+        step = pm.Metropolis(scaling=cov,
+                             proposal=pm.step_methods.metropolis.MultivariateNormalProposal)
+    elif sampler != 'advi':
+        raise NotImplemented('Sampler {} is not supported.'.format(init))
+
+    if sampler == 'advi':
+        if init != 'advi':
+            raise ValueError("To sample via ADVI, you have to set init='advi'.")
+        trace = pm.variational.sample_vp(v_params, draws=draws)
+    else:
+        trace = pm.sample(step=step, start=start, draws=draws, **kwargs)
+
+    return trace

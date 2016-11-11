@@ -61,6 +61,20 @@ class TestSample(SeededTest):
                 for steps in [1, 10, 300]:
                     pm.sample(steps, self.step, {}, None, njobs=njobs, random_seed=self.random_seed)
 
+    def test_sample_init(self):
+        with self.model:
+            for init in ('advi', 'map', 'metropolis', 'nuts'):
+                for sampler in ('nuts', 'hmc', 'advi'):
+                    if (sampler == 'advi') and (init != 'advi'):
+                        self.assertRaises(ValueError, pm.sample_init,
+                                          init=init, sampler=sampler,
+                                          n_init=1000)
+                    else:
+                        pm.sample_init(init=init, sampler=sampler,
+                                       n_init=1000, draws=50,
+                                       random_seed=self.random_seed)
+
+
     def test_iter_sample(self):
         with self.model:
             samps = pm.sampling.iter_sample(5, self.step, self.start, random_seed=self.random_seed)
