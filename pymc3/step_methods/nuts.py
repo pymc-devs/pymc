@@ -13,6 +13,7 @@ import theano.tensor as tt
 
 __all__ = ['NUTS']
 
+
 class NUTS(ArrayStepShared):
     """
     Automatically tunes step size and adjust number of steps for good performance.
@@ -31,7 +32,7 @@ class NUTS(ArrayStepShared):
                  k=0.75,
                  t0=10,
                  model=None,
-                 profile=False,**kwargs):
+                 profile=False, **kwargs):
         """
         Parameters
         ----------
@@ -67,14 +68,12 @@ class NUTS(ArrayStepShared):
             scaling = model.test_point
 
         if isinstance(scaling, dict):
-            scaling = guess_scaling(Point(scaling, model=model), model=model, vars = vars)
-
-
+            scaling = guess_scaling(
+                Point(scaling, model=model), model=model, vars=vars)
 
         n = scaling.shape[0]
 
-        self.step_size = step_scale / n**(1/4.)
-
+        self.step_size = step_scale / n**(1 / 4.)
 
         self.potential = quad_potential(scaling, is_cov, as_cov=False)
 
@@ -89,14 +88,15 @@ class NUTS(ArrayStepShared):
         self.k = k
 
         self.Hbar = 0
-        self.u = log(self.step_size*10)
+        self.u = log(self.step_size * 10)
         self.m = 1
 
         shared = make_shared_replacements(vars, model)
 
         def create_hamiltonian(vars, shared, model):
             dlogp = gradient(model.logpt, vars)
-            (logp, dlogp), q = join_nonshared_inputs([model.logpt, dlogp], vars, shared)
+            (logp, dlogp), q = join_nonshared_inputs(
+                [model.logpt, dlogp], vars, shared)
             logp = CallableTensor(logp)
             dlogp = CallableTensor(dlogp)
 
@@ -118,7 +118,6 @@ class NUTS(ArrayStepShared):
 
         super(NUTS, self).__init__(vars, shared, **kwargs)
 
-
     def astep(self, q0):
         leapfrog = self.leapfrog1_dE
         Emax = self.Emax
@@ -137,11 +136,13 @@ class NUTS(ArrayStepShared):
             v = bern(.5) * 2 - 1
 
             if v == -1:
-                qn, pn, _, _, q1, n1, s1, a, na = buildtree(leapfrog, qn, pn, u, v, j, e, Emax, q0, p0, E0)
+                qn, pn, _, _, q1, n1, s1, a, na = buildtree(
+                    leapfrog, qn, pn, u, v, j, e, Emax, q0, p0, E0)
             else:
-                _, _, qp, pp, q1, n1, s1, a, na = buildtree(leapfrog, qp, pp, u, v, j, e, Emax, q0, p0, E0)
+                _, _, qp, pp, q1, n1, s1, a, na = buildtree(
+                    leapfrog, qp, pp, u, v, j, e, Emax, q0, p0, E0)
 
-            if s1 == 1 and bern(min(1, n1*1./n)):
+            if s1 == 1 and bern(min(1, n1 * 1. / n)):
                 q = q1
 
             n = n + n1
@@ -152,10 +153,11 @@ class NUTS(ArrayStepShared):
 
         p = -p
 
-        w = 1./(self.m+self.t0)
-        self.Hbar = (1 - w) * self.Hbar + w*(self.target_accept - a*1./na)
+        w = 1. / (self.m + self.t0)
+        self.Hbar = (1 - w) * self.Hbar + w * \
+            (self.target_accept - a * 1. / na)
 
-        self.step_size = exp(self.u - (self.m**.5/self.gamma)*self.Hbar)
+        self.step_size = exp(self.u - (self.m**.5 / self.gamma) * self.Hbar)
         self.m += 1
 
         return q
@@ -169,20 +171,23 @@ class NUTS(ArrayStepShared):
 
 def buildtree(leapfrog1_dE, q, p, u, v, j, e, Emax, q0, p0, E0):
     if j == 0:
-        q1, p1, dE = leapfrog1_dE(q, p, array(v*e), E0[0])
+        q1, p1, dE = leapfrog1_dE(q, p, array(v * e), E0[0])
 
         n1 = int(log(u) + dE <= 0)
         s1 = int(log(u) + dE < Emax)
         return q1, p1, q1, p1, q1, n1, s1, min(1, exp(-dE)), 1
     else:
-        qn, pn, qp, pp, q1, n1, s1, a1, na1 = buildtree(leapfrog1_dE, q, p, u, v, j - 1, e, Emax, q0, p0, E0)
+        qn, pn, qp, pp, q1, n1, s1, a1, na1 = buildtree(
+            leapfrog1_dE, q, p, u, v, j - 1, e, Emax, q0, p0, E0)
         if s1 == 1:
             if v == -1:
-                qn, pn, _, _, q11, n11, s11, a11, na11 = buildtree(leapfrog1_dE, qn, pn, u, v, j - 1, e, Emax, q0, p0, E0)
+                qn, pn, _, _, q11, n11, s11, a11, na11 = buildtree(
+                    leapfrog1_dE, qn, pn, u, v, j - 1, e, Emax, q0, p0, E0)
             else:
-                _, _, qp, pp, q11, n11, s11, a11, na11 = buildtree(leapfrog1_dE, qp, pp, u, v, j - 1, e, Emax, q0, p0, E0)
+                _, _, qp, pp, q11, n11, s11, a11, na11 = buildtree(
+                    leapfrog1_dE, qp, pp, u, v, j - 1, e, Emax, q0, p0, E0)
 
-            if bern(n11*1./(max(n1 + n11, 1))):
+            if bern(n11 * 1. / (max(n1 + n11, 1))):
                 q1 = q11
 
             a1 = a1 + a11
