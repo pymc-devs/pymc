@@ -1,3 +1,24 @@
+"""
+Written by: Eric J. Ma
+Date: 11 November 2016
+Inspiration taken from many places, including the PyMC3 documentation.
+
+A note on the API design, for future contributors.
+
+There were some design choices made here for "default models" that may be
+modified in the future. I list the choices below:
+
+- A "model" is an object, like scikit-learn.
+- A model is instantiated with a DataFrame that houses the data.
+- Models accept other parameters as necessary.
+- Every model has a `.fit()` function that performs model fitting, like in
+  scikit-learn.
+- Every model has a `.plot_posterior()` function that returns a figure showing
+  the posterior distribution. Inspired by the pymc3 GLM module.
+- BEST uses ADVI, but this can (and should) be made an option; MCMC is also a
+  good tool to use.
+"""
+
 from ..distributions import StudentT, Exponential, Uniform, HalfCauchy
 from .. import Model
 from ..variational import advi, sample_vp
