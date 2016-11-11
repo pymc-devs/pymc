@@ -63,7 +63,7 @@ class TestSample(SeededTest):
 
     def test_sample_init(self):
         with self.model:
-            for init in ('advi', 'map', 'metropolis', 'nuts'):
+            for init in ('advi', 'map', 'nuts'):
                 for sampler in ('nuts', 'hmc', 'advi'):
                     if (sampler == 'advi') and (init != 'advi'):
                         self.assertRaises(ValueError, pm.sample_init,

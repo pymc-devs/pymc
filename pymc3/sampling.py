@@ -386,7 +386,7 @@ def sample_init(draws=2000, init='advi', n_init=500000, sampler='nuts',
 
     Parameteres
     -----------
-    init : str {'advi', 'map', 'metropolis', 'nuts'}
+    init : str {'advi', 'map', 'nuts'}
         Initialization method to use.
     n_init : int
         Number of iterations of initializer
@@ -412,20 +412,15 @@ def sample_init(draws=2000, init='advi', n_init=500000, sampler='nuts',
     if init == 'advi':
         v_params = pm.variational.advi(n=n_init)
         start = v_params.means
-        cov = np.diagflat(np.power(model.dict_to_array(v_params.stds), 2))
+        cov = np.power(model.dict_to_array(v_params.stds), 2)
 
     elif init == 'map':
         start = pm.find_MAP()
         cov = pm.find_hessian(point=start)
 
-    elif init == 'metropolis':
-        init_trace = pm.sample(step=pm.Metropolis(), draws=n_init)
-        cov = pm.trace_cov(init_trace)
-
-        start = {varname: np.mean(init_trace[varname]) for varname in init_trace.varnames}
     elif init == 'nuts':
         init_trace = pm.sample(step=pm.NUTS(), draws=n_init)
-        cov = pm.trace_cov(init_trace)
+        cov = pm.trace_cov(init_trace[n_init//2:])
 
         start = {varname: np.mean(init_trace[varname]) for varname in init_trace.varnames}
     else:
@@ -436,9 +431,6 @@ def sample_init(draws=2000, init='advi', n_init=500000, sampler='nuts',
         step = pm.NUTS(scaling=cov, is_cov=True)
     elif sampler == 'hmc':
         step = pm.HamiltonianMC(scaling=cov, is_cov=True)
-    elif sampler == 'metropolis':
-        step = pm.Metropolis(scaling=cov,
-                             proposal=pm.step_methods.metropolis.MultivariateNormalProposal)
     elif sampler != 'advi':
         raise NotImplemented('Sampler {} is not supported.'.format(init))
 
