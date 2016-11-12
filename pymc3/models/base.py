@@ -18,7 +18,7 @@ class UserModel(object):
         """Shortcut to model"""
         return modelcontext(None)
 
-    def add_var(self, name, dist, data=None):
+    def new_var(self, name, dist, data=None):
         """Create and add (un)observed random variable to the model with an
         appropriate prior distribution. Also adds prefix to the name
 
@@ -35,5 +35,21 @@ class UserModel(object):
         FreeRV or ObservedRV
         """
         var = self.model.Var('{}_{}'.format(self, name, name), dist=dist, data=data)
+        self.vars[name] = var
+        return var
+
+    def add_var(self, name, var):
+        """When user provides ready variable - do not create new one,
+         just register it
+
+        Parameters
+        ----------
+        name : str - inner name for the model
+        var : FreeRV or ObservedRV
+
+        Returns
+        -------
+        FreeRV or ObservedRV
+        """
         self.vars[name] = var
         return var
