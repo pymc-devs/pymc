@@ -14,7 +14,7 @@ class UserModel(object):
         # Just shortcut
         return modelcontext(None)
 
-    def _add_var(self, name, dist, data=None):
+    def add_var(self, name, dist, data=None):
         # Signature from pymc3.Model
         var = self.model.Var('{}_{}'.format(self, name, name), dist=dist, data=data)
         self.vars[name] = var
