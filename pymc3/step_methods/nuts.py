@@ -103,7 +103,7 @@ class NUTS(ArrayStepShared):
             return Hamiltonian(logp, dlogp, self.potential), q
 
         def create_energy_func(q):
-            p = theano.tensor.dvector('p')
+            p = tt.dvector('p')
             p.tag.test_value = q.tag.test_value
             E0 = energy(self.H, q, p)
             E0_func = theano.function([q, p], E0)
@@ -137,10 +137,10 @@ class NUTS(ArrayStepShared):
 
             if v == -1:
                 qn, pn, _, _, q1, n1, s1, a, na = buildtree(
-                    leapfrog, qn, pn, u, v, j, e, Emax, q0, p0, E0)
+                    leapfrog, qn, pn, u, v, j, e, Emax, E0)
             else:
                 _, _, qp, pp, q1, n1, s1, a, na = buildtree(
-                    leapfrog, qp, pp, u, v, j, e, Emax, q0, p0, E0)
+                    leapfrog, qp, pp, u, v, j, e, Emax, E0)
 
             if s1 == 1 and bern(min(1, n1 * 1. / n)):
                 q = q1
@@ -169,7 +169,7 @@ class NUTS(ArrayStepShared):
         return Competence.INCOMPATIBLE
 
 
-def buildtree(leapfrog1_dE, q, p, u, v, j, e, Emax, q0, p0, E0):
+def buildtree(leapfrog1_dE, q, p, u, v, j, e, Emax, E0):
     if j == 0:
         q1, p1, dE = leapfrog1_dE(q, p, array(v * e), E0)
 
@@ -178,14 +178,14 @@ def buildtree(leapfrog1_dE, q, p, u, v, j, e, Emax, q0, p0, E0):
         return q1, p1, q1, p1, q1, n1, s1, min(1, exp(-dE)), 1
     else:
         qn, pn, qp, pp, q1, n1, s1, a1, na1 = buildtree(
-            leapfrog1_dE, q, p, u, v, j - 1, e, Emax, q0, p0, E0)
+            leapfrog1_dE, q, p, u, v, j - 1, e, Emax, E0)
         if s1 == 1:
             if v == -1:
                 qn, pn, _, _, q11, n11, s11, a11, na11 = buildtree(
-                    leapfrog1_dE, qn, pn, u, v, j - 1, e, Emax, q0, p0, E0)
+                    leapfrog1_dE, qn, pn, u, v, j - 1, e, Emax, E0)
             else:
                 _, _, qp, pp, q11, n11, s11, a11, na11 = buildtree(
-                    leapfrog1_dE, qp, pp, u, v, j - 1, e, Emax, q0, p0, E0)
+                    leapfrog1_dE, qp, pp, u, v, j - 1, e, Emax, E0)
 
             if bern(n11 * 1. / (max(n1 + n11, 1))):
                 q1 = q11
@@ -213,16 +213,16 @@ def leapfrog1_dE(H, q, profile):
     theano function which returns
     q_new, p_new, dE
     """
-    p = theano.tensor.dvector('p')
+    p = tt.dvector('p')
     p.tag.test_value = q.tag.test_value
 
-    e = theano.tensor.dscalar('e')
+    e = tt.dscalar('e')
     e.tag.test_value = 1
 
     q1, p1 = leapfrog(H, q, p, 1, e)
     E = energy(H, q1, p1)
 
-    E0 = theano.tensor.dscalar('E0')
+    E0 = tt.dscalar('E0')
     E0.tag.test_value = 1
 
     dE = E - E0
