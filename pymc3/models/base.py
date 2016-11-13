@@ -34,7 +34,7 @@ class UserModel(object):
         -------
         FreeRV or ObservedRV
         """
-        var = self.model.Var('{}_{}'.format(self, name, name), dist=dist, data=data)
+        var = self.model.Var('{}_{}'.format(self.name, name), dist=dist, data=data)
         self.vars[name] = var
         return var
 
@@ -53,3 +53,6 @@ class UserModel(object):
         """
         self.vars[name] = var
         return var
+
+    def __getitem__(self, item):
+        return self.vars[item]
