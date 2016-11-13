@@ -7,13 +7,12 @@ do
     case "$1" in
         --global)
             GLOBAL=1
-            shift
             ;;
         --no-setup)
             NO_SETUP=1
-            shift
             ;;
     esac
+    shift
 done
 
 PYTHON_VERSION=${PYTHON_VERSION:-3.5} # if no python specified, use 3.5
@@ -29,6 +28,7 @@ if [ ${PYTHON_VERSION} == "2.7" ]; then
     conda install --yes mock enum34;
 fi
 
+pip install --upgrade pip
 pip install tqdm
 pip install --no-deps numdifftools
 pip install git+https://github.com/Theano/Theano.git
