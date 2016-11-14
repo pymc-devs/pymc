@@ -109,7 +109,7 @@ tools:
 
 We have provided a Dockerfile which helps for isolating build problems, and local development.
 Install [Docker](https://www.docker.com/) for your operating system, clone this repo, then
-then run `./scripts/start_container.sh`. This should start a local docker container called `pymc3`,
+run `./scripts/start_container.sh`. This should start a local docker container called `pymc3`,
 as well as a [`jupyter`](http://jupyter.org/) notebook server running on port 8888.  The repo
 will be running the code from your local copy of `pymc3`, so it is good for development.  You may
 also use it to run the test suite, with
