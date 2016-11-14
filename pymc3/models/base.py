@@ -34,9 +34,11 @@ class UserModel(object):
         -------
         FreeRV or ObservedRV
         """
-        var = self.model.Var('{}_{}'.format(self.name, name), dist=dist, data=data)
-        self.vars[name] = var
-        return var
+        assert name not in self.vars, \
+            'Cannot create duplicate var: {}'.format(name)
+        var = self.model.Var('{}_{}'.format(self.name, name),
+                             dist=dist, data=data)
+        return self.add_var(name, var)
 
     def add_var(self, name, var):
         """When user provides ready variable - do not create new one,
@@ -51,6 +53,8 @@ class UserModel(object):
         -------
         FreeRV or ObservedRV
         """
+        assert name not in self.vars, \
+            'Cannot create duplicate var: {}'.format(name)
         self.vars[name] = var
         return var
 
