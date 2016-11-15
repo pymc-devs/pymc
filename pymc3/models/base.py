@@ -19,7 +19,7 @@ class UserModel(object):
         """Shortcut to model"""
         return modelcontext(None)
 
-    def new_var(self, name, dist, data=None):
+    def new_var(self, name, dist, data=None, test_val=None):
         """Create and add (un)observed random variable to the model with an
         appropriate prior distribution. Also adds prefix to the name
 
@@ -30,15 +30,21 @@ class UserModel(object):
         data : array_like (optional)
            If data is provided, the variable is observed. If None,
            the variable is unobserved.
-
+        test_val : test value for variable
         Returns
         -------
         FreeRV or ObservedRV
         """
         assert name not in self.vars, \
             'Cannot create duplicate var: {}'.format(name)
-        var = self.model.Var('{}_{}'.format(self.name, name),
+        if self.name:
+            label = '{}_{}'.format(self.name, name)
+        else:
+            label = name
+        var = self.model.Var(label,
                              dist=dist, data=data)
+        if test_val is not None:
+            var.tag.test_value = test_val
         return self.add_var(name, var)
 
     def add_var(self, name, var):
