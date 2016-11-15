@@ -4,11 +4,11 @@ import numpy as np
 import theano
 import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
+import tqdm
 
-from pymc3 import modelcontext, ArrayOrdering, DictToArrayBijection
+import pymc3 as pm
 from pymc3.theanof import reshape_t, inputvars
-from .advi import check_discrete_rvs, ADVIFit, adagrad_optimizer, \
-                  gen_random_state
+from .advi import check_discrete_rvs, ADVIFit, adagrad_optimizer, gen_random_state
 
 __all__ = ['advi_minibatch']
 
@@ -68,7 +68,7 @@ def _get_rvss(
 
 def _init_uw_global_shared(start, global_RVs, global_order):
     start = {v.name: start[v.name] for v in global_RVs}
-    bij = DictToArrayBijection(global_order, start)
+    bij = pm.DictToArrayBijection(global_order, start)
     u_start = bij.map(start)
     w_start = np.zeros_like(u_start)
     uw_start = np.concatenate([u_start, w_start]).astype(floatX_str)
@@ -207,8 +207,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                    minibatch_RVs=None, minibatch_tensors=None,
                    minibatches=None, local_RVs=None, observed_RVs=None,
                    encoder_params=[], total_size=None, optimizer=None,
-                   learning_rate=.001, epsilon=.1, random_seed=None,
-                   verbose=1):
+                   learning_rate=.001, epsilon=.1, random_seed=None):
     """Perform mini-batch ADVI.
 
     This function implements a mini-batch ADVI with the meanfield
@@ -261,12 +260,12 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     model : Model
         Probabilistic model.
     n : int
-        Number of interations updating parameters.
+        Number of iterations updating parameters.
     n_mcsamples : int
         Number of Monte Carlo samples to approximate ELBO.
     minibatch_RVs : list of ObservedRVs
         Random variables in the model for which mini-batch tensors are set.
-        When this argument is given, both of arguments local_RVs and 
+        When this argument is given, both of arguments local_RVs and
         observed_RVs must be None.
     minibatch_tensors : list of (tensors or shared variables)
         Tensors used to create ObservedRVs in minibatch_RVs.
@@ -306,7 +305,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     """
     theano.config.compute_test_value = 'ignore'
 
-    model = modelcontext(model)
+    model = pm.modelcontext(model)
     vars = inputvars(vars if vars is not None else model.vars)
     start = start if start is not None else model.test_point
     check_discrete_rvs(vars)
@@ -335,8 +334,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     global_RVs = list(set(vars) - set(list(local_RVs) + list(observed_RVs)))
 
     # Ordering for concatenation of random variables
-    global_order = ArrayOrdering([v for v in global_RVs])
-    local_order = ArrayOrdering([v for v in local_RVs])
+    global_order = pm.ArrayOrdering([v for v in global_RVs])
+    local_order = pm.ArrayOrdering([v for v in local_RVs])
 
     # ELBO wrt variational parameters
     inarray_g, uw_g, replace_g = _join_global_RVs(global_RVs, global_order)
@@ -387,20 +386,15 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
 
     # Optimization loop
     elbos = np.empty(n)
-    for i in range(n):
+    progress = tqdm.trange(n)
+    for i in progress:
         e = f(*next(minibatches))
         elbos[i] = e
-        if verbose and not i % (n // 10):
-            if not i:
-                print('Iteration {0} [{1}%]: ELBO = {2}'.format(
-                    i, 100 * i // n, e.round(2)))
-            else:
-                avg_elbo = elbos[i - n // 10:i].mean()
-                print('Iteration {0} [{1}%]: Average ELBO = {2}'.format(
-                    i, 100 * i // n, avg_elbo.round(2)))
+        if i % (n // 10) == 0 and i > 0:
+            avg_elbo = elbos[i - n // 10:i].mean()
+            progress.set_description('Average ELBO = {:,.2f}'.format(avg_elbo))
 
-    if verbose:
-        print('Finished [100%]: ELBO = {}'.format(elbos[-1].round(2)))
+    pm._log.info('Finished minibatch ADVI: ELBO = {:,.2f}'.format(elbos[-1]))
 
     # Variational parameters of global RVs
     if 0 < len(global_RVs):

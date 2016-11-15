@@ -59,3 +59,20 @@ class TestGLM(SeededTest):
 
             self.assertAlmostEqual(np.mean(trace['Intercept']), self.intercept, 1)
             self.assertAlmostEqual(np.mean(trace['x']), self.slope, 1)
+
+    def test_more_than_one_glm_is_ok(self):
+        with Model():
+            glm.glm('y ~ x', self.data_logistic,
+                    family=glm.families.Binomial(link=glm.families.logit),
+                    name='glm1')
+            glm.glm('y ~ x', self.data_logistic,
+                    family=glm.families.Binomial(link=glm.families.logit),
+                    name='glm2')
+
+    def test_from_xy(self):
+        with Model():
+            glm.glm.from_xy(
+                self.data_logistic['x'],
+                self.data_logistic['y'],
+                family=glm.families.Binomial(link=glm.families.logit),
+                name='glm1')

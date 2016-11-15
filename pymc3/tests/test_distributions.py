@@ -90,6 +90,8 @@ Rplusbig = Domain([0, .5, .9, .99, 1, 1.5, 2, 20, inf])
 Rminusbig = Domain([-inf, -2, -1.5, -1, -.99, -.9, -.5, -0.01, 0])
 Unit = Domain([0, .001, .1, .5, .75, .99, 1])
 
+Circ = Domain([-np.pi -2.1, -1, -.01, .0, .01, 1, 2.1, np.pi])
+
 Runif = Domain([-1, -.4, 0, .4, 1])
 Rdunif = Domain([-10, 0, 10.])
 Rplusunif = Domain([0, .5, inf])
@@ -678,8 +680,9 @@ class TestMatchesScipy(SeededTest):
         pt = {'eg': value}
         assert_almost_equal(model.fastlogp(pt), logp, decimal=6, err_msg=str(pt))
 
+
     def test_vonmises(self):
-        self.pymc3_matches_scipy(VonMises, R, {'mu': R, 'kappa': Rplus},
+        self.pymc3_matches_scipy(VonMises, R, {'mu': Circ, 'kappa': Rplus},
                                  lambda value, mu, kappa: sp.vonmises.logpdf(value, kappa, loc=mu))
 
     def test_multidimensional_beta_construction(self):
