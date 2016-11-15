@@ -13,9 +13,10 @@ class LinearComponent(UserModel):
     x : pd.DataFrame or np.ndarray
     y : pd.Series or np.array
     intercept : bool - fit with intercept or not?
-    labels : replace variable names with these labels
-    priors : priors for coefficients
-    init : test_vals for coefficients
+    labels : list - replace variable names with these labels
+    priors : dict - priors for coefficients
+    init : dict - test_vals for coefficients
+    rvars : dict - random variables instead of creating new ones
     """
     def __init__(self, name, x, y, intercept=True, labels=None,
                  priors=None, init=None, rvars=None):
