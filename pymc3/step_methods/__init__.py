@@ -17,5 +17,3 @@ from .gibbs import ElemwiseCategorical
 from .slicer import Slice
 
 from .nuts import NUTS
-
-from .arraystep import Constant
