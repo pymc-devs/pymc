@@ -44,13 +44,19 @@ class LinearComponent(UserModel):
         else:
             self.intercept = 0
         for name in labels:
-            self.new_var(
-                name=name,
-                dist=priors.get(name, Normal.dist(mu=0, tau=1.0E-6)),
-                test_val=init.get(name)
-            )
-            if name == 'Intercept':
-                self.intercept = self['Intercept']
+            if name == 'Intercept':     # comes from patsy
+                self.intercept = self.new_var(
+                    name='Intercept',
+                    dist=priors.get('Intercept', Flat.dist()),
+                    test_val=init.get('Intercept')
+                )
+            else:
+                self.new_var(
+                    name=name,
+                    dist=priors.get(name, Normal.dist(mu=0, tau=1.0E-6)),
+                    test_val=init.get(name)
+                )
+
         self.coeffs = tt.stack(self.vars.values(), axis=0)
         self.y_est = tt.dot(np.asarray(x), self.coeffs).reshape((1, -1))
 
