@@ -17,18 +17,23 @@ class LinearComponent(UserModel):
     priors : priors for coefficients
     init : test_vals for coefficients
     """
-    def __init__(self, name, x, y, intercept=True, labels=None, priors=None, init=None):
+    def __init__(self, name, x, y, intercept=True, labels=None,
+                 priors=None, init=None, rvars=None):
         super(LinearComponent, self).__init__(name)
         if priors is None:
             priors = {}
         if init is None:
             init = {}
+        if rvars is None:
+            rvars = {}
         if isinstance(x, pd.DataFrame):
-            self._init_pandas_(x, y, intercept, labels, priors, init)
-        if isinstance(x, np.ndarray):
-            self._init_numpy_(x, y, intercept, labels, priors, init)
+            self._init_pandas_(x, y, intercept, labels, priors, init, rvars)
+        elif isinstance(x, np.ndarray):
+            self._init_numpy_(x, y, intercept, labels, priors, init, rvars)
+        else:
+            raise NotImplementedError('Not implemented for type %s' % type(x))
 
-    def _init_pandas_(self, x, y, intercept=True, labels=None, priors=None, init=None):
+    def _init_pandas_(self, x, y, intercept=True, labels=None, priors=None, init=None, rvars=None):
         if labels is None:
             labels = list(x.columns)
         else:
@@ -36,20 +41,18 @@ class LinearComponent(UserModel):
                 'Cannot deal with not full list of labels, need {}'.format(x.shape[1])
         if intercept:
             x = pd.concat([pd.Series(np.ones(x.shape[0])), x], 1)
-            self.intercept = self.new_var(
-                name='Intercept',
-                dist=priors.get('Intercept', Flat.dist()),
-                test_val=init.get('Intercept')
-            )
+            _dist, _var, _init = (priors.get('Intercept'),
+                                  rvars.get('Intercept'),
+                                  init.get('Intercept'))
+            self._add_intercept(_dist, _var, _init)
         else:
             self.intercept = 0
         for name in labels:
             if name == 'Intercept':     # comes from patsy
-                self.intercept = self.new_var(
-                    name='Intercept',
-                    dist=priors.get('Intercept', Flat.dist()),
-                    test_val=init.get('Intercept')
-                )
+                _dist, _var, _init = (priors.get('Intercept'),
+                                      rvars.get('Intercept'),
+                                      init.get('Intercept'))
+                self._add_intercept(_dist, _var, _init)
             else:
                 self.new_var(
                     name=name,
@@ -60,13 +63,24 @@ class LinearComponent(UserModel):
         self.coeffs = tt.stack(self.vars.values(), axis=0)
         self.y_est = tt.dot(np.asarray(x), self.coeffs).reshape((1, -1))
 
-    def _init_numpy_(self, x, y, intercept=True, labels=None, priors=None, init=None):
+    def _init_numpy_(self, x, y, intercept=True, labels=None, priors=None, init=None, rvars=None):
         x = pd.DataFrame(x).rename(columns=lambda i: "x%d" % i)
-        self._init_pandas_(x, y, intercept, labels, priors, init)
+        self._init_pandas_(x, y, intercept, labels, priors, init, rvars)
 
     @classmethod
-    def from_formula(cls, name, formula, data, priors=None, init=None):
+    def from_formula(cls, name, formula, data, priors=None, init=None, rvars=None):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
-        return cls(name, x, y, intercept=False, labels=labels, priors=priors, init=init)
+        return cls(name, x, y, intercept=False, labels=labels, priors=priors, init=init, rvars=rvars)
+
+    def _add_intercept(self, dist, var, init):
+        if var:
+            self.add_var('Intercept', var)
+        else:
+            self.new_var(
+                name='Intercept',
+                dist=dist or Flat.dist(),
+                test_val=init
+            )
+        self.intercept = self['Intercept']
