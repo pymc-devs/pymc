@@ -9,7 +9,7 @@ class LinearComponent(UserModel):
     """Creates linear component, y_est is accessible via attribute
     Parameters
     ----------
-    name : name, associated with the component
+    name : str - name, associated with the linear component
     x : pd.DataFrame or np.ndarray
     y : pd.Series or np.array
     intercept : bool - fit with intercept or not?
