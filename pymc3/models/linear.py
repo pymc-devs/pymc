@@ -55,11 +55,14 @@ class LinearComponent(UserModel):
                                       init.get('Intercept'))
                 self._add_intercept(_dist, _var, _init)
             else:
-                self.new_var(
-                    name=name,
-                    dist=priors.get(name, Normal.dist(mu=0, tau=1.0E-6)),
-                    test_val=init.get(name)
-                )
+                if name in rvars:
+                    self.add_var(name, rvars[name])
+                else:
+                    self.new_var(
+                        name=name,
+                        dist=priors.get(name, Normal.dist(mu=0, tau=1.0E-6)),
+                        test_val=init.get(name)
+                    )
 
         self.coeffs = tt.stack(self.vars.values(), axis=0)
         self.y_est = tt.dot(np.asarray(x), self.coeffs).reshape((1, -1))
