@@ -8,10 +8,12 @@ class UserModel(object):
     for simplifying usage of common bayesian models
     """
 
-    def __init__(self, name):
+    def __init__(self, name=''):
         # name should be used as prefix for
         # all variables specified within a model
         self.vars = OrderedDict()
+        if name:
+            name = '%s_' % name
         self.name = name
 
     @property
@@ -37,10 +39,7 @@ class UserModel(object):
         """
         assert name not in self.vars, \
             'Cannot create duplicate var: {}'.format(name)
-        if self.name:
-            label = '{}_{}'.format(self.name, name)
-        else:
-            label = name
+        label = '{}{}'.format(self.name, name)
         var = self.model.Var(label,
                              dist=dist, data=data)
         if test_val is not None:

@@ -19,8 +19,8 @@ class LinearComponent(UserModel):
     init : dict - test_vals for coefficients
     rvars : dict - random variables instead of creating new ones
     """
-    def __init__(self, name, x, y, intercept=True, labels=None,
-                 priors=None, init=None, rvars=None):
+    def __init__(self, x, y, intercept=True, labels=None,
+                 priors=None, init=None, rvars=None, name=''):
         super(LinearComponent, self).__init__(name)
         if priors is None:
             priors = {}
@@ -30,17 +30,20 @@ class LinearComponent(UserModel):
             rvars = {}
         if isinstance(x, pd.DataFrame):
             self._init_pandas_(x, y, intercept, labels, priors, init, rvars)
-        elif isinstance(x, np.ndarray):
-            self._init_numpy_(x, y, intercept, labels, priors, init, rvars)
         else:
-            raise NotImplementedError('Not implemented for type %s' % type(x))
+            try:
+                self._init_via_pandas_(x, y, intercept, labels, priors, init, rvars)
+            except pd.core.common.PandasError:
+                raise ValueError('Not implemented for type %s' % type(x))
 
-    def _init_pandas_(self, x, y, intercept=True, labels=None, priors=None, init=None, rvars=None):
+    def _init_pandas_(self, x, y, intercept=True, labels=None,
+                      priors=None, init=None, rvars=None):
         if labels is None:
             labels = list(x.columns)
         else:
             assert len(labels) == x.shape[1], \
-                'Cannot deal with not full list of labels, need {}'.format(x.shape[1])
+                ('Cannot deal with not full list of labels, need {}'
+                 .format(x.shape[1]))
         if intercept:
             x = pd.concat([pd.Series(np.ones(x.shape[0])), x], 1)
             _dist, _var, _init = (priors.get('Intercept'),
@@ -68,16 +71,19 @@ class LinearComponent(UserModel):
         self.coeffs = tt.stack(self.vars.values(), axis=0)
         self.y_est = tt.dot(np.asarray(x), self.coeffs).reshape((1, -1))
 
-    def _init_numpy_(self, x, y, intercept=True, labels=None, priors=None, init=None, rvars=None):
-        x = pd.DataFrame(x).rename(columns=lambda i: "x%d" % i)
-        self._init_pandas_(x, y, intercept, labels, priors, init, rvars)
+    def _init_via_pandas_(self, x, y, intercept=True, labels=None,
+                          priors=None, init=None, rvars=None):
+        new = pd.DataFrame(x)
+        new.columns = ['x%d' % i for i in range(new.shape[1])]
+        self._init_pandas_(new, y, intercept, labels, priors, init, rvars)
 
     @classmethod
-    def from_formula(cls, name, formula, data, priors=None, init=None, rvars=None):
+    def from_formula(cls, formula, data, priors=None, init=None, rvars=None, name=''):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
-        return cls(name, x, y, intercept=False, labels=labels, priors=priors, init=init, rvars=rvars)
+        return cls(np.asarray(x), np.asarray(y).T, intercept=False, labels=labels,
+                   priors=priors, init=init, rvars=rvars, name=name)
 
     def _add_intercept(self, dist, var, init):
         if var:
@@ -105,9 +111,9 @@ class Glm(LinearComponent):
         rvars : dict - random variables instead of creating new ones
         family : pymc3.glm.families object
         """
-    def __init__(self, name, x, y, intercept=True, labels=None,
-                 priors=None, init=None, rvars=None, family='normal'):
-        super(Glm, self).__init__(name, x, y, intercept, labels, priors, init, rvars)
+    def __init__(self, x, y, intercept=True, labels=None,
+                 priors=None, init=None, rvars=None, family='normal', name=''):
+        super(Glm, self).__init__(x, y, intercept, labels, priors, init, rvars, name)
 
         _families = dict(
             normal=families.Normal,
@@ -124,3 +130,11 @@ class Glm(LinearComponent):
             name = 'y'
         self.add_var('y', self.model.named_vars[name])
         self.y_est = self['y']
+
+    @classmethod
+    def from_formula(cls, formula, data, priors=None, init=None, rvars=None, family='normal', name=''):
+        import patsy
+        y, x = patsy.dmatrices(formula, data)
+        labels = x.design_info.column_names
+        return cls(np.asarray(x), np.asarray(y).T, intercept=False, labels=labels,
+                   priors=priors, init=init, rvars=rvars, family=family, name=name)
