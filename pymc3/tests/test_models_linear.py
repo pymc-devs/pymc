@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from .helpers import SeededTest
 from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
-from pymc3.models.linear import LinearComponent
+from pymc3.models.linear import LinearComponent, Glm
 
 
 # Generate data
@@ -57,3 +57,19 @@ class TestGLM(SeededTest):
             self.assertAlmostEqual(np.mean(trace['Intercept']), self.intercept, 1)
             self.assertAlmostEqual(np.mean(trace['x']), self.slope, 1)
             self.assertAlmostEqual(np.mean(trace['sigma']), self.sd, 1)
+
+    def test_glm(self):
+        with Model() as model:
+            NAME = 'glm'
+            Glm(
+                NAME,
+                self.data_linear['x'],
+                self.data_linear['y']
+            )
+            start = find_MAP()
+            step = Slice(model.vars)
+            trace = sample(500, step, start, progressbar=False, random_seed=self.random_seed)
+
+            self.assertAlmostEqual(np.mean(trace['%s_Intercept' % NAME]), self.intercept, 1)
+            self.assertAlmostEqual(np.mean(trace['%s_x' % NAME]), self.slope, 1)
+            self.assertAlmostEqual(np.mean(trace['%s_sd' % NAME]), self.sd, 1)

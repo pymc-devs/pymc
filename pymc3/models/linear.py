@@ -2,6 +2,7 @@ import theano.tensor as tt
 import pandas as pd
 import numpy as np
 from ..distributions import Normal, Flat
+from ..glm import families
 from .base import UserModel
 
 
@@ -88,3 +89,38 @@ class LinearComponent(UserModel):
                 test_val=init
             )
         self.intercept = self['Intercept']
+
+
+class Glm(LinearComponent):
+    """Creates glm model, y_est is accessible via attribute
+        Parameters
+        ----------
+        name : str - name, associated with the linear component
+        x : pd.DataFrame or np.ndarray
+        y : pd.Series or np.array
+        intercept : bool - fit with intercept or not?
+        labels : list - replace variable names with these labels
+        priors : dict - priors for coefficients
+        init : dict - test_vals for coefficients
+        rvars : dict - random variables instead of creating new ones
+        family : pymc3.glm.families object
+        """
+    def __init__(self, name, x, y, intercept=True, labels=None,
+                 priors=None, init=None, rvars=None, family='normal'):
+        super(Glm, self).__init__(name, x, y, intercept, labels, priors, init, rvars)
+
+        _families = dict(
+            normal=families.Normal,
+            student=families.StudentT,
+            binomial=families.Binomial,
+            poisson=families.Poisson
+        )
+        if isinstance(family, str):
+            family = _families[family]()
+        family.create_likelihood(name, self.y_est, y, model=self.model)
+        if name:
+            name = '{}_y'.format(name)
+        else:
+            name = 'y'
+        self.add_var('y', self.model.named_vars[name])
+        self.y_est = self['y']
