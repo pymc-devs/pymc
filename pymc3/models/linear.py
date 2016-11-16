@@ -30,11 +30,10 @@ class LinearComponent(UserModel):
         if rvars is None:
             rvars = {}
         x, labels = any_to_tensor_and_labels(x, labels)
-        shape = x.shape.eval()
         # now we have x, shape and labels
         if intercept:
             x = tt.concatenate(
-                [tt.ones((shape[0], 1), x.dtype), x],
+                [tt.ones((x.shape[0], 1), x.dtype), x],
                 axis=1
             )
             labels = ['Intercept'] + labels
