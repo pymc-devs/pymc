@@ -1,3 +1,4 @@
+import theano
 import theano.tensor as tt
 import pandas as pd
 import numpy as np
@@ -29,35 +30,62 @@ class LinearComponent(UserModel):
         if rvars is None:
             rvars = {}
         if isinstance(x, pd.DataFrame):
-            self._init_pandas_(x, y, intercept, labels, priors, init, rvars)
-        else:
-            try:
-                self._init_via_pandas_(x, y, intercept, labels, priors, init, rvars)
-            except pd.core.common.PandasError:
-                raise ValueError('Not implemented for type %s' % type(x))
-
-    def _init_pandas_(self, x, y, intercept=True, labels=None,
-                      priors=None, init=None, rvars=None):
-        if labels is None:
             labels = list(x.columns)
+            x = x.as_matrix()
+        elif isinstance(x, pd.Series):
+            labels = [x.name]
+            x = x.as_matrix()[:, None]
+        elif isinstance(x, dict):
+            x = pd.DataFrame(x)
+            labels = x.columns
+            x = x.as_matrix()
         else:
-            assert len(labels) == x.shape[1], \
-                ('Cannot deal with not full list of labels, need {}'
-                 .format(x.shape[1]))
+            tx = type(x)
+            x = tt.as_tensor_variable(x)
+            try:
+                shape = x.shape.eval()
+            except theano.gof.fg.MissingInputError:
+                shape = None
+            if not labels and shape is None:
+                raise TypeError(
+                    'Cannot infer shape of %r, '
+                    'please provide list of labels '
+                    'or x without missing inputs' % tx
+                )
+            if len(shape) == 0:
+                raise ValueError('scalars are not available as input')
+            elif len(shape) == 1:
+                x = x[:, None]
+                shape = x.shape.eval()
+            if not labels:
+                labels = ['x%d' % i for i in range(shape[1])]
+            else:
+                assert len(labels) == shape[1], (
+                    'Please provide all labels for coefficients'
+                )
+        if isinstance(labels, pd.RangeIndex):
+            labels = ['x%d' % i for i in labels]
+        if not isinstance(labels, list):
+            labels = list(labels)
+        x = tt.as_tensor_variable(x)
+        shape = x.shape.eval()
+        # now we have x, shape and labels
         if intercept:
-            x = pd.concat([pd.Series(np.ones(x.shape[0])), x], 1)
-            _dist, _var, _init = (priors.get('Intercept'),
-                                  rvars.get('Intercept'),
-                                  init.get('Intercept'))
-            self._add_intercept(_dist, _var, _init)
-        else:
-            self.intercept = 0
+            x = tt.concatenate(
+                [tt.ones((shape[0], 1), x.dtype), x],
+                axis=1
+            )
+            labels = ['Intercept'] + labels
         for name in labels:
-            if name == 'Intercept':     # comes from patsy
-                _dist, _var, _init = (priors.get('Intercept'),
-                                      rvars.get('Intercept'),
-                                      init.get('Intercept'))
-                self._add_intercept(_dist, _var, _init)
+            if name == 'Intercept':
+                if name in rvars:
+                    self.add_var(name, rvars[name])
+                else:
+                    self.new_var(
+                        name=name,
+                        dist=priors.get(name, Flat.dist()),
+                        test_val=init.get(name)
+                    )
             else:
                 if name in rvars:
                     self.add_var(name, rvars[name])
@@ -67,34 +95,16 @@ class LinearComponent(UserModel):
                         dist=priors.get(name, Normal.dist(mu=0, tau=1.0E-6)),
                         test_val=init.get(name)
                     )
-
         self.coeffs = tt.stack(self.vars.values(), axis=0)
-        self.y_est = tt.dot(np.asarray(x), self.coeffs).reshape((1, -1))
-
-    def _init_via_pandas_(self, x, y, intercept=True, labels=None,
-                          priors=None, init=None, rvars=None):
-        new = pd.DataFrame(x)
-        new.columns = ['x%d' % i for i in range(new.shape[1])]
-        self._init_pandas_(new, y, intercept, labels, priors, init, rvars)
+        self.y_est = x.dot(self.coeffs)
 
     @classmethod
     def from_formula(cls, formula, data, priors=None, init=None, rvars=None, name=''):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
-        return cls(np.asarray(x), np.asarray(y).T, intercept=False, labels=labels,
+        return cls(np.asarray(x), np.asarray(y)[:, 0], intercept=False, labels=labels,
                    priors=priors, init=init, rvars=rvars, name=name)
-
-    def _add_intercept(self, dist, var, init):
-        if var:
-            self.add_var('Intercept', var)
-        else:
-            self.new_var(
-                name='Intercept',
-                dist=dist or Flat.dist(),
-                test_val=init
-            )
-        self.intercept = self['Intercept']
 
 
 class Glm(LinearComponent):
@@ -136,5 +146,5 @@ class Glm(LinearComponent):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
-        return cls(np.asarray(x), np.asarray(y).T, intercept=False, labels=labels,
+        return cls(np.asarray(x), np.asarray(y)[:, 0], intercept=False, labels=labels,
                    priors=priors, init=init, rvars=rvars, family=family, name=name)
