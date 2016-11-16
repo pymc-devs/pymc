@@ -15,29 +15,36 @@ def any_to_tensor_and_labels(x, labels=None):
         labels = x.columns
         x = x.as_matrix()
     else:
+        if hasattr(x, 'shape') and not isinstance(x, tt.Variable):
+            shape = x.shape
+        else:
+            shape = None
         tx = type(x)
         x = tt.as_tensor_variable(x)
-        try:
-            shape = x.shape.eval()
-        except theano.gof.fg.MissingInputError:
-            shape = None
+        if shape is None:
+            try:
+                shape = x.shape.eval()
+            except theano.gof.fg.MissingInputError:
+                pass
         if not labels and shape is None:
             raise TypeError(
                 'Cannot infer shape of %r, '
                 'please provide list of labels '
                 'or x without missing inputs' % tx
             )
-        if len(shape) == 0:
-            raise ValueError('scalars are not available as input')
-        elif len(shape) == 1:
-            x = x[:, None]
-            shape = x.shape.eval()
-        if not labels:
-            labels = ['x%d' % i for i in range(shape[1])]
-        else:
-            assert len(labels) == shape[1], (
-                'Please provide all labels for coefficients'
-            )
+        if shape is not None:
+            if len(shape) == 0:
+                raise ValueError('scalars are not available as input')
+            elif len(shape) == 1:
+                x = x[:, None]
+                shape = x.shape.eval()
+            if not labels:
+                labels = ['x%d' % i for i in range(shape[1])]
+            else:
+                assert len(labels) == shape[1], (
+                    'Please provide all labels for coefficients'
+                )
+        # else: labels exist
     if isinstance(labels, pd.RangeIndex):
         labels = ['x%d' % i for i in labels]
     if not isinstance(labels, list):
