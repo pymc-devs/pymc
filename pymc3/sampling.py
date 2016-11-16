@@ -16,7 +16,7 @@ from tqdm import tqdm
 import sys
 sys.setrecursionlimit(10000)
 
-__all__ = ['sample', 'iter_sample', 'sample_ppc', 'sample_init']
+__all__ = ['sample', 'iter_sample', 'sample_ppc', 'init_nuts']
 
 
 def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropolis,
@@ -81,8 +81,9 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
     return steps
 
 
-def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None,
-           progressbar=True, model=None, random_seed=-1):
+def sample(draws, step=None, init='advi', n_init=500000, start=None,
+           trace=None, chain=0, njobs=1, tune=None, progressbar=True,
+           model=None, random_seed=-1):
     """
     Draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -97,6 +98,15 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
         A step function or collection of functions. If no step methods are
         specified, or are partially specified, they will be assigned
         automatically (defaults to None).
+    init : str {'advi', 'advi_map', 'map', 'nuts'}
+        Initialization method to use.
+        * advi : Run ADVI to estimate posterior mean and diagonal covariance matrix.
+        * advi_map: Initialize ADVI with MAP and use MAP as starting point.
+        * map : Use the MAP as starting point.
+        * nuts : Run NUTS and estimate posterior mean and covariance matrix.
+    n_init : int
+        Number of iterations of initializer
+        If 'advi', number of iterations, if 'nuts', number of draws.
     start : dict
         Starting point in parameter space (or partial point)
         Defaults to trace.point(-1)) if there is a trace provided and
@@ -132,7 +142,14 @@ def sample(draws, step=None, start=None, trace=None, chain=0, njobs=1, tune=None
     """
     model = modelcontext(model)
 
-    step = assign_step_methods(model, step)
+    if step is None and init is not None and pm.model.all_continuous(model.vars):
+        # By default, use NUTS sampler
+        pm._log.info('Auto-assigning NUTS sampler...')
+        start_, step = init_nuts(init=init, n_init=n_init, model=model)
+        if start is None:
+            start = start_
+    else:
+        step = assign_step_methods(model, step)
 
     if njobs is None:
         import multiprocessing as mp
@@ -375,8 +392,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def sample_init(draws=2000, init='advi', n_init=500000, sampler='nuts',
-                model=None, **kwargs):
+def init_nuts(init='advi', n_init=500000, model=None):
     """Initialize and sample from posterior of a continuous model.
 
     This is a convenience function. NUTS convergence and sampling speed is extremely
@@ -384,10 +400,8 @@ def sample_init(draws=2000, init='advi', n_init=500000, sampler='nuts',
     to estimate a diagonal covariance matrix and using this as the scaling matrix
     produces robust results over a wide class of continuous models.
 
-    Parameteres
-    -----------
-    draws : int
-        Number of posterior samples to draw.
+    Parameters
+    ----------
     init : str {'advi', 'advi_map', 'map', 'nuts'}
         Initialization method to use.
         * advi : Run ADVI to estimate posterior mean and diagonal covariance matrix.
@@ -397,21 +411,21 @@ def sample_init(draws=2000, init='advi', n_init=500000, sampler='nuts',
     n_init : int
         Number of iterations of initializer
         If 'advi', number of iterations, if 'metropolis', number of draws.
-    sampler : str {'nuts', 'hmc', advi'}
-        Sampler to use. Will be initialized using init algorithm.
-        * nuts : Run NUTS sampler with the init covariance estimation as the scaling matrix.
-        * hmc : Run HamiltonianMC sampler with the init covariance estimation as the scaling matrix.
-        * advi : Sample from variational posterior, requires init='advi'.
-    **kwargs : additional keyword argumemts
-        Additional keyword argumemts are forwared to pymc3.sample()
+    model : Model (optional if in `with` context)
 
     Returns
     -------
-    MultiTrace object with access to sampling values
+    start, nuts_sampler
+
+    start : pymc3.model.Point
+        Starting point for sampler
+    nuts_sampler : pymc3.step_methods.NUTS
+        Instantiated and initialized NUTS sampler object
     """
 
     model = pm.modelcontext(model)
-    pm._log.info('Initializing using {}...'.format(init))
+
+    pm._log.info('Initializing NUTS using {}...'.format(init))
 
     if init == 'advi':
         v_params = pm.variational.advi(n=n_init)
@@ -433,19 +447,6 @@ def sample_init(draws=2000, init='advi', n_init=500000, sampler='nuts',
     else:
         raise NotImplemented('Initializer {} is not supported.'.format(init))
 
-    pm._log.info('Sampling using {}...'.format(sampler))
-    if sampler == 'nuts':
-        step = pm.NUTS(scaling=cov, is_cov=True)
-    elif sampler == 'hmc':
-        step = pm.HamiltonianMC(scaling=cov, is_cov=True)
-    elif sampler != 'advi':
-        raise NotImplemented('Sampler {} is not supported.'.format(init))
+    step = pm.NUTS(scaling=cov, is_cov=True)
 
-    if sampler == 'advi':
-        if init != 'advi':
-            raise ValueError("To sample via ADVI, you have to set init='advi'.")
-        trace = pm.variational.sample_vp(v_params, draws=draws)
-    else:
-        trace = pm.sample(step=step, start=start, draws=draws, **kwargs)
-
-    return trace
+    return start, step
