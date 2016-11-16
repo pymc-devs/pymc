@@ -1,4 +1,3 @@
-import theano
 import theano.tensor as tt
 import pandas as pd
 import numpy as np
@@ -6,6 +5,7 @@ from ..distributions import Normal, Flat
 from ..glm import families
 from .base import UserModel
 from .utils import any_to_tensor_and_labels
+
 
 class LinearComponent(UserModel):
     """Creates linear component, y_est is accessible via attribute
