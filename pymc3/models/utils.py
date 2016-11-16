@@ -19,7 +19,7 @@ def any_to_tensor_and_labels(x, labels=None):
             shape = x.shape
         else:
             shape = None
-        tx = type(x)
+        _old_x_ = x
         x = tt.as_tensor_variable(x)
         if shape is None:
             try:
@@ -28,9 +28,9 @@ def any_to_tensor_and_labels(x, labels=None):
                 pass
         if not labels and shape is None:
             raise TypeError(
-                'Cannot infer shape of %r, '
+                'Cannot infer shape for %r, '
                 'please provide list of labels '
-                'or x without missing inputs' % tx
+                'or `x` without missing inputs' % _old_x_
             )
         if shape is not None:
             if len(shape) == 0:
