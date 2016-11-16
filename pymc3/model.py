@@ -703,6 +703,16 @@ def as_iterargs(data):
     else:
         return [data]
 
+
+def all_continuous(vars):
+    """Check that vars not include discrete variables, excepting ObservedRVs.
+    """
+    vars_ = [var for var in vars if not isinstance(var, pm.model.ObservedRV)]
+    if any([var.dtype in pm.discrete_types for var in vars_]):
+        return False
+    else:
+        return True
+
 # theano stuff
 theano.config.warn.sum_div_dimshuffle_bug = False
 theano.config.compute_test_value = 'raise'
