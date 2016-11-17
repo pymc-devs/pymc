@@ -36,7 +36,8 @@ def gen_random_state():
 
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
-         optimizer=None, learning_rate=.001, epsilon=.1, random_seed=None):
+         optimizer=None, learning_rate=.001, epsilon=.1, mode=None,     
+         random_seed=None):
     """Perform automatic differentiation variational inference (ADVI).
 
     This function implements the meanfield ADVI, where the variational
@@ -87,7 +88,9 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         This parameter is ignored when optimizer is given.
     random_seed : int or None
         Seed to initialize random state. None uses current seed.
-
+    mode :  string or `Mode` instance.
+        Compilation mode passed to Theano functions
+         
     Returns
     -------
     ADVIFit
@@ -137,7 +140,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     uw_shared = theano.shared(uw, 'uw_shared')
     elbo = pm.CallableTensor(elbo)(uw_shared)
     updates = optimizer(loss=-1 * elbo, param=[uw_shared])
-    f = theano.function([], [uw_shared, elbo], updates=updates)
+    f = theano.function([], [uw_shared, elbo], updates=updates, mode=mode)
 
     # Optimization loop
     elbos = np.empty(n)

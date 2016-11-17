@@ -207,7 +207,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                    minibatch_RVs=None, minibatch_tensors=None,
                    minibatches=None, local_RVs=None, observed_RVs=None,
                    encoder_params=[], total_size=None, optimizer=None,
-                   learning_rate=.001, epsilon=.1, random_seed=None):
+                   learning_rate=.001, epsilon=.1, random_seed=None,
+                   mode=None):
     """Perform mini-batch ADVI.
 
     This function implements a mini-batch ADVI with the meanfield
@@ -297,6 +298,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         This parameter is ignored when an optimizer is given.
     random_seed : int
         Seed to initialize random state.
+    mode :  string or `Mode` instance.
+        compilation mode passed to Theano functions
 
     Returns
     -------
@@ -382,7 +385,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     if 0 < len(global_RVs):
         params += [uw_global_shared]
     updates = OrderedDict(optimizer(loss=-1 * elbo, param=params))
-    f = theano.function(tensors, elbo, updates=updates)
+    f = theano.function(tensors, elbo, updates=updates, mode=mode)
 
     # Optimization loop
     elbos = np.empty(n)
