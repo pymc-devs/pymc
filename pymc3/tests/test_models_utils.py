@@ -10,7 +10,14 @@ class TestUtils(unittest.TestCase):
         self.data = pd.DataFrame(dict(a=[1, 2, 3], b=[4, 5, 6]))
 
     def assertMatrixLabels(self, m, l, mt=None, lt=None):
-        self.assertTrue(np.all(np.equal(m.eval(), mt or self.data.as_matrix())))
+        self.assertTrue(
+            np.all(
+                np.equal(
+                    m.eval(),
+                    mt if mt is not None else self.data.as_matrix()
+                )
+            )
+        )
         self.assertEqual(l, list(lt or self.data.columns))
 
     def test_numpy_init(self):
@@ -26,10 +33,18 @@ class TestUtils(unittest.TestCase):
         self.assertMatrixLabels(m, l, lt=['x2', 'x3'])
 
     def test_dict_input(self):
-        m, l = utils.any_to_tensor_and_labels(self.data.to_dict())
-        self.assertMatrixLabels(m, l)
-        m, l = utils.any_to_tensor_and_labels(self.data.to_dict(), labels=['x2', 'x3'])
-        self.assertMatrixLabels(m, l, lt=['x2', 'x3'])
+        m, l = utils.any_to_tensor_and_labels(self.data.to_dict('dict'))
+        self.assertMatrixLabels(m, l, mt=self.data.as_matrix(l))
+
+        m, l = utils.any_to_tensor_and_labels(self.data.to_dict('series'))
+        self.assertMatrixLabels(m, l, mt=self.data.as_matrix(l))
+
+        m, l = utils.any_to_tensor_and_labels(self.data.to_dict('list'))
+        self.assertMatrixLabels(m, l, mt=self.data.as_matrix(l))
+
+        inp = {k: tt.as_tensor_variable(v) for k, v in self.data.to_dict('series').items()}
+        m, l = utils.any_to_tensor_and_labels(inp)
+        self.assertMatrixLabels(m, l, mt=self.data.as_matrix(l))
 
     def test_list_input(self):
         m, l = utils.any_to_tensor_and_labels(self.data.as_matrix().tolist())

@@ -1,4 +1,5 @@
 import pandas as pd
+from pandas.core.common import PandasError
 import numpy as np
 import theano.tensor as tt
 
@@ -9,8 +10,12 @@ def any_to_tensor_and_labels(x, labels=None):
 
     Default names for columns are ['x0', 'x1', ...], for mappable
     arrays (e.g. pd.DataFrame) their names are treated as labels.
-    You can override them with `labels` argument. If you have tensor
-    input you should provide labels as we cannot get their shape directly
+    You can override them with `labels` argument.
+
+    If you have tensor input you should provide labels as we
+    cannot get their shape directly
+
+    If you pass dict input we cannot rely on labels order thus dict
 
     Parameters
     ----------
@@ -38,10 +43,19 @@ def any_to_tensor_and_labels(x, labels=None):
             labels = [x.name]
         x = x.as_matrix()[:, None]
     elif isinstance(x, dict):
-        x = pd.DataFrame(x)
-        if not labels:
+        try:
+            x = pd.DataFrame.from_dict(x)
             labels = x.columns
-        x = x.as_matrix()
+            x = x.as_matrix()
+        except (PandasError, TypeError):
+            res = []
+            labels = []
+            for k, v in x.items():
+                res.append(v)
+                labels.append(k)
+            x = tt.stack(res, axis=1)
+            if x.ndim == 1:
+                x = x[:, None]
     elif not isinstance(x, tt.Variable):
         x = np.asarray(x)
         if x.ndim == 0:
