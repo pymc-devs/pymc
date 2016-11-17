@@ -18,17 +18,17 @@ class LinearComponent(UserModel):
     labels : list - replace variable names with these labels
     priors : dict - priors for coefficients
     init : dict - test_vals for coefficients
-    rvars : dict - random variables instead of creating new ones
+    vars : dict - random variables instead of creating new ones
     """
     def __init__(self, x, y, intercept=True, labels=None,
-                 priors=None, init=None, rvars=None, name=''):
+                 priors=None, init=None, vars=None, name=''):
         super(LinearComponent, self).__init__(name)
         if priors is None:
             priors = {}
         if init is None:
             init = {}
-        if rvars is None:
-            rvars = {}
+        if vars is None:
+            vars = {}
         x, labels = any_to_tensor_and_labels(x, labels)
         # now we have x, shape and labels
         if intercept:
@@ -39,8 +39,8 @@ class LinearComponent(UserModel):
             labels = ['Intercept'] + labels
         for name in labels:
             if name == 'Intercept':
-                if name in rvars:
-                    self.add_var(name, rvars[name])
+                if name in vars:
+                    self.add_var(name, vars[name])
                 else:
                     self.new_var(
                         name=name,
@@ -48,8 +48,8 @@ class LinearComponent(UserModel):
                         test_val=init.get(name)
                     )
             else:
-                if name in rvars:
-                    self.add_var(name, rvars[name])
+                if name in vars:
+                    self.add_var(name, vars[name])
                 else:
                     self.new_var(
                         name=name,
@@ -60,12 +60,12 @@ class LinearComponent(UserModel):
         self.y_est = x.dot(self.coeffs)
 
     @classmethod
-    def from_formula(cls, formula, data, priors=None, init=None, rvars=None, name=''):
+    def from_formula(cls, formula, data, priors=None, init=None, vars=None, name=''):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
         return cls(np.asarray(x), np.asarray(y)[:, 0], intercept=False, labels=labels,
-                   priors=priors, init=init, rvars=rvars, name=name)
+                   priors=priors, init=init, rvars=vars, name=name)
 
 
 class Glm(LinearComponent):
@@ -79,12 +79,12 @@ class Glm(LinearComponent):
         labels : list - replace variable names with these labels
         priors : dict - priors for coefficients
         init : dict - test_vals for coefficients
-        rvars : dict - random variables instead of creating new ones
+        vars : dict - random variables instead of creating new ones
         family : pymc3.glm.families object
         """
     def __init__(self, x, y, intercept=True, labels=None,
-                 priors=None, init=None, rvars=None, family='normal', name=''):
-        super(Glm, self).__init__(x, y, intercept, labels, priors, init, rvars, name)
+                 priors=None, init=None, vars=None, family='normal', name=''):
+        super(Glm, self).__init__(x, y, intercept, labels, priors, init, vars, name)
 
         _families = dict(
             normal=families.Normal,
@@ -103,9 +103,9 @@ class Glm(LinearComponent):
         self.y_est = self['y']
 
     @classmethod
-    def from_formula(cls, formula, data, priors=None, init=None, rvars=None, family='normal', name=''):
+    def from_formula(cls, formula, data, priors=None, init=None, vars=None, family='normal', name=''):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
         return cls(np.asarray(x), np.asarray(y)[:, 0], intercept=False, labels=labels,
-                   priors=priors, init=init, rvars=rvars, family=family, name=name)
+                   priors=priors, init=init, rvars=vars, family=family, name=name)
