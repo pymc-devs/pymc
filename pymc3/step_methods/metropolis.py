@@ -66,7 +66,8 @@ class Metropolis(ArrayStepShared):
         The frequency of tuning. Defaults to 100 iterations.
     model : PyMC Model
         Optional model for sampling step. Defaults to None (taken from context).
-
+    mode :  string or `Mode` instance.
+        compilation mode passed to Theano functions
     """
     default_blocked = False
 
@@ -93,6 +94,8 @@ class Metropolis(ArrayStepShared):
             [[v.dtype in pm.discrete_types] * (v.dsize or 1) for v in vars])
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
+        
+        self.mode = mode
 
         shared = pm.make_shared_replacements(vars, model)
         self.delta_logp = delta_logp(model.logpt, vars, shared)
@@ -430,6 +433,6 @@ def delta_logp(logp, vars, shared):
 
     logp1 = pm.CallableTensor(logp0)(inarray1)
 
-    f = theano.function([inarray1, inarray0], logp1 - logp0)
+    f = theano.function([inarray1, inarray0], logp1 - logp0, mode=self.mode)
     f.trust_input = True
     return f
