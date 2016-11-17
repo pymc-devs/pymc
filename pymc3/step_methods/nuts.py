@@ -118,7 +118,8 @@ class NUTS(ArrayStepShared):
         self.H, q = create_hamiltonian(vars, shared, model)
         self.compute_energy = create_energy_func(q)
 
-        self.leapfrog1_dE = leapfrog1_dE(self.H, q, profile=profile)
+        self.leapfrog1_dE = leapfrog1_dE(self.H, q, profile=profile, 
+                                        mode=self.mode)
 
         super(NUTS, self).__init__(vars, shared, **kwargs)
 
@@ -204,7 +205,7 @@ def buildtree(leapfrog1_dE, q, p, u, v, j, e, Emax, E0):
     return
 
 
-def leapfrog1_dE(H, q, profile):
+def leapfrog1_dE(H, q, profile, mode):
     """Computes a theano function that computes one leapfrog step and the energy difference between the beginning and end of the trajectory.
     Parameters
     ----------
@@ -232,6 +233,6 @@ def leapfrog1_dE(H, q, profile):
     dE = E - E0
 
     f = theano.function([q, p, e, E0], [q1, p1, dE], 
-                        profile=profile, mode=self.mode)
+                        profile=profile, mode=mode)
     f.trust_input = True
     return f
