@@ -32,7 +32,8 @@ class NUTS(ArrayStepShared):
                  k=0.75,
                  t0=10,
                  model=None,
-                 profile=False, **kwargs):
+                 profile=False,
+                 mode=None, **kwargs):
         """
         Parameters
         ----------
@@ -57,6 +58,8 @@ class NUTS(ArrayStepShared):
             model : Model
             profile : bool or ProfileStats
                 sets the functions to be profiled
+            mode :  string or `Mode` instance.
+                compilation mode passed to Theano functions
         """
         model = modelcontext(model)
 
@@ -90,6 +93,7 @@ class NUTS(ArrayStepShared):
         self.Hbar = 0
         self.u = log(self.step_size * 10)
         self.m = 1
+        self.mode = mode
 
         shared = make_shared_replacements(vars, model)
 
@@ -106,7 +110,7 @@ class NUTS(ArrayStepShared):
             p = tt.dvector('p')
             p.tag.test_value = q.tag.test_value
             E0 = energy(self.H, q, p)
-            E0_func = theano.function([q, p], E0)
+            E0_func = theano.function([q, p], E0, mode=self.mode)
             E0_func.trust_input = True
 
             return E0_func
@@ -227,6 +231,7 @@ def leapfrog1_dE(H, q, profile):
 
     dE = E - E0
 
-    f = theano.function([q, p, e, E0], [q1, p1, dE], profile=profile)
+    f = theano.function([q, p, e, E0], [q1, p1, dE], 
+                        profile=profile, mode=self.mode)
     f.trust_input = True
     return f
