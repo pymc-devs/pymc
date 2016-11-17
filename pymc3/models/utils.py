@@ -19,7 +19,7 @@ def any_to_tensor_and_labels(x, labels=None):
 
     Returns
     -------
-
+    (x, labels) - tensor and labels for it's columns
     """
     def assert_shape_labels(s, l):
         if not len(l) == s[1]:
