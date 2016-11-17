@@ -157,7 +157,7 @@ class NUTS(ArrayStepShared):
         self.Hbar = (1 - w) * self.Hbar + w * \
             (self.target_accept - a * 1. / na)
 
-        self.step_size = exp(self.u - (self.m**.5 / self.gamma) * self.Hbar)
+        self.step_size = exp(self.u - (self.m**self.k / self.gamma) * self.Hbar)
         self.m += 1
 
         return q
