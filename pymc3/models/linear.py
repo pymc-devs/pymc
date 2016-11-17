@@ -65,7 +65,7 @@ class LinearComponent(UserModel):
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
         return cls(np.asarray(x), np.asarray(y)[:, 0], intercept=False, labels=labels,
-                   priors=priors, init=init, rvars=vars, name=name)
+                   priors=priors, init=init, vars=vars, name=name)
 
 
 class Glm(LinearComponent):
@@ -108,4 +108,4 @@ class Glm(LinearComponent):
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
         return cls(np.asarray(x), np.asarray(y)[:, 0], intercept=False, labels=labels,
-                   priors=priors, init=init, rvars=vars, family=family, name=name)
+                   priors=priors, init=init, vars=vars, family=family, name=name)
