@@ -64,15 +64,9 @@ class TestSample(SeededTest):
     def test_sample_init(self):
         with self.model:
             for init in ('advi', 'advi_map', 'map', 'nuts'):
-                for sampler in ('nuts', 'hmc', 'advi'):
-                    if (sampler == 'advi') and (init != 'advi'):
-                        self.assertRaises(ValueError, pm.sample_init,
-                                          init=init, sampler=sampler,
-                                          n_init=1000)
-                    else:
-                        pm.sample_init(init=init, sampler=sampler,
-                                       n_init=1000, draws=50,
-                                       random_seed=self.random_seed)
+                pm.sample(init=init,
+                          n_init=1000, draws=50,
+                          random_seed=self.random_seed)
 
 
     def test_iter_sample(self):
