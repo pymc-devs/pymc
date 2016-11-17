@@ -4,6 +4,23 @@ import theano.tensor as tt
 
 
 def any_to_tensor_and_labels(x, labels=None):
+    """Util for converting input x to tensor trying to
+    create labels for columns if they are not provided.
+
+    Default names for columns are ['x0', 'x1', ...], for mappable
+    arrays (e.g. pd.DataFrame) their names are treated as labels.
+    You can override them with `labels` argument. If you have tensor
+    input you should provide labels as we cannot get their shape directly
+
+    Parameters
+    ----------
+    x : np.ndarray | pd.DataFrame | tt.Variable | dict | list
+    labels : list - names for columns of output tensor
+
+    Returns
+    -------
+
+    """
     def assert_shape_labels(s, l):
         if not len(l) == s[1]:
             raise ValueError(

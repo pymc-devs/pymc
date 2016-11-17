@@ -52,7 +52,7 @@ class UserModel(object):
 
         Parameters
         ----------
-        name : str - inner name for the model
+        name : str - inner name for variable in the model
         var : FreeRV or ObservedRV
 
         Returns
