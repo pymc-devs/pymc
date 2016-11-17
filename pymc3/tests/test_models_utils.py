@@ -34,17 +34,17 @@ class TestUtils(unittest.TestCase):
 
     def test_dict_input(self):
         m, l = utils.any_to_tensor_and_labels(self.data.to_dict('dict'))
-        self.assertMatrixLabels(m, l, mt=self.data.as_matrix(l))
+        self.assertMatrixLabels(m, l, mt=self.data.as_matrix(l), lt=l)
 
         m, l = utils.any_to_tensor_and_labels(self.data.to_dict('series'))
-        self.assertMatrixLabels(m, l, mt=self.data.as_matrix(l))
+        self.assertMatrixLabels(m, l, mt=self.data.as_matrix(l), lt=l)
 
         m, l = utils.any_to_tensor_and_labels(self.data.to_dict('list'))
-        self.assertMatrixLabels(m, l, mt=self.data.as_matrix(l))
+        self.assertMatrixLabels(m, l, mt=self.data.as_matrix(l), lt=l)
 
         inp = {k: tt.as_tensor_variable(v) for k, v in self.data.to_dict('series').items()}
         m, l = utils.any_to_tensor_and_labels(inp)
-        self.assertMatrixLabels(m, l, mt=self.data.as_matrix(l))
+        self.assertMatrixLabels(m, l, mt=self.data.as_matrix(l), lt=l)
 
     def test_list_input(self):
         m, l = utils.any_to_tensor_and_labels(self.data.as_matrix().tolist())
