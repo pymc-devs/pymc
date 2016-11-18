@@ -281,8 +281,8 @@ class TestNegativeBinomial(BaseTestCases.BaseTestCase):
     params = {'mu': 1., 'alpha': 1.}
 
 
-class TestConstantDist(BaseTestCases.BaseTestCase):
-    distribution = pm.ConstantDist
+class TestConstant(BaseTestCases.BaseTestCase):
+    distribution = pm.Constant
     params = {'c': 3}
 
 
@@ -471,7 +471,7 @@ class ScalarParameterSamples(SeededTest):
     def test_constant_dist(self):
         def ref_rand(size, c):
             return c * np.ones(size, dtype=int)
-        pymc3_random_discrete(pm.ConstantDist, {'c': I}, ref_rand=ref_rand)
+        pymc3_random_discrete(pm.Constant, {'c': I}, ref_rand=ref_rand)
 
     def test_mv_normal(self):
         def ref_rand(size, mu, cov):
