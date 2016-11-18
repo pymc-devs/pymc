@@ -98,12 +98,13 @@ def sample(draws, step=None, init='advi', n_init=500000, start=None,
         A step function or collection of functions. If no step methods are
         specified, or are partially specified, they will be assigned
         automatically (defaults to None).
-    init : str {'advi', 'advi_map', 'map', 'nuts'}
+    init : str {'advi', 'advi_map', 'map', 'nuts', None}
         Initialization method to use.
         * advi : Run ADVI to estimate posterior mean and diagonal covariance matrix.
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
         * map : Use the MAP as starting point.
         * nuts : Run NUTS and estimate posterior mean and covariance matrix.
+        * None : Do not initialize.
     n_init : int
         Number of iterations of initializer
         If 'advi', number of iterations, if 'nuts', number of draws.
