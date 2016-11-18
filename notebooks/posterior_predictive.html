@@ -340,17 +340,6 @@ observed nodes of a model.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
-<span class="o">%</span><span class="k">autoreload</span> 2
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
@@ -363,7 +352,7 @@ observed nodes of a model.</p>
 <p>Lets generate a very simple model:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -374,31 +363,26 @@ observed nodes of a model.</p>
     <span class="n">sd</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfNormal</span><span class="p">(</span><span class="s1">&#39;sd&#39;</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">n</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sd</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
 
-    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">()</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
- [-----------------100%-----------------] 5000 of 5000 complete in 2.5 sec
-</pre></div></div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-/Users/santon/anaconda/envs/pymc3/lib/python2.7/site-packages/theano/scan_module/scan_perform_ext.py:135: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility
-  from scan_perform.scan_perform import *
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -148.20: 100%|██████████| 500000/500000 [00:38&lt;00:00, 13010.69it/s]
+Finished [100%]: Average ELBO = -148.18
+100%|██████████| 1/1 [00:00&lt;00:00, 4319.57it/s]
+100%|██████████| 5000/5000 [00:02&lt;00:00, 2151.11it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -410,16 +394,16 @@ observed nodes of a model.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_posterior_predictive_5_0.png" src="../_images/notebooks_posterior_predictive_5_0.png" />
+<img alt="../_images/notebooks_posterior_predictive_4_0.png" src="../_images/notebooks_posterior_predictive_4_0.png" />
 </div>
 </div>
 <p>This function will randomly draw 50 samples of parameters from the
 trace. Then, for each sample, it will draw 100 random numbers from a
 normal distribution specified by the values of <code class="docutils literal"><span class="pre">mu</span></code> and <code class="docutils literal"><span class="pre">std</span></code> in
 that sample.</p>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -427,11 +411,19 @@ that sample.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 500/500 [00:04&lt;00:00, 111.40it/s]
+</pre></div></div>
+</div>
 <p>Now, <code class="docutils literal"><span class="pre">ppc</span></code> contains 500 generated data sets (containing 100 samples
 each), each using a different parameter setting from the posterior:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -441,7 +433,7 @@ each), each using a different parameter setting from the posterior:</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[6]:
+<span></span>Out[5]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -454,7 +446,7 @@ patterns observed in the real data. For example, how close are the
 inferred means to the actual sample mean:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -469,7 +461,7 @@ inferred means to the actual sample mean:</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_posterior_predictive_11_0.png" src="../_images/notebooks_posterior_predictive_11_0.png" />
+<img alt="../_images/notebooks_posterior_predictive_10_0.png" src="../_images/notebooks_posterior_predictive_10_0.png" />
 </div>
 </div>
 <div class="section" id="Comparison-between-PPC-and-other-model-evaluation-methods.">
@@ -500,7 +492,7 @@ logistic regression model. Note that since we&#8217;re dealing the full
 posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -511,7 +503,7 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -532,7 +524,7 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -542,17 +534,17 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[10]:
+<span></span>Out[9]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([1, 1, 0, ..., 0, 1, 1])
+<span></span>array([0, 1, 1, ..., 1, 0, 0])
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -563,7 +555,7 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -577,23 +569,26 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
 
     <span class="n">o</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Bernoulli</span><span class="p">(</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">outcomes</span><span class="p">)</span>
 
-    <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">()</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 500 of 500 complete in 2.9 sec
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -2,454.48: 100%|██████████| 5000/5000 [00:04&lt;00:00, 1205.88it/s]
+Finished [100%]: Average ELBO = -2,434.84
+100%|██████████| 1/1 [00:00&lt;00:00, 5974.79it/s]
+100%|██████████| 5000/5000 [00:06&lt;00:00, 754.55it/s]
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -602,9 +597,9 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -613,11 +608,19 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 500/500 [00:02&lt;00:00, 190.34it/s]
+</pre></div></div>
+</div>
 <div class="section" id="Mean-predicted-values-plus-error-bars-to-give-sense-of-uncertainty-in-prediction">
 <h3>Mean predicted values plus error bars to give sense of uncertainty in prediction<a class="headerlink" href="#Mean-predicted-values-plus-error-bars-to-give-sense-of-uncertainty-in-prediction" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<span></span>In [14]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -631,11 +634,11 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[15]:
+<span></span>Out[14]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x129c81890&gt;
+<span></span>&lt;matplotlib.text.Text at 0x7f5db2aae0f0&gt;
 </pre></div>
 </div>
 </div>
@@ -643,7 +646,7 @@ posterior, we&#8217;re also getting uncertainty in our predictions for free.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_posterior_predictive_22_1.png" src="../_images/notebooks_posterior_predictive_22_1.png" />
+<img alt="../_images/notebooks_posterior_predictive_21_1.png" src="../_images/notebooks_posterior_predictive_21_1.png" />
 </div>
 </div>
 </div>

@@ -370,7 +370,7 @@ intelligence by comparing IQ scores of individuals in a treatment arm
 (those receiving the drug) to those in a control arm (those recieving a
 placebo). There are 47 individuals and 42 individuals in the treatment
 and control arms, respectively.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
@@ -386,14 +386,6 @@ and control arms, respectively.</p>
 <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">20090425</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up with strange g++/OSX bugs.
-</pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -486,7 +478,7 @@ as much prior information that you have available to the
 parameterization of prior distributions.</p>
 <p>We will instead set the group standard deviations to have a
 <span class="math">\(\text{Uniform}(1,10)\)</span> prior:</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
@@ -500,15 +492,6 @@ parameterization of prior distributions.</p>
     <span class="n">group2_std</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;group2_std&#39;</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="err">σ</span><span class="n">_low</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="err">σ</span><span class="n">_high</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Applied interval-transform to group1_std and added transformed group1_std_interval_ to model.
-Applied interval-transform to group2_std and added transformed group2_std_interval_ to model.
-</pre></div></div>
 </div>
 <p>We follow Kruschke by making the prior for <span class="math">\(\mu\)</span> exponentially
 distributed with a mean of 30; this allocates high prior probability
@@ -527,19 +510,11 @@ heavy-tailed data under the Student-T distribution.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Applied log-transform to ν_minus_one and added transformed ν_minus_one_log_ to model.
-</pre></div></div>
-</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_BEST_11_1.png" src="../_images/notebooks_BEST_11_1.png" />
+<img alt="../_images/notebooks_BEST_11_0.png" src="../_images/notebooks_BEST_11_0.png" />
 </div>
 </div>
 <p>Since PyMC3 parameterizes the Student-T in terms of precision, rather
@@ -595,7 +570,7 @@ function of all four estimated parameters.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -604,12 +579,12 @@ function of all four estimated parameters.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-Assigned NUTS to group1_mean
-Assigned NUTS to group2_mean
-Assigned NUTS to group1_std_interval_
-Assigned NUTS to group2_std_interval_
-Assigned NUTS to ν_minus_one_log_
-100%|██████████| 2000/2000 [00:17&lt;00:00, 113.25it/s]
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -230.26: 100%|██████████| 500000/500000 [02:14&lt;00:00, 3712.05it/s]
+Finished [100%]: Average ELBO = -230.24
+100%|██████████| 1/1 [00:00&lt;00:00, 2259.86it/s]
+100%|██████████| 2000/2000 [00:10&lt;00:00, 195.55it/s]
 </pre></div></div>
 </div>
 <p>We can plot the stochastic parameters of the model. PyMC&#8217;s
@@ -624,7 +599,7 @@ samples from each of the 2 chains, pooled together.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">100</span><span class="p">:],</span>
                   <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;group1_mean&#39;</span><span class="p">,</span> <span class="s1">&#39;group2_mean&#39;</span><span class="p">,</span> <span class="s1">&#39;group1_std&#39;</span><span class="p">,</span> <span class="s1">&#39;group2_std&#39;</span><span class="p">,</span> <span class="s1">&#39;ν_minus_one&#39;</span><span class="p">],</span>
                   <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#87ceeb&#39;</span><span class="p">);</span>
 </pre></div>
@@ -690,7 +665,7 @@ here, suggest that the model has converged.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.gridspec.GridSpec at 0x144328e48&gt;
+<span></span>&lt;matplotlib.gridspec.GridSpec at 0x7f15b0098278&gt;
 </pre></div>
 </div>
 </div>
@@ -723,13 +698,13 @@ difference of means:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  1.023            0.402            0.008            [0.270, 1.808]
+  1.020            0.436            0.007            [0.180, 1.862]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.236          0.757          1.016          1.284          1.797
+  0.181          0.733          1.030          1.298          1.863
 
 
 difference of stds:
@@ -737,13 +712,13 @@ difference of stds:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.921            0.412            0.015            [-0.011, 1.631]
+  0.928            0.444            0.010            [0.119, 1.819]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.121          0.631          0.905          1.206          1.820
+  0.155          0.620          0.895          1.203          1.890
 
 
 effect size:
@@ -751,13 +726,13 @@ effect size:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.605            0.255            0.006            [0.129, 1.118]
+  0.608            0.273            0.005            [0.097, 1.142]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.131          0.429          0.604          0.772          1.129
+  0.100          0.427          0.601          0.781          1.149
 
 </pre></div></div>
 </div>
@@ -773,16 +748,6 @@ Journal of Wildlife Management. 1999;63(3):763-772.</li>
 <li>Kruschke JK. Bayesian estimation supersedes the t test. J Exp Psychol
 Gen. 2013;142(2):573-603. doi:10.1037/a0029146.</li>
 </ol>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>
-</pre></div>
-</div>
-</div>
 </div>
 </div>
 </div>

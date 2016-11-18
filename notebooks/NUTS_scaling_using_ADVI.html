@@ -91,7 +91,11 @@
 <li class="toctree-l2 current"><a class="reference internal" href="../examples.html#howto">Howto</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">NUTS scaling using ADVI</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#A-minimal-reproducable-example-of-using-the-stdevs-of-ADVI-to-set-the-scaling-matrix-of-the-NUTS-sampler.">A minimal reproducable example of using the stdevs of ADVI to set the scaling matrix of the NUTS sampler.</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Note">Note</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Setup">Setup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Create-and-Run-Linear-Model">Create and Run Linear Model</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Test-NUTS-Sampling">Test NUTS Sampling</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#In-Summary">In Summary</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
@@ -318,8 +322,16 @@ div.nboutput  > :nth-child(2).stderr {
 </style>
 <div class="section" id="NUTS-scaling-using-ADVI">
 <h1>NUTS scaling using ADVI<a class="headerlink" href="#NUTS-scaling-using-ADVI" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="Note">
+<h2>Note<a class="headerlink" href="#Note" title="Permalink to this headline">¶</a></h2>
+<p>This notebook compares various techniques of initializing NUTS and finds
+that ADVI works best. <a class="reference external" href="https://github.com/pymc-devs/pymc3/pull/1523">Since
+then</a>, we have made
+ADVI initialization the default for when you don&#8217;t submit a sampler.
+Thus, if you run <code class="docutils literal"><span class="pre">pymc3.sample(500)</span></code> on a continuous model it will
+already initialize your model correctly.</p>
 <div class="section" id="A-minimal-reproducable-example-of-using-the-stdevs-of-ADVI-to-set-the-scaling-matrix-of-the-NUTS-sampler.">
-<h2>A minimal reproducable example of using the stdevs of ADVI to set the scaling matrix of the NUTS sampler.<a class="headerlink" href="#A-minimal-reproducable-example-of-using-the-stdevs-of-ADVI-to-set-the-scaling-matrix-of-the-NUTS-sampler." title="Permalink to this headline">¶</a></h2>
+<h3>A minimal reproducable example of using the stdevs of ADVI to set the scaling matrix of the NUTS sampler.<a class="headerlink" href="#A-minimal-reproducable-example-of-using-the-stdevs-of-ADVI-to-set-the-scaling-matrix-of-the-NUTS-sampler." title="Permalink to this headline">¶</a></h3>
 <p>I caught up with <a class="reference external" href="https://twiecki.github.io">Thomas Wiecki</a> after his
 talk at <a class="reference external" href="https://www.odsc.com/london">ODSC London</a> and he mentioned a
 potential speed increase for NUTS sampling by using ADVI outputs to set
@@ -328,7 +340,7 @@ the covariance scaling matrix.</p>
 docs</a>
 but I wanted to try it myself, and get a feel for the speed increase.</p>
 <div class="section" id="Overview">
-<h3>Overview<a class="headerlink" href="#Overview" title="Permalink to this headline">¶</a></h3>
+<h4>Overview<a class="headerlink" href="#Overview" title="Permalink to this headline">¶</a></h4>
 <p>In this Notebook I generate a small, noisy dataset according to a simple
 linear model, and attempt to recover the parameters comparing 3
 techniques:</p>
@@ -340,7 +352,7 @@ ADVI stdev (hopefully a speed increase)</li>
 </ol>
 </div>
 <div class="section" id="Results-Summary">
-<h3>Results Summary<a class="headerlink" href="#Results-Summary" title="Permalink to this headline">¶</a></h3>
+<h4>Results Summary<a class="headerlink" href="#Results-Summary" title="Permalink to this headline">¶</a></h4>
 <p>The final estimates of the model parameter coeffs look quite similar,
 and close to the correct values. Each NUTS sampler was run for the same
 count of traces, yet they took quite different times to sample, since
@@ -357,7 +369,7 @@ parameter estimates are good too.</p>
 stdevs.*</strong></p>
 </div>
 <div class="section" id="Contents">
-<h3>Contents<a class="headerlink" href="#Contents" title="Permalink to this headline">¶</a></h3>
+<h4>Contents<a class="headerlink" href="#Contents" title="Permalink to this headline">¶</a></h4>
 <ul class="simple">
 <li><a class="reference external" href="#Setup">Setup</a><ul>
 <li><a class="reference external" href="#Local-Functions">Local Functions</a></li>
@@ -381,7 +393,7 @@ stdevs</a></li>
 </ul>
 </div>
 <div class="section" id="Package-Requirements-(shown-as-a-conda-env-YAML):">
-<h3>Package Requirements (shown as a conda-env YAML):<a class="headerlink" href="#Package-Requirements-(shown-as-a-conda-env-YAML):" title="Permalink to this headline">¶</a></h3>
+<h4>Package Requirements (shown as a conda-env YAML):<a class="headerlink" href="#Package-Requirements-(shown-as-a-conda-env-YAML):" title="Permalink to this headline">¶</a></h4>
 <div class="highlight-default"><div class="highlight"><pre><span></span>$&gt; less conda_env_pymc3_examples.yml
 
 name: pymc3_examples
@@ -404,8 +416,11 @@ $&gt; conda env create --file conda_env_pymc3_examples.yml
 $&gt; source activate pymc3_examples
 </pre></div>
 </div>
+</div>
+</div>
+</div>
 <div class="section" id="Setup">
-<h4>Setup<a class="headerlink" href="#Setup" title="Permalink to this headline">¶</a></h4>
+<h2>Setup<a class="headerlink" href="#Setup" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
@@ -413,7 +428,6 @@ $&gt; source activate pymc3_examples
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
-<span class="o">%</span><span class="k">qtconsole</span> --colors=Linux
 </pre></div>
 </div>
 </div>
@@ -446,32 +460,28 @@ $&gt; source activate pymc3_examples
 </div>
 <div class="container">
 <div class="highlight"><pre>
-2016-10-18
+17/11/2016
 
 CPython 3.5.2
 IPython 5.1.0
 
-numpy 1.11.1
-pandas 0.18.1
-matplotlib 1.5.2
-pymc3 3.0.rc1
-theano 0.8.2
-joblib 0.10.2
+numpy 1.11.2
+pandas 0.19.0
+matplotlib 1.5.1
+pymc3 3.0rc1
+theano 0.7.0
+joblib 0.9.4
 
-compiler   : GCC 4.2.1 Compatible Apple LLVM 4.2 (clang-425.0.28)
-system     : Darwin
-release    : 14.5.0
+compiler   : GCC 4.4.7 20120313 (Red Hat 4.4.7-1)
+system     : Linux
+release    : 4.4.0-42-generic
 machine    : x86_64
-processor  : i386
+processor  : x86_64
 CPU cores  : 4
 interpreter: 64bit
-Git hash   : f737bf97f29670725f5ef2824e70585ee3feefd6
+Git hash   : 85e0f9db25938508934c920ad962a64ad308fce1
 </pre></div></div>
 </div>
-</div>
-</div>
-<div class="section" id="Local-Functions">
-<h3>Local Functions<a class="headerlink" href="#Local-Functions" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
@@ -519,9 +529,6 @@ Git hash   : f737bf97f29670725f5ef2824e70585ee3feefd6
 </pre></div>
 </div>
 </div>
-</div>
-<div class="section" id="Generate-Data">
-<h3>Generate Data<a class="headerlink" href="#Generate-Data" title="Permalink to this headline">¶</a></h3>
 <p><strong>NOTE:</strong></p>
 <ul class="simple">
 <li>Dataset is 1000 rows for publishing (<code class="docutils literal"><span class="pre">n=1000</span></code>), which is small but
@@ -604,10 +611,11 @@ different model parameters <code class="docutils literal"><span class="pre">p,</
 </table>
 </div></div>
 </div>
+</div>
 <hr class="docutils" />
 <div class="section" id="Create-and-Run-Linear-Model">
-<h4>Create and Run Linear Model<a class="headerlink" href="#Create-and-Run-Linear-Model" title="Permalink to this headline">¶</a></h4>
-<div class="nbinput container">
+<h2>Create and Run Linear Model<a class="headerlink" href="#Create-and-Run-Linear-Model" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
@@ -630,21 +638,9 @@ different model parameters <code class="docutils literal"><span class="pre">p,</
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied log-transform to sigma_y and added transformed sigma_y_log_ to model.
-</pre></div></div>
-</div>
-</div>
-</div>
-<div class="section" id="Metropolis-Sampling">
-<h3>Metropolis Sampling<a class="headerlink" href="#Metropolis-Sampling" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -656,14 +652,14 @@ Applied log-transform to sigma_y and added transformed sigma_y_log_ to model.
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 10000 of 10000 complete in 10.6 sec
+100%|██████████| 10000/10000 [01:02&lt;00:00, 160.60it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -685,7 +681,7 @@ Applied log-transform to sigma_y and added transformed sigma_y_log_ to model.
 </ul>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [15]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -706,27 +702,33 @@ Applied log-transform to sigma_y and added transformed sigma_y_log_ to model.
 <li>Parameter estimates for b1 and b2 seem good, b0 seems a little off,
 but in general parameters are good.</li>
 </ul>
-</div>
-<div class="section" id="ADVI-Estimation">
-<h3>ADVI Estimation<a class="headerlink" href="#ADVI-Estimation" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">mdl</span><span class="p">:</span>
-    <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
 
 <span class="n">_</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="o">-</span><span class="n">v_params</span><span class="o">.</span><span class="n">elbo_vals</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Average ELBO = -7,476.35: 100%|██████████| 100000/100000 [00:29&lt;00:00, 3433.70it/s]
+Finished [100%]: Average ELBO = -7,420.23
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_21_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_21_0.png" />
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_21_1.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_21_1.png" />
 </div>
 </div>
 <p><strong>Observe:</strong></p>
@@ -739,7 +741,7 @@ becomes very hard to see convergence</li>
 </ul>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -752,7 +754,7 @@ becomes very hard to see convergence</li>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[10]:
+<span></span>Out[7]:
 </pre></div>
 </div>
 <div class="container">
@@ -768,23 +770,23 @@ becomes very hard to see convergence</li>
   <tbody>
     <tr>
       <th>b0</th>
-      <td>14.491795</td>
-      <td>18.010402</td>
+      <td>14.465333</td>
+      <td>17.356051</td>
     </tr>
     <tr>
       <th>b1</th>
-      <td>8.712273</td>
-      <td>0.019617</td>
+      <td>8.713063</td>
+      <td>0.020899</td>
     </tr>
     <tr>
       <th>b2</th>
-      <td>2.000189</td>
+      <td>2.000169</td>
       <td>0.000013</td>
     </tr>
     <tr>
       <th>sigma_y_log_</th>
-      <td>5.872786</td>
-      <td>0.028040</td>
+      <td>5.869877</td>
+      <td>0.027989</td>
     </tr>
   </tbody>
 </table>
@@ -797,13 +799,10 @@ to be an issue with b0 in particular.</li>
 <li>However, I don&#8217;t really want to report these values anyhow, instead,
 I&#8217;ll use them to parameterise the NUTS sampler.</li>
 </ul>
+</div>
 <hr class="docutils" />
 <div class="section" id="Test-NUTS-Sampling">
-<h4>Test NUTS Sampling<a class="headerlink" href="#Test-NUTS-Sampling" title="Permalink to this headline">¶</a></h4>
-</div>
-</div>
-<div class="section" id="1.-NUTS-initialise-MAP-at-test_point">
-<h3>1. NUTS initialise MAP at test_point<a class="headerlink" href="#1.-NUTS-initialise-MAP-at-test_point" title="Permalink to this headline">¶</a></h3>
+<h2>Test NUTS Sampling<a class="headerlink" href="#Test-NUTS-Sampling" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [11]:
@@ -818,9 +817,9 @@ I&#8217;ll use them to parameterise the NUTS sampler.</li>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 300 of 300 complete in 9.2 sec
+100%|██████████| 300/300 [00:00&lt;00:00, 1552.91it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -864,31 +863,32 @@ I&#8217;ll use them to parameterise the NUTS sampler.</li>
 movement remaining.</li>
 <li>The estimated model coeffs look pretty good.</li>
 </ul>
-</div>
-<div class="section" id="2.-NUTS-initialise-MAP-using-ADVI-mean">
-<h3>2. NUTS initialise MAP using ADVI mean<a class="headerlink" href="#2.-NUTS-initialise-MAP-using-ADVI-mean" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [18]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">mdl</span><span class="p">:</span>
-    <span class="n">trc_nuts_map</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(),</span> <span class="n">start</span><span class="o">=</span><span class="n">v_params</span><span class="o">.</span><span class="n">means</span><span class="p">)</span>
+    <span class="n">trc_nuts_map</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">v_params</span><span class="o">.</span><span class="n">means</span><span class="p">),</span>
+                             <span class="n">start</span><span class="o">=</span><span class="n">v_params</span><span class="o">.</span><span class="n">means</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 300 of 300 complete in 163.4 sec
+INFO (theano.gof.compilelock): Refreshing lock /home/wiecki/.theano/compiledir_Linux-4.4--generic-x86_64-with-debian-stretch-sid-x86_64-3.5.2-64/lock_dir/lock
+ 24%|██▍       | 73/300 [01:30&lt;06:53,  1.82s/it]
 </pre></div></div>
 </div>
+<p>NUTS actually gets stuck because the ADVI mean estimate is far off from
+the true mean.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<span></span>In [20]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -900,12 +900,12 @@ movement remaining.</li>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_37_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_37_0.png" />
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_38_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_38_0.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<span></span>In [21]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -917,7 +917,7 @@ movement remaining.</li>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_39_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_39_0.png" />
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_40_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_40_0.png" />
 </div>
 </div>
 <p><strong>Observe:</strong></p>
@@ -928,17 +928,14 @@ traces afterwards appear to vary a lot - never truly settling.</li>
 <li>The estimated model coeffs for b1 and b2 look fine, but b0 has a very
 wide variance.</li>
 </ul>
-</div>
-<div class="section" id="3.-NUTS-initialise-MAP-using-ADVI-mean-and-scale-using-ADVI-stdevs">
-<h3>3. NUTS initialise MAP using ADVI mean and scale using ADVI stdevs<a class="headerlink" href="#3.-NUTS-initialise-MAP-using-ADVI-mean-and-scale-using-ADVI-stdevs" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<span></span>In [23]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">mdl</span><span class="p">:</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">mdl</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">v_params</span><span class="o">.</span><span class="n">stds</span><span class="p">),</span><span class="mi">2</span><span class="p">),</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">mdl</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">v_params</span><span class="o">.</span><span class="n">stds</span><span class="p">),</span> <span class="mi">2</span><span class="p">),</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
     <span class="n">trc_nuts_scale</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">v_params</span><span class="o">.</span><span class="n">means</span><span class="p">)</span>
 </pre></div>
@@ -947,14 +944,86 @@ wide variance.</li>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 300/300 [00:12&lt;00:00, 24.95it/s]
+</pre></div></div>
+</div>
+<p>Note that this initialization is the default for continuous models when
+you don&#8217;t submit a sampler. Thus, the line above is identical to:</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">mdl</span><span class="p">:</span>
+    <span class="n">trc_nuts_scale</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -7,456.53: 100%|██████████| 500000/500000 [00:56&lt;00:00, 8904.41it/s]
+Finished [100%]: Average ELBO = -7,460.26
+100%|██████████| 1/1 [00:00&lt;00:00, 4215.38it/s]
+100%|██████████| 300/300 [00:02&lt;00:00, 108.76it/s]
+</pre></div></div>
+</div>
+<p>And in this case, finding the MAP and using it to start ADVI actually
+lets ADVI converge to the correct solution and result in even better
+results. This can be achieved by setting <code class="docutils literal"><span class="pre">init</span></code> to <code class="docutils literal"><span class="pre">'advi_init'</span></code>. We
+can also reduce the number of ADVI iterations.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">mdl</span><span class="p">:</span>
+    <span class="n">trc_nuts_scale</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="s1">&#39;advi_map&#39;</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">150000</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi_map...
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
 <div class="container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 300 of 300 complete in 2.8 sec
+Warning: Desired error not necessarily achieved due to precision loss.
+         Current function value: 5375.931832
+         Iterations: 79
+         Function evaluations: 150
+         Gradient evaluations: 139
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Average ELBO = -7,448.56: 100%|██████████| 150000/150000 [01:01&lt;00:00, 2420.36it/s]
+Finished [100%]: Average ELBO = -7,456.37
+100%|██████████| 300/300 [00:09&lt;00:00, 30.63it/s]
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -967,18 +1036,18 @@ wide variance.</li>
 
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">mn</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">df_summary</span><span class="p">(</span><span class="n">traces</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="n">varnames</span><span class="p">)[</span><span class="s1">&#39;mean&#39;</span><span class="p">]):</span>
         <span class="n">ax</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="s1">&#39;{:.2f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mn</span><span class="p">),</span> <span class="n">xy</span><span class="o">=</span><span class="p">(</span><span class="n">mn</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="n">xycoords</span><span class="o">=</span><span class="s1">&#39;data&#39;</span>
-                    <span class="p">,</span><span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span> <span class="n">textcoords</span><span class="o">=</span><span class="s1">&#39;offset points&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span>
+                    <span class="p">,</span><span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">textcoords</span><span class="o">=</span><span class="s1">&#39;offset points&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span>
                     <span class="p">,</span><span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;large&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#AA0022&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [19]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trc_nuts_scale</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">4</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span> <span class="n">combined</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span></span><span class="n">ax</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trc_nuts_scale</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="o">*</span><span class="mf">1.5</span><span class="p">),</span> <span class="n">combined</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -986,12 +1055,12 @@ wide variance.</li>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_45_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_45_0.png" />
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_50_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_50_0.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [20]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1003,19 +1072,20 @@ wide variance.</li>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_47_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_47_0.png" />
+<img alt="../_images/notebooks_NUTS_scaling_using_ADVI_52_0.png" src="../_images/notebooks_NUTS_scaling_using_ADVI_52_0.png" />
 </div>
 </div>
 <p><strong>Observe:</strong></p>
 <ul class="simple">
-<li>The model took ~3 sec to sample - far quicker than #4 without the
-scaling, and quicker than #3 initialised at the test point.</li>
-<li>The traces appear to have converged after ~50 samples, and yielded
+<li>The model samples far quicker than #4 without the scaling, and
+quicker than #3 initialised at the test point.</li>
+<li>The traces appear converged directly from the start and yielded
 consistent trace values since: the traces look very settled.</li>
 <li>The estimated model coeffs look good.</li>
 </ul>
+</div>
 <div class="section" id="In-Summary">
-<h4>In Summary<a class="headerlink" href="#In-Summary" title="Permalink to this headline">¶</a></h4>
+<h2>In Summary<a class="headerlink" href="#In-Summary" title="Permalink to this headline">¶</a></h2>
 <p>The final estimates of the model parameter coeffs look quite similar,
 and close to the correct values. Each NUTS sampler was run for the same
 count of traces, yet they took quite different times to sample, since
@@ -1034,8 +1104,6 @@ stdevs.*</strong></p>
 <div class="line-block">
 <div class="line">Example originally contributed by Jonathan Sedar 2016-10-16</div>
 <div class="line"><a class="reference external" href="https://github.com/jonsedar">github.com/jonsedar</a></div>
-</div>
-</div>
 </div>
 </div>
 </div>

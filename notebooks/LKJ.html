@@ -453,7 +453,7 @@ shape parameter <span class="math">\(\nu &gt; 0\)</span>. If <span class="math">
 then <span class="math">\(f(\mathbf{C}) \propto |\mathbf{C}|^{\nu - 1}\)</span> (here
 <span class="math">\(|\cdot|\)</span> is the determinant).</p>
 <p>We can now begin to build this model in <code class="docutils literal"><span class="pre">pymc3</span></code>.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
@@ -466,15 +466,6 @@ then <span class="math">\(f(\mathbf{C}) \propto |\mathbf{C}|^{\nu - 1}\)</span> 
     <span class="n">C_triu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">LKJCorr</span><span class="p">(</span><span class="s1">&#39;C_triu&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied log-transform to sigma and added transformed sigma_log_ to model.
-Applied interval-transform to nu and added transformed nu_interval_ to model.
-</pre></div></div>
 </div>
 <p>There is a slight complication in <code class="docutils literal"><span class="pre">pymc3</span></code>&#8216;s handling of the
 <code class="docutils literal"><span class="pre">LKJCorr</span></code> distribution; <code class="docutils literal"><span class="pre">pymc3</span></code> represents the support of this
@@ -549,58 +540,43 @@ distribution.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">n_samples</span> <span class="o">=</span> <span class="mi">4000</span>
-<span class="n">n_burn</span> <span class="o">=</span> <span class="mi">2000</span>
-<span class="n">n_thin</span> <span class="o">=</span> <span class="mi">2</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">()</span>
-    <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
-</pre></div></div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
- [-------100%-------] 4000 of 4000 in 4.1 sec. | SPS: 974.5 | ETA: 0.0
-</pre></div></div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">trace</span> <span class="o">=</span> <span class="n">trace_</span><span class="p">[</span><span class="n">n_burn</span><span class="p">::</span><span class="n">n_thin</span><span class="p">]</span>
-</pre></div>
-</div>
-</div>
-<p>We see that the posterior estimate of <span class="math">\(\mu\)</span> is reasonably
-accurate.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [14]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
+<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">50000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -244.20: 100%|██████████| 50000/50000 [01:02&lt;00:00, 797.66it/s]
+Finished [100%]: Average ELBO = -244.11
+INFO (theano.gof.compilelock): Refreshing lock /home/wiecki/.theano/compiledir_Linux-4.4--generic-x86_64-with-debian-stretch-sid-x86_64-3.5.2-64/lock_dir/lock
+100%|██████████| 1/1 [00:00&lt;00:00, 1134.21it/s]
+100%|██████████| 4000/4000 [02:13&lt;00:00, 29.99it/s]
+</pre></div></div>
+</div>
+<p>We see that the posterior estimate of <span class="math">\(\mu\)</span> is reasonably
+accurate.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [19]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace_</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -608,12 +584,12 @@ accurate.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_LKJ_21_0.png" src="../_images/notebooks_LKJ_21_0.png" />
+<img alt="../_images/notebooks_LKJ_20_0.png" src="../_images/notebooks_LKJ_20_0.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<span></span>In [20]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -623,17 +599,17 @@ accurate.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[15]:
+<span></span>Out[20]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([-1.43732683, -4.73219003])
+<span></span>array([-1.41427562, -4.68366746])
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<span></span>In [21]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -643,7 +619,7 @@ accurate.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[16]:
+<span></span>Out[21]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -654,7 +630,7 @@ accurate.</p>
 <p>The estimates of the standard deviations are certainly biased.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<span></span>In [22]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -666,12 +642,12 @@ accurate.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_LKJ_25_0.png" src="../_images/notebooks_LKJ_25_0.png" />
+<img alt="../_images/notebooks_LKJ_24_0.png" src="../_images/notebooks_LKJ_24_0.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<span></span>In [23]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -681,17 +657,17 @@ accurate.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[18]:
+<span></span>Out[23]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([ 0.75396223,  1.49310645])
+<span></span>array([ 0.75790786,  1.49400529])
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [19]:
+<span></span>In [24]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -701,7 +677,7 @@ accurate.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[19]:
+<span></span>Out[24]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -713,7 +689,7 @@ accurate.</p>
 the true credible region, so we can be fairly satisfied with our model.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [20]:
+<span></span>In [25]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -726,7 +702,7 @@ the true credible region, so we can be fairly satisfied with our model.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [21]:
+<span></span>In [26]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -761,7 +737,7 @@ the true credible region, so we can be fairly satisfied with our model.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_LKJ_30_0.png" src="../_images/notebooks_LKJ_30_0.png" />
+<img alt="../_images/notebooks_LKJ_29_0.png" src="../_images/notebooks_LKJ_29_0.png" />
 </div>
 </div>
 </div>

@@ -370,9 +370,9 @@ for Evaluating Fitted Bayesian Models <a class="reference external" href="http:/
 Model</a></li>
 <li><a class="reference external" href="#Create-Higher-Order-Linear-Models">Create Higher-Order Linear
 Models</a></li>
-<li><a class="reference external" href="#Compare-Deviance-Information-Criterion-[DIC]">Compare Deviance Information Criterion
+<li><a class="reference external" href="#Compare-Deviance-Information-Criterion-%5BDIC%5D">Compare Deviance Information Criterion
 (DIC)</a></li>
-<li><a class="reference external" href="#Compare-Watanabe---Akaike-Information-Criterion-[WAIC]">Compare Watanabe-Akaike Information Criterion
+<li><a class="reference external" href="#Compare-Watanabe---Akaike-Information-Criterion-%5BWAIC%5D">Compare Watanabe-Akaike Information Criterion
 (WAIC)</a></li>
 </ul>
 <p><strong>Note:</strong></p>
@@ -668,9 +668,9 @@ possibilities of data we could generate.</p>
 \[y_{i} = a + bx_{i} + cx_{i}^{2} + \epsilon_{i}\]</div>
 <div class="line-block">
 <div class="line">where:</div>
-<div class="line"><span class="math">\(i \in n\)</span> datapoints</div>
+<div class="line"><span class="math">\(i \in n\)</span> datapoints
+<span class="math">\(\epsilon \sim \mathcal{N}(0,latent\_sigma\_y)\)</span></div>
 </div>
-<p><span class="math">\(\epsilon \sim \mathcal{N}(0,latent\_sigma\_y)\)</span></p>
 <p><strong>NOTE on outliers:</strong></p>
 <ul class="simple">
 <li>We can use value <code class="docutils literal"><span class="pre">p</span></code> to set the (approximate) proportion of

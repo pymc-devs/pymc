@@ -297,12 +297,12 @@ div.nboutput  > :nth-child(2).stderr {
 </style>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [1]:
+<span></span>In [14]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">matplotlib</span> inline
-<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Gamma</span><span class="p">,</span> <span class="n">Poisson</span><span class="p">,</span> <span class="n">Normal</span><span class="p">,</span> <span class="n">Model</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">forestplot</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">,</span> <span class="n">Metropolis</span><span class="p">,</span> <span class="n">find_MAP</span><span class="p">,</span> <span class="n">starting</span>
+<span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Gamma</span><span class="p">,</span> <span class="n">Poisson</span><span class="p">,</span> <span class="n">Normal</span><span class="p">,</span> <span class="n">Model</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">forestplot</span><span class="p">,</span> <span class="n">NUTS</span><span class="p">,</span> <span class="n">Metropolis</span><span class="p">,</span> <span class="n">find_MAP</span><span class="p">,</span> <span class="n">starting</span><span class="p">,</span> <span class="n">traceplot</span>
 <span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
 <span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">function</span> <span class="k">as</span> <span class="n">fn</span>
 <span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">printing</span>
@@ -444,9 +444,9 @@ div.nboutput  > :nth-child(2).stderr {
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [16]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -471,7 +471,7 @@ div.nboutput  > :nth-child(2).stderr {
     <span class="n">dL0</span> <span class="o">=</span> <span class="n">Gamma</span><span class="p">(</span><span class="s1">&#39;dL0&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">T</span><span class="p">)</span>
 
     <span class="n">beta</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;beta&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">7</span><span class="p">),</span>
-                  <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span><span class="o">*.</span><span class="mo">00001</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+                  <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
 
     <span class="n">linear_model</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">beta</span><span class="p">))</span>
     <span class="n">idt</span> <span class="o">=</span> <span class="n">Y</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">tt</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">linear_model</span><span class="p">,</span> <span class="n">dL0</span><span class="p">)</span>
@@ -480,55 +480,55 @@ div.nboutput  > :nth-child(2).stderr {
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied log-transform to c and added transformed c_log to model.
-Applied log-transform to r and added transformed r_log to model.
-Applied log-transform to dL0 and added transformed dL0_log to model.
-</pre></div></div>
-</div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
-<span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">mu</span><span class="p">,</span> <span class="n">sds</span><span class="p">,</span> <span class="n">elbo</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -3258348.49
-Iteration 2000 [10%]: ELBO = -1095875.73
-Iteration 4000 [20%]: ELBO = -612463.23
-Iteration 6000 [30%]: ELBO = -279207.98
-Iteration 8000 [40%]: ELBO = -151382.83
-Iteration 10000 [50%]: ELBO = -100624.21
-Iteration 12000 [60%]: ELBO = -44896.15
-Iteration 14000 [70%]: ELBO = -25704.79
-Iteration 16000 [80%]: ELBO = -15704.43
-Iteration 18000 [90%]: ELBO = -9036.55
-Finished [100%]: ELBO = -6224.12
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [17]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">sds</span><span class="p">),</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">mu</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="s1">&#39;advi_map&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi_map...
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Warning: Desired error not necessarily achieved due to precision loss.
+         Current function value: 2811.898224
+         Iterations: 921
+         Function evaluations: 1020
+         Gradient evaluations: 1010
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Average ELBO = -2,859.50: 100%|██████████| 10000/10000 [00:29&lt;00:00, 343.46it/s]
+Finished [100%]: Average ELBO = -2,845.43
+100%|██████████| 2000/2000 [02:03&lt;00:00, 16.14it/s]
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -536,13 +536,12 @@ Finished [100%]: ELBO = -6224.12
 <div class="container">
 </div>
 <div class="container">
-<div class="highlight"><pre>
- [-----------------100%-----------------] 2000 of 2000 complete in 171.4 sec
-</pre></div></div>
+<img alt="../_images/notebooks_cox_model_9_0.png" src="../_images/notebooks_cox_model_9_0.png" />
+</div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [19]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -552,11 +551,11 @@ Finished [100%]: ELBO = -6224.12
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[11]:
+<span></span>Out[19]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.gridspec.GridSpec at 0x7f60c4376550&gt;
+<span></span>&lt;matplotlib.gridspec.GridSpec at 0x7fa8a64a4dd8&gt;
 </pre></div>
 </div>
 </div>

@@ -2862,7 +2862,7 @@ is the first odd positive integer for which the sum
 <h3>Sampling<a class="headerlink" href="#sampling" title="Permalink to this headline">¶</a></h3>
 <span class="target" id="module-pymc3.sampling"></span><dl class="function">
 <dt id="pymc3.sampling.sample">
-<code class="descclassname">pymc3.sampling.</code><code class="descname">sample</code><span class="sig-paren">(</span><em>draws</em>, <em>step=None</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>njobs=1</em>, <em>tune=None</em>, <em>progressbar=True</em>, <em>model=None</em>, <em>random_seed=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.sample" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.sampling.</code><code class="descname">sample</code><span class="sig-paren">(</span><em>draws</em>, <em>step=None</em>, <em>init='advi'</em>, <em>n_init=500000</em>, <em>start=None</em>, <em>trace=None</em>, <em>chain=0</em>, <em>njobs=1</em>, <em>tune=None</em>, <em>progressbar=True</em>, <em>model=None</em>, <em>random_seed=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.sample" title="Permalink to this definition">¶</a></dt>
 <dd><p>Draw a number of samples using the given step method.
 Multiple step methods supported via compound step method
 returns the amount of time taken.</p>
@@ -2879,6 +2879,20 @@ returns the amount of time taken.</p>
 <div><p>A step function or collection of functions. If no step methods are
 specified, or are partially specified, they will be assigned
 automatically (defaults to None).</p>
+</div></blockquote>
+<p><strong>init</strong> : str {&#8216;advi&#8217;, &#8216;advi_map&#8217;, &#8216;map&#8217;, &#8216;nuts&#8217;, None}</p>
+<blockquote>
+<div><p>Initialization method to use.
+* advi : Run ADVI to estimate posterior mean and diagonal covariance matrix.
+* advi_map: Initialize ADVI with MAP and use MAP as starting point.
+* map : Use the MAP as starting point.
+* nuts : Run NUTS and estimate posterior mean and covariance matrix.
+* None : Do not initialize.</p>
+</div></blockquote>
+<p><strong>n_init</strong> : int</p>
+<blockquote>
+<div><p>Number of iterations of initializer
+If &#8216;advi&#8217;, number of iterations, if &#8216;nuts&#8217;, number of draws.</p>
 </div></blockquote>
 <p><strong>start</strong> : dict</p>
 <blockquote>
@@ -3017,6 +3031,49 @@ parameters in each sample of the trace.</p>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Dictionary keyed by <cite>vars</cite>, where the values are the corresponding</p>
 <p class="last">posterior predictive samples.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pymc3.sampling.init_nuts">
+<code class="descclassname">pymc3.sampling.</code><code class="descname">init_nuts</code><span class="sig-paren">(</span><em>init='advi'</em>, <em>n_init=500000</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.sampling.init_nuts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize and sample from posterior of a continuous model.</p>
+<p>This is a convenience function. NUTS convergence and sampling speed is extremely
+dependent on the choice of mass/scaling matrix. In our experience, using ADVI
+to estimate a diagonal covariance matrix and using this as the scaling matrix
+produces robust results over a wide class of continuous models.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>init</strong> : str {&#8216;advi&#8217;, &#8216;advi_map&#8217;, &#8216;map&#8217;, &#8216;nuts&#8217;}</p>
+<blockquote>
+<div><p>Initialization method to use.
+* advi : Run ADVI to estimate posterior mean and diagonal covariance matrix.
+* advi_map: Initialize ADVI with MAP and use MAP as starting point.
+* map : Use the MAP as starting point.
+* nuts : Run NUTS and estimate posterior mean and covariance matrix.</p>
+</div></blockquote>
+<p><strong>n_init</strong> : int</p>
+<blockquote>
+<div><p>Number of iterations of initializer
+If &#8216;advi&#8217;, number of iterations, if &#8216;metropolis&#8217;, number of draws.</p>
+</div></blockquote>
+<p><strong>model</strong> : Model (optional if in <cite>with</cite> context)</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">start, nuts_sampler</p>
+<p><strong>start</strong> : pymc3.model.Point</p>
+<blockquote>
+<div><p>Starting point for sampler</p>
+</div></blockquote>
+<p><strong>nuts_sampler</strong> : pymc3.step_methods.NUTS</p>
+<blockquote class="last">
+<div><p>Instantiated and initialized NUTS sampler object</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -3204,7 +3261,7 @@ Categorical variables.</p>
 </ol>
 <dl class="function">
 <dt id="pymc3.variational.advi.advi">
-<code class="descclassname">pymc3.variational.advi.</code><code class="descname">advi</code><span class="sig-paren">(</span><em>vars=None</em>, <em>start=None</em>, <em>model=None</em>, <em>n=5000</em>, <em>accurate_elbo=False</em>, <em>optimizer=None</em>, <em>learning_rate=0.001</em>, <em>epsilon=0.1</em>, <em>random_seed=None</em>, <em>verbose=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi.advi" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.variational.advi.</code><code class="descname">advi</code><span class="sig-paren">(</span><em>vars=None</em>, <em>start=None</em>, <em>model=None</em>, <em>n=5000</em>, <em>accurate_elbo=False</em>, <em>optimizer=None</em>, <em>learning_rate=0.001</em>, <em>epsilon=0.1</em>, <em>random_seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi.advi" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform automatic differentiation variational inference (ADVI).</p>
 <p>This function implements the meanfield ADVI, where the variational
 posterior distribution is assumed to be spherical Gaussian without
@@ -3338,7 +3395,7 @@ Inference. arXiv preprint arXiv:1603.00788.</td></tr>
 <h4>ADVI minibatch<a class="headerlink" href="#advi-minibatch" title="Permalink to this headline">¶</a></h4>
 <span class="target" id="module-pymc3.variational.advi_minibatch"></span><dl class="function">
 <dt id="pymc3.variational.advi_minibatch.advi_minibatch">
-<code class="descclassname">pymc3.variational.advi_minibatch.</code><code class="descname">advi_minibatch</code><span class="sig-paren">(</span><em>vars=None</em>, <em>start=None</em>, <em>model=None</em>, <em>n=5000</em>, <em>n_mcsamples=1</em>, <em>minibatch_RVs=None</em>, <em>minibatch_tensors=None</em>, <em>minibatches=None</em>, <em>local_RVs=None</em>, <em>observed_RVs=None</em>, <em>encoder_params=[]</em>, <em>total_size=None</em>, <em>optimizer=None</em>, <em>learning_rate=0.001</em>, <em>epsilon=0.1</em>, <em>random_seed=None</em>, <em>verbose=1</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi_minibatch.advi_minibatch" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pymc3.variational.advi_minibatch.</code><code class="descname">advi_minibatch</code><span class="sig-paren">(</span><em>vars=None</em>, <em>start=None</em>, <em>model=None</em>, <em>n=5000</em>, <em>n_mcsamples=1</em>, <em>minibatch_RVs=None</em>, <em>minibatch_tensors=None</em>, <em>minibatches=None</em>, <em>local_RVs=None</em>, <em>observed_RVs=None</em>, <em>encoder_params=[]</em>, <em>total_size=None</em>, <em>optimizer=None</em>, <em>learning_rate=0.001</em>, <em>epsilon=0.1</em>, <em>random_seed=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.variational.advi_minibatch.advi_minibatch" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform mini-batch ADVI.</p>
 <p>This function implements a mini-batch ADVI with the meanfield
 approximation. Autoencoding variational inference is also supported.</p>
@@ -3391,7 +3448,7 @@ distribution) are fit for all RVs in the given model.</p>
 </div></blockquote>
 <p><strong>n</strong> : int</p>
 <blockquote>
-<div><p>Number of interations updating parameters.</p>
+<div><p>Number of iterations updating parameters.</p>
 </div></blockquote>
 <p><strong>n_mcsamples</strong> : int</p>
 <blockquote>
@@ -3400,7 +3457,7 @@ distribution) are fit for all RVs in the given model.</p>
 <p><strong>minibatch_RVs</strong> : list of ObservedRVs</p>
 <blockquote>
 <div><p>Random variables in the model for which mini-batch tensors are set.
-When this argument is given, both of arguments local_RVs and 
+When this argument is given, both of arguments local_RVs and
 observed_RVs must be None.</p>
 </div></blockquote>
 <p><strong>minibatch_tensors</strong> : list of (tensors or shared variables)</p>
@@ -4000,9 +4057,9 @@ chain value can also be given.</p>
 </div>
 <div class="section" id="glm">
 <h2>GLM<a class="headerlink" href="#glm" title="Permalink to this headline">¶</a></h2>
-<span class="target" id="module-pymc3.glm.glm"></span><dl class="function">
+<span class="target" id="module-pymc3.glm.glm"></span><dl class="class">
 <dt id="pymc3.glm.glm.glm">
-<code class="descclassname">pymc3.glm.glm.</code><code class="descname">glm</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.glm.glm.glm" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.glm.glm.</code><code class="descname">glm</code><a class="headerlink" href="#pymc3.glm.glm.glm" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create GLM after Patsy model specification string.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -4047,9 +4104,9 @@ Default: None</p>
 </table>
 </dd></dl>
 
-<dl class="function">
+<dl class="class">
 <dt id="pymc3.glm.glm.linear_component">
-<code class="descclassname">pymc3.glm.glm.</code><code class="descname">linear_component</code><span class="sig-paren">(</span><em>formula</em>, <em>data</em>, <em>priors=None</em>, <em>intercept_prior=None</em>, <em>regressor_prior=None</em>, <em>init_vals=None</em>, <em>family=None</em>, <em>model=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymc3.glm.glm.linear_component" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pymc3.glm.glm.</code><code class="descname">linear_component</code><a class="headerlink" href="#pymc3.glm.glm.linear_component" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create linear model according to patsy specification.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -4079,17 +4136,9 @@ Default: Normal.dist(mu=0, tau=1.0E-12)</p>
 Default: Normal.dist(mu=0, tau=1.0E-12)</p>
 </div></blockquote>
 <p><strong>init_vals</strong> : dict</p>
-<blockquote>
+<blockquote class="last">
 <div><p>Set starting values externally: parameter -&gt; value
 Default: None</p>
-</div></blockquote>
-<p><strong>family</strong> : statsmodels.family</p>
-<blockquote>
-<div><p>Link function to pass to statsmodels (init has to be True).</p>
-</div></blockquote>
-<p><strong>See `statsmodels.api.families`</strong></p>
-<blockquote class="last">
-<div><p>Default: identity</p>
 </div></blockquote>
 </td>
 </tr>

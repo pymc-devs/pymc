@@ -324,7 +324,7 @@ div.nboutput  > :nth-child(2).stderr {
 <h1>Stochastic Volatility model<a class="headerlink" href="#Stochastic-Volatility-model" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [1]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -332,7 +332,6 @@ div.nboutput  > :nth-child(2).stderr {
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">from</span> <span class="nn">pymc3.distributions.timeseries</span> <span class="kn">import</span> <span class="n">GaussianRandomWalk</span>
 
-<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="kn">import</span> <span class="n">csc_matrix</span>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
 
 <span class="o">%</span><span class="k">pylab</span> inline
@@ -368,7 +367,7 @@ log volatility process.</p>
 <p>First we load some daily returns of the S&amp;P 500.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -380,7 +379,7 @@ log volatility process.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[2]:
+<span></span>Out[3]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -390,7 +389,7 @@ log volatility process.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -400,11 +399,11 @@ log volatility process.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[3]:
+<span></span>Out[4]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x7fdff704a9e8&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x7f64eab559b0&gt;]
 </pre></div>
 </div>
 </div>
@@ -416,7 +415,7 @@ log volatility process.</p>
 </div>
 </div>
 <p>Specifying the model in pymc3 mirrors its statistical specification.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [5]:
 </pre></div>
@@ -433,95 +432,21 @@ log volatility process.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Applied log-transform to sigma and added transformed sigma_log_ to model.
-Applied log-transform to nu and added transformed nu_log_ to model.
-</pre></div></div>
-</div>
 </div>
 <div class="section" id="Fit-Model">
 <h2>Fit Model<a class="headerlink" href="#Fit-Model" title="Permalink to this headline">¶</a></h2>
 <p>For this model, the full maximum a posteriori (MAP) point is degenerate
-and has infinite density. However, if we fix <code class="docutils literal"><span class="pre">log_sigma</span></code> and <code class="docutils literal"><span class="pre">nu</span></code> it
-is no longer degenerate, so we find the MAP with respect to the
-volatility process, &#8216;s&#8217;, keeping <code class="docutils literal"><span class="pre">log_sigma</span></code> and <code class="docutils literal"><span class="pre">nu</span></code> constant at
-their default values.</p>
-<p>We use L-BFGS because it is more efficient for high dimensional
-functions (<code class="docutils literal"><span class="pre">s</span></code> has n elements).</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">mu</span><span class="p">,</span> <span class="n">sds</span><span class="p">,</span> <span class="n">elbo</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">200000</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -78112.89
-Iteration 20000 [10%]: Average ELBO = -13980.82
-Iteration 40000 [20%]: Average ELBO = 369.75
-Iteration 60000 [30%]: Average ELBO = 1008.15
-Iteration 80000 [40%]: Average ELBO = 1133.24
-Iteration 100000 [50%]: Average ELBO = 1138.86
-Iteration 120000 [60%]: Average ELBO = 1138.72
-Iteration 140000 [70%]: Average ELBO = 1138.76
-Iteration 160000 [80%]: Average ELBO = 1138.73
-Iteration 180000 [90%]: Average ELBO = 1138.6
-Finished [100%]: Average ELBO = 1138.44
-</pre></div></div>
-</div>
+and has infinite density. To get good convergence with NUTS we use ADVI
+(autodiff variational inference) for initialization. This is done under
+the hood by the <code class="docutils literal"><span class="pre">sample_init()</span></code> function.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">elbo</span><span class="p">[</span><span class="mi">10000</span><span class="p">:])</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[7]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x7fdfd5efc198&gt;]
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="../_images/notebooks_stochastic_volatility_12_1.png" src="../_images/notebooks_stochastic_volatility_12_1.png" />
-</div>
-</div>
-<p>We do a short initial run to get near the right area, then start again
-using a new Hessian at the new starting point to get faster sampling due
-to better scaling. We do a short run since this is an interactive
-example.</p>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="c1"># Start next run at the last sampled position.</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">sds</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">mu</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -530,12 +455,19 @@ example.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 2000/2000 [02:23&lt;00:00,  8.69it/s]
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+INFO (theano.gof.compilelock): Waiting for existing lock by process &#39;19349&#39; (I am process &#39;19302&#39;)
+INFO (theano.gof.compilelock): To manually release the lock, delete /home/wiecki/.theano/compiledir_Linux-4.4--generic-x86_64-with-debian-stretch-sid-x86_64-3.5.2-64/lock_dir
+Average ELBO = 1,138.51: 100%|██████████| 500000/500000 [04:55&lt;00:00, 1693.17it/s]
+Finished [100%]: Average ELBO = 1,138.62
+100%|██████████| 1/1 [00:00&lt;00:00, 1837.99it/s]
+100%|██████████| 2000/2000 [04:27&lt;00:00, 11.80it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -548,12 +480,12 @@ example.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_stochastic_volatility_15_0.png" src="../_images/notebooks_stochastic_volatility_15_0.png" />
+<img alt="../_images/notebooks_stochastic_volatility_12_0.png" src="../_images/notebooks_stochastic_volatility_12_0.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -567,11 +499,11 @@ example.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[10]:
+<span></span>Out[9]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x7fdfdbeb6278&gt;
+<span></span>&lt;matplotlib.text.Text at 0x7f64c41f4048&gt;
 </pre></div>
 </div>
 </div>
@@ -579,14 +511,14 @@ example.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_stochastic_volatility_16_1.png" src="../_images/notebooks_stochastic_volatility_16_1.png" />
+<img alt="../_images/notebooks_stochastic_volatility_13_1.png" src="../_images/notebooks_stochastic_volatility_13_1.png" />
 </div>
 </div>
 <p>Looking at the returns over time and overlaying the estimated standard
 deviation we can see how the model tracks the volatility over time.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -600,11 +532,11 @@ deviation we can see how the model tracks the volatility over time.</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[14]:
+<span></span>Out[9]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x7fdfd3da9f28&gt;
+<span></span>&lt;matplotlib.text.Text at 0x7f8e7a93d160&gt;
 </pre></div>
 </div>
 </div>
@@ -612,7 +544,7 @@ deviation we can see how the model tracks the volatility over time.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_stochastic_volatility_18_1.png" src="../_images/notebooks_stochastic_volatility_18_1.png" />
+<img alt="../_images/notebooks_stochastic_volatility_15_1.png" src="../_images/notebooks_stochastic_volatility_15_1.png" />
 </div>
 </div>
 </div>

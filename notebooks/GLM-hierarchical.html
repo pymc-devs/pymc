@@ -571,9 +571,9 @@ distribution centered around 0 with a wide standard-deviation to
 describe the intercept and regressions. We&#8217;ll assume the measurements
 are normally distributed with noise <span class="math">\(\epsilon\)</span> on which we place a
 uniform distribution.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [35]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -597,34 +597,28 @@ uniform distribution.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied log-transform to eps and added transformed eps_log to model.
-</pre></div></div>
-</div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [36]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">unpooled_model</span><span class="p">:</span>
-    <span class="n">unpooled_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
+    <span class="n">unpooled_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Assigned NUTS to a
-Assigned NUTS to b
-Assigned NUTS to eps_log
- [-----------------100%-----------------] 2000 of 2000 complete in 29.6 sec
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -1,745.35: 100%|██████████| 500000/500000 [01:12&lt;00:00, 6861.05it/s]
+Finished [100%]: Average ELBO = -1,745.36
+100%|██████████| 1/1 [00:00&lt;00:00, 3435.14it/s]
+100%|██████████| 5000/5000 [00:14&lt;00:00, 335.06it/s]
 </pre></div></div>
 </div>
 </div>
@@ -635,9 +629,9 @@ group parameters that consider the countys not as completely different
 but as having an underlying similarity. These distributions are
 subsequently used to influence the distribution of each county&#8217;s
 <span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span>.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [37]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -666,52 +660,41 @@ subsequently used to influence the distribution of each county&#8217;s
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied log-transform to sigma_a and added transformed sigma_a_log to model.
-Applied log-transform to sigma_b and added transformed sigma_b_log to model.
-Applied log-transform to eps and added transformed eps_log to model.
-</pre></div></div>
-</div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [38]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1"># Inference button (TM)!</span>
 <span class="k">with</span> <span class="n">hierarchical_model</span><span class="p">:</span>
-    <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
+    <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">draws</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">20000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Assigned NUTS to mu_a
-Assigned NUTS to sigma_a_log
-Assigned NUTS to mu_b
-Assigned NUTS to sigma_b_log
-Assigned NUTS to a
-Assigned NUTS to b
-Assigned NUTS to eps_log
- [-----------------100%-----------------] 2000 of 2000 complete in 15.8 sec
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -1,124.59: 100%|██████████| 20000/20000 [00:03&lt;00:00, 5089.45it/s]
+Finished [100%]: Average ELBO = -1,112.39
+100%|██████████| 1/1 [00:00&lt;00:00, 2277.04it/s]
+100%|██████████| 5000/5000 [00:40&lt;00:00, 124.34it/s]
 </pre></div></div>
 </div>
+<p>Plotting the hierarchical model trace -its found values- from 2000
+iterations onwards (right side plot) and its accumulated marginal values
+(left side plot)</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [39]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="c1"># Plotting the hierarchical model trace -its found values- from 500 iterations onwards (right side plot)</span>
-<span class="c1"># and its accumulated marginal values (left side plot)</span>
-<span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">hierarchical_trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:]);</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">hierarchical_trace</span><span class="p">[</span><span class="mi">2000</span><span class="p">:]);</span>
 </pre></div>
 </div>
 </div>
@@ -719,7 +702,7 @@ Assigned NUTS to eps_log
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-hierarchical_14_0.png" src="../_images/notebooks_GLM-hierarchical_14_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical_15_0.png" src="../_images/notebooks_GLM-hierarchical_15_0.png" />
 </div>
 </div>
 <p>The marginal posteriors in the left column are highly informative.
@@ -755,7 +738,7 @@ measurements, the hierarchial predictions and the non-hierarchical
 predictions.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [45]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -793,7 +776,7 @@ predictions.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-hierarchical_17_0.png" src="../_images/notebooks_GLM-hierarchical_17_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical_18_0.png" src="../_images/notebooks_GLM-hierarchical_18_0.png" />
 </div>
 </div>
 <p>In the above plot we have the data points in black of three selected
@@ -829,7 +812,7 @@ using each county&#8217;s data, resulting in a model more prone to outliers
 (as shown above).</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [43]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -842,7 +825,7 @@ using each county&#8217;s data, resulting in a model more prone to outliers
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [44]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -864,7 +847,7 @@ using each county&#8217;s data, resulting in a model more prone to outliers
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-hierarchical_21_0.png" src="../_images/notebooks_GLM-hierarchical_21_0.png" />
+<img alt="../_images/notebooks_GLM-hierarchical_22_0.png" src="../_images/notebooks_GLM-hierarchical_22_0.png" />
 </div>
 </div>
 <p>In the shrinkage plot above we show the coefficients of each county&#8217;s
@@ -912,7 +895,7 @@ estimates, as shown above. By assuming that each individual data set
 distribution &#8211; which we simultaneously estimate &#8211; we benefit from
 increased statistical power and smart regularization via the shrinkage
 effect. Probabilistic Programming in
-<a class="reference external" href="https://github.com/pymc-devs/pymc">PyMC</a> then makes Bayesian
+<a class="reference external" href="https://github.com/pymc-devs/pymc3">PyMC3</a> then makes Bayesian
 estimation of this model trivial.</p>
 <p>As a follow-up we could also include other states into our model. For
 this we could add yet another layer to the hierarchy where each state is

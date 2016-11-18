@@ -1188,10 +1188,10 @@ data from Yahoo!-Finance; it can be installed with
 <h3>Model Specification<a class="headerlink" href="#Model-Specification" title="Permalink to this headline">¶</a></h3>
 <p>As with the linear regression example, specifying the model in PyMC3
 mirrors its statistical specification. This model employs several new
-distributions: the <code class="docutils literal"><span class="pre">Exponential</span></code> distribution for the $ $ and
-<span class="math">\(\sigma\)</span> priors, the Student-T (<code class="docutils literal"><span class="pre">StudentT</span></code>) distribution for
-distribution of returns, and the <code class="docutils literal"><span class="pre">GaussianRandomWalk</span></code> for the prior
-for the latent volatilities.</p>
+distributions: the <code class="docutils literal"><span class="pre">Exponential</span></code> distribution for the $
+<a href="#id2"><span class="problematic" id="id3">:raw-latex:`\nu `$ and :math:`</span></a>sigma` priors, the Student-T
+(<code class="docutils literal"><span class="pre">StudentT</span></code>) distribution for distribution of returns, and the
+<code class="docutils literal"><span class="pre">GaussianRandomWalk</span></code> for the prior for the latent volatilities.</p>
 <p>In PyMC3, variables with purely positive priors like <code class="docutils literal"><span class="pre">Exponential</span></code> are
 transformed with a log transform. This makes sampling more robust.
 Behind the scenes, a variable in the unconstrained space (named
@@ -1438,16 +1438,16 @@ interested in locating the change point in the series, which perhaps is
 related to changes in mining safety regulations.</p>
 <p>In our model,</p>
 <div class="math">
-\begin{aligned}
-  D_t &amp;\sim \text{Pois}(r_t), r_t= \begin{cases}
-   l, &amp; \text{if } t \lt s \\
-   e, &amp; \text{if } t \ge s
-   \end{cases} \\
-  s &amp;\sim \text{Unif}(t_l, t_h)\\
-  e &amp;\sim \text{exp}(1)\\
-  l &amp;\sim \text{exp}(1)
-\end{aligned}</div><p>the parameters are defined as follows: * <span class="math">\(D_t\)</span>: The number of
-disasters in year <span class="math">\(t\)</span> * <span class="math">\(r_t\)</span>: The rate parameter of the
+\[ \begin{align}\begin{aligned}:nowrap:\\\begin{split}  \begin{aligned}
+    D_t &amp;\sim \text{Pois}(r_t), r_t= \begin{cases}
+     l, &amp; \text{if } t \lt s \\
+     e, &amp; \text{if } t \ge s
+     \end{cases} \\
+    s &amp;\sim \text{Unif}(t_l, t_h)\\
+    e &amp;\sim \text{exp}(1)\\
+    l &amp;\sim \text{exp}(1)
+  \end{aligned}\end{split}\\the parameters are defined as follows: \* :math:`D_t`: The number of\end{aligned}\end{align} \]</div>
+<p>disasters in year <span class="math">\(t\)</span> * <span class="math">\(r_t\)</span>: The rate parameter of the
 Poisson distribution of disasters in year <span class="math">\(t\)</span>. * <span class="math">\(s\)</span>: The
 year in which the rate parameter changes (the switchpoint). *
 <span class="math">\(e\)</span>: The rate parameter before the switchpoint <span class="math">\(s\)</span>. *
