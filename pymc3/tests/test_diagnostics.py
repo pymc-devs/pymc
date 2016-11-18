@@ -20,9 +20,9 @@ class TestGelmanRubin(SeededTest):
             # Run sampler
             step1 = Slice([model.early_mean_log_, model.late_mean_log_])
             step2 = Metropolis([model.switchpoint])
-            start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
+            start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 90}
             ptrace = sample(n_samples, [step1, step2], start, njobs=2, progressbar=False,
-                            random_seed=[1, 3])
+                            random_seed=[1, 4])
         return ptrace
 
     def test_good(self):
