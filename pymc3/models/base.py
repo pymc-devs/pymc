@@ -70,16 +70,21 @@ class UserModel(object):
         return self.vars[item]
 
     @property
+    def all_vars(self):
+        """All variables in the model"""
+        return self.vars.values()
+
+    @property
     def random_vars(self):
-        """All the random variables in the model"""
-        return list(v for v in self.vars.values() if isinstance(v, Factor))
+        """All random variables in the model"""
+        return list(v for v in self.all_vars if isinstance(v, Factor))
 
     @property
     def disc_vars(self):
-        """All the discrete variables in the model"""
+        """All discrete random variables in the model"""
         return list(typefilter(self.random_vars, discrete_types))
 
     @property
     def cont_vars(self):
-        """All the continuous variables in the model"""
+        """All continuous random variables in the model"""
         return list(typefilter(self.random_vars, continuous_types))
