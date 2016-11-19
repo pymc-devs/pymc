@@ -20,6 +20,9 @@ class LinearComponent(UserModel):
     init : dict - test_vals for coefficients
     vars : dict - random variables instead of creating new ones
     """
+    default_regressor_prior = Normal.dist(mu=0, tau=1.0E-6)
+    default_intecept_prior = Flat.dist()
+
     def __init__(self, x, y, intercept=True, labels=None,
                  priors=None, init=None, vars=None, name=''):
         super(LinearComponent, self).__init__(name)
@@ -44,7 +47,10 @@ class LinearComponent(UserModel):
                 else:
                     self.new_var(
                         name=name,
-                        dist=priors.get(name, Flat.dist()),
+                        dist=priors.get(
+                            name,
+                            self.default_intecept_prior
+                        ),
                         test_val=init.get(name)
                     )
             else:
@@ -53,7 +59,13 @@ class LinearComponent(UserModel):
                 else:
                     self.new_var(
                         name=name,
-                        dist=priors.get(name, Normal.dist(mu=0, tau=1.0E-6)),
+                        dist=priors.get(
+                            name,
+                            priors.get(
+                                'Regressor',
+                                self.default_regressor_prior
+                            )
+                        ),
                         test_val=init.get(name)
                     )
         self.coeffs = tt.stack(self.vars.values(), axis=0)
