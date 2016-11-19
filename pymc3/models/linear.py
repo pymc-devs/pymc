@@ -44,12 +44,13 @@ class LinearComponent(UserModel):
                 axis=1
             )
             labels = ['Intercept'] + labels
+        coeffs = list()
         for name in labels:
             if name == 'Intercept':
                 if name in vars:
-                    self.add_var(name, vars[name])
+                    v = self.add_var(name, vars[name])
                 else:
-                    self.new_var(
+                    v = self.new_var(
                         name=name,
                         dist=priors.get(
                             name,
@@ -57,11 +58,12 @@ class LinearComponent(UserModel):
                         ),
                         test_val=init.get(name)
                     )
+                coeffs.append(v)
             else:
                 if name in vars:
-                    self.add_var(name, vars[name])
+                    v = self.add_var(name, vars[name])
                 else:
-                    self.new_var(
+                    v = self.new_var(
                         name=name,
                         dist=priors.get(
                             name,
@@ -72,7 +74,8 @@ class LinearComponent(UserModel):
                         ),
                         test_val=init.get(name)
                     )
-        self.coeffs = tt.stack(self.vars.values(), axis=0)
+                coeffs.append(v)
+        self.coeffs = tt.stack(coeffs, axis=0)
         self.y_est = x.dot(self.coeffs)
 
     @classmethod

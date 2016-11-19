@@ -1,7 +1,18 @@
 from collections import OrderedDict
 from ..model import modelcontext
 from ..vartypes import typefilter, discrete_types, continuous_types
-from ..model import Factor
+import pymc3.model as _model
+
+__all__ = [
+    'UserModel'
+]
+
+_rv_types_ = (
+    _model.FreeRV,
+    _model.ObservedRV,
+    _model.MultiObservedRV,
+    _model.TransformedRV,
+)
 
 
 class UserModel(object):
@@ -13,10 +24,13 @@ class UserModel(object):
     def __init__(self, name=''):
         # name should be used as prefix for
         # all variables specified within a model
-        self.vars = OrderedDict()
+        self.named_vars = OrderedDict()
         if name:
             name = '%s_' % name
         self.name = name
+        self.observed_RVs = list()
+        self.free_RVs = list()
+        self.deterministics = list()
 
     @property
     def model(self):
@@ -39,7 +53,7 @@ class UserModel(object):
         -------
         FreeRV or ObservedRV
         """
-        assert name not in self.vars, \
+        assert name not in self.named_vars, \
             'Cannot create duplicate var: {}'.format(name)
         label = '{}{}'.format(self.name, name)
         var = self.model.Var(label,
@@ -61,30 +75,54 @@ class UserModel(object):
         -------
         FreeRV or ObservedRV
         """
-        assert name not in self.vars, \
+        assert name not in self.named_vars, \
             'Cannot create duplicate var: {}'.format(name)
-        self.vars[name] = var
+        if not isinstance(var, _rv_types_):
+            var = _model.Deterministic(
+                '{}{}'.format(self.name, name),
+                var=var
+            )
+        self._register_var(var)
+        self.named_vars[name] = var
         return var
 
     def __getitem__(self, item):
-        return self.vars[item]
+        return self.named_vars[item]
 
     @property
-    def all_vars(self):
-        """All variables in the model"""
-        return self.vars.values()
+    def vars(self):
+        """List of unobserved random variables used as inputs to the model
+        (which excludes deterministics).
+        """
+        return self.free_RVs
 
     @property
-    def random_vars(self):
-        """All random variables in the model"""
-        return list(v for v in self.all_vars if isinstance(v, Factor))
+    def basic_RVs(self):
+        """List of random variables the model is defined in terms of
+        (which excludes deterministics).
+        """
+        return self.free_RVs + self.observed_RVs
+
+    @property
+    def unobserved_RVs(self):
+        """List of all random variable, including deterministic ones."""
+        return self.vars + self.deterministics
 
     @property
     def disc_vars(self):
-        """All discrete random variables in the model"""
-        return list(typefilter(self.random_vars, discrete_types))
+        """All the discrete variables in the model"""
+        return list(typefilter(self.vars, discrete_types))
 
     @property
     def cont_vars(self):
-        """All continuous random variables in the model"""
-        return list(typefilter(self.random_vars, continuous_types))
+        """All the continuous variables in the model"""
+        return list(typefilter(self.vars, continuous_types))
+
+    def _register_var(self, var):
+        """Adds variable to variables stack"""
+        if isinstance(var, (_model.ObservedRV, _model.MultiObservedRV)):
+            self.observed_RVs.append(var)
+        elif isinstance(var, _model.FreeRV):
+            self.free_RVs.append(var)
+        else:
+            self.deterministics.append(var)
