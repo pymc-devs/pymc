@@ -17,6 +17,10 @@ class LinearComponent(UserModel):
     intercept : bool - fit with intercept or not?
     labels : list - replace variable names with these labels
     priors : dict - priors for coefficients
+        use `Intercept` key for defining Intercept prior
+            defaults to Flat.dist()
+        use `Regressor` key for defining default prior for all regressors
+            defaults to Normal.dist(mu=0, tau=1.0E-6)
     init : dict - test_vals for coefficients
     vars : dict - random variables instead of creating new ones
     """
@@ -82,18 +86,22 @@ class LinearComponent(UserModel):
 
 class Glm(LinearComponent):
     """Creates glm model, y_est is accessible via attribute
-        Parameters
-        ----------
-        name : str - name, associated with the linear component
-        x : pd.DataFrame or np.ndarray
-        y : pd.Series or np.array
-        intercept : bool - fit with intercept or not?
-        labels : list - replace variable names with these labels
-        priors : dict - priors for coefficients
-        init : dict - test_vals for coefficients
-        vars : dict - random variables instead of creating new ones
-        family : pymc3.glm.families object
-        """
+    Parameters
+    ----------
+    name : str - name, associated with the linear component
+    x : pd.DataFrame or np.ndarray
+    y : pd.Series or np.array
+    intercept : bool - fit with intercept or not?
+    labels : list - replace variable names with these labels
+    priors : dict - priors for coefficients
+        use `Intercept` key for defining Intercept prior
+            defaults to Flat.dist()
+        use `Regressor` key for defining default prior for all regressors
+            defaults to Normal.dist(mu=0, tau=1.0E-6)
+    init : dict - test_vals for coefficients
+    vars : dict - random variables instead of creating new ones
+    family : pymc3.glm.families object
+    """
     def __init__(self, x, y, intercept=True, labels=None,
                  priors=None, init=None, vars=None, family='normal', name=''):
         super(Glm, self).__init__(x, y, intercept, labels, priors, init, vars, name)
