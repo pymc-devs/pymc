@@ -1,5 +1,7 @@
-from ..model import modelcontext
 from collections import OrderedDict
+from ..model import modelcontext
+from ..vartypes import typefilter, discrete_types, continuous_types
+from ..model import Factor
 
 
 class UserModel(object):
@@ -66,3 +68,18 @@ class UserModel(object):
 
     def __getitem__(self, item):
         return self.vars[item]
+
+    @property
+    def random_vars(self):
+        """All the random variables in the model"""
+        return list(v for v in self.vars.values() if isinstance(v, Factor))
+
+    @property
+    def disc_vars(self):
+        """All the discrete variables in the model"""
+        return list(typefilter(self.random_vars, discrete_types))
+
+    @property
+    def cont_vars(self):
+        """All the continuous variables in the model"""
+        return list(typefilter(self.random_vars, continuous_types))
