@@ -86,7 +86,6 @@ Plots
 -----
 
 .. currentmodule:: pymc3.plots
-   :members:
 
 .. automodule:: pymc3.plots
    :members:
@@ -95,7 +94,6 @@ Stats
 -----
 
 .. currentmodule:: pymc3.stats
-   :members:
 
 .. automodule:: pymc3.stats
    :members:
@@ -104,7 +102,6 @@ Diagnostics
 -----------
 
 .. currentmodule:: pymc3.diagnostics
-   :members:
 
 .. automodule:: pymc3.diagnostics
    :members:
@@ -117,8 +114,7 @@ Inference
 Sampling
 ^^^^^^^^
 
-.. currentomdule:: pymc3.sampling
-   :members:
+.. currentmodule:: pymc3.sampling
 
 .. automodule:: pymc3.sampling
    :members:
@@ -131,7 +127,6 @@ NUTS
 """"
 
 .. currentmodule:: pymc3.step_methods.nuts
-   :members:
 
 .. automodule:: pymc3.step_methods.nuts
    :members:
@@ -140,7 +135,6 @@ Metropolis
 """"""""""
 
 .. currentmodule:: pymc3.step_methods.metropolis
-   :members:
 
 .. automodule:: pymc3.step_methods.metropolis
    :members:
@@ -149,7 +143,6 @@ Slice
 """""
 
 .. currentmodule:: pymc3.step_methods.slicer
-   :members:
 
 .. automodule:: pymc3.step_methods.slicer
    :members:
@@ -158,7 +151,6 @@ Hamiltonian Monte Carlo
 """""""""""""""""""""""
 
 .. currentmodule:: pymc3.step_methods.hmc
-   :members:
 
 .. automodule:: pymc3.step_methods.hmc
    :members:
@@ -171,7 +163,6 @@ ADVI
 """"
 
 .. currentmodule:: pymc3.variational.advi
-   :members:
 
 .. automodule:: pymc3.variational.advi
    :members:
@@ -180,7 +171,6 @@ ADVI minibatch
 """"""""""""""
 
 .. currentmodule:: pymc3.variational.advi_minibatch
-   :members:
 
 .. automodule:: pymc3.variational.advi_minibatch
    :members:
@@ -189,7 +179,6 @@ Backends
 --------
 
 .. currentmodule:: pymc3.backends
-   :members:
 
 .. automodule:: pymc3.backends
    :members:
@@ -198,7 +187,6 @@ ndarray
 ^^^^^^^
 
 .. currentmodule:: pymc3.backends.ndarray
-   :members:
 
 .. automodule:: pymc3.backends.ndarray
    :members:
@@ -207,7 +195,6 @@ sqlite
 ^^^^^^
 
 .. currentmodule:: pymc3.backends.sqlite
-   :members:
 
 .. automodule:: pymc3.backends.sqlite
    :members:
@@ -216,7 +203,6 @@ text
 ^^^^
 
 .. currentmodule:: pymc3.backends.text
-   :members:
 
 .. automodule:: pymc3.backends.text
    :members:
@@ -225,22 +211,78 @@ tracetab
 ^^^^^^^^
 
 .. currentmodule:: pymc3.backends.tracetab
-   :members:
 
 .. automodule:: pymc3.backends.tracetab
    :members:
-
-
-
-
 
 
 GLM
 ---
 
 .. currentmodule:: pymc3.glm.glm
-   :members:
 
 .. automodule:: pymc3.glm.glm
    :members:
 
+Math
+----
+
+This submodule contains various mathematical functions. Most of them
+are imported directly from theano.tensor (see there for more
+details). Doing any kind of math with PyMC3 random variables, or
+defining custom likelihoods or priors requires you to use these theano
+expressions rather than NumPy or Python code.
+
+.. currentmodule:: pymc3.math
+.. autosummary::
+   dot
+   constant
+   flatten
+   zeros_like
+   ones_like
+   stack
+   concatenate
+   sum
+   prod
+   lt
+   gt
+   le
+   ge
+   eq
+   neq
+   switch
+   clip
+   where
+   and_
+   or_
+   abs_
+   exp
+   log
+   cos
+   sin
+   tan
+   cosh
+   sinh
+   tanh
+   sqr
+   sqrt
+   erf
+   erfinv
+   dot
+   maximum
+   minimum
+   sgn
+   ceil
+   floor
+   det
+   matrix_inverse
+   extract_diag
+   matrix_dot
+   trace
+   sigmoid
+   logsumexp
+   invlogit
+   logit
+
+.. automodule:: pymc3.math
+   :members:
