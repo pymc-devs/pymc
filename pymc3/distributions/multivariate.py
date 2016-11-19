@@ -120,18 +120,21 @@ class MvNormal(Continuous):
 
 
 class MvStudentT(Continuous):
-    """
-    Multivariate Student T log-likelihood.
+    R"""
+    Multivariate Student-T log-likelihood.
 
     .. math::
+        f(\mathbf{x}| \nu,\mu,\Sigma) =
+        \frac{\Gamma\left[(\nu+p)/2\right]}{\Gamma(\nu/2)\nu^{p/2}\pi^{p/2}\left|{\Sigma}\right|^{1/2}\left[1+\frac{1}{\nu}({\mathbf x}-{\mu})^T{\Sigma}^{-1}({\mathbf x}-{\mu})\right]^{(\nu+p)/2}}
 
-    f(\mathbf{x}| \nu,\mu,\Sigma) = \frac{\Gamma\left[(\nu+p)/2\right]}{\Gamma(\nu/2)\nu^{p/2}\pi^{p/2}\left|{\Sigma}\right|^{1/2}\left[1+\frac{1}{\nu}({\mathbf x}-{\mu})^T{\Sigma}^{-1}({\mathbf x}-{\mu})\right]^{(\nu+p)/2}}
 
-    ========  ==========================
+    ========  =============================================
     Support   :math:`x \in \mathbb{R}^k`
-    Mean      :math:`\mu` if :math:`\nu > 1`  else undefined
-    Variance  :math:`\frac{\nu}{\mu-2}\Sigma` if :math:`\nu>2` else undefined
-    ========  ==========================
+    Mean      :math:`\mu` if :math:`\nu > 1` else undefined
+    Variance  :math:`\frac{\nu}{\mu-2}\Sigma`
+                  if :math:`\nu>2` else undefined
+    ========  =============================================
+
 
     Parameters
     ----------
@@ -376,13 +379,11 @@ class Wishart(Continuous):
     R"""
     Wishart log-likelihood.
 
-    The Wishart distribution is the probability
-    distribution of the maximum-likelihood estimator (MLE) of the precision
-    matrix of a multivariate normal distribution.  If V=1, the distribution
-    is identical to the chi-square distribution with n degrees of freedom.
-
-    For an alternative parameterization based on :math:`C=T{-1}`
-    (Not yet implemented)
+    The Wishart distribution is the probability distribution of the
+    maximum-likelihood estimator (MLE) of the precision matrix of a
+    multivariate normal distribution.  If V=1, the distribution is
+    identical to the chi-square distribution with n degrees of
+    freedom.
 
     .. math::
 
@@ -390,7 +391,7 @@ class Wishart(Continuous):
            \frac{{\mid T \mid}^{n/2}{\mid X \mid}^{(n-k-1)/2}}{2^{nk/2}
            \Gamma_p(n/2)} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
 
-    where :math:`k` is the rank of X.
+    where :math:`k` is the rank of :math:`X`.
 
     ========  =========================================
     Support   :math:`X(p x p)` positive definite matrix
@@ -404,6 +405,11 @@ class Wishart(Continuous):
         Degrees of freedom, > 0.
     V : array
         p x p positive definite matrix.
+
+    Note
+    ----
+    This distribution is unusable in a PyMC3 model. You should instead
+    use WishartBartlett or LKJCorr.
     """
 
     def __init__(self, n, V, *args, **kwargs):
@@ -441,7 +447,7 @@ class Wishart(Continuous):
 
 
 def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testval=None):
-    """
+    R"""
     Bartlett decomposition of the Wishart distribution. As the Wishart
     distribution requires the matrix to be symmetric positive semi-definite
     it is impossible for MCMC to ever propose acceptable matrices.
@@ -449,34 +455,40 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testv
     Instead, we can use the Barlett decomposition which samples a lower
     diagonal matrix. Specifically:
 
-    If L ~ [[sqrt(c_1), 0, ...],
-             [z_21, sqrt(c_1), 0, ...],
-             [z_31, z32, sqrt(c3), ...]]
-    with c_i ~ Chi²(n-i+1) and n_ij ~ N(0, 1), then
-    L * A * A.T * L.T ~ Wishart(L * L.T, nu)
+    .. math::
+        \text{If} L \sim \begin{pmatrix}
+        \sqrt{c_1} & 0 & 0 \\
+        z_{21} & \sqrt{c_2} & 0 \\
+        z_{31} & z_{32} & \sqrt{c_3}
+        \end{pmatrix}
+
+        \text{with} c_i \sim \chi^2(n-i+1) \text{ and } n_{ij} \sim \mathcal{N}(0, 1), \text{then} \\
+        L \times A \times A.T \times L.T \sim \text{Wishart}(L \times L.T, \nu)
 
     See http://en.wikipedia.org/wiki/Wishart_distribution#Bartlett_decomposition
     for more information.
 
-    :Parameters:
-      S : ndarray
+    Parameters
+    ----------
+    S : ndarray
         p x p positive definite matrix
         Or:
         p x p lower-triangular matrix that is the Cholesky factor
         of the covariance matrix.
-      nu : int
+    nu : int
         Degrees of freedom, > dim(S).
-      is_cholesky : bool (default=False)
+    is_cholesky : bool (default=False)
         Input matrix S is already Cholesky decomposed as S.T * S
-      return_cholesky : bool (default=False)
+    return_cholesky : bool (default=False)
         Only return the Cholesky decomposed matrix.
-      testval : ndarray
+    testval : ndarray
         p x p positive definite matrix used to initialize
 
-    :Note:
-      This is not a standard Distribution class but follows a similar
-      interface. Besides the Wishart distribution, it will add RVs
-      c and z to your model which make up the matrix.
+    Note
+    ----
+    This is not a standard Distribution class but follows a similar
+    interface. Besides the Wishart distribution, it will add RVs
+    c and z to your model which make up the matrix.
     """
 
     L = S if is_cholesky else scipy.linalg.cholesky(S)
