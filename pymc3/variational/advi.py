@@ -110,7 +110,8 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         vars = model.vars
     vars = pm.inputvars(vars)
 
-    check_discrete_rvs(vars)
+    if not pm.model.all_continuous(vars):
+        raise ValueError('Model should not include discrete RVs for ADVI.')
 
     n_mcsamples = 100 if accurate_elbo else 1
 

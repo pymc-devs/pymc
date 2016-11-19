@@ -138,7 +138,7 @@ def eig_recompose(val, vec):
     return vec.dot(np.diag(val)).dot(vec.T)
 
 
-def trace_cov(trace, vars=None):
+def trace_cov(trace, vars=None, model=None):
     """
     Calculate the flattened covariance matrix using a sample trace
 
@@ -155,9 +155,12 @@ def trace_cov(trace, vars=None):
     r : array (n,n)
         covariance matrix
     """
+    model = modelcontext(model)
 
-    if vars is None:
-        vars = trace.samples.keys
+    if model is not None:
+        vars = model.free_RVs
+    elif vars is None:
+        vars = trace.varnames
 
     def flat_t(var):
         x = trace[str(var)]

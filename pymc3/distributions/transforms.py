@@ -209,7 +209,7 @@ class StickBreaking(Transform):
         z = x0 / s
         Km1 = x.shape[0] - 1
         k = tt.arange(Km1)[(slice(None), ) + (None, ) * (x.ndim - 1)]
-        eq_share = logit(1. / (Km1 + 1 - k))  # - tt.log(Km1 - k)
+        eq_share = logit(1. / (Km1 + 1 - k).astype(str(x_.dtype)))
         y = logit(z) - eq_share
         return y.T
 
@@ -217,7 +217,7 @@ class StickBreaking(Transform):
         y = y_.T
         Km1 = y.shape[0]
         k = tt.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
-        eq_share = logit(1. / (Km1 + 1 - k))  # - tt.log(Km1 - k)
+        eq_share = logit(1. / (Km1 + 1 - k).astype(str(y_.dtype)))
         z = invlogit(y + eq_share, self.eps)
         yl = tt.concatenate([z, tt.ones(y[:1].shape)])
         yu = tt.concatenate([tt.ones(y[:1].shape), 1 - z])
@@ -229,7 +229,7 @@ class StickBreaking(Transform):
         y = y_.T
         Km1 = y.shape[0]
         k = tt.arange(Km1)[(slice(None), ) + (None, ) * (y.ndim - 1)]
-        eq_share = logit(1. / (Km1 + 1 - k))  # -tt.log(Km1 - k)
+        eq_share = logit(1. / (Km1 + 1 - k).astype(str(y_.dtype)))
         yl = y + eq_share
         yu = tt.concatenate([tt.ones(y[:1].shape), 1 - invlogit(yl, self.eps)])
         S = tt.extra_ops.cumprod(yu, 0)

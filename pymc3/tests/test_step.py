@@ -5,7 +5,7 @@ from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2m
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
-                                Metropolis, Constant, Slice, CompoundStep,
+                                Metropolis, Slice, CompoundStep,
                                 MultivariateNormalProposal, HamiltonianMC)
 from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
 from numpy.testing import assert_almost_equal
@@ -66,14 +66,6 @@ class TestStepMethods(object):  # yield test doesn't work subclassing unittest.T
         for step in steps:
             trace = sample(8000, step=step, start=start, model=model, random_seed=1)
             self.check_stat(check, trace)
-
-
-    def test_constant_step(self):
-        with Model():
-            x = Normal('x', 0, 1)
-            start = {'x': -1}
-            tr = sample(10, step=Constant([x]), start=start)
-        assert_almost_equal(tr['x'], start['x'], decimal=10)
 
 
 class TestCompoundStep(unittest.TestCase):

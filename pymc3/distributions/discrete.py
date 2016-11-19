@@ -9,7 +9,7 @@ from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
-           'NegativeBinomial', 'ConstantDist', 'ZeroInflatedPoisson',
+           'NegativeBinomial', 'ConstantDist', 'Constant', 'ZeroInflatedPoisson',
            'ZeroInflatedNegativeBinomial', 'DiscreteUniform', 'Geometric',
            'Categorical']
 
@@ -413,7 +413,7 @@ class Categorical(Discrete):
                      sumto1)
 
 
-class ConstantDist(Discrete):
+class Constant(Discrete):
     """
     Constant log-likelihood.
 
@@ -424,7 +424,7 @@ class ConstantDist(Discrete):
     """
 
     def __init__(self, c, *args, **kwargs):
-        super(ConstantDist, self).__init__(*args, **kwargs)
+        super(Constant, self).__init__(*args, **kwargs)
         self.mean = self.median = self.mode = self.c = c
 
     def random(self, point=None, size=None, repeat=None):
@@ -440,6 +440,11 @@ class ConstantDist(Discrete):
     def logp(self, value):
         c = self.c
         return bound(0, tt.eq(value, c))
+
+def ConstantDist(*args, **kwargs):
+    warnings.warn("ConstantDist has been deprecated. In future, use Constant instead.",
+                DeprecationWarning)
+    return Constant(*args, **kwargs)
 
 
 class ZeroInflatedPoisson(Discrete):
