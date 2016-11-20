@@ -7,13 +7,6 @@ __all__ = [
     'UserModel'
 ]
 
-_rv_types_ = (
-    _model.FreeRV,
-    _model.ObservedRV,
-    _model.MultiObservedRV,
-    _model.TransformedRV,
-)
-
 
 class UserModel(_model.Model):
     """Base class for class based model specification
@@ -148,4 +141,3 @@ class UserModel(_model.Model):
         if not hasattr(self, name):
             setattr(self, name, var)
         return var
-
