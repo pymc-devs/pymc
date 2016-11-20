@@ -28,7 +28,7 @@ class LinearComponent(UserModel):
     default_intecept_prior = Flat.dist()
 
     def __init__(self, x, y, intercept=True, labels=None,
-                 priors=None, init=None, vars=None, name=''):
+                 priors=None, init=None, vars=None, name='', model=None):
         super(LinearComponent, self).__init__(name)
         if priors is None:
             priors = {}
@@ -48,9 +48,9 @@ class LinearComponent(UserModel):
         for name in labels:
             if name == 'Intercept':
                 if name in vars:
-                    v = self.add_var(name, vars[name])
+                    v = self.named_var(name, vars[name])
                 else:
-                    v = self.new_var(
+                    v = self.Var(
                         name=name,
                         dist=priors.get(
                             name,
@@ -61,9 +61,9 @@ class LinearComponent(UserModel):
                 coeffs.append(v)
             else:
                 if name in vars:
-                    v = self.add_var(name, vars[name])
+                    v = self.named_var(name, vars[name])
                 else:
-                    v = self.new_var(
+                    v = self.Var(
                         name=name,
                         dist=priors.get(
                             name,
@@ -79,12 +79,12 @@ class LinearComponent(UserModel):
         self.y_est = x.dot(self.coeffs)
 
     @classmethod
-    def from_formula(cls, formula, data, priors=None, init=None, vars=None, name=''):
+    def from_formula(cls, formula, data, priors=None, init=None, vars=None, name='', model=None):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
         return cls(np.asarray(x), np.asarray(y)[:, 0], intercept=False, labels=labels,
-                   priors=priors, init=init, vars=vars, name=name)
+                   priors=priors, init=init, vars=vars, name=name, model=model)
 
 
 class Glm(LinearComponent):
@@ -106,7 +106,7 @@ class Glm(LinearComponent):
     family : pymc3.glm.families object
     """
     def __init__(self, x, y, intercept=True, labels=None,
-                 priors=None, init=None, vars=None, family='normal', name=''):
+                 priors=None, init=None, vars=None, family='normal', name='', model=None):
         super(Glm, self).__init__(x, y, intercept, labels, priors, init, vars, name)
 
         _families = dict(
@@ -122,13 +122,13 @@ class Glm(LinearComponent):
             name = '{}_y'.format(name)
         else:
             name = 'y'
-        self.add_var('y', self.model.named_vars[name])
+        self.named_var('y', self.model.named_vars[name])
         self.y_est = self['y']
 
     @classmethod
-    def from_formula(cls, formula, data, priors=None, init=None, vars=None, family='normal', name=''):
+    def from_formula(cls, formula, data, priors=None, init=None, vars=None, family='normal', name='', model=None):
         import patsy
         y, x = patsy.dmatrices(formula, data)
         labels = x.design_info.column_names
         return cls(np.asarray(x), np.asarray(y)[:, 0], intercept=False, labels=labels,
-                   priors=priors, init=init, vars=vars, family=family, name=name)
+                   priors=priors, init=init, vars=vars, family=family, name=name, model=model)

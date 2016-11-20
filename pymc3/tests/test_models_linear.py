@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from .helpers import SeededTest
 from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
 from pymc3.models.linear import LinearComponent, Glm
