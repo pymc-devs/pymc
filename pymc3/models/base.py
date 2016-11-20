@@ -23,26 +23,29 @@ class UserModel(_model.Model):
     # When you create a class based model you should follow some rules
     class NewModel(UserModel):
         def __init__(self, name='', model=None):
-            super(TestBaseModel.NewModel, self).__init__(name, model)
-            # 1) init variables with Var method
+            # 0) init base class first
+            super(NewModel, self).__init__(name, model)
+            # 1) create variables with Var method
             self.Var('v1', pm.Normal.dist())
-            # 2) Potentials and Deterministic variables via method too
-            # be sure that names will not overlap with other same models
+            # 2) create Potentials and Deterministic variables via method too
+            # Then be sure that names will not overlap with other same models
             self.Deterministic('d', tt.constant(1))
             self.Potential('p', tt.constant(1))
-            # avoid pm.Normal(...) initialisation as names can overlap
-            # instead of `add_random_variable` use `named_var` internally
+            # 3) avoid pm.Normal(...) initialization as names can overlap
+            # 4) instead of `add_random_variable` use `named_var` internally
 
     with pm.Model() as model:
         # a set of variables is created
         NewModel()
-        # another set of variables are created but with prefix 'another'
+        # another set of variables is created but with prefix 'another'
         usermodel2 = NewModel(name='another')
         # you can enter in a context with submodel
+
     with usermodel2:
         usermodel2.Var('v2', pm.Normal.dist())
         # this variable is created in parent model too
-
+    # this works too
+    usermodel2.Var('v3', pm.Normal.dist())
     with model:
         m = NewModel('one_more')
         print(m.d is model['one_more_d'])   # True
