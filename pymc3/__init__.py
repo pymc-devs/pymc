@@ -1,4 +1,5 @@
 __version__ = "3.0.rc2"
+print "using gp modified version"
 
 from .blocking import *
 from .distributions import *
@@ -23,6 +24,7 @@ from .plots import *
 from .tests import test
 
 from . import glm
+from . import gp
 from .data import *
 
 import logging
