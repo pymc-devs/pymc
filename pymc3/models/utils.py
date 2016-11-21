@@ -16,6 +16,7 @@ def any_to_tensor_and_labels(x, labels=None):
     cannot get their shape directly
 
     If you pass dict input we cannot rely on labels order thus dict
+    keys are treated as labels anyway
 
     Parameters
     ----------

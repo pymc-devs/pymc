@@ -6,6 +6,11 @@ from ..glm import families
 from ..model import Model, Deterministic
 from .utils import any_to_tensor_and_labels
 
+__all__ = [
+    'LinearComponent',
+    'Glm'
+]
+
 
 class LinearComponent(Model):
     """Creates linear component, y_est is accessible via attribute
@@ -24,7 +29,7 @@ class LinearComponent(Model):
     vars : dict - random variables instead of creating new ones
     """
     default_regressor_prior = Normal.dist(mu=0, tau=1.0E-6)
-    default_intecept_prior = Flat.dist()
+    default_intercept_prior = Flat.dist()
 
     def __init__(self, x, y, intercept=True, labels=None,
                  priors=None, vars=None, name='', model=None):
@@ -51,7 +56,7 @@ class LinearComponent(Model):
                         name=name,
                         dist=priors.get(
                             name,
-                            self.default_intecept_prior
+                            self.default_intercept_prior
                         )
                     )
                 coeffs.append(v)

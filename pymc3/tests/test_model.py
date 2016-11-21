@@ -1,7 +1,8 @@
 import unittest
 import theano.tensor as tt
 import pymc3 as pm
-from pymc3.models.base import UserModel
+from pymc3.distributions import HalfCauchy, Normal
+from pymc3 import Potential, Deterministic
 
 
 class NewModel(pm.Model):
@@ -10,19 +11,29 @@ class NewModel(pm.Model):
         assert pm.modelcontext(None) is self
         # 1) init variables with Var method
         self.Var('v1', pm.Normal.dist())
-        self.v2 = pm.Normal('v2', 0, 1)
+        self.v2 = pm.Normal('v2', mu=0, sd=1)
         # 2) Potentials and Deterministic variables with method too
         # be sure that names will not overlap with other same models
         pm.Deterministic('d', tt.constant(1))
         pm.Potential('p', tt.constant(1))
 
 
+class DocstringModel(pm.Model):
+    def __init__(self, mean=0, sd=1, name='', model=None):
+        super(DocstringModel, self).__init__(name, model)
+        self.Var('v1', Normal.dist(mu=mean, sd=sd))
+        Normal('v2', mu=mean, sd=sd)
+        Normal('v3', mu=mean, sd=HalfCauchy('sd', beta=10, testval=1.))
+        Deterministic('v3_sq', self.v3 ** 2)
+        Potential('p1', tt.constant(1))
+
+
 class TestBaseModel(unittest.TestCase):
-    def test_context_works(self):
+    def test_setattr_properly_works(self):
         with pm.Model() as model:
             pm.Normal('v1')
             self.assertEqual(len(model.vars), 1)
-            with UserModel('sub') as submodel:
+            with pm.Model('sub') as submodel:
                 submodel.Var('v1', pm.Normal.dist())
                 self.assertTrue(hasattr(submodel, 'v1'))
                 self.assertEqual(len(submodel.vars), 1)
@@ -55,11 +66,13 @@ class TestBaseModel(unittest.TestCase):
         # When you create a class based model you should follow some rules
         with model:
             m = NewModel('one_more')
-            self.assertTrue(m.d is model['one_more_d'])
+        self.assertTrue(m.d is model['one_more_d'])
+        self.assertTrue(m['d'] is model['one_more_d'])
+        self.assertTrue(m['one_more_d'] is model['one_more_d'])
 
 
 class TestNested(unittest.TestCase):
-    def test_nest_context(self):
+    def test_nest_context_works(self):
         with pm.Model() as m:
             new = NewModel()
             with new:
@@ -77,3 +90,20 @@ class TestNested(unittest.TestCase):
             NewModel(name='new')
         self.assertIn('new_v1', m.named_vars)
         self.assertIn('new_v2', m.named_vars)
+
+    def test_docstring_example1(self):
+        usage1 = DocstringModel()
+        self.assertIn('v1', usage1.named_vars)
+        self.assertIn('v2', usage1.named_vars)
+        self.assertIn('v3', usage1.named_vars)
+        self.assertIn('v3_sq', usage1.named_vars)
+        self.assertTrue(len(usage1.potentials), 1)
+
+    def test_docstring_example2(self):
+        with pm.Model() as model:
+            DocstringModel(name='prefix')
+        self.assertIn('prefix_v1', model.named_vars)
+        self.assertIn('prefix_v2', model.named_vars)
+        self.assertIn('prefix_v3', model.named_vars)
+        self.assertIn('prefix_v3_sq', model.named_vars)
+        self.assertTrue(len(model.potentials), 1)

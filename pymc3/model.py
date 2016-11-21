@@ -171,6 +171,7 @@ class Factor(object):
 
 
 class InitContextMeta(type):
+    """Metaclass that executes `__init__` of instance in it's context"""
     def __call__(cls, *args, **kwargs):
         instance = cls.__new__(cls, *args, **kwargs)
         with instance:  # appends context
@@ -179,15 +180,21 @@ class InitContextMeta(type):
 
 
 def withparent(meth):
+    """Helper wrapper that passes calls to parent's instance"""
     @wraps(meth)
     def wrapped(self, *args, **kwargs):
-        meth(self, *args, **kwargs)
-        if self.parent is not None:
+        res = meth(self, *args, **kwargs)
+        if getattr(self, 'parent', None) is not None:
             getattr(self.parent, meth.__name__)(*args, **kwargs)
+        return res
     return wrapped
 
 
 class treelist(list):
+    """A list that passes mutable extending operations used in Model
+    to parent list instance.
+    Extending treelist you will also extend it's parent
+    """
     def __init__(self, *iterable, parent=None):
         if len(iterable) > 1:
             raise TypeError('Cannot init more than one iterable')
@@ -201,6 +208,10 @@ class treelist(list):
 
 
 class treedict(dict):
+    """A dict that passes mutable extending operations used in Model
+    to parent dict instance.
+    Extending treedict you will also extend it's parent
+    """
     def __init__(self, *iterable, parent=None, **kwargs):
         if len(iterable) > 1:
             raise TypeError('Cannot init more than one iterable')
@@ -213,8 +224,82 @@ class treedict(dict):
 
 
 class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
-    """Encapsulates the variables and likelihood factors of a model."""
+    """Encapsulates the variables and likelihood factors of a model.
+
+    Model class can be used for creating class based models. To create
+    a class based model you should inherit from `Model` and
+    override `__init__` with arbitrary definitions
+    (do not forget to call base class `__init__` first).
+
+    Parameters
+    ----------
+    name : str, default '' - name that will be used as prefix for
+        names of all random variables defined within model
+    model : Model, default None - instance of Model that is
+        supposed to be a parent for the new instance. If None,
+        context will be used. All variables defined within instance
+        will be passed to the parent instance. So that 'nested' model
+        contributes to the variables and likelihood factors of
+        parent model.
+
+    Examples
+    --------
+    # How to define a custom model
+    class CustomModel(Model):
+        # 1) override init
+        def __init__(self, mean=0, sd=1, name='', model=None):
+            # 2) call super's init first, passing model and name to it
+            # name will be prefix for all variables here
+            # if no name specified for model there will be no prefix
+            super(CustomModel, self).__init__(name, model)
+            # now you are in the context of instance,
+            # `modelcontext` will return self
+            # you can define variables in several ways
+            # note, that all variables will get model's name prefix
+
+            # 3) you can create variables rith Var method
+            self.Var('v1', Normal.dist(mu=mean, sd=sd))
+            # this will create variable named like '{prefix_}v1'
+            # and assign attribute 'v1' to instance
+            # created variable can be accessed with self.v1 or self['v1']
+
+            # 4) this syntax will also work as we are in the context
+            # of instance itself, names are given as usual
+            Normal('v2', mu=mean, sd=sd)
+
+            # something more complex is allowed too
+            Normal('v3', mu=mean, sd=HalfCauchy('sd', beta=10, testval=1.))
+
+            # Deterministic variables can be used in usual way
+            Deterministic('v3_sq', self.v3 ** 2)
+            # Potentials too
+            Potential('p1', tt.constant(1))
+
+    # After defining a class CustomModel you can use it in several ways
+
+    # I:
+    #   state the model within a context
+    with Model() as model:
+        CustomModel()
+        # arbitrary actions
+
+    # II:
+    #   use new class as entering point in context
+    with CustomModel() as model:
+        Normal('new_normal_var', mu=1, sd=0)
+
+    # III:
+    #   just get model instance with all that was defined in it
+    model = CustomModel()
+
+    # IV:
+    #   use many custom models within one context
+    with Model() as model:
+        CustomModel(mean=1, name='first')
+        CustomModel(mean=2, name='second')
+    """
     def __new__(cls, *args, **kwargs):
+        # resolves the parent instance
         instance = object.__new__(cls)
         if kwargs.get('model') is not None:
             instance.parent = kwargs.get('model')
