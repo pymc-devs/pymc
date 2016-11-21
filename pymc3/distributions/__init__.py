@@ -50,6 +50,7 @@ from .mixture import Mixture
 from .mixture import NormalMixture
 
 from .multivariate import MvNormal
+from .multivariate import MvNormal2
 from .multivariate import MvStudentT
 from .multivariate import Dirichlet
 from .multivariate import Multinomial
@@ -79,8 +80,8 @@ __all__ = ['Uniform',
            'Gamma',
            'Weibull',
            'Bound',
-           'Lognormal',     
-           'HalfStudentT', 
+           'Lognormal',
+           'HalfStudentT',
            'StudentTpos',
            'ChiSquared',
            'HalfNormal',
@@ -108,6 +109,7 @@ __all__ = ['Uniform',
            'NoDistribution',
            'TensorType',
            'MvNormal',
+           'MvNormal2',
            'MvStudentT',
            'Dirichlet',
            'Multinomial',

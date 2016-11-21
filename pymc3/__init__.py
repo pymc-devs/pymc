@@ -1,4 +1,8 @@
+<<<<<<< 8c87f738da31e2985230434ecff6e25b14c05e91
 __version__ = "3.0"
+=======
+__version__ = "3.0.rc2"
+>>>>>>> initial gp commit
 
 from .blocking import *
 from .distributions import *
@@ -23,6 +27,7 @@ from .plots import *
 from .tests import test
 
 from . import glm
+from . import gp
 from .data import *
 
 import logging
