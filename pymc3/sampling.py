@@ -81,7 +81,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
     return steps
 
 
-def sample(draws, step=None, init='advi', n_init=500000, start=None,
+def sample(draws, step=None, init='advi', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=None, progressbar=True,
            model=None, random_seed=-1):
     """
