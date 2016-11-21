@@ -257,7 +257,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             # you can define variables in several ways
             # note, that all variables will get model's name prefix
 
-            # 3) you can create variables rith Var method
+            # 3) you can create variables with Var method
             self.Var('v1', Normal.dist(mu=mean, sd=sd))
             # this will create variable named like '{prefix_}v1'
             # and assign attribute 'v1' to instance
