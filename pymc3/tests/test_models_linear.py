@@ -28,14 +28,20 @@ class TestGLM(SeededTest):
         cls.data_logistic = dict(x=x_logistic, y=bern_trials)
 
     def test_linear_component(self):
+        vars_to_create = {
+            'sigma_interval_',
+            'y_obs',
+            'lm_x0',
+            'lm_Intercept'
+        }
         with Model() as model:
             lm = LinearComponent(
                 self.data_linear['x'],
                 self.data_linear['y'],
                 name='lm'
-            )
-            sigma = Uniform('sigma', 0, 20)
-            Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)
+            )   # yields lm_x0, lm_Intercept
+            sigma = Uniform('sigma', 0, 20)     # yields sigma_interval_
+            Normal('y_obs', mu=lm.y_est, sd=sigma, observed=self.y_linear)  # yields y_obs
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
             trace = sample(500, step, start, progressbar=False, random_seed=self.random_seed)
@@ -43,6 +49,7 @@ class TestGLM(SeededTest):
             self.assertAlmostEqual(np.mean(trace['lm_Intercept']), self.intercept, 1)
             self.assertAlmostEqual(np.mean(trace['lm_x0']), self.slope, 1)
             self.assertAlmostEqual(np.mean(trace['sigma']), self.sd, 1)
+        self.assertSetEqual(vars_to_create, set(model.named_vars.keys()))
 
     def test_linear_component_from_formula(self):
         with Model() as model:
@@ -59,19 +66,24 @@ class TestGLM(SeededTest):
 
     def test_glm(self):
         with Model() as model:
-            NAME = 'glm'
+            vars_to_create = {
+                'glm_sd_log_',
+                'glm_y',
+                'glm_x0',
+                'glm_Intercept'
+            }
             Glm(
                 self.data_linear['x'],
                 self.data_linear['y'],
-                name=NAME
+                name='glm'
             )
             start = find_MAP()
             step = Slice(model.vars)
             trace = sample(500, step, start, progressbar=False, random_seed=self.random_seed)
-
-            self.assertAlmostEqual(np.mean(trace['%s_Intercept' % NAME]), self.intercept, 1)
-            self.assertAlmostEqual(np.mean(trace['%s_x0' % NAME]), self.slope, 1)
-            self.assertAlmostEqual(np.mean(trace['%s_sd' % NAME]), self.sd, 1)
+            self.assertAlmostEqual(np.mean(trace['glm_Intercept']), self.intercept, 1)
+            self.assertAlmostEqual(np.mean(trace['glm_x0']), self.slope, 1)
+            self.assertAlmostEqual(np.mean(trace['glm_sd']), self.sd, 1)
+            self.assertSetEqual(vars_to_create, set(model.named_vars.keys()))
 
     def test_glm_from_formula(self):
         with Model() as model:

@@ -1,3 +1,4 @@
+import six
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -8,6 +9,7 @@ from .memoize import memoize
 from .theanof import gradient, hessian, inputvars
 from .vartypes import typefilter, discrete_types, continuous_types
 from .blocking import DictToArrayBijection, ArrayOrdering
+from functools import wraps
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -168,17 +170,77 @@ class Factor(object):
         return tt.sum(self.logp_elemwiset)
 
 
-class Model(Context, Factor):
-    """Encapsulates the variables and likelihood factors of a model."""
+class InitContextMeta(type):
+    def __call__(cls, *args, **kwargs):
+        instance = cls.__new__(cls, *args, **kwargs)
+        with instance:  # appends context
+            instance.__init__(*args, **kwargs)
+        return instance
 
-    def __init__(self):
-        self.named_vars = {}
-        self.free_RVs = []
-        self.observed_RVs = []
-        self.deterministics = []
-        self.potentials = []
-        self.missing_values = []
-        self.model = self
+
+def withparent(meth):
+    @wraps(meth)
+    def wrapped(self, *args, **kwargs):
+        meth(self, *args, **kwargs)
+        if self.parent is not None:
+            getattr(self.parent, meth.__name__)(*args, **kwargs)
+    return wrapped
+
+
+class treelist(list):
+    def __init__(self, *iterable, parent=None):
+        if len(iterable) > 1:
+            raise TypeError('Cannot init more than one iterable')
+        super(treelist, self).__init__(iterable)
+        assert isinstance(parent, list) or parent is None
+        self.parent = parent
+    append = withparent(list.append)
+    __iadd__ = withparent(list.__iadd__)
+    __imul__ = withparent(list.__imul__)
+    extend = withparent(list.extend)
+
+
+class treedict(dict):
+    def __init__(self, *iterable, parent=None, **kwargs):
+        if len(iterable) > 1:
+            raise TypeError('Cannot init more than one iterable')
+        super(treedict, self).__init__(iterable, **kwargs)
+        assert isinstance(parent, dict) or parent is None
+        self.parent = parent
+        self.parent.update(iterable, **kwargs)
+    __setitem__ = withparent(dict.__setitem__)
+    update = withparent(dict.update)
+
+
+class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
+    """Encapsulates the variables and likelihood factors of a model."""
+    def __new__(cls, *args, **kwargs):
+        instance = object.__new__(cls)
+        if kwargs.get('model') is not None:
+            instance.parent = kwargs.get('model')
+        elif cls.get_contexts():
+            instance.parent = cls.get_contexts()[-1]
+        else:
+            instance.parent = None
+        instance.model = instance
+        return instance
+
+    def __init__(self, name='', model=None):
+        self.name = name
+        if self.parent is not None:
+            self.named_vars = treedict(parent=self.parent.named_vars)
+            self.free_RVs = treelist(parent=self.parent.free_RVs)
+            self.observed_RVs = treelist(parent=self.parent.observed_RVs)
+            self.deterministics = treelist(parent=self.parent.deterministics)
+            self.potentials = treelist(parent=self.parent.potentials)
+            self.missing_values = treelist(parent=self.parent.missing_values)
+        else:
+            self.named_vars = dict()
+            self.free_RVs = list()
+            self.observed_RVs = list()
+            self.deterministics = list()
+            self.potentials = list()
+            self.missing_values = list()
 
     @property
     @memoize
@@ -271,6 +333,7 @@ class Model(Context, Factor):
         -------
         FreeRV or ObservedRV
         """
+        name = self.name_for(name)
         if data is None:
             if getattr(dist, "transform", None) is None:
                 var = FreeRV(name=name, distribution=dist, model=self)
@@ -312,11 +375,42 @@ class Model(Context, Factor):
             raise ValueError(
                 "Variable name {} already exists.".format(var.name))
         self.named_vars[var.name] = var
-        if not hasattr(self, var.name):
-            setattr(self, var.name, var)
+        if not hasattr(self, self.name_of(var.name)):
+            setattr(self, self.name_of(var.name), var)
+
+    @property
+    def prefix(self):
+        return '%s_' % self.name if self.name else ''
+
+    def name_for(self, name):
+        """Checks if name has prefix and adds if needed
+        """
+        if self.prefix:
+            if not name.startswith(self.prefix):
+                return '{}{}'.format(self.prefix, name)
+            else:
+                return name
+        else:
+            return name
+
+    def name_of(self, name):
+        """Checks if name has prefix and deletes if needed
+        """
+        if not self.prefix or not name:
+            return name
+        elif name.startswith(self.prefix):
+            return name[len(self.prefix):]
+        else:
+            return name
 
     def __getitem__(self, key):
-        return self.named_vars[key]
+        try:
+            return self.named_vars[key]
+        except KeyError as e:
+            try:
+                return self.named_vars[self.name_for(key)]
+            except KeyError:
+                raise e
 
     @memoize
     def makefn(self, outs, mode=None, *args, **kwargs):
@@ -633,9 +727,10 @@ def Deterministic(name, var, model=None):
     -------
     n : var but with name name
     """
-    var.name = name
-    modelcontext(model).deterministics.append(var)
-    modelcontext(model).add_random_variable(var)
+    model = modelcontext(model)
+    var.name = model.name_for(name)
+    model.deterministics.append(var)
+    model.add_random_variable(var)
     return var
 
 
@@ -651,8 +746,9 @@ def Potential(name, var, model=None):
     -------
     var : var, with name attribute
     """
-    var.name = name
-    modelcontext(model).potentials.append(var)
+    model = modelcontext(model)
+    var.name = model.name_for(name)
+    model.potentials.append(var)
     return var
 
 

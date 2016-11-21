@@ -11,3 +11,4 @@ recommonmark
 sphinx
 nbsphinx
 numpydoc
+six
