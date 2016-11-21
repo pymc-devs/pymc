@@ -148,15 +148,15 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
             elbos[i] = e
             if i % (n // 10) == 0 and i > 0:
                 avg_elbo = elbos[i - n // 10:i].mean()
-                progress.set_description('Average ELBO = {:,.2f}'.format(avg_elbo))
+                progress.set_description('Average ELBO = {:,.5g}'.format(avg_elbo))
     except KeyboardInterrupt:
         elbos = elbos[:i]
         avg_elbo = elbos[i - n // 10:].mean()
-        pm._log.info('Interrupted at {:,d} [{:.0f}%]: Average ELBO = {:,.2f}'.format(
+        pm._log.info('Interrupted at {:,d} [{:.0f}%]: Average ELBO = {:,.5g}'.format(
             i, 100 * i // n, avg_elbo))
     else:
         avg_elbo = elbos[-n // 10:].mean()
-        pm._log.info('Finished [100%]: Average ELBO = {:,.2f}'.format(avg_elbo))
+        pm._log.info('Finished [100%]: Average ELBO = {:,.5g}'.format(avg_elbo))
 
     # Estimated parameters
     l = int(uw_i.size / 2)
