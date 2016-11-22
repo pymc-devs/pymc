@@ -222,6 +222,14 @@ class treedict(dict):
     __setitem__ = withparent(dict.__setitem__)
     update = withparent(dict.update)
 
+    def __contains__(self, item):
+        # needed for `add_random_variable` method
+        if self.parent is not None:
+            return (dict.__contains__(self, item) or
+                    self.parent.__contains__(item))
+        else:
+            dict.__contains__(self, item)
+
 
 class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
     """Encapsulates the variables and likelihood factors of a model.
