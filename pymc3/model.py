@@ -205,7 +205,6 @@ class treelist(list):
             self.parent.extend(self)
     append = withparent(list.append)
     __iadd__ = withparent(list.__iadd__)
-    __imul__ = withparent(list.__imul__)
     extend = withparent(list.extend)
 
     def tree_contains(self, item):
@@ -221,6 +220,12 @@ class treelist(list):
     def __setitem__(self, key, value):
         raise NotImplementedError('Not able to determine '
                                   'appropriate logic for method')
+
+    def __imul__(self, other):
+        t0 = len(self)
+        list.__imul__(self, other)
+        if self.parent is not None:
+            self.parent.extend(self[t0:])
 
 
 class treedict(dict):
