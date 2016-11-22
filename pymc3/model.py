@@ -201,6 +201,8 @@ class treelist(list):
         super(treelist, self).__init__(iterable)
         assert isinstance(parent, list) or parent is None
         self.parent = parent
+        if self.parent is not None:
+            self.parent.extend(self)
     append = withparent(list.append)
     __iadd__ = withparent(list.__iadd__)
     __imul__ = withparent(list.__imul__)
@@ -218,17 +220,21 @@ class treedict(dict):
         super(treedict, self).__init__(iterable, **kwargs)
         assert isinstance(parent, dict) or parent is None
         self.parent = parent
-        self.parent.update(iterable, **kwargs)
+        if self.parent is not None:
+            self.parent.update(self)
     __setitem__ = withparent(dict.__setitem__)
     update = withparent(dict.update)
 
-    def __contains__(self, item):
+    def tree_contains(self, item):
         # needed for `add_random_variable` method
-        if self.parent is not None:
+        if isinstance(self.parent, treedict):
+            return (dict.__contains__(self, item) or
+                    self.parent.tree_contains(item))
+        elif isinstance(self.parent, dict):
             return (dict.__contains__(self, item) or
                     self.parent.__contains__(item))
         else:
-            dict.__contains__(self, item)
+            return dict.__contains__(self, item)
 
 
 class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
@@ -328,12 +334,12 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             self.potentials = treelist(parent=self.parent.potentials)
             self.missing_values = treelist(parent=self.parent.missing_values)
         else:
-            self.named_vars = dict()
-            self.free_RVs = list()
-            self.observed_RVs = list()
-            self.deterministics = list()
-            self.potentials = list()
-            self.missing_values = list()
+            self.named_vars = treedict()
+            self.free_RVs = treelist()
+            self.observed_RVs = treelist()
+            self.deterministics = treelist()
+            self.potentials = treelist()
+            self.missing_values = treelist()
 
     @property
     @memoize
@@ -464,7 +470,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
 
     def add_random_variable(self, var):
         """Add a random variable to the named variables of the model."""
-        if var.name in self.named_vars:
+        if self.named_vars.tree_contains(var.name):
             raise ValueError(
                 "Variable name {} already exists.".format(var.name))
         self.named_vars[var.name] = var

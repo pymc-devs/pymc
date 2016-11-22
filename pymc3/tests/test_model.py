@@ -107,3 +107,8 @@ class TestNested(unittest.TestCase):
         self.assertIn('prefix_v3', model.named_vars)
         self.assertIn('prefix_v3_sq', model.named_vars)
         self.assertTrue(len(model.potentials), 1)
+
+    def test_duplicates_detection(self):
+        with pm.Model():
+            DocstringModel(name='prefix')
+            self.assertRaises(ValueError, DocstringModel, name='prefix')
