@@ -197,7 +197,7 @@ class treelist(list):
     """
     def __init__(self, *iterable, parent=None):
         if len(iterable) > 1:
-            raise TypeError('Cannot init more than one iterable')
+            raise TypeError('Cannot init more than one positional argument')
         super(treelist, self).__init__(iterable)
         assert isinstance(parent, list) or parent is None
         self.parent = parent
@@ -208,6 +208,20 @@ class treelist(list):
     __imul__ = withparent(list.__imul__)
     extend = withparent(list.extend)
 
+    def tree_contains(self, item):
+        if isinstance(self.parent, treedict):
+            return (list.__contains__(self, item) or
+                    self.parent.tree_contains(item))
+        elif isinstance(self.parent, list):
+            return (list.__contains__(self, item) or
+                    self.parent.__contains__(item))
+        else:
+            return list.__contains__(self, item)
+
+    def __setitem__(self, key, value):
+        raise NotImplementedError('Not able to determine '
+                                  'appropriate logic for method')
+
 
 class treedict(dict):
     """A dict that passes mutable extending operations used in Model
@@ -216,7 +230,7 @@ class treedict(dict):
     """
     def __init__(self, *iterable, parent=None, **kwargs):
         if len(iterable) > 1:
-            raise TypeError('Cannot init more than one iterable')
+            raise TypeError('Cannot init more than one positional argument')
         super(treedict, self).__init__(iterable, **kwargs)
         assert isinstance(parent, dict) or parent is None
         self.parent = parent
