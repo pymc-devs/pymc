@@ -203,53 +203,6 @@ class TestGLMLinear(SeededTest):
         pm.glm.plot_posterior_predictive(trace)
 
 
-class TestHierarchical(SeededTest):
-    @classmethod
-    def setUpClass(cls):
-        n_groups = 10
-        no_pergroup = 30
-        n_group_predictors = 1
-        n_predictors = 3
-        n_observed = no_pergroup * n_groups
-
-        group = np.concatenate([[i] * no_pergroup for i in range(n_groups)])
-        group_predictors = np.random.normal(size=(n_groups, n_group_predictors))
-        predictors = np.random.normal(size=(n_observed, n_predictors))
-
-        group_effects_a = np.random.normal(size=(n_group_predictors, n_predictors))
-        effects_a = (np.random.normal(size=(n_groups, n_predictors)) +
-                     np.dot(group_predictors, group_effects_a))
-
-        y = np.sum(effects_a[group, :] * predictors, 1) + np.random.normal(size=(n_observed))
-        with pm.Model() as cls.model:
-            # m_g ~ N(0, .1)
-            group_effects = pm.Normal("group_effects", 0, .1,
-                                      shape=(1, n_group_predictors, n_predictors))
-            # sg ~ Uniform(.05, 10)
-            sg = pm.Uniform("sg", .05, 10, testval=2.)
-            # m ~ N(mg * pg, sg)
-            effects = pm.Normal("effects",
-                                (group_predictors[:, :, np.newaxis] * group_effects).sum(),
-                                sg ** -2,
-                                shape=(n_groups, n_predictors))
-            s = pm.Uniform("s", .01, 10, shape=n_groups)
-            g = tt.constant(group)
-            # y ~ Normal(m[g] * p, s)
-            pm.Normal('y', (effects[g] * predictors).sum(), s[g] ** -2, observed=y)
-
-    def test_normal(self):
-        with self.model:
-            start = pm.find_MAP()
-            step = pm.NUTS(self.model.vars, scaling=start)
-            pm.sample(50, step, start)
-
-    def test_sqlite(self):
-        with self.model:
-            start = pm.find_MAP()
-            step = pm.NUTS(self.model.vars, scaling=start)
-            pm.sample(50, step, start, trace='sqlite')
-
-
 class TestLatentOccupancy(SeededTest):
     """
     From the PyMC example list

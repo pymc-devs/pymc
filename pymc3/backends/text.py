@@ -199,5 +199,5 @@ def dump(name, trace, chains=None):
     for chain in chains:
         filename = os.path.join(name, 'chain-{}.csv'.format(chain))
         df = ttab.trace_to_dataframe(
-            trace, chains=chain, flat_names=flat_names)
+            trace, chains=chain, flat_names=flat_names,hide_transformed_vars=False)
         df.to_csv(filename, index=False)

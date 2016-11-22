@@ -53,12 +53,12 @@ def assert_negative_support(var, label, distname, value=-1e-6):
         except AttributeError:
             # Otherwise no direct evidence of non-positive support
             support = False
-                        
+
     if np.any(support):
         msg = "The variable specified for {0} has negative support for {1}, ".format(label, distname)
         msg += "likely making it unsuitable for this parameter."
         warnings.warn(msg)
-    
+
 
 def get_tau_sd(tau=None, sd=None):
     """
@@ -206,7 +206,7 @@ class Normal(Continuous):
         # called to display a warning we have to fetch the args and
         # kwargs manually.  After a certain period we should revert
         # back to the old calling signature.
-        
+
         if len(args) == 1:
             mu = args[0]
             sd = kwargs.pop('sd', None)
@@ -226,7 +226,7 @@ class Normal(Continuous):
         self.mean = self.median = self.mode = self.mu = mu
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.variance = 1. / self.tau
-        
+
         assert_negative_support(sd, 'sd', 'Normal')
         assert_negative_support(tau, 'tau', 'Normal')
 
@@ -276,7 +276,7 @@ class HalfNormal(PositiveContinuous):
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.mean = tt.sqrt(2 / (np.pi * self.tau))
         self.variance = (1. - 2 / np.pi) / self.tau
-        
+
         assert_negative_support(tau, 'tau', 'HalfNormal')
         assert_negative_support(sd, 'sd', 'HalfNormal')
 
@@ -358,7 +358,7 @@ class Wald(PositiveContinuous):
         self.mode = self.mu * (tt.sqrt(1. + (1.5 * self.mu / self.lam)**2)
                                - 1.5 * self.mu / self.lam) + alpha
         self.variance = (self.mu**3) / self.lam
-        
+
         assert_negative_support(phi, 'phi', 'Wald')
         assert_negative_support(mu, 'mu', 'Wald')
         assert_negative_support(lam, 'lam', 'Wald')
@@ -464,7 +464,7 @@ class Beta(UnitContinuous):
         self.mean = alpha / (alpha + beta)
         self.variance = alpha * beta / (
             (alpha + beta)**2 * (alpha + beta + 1))
-            
+
         assert_negative_support(alpha, 'alpha', 'Beta')
         assert_negative_support(beta, 'beta', 'Beta')
 
@@ -526,7 +526,7 @@ class Exponential(PositiveContinuous):
         self.mode = 0
 
         self.variance = lam**-2
-        
+
         assert_negative_support(lam, 'lam', 'Exponential')
 
     def random(self, point=None, size=None, repeat=None):
@@ -569,7 +569,7 @@ class Laplace(Continuous):
         self.mean = self.median = self.mode = self.mu = mu
 
         self.variance = 2 * b**2
-        
+
         assert_negative_support(b, 'b', 'Laplace')
 
     def random(self, point=None, size=None, repeat=None):
@@ -624,7 +624,7 @@ class Lognormal(PositiveContinuous):
         self.median = tt.exp(mu)
         self.mode = tt.exp(mu - 1. / self.tau)
         self.variance = (tt.exp(1. / self.tau) - 1) * tt.exp(2 * mu + 1. / self.tau)
-        
+
         assert_negative_support(tau, 'tau', 'Lognormal')
         assert_negative_support(sd, 'sd', 'Lognormal')
 
@@ -685,7 +685,7 @@ class StudentT(Continuous):
         self.variance = tt.switch((nu > 2) * 1,
                                   (1 / self.lam) * (nu / (nu - 2)),
                                   np.inf)
-                                  
+
         assert_negative_support(lam, 'lam (sd)', 'StudentT')
         assert_negative_support(nu, 'nu', 'StudentT')
 
@@ -746,10 +746,10 @@ class Pareto(PositiveContinuous):
             tt.gt(alpha, 2),
             (alpha * m**2) / ((alpha - 2.) * (alpha - 1.)**2),
             np.inf)
-            
+
         assert_negative_support(alpha, 'alpha', 'Pareto')
         assert_negative_support(m, 'm', 'Pareto')
-        
+
 
     def _random(self, alpha, m, size=None):
         u = np.random.uniform(size=size)
@@ -800,7 +800,7 @@ class Cauchy(Continuous):
         super(Cauchy, self).__init__(*args, **kwargs)
         self.median = self.mode = self.alpha = alpha
         self.beta = beta
-        
+
         assert_negative_support(beta, 'beta', 'Cauchy')
 
     def _random(self, alpha, beta, size=None):
@@ -848,7 +848,7 @@ class HalfCauchy(PositiveContinuous):
         self.mode = 0
         self.median = beta
         self.beta = beta
-        
+
         assert_negative_support(beta, 'beta', 'HalfCauchy')
 
     def _random(self, beta, size=None):
@@ -916,7 +916,7 @@ class Gamma(PositiveContinuous):
         self.mean = alpha / beta
         self.mode = tt.maximum((alpha - 1) / beta, 0)
         self.variance = alpha / beta**2
-        
+
         assert_negative_support(alpha, 'alpha', 'Gamma')
         assert_negative_support(beta, 'beta', 'Gamma')
 
@@ -1070,7 +1070,7 @@ class Weibull(PositiveContinuous):
         self.median = beta * tt.exp(gammaln(tt.log(2)))**(1. / alpha)
         self.variance = (beta**2) * \
             tt.exp(gammaln(1 + 2. / alpha - self.mean**2))
-            
+
         assert_negative_support(alpha, 'alpha', 'Weibull')
         assert_negative_support(beta, 'beta', 'Weibull')
 
@@ -1259,7 +1259,7 @@ class ExGaussian(Continuous):
         self.nu = nu
         self.mean = mu + nu
         self.variance = (sigma**2) + (nu**2)
-        
+
         assert_negative_support(sigma, 'sigma', 'ExGaussian')
         assert_negative_support(nu, 'nu', 'ExGaussian')
 
@@ -1292,6 +1292,7 @@ class ExGaussian(Continuous):
 class VonMises(Continuous):
     R"""
     Univariate VonMises log-likelihood.
+
     .. math::
         f(x \mid \mu, \kappa) =
             \frac{e^{\kappa\cos(x-\mu)}}{2\pi I_0(\kappa)}
@@ -1303,6 +1304,7 @@ class VonMises(Continuous):
     Mean      :math:`\mu`
     Variance  :math:`1-\frac{I_1(\kappa)}{I_0(\kappa)}`
     ========  ==========================================
+
     Parameters
     ----------
     mu : float
@@ -1320,7 +1322,7 @@ class VonMises(Continuous):
 
         if transform == 'circular':
             self.transform = transforms.Circular()
-            
+
         assert_negative_support(kappa, 'kappa', 'VonMises')
 
     def random(self, point=None, size=None, repeat=None):
@@ -1339,19 +1341,24 @@ class VonMises(Continuous):
 class SkewNormal(Continuous):
     R"""
     Univariate skew-normal log-likelihood.
+
     .. math::
        f(x \mid \mu, \tau, \alpha) =
        2 \Phi((x-\mu)\sqrt{\tau}\alpha) \phi(x,\mu,\tau)
+
     ========  ==========================================
     Support   :math:`x \in \mathbb{R}`
     Mean      :math:`\mu + \sigma \sqrt{\frac{2}{\pi}} \frac {\alpha }{{\sqrt {1+\alpha ^{2}}}}`
     Variance  :math:`\sigma^2 \left(  1-\frac{2\alpha^2}{(\alpha^2+1) \pi} \right)`
     ========  ==========================================
+
     Skew-normal distribution can be parameterized either in terms of precision
     or standard deviation. The link between the two parametrizations is
     given by
+
     .. math::
        \tau = \dfrac{1}{\sigma^2}
+
     Parameters
     ----------
     mu : float
@@ -1377,7 +1384,7 @@ class SkewNormal(Continuous):
         self.alpha = alpha
         self.mean = mu + self.sd * (2 / np.pi)**0.5 * alpha / (1 + alpha**2)**0.5
         self.variance = self.sd**2 * (1 - (2 * alpha**2) / ((1 + alpha**2) * np.pi))
-        
+
         assert_negative_support(tau, 'tau', 'SkewNormal')
         assert_negative_support(sd, 'sd', 'SkewNormal')
 

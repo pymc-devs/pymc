@@ -106,10 +106,12 @@ def log_post_trace(trace, model):
 
 def waic(trace, model=None, n_eff=False):
     """
-    Calculate the widely available information criterion, its standard error 
+    Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
-    Read more theory here - in a paper by some of the leading authorities on 
+    Read more theory here - in a paper by some of the leading authorities on
     Model Selection - dx.doi.org/10.1111/1467-9868.00353
+
+
     Parameters
     ----------
     trace : result of MCMC run
@@ -118,6 +120,8 @@ def waic(trace, model=None, n_eff=False):
     n_eff: bool
         if True the effective number parameters will be returned.
         Default False
+
+
     Returns
     -------
     waic: widely available information criterion
@@ -141,9 +145,9 @@ def waic(trace, model=None, n_eff=False):
     waic_se = np.sqrt(len(waic_i) * np.var(waic_i))
 
     waic = np.sum(waic_i)
-    
+
     p_waic = np.sum(vars_lpd)
-    
+
 
     if n_eff:
         return waic, waic_se, p_waic
@@ -156,6 +160,8 @@ def loo(trace, model=None, n_eff=False):
     Calculates leave-one-out (LOO) cross-validation for out of sample predictive
     model fit, following Vehtari et al. (2015). Cross-validation is computed using
     Pareto-smoothed importance sampling (PSIS).
+
+
     Parameters
     ----------
     trace : result of MCMC run
@@ -164,6 +170,8 @@ def loo(trace, model=None, n_eff=False):
     n_eff: bool
         if True the effective number parameters will be computed and returned.
         Default False
+
+
     Returns
     -------
     elpd_loo: log pointwise predictive density calculated via approximated LOO cross-validation
@@ -186,15 +194,15 @@ def loo(trace, model=None, n_eff=False):
         lambda x: pareto.fit(x, floc=0), 0, r_sorted[q80:])
 
     if np.any(pareto_fit[0] > 0.7):
-        warnings.warn("""Estimated shape parameter of Pareto distribution is 
+        warnings.warn("""Estimated shape parameter of Pareto distribution is
         greater than 0.7 for one or more samples.
         You should consider using a more robust model, this is
         because importance sampling is less likely to work well if the marginal
         posterior and LOO posterior are very different. This is more likely to
         happen with a non-robust model and highly influential observations.""")
- 
+
     elif np.any(pareto_fit[0] > 0.5):
-        warnings.warn("""Estimated shape parameter of Pareto distribution is 
+        warnings.warn("""Estimated shape parameter of Pareto distribution is
         greater than 0.5 for one or more samples. This may indicate
         that the variance of the Pareto smoothed importance sampling estimate
         is very large.""")
@@ -215,12 +223,12 @@ def loo(trace, model=None, n_eff=False):
     w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
 
     loo_lppd_i = -2 * np.log(np.sum(w * py, axis=0) / np.sum(w, axis=0))
-    
+
     loo_lppd_se = np.sqrt(len(loo_lppd_i) * np.var(loo_lppd_i))
-    
+
     loo_lppd = np.sum(loo_lppd_i)
-    
-    
+
+
     if n_eff:
         p_loo = np.sum(np.log(np.mean(py, axis=0))) - loo_lppd
         return loo_lppd, loo_lppd_se, p_loo
@@ -421,7 +429,7 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
 
 def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_transformed=False,
                alpha=0.05, batches=100):
-    """Create a data frame with summary statistics.
+    R"""Create a data frame with summary statistics.
 
     Parameters
     ----------
@@ -473,7 +481,6 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
 
     Examples
     --------
-
     >>> import pymc3 as pm
     >>> trace.mu.shape
     (1000, 2)
@@ -530,36 +537,30 @@ def _hpd_df(x, alpha):
 
 def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
             include_transformed=False, to_file=None):
-    """
+    R"""
     Generate a pretty-printed summary of the node.
 
-    :Parameters:
+    Parameters
+    ----------
     trace : Trace object
       Trace containing MCMC sample
-
     varnames : list of strings
       List of variables to summarize. Defaults to None, which results
       in all variables summarized.
-
     alpha : float
       The alpha level for generating posterior intervals. Defaults to
       0.05.
-
     start : int
       The starting index from which to summarize (each) chain. Defaults
       to zero.
-
     batches : int
       Batch size for calculating standard deviation for non-independent
       samples. Defaults to 100.
-
     roundto : int
       The number of digits to round posterior statistics.
-
     include_transformed : bool
       Flag for summarizing automatically transformed variables in addition to
       original variables (defaults to False).
-
     tofile : None or string
       File to write results to. If not given, print to stdout.
 
