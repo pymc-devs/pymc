@@ -38,6 +38,14 @@ class DictToArrayBijection(object):
     def __init__(self, ordering, dpoint):
         self.ordering = ordering
         self.dpt = dpoint
+        
+        # determine smallest float dtype that will fit all data
+        if all([x.dtyp == 'float16' for x in ordering.vmap]):
+            self.array_dtype = 'float16'
+        elif all([x.dtyp == 'float32' for x in ordering.vmap]):
+            self.array_dtype = 'float32'
+        else:
+            self.array_dtype = 'float64'
 
     def map(self, dpt):
         """
@@ -47,7 +55,7 @@ class DictToArrayBijection(object):
         ----------
         dpt : dict
         """
-        apt = np.empty(self.ordering.dimensions)
+        apt = np.empty(self.ordering.dimensions, dtype=self.array_dtype)
         for var, slc, _, _ in self.ordering.vmap:
             apt[slc] = dpt[var].ravel()
         return apt
