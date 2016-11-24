@@ -14,6 +14,7 @@ from .advi import ADVIFit, adagrad_optimizer, gen_random_state
 __all__ = ['advi_minibatch']
 
 
+
 def _value_error(cond, str):
     if not cond:
         raise ValueError(str)
