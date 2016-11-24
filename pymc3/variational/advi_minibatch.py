@@ -8,7 +8,7 @@ import tqdm
 
 import pymc3 as pm
 from pymc3.theanof import reshape_t, inputvars
-from .advi import check_discrete_rvs, ADVIFit, adagrad_optimizer, gen_random_state
+from .advi import ADVIFit, adagrad_optimizer, gen_random_state
 
 __all__ = ['advi_minibatch']
 
@@ -311,7 +311,9 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     model = pm.modelcontext(model)
     vars = inputvars(vars if vars is not None else model.vars)
     start = start if start is not None else model.test_point
-    check_discrete_rvs(vars)
+    if not pm.model.all_continuous(vars):
+        raise ValueError('Model should not include discrete RVs for ADVI.')
+
     _check_minibatches(minibatch_tensors, minibatches)
 
     # Prepare optimizer
