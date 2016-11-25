@@ -33,7 +33,6 @@ GLM
    notebooks/GLM-robust-with-outlier-detection.ipynb
    notebooks/GLM-model-selection.ipynb
    notebooks/GLM-rolling-regression.ipynb
-   notebooks/GLM-logistic.ipynb
    notebooks/GLM-hierarchical.ipynb
    notebooks/GLM-poisson-regression.ipynb
 
