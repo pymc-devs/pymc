@@ -1,3 +1,5 @@
+import threading
+
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -106,9 +108,10 @@ class Context(object):
     @classmethod
     def get_contexts(cls):
         if not hasattr(cls, "contexts"):
-            cls.contexts = []
+            cls.contexts = threading.local()
+            cls.contexts.stack = []
 
-        return cls.contexts
+        return cls.contexts.stack
 
     @classmethod
     def get_context(cls):
