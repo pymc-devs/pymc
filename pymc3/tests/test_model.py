@@ -112,3 +112,9 @@ class TestNested(unittest.TestCase):
         with pm.Model():
             DocstringModel(name='prefix')
             self.assertRaises(ValueError, DocstringModel, name='prefix')
+
+    def test_model_root(self):
+        with pm.Model() as model:
+            self.assertTrue(model is model.root)
+            with pm.Model() as sub:
+                self.assertTrue(model is sub.root)

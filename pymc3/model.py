@@ -361,6 +361,17 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             self.missing_values = treelist()
 
     @property
+    def root(self):
+        model = self
+        while not model.isroot:
+            model = model.parent
+        return model
+
+    @property
+    def isroot(self):
+        return self.parent is None
+
+    @property
     @memoize
     def bijection(self):
         vars = inputvars(self.cont_vars)
