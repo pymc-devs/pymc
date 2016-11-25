@@ -1,9 +1,10 @@
 from .checks import close_to
 import numpy as np
 from pymc3.tuning import starting
-from pymc3 import Model, Uniform, Normal, Beta, Binomial, find_MAP, Point
+from pymc3 import Model, Uniform, Normal, Beta, Binomial, find_MAP, Point, Poisson
 from .models import simple_model, non_normal, exponential_beta
-
+from theano.compile.ops import as_op
+import theano.tensor as tt
 
 def test_accuracy_normal():
     _, model, (mu, _) = simple_model()
@@ -51,6 +52,20 @@ def test_find_MAP_discrete():
 
     close_to(map_est2['p'], 0.695642178810167, tol)
     assert map_est2['ss'] == 14
+
+
+def test_find_MAP_no_gradient():
+    # as_op without gradient definition
+    @as_op(itypes=[tt.dscalar], otypes=[tt.dscalar])
+    def arbitrary_det(value):
+        return value
+
+    with Model() as model_deterministic:
+        a = Normal('a')
+        b = arbitrary_det(a)
+        c = Normal('obs', mu=b.astype('float64'),
+                   observed=np.array([1, 3, 5]))
+        find_MAP()
 
 
 def test_find_MAP():
