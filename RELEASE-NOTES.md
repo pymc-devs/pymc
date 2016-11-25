@@ -9,6 +9,8 @@ Since the beta release last year, the following improvements have been implement
 
 * Added `variational` submodule, which features the automatic differentiation variational inference (ADVI) fitting method. Also supports mini-batch ADVI for large data sets. Much of this work was due to the efforts of Taku Yoshioka, and important guidance was provided by the Stan team (specifically Alp Kucukelbir and Daniel Lee).
 
+* Improved initialization for NUTS (using ADVI). Simply call `pymc3.sample(n_draws)` on any continuous model.
+
 * Added model checking utility functions, including leave-one-out (LOO) cross-validation, BPIC, WAIC, and DIC.
 
 * Implemented posterior predictive sampling (`sample_ppc`).
