@@ -23,4 +23,4 @@ _build
 mcmc.sqlite
 
 # Docker development
-#notebooks/
+# notebooks/
