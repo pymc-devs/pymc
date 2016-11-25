@@ -2,8 +2,7 @@ from .checks import close_to
 import numpy as np
 from pymc3.tuning import starting
 from pymc3 import Model, Uniform, Normal, Beta, Binomial, find_MAP, Point
-from .models import simple_model, non_normal, exponential_beta
-
+from .models import simple_model, non_normal, exponential_beta, simple_arbitrary_det
 
 def test_accuracy_normal():
     _, model, (mu, _) = simple_model()
@@ -51,6 +50,12 @@ def test_find_MAP_discrete():
 
     close_to(map_est2['p'], 0.695642178810167, tol)
     assert map_est2['ss'] == 14
+
+
+def test_find_MAP_no_gradient():
+    _, model = simple_arbitrary_det()
+    with model:
+        find_MAP()
 
 
 def test_find_MAP():

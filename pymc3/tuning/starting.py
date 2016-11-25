@@ -17,8 +17,8 @@ from inspect import getargspec
 __all__ = ['find_MAP']
 
 
-def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
-             model=None, *args, **kwargs):
+def find_MAP(start=None, vars=None, fmin=None,
+             return_raw=False,model=None, *args, **kwargs):
     """
     Sets state to the local maximum a posteriori point given a model.
     Current default of fmin_Hessian does not deal well with optimizing close
@@ -55,8 +55,15 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
 
     disc_vars = list(typefilter(vars, discrete_types))
 
-    if disc_vars:
-        pm._log.warning("Warning: vars contains discrete variables. MAP " +
+    try:
+        model.fastdlogp(vars)
+        gradient_avail = True
+    except AttributeError:
+        gradient_avail = False
+
+    if disc_vars or not gradient_avail :
+        pm._log.warning("Warning: gradient not available." +
+                        "(E.g. vars contains discrete variables). MAP " +
                         "estimates may not be accurate for the default " +
                         "parameters. Defaulting to non-gradient minimization " +
                         "fmin_powell.")
@@ -74,19 +81,21 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
     bij = DictToArrayBijection(ArrayOrdering(vars), start)
 
     logp = bij.mapf(model.fastlogp)
-    dlogp = bij.mapf(model.fastdlogp(vars))
-
     def logp_o(point):
         return nan_to_high(-logp(point))
 
-    def grad_logp_o(point):
-        return nan_to_num(-dlogp(point))
-
     # Check to see if minimization function actually uses the gradient
     if 'fprime' in getargspec(fmin).args:
+        dlogp = bij.mapf(model.fastdlogp(vars))
+        def grad_logp_o(point):
+            return nan_to_num(-dlogp(point))
+
         r = fmin(logp_o, bij.map(
             start), fprime=grad_logp_o, *args, **kwargs)
+        compute_gradient = True
     else:
+        compute_gradient = False
+
         # Check to see if minimization function uses a starting value
         if 'x0' in getargspec(fmin).args:
             r = fmin(logp_o, bij.map(start), *args, **kwargs)
@@ -100,17 +109,24 @@ def find_MAP(start=None, vars=None, fmin=None, return_raw=False,
 
     mx = bij.rmap(mx0)
 
-    if (not allfinite(mx0) or
-            not allfinite(model.logp(mx)) or
-            not allfinite(model.dlogp()(mx))):
+    allfinite_mx0 = allfinite(mx0)
+    allfinite_logp = allfinite(model.logp(mx))
+    if compute_gradient:
+        allfinite_dlogp = allfinite(model.dlogp()(mx))
+    else:
+        allfinite_dlogp = True
+
+    if (not allfinite_mx0 or
+        not allfinite_logp or
+        not allfinite_dlogp):
 
         messages = []
         for var in vars:
-
             vals = {
                 "value": mx[var.name],
-                "logp": var.logp(mx),
-                "dlogp": var.dlogp()(mx)}
+                "logp": var.logp(mx)}
+            if compute_gradient:
+                vals["dlogp"] = var.dlogp()(mx)
 
             def message(name, values):
                 if np.size(values) < 10:
