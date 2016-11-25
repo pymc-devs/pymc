@@ -9,7 +9,6 @@ Howto
 
 .. toctree::
    notebooks/posterior_predictive.ipynb
-   notebooks/NUTS_scaling_using_ADVI.ipynb
    notebooks/howto_debugging.ipynb
    notebooks/LKJ.ipynb
 
