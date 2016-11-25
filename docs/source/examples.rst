@@ -19,7 +19,7 @@ Applied
 .. toctree::
    notebooks/BEST.ipynb
    notebooks/stochastic_volatility.ipynb
-   notebooks/pmf-pymc.ipynb
+   notebooks/probabilistic-matrix-factorization.ipynb
    notebooks/rugby_analytics.ipynb
    notebooks/survival_analysis.ipynb
    notebooks/GP-smoothing.ipynb
