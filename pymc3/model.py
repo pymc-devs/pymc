@@ -335,12 +335,11 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         # resolves the parent instance
         instance = object.__new__(cls)
         if kwargs.get('model') is not None:
-            instance.parent = kwargs.get('model')
+            instance._parent = kwargs.get('model')
         elif cls.get_contexts():
-            instance.parent = cls.get_contexts()[-1]
+            instance._parent = cls.get_contexts()[-1]
         else:
-            instance.parent = None
-        instance.model = instance
+            instance._parent = None
         return instance
 
     def __init__(self, name='', model=None):
@@ -359,6 +358,14 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
             self.deterministics = treelist()
             self.potentials = treelist()
             self.missing_values = treelist()
+
+    @property
+    def model(self):
+        return self
+
+    @property
+    def parent(self):
+        return self._parent
 
     @property
     def root(self):
