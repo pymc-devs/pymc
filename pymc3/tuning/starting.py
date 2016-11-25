@@ -110,7 +110,7 @@ def find_MAP(start=None, vars=None, fmin=None,
     mx = bij.rmap(mx0)
 
     allfinite_mx0 = allfinite(mx0)
-    allfinite_logp = (model.logp(mx))
+    allfinite_logp = allfinite(model.logp(mx))
     if compute_gradient:
         allfinite_dlogp = allfinite(model.dlogp()(mx))
     else:
