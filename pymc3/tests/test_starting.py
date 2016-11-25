@@ -2,7 +2,7 @@ from .checks import close_to
 import numpy as np
 from pymc3.tuning import starting
 from pymc3 import Model, Uniform, Normal, Beta, Binomial, find_MAP, Point
-from .models import simple_model, non_normal, exponential_beta
+from .models import simple_model, non_normal, exponential_beta, simple_arbitrary_det
 
 def test_accuracy_normal():
     _, model, (mu, _) = simple_model()
