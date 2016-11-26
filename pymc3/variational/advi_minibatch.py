@@ -94,15 +94,16 @@ def _join_global_RVs(global_RVs, global_order):
         inarray_global = joined_global.type('inarray_global')
         inarray_global.tag.test_value = joined_global.tag.test_value
 
-        get_var = {var.name: var for var in global_RVs}
-        replace_global = {
-            get_var[var]: reshape_t(inarray_global[slc], shp).astype(dtyp)
-            for var, slc, shp, dtyp in global_order.vmap
-        }
+        # Replace RVs with reshaped subvectors of the joined vector
+        # The order of global_order is the same with that of global_RVs
+        subvecs = [reshape_t(inarray_global[slc], shp).astype(dtyp)
+                   for _, slc, shp, dtyp in global_order.vmap]
+        replace_global = {v: subvec for v, subvec in zip(global_RVs, subvecs)}
 
+        # Weight vector
         cs = [c for _, c in global_RVs.items()]
-        shps = [shp for _, _, shp, _ in global_order.vmap]
-        c_g = [c * tt.ones(np.prod(shp)) for c, shp in zip(cs, shps)]
+        oness = [tt.ones(v.ravel().tag.test_value.shape) for v in global_RVs]
+        c_g = tt.concatenate([c * ones for c, ones in zip(cs, oness)])
 
     return inarray_global, uw_global, replace_global, c_g
 
@@ -128,9 +129,15 @@ def _join_local_RVs(local_RVs, local_order):
             for var, slc, shp, dtyp in local_order.vmap
         }
 
+        # Weight vector
         cs = [c for _, (_, c) in local_RVs.items()]
-        shps = [shp for _, _, shp, _ in local_order.vmap]
-        c_l = [c * tt.ones(np.prod(shp)) for c, shp in zip(cs, shps)]
+        oness = [tt.ones(v.ravel().tag.test_value.shape) for v in local_RVs]
+        c_l = tt.concatenate([c * ones for c, ones in zip(cs, oness)])
+
+        # shps = [shp for _, _, shp, _ in local_order.vmap]
+        # c_l = tt.concatenate(
+        #     [c * tt.ones(np.prod(shp)) for c, shp in zip(cs, shps)]
+        # )
 
     return inarray_local, uw_local, replace_local, c_l
 
@@ -368,6 +375,14 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     parameters of the global variables, :math:`\gamma`, because these are
     automatically created and updated in this function.
 
+    The following is a list of example notebooks using advi_minibatch:
+
+    - docs/source/notebooks/GLM-hierarchical-advi-minibatch.ipynb
+    - docs/source/notebooks/bayesian_neural_network_advi.ipynb
+    - docs/source/notebooks/convolutional_vae_keras_advi.ipynb
+    - docs/source/notebooks/gaussian-mixture-model-advi.ipynb
+    - docs/source/notebooks/lda-advi-aevb.ipynb
+
     Parameters
     ----------
     vars : object
@@ -475,15 +490,6 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         assert(len(grvs) == len(global_RVs))
 
     # ELBO wrt variational parameters
-    # inarray_g, uw_g, replace_g, c_g = _join_global_RVs(global_RVs, global_order)
-    # inarray_l, uw_l, replace_l, c_l = _join_local_RVs(local_RVs, local_order)
-    # logpt = _make_logpt(global_RVs, local_RVs, observed_RVs, model.potentials)
-    # replace = replace_g
-    # replace.update(replace_l)
-    # logp = theano.clone(logpt, replace, strict=False)
-    # elbo = _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l,
-    #                n_mcsamples, random_seed)
-    # del logpt
     elbo, uw_l, uw_g = _make_elbo_t(observed_RVs, global_RVs, local_RVs, 
                                     model.potentials, n_mcsamples, random_seed)
 
