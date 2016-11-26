@@ -195,9 +195,7 @@ class treelist(list):
     to parent list instance.
     Extending treelist you will also extend it's parent
     """
-    def __init__(self, *iterable, parent=None):
-        if len(iterable) > 1:
-            raise TypeError('Cannot init more than one positional argument')
+    def __init__(self, iterable=(), parent=None):
         super(treelist, self).__init__(iterable)
         assert isinstance(parent, list) or parent is None
         self.parent = parent
@@ -233,9 +231,7 @@ class treedict(dict):
     to parent dict instance.
     Extending treedict you will also extend it's parent
     """
-    def __init__(self, *iterable, parent=None, **kwargs):
-        if len(iterable) > 1:
-            raise TypeError('Cannot init more than one positional argument')
+    def __init__(self, iterable=(), parent=None, **kwargs):
         super(treedict, self).__init__(iterable, **kwargs)
         assert isinstance(parent, dict) or parent is None
         self.parent = parent
