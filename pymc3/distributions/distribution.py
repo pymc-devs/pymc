@@ -71,6 +71,9 @@ class Distribution(object):
         if isinstance(val, tt.TensorVariable):
             return val.tag.test_value
 
+        if isinstance(val, tt.TensorConstant):
+            return val.value
+
         return val
 
 
