@@ -9,7 +9,6 @@ from .memoize import memoize
 from .theanof import gradient, hessian, inputvars
 from .vartypes import typefilter, discrete_types, continuous_types
 from .blocking import DictToArrayBijection, ArrayOrdering
-from functools import wraps
 
 __all__ = [
     'Model', 'Factor', 'compilef', 'fn', 'fastfn', 'modelcontext',
@@ -181,12 +180,15 @@ class InitContextMeta(type):
 
 def withparent(meth):
     """Helper wrapper that passes calls to parent's instance"""
-    @wraps(meth)
     def wrapped(self, *args, **kwargs):
         res = meth(self, *args, **kwargs)
         if getattr(self, 'parent', None) is not None:
             getattr(self.parent, meth.__name__)(*args, **kwargs)
         return res
+    # Unfortunately functools wrapper fails
+    # when decorating built-in methods so I
+    # need to fix that improper behaviour
+    wrapped.__name__ = meth.__name__
     return wrapped
 
 
@@ -201,6 +203,7 @@ class treelist(list):
         self.parent = parent
         if self.parent is not None:
             self.parent.extend(self)
+    # typechecking here works bad
     append = withparent(list.append)
     __iadd__ = withparent(list.__iadd__)
     extend = withparent(list.extend)
