@@ -186,7 +186,7 @@ def withparent(meth):
             getattr(self.parent, meth.__name__)(*args, **kwargs)
         return res
     # Unfortunately functools wrapper fails
-    # when decorating built-in methods so I
+    # when decorating built-in methods so we
     # need to fix that improper behaviour
     wrapped.__name__ = meth.__name__
     return wrapped
@@ -195,7 +195,7 @@ def withparent(meth):
 class treelist(list):
     """A list that passes mutable extending operations used in Model
     to parent list instance.
-    Extending treelist you will also extend it's parent
+    Extending treelist you will also extend its parent
     """
     def __init__(self, iterable=(), parent=None):
         super(treelist, self).__init__(iterable)
@@ -219,8 +219,9 @@ class treelist(list):
             return list.__contains__(self, item)
 
     def __setitem__(self, key, value):
-        raise NotImplementedError('Not able to determine '
-                                  'appropriate logic for method')
+        raise NotImplementedError('Method is removed as we are not'
+                                  ' able to determine '
+                                  'appropriate logic for it')
 
     def __imul__(self, other):
         t0 = len(self)
@@ -232,7 +233,7 @@ class treelist(list):
 class treedict(dict):
     """A dict that passes mutable extending operations used in Model
     to parent dict instance.
-    Extending treedict you will also extend it's parent
+    Extending treedict you will also extend its parent
     """
     def __init__(self, iterable=(), parent=None, **kwargs):
         super(treedict, self).__init__(iterable, **kwargs)
@@ -240,6 +241,7 @@ class treedict(dict):
         self.parent = parent
         if self.parent is not None:
             self.parent.update(self)
+    # typechecking here works bad
     __setitem__ = withparent(dict.__setitem__)
     update = withparent(dict.update)
 
