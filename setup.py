@@ -5,7 +5,7 @@ import sys
 
 DISTNAME = 'pymc3'
 DESCRIPTION = "PyMC3"
-LONG_DESCRIPTION    = """Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC), is an increasingly relevant approach to statistical estimation. However, few statistical software packages implement MCMC samplers, and they are non-trivial to code by hand. ``pymc3`` is a python package that implements the Metropolis-Hastings algorithm as a python class, and is extremely flexible and applicable to a large suite of problems. ``pymc3`` includes methods for summarizing output, plotting, goodness-of-fit and convergence diagnostics."""
+LONG_DESCRIPTION = """Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC), is an increasingly relevant approach to statistical estimation. However, few statistical software packages implement MCMC samplers, and they are non-trivial to code by hand. ``pymc3`` is a python package that implements the Metropolis-Hastings algorithm as a python class, and is extremely flexible and applicable to a large suite of problems. ``pymc3`` includes methods for summarizing output, plotting, goodness-of-fit and convergence diagnostics."""
 MAINTAINER = 'Thomas Wiecki'
 MAINTAINER_EMAIL = 'thomas.wiecki@gmail.com'
 AUTHOR = 'John Salvatier and Christopher Fonnesbeck'
@@ -50,7 +50,8 @@ if __name__ == "__main__":
           packages=['pymc3', 'pymc3.distributions',
                     'pymc3.step_methods', 'pymc3.tuning',
                     'pymc3.tests', 'pymc3.glm', 'pymc3.examples',
-                    'pymc3.backends', 'pymc3.variational', 'docs', '.'],
+                    'pymc3.models', 'pymc3.backends',
+                    'pymc3.variational', 'docs', '.'],
           classifiers=classifiers,
           install_requires=install_reqs,
           tests_require=test_reqs,
