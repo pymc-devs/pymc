@@ -7,6 +7,7 @@ import sys
 import warnings
 from .model import modelcontext
 
+from scipy.misc import logsumexp
 from scipy.stats.distributions import pareto
 
 import pymc3 as pm
@@ -101,7 +102,7 @@ def log_post_trace(trace, model):
     '''
     Calculate the elementwise log-posterior for the sampled trace.
     '''
-    return np.hstack([obs.logp_elemwise(pt) for pt in trace] for obs in model.observed_RVs)
+    return np.vstack([obs.logp_elemwise(pt) for obs in model.observed_RVs] for pt in trace)
 
 
 def waic(trace, model=None, n_eff=False):
@@ -132,7 +133,7 @@ def waic(trace, model=None, n_eff=False):
 
     log_py = log_post_trace(trace, model)
 
-    lppd_i = np.log(np.mean(np.exp(log_py), axis=0))
+    lppd_i = logsumexp(log_py, axis = 0, b = 1.0 / log_py.shape[0])
 
     vars_lpd = np.var(log_py, axis=0)
     if np.any(vars_lpd > 0.4):
@@ -183,8 +184,7 @@ def loo(trace, model=None, n_eff=False):
     log_py = log_post_trace(trace, model)
 
     # Importance ratios
-    py = np.exp(log_py)
-    r = 1. / py
+    r = np.exp(-log_py)
     r_sorted = np.sort(r, axis=0)
 
     # Extract largest 20% of importance ratios and fit generalized Pareto to each
@@ -222,7 +222,7 @@ def loo(trace, model=None, n_eff=False):
     # Truncate weights to guarantee finite variance
     w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
 
-    loo_lppd_i = -2 * np.log(np.sum(w * py, axis=0) / np.sum(w, axis=0))
+    loo_lppd_i = -2.0 * logsumexp(log_py, axis = 0, b = w / np.sum(w, axis = 0))
 
     loo_lppd_se = np.sqrt(len(loo_lppd_i) * np.var(loo_lppd_i))
 
