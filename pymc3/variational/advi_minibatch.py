@@ -134,11 +134,6 @@ def _join_local_RVs(local_RVs, local_order):
         oness = [tt.ones(v.ravel().tag.test_value.shape) for v in local_RVs]
         c_l = tt.concatenate([c * ones for c, ones in zip(cs, oness)])
 
-        # shps = [shp for _, _, shp, _ in local_order.vmap]
-        # c_l = tt.concatenate(
-        #     [c * tt.ones(np.prod(shp)) for c, shp in zip(cs, shps)]
-        # )
-
     return inarray_local, uw_local, replace_local, c_l
 
 
