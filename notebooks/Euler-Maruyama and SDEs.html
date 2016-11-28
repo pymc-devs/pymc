@@ -445,8 +445,8 @@ the posterior distribution, in the following steps:</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 1000/1000 [00:04&lt;00:00, 224.35it/s]
-100%|██████████| 2000/2000 [00:07&lt;00:00, 263.12it/s]
+100%|██████████| 1000/1000 [00:10&lt;00:00, 93.65it/s]
+100%|██████████| 2000/2000 [00:11&lt;00:00, 178.16it/s]
 </pre></div></div>
 </div>
 <p>Next, we plot some basic statistics on the samples from the posterior,</p>
@@ -504,7 +504,7 @@ data</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 2000/2000 [00:03&lt;00:00, 537.07it/s]
+100%|██████████| 2000/2000 [00:03&lt;00:00, 504.18it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
@@ -513,7 +513,7 @@ data</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x116577a20&gt;
+<span></span>&lt;matplotlib.legend.Legend at 0x117dac080&gt;
 </pre></div>
 </div>
 </div>
@@ -541,7 +541,7 @@ the PPC.</li>
 \end{align}</div><p>with noisy observation <span class="math">\(z(t) = m x + (1 - m) y + N(0, 0.05)\)</span>.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -566,11 +566,11 @@ the PPC.</li>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[11]:
+<span></span>Out[9]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x116e9db00&gt;
+<span></span>&lt;matplotlib.legend.Legend at 0x117facb00&gt;
 </pre></div>
 </div>
 </div>
@@ -587,7 +587,7 @@ as parameters <span class="math">\(\tau\)</span>, <span class="math">\(a\)</span
 coefficients:</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -605,9 +605,9 @@ prediction of the state at step <span class="math">\(i+1\)</span> based on the s
 <span class="math">\(i\)</span>.</p>
 <p>We can now write our statistical model as before, with uninformative
 priors on <span class="math">\(\tau\)</span>, <span class="math">\(a\)</span> and <span class="math">\(m\)</span>:</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -622,21 +622,11 @@ priors on <span class="math">\(\tau\)</span>, <span class="math">\(a\)</span> an
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Applied interval-transform to τh and added transformed τh_interval_ to model.
-Applied interval-transform to ah and added transformed ah_interval_ to model.
-Applied interval-transform to mh and added transformed mh_interval_ to model.
-</pre></div></div>
-</div>
 <p>As with the linear SDE, we 1) find a MAP estimate, 2) warm up and 3)
 sample from the probability mass:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -660,15 +650,15 @@ sample from the probability mass:</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 100/100 [00:05&lt;00:00, 17.60it/s]
-100%|██████████| 2000/2000 [02:04&lt;00:00, 16.01it/s]
+100%|██████████| 100/100 [00:17&lt;00:00,  6.02it/s]
+100%|██████████| 2000/2000 [01:38&lt;00:00, 20.29it/s]
 </pre></div></div>
 </div>
 <p>Again, the result is a set of samples from the posterior, including our
 parameters of interest but also the hidden states</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -695,7 +685,7 @@ parameters of interest but also the hidden states</p>
 likely given the fit model</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [19]:
+<span></span>In [14]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -715,16 +705,16 @@ likely given the fit model</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 2000/2000 [00:10&lt;00:00, 197.07it/s]
+100%|██████████| 2000/2000 [00:09&lt;00:00, 210.01it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[19]:
+<span></span>Out[14]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x1242e3eb8&gt;
+<span></span>&lt;matplotlib.legend.Legend at 0x122c6fa90&gt;
 </pre></div>
 </div>
 </div>

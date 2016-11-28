@@ -365,7 +365,7 @@ components.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.collections.PathCollection at 0x7f77b9403dd8&gt;
+<span></span>&lt;matplotlib.collections.PathCollection at 0x111282080&gt;
 </pre></div>
 </div>
 </div>
@@ -434,13 +434,24 @@ representation of the log-likelihood.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Optimization terminated successfully.
+         Current function value: 347.140024
+         Iterations: 2
+         Function evaluations: 3
+         Gradient evaluations: 3
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
-100%|██████████| 1000/1000 [00:00&lt;00:00, 1250.60it/s]
+100%|██████████| 1000/1000 [00:00&lt;00:00, 1386.45it/s]
 </pre></div></div>
 </div>
 <p>Check posterior of component means and weights. We can see that the MCMC
@@ -497,7 +508,7 @@ clusters.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7f7790b0cbe0&gt;
+<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x118fffc88&gt;
 </pre></div>
 </div>
 </div>
@@ -526,24 +537,22 @@ clusters.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Average ELBO = -324.52: 100%|██████████| 1000/1000 [00:00&lt;00:00, 2288.80it/s]
+Finished [100%]: Average ELBO = -324.36
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -341.82
-Iteration 100 [10%]: Average ELBO = -352.28
-Iteration 200 [20%]: Average ELBO = -325.44
-Iteration 300 [30%]: Average ELBO = -324.36
-Iteration 400 [40%]: Average ELBO = -324.09
-Iteration 500 [50%]: Average ELBO = -324.46
-Iteration 600 [60%]: Average ELBO = -324.71
-Iteration 700 [70%]: Average ELBO = -324.57
-Iteration 800 [80%]: Average ELBO = -324.1
-Iteration 900 [90%]: Average ELBO = -324.52
-Finished [100%]: Average ELBO = -324.61
-CPU times: user 3.82 s, sys: 520 ms, total: 4.34 s
-Wall time: 10.2 s
+CPU times: user 4.1 s, sys: 430 ms, total: 4.53 s
+Wall time: 10.4 s
 </pre></div></div>
 </div>
 <p>The function returns three variables. &#8216;means&#8217; and &#8216;sds&#8217; are the mean and
@@ -628,7 +637,7 @@ the algorithm.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x7f778cba0ba8&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x11a19c7b8&gt;]
 </pre></div>
 </div>
 </div>
@@ -699,12 +708,24 @@ create 100,000 samples from the same mixture distribution.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Optimization terminated successfully.
+         Current function value: 365347.058264
+         Iterations: 2
+         Function evaluations: 3
+         Gradient evaluations: 3
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 1000/1000 [00:48&lt;00:00, 21.15it/s]
+100%|██████████| 1000/1000 [01:47&lt;00:00,  9.64it/s]
 </pre></div></div>
 </div>
 <p>Posterior samples are concentrated on the true means, so looks like
@@ -814,7 +835,8 @@ and it&#8217;s not a fair comparison.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
+Average ELBO = -323,469.35: 100%|██████████| 1000/1000 [00:00&lt;00:00, 1263.06it/s]
+Finished minibatch ADVI: ELBO = -313,792.75
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
@@ -822,19 +844,8 @@ WARNING (theano.tensor.blas): We did not found a dynamic library into the librar
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -681445.73
-Iteration 100 [10%]: Average ELBO = -380047.68
-Iteration 200 [20%]: Average ELBO = -328751.45
-Iteration 300 [30%]: Average ELBO = -324693.4
-Iteration 400 [40%]: Average ELBO = -322212.06
-Iteration 500 [50%]: Average ELBO = -323102.09
-Iteration 600 [60%]: Average ELBO = -323953.57
-Iteration 700 [70%]: Average ELBO = -324256.33
-Iteration 800 [80%]: Average ELBO = -324780.82
-Iteration 900 [90%]: Average ELBO = -323471.28
-Finished [100%]: ELBO = -313722.31
-CPU times: user 11.4 s, sys: 1.27 s, total: 12.6 s
-Wall time: 26.7 s
+CPU times: user 11.9 s, sys: 649 ms, total: 12.6 s
+Wall time: 22.5 s
 </pre></div></div>
 </div>
 <p>The result is almost the same.</p>

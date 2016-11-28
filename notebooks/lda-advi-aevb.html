@@ -427,9 +427,9 @@ We set the number of words in the vocabulary to 1000.</p>
 <div class="container">
 <div class="highlight"><pre>
 Loading dataset...
-done in 1.387s.
+done in 1.923s.
 Extracting tf features for LDA...
-done in 2.152s.
+done in 2.227s.
 </pre></div></div>
 </div>
 <p>Each document is represented by 1000-dimensional term-frequency vector.
@@ -482,8 +482,8 @@ term-frequency matrix is zero.</p>
 <div class="highlight"><pre>
 Number of docs for training = 10000
 Number of docs for test = 1314
-Number of tokens in training set = 480287
-Sparsity = 0.0253837
+Number of tokens in training set = 480263
+Sparsity = 0.0253936
 </pre></div></div>
 </div>
 </div>
@@ -763,21 +763,19 @@ function for ADVI.</p>
 <div class="nboutput container">
 <div class="container">
 </div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Average ELBO = -3,237,774.14: 100%|██████████| 3000/3000 [00:46&lt;00:00, 64.78it/s]
+Finished minibatch ADVI: ELBO = -3,221,686.06
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -3747623.03
-Iteration 300 [10%]: Average ELBO = -3540248.71
-Iteration 600 [20%]: Average ELBO = -3452421.13
-Iteration 900 [30%]: Average ELBO = -3389025.84
-Iteration 1200 [40%]: Average ELBO = -3325097.22
-Iteration 1500 [50%]: Average ELBO = -3270771.76
-Iteration 1800 [60%]: Average ELBO = -3259855.19
-Iteration 2100 [70%]: Average ELBO = -3252920.66
-Iteration 2400 [80%]: Average ELBO = -3246246.51
-Iteration 2700 [90%]: Average ELBO = -3233193.11
-Finished [100%]: ELBO = -3216035.4
-CPU times: user 1min 58s, sys: 3min 16s, total: 5min 15s
-Wall time: 1min 35s
+CPU times: user 1min 12s, sys: 3.13 s, total: 1min 15s
+Wall time: 2min 26s
 </pre></div></div>
 </div>
 <div class="nboutput container">
@@ -786,7 +784,7 @@ Wall time: 1min 35s
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x7feb85501588&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x125ed7978&gt;]
 </pre></div>
 </div>
 </div>
@@ -794,7 +792,7 @@ Wall time: 1min 35s
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_lda-advi-aevb_26_2.png" src="../_images/notebooks_lda-advi-aevb_26_2.png" />
+<img alt="../_images/notebooks_lda-advi-aevb_26_3.png" src="../_images/notebooks_lda-advi-aevb_26_3.png" />
 </div>
 </div>
 <p>We can see ELBO increases as optimization proceeds. The trace of ELBO
@@ -834,7 +832,7 @@ the 10 topics.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 100/100 [00:00&lt;00:00, 296.67it/s]
+100%|██████████| 100/100 [00:00&lt;00:00, 483.07it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
@@ -842,16 +840,16 @@ the 10 topics.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Topic #0: don think know ve just want like really sure ll
-Topic #1: people said world war armenian israel government president armenians years
-Topic #2: people state law gun case use used control right make
-Topic #3: edu space information com mail university list send research 1993
-Topic #4: year 10 00 team 20 game 15 12 30 50
-Topic #5: good like just time got better car didn did little
-Topic #6: god does believe people jesus true say life question way
-Topic #7: thanks drive card use scsi does memory problem work video
-Topic #8: key use chip encryption government keys clipper used security bit
-Topic #9: windows file use program window using version files code set
+Topic #0: does question point believe true case think read evidence way
+Topic #1: key government use law public state used encryption president people
+Topic #2: space edu 10 00 20 15 university 12 11 30
+Topic #3: year team game play win games players season won second
+Topic #4: don know just think people like going ll did let
+Topic #5: thanks drive card mail new does price use used need
+Topic #6: years said people gun armenian 000 went ago armenians day
+Topic #7: windows use using file software program window version available data
+Topic #8: god people jesus life world bible israel man christian church
+Topic #9: good like ve just time better little car problem long
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
@@ -889,18 +887,18 @@ words in the topics are qualitatively similar.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-CPU times: user 12.5 s, sys: 70 ms, total: 12.6 s
-Wall time: 12.5 s
-Topic #0: government people law mr president gun state states public rights
-Topic #1: drive card scsi bit disk use mac hard memory does
-Topic #2: people armenian said armenians turkish did war killed saw russian
-Topic #3: year just good time team game car years like think
-Topic #4: 10 00 25 15 20 12 11 14 16 17
-Topic #5: windows window program dos file use version display ms application
-Topic #6: edu space com file information mail data available send ftp
-Topic #7: ax max g9v pl b8f a86 34u 145 1t 75u
-Topic #8: god people jesus believe does think say life don true
-Topic #9: don like know just think ve does use want good
+CPU times: user 13 s, sys: 102 ms, total: 13.1 s
+Wall time: 13.1 s
+Topic #0: people gun armenian war armenians turkish states said state 000
+Topic #1: government people law mr president use don think right public
+Topic #2: space science nasa program data research center output earth launch
+Topic #3: key car chip used keys bit bike clipper use number
+Topic #4: edu file com mail available ftp image files information list
+Topic #5: god people does jesus think believe don say just know
+Topic #6: windows drive use thanks does card know problem like db
+Topic #7: ax max g9v pl b8f a86 cx 34u 145 1t
+Topic #8: just don like know think good time ve people year
+Topic #9: 00 10 25 15 20 12 11 16 14 17
 </pre></div></div>
 </div>
 </div>
@@ -1045,106 +1043,106 @@ probabilities.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 100/100 [00:01&lt;00:00, 57.44it/s]
-100%|██████████| 100/100 [00:01&lt;00:00, 56.27it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 44.11it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.48it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 41.60it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 41.95it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 44.60it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 39.53it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 35.36it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 64.72it/s]
+100%|██████████| 100/100 [2:31:10&lt;00:00, 90.71s/it]
+100%|██████████| 100/100 [00:02&lt;00:00, 36.94it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 25.35it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 25.95it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 44.83it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 49.86it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 37.12it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.07it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 40.57it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 40.53it/s]
+100%|██████████| 100/100 [00:04&lt;00:00, 22.69it/s]
+100%|██████████| 100/100 [00:05&lt;00:00, 12.18it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 43.22it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 47.62it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 35.62it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 36.89it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 31.43it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 45.55it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 14.44it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 39.82it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 30.07it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 48.08it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 40.44it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 43.96it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 38.58it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 43.66it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 42.38it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 51.91it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 47.20it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 38.80it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 44.37it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 43.72it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.10it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 37.62it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 43.47it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 39.60it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 32.30it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 27.63it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 33.30it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 33.82it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 34.26it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 18.41it/s]
+100%|██████████| 100/100 [00:04&lt;00:00, 24.33it/s]
+100%|██████████| 100/100 [00:04&lt;00:00, 14.50it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 22.96it/s]
+100%|██████████| 100/100 [00:03&lt;00:00, 31.56it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 35.07it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 44.21it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 46.64it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 38.47it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 37.22it/s]
 100%|██████████| 100/100 [00:02&lt;00:00, 34.88it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.77it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.39it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.63it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 35.19it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 43.64it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 46.20it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 40.46it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 41.38it/s]
-100%|██████████| 100/100 [00:03&lt;00:00, 31.07it/s]
-100%|██████████| 100/100 [00:03&lt;00:00, 26.47it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 40.46it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 43.50it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 35.46it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.88it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 39.95it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.40it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.92it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 35.45it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 37.71it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 26.75it/s]
-100%|██████████| 100/100 [00:03&lt;00:00, 29.48it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.79it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 36.83it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.89it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.45it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 37.27it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 42.19it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.24it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.50it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 37.49it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.75it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.94it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.05it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 35.26it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.38it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 41.06it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.68it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.12it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 37.51it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.95it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.94it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 35.11it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 41.57it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 44.58it/s]
-100%|██████████| 100/100 [00:01&lt;00:00, 54.76it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 35.29it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 41.83it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.99it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.99it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 41.38it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 35.52it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 40.28it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 37.57it/s]
-100%|██████████| 100/100 [00:01&lt;00:00, 50.80it/s]
-100%|██████████| 100/100 [00:01&lt;00:00, 52.25it/s]
-100%|██████████| 100/100 [00:01&lt;00:00, 55.96it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 36.15it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.99it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.33it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 40.34it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 37.11it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 41.08it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.24it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 38.11it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 35.06it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.47it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 37.35it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 29.76it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.66it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 38.16it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 39.21it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 46.72it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.91it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 36.46it/s]
-100%|██████████| 100/100 [00:03&lt;00:00, 28.80it/s]
-100%|██████████| 100/100 [00:03&lt;00:00, 28.68it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 34.57it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 39.27it/s]
-100%|██████████| 100/100 [00:03&lt;00:00, 32.83it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 38.76it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 32.88it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 40.43it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 40.20it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 37.56it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 41.12it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 37.95it/s]
-100%|██████████| 100/100 [00:03&lt;00:00, 33.10it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.42it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.11it/s]
-100%|██████████| 100/100 [00:02&lt;00:00, 33.52it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 38.55it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 48.24it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 49.89it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 44.14it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 39.71it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 38.94it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 40.94it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 45.95it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 52.57it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 51.72it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 51.51it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 43.85it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 51.67it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 49.06it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 47.38it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 50.67it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 53.39it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 48.44it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 50.47it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 52.42it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 51.73it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 50.28it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 48.51it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 48.16it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 51.25it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 51.37it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 50.50it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 52.44it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 52.52it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 51.08it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 50.48it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 50.36it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 51.66it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 41.82it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 50.62it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 50.90it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 52.36it/s]
+100%|██████████| 100/100 [00:02&lt;00:00, 51.39it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 51.64it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 51.21it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 53.22it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 51.59it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 52.44it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 50.35it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 50.31it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 50.05it/s]
+100%|██████████| 100/100 [00:01&lt;00:00, 52.75it/s]
 </pre></div></div>
 </div>
 <div class="nboutput container">
@@ -1152,9 +1150,9 @@ probabilities.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-CPU times: user 5min 44s, sys: 13min 6s, total: 18min 50s
-Wall time: 5min 10s
-Predictive log prob (pm3) = -7.483045191781358
+CPU times: user 5min 46s, sys: 38.9 s, total: 6min 25s
+Wall time: 2h 36min 36s
+Predictive log prob (pm3) = -7.165695592003698
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
@@ -1191,9 +1189,9 @@ and/or word distributions) is less accurate. See
 </div>
 <div class="container">
 <div class="highlight"><pre>
-CPU times: user 30.4 s, sys: 29.4 s, total: 59.8 s
-Wall time: 27.9 s
-Predictive log prob (sklearn) = -6.041000209921997
+CPU times: user 37 s, sys: 163 ms, total: 37.2 s
+Wall time: 37.4 s
+Predictive log prob (sklearn) = -6.0147710652278965
 </pre></div></div>
 </div>
 </div>
@@ -1236,16 +1234,6 @@ normalizing flows. arXiv preprint arXiv:1505.05770.</li>
 Carlo and variational inference: Bridging the gap. In International
 Conference on Machine Learning (pp. 1218-1226).</li>
 </ul>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>
-</pre></div>
-</div>
-</div>
 </div>
 </div>
 

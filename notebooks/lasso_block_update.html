@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>&lt;no title&gt; &mdash; PyMC3 3.0.rc1 documentation</title>
+  <title>Lasso regression with block updating &mdash; PyMC3 3.0.rc1 documentation</title>
   
 
   
@@ -116,7 +116,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="../index.html">Docs</a> &raquo;</li>
       
-    <li>&lt;no title&gt;</li>
+    <li>Lasso regression with block updating</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -295,6 +295,8 @@ div.nboutput  > :nth-child(2).stderr {
     margin-right: 4px;  /* make room for the exclamation icon */
 }
 </style>
+<div class="section" id="Lasso-regression-with-block-updating">
+<h1>Lasso regression with block updating<a class="headerlink" href="#Lasso-regression-with-block-updating" title="Permalink to this headline">¶</a></h1>
 <p>Sometimes, it is very useful to update a set of parameters together. For
 example, variables that are highly correlated are often good to update
 together. In PyMC 3 block updating is simple, as example will
@@ -306,10 +308,10 @@ separately to show how to do block updates.</p>
 <p>First we generate some fake data.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [1]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="o">%</span><span class="k">pylab</span> inline
 <span class="kn">from</span> <span class="nn">matplotlib.pylab</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="o">*</span>
@@ -322,7 +324,7 @@ separately to show how to do block updates.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
+<div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
@@ -330,32 +332,13 @@ separately to show how to do block updates.</p>
 Populating the interactive namespace from numpy and matplotlib
 </pre></div></div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-WARNING: pylab import has clobbered these variables: [&#39;prod&#39;, &#39;zeros_like&#39;, &#39;power&#39;, &#39;sinh&#39;, &#39;det&#39;, &#39;sample&#39;, &#39;minimum&#39;, &#39;tan&#39;, &#39;ones_like&#39;, &#39;sin&#39;, &#39;gradient&#39;, &#39;math&#39;, &#39;cosh&#39;, &#39;clip&#39;, &#39;linalg&#39;, &#39;trace&#39;, &#39;dot&#39;, &#39;random&#39;, &#39;ceil&#39;, &#39;where&#39;, &#39;maximum&#39;, &#39;concatenate&#39;, &#39;cos&#39;, &#39;tanh&#39;, &#39;sqrt&#39;, &#39;floor&#39;, &#39;test&#39;, &#39;fft&#39;, &#39;log&#39;, &#39;info&#39;, &#39;sum&#39;, &#39;flatten&#39;, &#39;exp&#39;]
-`%matplotlib` prevents importing * from pylab and numpy
-</pre></div></div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
-</pre></div>
-</div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span>
-</pre></div>
-</div>
-</div>
 <p>Then define the random variables.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [2]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">lam</span> <span class="o">=</span> <span class="mi">3</span>
 
 <span class="k">with</span> <span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
@@ -376,38 +359,10 @@ list of variables to sample as a block. This works with both scalar and
 array parameters.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [4]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">pymc3</span>
-<span class="n">pymc3</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[12]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>({&#39;m1&#39;: array(0.48459033591027423),
-  &#39;m2&#39;: array(0.04708045902248652),
-  &#39;s_log&#39;: array(0.2646004713715775),
-  &#39;tau_interval&#39;: array(-8.314564627550315)},
- {&#39;m1&#39;: array(-3.0429711203909964),
-  &#39;m2&#39;: array(-3.115115750655253),
-  &#39;s_log&#39;: array(-1.932210086480891),
-  &#39;tau_interval&#39;: array(0.21826592793700966)})
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
-</pre></div>
-</div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
     <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">()</span>
 
@@ -419,21 +374,32 @@ array parameters.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 10000 of 10000 complete in 29.6 sec
+Optimization terminated successfully.
+         Current function value: 52.260224
+         Iterations: 15
+         Function evaluations: 23
+         Gradient evaluations: 23
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 10000/10000 [00:14&lt;00:00, 688.86it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [5]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
-
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">);</span>
 </pre></div>
 </div>
@@ -442,26 +408,26 @@ array parameters.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_lasso_block_update_8_0.png" src="../_images/notebooks_lasso_block_update_8_0.png" />
+<img alt="../_images/notebooks_lasso_block_update_6_0.png" src="../_images/notebooks_lasso_block_update_6_0.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [6]:
 </pre></div>
 </div>
-<div class="highlight-ipython2"><div class="highlight"><pre>
+<div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="n">hexbin</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="n">m1</span><span class="p">],</span><span class="n">trace</span><span class="p">[</span><span class="n">m2</span><span class="p">],</span> <span class="n">gridsize</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[5]:
+<span></span>Out[6]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.collections.PolyCollection at 0xcc8d64c&gt;
+<span></span>&lt;matplotlib.collections.PolyCollection at 0x1141ed208&gt;
 </pre></div>
 </div>
 </div>
@@ -469,7 +435,8 @@ array parameters.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_lasso_block_update_9_1.png" src="../_images/notebooks_lasso_block_update_9_1.png" />
+<img alt="../_images/notebooks_lasso_block_update_7_1.png" src="../_images/notebooks_lasso_block_update_7_1.png" />
+</div>
 </div>
 </div>
 

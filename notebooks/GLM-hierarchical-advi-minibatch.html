@@ -452,19 +452,10 @@ above.</p>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -5226.58
-Iteration 4000 [10%]: Average ELBO = -2440.14
-Iteration 8000 [20%]: Average ELBO = -1177.3
-Iteration 12000 [30%]: Average ELBO = -1116.98
-Iteration 16000 [40%]: Average ELBO = -1112.3
-Iteration 20000 [50%]: Average ELBO = -1112.01
-Iteration 24000 [60%]: Average ELBO = -1111.11
-Iteration 28000 [70%]: Average ELBO = -1110.05
-Iteration 32000 [80%]: Average ELBO = -1112.58
-Iteration 36000 [90%]: Average ELBO = -1114.31
-Finished [100%]: ELBO = -1077.87
+Average ELBO = -1,112.85: 100%|██████████| 40000/40000 [00:37&lt;00:00, 1073.74it/s]
+Finished minibatch ADVI: ELBO = -1,066.92
 </pre></div></div>
 </div>
 <p>Check the trace of ELBO and compare the result with MCMC.</p>
@@ -488,7 +479,7 @@ Finished [100%]: ELBO = -1077.87
 <img alt="../_images/notebooks_GLM-hierarchical-advi-minibatch_12_0.png" src="../_images/notebooks_GLM-hierarchical-advi-minibatch_12_0.png" />
 </div>
 </div>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
 </pre></div>
@@ -528,14 +519,6 @@ Finished [100%]: ELBO = -1077.87
     <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">means</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
-</pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>

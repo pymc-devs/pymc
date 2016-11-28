@@ -96,7 +96,6 @@
 <li class="toctree-l3"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-model-selection.html">GLM: Model Selection</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">GLM: Poisson Regression</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#A-minimal-reproducable-example-of-poisson-regression-to-predict-counts-using-dummy-data.">A minimal reproducable example of poisson regression to predict counts using dummy data.</a></li>
@@ -406,11 +405,10 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="c1">## Interactive magics</span>
 <span class="o">%</span><span class="k">matplotlib</span> inline
-<span class="o">%</span><span class="k">qtconsole</span> --colors=linux
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
@@ -420,7 +418,7 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
 
-<span class="kn">import</span> <span class="nn">regex</span> <span class="kn">as</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
@@ -432,10 +430,7 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 <span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
 <span class="kn">import</span> <span class="nn">theano</span> <span class="kn">as</span> <span class="nn">thno</span>
 <span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
-<span class="c1"># import pystan</span>
 
-<span class="c1"># get watermark</span>
-<span class="o">%</span><span class="k">install_ext</span> https://raw.githubusercontent.com/rasbt/watermark/master/watermark.py
 
 <span class="n">sns</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">style</span><span class="o">=</span><span class="s2">&quot;darkgrid&quot;</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;muted&quot;</span><span class="p">)</span>
 <span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.mpl_style&#39;</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">)</span>
@@ -444,61 +439,12 @@ $&gt; pip install --process-dependency-links git+https://github.com/pymc-devs/py
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Installed watermark.py. To use it, type:
-  %load_ext watermark
-</pre></div></div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">load_ext</span> watermark
-<span class="o">%</span><span class="k">watermark</span> -dmvgp numpy,scipy,pandas,matplotlib,pymc3,theano
-<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Recursion limit {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">getrecursionlimit</span><span class="p">()))</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-2016-05-15
-
-CPython 3.5.1
-IPython 4.2.0
-
-numpy 1.11.0
-scipy 0.17.0
-pandas 0.18.1
-matplotlib 1.5.1
-pymc3 3.0
-theano 0.8.2
-
-compiler   : GCC 4.2.1 (Apple Inc. build 5577)
-system     : Darwin
-release    : 14.5.0
-machine    : x86_64
-processor  : i386
-CPU cores  : 4
-interpreter: 64bit
-Git hash   : 687d17856f894aaa0c2b42d30b7ff151b9289856
-Recursion limit 10000
-</pre></div></div>
-</div>
 </div>
 <div class="section" id="Local-Functions">
 <h2>Local Functions<a class="headerlink" href="#Local-Functions" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [4]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -552,7 +498,7 @@ relationship.</li>
 </ul>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -582,7 +528,7 @@ relationship.</li>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -592,7 +538,7 @@ relationship.</li>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[6]:
+<span></span>Out[5]:
 </pre></div>
 </div>
 <div class="container">
@@ -643,7 +589,7 @@ relationship.</li>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -653,7 +599,7 @@ relationship.</li>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[7]:
+<span></span>Out[6]:
 </pre></div>
 </div>
 <div class="container">
@@ -692,7 +638,7 @@ relationship.</li>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -705,7 +651,7 @@ relationship.</li>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-poisson-regression_16_0.png" src="../_images/notebooks_GLM-poisson-regression_16_0.png" />
+<img alt="../_images/notebooks_GLM-poisson-regression_14_0.png" src="../_images/notebooks_GLM-poisson-regression_14_0.png" />
 </div>
 </div>
 <p><strong>Observe:</strong></p>
@@ -734,7 +680,7 @@ interaction of terms:</p>
 \[Y_{sneeze\_count} ~ Poisson(\theta)\]</div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -744,7 +690,7 @@ interaction of terms:</p>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -754,7 +700,7 @@ interaction of terms:</p>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -764,7 +710,7 @@ interaction of terms:</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [12]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -774,7 +720,7 @@ interaction of terms:</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[12]:
+<span></span>Out[11]:
 </pre></div>
 </div>
 <div class="container">
@@ -840,7 +786,7 @@ interaction of terms:</p>
 <h3>Create Model<a class="headerlink" href="#Create-Model" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [13]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -868,7 +814,7 @@ interaction of terms:</p>
 <h3>Sample Model<a class="headerlink" href="#Sample-Model" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -879,12 +825,23 @@ interaction of terms:</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 2001 of 2000 complete in 34.7 sec
+Optimization terminated successfully.
+         Current function value: 8723.943403
+         Iterations: 9
+         Function evaluations: 445
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 2000/2000 [02:26&lt;00:00, 13.66it/s]
 </pre></div></div>
 </div>
 </div>
@@ -892,7 +849,7 @@ interaction of terms:</p>
 <h3>View Diagnostics<a class="headerlink" href="#View-Diagnostics" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [15]:
+<span></span>In [14]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -905,7 +862,7 @@ interaction of terms:</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-poisson-regression_33_0.png" src="../_images/notebooks_GLM-poisson-regression_33_0.png" />
+<img alt="../_images/notebooks_GLM-poisson-regression_31_0.png" src="../_images/notebooks_GLM-poisson-regression_31_0.png" />
 </div>
 </div>
 <p><strong>Observe:</strong></p>
@@ -916,7 +873,7 @@ interaction of terms:</p>
 <h4>Transform coeffs and recover theta values<a class="headerlink" href="#Transform-coeffs-and-recover-theta-values" title="Permalink to this headline">¶</a></h4>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<span></span>In [15]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -926,7 +883,7 @@ interaction of terms:</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[16]:
+<span></span>Out[15]:
 </pre></div>
 </div>
 <div class="container">
@@ -943,27 +900,27 @@ interaction of terms:</p>
   <tbody>
     <tr>
       <th>b0_intercept</th>
-      <td>1.019033</td>
-      <td>0.957895</td>
-      <td>1.083158</td>
+      <td>1.017211</td>
+      <td>0.961873</td>
+      <td>1.079485</td>
     </tr>
     <tr>
       <th>b1_alcohol[T.True]</th>
-      <td>2.881882</td>
-      <td>2.687557</td>
-      <td>3.094581</td>
+      <td>2.889795</td>
+      <td>2.693497</td>
+      <td>3.073583</td>
     </tr>
     <tr>
       <th>b2_nomeds[T.True]</th>
-      <td>5.756029</td>
-      <td>5.408539</td>
-      <td>6.168330</td>
+      <td>5.766963</td>
+      <td>5.378811</td>
+      <td>6.118155</td>
     </tr>
     <tr>
       <th>b3_alcohol[T.True]:nomeds[T.True]</th>
-      <td>2.122779</td>
-      <td>1.978858</td>
-      <td>2.295429</td>
+      <td>2.117025</td>
+      <td>1.973845</td>
+      <td>2.277620</td>
     </tr>
   </tbody>
 </table>
@@ -1013,9 +970,9 @@ exp(b2_nomeds * b3_alcohol:nomeds) = 1 * 3 * 6 * 2 = 36</p>
 </div>
 <div class="section" id="Create-Model">
 <h3>Create Model<a class="headerlink" href="#Create-Model" title="Permalink to this headline">¶</a></h3>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<span></span>In [16]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1025,20 +982,12 @@ exp(b2_nomeds * b3_alcohol:nomeds) = 1 * 3 * 6 * 2 = 36</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Applied log-transform to mu and added transformed mu_log to model.
-</pre></div></div>
-</div>
 </div>
 <div class="section" id="Sample-Model">
 <h3>Sample Model<a class="headerlink" href="#Sample-Model" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<span></span>In [17]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1049,12 +998,23 @@ Applied log-transform to mu and added transformed mu_log to model.
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
- [-----------------100%-----------------] 4000 of 4000 complete in 48.4 sec
+Optimization terminated successfully.
+         Current function value: 8771.116059
+         Iterations: 9
+         Function evaluations: 545
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 4000/4000 [15:41&lt;00:00,  4.25it/s]
 </pre></div></div>
 </div>
 </div>
@@ -1062,7 +1022,7 @@ Applied log-transform to mu and added transformed mu_log to model.
 <h3>View Traces<a class="headerlink" href="#View-Traces" title="Permalink to this headline">¶</a></h3>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [19]:
+<span></span>In [18]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1075,14 +1035,14 @@ Applied log-transform to mu and added transformed mu_log to model.
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_GLM-poisson-regression_46_0.png" src="../_images/notebooks_GLM-poisson-regression_46_0.png" />
+<img alt="../_images/notebooks_GLM-poisson-regression_44_0.png" src="../_images/notebooks_GLM-poisson-regression_44_0.png" />
 </div>
 </div>
 <div class="section" id="Transform-coeffs">
 <h4>Transform coeffs<a class="headerlink" href="#Transform-coeffs" title="Permalink to this headline">¶</a></h4>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [25]:
+<span></span>In [19]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1092,7 +1052,7 @@ Applied log-transform to mu and added transformed mu_log to model.
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[25]:
+<span></span>Out[19]:
 </pre></div>
 </div>
 <div class="container">
@@ -1109,33 +1069,33 @@ Applied log-transform to mu and added transformed mu_log to model.
   <tbody>
     <tr>
       <th>Intercept</th>
-      <td>1.016913e+00</td>
-      <td>0.958431</td>
-      <td>1.081468e+00</td>
+      <td>1.019522e+00</td>
+      <td>0.957801</td>
+      <td>1.085582e+00</td>
     </tr>
     <tr>
       <th>alcohol[T.True]</th>
-      <td>2.890336e+00</td>
-      <td>2.689204</td>
-      <td>3.104546e+00</td>
+      <td>2.880138e+00</td>
+      <td>2.665457</td>
+      <td>3.092374e+00</td>
     </tr>
     <tr>
       <th>nomeds[T.True]</th>
-      <td>5.768525e+00</td>
-      <td>5.427639</td>
-      <td>6.155485e+00</td>
+      <td>5.749949e+00</td>
+      <td>5.378194</td>
+      <td>6.118040e+00</td>
     </tr>
     <tr>
       <th>alcohol[T.True]:nomeds[T.True]</th>
-      <td>2.116617e+00</td>
-      <td>1.959358</td>
-      <td>2.264685e+00</td>
+      <td>2.125638e+00</td>
+      <td>1.975367</td>
+      <td>2.304255e+00</td>
     </tr>
     <tr>
       <th>mu</th>
-      <td>7.964644e+18</td>
-      <td>1.003069</td>
-      <td>8.049357e+50</td>
+      <td>4.963290e+47</td>
+      <td>1.233879</td>
+      <td>1.036209e+38</td>
     </tr>
   </tbody>
 </table>
@@ -1151,7 +1111,7 @@ dataset and has an extreme skew, if we look at the median value ...</li>
 </ul>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [26]:
+<span></span>In [20]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1161,11 +1121,11 @@ dataset and has an extreme skew, if we look at the median value ...</li>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[26]:
+<span></span>Out[20]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([  4.17219583,   9.44616465,  24.18060789])
+<span></span>array([  4.52831198,   8.5121865 ,  17.76336287])
 </pre></div>
 </div>
 </div>
@@ -1173,7 +1133,7 @@ dataset and has an extreme skew, if we look at the median value ...</li>
 pretty close to the overall mean of:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [27]:
+<span></span>In [21]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1183,7 +1143,7 @@ pretty close to the overall mean of:</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[27]:
+<span></span>Out[21]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>

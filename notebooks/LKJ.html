@@ -90,7 +90,6 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="../examples.html#howto">Howto</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="posterior_predictive.html">Posterior Predictive Checks</a></li>
-<li class="toctree-l3"><a class="reference internal" href="NUTS_scaling_using_ADVI.html">NUTS scaling using ADVI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="howto_debugging.html">How to debug a model</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">LKJ Prior for fitting a Multivariate Normal Model</a></li>
 </ul>
@@ -452,18 +451,24 @@ correlation matric <span class="math">\(\mathbf{C}\)</span>. The LKJ distributio
 shape parameter <span class="math">\(\nu &gt; 0\)</span>. If <span class="math">\(\mathbf{C} \sim LKJ(\nu)\)</span>,
 then <span class="math">\(f(\mathbf{C}) \propto |\mathbf{C}|^{\nu - 1}\)</span> (here
 <span class="math">\(|\cdot|\)</span> is the determinant).</p>
-<p>We can now begin to build this model in <code class="docutils literal"><span class="pre">pymc3</span></code>.</p>
+<p>We can now begin to build this model in <code class="docutils literal"><span class="pre">pymc3</span></code>. As you can see, we
+are passing summary statistics to <code class="docutils literal"><span class="pre">testval</span></code> which will be used as the
+starting point when we do inference further below. When summary
+statistics are available, it is always a good idea to use them in this
+manner.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">sigma</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Lognormal</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span></span><span class="n">init_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">init_corr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">rowvar</span><span class="o">=</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Lognormal</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">init_sigma</span><span class="p">)</span>
 
     <span class="n">nu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="s1">&#39;nu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
-    <span class="n">C_triu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">LKJCorr</span><span class="p">(</span><span class="s1">&#39;C_triu&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">C_triu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">LKJCorr</span><span class="p">(</span><span class="s1">&#39;C_triu&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">init_corr</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -511,6 +516,27 @@ equal to one.) We can then proceed to build the covariance matrix
 </pre></div>
 </div>
 </div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">cov</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">test_value</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[10]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>array([[ 0.54737873,  0.88092866],
+       [ 0.88092866,  1.98234664]])
+</pre></div>
+</div>
+</div>
 <p>While defining <code class="docutils literal"><span class="pre">C</span></code> in terms of <code class="docutils literal"><span class="pre">C_triu</span></code> was simple in this case
 because our sampling distribution is two-dimensional, the example from
 this <a class="reference external" href="http://stackoverflow.com/questions/29759789/modified-bpmf-in-pymc3-using-lkjcorr-priors-positivedefiniteerror-using-nuts">StackOverflow
@@ -521,12 +547,12 @@ dimensions.</p>
 distribution.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [11]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;mu&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">testval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
 
     <span class="n">x_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">MvNormal</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">x</span><span class="p">)</span>
 </pre></div>
@@ -535,7 +561,7 @@ distribution.</p>
 <p>We are now ready to fit this model using <code class="docutils literal"><span class="pre">pymc3</span></code>.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -545,12 +571,12 @@ distribution.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">50000</span><span class="p">)</span>
+    <span class="n">trace_</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">pm</span><span class="o">.</span><span class="n">Metropolis</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
@@ -559,24 +585,28 @@ distribution.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-Auto-assigning NUTS sampler...
-Initializing NUTS using advi...
-Average ELBO = -244.20: 100%|██████████| 50000/50000 [01:02&lt;00:00, 797.66it/s]
-Finished [100%]: Average ELBO = -244.11
-INFO (theano.gof.compilelock): Refreshing lock /home/wiecki/.theano/compiledir_Linux-4.4--generic-x86_64-with-debian-stretch-sid-x86_64-3.5.2-64/lock_dir/lock
-100%|██████████| 1/1 [00:00&lt;00:00, 1134.21it/s]
-100%|██████████| 4000/4000 [02:13&lt;00:00, 29.99it/s]
+100%|██████████| 4000/4000 [00:05&lt;00:00, 718.12it/s]
 </pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">trace</span> <span class="o">=</span> <span class="n">trace_</span><span class="p">[</span><span class="mi">50</span><span class="p">:]</span>
+</pre></div>
+</div>
 </div>
 <p>We see that the posterior estimate of <span class="math">\(\mu\)</span> is reasonably
 accurate.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [19]:
+<span></span>In [15]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace_</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]);</span>
 </pre></div>
 </div>
 </div>
@@ -584,32 +614,12 @@ accurate.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_LKJ_20_0.png" src="../_images/notebooks_LKJ_20_0.png" />
+<img alt="../_images/notebooks_LKJ_22_0.png" src="../_images/notebooks_LKJ_22_0.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [20]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">trace</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[20]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([-1.41427562, -4.68366746])
-</pre></div>
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [21]:
+<span></span>In [16]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -619,7 +629,7 @@ accurate.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[21]:
+<span></span>Out[16]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -630,7 +640,7 @@ accurate.</p>
 <p>The estimates of the standard deviations are certainly biased.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [22]:
+<span></span>In [17]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -642,12 +652,12 @@ accurate.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_LKJ_24_0.png" src="../_images/notebooks_LKJ_24_0.png" />
+<img alt="../_images/notebooks_LKJ_25_0.png" src="../_images/notebooks_LKJ_25_0.png" />
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [23]:
+<span></span>In [18]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -657,17 +667,17 @@ accurate.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[23]:
+<span></span>Out[18]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([ 0.75790786,  1.49400529])
+<span></span>array([ 0.75945843,  1.50000803])
 </pre></div>
 </div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [24]:
+<span></span>In [19]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -677,7 +687,7 @@ accurate.</p>
 </div>
 <div class="nboutput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[24]:
+<span></span>Out[19]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
@@ -689,7 +699,7 @@ accurate.</p>
 the true credible region, so we can be fairly satisfied with our model.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [25]:
+<span></span>In [20]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -702,7 +712,7 @@ the true credible region, so we can be fairly satisfied with our model.</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [26]:
+<span></span>In [21]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -737,7 +747,7 @@ the true credible region, so we can be fairly satisfied with our model.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_LKJ_29_0.png" src="../_images/notebooks_LKJ_29_0.png" />
+<img alt="../_images/notebooks_LKJ_30_0.png" src="../_images/notebooks_LKJ_30_0.png" />
 </div>
 </div>
 </div>

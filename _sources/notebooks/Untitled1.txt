@@ -1,0 +1,99 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "SyntaxError",
+     "evalue": "invalid syntax (<ipython-input-1-15f294479c23>, line 39)",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;36m  File \u001b[0;32m\"<ipython-input-1-15f294479c23>\"\u001b[0;36m, line \u001b[0;32m39\u001b[0m\n\u001b[0;31m    print 'iter ' + str(iter+1)\u001b[0m\n\u001b[0m                ^\u001b[0m\n\u001b[0;31mSyntaxError\u001b[0m\u001b[0;31m:\u001b[0m invalid syntax\n"
+     ]
+    }
+   ],
+   "source": [
+    "import numpy as np\n",
+    "from scipy.spatial.distance import pdist, squareform\n",
+    "\n",
+    "class SVGD():\n",
+    "\n",
+    "    def __init__(self):\n",
+    "        pass\n",
+    "    \n",
+    "    def svgd_kernel(self, theta, h = -1):\n",
+    "        sq_dist = pdist(theta)\n",
+    "        pairwise_dists = squareform(sq_dist)**2\n",
+    "        if h < 0: # if h < 0, using median trick\n",
+    "            h = np.median(pairwise_dists)  \n",
+    "            h = np.sqrt(0.5 * h / np.log(theta.shape[0]+1))\n",
+    "\n",
+    "        # compute the rbf kernel\n",
+    "        Kxy = np.exp( -pairwise_dists / h**2 / 2)\n",
+    "\n",
+    "        dxkxy = -np.matmul(Kxy, theta)\n",
+    "        sumkxy = np.sum(Kxy, axis=1)\n",
+    "        for i in range(theta.shape[1]):\n",
+    "            dxkxy[:, i] = dxkxy[:,i] + np.multiply(theta[:,i],sumkxy)\n",
+    "        dxkxy = dxkxy / (h**2)\n",
+    "        return (Kxy, dxkxy)\n",
+    "    \n",
+    " \n",
+    "    def update(self, x0, lnprob, n_iter = 1000, stepsize = 1e-3, bandwidth = -1, alpha = 0.9, debug = False):\n",
+    "        # Check input\n",
+    "        if x0 is None or lnprob is None:\n",
+    "            raise ValueError('x0 or lnprob cannot be None!')\n",
+    "        \n",
+    "        theta = np.copy(x0) \n",
+    "        \n",
+    "        # adagrad with momentum\n",
+    "        fudge_factor = 1e-6\n",
+    "        historical_grad = 0\n",
+    "        for iter in range(n_iter):\n",
+    "            if debug and (iter+1) % 1000 == 0:\n",
+    "                print 'iter ' + str(iter+1) \n",
+    "            \n",
+    "            lnpgrad = lnprob(theta)\n",
+    "            # calculating the kernel matrix\n",
+    "            kxy, dxkxy = self.svgd_kernel(theta, h = -1)  \n",
+    "            grad_theta = (np.matmul(kxy, lnpgrad) + dxkxy) / x0.shape[0]  \n",
+    "            \n",
+    "            # adagrad \n",
+    "            if iter == 0:\n",
+    "                historical_grad = historical_grad + grad_theta ** 2\n",
+    "            else:\n",
+    "                historical_grad = alpha * historical_grad + (1 - alpha) * (grad_theta ** 2)\n",
+    "            adj_grad = np.divide(grad_theta, fudge_factor+np.sqrt(historical_grad))\n",
+    "            theta = theta + stepsize * adj_grad \n",
+    "            \n",
+    "        return theta\n",
+    "    "
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python [default]",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.5.2"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 1
+}

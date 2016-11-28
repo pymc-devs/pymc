@@ -527,7 +527,7 @@ Python code corresponds to a line in the model notation above.</p>
 </div>
 <p>Now we build our model, which we will present in full first, then
 explain each part line-by-line.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
@@ -549,14 +549,6 @@ explain each part line-by-line.</p>
     <span class="n">Y_obs</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;Y_obs&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sigma</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">Y</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Applied log-transform to sigma and added transformed sigma_log_ to model.
-</pre></div></div>
 </div>
 <p>The first line,</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">basic_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">()</span>
@@ -788,7 +780,12 @@ of variable names to NumPy arrays of parameter values.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-{&#39;beta&#39;: array([ 0.94848602,  2.60705514]), &#39;alpha&#39;: array(0.9065985497559482), &#39;sigma_log_&#39;: array(-0.03278147017403066)}
+Optimization terminated successfully.
+         Current function value: 149.017982
+         Iterations: 16
+         Function evaluations: 21
+         Gradient evaluations: 21
+{&#39;alpha&#39;: array(0.9065985497559482), &#39;beta&#39;: array([ 0.94848602,  2.60705514]), &#39;sigma_log_&#39;: array(-0.03278147017403066)}
 </pre></div></div>
 </div>
 <p>By default, <code class="docutils literal"><span class="pre">find_MAP</span></code> uses the Broyden–Fletcher–Goldfarb–Shanno
@@ -815,7 +812,11 @@ find the MAP.</p>
 </div>
 <div class="container">
 <div class="highlight"><pre>
-{&#39;beta&#39;: array([ 0.95140146,  2.61437458]), &#39;alpha&#39;: array(0.9090521898977764), &#39;sigma_log_&#39;: array(-0.030009775203258385)}
+Optimization terminated successfully.
+         Current function value: 149.019762
+         Iterations: 4
+         Function evaluations: 176
+{&#39;alpha&#39;: array(0.9090521898977764), &#39;beta&#39;: array([ 0.95140146,  2.61437458]), &#39;sigma_log_&#39;: array(-0.030009775203258385)}
 </pre></div></div>
 </div>
 <p>It is important to note that the MAP estimate is not always reasonable,
@@ -886,21 +887,11 @@ models with highly non-normal posterior distributions. Poor scaling
 parameters will slow down NUTS significantly, sometimes almost stopping
 it completely. A reasonable starting point for sampling can also be
 important for efficient sampling, but not as often.</p>
-<p>Fortunately NUTS can often make good guesses for the scaling parameters.
-If you pass a point in parameter space (as a dictionary of variable
-names to parameter values, the same format as returned by <code class="docutils literal"><span class="pre">find_MAP</span></code>)
-to NUTS, it will look at the local curvature of the log
-posterior-density (the diagonal of the Hessian matrix) at that point to
-make a guess for a good scaling vector, which often results in a good
-value. The MAP estimate is often a good point to use to initiate
-sampling. It is also possible to supply your own vector or scaling
-matrix to NUTS, though this is a more advanced use. If you wish to
-modify a Hessian at a specific point to use as your scaling matrix or
-vector, you can use <code class="docutils literal"><span class="pre">find_hessian</span></code> or <code class="docutils literal"><span class="pre">find_hessian_diag</span></code>.</p>
-<p>For our basic linear regression example in <code class="docutils literal"><span class="pre">basic_model</span></code>, we will use
-NUTS to sample 2000 draws from the posterior using the MAP as the
-starting point and scaling point. This must also be performed inside the
-context of the model.</p>
+<p>Fortunately <code class="docutils literal"><span class="pre">PyMC3</span></code> automatically initializes NUTS using another
+inference algorithm called ADVI (auto-diff variational inference).
+Moreover, <code class="docutils literal"><span class="pre">PyMC3</span></code> will automatically assign an appropriate sampler if
+we don&#8217;t supply it via the <code class="docutils literal"><span class="pre">step</span></code> keyword argument (see below for an
+example of how to explicitly assign step methods).</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [8]:
@@ -911,12 +902,8 @@ context of the model.</p>
 <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
 
 <span class="k">with</span> <span class="n">basic_model</span><span class="p">:</span>
-
-    <span class="c1"># obtain starting values via MAP</span>
-    <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">(</span><span class="n">fmin</span><span class="o">=</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_powell</span><span class="p">)</span>
-
     <span class="c1"># draw 2000 posterior samples</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -925,10 +912,11 @@ context of the model.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-Assigned NUTS to alpha
-Assigned NUTS to beta
-Assigned NUTS to sigma_log_
-100%|██████████| 2000/2000 [00:01&lt;00:00, 1314.85it/s]
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -153.48: 100%|██████████| 200000/200000 [00:17&lt;00:00, 11639.06it/s]
+Finished [100%]: Average ELBO = -153.51
+100%|██████████| 2000/2000 [00:03&lt;00:00, 522.55it/s]
 </pre></div></div>
 </div>
 <p>The <code class="docutils literal"><span class="pre">sample</span></code> function runs the step method(s) assigned (or passed) to
@@ -955,7 +943,7 @@ match the shape of the variable. We can see the last 5 values for the
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([ 0.94673726,  0.77287768,  1.03487944,  0.78195843,  1.03158494])
+<span></span>array([ 0.87254059,  0.92100952,  0.90321028,  0.90372965,  0.86679235])
 </pre></div>
 </div>
 </div>
@@ -984,14 +972,32 @@ the <code class="docutils literal"><span class="pre">step</span></code> argument
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
 Assigned NUTS to alpha
 Assigned NUTS to beta
-100%|██████████| 5000/5000 [00:05&lt;00:00, 894.31it/s]
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Optimization terminated successfully.
+         Current function value: 149.019762
+         Iterations: 4
+         Function evaluations: 176
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+100%|██████████| 5000/5000 [00:11&lt;00:00, 443.78it/s]
 </pre></div></div>
 </div>
 </div>
@@ -1051,13 +1057,13 @@ alpha:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.907            0.099            0.001            [0.713, 1.105]
+  0.905            0.099            0.002            [0.727, 1.120]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.711          0.839          0.906          0.972          1.104
+  0.709          0.839          0.904          0.971          1.106
 
 
 beta:
@@ -1065,15 +1071,15 @@ beta:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.948            0.086            0.001            [0.781, 1.114]
-  2.614            0.513            0.005            [1.624, 3.659]
+  0.948            0.087            0.001            [0.767, 1.112]
+  2.591            0.510            0.018            [1.653, 3.601]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.780          0.890          0.949          1.009          1.114
-  1.591          2.279          2.613          2.959          3.633
+  0.777          0.890          0.949          1.006          1.123
+  1.602          2.249          2.591          2.960          3.555
 
 
 sigma:
@@ -1081,13 +1087,13 @@ sigma:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.990            0.072            0.001            [0.852, 1.130]
+  0.990            0.072            0.001            [0.853, 1.129]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.861          0.938          0.985          1.038          1.143
+  0.863          0.940          0.986          1.036          1.142
 
 </pre></div></div>
 </div>
@@ -1217,7 +1223,7 @@ normal walk of length n, as specified by the <code class="docutils literal"><spa
 scale of the innovations of the random walk, <code class="docutils literal"><span class="pre">sigma</span></code>, is specified in
 terms of the precision of the normally distributed innovations and can
 be a scalar or vector.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [16]:
 </pre></div>
@@ -1241,15 +1247,6 @@ be a scalar or vector.</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Applied log-transform to nu and added transformed nu_log_ to model.
-Applied log-transform to sigma and added transformed sigma_log_ to model.
-</pre></div></div>
-</div>
 <p>Notice that we transform the log volatility process <code class="docutils literal"><span class="pre">s</span></code> into the
 volatility process by <code class="docutils literal"><span class="pre">exp(-2*s)</span></code>. Here, <code class="docutils literal"><span class="pre">exp</span></code> is a Theano function,
 rather than the corresponding function in NumPy; Theano provides a large
@@ -1260,23 +1257,6 @@ into two lines, as we did for the first example.</p>
 </div>
 <div class="section" id="Fitting">
 <h3>Fitting<a class="headerlink" href="#Fitting" title="Permalink to this headline">¶</a></h3>
-<p>Before we draw samples from the posterior, it is prudent to find a
-decent starting value by finding a point of relatively high probability.
-For this model, the full <em>maximum a posteriori</em> (MAP) point over all
-variables is degenerate and has infinite density. But, if we fix
-<code class="docutils literal"><span class="pre">log_sigma</span></code> and <code class="docutils literal"><span class="pre">nu</span></code> it is no longer degenerate, so we find the MAP
-with respect only to the volatility process <code class="docutils literal"><span class="pre">s</span></code> keeping <code class="docutils literal"><span class="pre">log_sigma</span></code>
-and <code class="docutils literal"><span class="pre">nu</span></code> constant at their default values (remember that we set
-<code class="docutils literal"><span class="pre">testval=.1</span></code> for <code class="docutils literal"><span class="pre">sigma</span></code>). We use the Limited-memory BFGS (L-BFGS)
-optimizer, which is provided by the <code class="docutils literal"><span class="pre">scipy.optimize</span></code> package, as it is
-more efficient for high dimensional functions and we have 400 stochastic
-random variables (mostly from <code class="docutils literal"><span class="pre">s</span></code>).</p>
-<p>To achieve good convergence with NUTS, it is critical to find a good
-scaling. The MAP as found by <code class="docutils literal"><span class="pre">find_MAP()</span></code> is in our experience a poor
-choice. Instead, we run automatic differentiation variational inference
-(ADVI) to get a variational estimate of the posterior mean as well as
-the posterior standard deviations. We can use these estimates to
-initialize NUTS to achieve faster sampling due to better scaling.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [17]:
@@ -1287,37 +1267,20 @@ initialize NUTS to achieve faster sampling due to better scaling.</p>
 
 <span class="kn">import</span> <span class="nn">scipy</span>
 <span class="k">with</span> <span class="n">sp500_model</span><span class="p">:</span>
-    <span class="n">mu</span><span class="p">,</span> <span class="n">sds</span><span class="p">,</span> <span class="n">elbo</span> <span class="o">=</span> <span class="n">variational</span><span class="o">.</span><span class="n">advi</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">sp500_model</span><span class="o">.</span><span class="n">dict_to_array</span><span class="p">(</span><span class="n">sds</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">is_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -60151.01
-Iteration 10000 [10%]: Average ELBO = -32763.07
-Iteration 20000 [20%]: Average ELBO = -266.02
-Iteration 30000 [30%]: Average ELBO = 130.94
-Iteration 40000 [40%]: Average ELBO = 520.74
-Iteration 50000 [50%]: Average ELBO = 767.25
-Iteration 60000 [60%]: Average ELBO = 853.8
-Iteration 70000 [70%]: Average ELBO = 874.46
-Iteration 80000 [80%]: Average ELBO = 879.28
-Iteration 90000 [90%]: Average ELBO = 881.4
-Finished [100%]: Average ELBO = 882.11
-</pre></div></div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 2000/2000 [02:09&lt;00:00, 11.58it/s]
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = 883.19: 100%|██████████| 200000/200000 [00:45&lt;00:00, 4380.24it/s]
+Finished [100%]: Average ELBO = 883.43
+100%|██████████| 2000/2000 [03:20&lt;00:00, 15.80it/s]
 </pre></div></div>
 </div>
 <p>We can check our samples by looking at the traceplot for <code class="docutils literal"><span class="pre">nu</span></code> and
@@ -1364,7 +1327,7 @@ more darkly.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x7f7ca5a0b438&gt;
+<span></span>&lt;matplotlib.legend.Legend at 0x7f0a0935e780&gt;
 </pre></div>
 </div>
 </div>
@@ -1420,7 +1383,7 @@ data, use multiple samplers and sample from discrete random variables.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x7f7ca087aac8&gt;
+<span></span>&lt;matplotlib.text.Text at 0x7f0a05f0ef60&gt;
 </pre></div>
 </div>
 </div>
@@ -1458,7 +1421,7 @@ year in which the rate parameter changes (the switchpoint). *
 are the introduction of discrete variables with the Poisson and
 discrete-uniform priors and the novel form of the deterministic random
 variable <code class="docutils literal"><span class="pre">rate</span></code>.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [21]:
 </pre></div>
@@ -1482,15 +1445,6 @@ variable <code class="docutils literal"><span class="pre">rate</span></code>.</p
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Applied log-transform to early_rate and added transformed early_rate_log_ to model.
-Applied log-transform to late_rate and added transformed late_rate_log_ to model.
-</pre></div></div>
-</div>
 <p>The logic for the rate random variable,</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">rate</span> <span class="o">=</span> <span class="n">switch</span><span class="p">(</span><span class="n">switchpoint</span> <span class="o">&gt;=</span> <span class="n">year</span><span class="p">,</span> <span class="n">early_rate</span><span class="p">,</span> <span class="n">late_rate</span><span class="p">)</span>
 </pre></div>
@@ -1508,25 +1462,18 @@ is ensure we sample this random variable as well.</p>
 meaningful gradient, we cannot use NUTS for sampling <code class="docutils literal"><span class="pre">switchpoint</span></code> or
 the missing disaster observations. Instead, we will sample using a
 <code class="docutils literal"><span class="pre">Metroplis</span></code> step method, which implements adaptive
-Metropolis-Hastings, because it is designed to handle discrete values.</p>
-<p>We sample with both samplers at once by passing them to the <code class="docutils literal"><span class="pre">sample</span></code>
-function in a list. Each new sample is generated by first applying
-<code class="docutils literal"><span class="pre">step1</span></code> then <code class="docutils literal"><span class="pre">step2</span></code>.</p>
+Metropolis-Hastings, because it is designed to handle discrete values.
+<code class="docutils literal"><span class="pre">PyMC3</span></code> automatically assigns the correct sampling algorithms.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [22]:
+<span></span>In [23]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">pymc3</span> <span class="kn">import</span> <span class="n">Metropolis</span>
 
 <span class="k">with</span> <span class="n">disaster_model</span><span class="p">:</span>
-    <span class="n">step1</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">([</span><span class="n">early_rate</span><span class="p">,</span> <span class="n">late_rate</span><span class="p">])</span>
-
-    <span class="c1"># Use Metropolis for switchpoint, and missing values since it accommodates discrete variables</span>
-    <span class="n">step2</span> <span class="o">=</span> <span class="n">Metropolis</span><span class="p">([</span><span class="n">switchpoint</span><span class="p">,</span> <span class="n">disasters</span><span class="o">.</span><span class="n">missing_values</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
-
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="p">[</span><span class="n">step1</span><span class="p">,</span> <span class="n">step2</span><span class="p">])</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1535,7 +1482,11 @@ function in a list. Each new sample is generated by first applying
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 10000/10000 [00:07&lt;00:00, 1277.29it/s]
+Assigned Metropolis to switchpoint
+Assigned NUTS to early_rate_log_
+Assigned NUTS to late_rate_log_
+Assigned Metropolis to disasters_missing
+100%|██████████| 10000/10000 [00:13&lt;00:00, 758.15it/s]
 </pre></div></div>
 </div>
 <p>In the trace plot below we can see that there&#8217;s about a 10 year span
@@ -1545,7 +1496,7 @@ because of the jumpy relationship between the year switchpoint and the
 likelihood and not due to sampling error.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [23]:
+<span></span>In [24]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1577,7 +1528,7 @@ of the available
 types</a>.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [24]:
+<span></span>In [25]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1643,7 +1594,7 @@ shown below, along with a sub-function using the <code class="docutils literal">
 though this is not strictly necessary.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [25]:
+<span></span>In [26]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1682,7 +1633,7 @@ implemented via the <code class="docutils literal"><span class="pre">patsy</span
 <code class="docutils literal"><span class="pre">DataFrame</span></code>. Hence, for our linear regression example:</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [26]:
+<span></span>In [27]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1696,7 +1647,7 @@ implemented via the <code class="docutils literal"><span class="pre">patsy</span
 <p>The model can then be very concisely specified in one line of code.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [27]:
+<span></span>In [28]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1713,20 +1664,19 @@ implemented via the <code class="docutils literal"><span class="pre">patsy</span
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-Applied log-transform to sd and added transformed sd_log_ to model.
-Assigned NUTS to Intercept
-Assigned NUTS to x1
-Assigned NUTS to x2
-Assigned NUTS to sd_log_
-100%|██████████| 5000/5000 [00:04&lt;00:00, 1203.77it/s]
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -190.04: 100%|██████████| 200000/200000 [00:21&lt;00:00, 9506.68it/s]
+Finished [100%]: Average ELBO = -190.04
+100%|██████████| 5000/5000 [00:07&lt;00:00, 701.65it/s]
 </pre></div></div>
 </div>
 <p>The error distribution, if not specified via the <code class="docutils literal"><span class="pre">family</span></code> argument, is
 assumed to be normal. In the case of logistic regression, this can be
 modified by passing in a <code class="docutils literal"><span class="pre">Binomial</span></code> family object.</p>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [28]:
+<span></span>In [29]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1739,14 +1689,6 @@ modified by passing in a <code class="docutils literal"><span class="pre">Binomi
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Applied logodds-transform to p and added transformed p_logodds_ to model.
-</pre></div></div>
-</div>
 </div>
 <div class="section" id="Backends">
 <h2>Backends<a class="headerlink" href="#Backends" title="Permalink to this headline">¶</a></h2>
@@ -1757,7 +1699,7 @@ file, and SQLite. These can be found in <code class="docutils literal"><span cla
 get too large to be held in memory we could use the <code class="docutils literal"><span class="pre">sqlite</span></code> backend:</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [29]:
+<span></span>In [30]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1767,9 +1709,7 @@ get too large to be held in memory we could use the <code class="docutils litera
     <span class="n">glm</span><span class="p">(</span><span class="s1">&#39;y ~ x1&#39;</span><span class="p">,</span> <span class="n">df_logistic</span><span class="p">,</span> <span class="n">family</span><span class="o">=</span><span class="n">Binomial</span><span class="p">())</span>
 
     <span class="n">backend</span> <span class="o">=</span> <span class="n">SQLite</span><span class="p">(</span><span class="s1">&#39;trace.sqlite&#39;</span><span class="p">)</span>
-    <span class="n">start</span> <span class="o">=</span> <span class="n">find_MAP</span><span class="p">()</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="n">NUTS</span><span class="p">(</span><span class="n">scaling</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">trace</span><span class="o">=</span><span class="n">backend</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">trace</span><span class="o">=</span><span class="n">backend</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1778,13 +1718,16 @@ get too large to be held in memory we could use the <code class="docutils litera
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-Applied logodds-transform to p and added transformed p_logodds_ to model.
-100%|██████████| 5000/5000 [00:04&lt;00:00, 1138.49it/s]
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -170.31: 100%|██████████| 200000/200000 [00:22&lt;00:00, 8858.79it/s]
+Finished [100%]: Average ELBO = -170.31
+100%|██████████| 5000/5000 [00:07&lt;00:00, 701.61it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [30]:
+<span></span>In [31]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -1803,20 +1746,20 @@ x1:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.001            0.130            0.001            [-0.244, 0.263]
+  0.000            0.129            0.001            [-0.253, 0.250]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  -0.251         -0.088         0.001          0.090          0.257
+  -0.251         -0.089         0.001          0.090          0.253
 
 </pre></div></div>
 </div>
 <p>The stored trace can then later be loaded using the <code class="docutils literal"><span class="pre">load</span></code> command:</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [31]:
+<span></span>In [32]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>

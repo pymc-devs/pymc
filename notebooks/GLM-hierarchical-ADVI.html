@@ -393,22 +393,13 @@ div.nboutput  > :nth-child(2).stderr {
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -4727.86
-Iteration 10000 [10%]: Average ELBO = -3951.33
-Iteration 20000 [20%]: Average ELBO = -2266.51
-Iteration 30000 [30%]: Average ELBO = -1282.22
-Iteration 40000 [40%]: Average ELBO = -1118.58
-Iteration 50000 [50%]: Average ELBO = -1102.98
-Iteration 60000 [60%]: Average ELBO = -1099.79
-Iteration 70000 [70%]: Average ELBO = -1098.64
-Iteration 80000 [80%]: Average ELBO = -1098.57
-Iteration 90000 [90%]: Average ELBO = -1098.14
-Finished [100%]: Average ELBO = -1098.16
+Average ELBO = -1,098.31: 100%|██████████| 100000/100000 [00:23&lt;00:00, 4255.25it/s]
+Finished [100%]: Average ELBO = -1,098.06
 </pre></div></div>
 </div>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
@@ -421,14 +412,6 @@ Finished [100%]: Average ELBO = -1098.16
     <span class="n">hierarchical_trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">means</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
-</pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -556,20 +539,20 @@ predictions.</p>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Applied interval-transform to eps and added transformed eps_interval to model.
-Assigned NUTS to alpha
-Assigned NUTS to beta
-Assigned NUTS to eps_interval
-Applied interval-transform to eps and added transformed eps_interval to model.
-Assigned NUTS to alpha
-Assigned NUTS to beta
-Assigned NUTS to eps_interval
-Applied interval-transform to eps and added transformed eps_interval to model.
-Assigned NUTS to alpha
-Assigned NUTS to beta
-Assigned NUTS to eps_interval
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -19.21: 100%|██████████| 500000/500000 [00:45&lt;00:00, 11104.16it/s]
+Finished [100%]: Average ELBO = -19.20
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -37.91: 100%|██████████| 500000/500000 [01:11&lt;00:00, 7003.49it/s]
+Finished [100%]: Average ELBO = -37.89
+Auto-assigning NUTS sampler...
+Initializing NUTS using advi...
+Average ELBO = -34.96: 100%|██████████| 500000/500000 [01:14&lt;00:00, 6685.85it/s]
+Finished [100%]: Average ELBO = -34.96
 </pre></div></div>
 </div>
 <div class="nbinput container">

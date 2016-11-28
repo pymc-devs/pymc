@@ -36,7 +36,7 @@
     <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Bayesian Survival Analysis" href="survival_analysis.html"/>
-        <link rel="prev" title="Probabilistic Matrix Factorization for Making Personalized Recommendations" href="pmf-pymc.html"/> 
+        <link rel="prev" title="Stochastic Volatility model" href="stochastic_volatility.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -92,7 +92,6 @@
 <li class="toctree-l2 current"><a class="reference internal" href="../examples.html#applied">Applied</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="BEST.html">Bayesian Estimation Supersedes the T-Test</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stochastic_volatility.html">Stochastic Volatility model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="pmf-pymc.html">Probabilistic Matrix Factorization for Making Personalized Recommendations</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">A Hierarchical model for Rugby prediction</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#Motivation">Motivation</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#What-do-we-want-to-infer?">What do we want to infer?</a></li>
@@ -388,20 +387,12 @@ of a team.</li>
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="container">
-<div class="highlight"><pre>
-Thu Oct 13 10:10:40 EDT 2016
-</pre></div></div>
-</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="stderr container">
+<div class="container">
 <div class="highlight"><pre>
-WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up with strange g++/OSX bugs.
+Sun Nov 20 16:24:00 GMT 2016
 </pre></div></div>
 </div>
 <p>This is a Rugby prediction exercise. So we&#8217;ll input some data</p>
@@ -542,7 +533,7 @@ in the sports analytics literature</li>
 <li>We now build the model in PyMC3, specifying the global parameters,
 and the team-specific parameters and the likelihood function</li>
 </ul>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [4]:
 </pre></div>
@@ -577,24 +568,25 @@ and the team-specific parameters and the likelihood function</li>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Applied log-transform to tau_att and added transformed tau_att_log_ to model.
-Applied log-transform to tau_def and added transformed tau_def_log_ to model.
-</pre></div></div>
-</div>
 <ul class="simple">
 <li>We specified the model and the likelihood function</li>
 <li>All this runs on a Theano graph under the hood</li>
 <li>Now we need to fit our model using the Maximum A Posteriori algorithm
 to decide where to start out No U Turn Sampler</li>
 </ul>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>pm.sample<span class="o">?</span>
+</pre></div>
+</div>
+</div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [5]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -602,7 +594,7 @@ to decide where to start out No U Turn Sampler</li>
 
     <span class="n">start</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">find_MAP</span><span class="p">()</span>
     <span class="n">step</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">NUTS</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
 
     <span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">)</span>
 </pre></div>
@@ -611,16 +603,28 @@ to decide where to start out No U Turn Sampler</li>
 <div class="nboutput container">
 <div class="container">
 </div>
+<div class="container">
+<div class="highlight"><pre>
+Optimization terminated successfully.
+         Current function value: 130.518817
+         Iterations: 31
+         Function evaluations: 40
+         Gradient evaluations: 40
+</pre></div></div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 2000/2000 [00:05&lt;00:00, 393.48it/s]
+100%|██████████| 2000/2000 [00:45&lt;00:00, 44.27it/s]
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_rugby_analytics_15_1.png" src="../_images/notebooks_rugby_analytics_15_1.png" />
+<img alt="../_images/notebooks_rugby_analytics_16_2.png" src="../_images/notebooks_rugby_analytics_16_2.png" />
 </div>
 </div>
 </div>
@@ -632,7 +636,7 @@ estimates and help us better understand the uncertainty in sports
 analytics</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -642,38 +646,11 @@ analytics</p>
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[6]:
+<span></span>Out[10]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.gridspec.GridSpec at 0x150176f28&gt;
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="../_images/notebooks_rugby_analytics_17_1.png" src="../_images/notebooks_rugby_analytics_17_1.png" />
-</div>
-</div>
-<div class="nbinput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [7]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;defs&#39;</span><span class="p">],</span> <span class="n">ylabels</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;France&#39;</span><span class="p">,</span> <span class="s1">&#39;Ireland&#39;</span><span class="p">,</span> <span class="s1">&#39;Scotland&#39;</span><span class="p">,</span> <span class="s1">&#39;Italy&#39;</span><span class="p">,</span> <span class="s1">&#39;England&#39;</span><span class="p">,</span> <span class="s1">&#39;Wales&#39;</span><span class="p">],</span> <span class="n">main</span><span class="o">=</span><span class="s2">&quot;Team Defense&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[7]:
-</pre></div>
-</div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.gridspec.GridSpec at 0x14df88c50&gt;
+<span></span>&lt;matplotlib.gridspec.GridSpec at 0x11fc4e240&gt;
 </pre></div>
 </div>
 </div>
@@ -684,13 +661,69 @@ analytics</p>
 <img alt="../_images/notebooks_rugby_analytics_18_1.png" src="../_images/notebooks_rugby_analytics_18_1.png" />
 </div>
 </div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;defs&#39;</span><span class="p">],</span> <span class="n">ylabels</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;France&#39;</span><span class="p">,</span> <span class="s1">&#39;Ireland&#39;</span><span class="p">,</span> <span class="s1">&#39;Scotland&#39;</span><span class="p">,</span> <span class="s1">&#39;Italy&#39;</span><span class="p">,</span> <span class="s1">&#39;England&#39;</span><span class="p">,</span> <span class="s1">&#39;Wales&#39;</span><span class="p">],</span> <span class="n">main</span><span class="o">=</span><span class="s2">&quot;Team Defense&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[11]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.gridspec.GridSpec at 0x11ef0e588&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_rugby_analytics_19_1.png" src="../_images/notebooks_rugby_analytics_19_1.png" />
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [22]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>pm.plot_posterior<span class="o">?</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [23]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">plot_posterior</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">100</span><span class="p">:],</span>
+                  <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;defs&#39;</span><span class="p">],</span>
+                  <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#87ceeb&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_rugby_analytics_21_0.png" src="../_images/notebooks_rugby_analytics_21_0.png" />
+</div>
+</div>
 </div>
 <div class="section" id="Covariates">
 <h2>Covariates<a class="headerlink" href="#Covariates" title="Permalink to this headline">¶</a></h2>
 <p>We should do some exploration of the variables.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [12]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -702,7 +735,7 @@ analytics</p>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -726,7 +759,7 @@ analytics</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-/usr/local/var/pyenv/versions/miniconda3-4.0.5/envs/testenv/lib/python3.5/site-packages/pandas/core/frame.py:2754: SettingWithCopyWarning:
+/Users/peadarcoyle/anaconda/envs/pymc3_dev/lib/python3.5/site-packages/pandas/core/frame.py:2834: SettingWithCopyWarning:
 A value is trying to be set on a copy of a slice from a DataFrame
 
 See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
@@ -737,7 +770,7 @@ See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stabl
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_rugby_analytics_21_1.png" src="../_images/notebooks_rugby_analytics_21_1.png" />
+<img alt="../_images/notebooks_rugby_analytics_24_1.png" src="../_images/notebooks_rugby_analytics_24_1.png" />
 </div>
 </div>
 <p>We observe that there isn&#8217;t a lot of correlation between these
@@ -757,7 +790,7 @@ get some insight into how the variables are behaving.</p>
         <a href="survival_analysis.html" class="btn btn-neutral float-right" title="Bayesian Survival Analysis" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="pmf-pymc.html" class="btn btn-neutral" title="Probabilistic Matrix Factorization for Making Personalized Recommendations" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="stochastic_volatility.html" class="btn btn-neutral" title="Stochastic Volatility model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

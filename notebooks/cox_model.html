@@ -297,7 +297,7 @@ div.nboutput  > :nth-child(2).stderr {
 </style>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [14]:
+<span></span>In [1]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -312,38 +312,38 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 </div>
 <p>Here is the original model, implemented in BUGS:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">model</span>
+<div class="highlight-r"><div class="highlight"><pre><span></span>model
 <span class="p">{</span>
     <span class="c1"># Set up data</span>
-        <span class="k">for</span><span class="p">(</span><span class="n">i</span> <span class="ow">in</span> <span class="mi">1</span><span class="p">:</span><span class="n">Nsubj</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">for</span><span class="p">(</span><span class="n">j</span> <span class="ow">in</span> <span class="mi">1</span><span class="p">:</span><span class="n">T</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kr">for</span><span class="p">(</span>i <span class="kr">in</span> <span class="m">1</span><span class="o">:</span>Nsubj<span class="p">)</span> <span class="p">{</span>
+            <span class="kr">for</span><span class="p">(</span>j <span class="kr">in</span> <span class="m">1</span><span class="o">:</span><span class="bp">T</span><span class="p">)</span> <span class="p">{</span>
     <span class="c1"># risk set = 1 if obs.t &gt;= t</span>
-                <span class="n">Y</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;-</span> <span class="n">step</span><span class="p">(</span><span class="n">obs</span><span class="o">.</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">t</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">eps</span><span class="p">)</span>
+                Y<span class="p">[</span>i<span class="p">,</span>j<span class="p">]</span> <span class="o">&lt;-</span> step<span class="p">(</span>obs.t<span class="p">[</span>i<span class="p">]</span> <span class="o">-</span> <span class="kp">t</span><span class="p">[</span>j<span class="p">]</span> <span class="o">+</span> eps<span class="p">)</span>
     <span class="c1"># counting process jump = 1 if obs.t in [ t[j], t[j+1] )</span>
     <span class="c1">#                      i.e. if t[j] &lt;= obs.t &lt; t[j+1]</span>
-                <span class="n">dN</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">&lt;-</span> <span class="n">Y</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">step</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">obs</span><span class="o">.</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">eps</span><span class="p">)</span> <span class="o">*</span> <span class="n">FAIL</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                dN<span class="p">[</span>i<span class="p">,</span> j<span class="p">]</span> <span class="o">&lt;-</span> Y<span class="p">[</span>i<span class="p">,</span> j<span class="p">]</span> <span class="o">*</span> step<span class="p">(</span><span class="kp">t</span><span class="p">[</span>j <span class="o">+</span> <span class="m">1</span><span class="p">]</span> <span class="o">-</span> obs.t<span class="p">[</span>i<span class="p">]</span> <span class="o">-</span> eps<span class="p">)</span> <span class="o">*</span> FAIL<span class="p">[</span>i<span class="p">]</span>
             <span class="p">}</span>
         <span class="p">}</span>
 
     <span class="c1"># Model</span>
-        <span class="k">for</span><span class="p">(</span><span class="n">j</span> <span class="ow">in</span> <span class="mi">1</span><span class="p">:</span><span class="n">T</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">for</span><span class="p">(</span><span class="n">i</span> <span class="ow">in</span> <span class="mi">1</span><span class="p">:</span><span class="n">Nsubj</span><span class="p">)</span> <span class="p">{</span>
-                <span class="n">dN</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>   <span class="o">~</span> <span class="n">dpois</span><span class="p">(</span><span class="n">Idt</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">])</span>              <span class="c1"># Likelihood</span>
-                <span class="n">Idt</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">&lt;-</span> <span class="n">Y</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp</span><span class="p">(</span><span class="n">beta</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">pscenter</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">beta</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span>
-                <span class="n">hhcenter</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">beta</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">*</span><span class="n">ncomact</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">beta</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">*</span><span class="n">rleader</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">beta</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">*</span><span class="n">dleader</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">beta</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">*</span><span class="n">inter1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">beta</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span><span class="o">*</span><span class="n">inter2</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="n">dL0</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>    <span class="c1"># Intensity</span>
+        <span class="kr">for</span><span class="p">(</span>j <span class="kr">in</span> <span class="m">1</span><span class="o">:</span><span class="bp">T</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kr">for</span><span class="p">(</span>i <span class="kr">in</span> <span class="m">1</span><span class="o">:</span>Nsubj<span class="p">)</span> <span class="p">{</span>
+                dN<span class="p">[</span>i<span class="p">,</span> j<span class="p">]</span>   <span class="o">~</span> dpois<span class="p">(</span>Idt<span class="p">[</span>i<span class="p">,</span> j<span class="p">])</span>              <span class="c1"># Likelihood</span>
+                Idt<span class="p">[</span>i<span class="p">,</span> j<span class="p">]</span> <span class="o">&lt;-</span> Y<span class="p">[</span>i<span class="p">,</span> j<span class="p">]</span> <span class="o">*</span> <span class="kp">exp</span><span class="p">(</span><span class="kp">beta</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="o">*</span>pscenter<span class="p">[</span>i<span class="p">]</span> <span class="o">+</span> <span class="kp">beta</span><span class="p">[</span><span class="m">2</span><span class="p">]</span><span class="o">*</span>
+                hhcenter<span class="p">[</span>i<span class="p">]</span> <span class="o">+</span> <span class="kp">beta</span><span class="p">[</span><span class="m">3</span><span class="p">]</span><span class="o">*</span>ncomact<span class="p">[</span>i<span class="p">]</span> <span class="o">+</span> <span class="kp">beta</span><span class="p">[</span><span class="m">4</span><span class="p">]</span><span class="o">*</span>rleader<span class="p">[</span>i<span class="p">]</span> <span class="o">+</span> <span class="kp">beta</span><span class="p">[</span><span class="m">5</span><span class="p">]</span><span class="o">*</span>dleader<span class="p">[</span>i<span class="p">]</span> <span class="o">+</span> <span class="kp">beta</span><span class="p">[</span><span class="m">6</span><span class="p">]</span><span class="o">*</span>inter1<span class="p">[</span>i<span class="p">]</span> <span class="o">+</span> <span class="kp">beta</span><span class="p">[</span><span class="m">7</span><span class="p">]</span><span class="o">*</span>inter2<span class="p">[</span>i<span class="p">])</span> <span class="o">*</span> dL0<span class="p">[</span>j<span class="p">]</span>    <span class="c1"># Intensity</span>
             <span class="p">}</span>
-            <span class="n">dL0</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">~</span> <span class="n">dgamma</span><span class="p">(</span><span class="n">mu</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">c</span><span class="p">)</span>
-            <span class="n">mu</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;-</span> <span class="n">dL0</span><span class="o">.</span><span class="n">star</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">c</span>    <span class="c1"># prior mean hazard</span>
+            dL0<span class="p">[</span>j<span class="p">]</span> <span class="o">~</span> dgamma<span class="p">(</span>mu<span class="p">[</span>j<span class="p">],</span> <span class="kt">c</span><span class="p">)</span>
+            mu<span class="p">[</span>j<span class="p">]</span> <span class="o">&lt;-</span> dL0.star<span class="p">[</span>j<span class="p">]</span> <span class="o">*</span> <span class="kt">c</span>    <span class="c1"># prior mean hazard</span>
         <span class="p">}</span>
 
 
-    <span class="n">c</span> <span class="o">~</span> <span class="n">dgamma</span><span class="p">(</span><span class="mf">0.0001</span><span class="p">,</span> <span class="mf">0.00001</span><span class="p">)</span>
-    <span class="n">r</span> <span class="o">~</span> <span class="n">dgamma</span><span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.0001</span><span class="p">)</span>
+    <span class="kt">c</span> <span class="o">~</span> dgamma<span class="p">(</span><span class="m">0.0001</span><span class="p">,</span> <span class="m">0.00001</span><span class="p">)</span>
+    r <span class="o">~</span> dgamma<span class="p">(</span><span class="m">0.001</span><span class="p">,</span> <span class="m">0.0001</span><span class="p">)</span>
 
 
-    <span class="k">for</span> <span class="p">(</span><span class="n">j</span> <span class="ow">in</span> <span class="mi">1</span> <span class="p">:</span> <span class="n">T</span><span class="p">)</span> <span class="p">{</span>  <span class="n">dL0</span><span class="o">.</span><span class="n">star</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;-</span> <span class="n">r</span> <span class="o">*</span> <span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">t</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>  <span class="p">}</span>
+    <span class="kr">for</span> <span class="p">(</span>j <span class="kr">in</span> <span class="m">1</span> <span class="o">:</span> <span class="bp">T</span><span class="p">)</span> <span class="p">{</span>  dL0.star<span class="p">[</span>j<span class="p">]</span> <span class="o">&lt;-</span> r <span class="o">*</span> <span class="p">(</span><span class="kp">t</span><span class="p">[</span>j <span class="o">+</span> <span class="m">1</span><span class="p">]</span> <span class="o">-</span> <span class="kp">t</span><span class="p">[</span>j<span class="p">])</span>  <span class="p">}</span>
     <span class="c1"># next line indicates number of covariates and is for the corresponding betas</span>
-    <span class="k">for</span><span class="p">(</span><span class="n">i</span> <span class="ow">in</span> <span class="mi">1</span><span class="p">:</span><span class="mi">7</span><span class="p">)</span> <span class="p">{</span><span class="n">beta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">~</span> <span class="n">dnorm</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.00001</span><span class="p">)}</span>
+    <span class="kr">for</span><span class="p">(</span>i <span class="kr">in</span> <span class="m">1</span><span class="o">:</span><span class="m">7</span><span class="p">)</span> <span class="p">{</span><span class="kp">beta</span><span class="p">[</span>i<span class="p">]</span> <span class="o">~</span> dnorm<span class="p">(</span><span class="m">0.0</span><span class="p">,</span><span class="m">0.00001</span><span class="p">)}</span>
 
 
 <span class="p">}</span>
@@ -446,7 +446,7 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [16]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -482,7 +482,7 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [17]:
+<span></span>In [8]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -507,9 +507,9 @@ Initializing NUTS using advi_map...
 <div class="highlight"><pre>
 Warning: Desired error not necessarily achieved due to precision loss.
          Current function value: 2811.898224
-         Iterations: 921
-         Function evaluations: 1020
-         Gradient evaluations: 1010
+         Iterations: 913
+         Function evaluations: 999
+         Gradient evaluations: 988
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
@@ -517,14 +517,14 @@ Warning: Desired error not necessarily achieved due to precision loss.
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-Average ELBO = -2,859.50: 100%|██████████| 10000/10000 [00:29&lt;00:00, 343.46it/s]
-Finished [100%]: Average ELBO = -2,845.43
-100%|██████████| 2000/2000 [02:03&lt;00:00, 16.14it/s]
+Average ELBO = -2,860.41: 100%|██████████| 10000/10000 [00:14&lt;00:00, 674.72it/s]
+Finished [100%]: Average ELBO = -2,845.79
+100%|██████████| 2000/2000 [02:30&lt;00:00, 13.25it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [18]:
+<span></span>In [9]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -541,7 +541,7 @@ Finished [100%]: Average ELBO = -2,845.43
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [19]:
+<span></span>In [10]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -551,11 +551,11 @@ Finished [100%]: Average ELBO = -2,845.43
 </div>
 <div class="nboutput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[19]:
+<span></span>Out[10]:
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.gridspec.GridSpec at 0x7fa8a64a4dd8&gt;
+<span></span>&lt;matplotlib.gridspec.GridSpec at 0x115a44d68&gt;
 </pre></div>
 </div>
 </div>

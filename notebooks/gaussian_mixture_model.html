@@ -340,10 +340,10 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Wed Oct 12 08:50:16 EDT 2016
+Fri Nov 18 18:11:28 CST 2016
 </pre></div></div>
 </div>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [2]:
 </pre></div>
@@ -352,14 +352,6 @@ Wed Oct 12 08:50:16 EDT 2016
 <span></span><span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span><span class="o">,</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">tt</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up with strange g++/OSX bugs.
-</pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -433,8 +425,8 @@ WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up 
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-Applied stickbreaking-transform to p and added transformed p_stickbreaking_ to model.
-Applied interval-transform to sd and added transformed sd_interval_ to model.
+INFO (theano.gof.compilelock): Waiting for existing lock by process &#39;4344&#39; (I am process &#39;4379&#39;)
+INFO (theano.gof.compilelock): To manually release the lock, delete /Users/fonnescj/.theano/compiledir_Darwin-16.1.0-x86_64-i386-64bit-i386-3.5.2-64/lock_dir
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -456,7 +448,8 @@ Applied interval-transform to sd and added transformed sd_interval_ to model.
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 10000/10000 [00:48&lt;00:00, 206.21it/s]
+/Users/fonnescj/anaconda3/envs/dev/lib/python3.5/site-packages/ipykernel/__main__.py:4: DeprecationWarning: ElemwiseCategorical is deprecated, switch to CategoricalGibbsMetropolis.
+100%|██████████| 10000/10000 [02:00&lt;00:00, 82.75it/s]
 </pre></div></div>
 </div>
 <div class="section" id="Full-trace">
@@ -517,7 +510,7 @@ Applied interval-transform to sd and added transformed sd_interval_ to model.
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x1453492e8&gt;]], dtype=object)
+<span></span>array([[&lt;matplotlib.axes._subplots.AxesSubplot object at 0x1162b0860&gt;]], dtype=object)
 </pre></div>
 </div>
 </div>
@@ -590,16 +583,6 @@ true cluster: 2
 </div>
 <div class="container">
 <img alt="../_images/notebooks_gaussian_mixture_model_13_1.png" src="../_images/notebooks_gaussian_mixture_model_13_1.png" />
-</div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>
-</pre></div>
 </div>
 </div>
 </div>

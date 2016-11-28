@@ -473,7 +473,7 @@ hyper-parameter optimization and a lot of tribal knowledge.</p>
 <h3>Generating data<a class="headerlink" href="#Generating-data" title="Permalink to this headline">¶</a></h3>
 <p>First, lets generate some toy data &#8211; a simple binary classification
 problem that&#8217;s not linearly separable.</p>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [1]:
 </pre></div>
@@ -495,6 +495,15 @@ problem that&#8217;s not linearly separable.</p>
 <span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">make_moons</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/Users/fonnescj/anaconda3/envs/dev/lib/python3.5/site-packages/sklearn/cross_validation.py:44: DeprecationWarning: This module was deprecated in version 0.18 in favor of the model_selection module into which all the refactored classes and functions are moved. Also note that the interface of the new CV iterators are different from that of this module. This module will be removed in 0.20.
+  &#34;This module will be removed in 0.20.&#34;, DeprecationWarning)
+</pre></div></div>
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -626,7 +635,8 @@ with neural_network:
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-WARNING (theano.tensor.blas): We did not found a dynamic library into the library_dir of the library we use for blas. If you use ATLAS, make sure to compile it with dynamics library.
+Average ELBO = -131.71: 100%|██████████| 50000/50000 [00:25&lt;00:00, 1965.31it/s]
+Finished [100%]: Average ELBO = -129.04
 </pre></div></div>
 </div>
 <div class="nboutput nblast container">
@@ -634,19 +644,8 @@ WARNING (theano.tensor.blas): We did not found a dynamic library into the librar
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -555.77
-Iteration 5000 [10%]: Average ELBO = -542.19
-Iteration 10000 [20%]: Average ELBO = -263.19
-Iteration 15000 [30%]: Average ELBO = -217.94
-Iteration 20000 [40%]: Average ELBO = -201.32
-Iteration 25000 [50%]: Average ELBO = -186.01
-Iteration 30000 [60%]: Average ELBO = -168.42
-Iteration 35000 [70%]: Average ELBO = -149.66
-Iteration 40000 [80%]: Average ELBO = -138.55
-Iteration 45000 [90%]: Average ELBO = -132.01
-Finished [100%]: Average ELBO = -129.52
-CPU times: user 18.6 s, sys: 330 ms, total: 18.9 s
-Wall time: 18.8 s
+CPU times: user 25.3 s, sys: 685 ms, total: 26 s
+Wall time: 29.4 s
 </pre></div></div>
 </div>
 <p>&lt; 40 seconds on my older laptop. That&#8217;s pretty good considering that
@@ -673,7 +672,7 @@ MCMC):</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 5000/5000 [00:00&lt;00:00, 9470.43it/s]
+100%|██████████| 5000/5000 [00:00&lt;00:00, 9737.59it/s]
 </pre></div></div>
 </div>
 <p>Plotting the objective function (ELBO) we can see that the optimization
@@ -696,7 +695,7 @@ slowly improves the fit over time.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.text.Text at 0x7f9e90bf3908&gt;
+<span></span>&lt;matplotlib.text.Text at 0x116334438&gt;
 </pre></div>
 </div>
 </div>
@@ -735,7 +734,7 @@ to generate new data (in this case class predictions) from the posterior
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 500/500 [00:02&lt;00:00, 171.97it/s]
+100%|██████████| 500/500 [00:05&lt;00:00, 94.45it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -815,7 +814,7 @@ the whole input space.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 500/500 [00:05&lt;00:00, 84.08it/s]
+100%|██████████| 500/500 [00:08&lt;00:00, 57.93it/s]
 </pre></div></div>
 </div>
 <div class="section" id="Probability-surface">
@@ -948,24 +947,22 @@ with neural_network:
 </pre></div>
 </div>
 </div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Average ELBO = -120.61: 100%|██████████| 50000/50000 [00:31&lt;00:00, 1582.90it/s]
+Finished minibatch ADVI: ELBO = -120.17
+</pre></div></div>
+</div>
 <div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -1696.08
-Iteration 5000 [10%]: Average ELBO = -218.26
-Iteration 10000 [20%]: Average ELBO = -125.75
-Iteration 15000 [30%]: Average ELBO = -119.31
-Iteration 20000 [40%]: Average ELBO = -117.92
-Iteration 25000 [50%]: Average ELBO = -118.06
-Iteration 30000 [60%]: Average ELBO = -118.14
-Iteration 35000 [70%]: Average ELBO = -118.09
-Iteration 40000 [80%]: Average ELBO = -118.57
-Iteration 45000 [90%]: Average ELBO = -118.22
-Finished [100%]: ELBO = -97.24
-CPU times: user 21.9 s, sys: 30 ms, total: 21.9 s
-Wall time: 22.4 s
+CPU times: user 35.9 s, sys: 676 ms, total: 36.6 s
+Wall time: 43.9 s
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -984,7 +981,7 @@ Wall time: 22.4 s
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 5000/5000 [00:00&lt;00:00, 9245.25it/s]
+100%|██████████| 5000/5000 [00:00&lt;00:00, 7864.25it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">

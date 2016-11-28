@@ -102,7 +102,6 @@
 <li class="toctree-l3"><a class="reference internal" href="GLM-robust-with-outlier-detection.html">GLM: Robust Regression with Outlier Detection</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-model-selection.html">GLM: Model Selection</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-rolling-regression.html">Rolling Regression</a></li>
-<li class="toctree-l3"><a class="reference internal" href="GLM-logistic.html">GLM: Logistic Regression</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-hierarchical.html">GLM: Hierarchical Linear Regression</a></li>
 <li class="toctree-l3"><a class="reference internal" href="GLM-poisson-regression.html">GLM: Poisson Regression</a></li>
 </ul>
@@ -434,7 +433,7 @@ more complex models.</p>
 <p>First, lets import the required modules.</p>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [11]:
+<span></span>In [1]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -503,9 +502,9 @@ statement.</p>
 <p>Here we use the awesome new <a class="reference external" href="http://arxiv.org/abs/1111.4246">NUTS
 sampler</a> (our Inference Button) to
 draw 2000 posterior samples.</p>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [10]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -526,6 +525,18 @@ draw 2000 posterior samples.</p>
 </pre></div>
 </div>
 </div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Optimization terminated successfully.
+         Current function value: 170.835551
+         Iterations: 15
+         Function evaluations: 20
+         Gradient evaluations: 20
+</pre></div></div>
+</div>
 <p>This should be fairly readable for people who know probabilistic
 programming. However, would my non-statistican friend know what all this
 does? Moreover, recall that this is an extremely simple model that would
@@ -537,9 +548,9 @@ complex and error prone.</p>
 linear model specifier from which it creates a design matrix. <code class="docutils literal"><span class="pre">glm()</span></code>
 then adds random variables for each of the coefficients and an
 appopriate likelihood to the model.</p>
-<div class="nbinput nblast container">
+<div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [9]:
+<span></span>In [5]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -552,6 +563,27 @@ appopriate likelihood to the model.</p>
     <span class="n">trace</span> <span class="o">=</span> <span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span> <span class="c1"># draw 2000 posterior samples using NUTS sampling</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Optimization terminated successfully.
+         Current function value: 192.469482
+         Iterations: 14
+         Function evaluations: 19
+         Gradient evaluations: 19
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+INFO (theano.gof.compilelock): Waiting for existing lock by process &#39;6536&#39; (I am process &#39;6530&#39;)
+INFO (theano.gof.compilelock): To manually release the lock, delete /Users/fonnescj/.theano/compiledir_Darwin-16.1.0-x86_64-i386-64bit-i386-3.5.2-64/lock_dir
+</pre></div></div>
 </div>
 <p>Much shorter, but this code does the exact same thing as the above model
 specification (you can change priors and everything else too if we
@@ -573,7 +605,7 @@ likely parameters. Lets plot the posterior distribution of our
 parameters and the individual samples we drew.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [8]:
+<span></span>In [6]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -587,7 +619,7 @@ parameters and the individual samples we drew.</p>
 <div class="container">
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.figure.Figure at 0x7f574ca72b10&gt;
+<span></span>&lt;matplotlib.figure.Figure at 0x110db4cc0&gt;
 </pre></div>
 </div>
 </div>
@@ -615,7 +647,7 @@ of them. Here we are using the <code class="docutils literal"><span class="pre">
 convenience function for this.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [6]:
+<span></span>In [7]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>

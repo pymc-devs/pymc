@@ -310,20 +310,12 @@ div.nboutput  > :nth-child(2).stderr {
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
+<div class="nboutput nblast container">
 <div class="container">
 </div>
 <div class="container">
 <div class="highlight"><pre>
 Populating the interactive namespace from numpy and matplotlib
-</pre></div></div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up with strange g++/OSX bugs.
 </pre></div></div>
 </div>
 <div class="nbinput nblast container">
@@ -336,7 +328,7 @@ WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up 
 </pre></div>
 </div>
 </div>
-<div class="nbinput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [3]:
 </pre></div>
@@ -348,14 +340,6 @@ WARNING (theano.configdefaults): Only clang++ is supported. With g++, we end up 
     <span class="n">n</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">sd</span><span class="p">,</span> <span class="n">observed</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-Applied log-transform to sd and added transformed sd_log_ to model.
-</pre></div></div>
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
@@ -370,19 +354,10 @@ Applied log-transform to sd and added transformed sd_log_ to model.
 <div class="nboutput nblast container">
 <div class="container">
 </div>
-<div class="container">
+<div class="stderr container">
 <div class="highlight"><pre>
-Iteration 0 [0%]: ELBO = -586.43
-Iteration 2000 [10%]: Average ELBO = -386.82
-Iteration 4000 [20%]: Average ELBO = -157.07
-Iteration 6000 [30%]: Average ELBO = -136.69
-Iteration 8000 [40%]: Average ELBO = -131.44
-Iteration 10000 [50%]: Average ELBO = -130.67
-Iteration 12000 [60%]: Average ELBO = -130.66
-Iteration 14000 [70%]: Average ELBO = -130.67
-Iteration 16000 [80%]: Average ELBO = -130.66
-Iteration 18000 [90%]: Average ELBO = -130.66
-Finished [100%]: Average ELBO = -130.66
+Average ELBO = -144.42: 100%|██████████| 20000/20000 [01:41&lt;00:00, 197.93it/s]
+Finished [100%]: Average ELBO = -144.43
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -402,7 +377,7 @@ Finished [100%]: Average ELBO = -130.66
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-100%|██████████| 1000/1000 [00:00&lt;00:00, 2698.98it/s]
+100%|██████████| 1000/1000 [00:03&lt;00:00, 273.24it/s]
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -423,10 +398,10 @@ Finished [100%]: Average ELBO = -130.66
 </div>
 <div class="container">
 <div class="highlight"><pre>
-0.00766113915397
--0.146682044436
-0.0897388737967
-0.0773784687122
+-0.17169500302
+-0.00961214148597
+0.101946369818
+0.0678575947719
 </pre></div></div>
 </div>
 <div class="nbinput container">
@@ -450,7 +425,7 @@ Finished [100%]: Average ELBO = -130.66
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-/usr/local/var/pyenv/versions/miniconda3-4.0.5/envs/testenv/lib/python3.5/site-packages/statsmodels/nonparametric/kdetools.py:20: VisibleDeprecationWarning: using a non-integer number instead of an integer will result in an error in the future
+/Users/fonnescj/anaconda3/envs/dev/lib/python3.5/site-packages/statsmodels/nonparametric/kdetools.py:20: VisibleDeprecationWarning: using a non-integer number instead of an integer will result in an error in the future
   y = X[:m/2+1] + np.r_[0,X[m/2+1:],0]*1j
 </pre></div></div>
 </div>
@@ -460,7 +435,7 @@ Finished [100%]: Average ELBO = -130.66
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x14339a7b8&gt;
+<span></span>&lt;matplotlib.legend.Legend at 0x116431e80&gt;
 </pre></div>
 </div>
 </div>
@@ -492,7 +467,7 @@ Finished [100%]: Average ELBO = -130.66
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-/usr/local/var/pyenv/versions/miniconda3-4.0.5/envs/testenv/lib/python3.5/site-packages/statsmodels/nonparametric/kdetools.py:20: VisibleDeprecationWarning: using a non-integer number instead of an integer will result in an error in the future
+/Users/fonnescj/anaconda3/envs/dev/lib/python3.5/site-packages/statsmodels/nonparametric/kdetools.py:20: VisibleDeprecationWarning: using a non-integer number instead of an integer will result in an error in the future
   y = X[:m/2+1] + np.r_[0,X[m/2+1:],0]*1j
 </pre></div></div>
 </div>
@@ -502,7 +477,7 @@ Finished [100%]: Average ELBO = -130.66
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x1434bb278&gt;
+<span></span>&lt;matplotlib.legend.Legend at 0x1174935c0&gt;
 </pre></div>
 </div>
 </div>
@@ -530,7 +505,7 @@ Finished [100%]: Average ELBO = -130.66
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>[&lt;matplotlib.lines.Line2D at 0x1437d35f8&gt;]
+<span></span>[&lt;matplotlib.lines.Line2D at 0x1181f4710&gt;]
 </pre></div>
 </div>
 </div>
@@ -539,16 +514,6 @@ Finished [100%]: Average ELBO = -130.66
 </div>
 <div class="container">
 <img alt="../_images/notebooks_advi_8_1.png" src="../_images/notebooks_advi_8_1.png" />
-</div>
-</div>
-<div class="nbinput nblast container">
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [ ]:
-</pre></div>
-</div>
-<div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span>
-</pre></div>
 </div>
 </div>
 

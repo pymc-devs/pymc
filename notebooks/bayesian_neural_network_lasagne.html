@@ -1,0 +1,2342 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Bayesian Neural Networks with Lasagne &mdash; PyMC3 3.0.rc1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> PyMC3
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                3.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">PyMC3</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>Bayesian Neural Networks with Lasagne</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/notebooks/bayesian_neural_network_lasagne.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput,
+div.nbinput > div,
+div.nbinput div[class^=highlight],
+div.nbinput div[class^=highlight] pre,
+div.nboutput,
+div.nboutput > div,
+div.nboutput div[class^=highlight],
+div.nboutput div[class^=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput div[class^=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput,
+div.nboutput {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+}
+
+/* input container */
+div.nbinput {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput > :first-child pre {
+    color: #303F9F;
+}
+
+/* output prompt */
+div.nboutput > :first-child pre {
+    color: #D84315;
+}
+
+/* all prompts */
+div.nbinput > :first-child[class^=highlight],
+div.nboutput > :first-child[class^=highlight],
+div.nboutput > :first-child {
+    min-width: 8ex;
+    padding-top: 0.4em;
+    padding-right: 0.4em;
+    text-align: right;
+    flex: 0;
+}
+
+/* input/output area */
+div.nbinput > :nth-child(2)[class^=highlight],
+div.nboutput > :nth-child(2),
+div.nboutput > :nth-child(2)[class^=highlight] {
+    padding: 0.4em;
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+
+/* input area */
+div.nbinput > :nth-child(2)[class^=highlight] {
+    border: 1px solid #cfcfcf;
+    border-radius: 2px;
+    background: #f7f7f7;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.pngmath center alignment in output cells */
+div.nboutput div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput  > :nth-child(2).stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-bold { font-weight: bold; }
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast,
+.nboutput.nblast {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast + .nbinput {
+    margin-top: -19px;
+}
+
+/* nice headers on first paragraph of info/warning boxes */
+.admonition .first {
+    margin: -12px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    color: #fff;
+    line-height: 1;
+    display: block;
+}
+.admonition.warning .first {
+    background: #f0b37e;
+}
+.admonition.note .first {
+    background: #6ab0de;
+}
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+</style>
+<div class="section" id="Bayesian-Neural-Networks-with-Lasagne">
+<h1>Bayesian Neural Networks with Lasagne<a class="headerlink" href="#Bayesian-Neural-Networks-with-Lasagne" title="Permalink to this headline">¶</a></h1>
+<p>Originally appeared here:
+<a class="reference external" href="http://twiecki.github.io/blog/2016/07/05/bayesian-deep-learning/">http://twiecki.github.io/blog/2016/07/05/bayesian-deep-learning/</a></p>
+<p>Note: Running those notebook requires a lot of RAM.</p>
+<ol class="loweralpha simple" start="3">
+<li>2016 by Thomas Wiecki</li>
+</ol>
+<p>Recently, I blogged about <a class="reference external" href="http://twiecki.github.io/blog/2016/06/01/bayesian-deep-learning/">Bayesian Deep Learning with
+PyMC3</a>
+where I built a simple hand-coded Bayesian Neural Network and fit it on
+a toy data set. Today, we will build a more interesting model using
+<a class="reference external" href="https://lasagne.readthedocs.io/en/latest/">Lasagne</a>, a flexible
+<code class="docutils literal"><span class="pre">Theano</span></code> library for constructing various types of Neural Networks. As
+you may know, <a class="reference external" href="http://pymc-devs.github.io/pymc3/">PyMC3</a> is also
+using <code class="docutils literal"><span class="pre">Theano</span></code> so having the Artifical Neural Network (ANN) be built
+in <code class="docutils literal"><span class="pre">Lasagne</span></code>, but placing Bayesian priors on our parameters and then
+using variational inference (ADVI) in PyMC3 to estimate the model should
+be possible. To my delight, it is not only possible but also very
+straight forward.</p>
+<p>Below, I will first show how to bridge <code class="docutils literal"><span class="pre">PyMC3</span></code> and <code class="docutils literal"><span class="pre">Lasagne</span></code> to
+build a dense 2-layer ANN. We&#8217;ll then use mini-batch ADVI to fit the
+model on the MNIST handwritten digit data set. Then, we will follow up
+on another idea expressed in my <a class="reference external" href="http://twiecki.github.io/blog/2016/06/01/bayesian-deep-learning/">last blog
+post</a>
+&#8211; hierarchical ANNs. Finally, due to the power of <code class="docutils literal"><span class="pre">Lasagne</span></code>, we can
+just as easily build a Hierarchical Bayesian Convolution ANN with
+max-pooling layers to achieve 98% accuracy on MNIST.</p>
+<p>Most of the code used here is borrowed from the <a class="reference external" href="http://lasagne.readthedocs.io/en/latest/user/tutorial.html">Lasagne
+tutorial</a>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [1]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="kn">as</span> <span class="nn">sns</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set_style</span><span class="p">(</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set_context</span><span class="p">(</span><span class="s1">&#39;talk&#39;</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">pymc3</span> <span class="kn">as</span> <span class="nn">pm</span>
+<span class="kn">import</span> <span class="nn">theano.tensor</span> <span class="kn">as</span> <span class="nn">T</span>
+<span class="kn">import</span> <span class="nn">theano</span>
+
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">mode</span><span class="p">,</span> <span class="n">chisquare</span>
+
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">confusion_matrix</span><span class="p">,</span> <span class="n">accuracy_score</span>
+
+<span class="kn">import</span> <span class="nn">lasagne</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="Data-set:-MNIST">
+<h2>Data set: MNIST<a class="headerlink" href="#Data-set:-MNIST" title="Permalink to this headline">¶</a></h2>
+<p>We will be using the classic MNIST data set of handwritten digits.
+Contrary to my previous blog post which was limited to a toy data set,
+MNIST is an actually challenging ML task (of course not quite as
+challening as e.g. ImageNet) with a reasonable number of dimensions and
+data points.</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [2]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">os</span>
+
+<span class="k">def</span> <span class="nf">load_dataset</span><span class="p">():</span>
+    <span class="c1"># We first define a download function, supporting both Python 2 and 3.</span>
+    <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">urllib</span> <span class="kn">import</span> <span class="n">urlretrieve</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">urllib.request</span> <span class="kn">import</span> <span class="n">urlretrieve</span>
+
+    <span class="k">def</span> <span class="nf">download</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s1">&#39;http://yann.lecun.com/exdb/mnist/&#39;</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Downloading </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">filename</span><span class="p">)</span>
+        <span class="n">urlretrieve</span><span class="p">(</span><span class="n">source</span> <span class="o">+</span> <span class="n">filename</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+
+    <span class="c1"># We then define functions for loading MNIST images and labels.</span>
+    <span class="c1"># For convenience, they also download the requested files if needed.</span>
+    <span class="kn">import</span> <span class="nn">gzip</span>
+
+    <span class="k">def</span> <span class="nf">load_mnist_images</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+            <span class="n">download</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="c1"># Read the inputs in Yann LeCun&#39;s binary format.</span>
+        <span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+        <span class="c1"># The inputs are vectors now, we reshape them to monochrome 2D images,</span>
+        <span class="c1"># following the shape convention: (examples, channels, rows, columns)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)</span>
+        <span class="c1"># The inputs come as bytes, we convert them to float32 in range [0,1].</span>
+        <span class="c1"># (Actually to range [0, 255/256], for compatibility to the version</span>
+        <span class="c1"># provided at http://deeplearning.net/data/mnist/mnist.pkl.gz.)</span>
+        <span class="k">return</span> <span class="n">data</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">256</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">load_mnist_labels</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+            <span class="n">download</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="c1"># Read the labels in Yann LeCun&#39;s binary format.</span>
+        <span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+        <span class="c1"># The labels are vectors of integers now, that&#39;s exactly what we want.</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+    <span class="c1"># We can now download and read the training and test set images and labels.</span>
+    <span class="n">X_train</span> <span class="o">=</span> <span class="n">load_mnist_images</span><span class="p">(</span><span class="s1">&#39;train-images-idx3-ubyte.gz&#39;</span><span class="p">)</span>
+    <span class="n">y_train</span> <span class="o">=</span> <span class="n">load_mnist_labels</span><span class="p">(</span><span class="s1">&#39;train-labels-idx1-ubyte.gz&#39;</span><span class="p">)</span>
+    <span class="n">X_test</span> <span class="o">=</span> <span class="n">load_mnist_images</span><span class="p">(</span><span class="s1">&#39;t10k-images-idx3-ubyte.gz&#39;</span><span class="p">)</span>
+    <span class="n">y_test</span> <span class="o">=</span> <span class="n">load_mnist_labels</span><span class="p">(</span><span class="s1">&#39;t10k-labels-idx1-ubyte.gz&#39;</span><span class="p">)</span>
+
+    <span class="c1"># We reserve the last 10000 training examples for validation.</span>
+    <span class="n">X_train</span><span class="p">,</span> <span class="n">X_val</span> <span class="o">=</span> <span class="n">X_train</span><span class="p">[:</span><span class="o">-</span><span class="mi">10000</span><span class="p">],</span> <span class="n">X_train</span><span class="p">[</span><span class="o">-</span><span class="mi">10000</span><span class="p">:]</span>
+    <span class="n">y_train</span><span class="p">,</span> <span class="n">y_val</span> <span class="o">=</span> <span class="n">y_train</span><span class="p">[:</span><span class="o">-</span><span class="mi">10000</span><span class="p">],</span> <span class="n">y_train</span><span class="p">[</span><span class="o">-</span><span class="mi">10000</span><span class="p">:]</span>
+
+    <span class="c1"># We just return all the arrays in order, as expected in main().</span>
+    <span class="c1"># (It doesn&#39;t matter how we do this as long as we can read them again.)</span>
+    <span class="k">return</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">X_val</span><span class="p">,</span> <span class="n">y_val</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s2">&quot;Loading data...&quot;</span><span class="p">)</span>
+<span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">X_val</span><span class="p">,</span> <span class="n">y_val</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">load_dataset</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Loading data...
+Downloading train-images-idx3-ubyte.gz
+Downloading train-labels-idx1-ubyte.gz
+Downloading t10k-images-idx3-ubyte.gz
+Downloading t10k-labels-idx1-ubyte.gz
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [3]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Building a theano.shared variable with a subset of the data to make construction of the model faster.</span>
+<span class="c1"># We will later switch that out, this is just a placeholder to get the dimensionality right.</span>
+<span class="n">input_var</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">X_train</span><span class="p">[:</span><span class="mi">500</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+<span class="n">target_var</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">y_train</span><span class="p">[:</span><span class="mi">500</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Model-specification">
+<h2>Model specification<a class="headerlink" href="#Model-specification" title="Permalink to this headline">¶</a></h2>
+<p>I imagined that it should be possible to bridge <code class="docutils literal"><span class="pre">Lasagne</span></code> and
+<code class="docutils literal"><span class="pre">PyMC3</span></code> just because they both rely on <code class="docutils literal"><span class="pre">Theano</span></code>. However, it was
+unclear how difficult it was really going to be. Fortunately, a first
+experiment worked out very well but there were some potential ways in
+which this could be made even easier. I opened a <a class="reference external" href="https://github.com/Lasagne/Lasagne/issues/693">GitHub
+issue</a> on
+<code class="docutils literal"><span class="pre">Lasagne</span></code>&#8216;s repo and a few days later,
+<a class="reference external" href="https://github.com/Lasagne/Lasagne/pull/695">PR695</a> was merged which
+allowed for an ever nicer integration fo the two, as I show below. Long
+live OSS.</p>
+<p>First, the <code class="docutils literal"><span class="pre">Lasagne</span></code> function to create an ANN with 2 fully connected
+hidden layers with 800 neurons each, this is pure Lasagne code taken
+almost directly from the tutorial. The trick comes in when creating the
+layer with <code class="docutils literal"><span class="pre">lasagne.layers.DenseLayer</span></code> where we can pass in a function
+<code class="docutils literal"><span class="pre">init</span></code> which has to return a <code class="docutils literal"><span class="pre">Theano</span></code> expression to be used as the
+weight and bias matrices. This is where we will pass in our <code class="docutils literal"><span class="pre">PyMC3</span></code>
+created priors which are also just <code class="docutils literal"><span class="pre">Theano</span></code> expressions:</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [4]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">build_ann</span><span class="p">(</span><span class="n">init</span><span class="p">):</span>
+    <span class="n">l_in</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">InputLayer</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">),</span>
+                                     <span class="n">input_var</span><span class="o">=</span><span class="n">input_var</span><span class="p">)</span>
+
+    <span class="c1"># Add a fully-connected layer of 800 units, using the linear rectifier, and</span>
+    <span class="c1"># initializing weights with Glorot&#39;s scheme (which is the default anyway):</span>
+    <span class="n">n_hid1</span> <span class="o">=</span> <span class="mi">80</span>
+    <span class="n">l_hid1</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">l_in</span><span class="p">,</span> <span class="n">num_units</span><span class="o">=</span><span class="n">n_hid1</span><span class="p">,</span>
+        <span class="n">nonlinearity</span><span class="o">=</span><span class="n">lasagne</span><span class="o">.</span><span class="n">nonlinearities</span><span class="o">.</span><span class="n">tanh</span><span class="p">,</span>
+        <span class="n">b</span><span class="o">=</span><span class="n">init</span><span class="p">,</span>
+        <span class="n">W</span><span class="o">=</span><span class="n">init</span>
+    <span class="p">)</span>
+
+    <span class="n">n_hid2</span> <span class="o">=</span> <span class="mi">80</span>
+    <span class="c1"># Another 800-unit layer:</span>
+    <span class="n">l_hid2</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">l_hid1</span><span class="p">,</span> <span class="n">num_units</span><span class="o">=</span><span class="n">n_hid2</span><span class="p">,</span>
+        <span class="n">nonlinearity</span><span class="o">=</span><span class="n">lasagne</span><span class="o">.</span><span class="n">nonlinearities</span><span class="o">.</span><span class="n">tanh</span><span class="p">,</span>
+        <span class="n">b</span><span class="o">=</span><span class="n">init</span><span class="p">,</span>
+        <span class="n">W</span><span class="o">=</span><span class="n">init</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Finally, we&#39;ll add the fully-connected output layer, of 10 softmax units:</span>
+    <span class="n">l_out</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">l_hid2</span><span class="p">,</span> <span class="n">num_units</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">nonlinearity</span><span class="o">=</span><span class="n">lasagne</span><span class="o">.</span><span class="n">nonlinearities</span><span class="o">.</span><span class="n">softmax</span><span class="p">,</span>
+        <span class="n">b</span><span class="o">=</span><span class="n">init</span><span class="p">,</span>
+        <span class="n">W</span><span class="o">=</span><span class="n">init</span>
+    <span class="p">)</span>
+
+    <span class="n">prediction</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">get_output</span><span class="p">(</span><span class="n">l_out</span><span class="p">)</span>
+
+    <span class="c1"># 10 discrete output classes -&gt; pymc3 categorical distribution</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Categorical</span><span class="p">(</span><span class="s1">&#39;out&#39;</span><span class="p">,</span>
+                         <span class="n">prediction</span><span class="p">,</span>
+                         <span class="n">observed</span><span class="o">=</span><span class="n">target_var</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">out</span>
+</pre></div>
+</div>
+</div>
+<p>Next, the function which create the weights for the ANN. Because
+<code class="docutils literal"><span class="pre">PyMC3</span></code> requires every random variable to have a different name, we&#8217;re
+creating a class instead which creates uniquely named priors.</p>
+<p>The priors act as regularizers here to try and keep the weights of the
+ANN small. It&#8217;s mathematically equivalent to putting a L2 loss term that
+penalizes large weights into the objective function, as is commonly
+done.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [5]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">class</span> <span class="nc">GaussWeights</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;w</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=.</span><span class="mi">1</span><span class="p">,</span>
+                         <span class="n">testval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                         <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>If you compare what we have done so far to the previous blog post, it&#8217;s
+apparent that using <code class="docutils literal"><span class="pre">Lasagne</span></code> is much more comfortable. We don&#8217;t have
+to manually keep track of the shapes of the individual matrices, nor do
+we have to handle the underlying matrix math to make it all fit
+together.</p>
+<p>Next are some functions to set up mini-batch ADVI, you can find more
+information in the <a class="reference external" href="http://twiecki.github.io/blog/2016/06/01/bayesian-deep-learning/">prior blog
+post</a>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [6]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="c1"># Tensors and RV that will be using mini-batches</span>
+<span class="n">minibatch_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">input_var</span><span class="p">,</span> <span class="n">target_var</span><span class="p">]</span>
+
+<span class="c1"># Generator that returns mini-batches in each iteration</span>
+<span class="k">def</span> <span class="nf">create_minibatch</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">batchsize</span><span class="o">=</span><span class="mi">500</span><span class="p">):</span>
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">start_idx</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="c1"># Return random data samples of set size batchsize each iteration</span>
+        <span class="n">ixs</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">size</span><span class="o">=</span><span class="n">batchsize</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="n">data</span><span class="p">[</span><span class="n">ixs</span><span class="p">]</span>
+
+<span class="n">minibatches</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span>
+    <span class="n">create_minibatch</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="mi">500</span><span class="p">),</span>
+    <span class="n">create_minibatch</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="mi">500</span><span class="p">),</span>
+<span class="p">)</span>
+
+<span class="n">total_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_train</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">run_advi</span><span class="p">(</span><span class="n">likelihood</span><span class="p">,</span> <span class="n">advi_iters</span><span class="o">=</span><span class="mi">50000</span><span class="p">):</span>
+    <span class="c1"># Train on train data</span>
+    <span class="n">input_var</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">X_train</span><span class="p">[:</span><span class="mi">500</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+    <span class="n">target_var</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">y_train</span><span class="p">[:</span><span class="mi">500</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+
+    <span class="n">v_params</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">advi_minibatch</span><span class="p">(</span>
+        <span class="n">n</span><span class="o">=</span><span class="n">advi_iters</span><span class="p">,</span> <span class="n">minibatch_tensors</span><span class="o">=</span><span class="n">minibatch_tensors</span><span class="p">,</span>
+        <span class="n">minibatch_RVs</span><span class="o">=</span><span class="p">[</span><span class="n">likelihood</span><span class="p">],</span> <span class="n">minibatches</span><span class="o">=</span><span class="n">minibatches</span><span class="p">,</span>  <span class="n">local_RVs</span><span class="o">=</span><span class="p">{},</span>
+        <span class="n">total_size</span><span class="o">=</span><span class="n">total_size</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0</span>
+    <span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">sample_vp</span><span class="p">(</span><span class="n">v_params</span><span class="p">,</span> <span class="n">draws</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+
+    <span class="c1"># Predict on test data</span>
+    <span class="n">input_var</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+    <span class="n">target_var</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">y_test</span><span class="p">)</span>
+
+    <span class="n">ppc</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample_ppc</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">y_pred</span> <span class="o">=</span> <span class="n">mode</span><span class="p">(</span><span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;out&#39;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">mode</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="k">return</span> <span class="n">v_params</span><span class="p">,</span> <span class="n">trace</span><span class="p">,</span> <span class="n">ppc</span><span class="p">,</span> <span class="n">y_pred</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Putting-it-all-together">
+<h2>Putting it all together<a class="headerlink" href="#Putting-it-all-together" title="Permalink to this headline">¶</a></h2>
+<p>Lets run our ANN with mini-batch ADVI:</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">neural_network</span><span class="p">:</span>
+    <span class="n">likelihood</span> <span class="o">=</span> <span class="n">build_ann</span><span class="p">(</span><span class="n">GaussWeights</span><span class="p">())</span>
+    <span class="n">v_params</span><span class="p">,</span> <span class="n">trace</span><span class="p">,</span> <span class="n">ppc</span><span class="p">,</span> <span class="n">y_pred</span> <span class="o">=</span> <span class="n">run_advi</span><span class="p">(</span><span class="n">likelihood</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+Average ELBO = -23,485.94: 100%|██████████| 50000/50000 [21:42&lt;00:00, 38.39it/s]
+Finished minibatch ADVI: ELBO = -24,086.32
+100%|██████████| 500/500 [00:03&lt;00:00, 157.48it/s]
+100%|██████████| 100/100 [00:48&lt;00:00,  2.16it/s]
+</pre></div></div>
+</div>
+<p>Make sure everything converged:</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [8]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">v_params</span><span class="o">.</span><span class="n">elbo_vals</span><span class="p">[</span><span class="mi">10000</span><span class="p">:])</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_bayesian_neural_network_lasagne_16_0.png" src="../_images/notebooks_bayesian_neural_network_lasagne_16_0.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [9]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">sns</span><span class="o">.</span><span class="n">heatmap</span><span class="p">(</span><span class="n">confusion_matrix</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[9]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.axes._subplots.AxesSubplot at 0x7f4434a65b00&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_bayesian_neural_network_lasagne_17_1.png" src="../_images/notebooks_bayesian_neural_network_lasagne_17_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [10]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">print</span><span class="p">(</span><span class="s1">&#39;Accuracy on test data = {}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Accuracy on test data = 95.67%
+</pre></div></div>
+</div>
+<p>The performance is not incredibly high but hey, it seems to actually
+work.</p>
+</div>
+<div class="section" id="Hierarchical-Neural-Network:-Learning-Regularization-from-data">
+<h2>Hierarchical Neural Network: Learning Regularization from data<a class="headerlink" href="#Hierarchical-Neural-Network:-Learning-Regularization-from-data" title="Permalink to this headline">¶</a></h2>
+<p>The connection between the standard deviation of the weight prior to the
+strengh of the L2 penalization term leads to an interesting idea. Above
+we just fixed <code class="docutils literal"><span class="pre">sd=0.1</span></code> for all layers, but maybe the first layer
+should have a different value than the second. And maybe <code class="docutils literal"><span class="pre">0.1</span></code> is too
+small or too large to begin with. In Bayesian modeling it is quite
+common to just place hyperpriors in cases like this and learn the
+optimal regularization to apply from the data. This saves us from tuning
+that parameter in a costly hyperparameter optimization. For more
+information on hierarchical modeling, see my other <a href="#id1"><span class="problematic" id="id2">`blog post &lt;&gt;`__</span></a>.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [11]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">class</span> <span class="nc">GaussWeightsHierarchicalRegularization</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">regularization</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">HalfNormal</span><span class="p">(</span><span class="s1">&#39;reg_hyper</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">pm</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s1">&#39;w</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sd</span><span class="o">=</span><span class="n">regularization</span><span class="p">,</span>
+                         <span class="n">testval</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">shape</span><span class="p">),</span>
+                         <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">neural_network_hier</span><span class="p">:</span>
+    <span class="n">likelihood</span> <span class="o">=</span> <span class="n">build_ann</span><span class="p">(</span><span class="n">GaussWeightsHierarchicalRegularization</span><span class="p">())</span>
+    <span class="n">v_params</span><span class="p">,</span> <span class="n">trace</span><span class="p">,</span> <span class="n">ppc</span><span class="p">,</span> <span class="n">y_pred</span> <span class="o">=</span> <span class="n">run_advi</span><span class="p">(</span><span class="n">likelihood</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">DisconnectedInputError</span>                    Traceback (most recent call last)
+<span class="ansi-green-fg">&lt;ipython-input-12-42a8f5716c61&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-intense-fg ansi-bold">      1</span> <span class="ansi-green-fg">with</span> pm<span class="ansi-blue-fg">.</span>Model<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">as</span> neural_network_hier<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">      2</span>     likelihood <span class="ansi-blue-fg">=</span> build_ann<span class="ansi-blue-fg">(</span>GaussWeightsHierarchicalRegularization<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">----&gt; 3</span><span class="ansi-red-fg">     </span>v_params<span class="ansi-blue-fg">,</span> trace<span class="ansi-blue-fg">,</span> ppc<span class="ansi-blue-fg">,</span> y_pred <span class="ansi-blue-fg">=</span> run_advi<span class="ansi-blue-fg">(</span>likelihood<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">&lt;ipython-input-6-5bf457041a1a&gt;</span> in <span class="ansi-cyan-fg">run_advi</span><span class="ansi-blue-fg">(likelihood, advi_iters)</span>
+<span class="ansi-green-intense-fg ansi-bold">     26</span>         n<span class="ansi-blue-fg">=</span>advi_iters<span class="ansi-blue-fg">,</span> minibatch_tensors<span class="ansi-blue-fg">=</span>minibatch_tensors<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-intense-fg ansi-bold">     27</span>         minibatch_RVs<span class="ansi-blue-fg">=</span><span class="ansi-blue-fg">[</span>likelihood<span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> minibatches<span class="ansi-blue-fg">=</span>minibatches<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg">---&gt; 28</span><span class="ansi-red-fg">         </span>total_size<span class="ansi-blue-fg">=</span>total_size<span class="ansi-blue-fg">,</span> learning_rate<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">1e-2</span><span class="ansi-blue-fg">,</span> epsilon<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">1.0</span>
+<span class="ansi-green-intense-fg ansi-bold">     29</span>     )
+<span class="ansi-green-intense-fg ansi-bold">     30</span>     trace <span class="ansi-blue-fg">=</span> pm<span class="ansi-blue-fg">.</span>variational<span class="ansi-blue-fg">.</span>sample_vp<span class="ansi-blue-fg">(</span>v_params<span class="ansi-blue-fg">,</span> draws<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">500</span><span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/variational/advi_minibatch.py</span> in <span class="ansi-cyan-fg">advi_minibatch</span><span class="ansi-blue-fg">(vars, start, model, n, n_mcsamples, minibatch_RVs, minibatch_tensors, minibatches, local_RVs, observed_RVs, encoder_params, total_size, optimizer, learning_rate, epsilon, random_seed)</span>
+<span class="ansi-green-intense-fg ansi-bold">    384</span>     <span class="ansi-green-fg">if</span> <span class="ansi-cyan-fg">0</span> <span class="ansi-blue-fg">&lt;</span> len<span class="ansi-blue-fg">(</span>global_RVs<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    385</span>         params <span class="ansi-blue-fg">+=</span> <span class="ansi-blue-fg">[</span>uw_global_shared<span class="ansi-blue-fg">]</span>
+<span class="ansi-green-fg">--&gt; 386</span><span class="ansi-red-fg">     </span>updates <span class="ansi-blue-fg">=</span> OrderedDict<span class="ansi-blue-fg">(</span>optimizer<span class="ansi-blue-fg">(</span>loss<span class="ansi-blue-fg">=</span><span class="ansi-blue-fg">-</span><span class="ansi-cyan-fg">1</span> <span class="ansi-blue-fg">*</span> elbo<span class="ansi-blue-fg">,</span> param<span class="ansi-blue-fg">=</span>params<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    387</span>     f <span class="ansi-blue-fg">=</span> theano<span class="ansi-blue-fg">.</span>function<span class="ansi-blue-fg">(</span>tensors<span class="ansi-blue-fg">,</span> elbo<span class="ansi-blue-fg">,</span> updates<span class="ansi-blue-fg">=</span>updates<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    388</span>
+
+<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/variational/optimizers.py</span> in <span class="ansi-cyan-fg">optimizer</span><span class="ansi-blue-fg">(loss, param)</span>
+<span class="ansi-green-intense-fg ansi-bold">     38</span>             accu = theano.shared(
+<span class="ansi-green-intense-fg ansi-bold">     39</span>                 np.zeros(value.shape + (n_win,), dtype=value.dtype))
+<span class="ansi-green-fg">---&gt; 40</span><span class="ansi-red-fg">             </span>grad <span class="ansi-blue-fg">=</span> tt<span class="ansi-blue-fg">.</span>grad<span class="ansi-blue-fg">(</span>loss<span class="ansi-blue-fg">,</span> param_<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     41</span>
+<span class="ansi-green-intense-fg ansi-bold">     42</span>             <span class="ansi-red-fg"># Append squared gradient vector to accu_new</span>
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/gradient.py</span> in <span class="ansi-cyan-fg">grad</span><span class="ansi-blue-fg">(cost, wrt, consider_constant, disconnected_inputs, add_names, known_grads, return_disconnected, null_gradients)</span>
+<span class="ansi-green-intense-fg ansi-bold">    535</span>         <span class="ansi-green-fg">if</span> elem <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> var_to_app_to_idx <span class="ansi-green-fg">and</span> elem <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">not</span> cost<span class="ansi-red-fg"> </span><span class="ansi-red-fg">\</span>
+<span class="ansi-green-intense-fg ansi-bold">    536</span>                 <span class="ansi-green-fg">and</span> elem <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">in</span> grad_dict<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 537</span><span class="ansi-red-fg">             </span>handle_disconnected<span class="ansi-blue-fg">(</span>elem<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    538</span>             grad_dict<span class="ansi-blue-fg">[</span>elem<span class="ansi-blue-fg">]</span> <span class="ansi-blue-fg">=</span> disconnected_type<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    539</span>
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/gradient.py</span> in <span class="ansi-cyan-fg">handle_disconnected</span><span class="ansi-blue-fg">(var)</span>
+<span class="ansi-green-intense-fg ansi-bold">    522</span>             <span class="ansi-green-fg">elif</span> disconnected_inputs <span class="ansi-blue-fg">==</span> <span class="ansi-blue-fg">&#39;raise&#39;</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    523</span>                 message <span class="ansi-blue-fg">=</span> utils<span class="ansi-blue-fg">.</span>get_variable_trace_string<span class="ansi-blue-fg">(</span>var<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">--&gt; 524</span><span class="ansi-red-fg">                 </span><span class="ansi-green-fg">raise</span> DisconnectedInputError<span class="ansi-blue-fg">(</span>message<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    525</span>             <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    526</span>                 raise ValueError(&#34;Invalid value for keyword &#34;
+
+<span class="ansi-red-fg">DisconnectedInputError</span>:
+Backtrace when that variable is created:
+
+  File &#34;/home/wiecki/miniconda3/lib/python3.5/site-packages/ipykernel/zmqshell.py&#34;, line 501, in run_cell
+    return super(ZMQInteractiveShell, self).run_cell(*args, **kwargs)
+  File &#34;/home/wiecki/miniconda3/lib/python3.5/site-packages/IPython/core/interactiveshell.py&#34;, line 2717, in run_cell
+    interactivity=interactivity, compiler=compiler, result=result)
+  File &#34;/home/wiecki/miniconda3/lib/python3.5/site-packages/IPython/core/interactiveshell.py&#34;, line 2821, in run_ast_nodes
+    if self.run_code(code, result):
+  File &#34;/home/wiecki/miniconda3/lib/python3.5/site-packages/IPython/core/interactiveshell.py&#34;, line 2881, in run_code
+    exec(code_obj, self.user_global_ns, self.user_ns)
+  File &#34;&lt;ipython-input-7-ddedaf6d2805&gt;&#34;, line 3, in &lt;module&gt;
+    v_params, trace, ppc, y_pred = run_advi(likelihood)
+  File &#34;&lt;ipython-input-6-5bf457041a1a&gt;&#34;, line 28, in run_advi
+    total_size=total_size, learning_rate=1e-2, epsilon=1.0
+  File &#34;/home/wiecki/working/projects/pymc/pymc3/variational/advi_minibatch.py&#34;, line 359, in advi_minibatch
+    global_order)
+  File &#34;/home/wiecki/working/projects/pymc/pymc3/variational/advi_minibatch.py&#34;, line 75, in _init_uw_global_shared
+    uw_global_shared = theano.shared(uw_start, &#39;uw_global_shared&#39;)
+
+</pre></div></div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [22]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">print</span><span class="p">(</span><span class="s1">&#39;Accuracy on test data = {}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+Accuracy on test data = 92.13%
+</pre></div></div>
+</div>
+<p>We get a small but nice boost in accuracy. Let&#8217;s look at the posteriors
+of our hyperparameters:</p>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [23]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">traceplot</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;reg_hyper1&#39;</span><span class="p">,</span> <span class="s1">&#39;reg_hyper2&#39;</span><span class="p">,</span> <span class="s1">&#39;reg_hyper3&#39;</span><span class="p">,</span> <span class="s1">&#39;reg_hyper4&#39;</span><span class="p">,</span> <span class="s1">&#39;reg_hyper5&#39;</span><span class="p">,</span> <span class="s1">&#39;reg_hyper6&#39;</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_bayesian_neural_network_lasagne_25_0.png" src="../_images/notebooks_bayesian_neural_network_lasagne_25_0.png" />
+</div>
+</div>
+<p>Interestingly, they all are pretty different suggesting that it makes
+sense to change the amount of regularization that gets applied at each
+layer of the network.</p>
+</div>
+<div class="section" id="Convolutional-Neural-Network">
+<h2>Convolutional Neural Network<a class="headerlink" href="#Convolutional-Neural-Network" title="Permalink to this headline">¶</a></h2>
+<p>This is pretty nice but everything so far would have also been pretty
+simple to implement directly in <code class="docutils literal"><span class="pre">PyMC3</span></code> as I have shown in my previous
+post. Where things get really interesting, is that we can now build way
+more complex ANNs, like Convolutional Neural Nets:</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">def</span> <span class="nf">build_ann_conv</span><span class="p">(</span><span class="n">init</span><span class="p">):</span>
+    <span class="n">network</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">InputLayer</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">),</span>
+                                        <span class="n">input_var</span><span class="o">=</span><span class="n">input_var</span><span class="p">)</span>
+
+    <span class="n">network</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Conv2DLayer</span><span class="p">(</span>
+            <span class="n">network</span><span class="p">,</span> <span class="n">num_filters</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">filter_size</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+            <span class="n">nonlinearity</span><span class="o">=</span><span class="n">lasagne</span><span class="o">.</span><span class="n">nonlinearities</span><span class="o">.</span><span class="n">tanh</span><span class="p">,</span>
+            <span class="n">W</span><span class="o">=</span><span class="n">init</span><span class="p">)</span>
+
+    <span class="c1"># Max-pooling layer of factor 2 in both dimensions:</span>
+    <span class="n">network</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">MaxPool2DLayer</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="n">pool_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="c1"># Another convolution with 32 5x5 kernels, and another 2x2 pooling:</span>
+    <span class="n">network</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">Conv2DLayer</span><span class="p">(</span>
+        <span class="n">network</span><span class="p">,</span> <span class="n">num_filters</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">filter_size</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+        <span class="n">nonlinearity</span><span class="o">=</span><span class="n">lasagne</span><span class="o">.</span><span class="n">nonlinearities</span><span class="o">.</span><span class="n">tanh</span><span class="p">,</span>
+        <span class="n">W</span><span class="o">=</span><span class="n">init</span><span class="p">)</span>
+
+    <span class="n">network</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">MaxPool2DLayer</span><span class="p">(</span><span class="n">network</span><span class="p">,</span>
+                                            <span class="n">pool_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="n">n_hid2</span> <span class="o">=</span> <span class="mi">256</span>
+    <span class="n">network</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">network</span><span class="p">,</span> <span class="n">num_units</span><span class="o">=</span><span class="n">n_hid2</span><span class="p">,</span>
+        <span class="n">nonlinearity</span><span class="o">=</span><span class="n">lasagne</span><span class="o">.</span><span class="n">nonlinearities</span><span class="o">.</span><span class="n">tanh</span><span class="p">,</span>
+        <span class="n">b</span><span class="o">=</span><span class="n">init</span><span class="p">,</span>
+        <span class="n">W</span><span class="o">=</span><span class="n">init</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Finally, we&#39;ll add the fully-connected output layer, of 10 softmax units:</span>
+    <span class="n">network</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">(</span>
+        <span class="n">network</span><span class="p">,</span> <span class="n">num_units</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">nonlinearity</span><span class="o">=</span><span class="n">lasagne</span><span class="o">.</span><span class="n">nonlinearities</span><span class="o">.</span><span class="n">softmax</span><span class="p">,</span>
+        <span class="n">b</span><span class="o">=</span><span class="n">init</span><span class="p">,</span>
+        <span class="n">W</span><span class="o">=</span><span class="n">init</span>
+    <span class="p">)</span>
+
+    <span class="n">prediction</span> <span class="o">=</span> <span class="n">lasagne</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">get_output</span><span class="p">(</span><span class="n">network</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">pm</span><span class="o">.</span><span class="n">Categorical</span><span class="p">(</span><span class="s1">&#39;out&#39;</span><span class="p">,</span>
+                   <span class="n">prediction</span><span class="p">,</span>
+                   <span class="n">observed</span><span class="o">=</span><span class="n">target_var</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">neural_network_conv</span><span class="p">:</span>
+    <span class="n">likelihood</span> <span class="o">=</span> <span class="n">build_ann_conv</span><span class="p">(</span><span class="n">GaussWeights</span><span class="p">())</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">variational</span><span class="o">.</span><span class="n">svgd</span><span class="p">(</span><span class="n">n_particles</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="c1">#v_params, trace, ppc, y_pred = run_advi(likelihood, advi_iters=50000)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="container">
+</div>
+<div class="stderr container">
+<div class="highlight"><pre>
+/home/wiecki/miniconda3/lib/python3.5/site-packages/lasagne/layers/pool.py:266: UserWarning: DEPRECATION: the &#39;ds&#39; parameter is not going to exist anymore as it is going to be replaced by the parameter &#39;ws&#39;.
+  mode=self.mode,
+/home/wiecki/miniconda3/lib/python3.5/site-packages/lasagne/layers/pool.py:266: UserWarning: DEPRECATION: the &#39;st&#39; parameter is not going to exist anymore as it is going to be replaced by the parameter &#39;stride&#39;.
+  mode=self.mode,
+/home/wiecki/miniconda3/lib/python3.5/site-packages/lasagne/layers/pool.py:266: UserWarning: DEPRECATION: the &#39;padding&#39; parameter is not going to exist anymore as it is going to be replaced by the parameter &#39;pad&#39;.
+  mode=self.mode,
+/home/wiecki/miniconda3/lib/python3.5/site-packages/lasagne/layers/pool.py:266: UserWarning: DEPRECATION: the &#39;ds&#39; parameter is not going to exist anymore as it is going to be replaced by the parameter &#39;ws&#39;.
+  mode=self.mode,
+/home/wiecki/miniconda3/lib/python3.5/site-packages/lasagne/layers/pool.py:266: UserWarning: DEPRECATION: the &#39;st&#39; parameter is not going to exist anymore as it is going to be replaced by the parameter &#39;stride&#39;.
+  mode=self.mode,
+/home/wiecki/miniconda3/lib/python3.5/site-packages/lasagne/layers/pool.py:266: UserWarning: DEPRECATION: the &#39;padding&#39; parameter is not going to exist anymore as it is going to be replaced by the parameter &#39;pad&#39;.
+  mode=self.mode,
+
+  0%|          | 0/5000 [00:00&lt;?, ?it/s]
+  0%|          | 1/5000 [00:06&lt;9:40:37,  6.97s/it]
+  0%|          | 2/5000 [00:13&lt;9:37:03,  6.93s/it]
+  0%|          | 3/5000 [00:20&lt;9:33:35,  6.89s/it]
+  0%|          | 4/5000 [00:27&lt;9:36:16,  6.92s/it]
+  0%|          | 5/5000 [00:34&lt;9:34:47,  6.90s/it]
+  0%|          | 6/5000 [00:41&lt;9:35:52,  6.92s/it]
+  0%|          | 7/5000 [00:48&lt;9:35:49,  6.92s/it]
+  0%|          | 8/5000 [00:55&lt;9:33:59,  6.90s/it]
+  0%|          | 9/5000 [01:01&lt;9:31:39,  6.87s/it]
+  0%|          | 10/5000 [01:08&lt;9:30:10,  6.86s/it]
+  0%|          | 11/5000 [01:15&lt;9:29:34,  6.85s/it]
+  0%|          | 12/5000 [01:22&lt;9:28:09,  6.83s/it]
+  0%|          | 13/5000 [01:29&lt;9:26:44,  6.82s/it]
+  0%|          | 14/5000 [01:36&lt;9:29:24,  6.85s/it]
+  0%|          | 15/5000 [01:43&lt;9:29:13,  6.85s/it]
+  0%|          | 16/5000 [01:49&lt;9:28:12,  6.84s/it]
+  0%|          | 17/5000 [01:57&lt;9:47:39,  7.08s/it]
+  0%|          | 18/5000 [02:05&lt;10:20:11,  7.47s/it]
+  0%|          | 19/5000 [02:12&lt;10:02:46,  7.26s/it]
+  0%|          | 20/5000 [02:19&lt;9:53:33,  7.15s/it]
+  0%|          | 21/5000 [02:26&lt;9:43:56,  7.04s/it]
+  0%|          | 22/5000 [02:33&lt;9:36:42,  6.95s/it]
+  0%|          | 23/5000 [02:39&lt;9:32:14,  6.90s/it]
+  0%|          | 24/5000 [02:46&lt;9:30:15,  6.88s/it]
+  0%|          | 25/5000 [02:53&lt;9:28:28,  6.86s/it]
+  1%|          | 26/5000 [03:00&lt;9:32:13,  6.90s/it]
+  1%|          | 27/5000 [03:07&lt;9:32:16,  6.90s/it]
+  1%|          | 28/5000 [03:14&lt;9:44:38,  7.06s/it]
+  1%|          | 29/5000 [03:21&lt;9:42:10,  7.03s/it]
+  1%|          | 30/5000 [03:28&lt;9:37:24,  6.97s/it]
+  1%|          | 31/5000 [03:35&lt;9:35:16,  6.95s/it]
+  1%|          | 32/5000 [03:42&lt;9:34:32,  6.94s/it]
+  1%|          | 33/5000 [03:49&lt;9:32:16,  6.91s/it]
+  1%|          | 34/5000 [03:56&lt;9:29:55,  6.89s/it]
+  1%|          | 35/5000 [04:02&lt;9:28:25,  6.87s/it]
+  1%|          | 36/5000 [04:10&lt;9:38:28,  6.99s/it]
+  1%|          | 37/5000 [04:17&lt;9:36:42,  6.97s/it]
+  1%|          | 38/5000 [04:24&lt;9:52:54,  7.17s/it]
+  1%|          | 39/5000 [04:32&lt;10:11:57,  7.40s/it]
+  1%|          | 40/5000 [04:40&lt;10:13:45,  7.42s/it]
+  1%|          | 41/5000 [04:47&lt;10:19:03,  7.49s/it]
+  1%|          | 42/5000 [04:55&lt;10:26:06,  7.58s/it]
+  1%|          | 43/5000 [05:05&lt;11:22:21,  8.26s/it]
+  1%|          | 44/5000 [05:12&lt;11:03:18,  8.03s/it]
+  1%|          | 45/5000 [05:20&lt;10:49:36,  7.87s/it]
+  1%|          | 46/5000 [05:27&lt;10:32:06,  7.66s/it]
+  1%|          | 47/5000 [05:34&lt;10:13:14,  7.43s/it]
+  1%|          | 48/5000 [05:41&lt;10:10:06,  7.39s/it]
+  1%|          | 49/5000 [05:48&lt;10:03:20,  7.31s/it]
+  1%|          | 50/5000 [05:56&lt;10:12:59,  7.43s/it]
+  1%|          | 51/5000 [06:05&lt;10:46:37,  7.84s/it]
+  1%|          | 52/5000 [06:13&lt;10:59:41,  8.00s/it]
+  1%|          | 53/5000 [06:20&lt;10:39:09,  7.75s/it]
+  1%|          | 54/5000 [06:27&lt;10:19:59,  7.52s/it]
+  1%|          | 55/5000 [06:34&lt;10:07:40,  7.37s/it]
+  1%|          | 56/5000 [06:41&lt;9:55:30,  7.23s/it]
+  1%|          | 57/5000 [06:48&lt;9:48:11,  7.14s/it]
+  1%|          | 58/5000 [06:55&lt;9:47:47,  7.14s/it]
+  1%|          | 59/5000 [07:04&lt;10:22:20,  7.56s/it]
+  1%|          | 60/5000 [07:11&lt;10:04:05,  7.34s/it]
+  1%|          | 61/5000 [07:18&lt;9:54:07,  7.22s/it]
+  1%|          | 62/5000 [07:25&lt;9:44:22,  7.10s/it]
+  1%|▏         | 63/5000 [07:31&lt;9:38:24,  7.03s/it]
+  1%|▏         | 64/5000 [07:38&lt;9:31:52,  6.95s/it]
+  1%|▏         | 65/5000 [07:45&lt;9:28:22,  6.91s/it]
+  1%|▏         | 66/5000 [07:52&lt;9:35:42,  7.00s/it]
+  1%|▏         | 67/5000 [08:01&lt;10:15:39,  7.49s/it]
+  1%|▏         | 68/5000 [08:08&lt;10:04:07,  7.35s/it]
+  1%|▏         | 69/5000 [08:15&lt;9:55:36,  7.25s/it]
+  1%|▏         | 70/5000 [08:23&lt;10:13:55,  7.47s/it]
+  1%|▏         | 71/5000 [08:30&lt;10:04:29,  7.36s/it]
+  1%|▏         | 72/5000 [08:37&lt;9:54:49,  7.24s/it]
+  1%|▏         | 73/5000 [08:45&lt;10:23:11,  7.59s/it]
+  1%|▏         | 74/5000 [08:52&lt;10:05:29,  7.38s/it]
+  2%|▏         | 75/5000 [09:01&lt;10:31:06,  7.69s/it]
+  2%|▏         | 76/5000 [09:08&lt;10:30:55,  7.69s/it]
+  2%|▏         | 77/5000 [09:16&lt;10:28:00,  7.65s/it]
+  2%|▏         | 78/5000 [09:24&lt;10:32:53,  7.71s/it]
+  2%|▏         | 79/5000 [09:31&lt;10:10:44,  7.45s/it]
+  2%|▏         | 80/5000 [09:37&lt;9:56:07,  7.27s/it]
+  2%|▏         | 81/5000 [09:44&lt;9:47:27,  7.17s/it]
+  2%|▏         | 82/5000 [09:51&lt;9:40:54,  7.09s/it]
+  2%|▏         | 83/5000 [09:58&lt;9:36:03,  7.03s/it]
+  2%|▏         | 84/5000 [10:06&lt;9:45:31,  7.15s/it]
+  2%|▏         | 85/5000 [10:13&lt;9:56:02,  7.28s/it]
+  2%|▏         | 86/5000 [10:21&lt;10:06:41,  7.41s/it]
+  2%|▏         | 87/5000 [10:29&lt;10:14:12,  7.50s/it]
+  2%|▏         | 88/5000 [10:35&lt;10:00:15,  7.33s/it]
+  2%|▏         | 89/5000 [10:42&lt;9:47:22,  7.18s/it]
+  2%|▏         | 90/5000 [10:51&lt;10:18:29,  7.56s/it]
+  2%|▏         | 91/5000 [10:58&lt;9:59:55,  7.33s/it]
+  2%|▏         | 92/5000 [11:04&lt;9:44:35,  7.15s/it]
+  2%|▏         | 93/5000 [11:11&lt;9:37:38,  7.06s/it]
+  2%|▏         | 94/5000 [11:18&lt;9:30:43,  6.98s/it]
+  2%|▏         | 95/5000 [11:25&lt;9:34:46,  7.03s/it]
+  2%|▏         | 96/5000 [11:34&lt;10:10:46,  7.47s/it]
+  2%|▏         | 97/5000 [11:40&lt;9:54:09,  7.27s/it]
+  2%|▏         | 98/5000 [11:47&lt;9:41:34,  7.12s/it]
+  2%|▏         | 99/5000 [11:55&lt;9:52:15,  7.25s/it]
+  2%|▏         | 100/5000 [12:04&lt;10:53:30,  8.00s/it]
+  2%|▏         | 101/5000 [12:12&lt;10:30:10,  7.72s/it]
+  2%|▏         | 102/5000 [12:18&lt;10:06:42,  7.43s/it]
+  2%|▏         | 103/5000 [12:25&lt;9:52:20,  7.26s/it]
+  2%|▏         | 104/5000 [12:32&lt;9:38:44,  7.09s/it]
+  2%|▏         | 105/5000 [12:39&lt;9:28:31,  6.97s/it]
+  2%|▏         | 106/5000 [12:45&lt;9:21:28,  6.88s/it]
+  2%|▏         | 107/5000 [12:52&lt;9:16:09,  6.82s/it]
+  2%|▏         | 108/5000 [12:59&lt;9:14:07,  6.80s/it]
+  2%|▏         | 109/5000 [13:05&lt;9:10:59,  6.76s/it]
+  2%|▏         | 110/5000 [13:12&lt;9:08:54,  6.74s/it]
+  2%|▏         | 111/5000 [13:19&lt;9:07:25,  6.72s/it]
+  2%|▏         | 112/5000 [13:25&lt;9:05:31,  6.70s/it]
+  2%|▏         | 113/5000 [13:32&lt;9:05:01,  6.69s/it]
+  2%|▏         | 114/5000 [13:39&lt;9:12:08,  6.78s/it]
+  2%|▏         | 115/5000 [13:46&lt;9:18:04,  6.85s/it]
+  2%|▏         | 116/5000 [13:53&lt;9:14:03,  6.81s/it]
+  2%|▏         | 117/5000 [14:00&lt;9:28:35,  6.99s/it]
+  2%|▏         | 118/5000 [14:10&lt;10:38:44,  7.85s/it]
+  2%|▏         | 119/5000 [14:17&lt;10:29:33,  7.74s/it]
+  2%|▏         | 120/5000 [14:26&lt;10:42:49,  7.90s/it]
+  2%|▏         | 121/5000 [14:35&lt;11:09:07,  8.23s/it]
+  2%|▏         | 122/5000 [14:41&lt;10:32:01,  7.77s/it]
+  2%|▏         | 123/5000 [14:48&lt;10:05:24,  7.45s/it]
+  2%|▏         | 124/5000 [14:55&lt;9:50:10,  7.26s/it]
+  2%|▎         | 125/5000 [15:02&lt;9:35:37,  7.08s/it]
+  3%|▎         | 126/5000 [15:08&lt;9:25:58,  6.97s/it]
+  3%|▎         | 127/5000 [15:15&lt;9:31:09,  7.03s/it]
+  3%|▎         | 128/5000 [15:22&lt;9:24:20,  6.95s/it]
+  3%|▎         | 129/5000 [15:30&lt;9:45:09,  7.21s/it]
+  3%|▎         | 130/5000 [15:37&lt;9:43:43,  7.19s/it]
+  3%|▎         | 131/5000 [15:46&lt;10:15:20,  7.58s/it]
+  3%|▎         | 132/5000 [15:54&lt;10:21:50,  7.66s/it]
+  3%|▎         | 133/5000 [16:00&lt;10:01:54,  7.42s/it]
+  3%|▎         | 134/5000 [16:09&lt;10:25:44,  7.72s/it]
+  3%|▎         | 135/5000 [16:15&lt;9:58:17,  7.38s/it]
+  3%|▎         | 136/5000 [16:22&lt;9:40:04,  7.16s/it]
+  3%|▎         | 137/5000 [16:29&lt;9:27:40,  7.00s/it]
+  3%|▎         | 138/5000 [16:35&lt;9:18:15,  6.89s/it]
+  3%|▎         | 139/5000 [16:42&lt;9:12:35,  6.82s/it]
+  3%|▎         | 140/5000 [16:49&lt;9:14:31,  6.85s/it]
+  3%|▎         | 141/5000 [16:57&lt;9:57:39,  7.38s/it]
+  3%|▎         | 142/5000 [17:06&lt;10:15:37,  7.60s/it]
+  3%|▎         | 143/5000 [17:13&lt;10:01:05,  7.43s/it]
+  3%|▎         | 144/5000 [17:19&lt;9:42:26,  7.20s/it]
+  3%|▎         | 145/5000 [17:27&lt;9:49:47,  7.29s/it]
+  3%|▎         | 146/5000 [17:34&lt;9:55:42,  7.36s/it]
+  3%|▎         | 147/5000 [17:42&lt;10:09:39,  7.54s/it]
+  3%|▎         | 148/5000 [17:50&lt;10:10:44,  7.55s/it]
+  3%|▎         | 149/5000 [17:57&lt;9:56:28,  7.38s/it]
+  3%|▎         | 150/5000 [18:04&lt;9:44:16,  7.23s/it]
+  3%|▎         | 151/5000 [18:10&lt;9:28:32,  7.03s/it]
+  3%|▎         | 152/5000 [18:17&lt;9:18:40,  6.91s/it]
+  3%|▎         | 153/5000 [18:24&lt;9:11:38,  6.83s/it]
+  3%|▎         | 154/5000 [18:30&lt;9:06:19,  6.76s/it]
+  3%|▎         | 155/5000 [18:37&lt;9:05:23,  6.75s/it]
+  3%|▎         | 156/5000 [18:44&lt;9:06:25,  6.77s/it]
+  3%|▎         | 157/5000 [18:51&lt;9:07:59,  6.79s/it]
+  3%|▎         | 158/5000 [18:57&lt;9:07:02,  6.78s/it]
+  3%|▎         | 159/5000 [19:05&lt;9:17:20,  6.91s/it]
+  3%|▎         | 160/5000 [19:12&lt;9:42:15,  7.22s/it]
+  3%|▎         | 161/5000 [19:21&lt;10:09:36,  7.56s/it]
+  3%|▎         | 162/5000 [19:27&lt;9:46:31,  7.27s/it]
+  3%|▎         | 163/5000 [19:34&lt;9:33:37,  7.12s/it]
+  3%|▎         | 164/5000 [19:41&lt;9:27:18,  7.04s/it]
+  3%|▎         | 165/5000 [19:49&lt;9:50:36,  7.33s/it]
+  3%|▎         | 166/5000 [19:57&lt;9:55:10,  7.39s/it]
+  3%|▎         | 167/5000 [20:04&lt;9:57:24,  7.42s/it]
+  3%|▎         | 168/5000 [20:12&lt;10:11:14,  7.59s/it]
+  3%|▎         | 169/5000 [20:19&lt;9:51:37,  7.35s/it]
+  3%|▎         | 170/5000 [20:26&lt;9:38:29,  7.19s/it]
+  3%|▎         | 171/5000 [20:32&lt;9:28:48,  7.07s/it]
+  3%|▎         | 172/5000 [20:39&lt;9:26:14,  7.04s/it]
+  3%|▎         | 173/5000 [20:46&lt;9:20:34,  6.97s/it]
+  3%|▎         | 174/5000 [20:53&lt;9:16:39,  6.92s/it]
+  4%|▎         | 175/5000 [21:00&lt;9:14:24,  6.89s/it]
+  4%|▎         | 176/5000 [21:07&lt;9:11:53,  6.86s/it]
+  4%|▎         | 177/5000 [21:13&lt;9:09:54,  6.84s/it]
+  4%|▎         | 178/5000 [21:20&lt;9:10:12,  6.85s/it]
+  4%|▎         | 179/5000 [21:27&lt;9:09:27,  6.84s/it]
+  4%|▎         | 180/5000 [21:34&lt;9:10:44,  6.86s/it]
+  4%|▎         | 181/5000 [21:41&lt;9:06:34,  6.81s/it]
+  4%|▎         | 182/5000 [21:47&lt;9:01:20,  6.74s/it]
+  4%|▎         | 183/5000 [21:54&lt;9:01:46,  6.75s/it]
+  4%|▎         | 184/5000 [22:02&lt;9:31:49,  7.12s/it]
+  4%|▎         | 185/5000 [22:09&lt;9:30:10,  7.10s/it]
+  4%|▎         | 186/5000 [22:16&lt;9:16:40,  6.94s/it]
+  4%|▎         | 187/5000 [22:22&lt;9:08:14,  6.83s/it]
+  4%|▍         | 188/5000 [22:29&lt;9:02:58,  6.77s/it]
+  4%|▍         | 189/5000 [22:35&lt;9:00:10,  6.74s/it]
+  4%|▍         | 190/5000 [22:42&lt;8:55:25,  6.68s/it]
+  4%|▍         | 191/5000 [22:49&lt;8:51:35,  6.63s/it]
+  4%|▍         | 192/5000 [22:55&lt;8:51:44,  6.64s/it]
+  4%|▍         | 193/5000 [23:02&lt;8:52:45,  6.65s/it]
+  4%|▍         | 194/5000 [23:08&lt;8:50:35,  6.62s/it]
+  4%|▍         | 195/5000 [23:15&lt;8:50:22,  6.62s/it]
+  4%|▍         | 196/5000 [23:22&lt;8:54:15,  6.67s/it]
+  4%|▍         | 197/5000 [23:29&lt;8:55:28,  6.69s/it]
+  4%|▍         | 198/5000 [23:35&lt;8:52:03,  6.65s/it]
+  4%|▍         | 199/5000 [23:42&lt;8:46:56,  6.59s/it]
+  4%|▍         | 200/5000 [23:48&lt;8:43:08,  6.54s/it]
+  4%|▍         | 201/5000 [23:54&lt;8:40:44,  6.51s/it]
+  4%|▍         | 202/5000 [24:01&lt;8:41:33,  6.52s/it]
+  4%|▍         | 203/5000 [24:07&lt;8:40:13,  6.51s/it]
+  4%|▍         | 204/5000 [24:14&lt;8:40:07,  6.51s/it]
+  4%|▍         | 205/5000 [24:20&lt;8:39:32,  6.50s/it]
+  4%|▍         | 206/5000 [24:27&lt;8:37:19,  6.47s/it]
+  4%|▍         | 207/5000 [24:33&lt;8:36:58,  6.47s/it]
+  4%|▍         | 208/5000 [24:40&lt;8:37:25,  6.48s/it]
+  4%|▍         | 209/5000 [24:46&lt;8:35:43,  6.46s/it]
+  4%|▍         | 210/5000 [24:53&lt;8:34:47,  6.45s/it]
+  4%|▍         | 211/5000 [24:59&lt;8:32:36,  6.42s/it]
+  4%|▍         | 212/5000 [25:06&lt;8:35:18,  6.46s/it]
+  4%|▍         | 213/5000 [25:12&lt;8:34:51,  6.45s/it]
+  4%|▍         | 214/5000 [25:18&lt;8:34:50,  6.45s/it]
+  4%|▍         | 215/5000 [25:25&lt;8:33:24,  6.44s/it]
+  4%|▍         | 216/5000 [25:31&lt;8:32:18,  6.43s/it]
+  4%|▍         | 217/5000 [25:38&lt;8:31:33,  6.42s/it]
+  4%|▍         | 218/5000 [25:44&lt;8:30:37,  6.41s/it]
+  4%|▍         | 219/5000 [25:51&lt;8:34:24,  6.46s/it]
+  4%|▍         | 220/5000 [25:57&lt;8:33:12,  6.44s/it]
+  4%|▍         | 221/5000 [26:04&lt;8:37:14,  6.49s/it]
+  4%|▍         | 222/5000 [26:10&lt;8:36:13,  6.48s/it]
+  4%|▍         | 223/5000 [26:16&lt;8:33:28,  6.45s/it]
+  4%|▍         | 224/5000 [26:23&lt;8:34:37,  6.47s/it]
+  4%|▍         | 225/5000 [26:30&lt;8:36:22,  6.49s/it]
+  5%|▍         | 226/5000 [26:36&lt;8:45:14,  6.60s/it]
+  5%|▍         | 227/5000 [26:43&lt;8:54:52,  6.72s/it]
+  5%|▍         | 228/5000 [26:50&lt;8:57:33,  6.76s/it]
+  5%|▍         | 229/5000 [26:57&lt;8:58:43,  6.77s/it]
+  5%|▍         | 230/5000 [27:05&lt;9:26:58,  7.13s/it]
+  5%|▍         | 231/5000 [27:11&lt;9:08:02,  6.90s/it]
+  5%|▍         | 232/5000 [27:18&lt;8:55:40,  6.74s/it]
+  5%|▍         | 233/5000 [27:24&lt;8:51:50,  6.69s/it]
+  5%|▍         | 234/5000 [27:31&lt;8:44:42,  6.61s/it]
+  5%|▍         | 235/5000 [27:37&lt;8:38:04,  6.52s/it]
+  5%|▍         | 236/5000 [27:43&lt;8:34:06,  6.47s/it]
+  5%|▍         | 237/5000 [27:50&lt;8:31:08,  6.44s/it]
+  5%|▍         | 238/5000 [27:56&lt;8:27:36,  6.40s/it]
+  5%|▍         | 239/5000 [28:02&lt;8:25:25,  6.37s/it]
+  5%|▍         | 240/5000 [28:09&lt;8:25:02,  6.37s/it]
+  5%|▍         | 241/5000 [28:15&lt;8:28:29,  6.41s/it]
+  5%|▍         | 242/5000 [28:22&lt;8:30:06,  6.43s/it]
+  5%|▍         | 243/5000 [28:28&lt;8:27:50,  6.41s/it]
+  5%|▍         | 244/5000 [28:35&lt;8:30:34,  6.44s/it]
+  5%|▍         | 245/5000 [28:41&lt;8:30:20,  6.44s/it]
+  5%|▍         | 246/5000 [28:47&lt;8:29:33,  6.43s/it]
+  5%|▍         | 247/5000 [28:54&lt;8:27:40,  6.41s/it]
+  5%|▍         | 248/5000 [29:00&lt;8:32:47,  6.47s/it]
+  5%|▍         | 249/5000 [29:07&lt;8:35:41,  6.51s/it]
+  5%|▌         | 250/5000 [29:14&lt;8:44:40,  6.63s/it]
+  5%|▌         | 251/5000 [29:21&lt;8:44:13,  6.62s/it]
+  5%|▌         | 252/5000 [29:27&lt;8:39:29,  6.56s/it]
+  5%|▌         | 253/5000 [29:33&lt;8:34:08,  6.50s/it]
+  5%|▌         | 254/5000 [29:40&lt;8:31:36,  6.47s/it]
+  5%|▌         | 255/5000 [29:46&lt;8:30:31,  6.46s/it]
+  5%|▌         | 256/5000 [29:53&lt;8:31:00,  6.46s/it]
+  5%|▌         | 257/5000 [29:59&lt;8:29:09,  6.44s/it]
+  5%|▌         | 258/5000 [30:06&lt;8:30:55,  6.46s/it]
+  5%|▌         | 259/5000 [30:12&lt;8:27:00,  6.42s/it]
+  5%|▌         | 260/5000 [30:18&lt;8:23:50,  6.38s/it]
+  5%|▌         | 261/5000 [30:24&lt;8:22:03,  6.36s/it]
+  5%|▌         | 262/5000 [30:31&lt;8:23:17,  6.37s/it]
+  5%|▌         | 263/5000 [30:38&lt;8:43:19,  6.63s/it]
+  5%|▌         | 264/5000 [30:45&lt;8:48:39,  6.70s/it]
+  5%|▌         | 265/5000 [30:53&lt;9:20:23,  7.10s/it]
+  5%|▌         | 266/5000 [31:01&lt;9:41:59,  7.38s/it]
+  5%|▌         | 267/5000 [31:07&lt;9:16:46,  7.06s/it]
+  5%|▌         | 268/5000 [31:14&lt;9:00:31,  6.85s/it]
+  5%|▌         | 269/5000 [31:20&lt;8:48:11,  6.70s/it]
+  5%|▌         | 270/5000 [31:26&lt;8:39:59,  6.60s/it]
+  5%|▌         | 271/5000 [31:33&lt;8:34:15,  6.52s/it]
+  5%|▌         | 272/5000 [31:39&lt;8:28:22,  6.45s/it]
+  5%|▌         | 273/5000 [31:45&lt;8:25:31,  6.42s/it]
+  5%|▌         | 274/5000 [31:52&lt;8:26:47,  6.43s/it]
+  6%|▌         | 275/5000 [31:59&lt;8:42:31,  6.64s/it]
+  6%|▌         | 276/5000 [32:07&lt;9:06:02,  6.94s/it]
+  6%|▌         | 277/5000 [32:13&lt;8:56:59,  6.82s/it]
+  6%|▌         | 278/5000 [32:20&lt;8:47:03,  6.70s/it]
+  6%|▌         | 279/5000 [32:26&lt;8:38:25,  6.59s/it]
+  6%|▌         | 280/5000 [32:32&lt;8:32:33,  6.52s/it]
+  6%|▌         | 281/5000 [32:39&lt;8:27:29,  6.45s/it]
+  6%|▌         | 282/5000 [32:45&lt;8:23:38,  6.40s/it]
+  6%|▌         | 283/5000 [32:51&lt;8:29:38,  6.48s/it]
+  6%|▌         | 284/5000 [32:58&lt;8:24:41,  6.42s/it]
+  6%|▌         | 285/5000 [33:04&lt;8:20:29,  6.37s/it]
+  6%|▌         | 286/5000 [33:10&lt;8:22:44,  6.40s/it]
+  6%|▌         | 287/5000 [33:17&lt;8:36:38,  6.58s/it]
+  6%|▌         | 288/5000 [33:24&lt;8:39:54,  6.62s/it]
+  6%|▌         | 289/5000 [33:30&lt;8:32:18,  6.52s/it]
+  6%|▌         | 290/5000 [33:37&lt;8:26:30,  6.45s/it]
+  6%|▌         | 291/5000 [33:44&lt;8:51:16,  6.77s/it]
+  6%|▌         | 292/5000 [33:52&lt;9:14:09,  7.06s/it]
+  6%|▌         | 293/5000 [33:59&lt;9:09:07,  7.00s/it]
+  6%|▌         | 294/5000 [34:06&lt;9:22:36,  7.17s/it]
+  6%|▌         | 295/5000 [34:13&lt;9:11:57,  7.04s/it]
+  6%|▌         | 296/5000 [34:20&lt;8:57:51,  6.86s/it]
+  6%|▌         | 297/5000 [34:26&lt;8:44:29,  6.69s/it]
+  6%|▌         | 298/5000 [34:32&lt;8:37:03,  6.60s/it]
+  6%|▌         | 299/5000 [34:39&lt;8:30:14,  6.51s/it]
+  6%|▌         | 300/5000 [34:45&lt;8:23:50,  6.43s/it]
+  6%|▌         | 301/5000 [34:51&lt;8:19:33,  6.38s/it]
+  6%|▌         | 302/5000 [34:57&lt;8:17:35,  6.35s/it]
+  6%|▌         | 303/5000 [35:04&lt;8:16:14,  6.34s/it]
+  6%|▌         | 304/5000 [35:10&lt;8:16:43,  6.35s/it]
+  6%|▌         | 305/5000 [35:17&lt;8:40:37,  6.65s/it]
+  6%|▌         | 306/5000 [35:24&lt;8:33:48,  6.57s/it]
+  6%|▌         | 307/5000 [35:30&lt;8:26:28,  6.48s/it]
+  6%|▌         | 308/5000 [35:37&lt;8:27:36,  6.49s/it]
+  6%|▌         | 309/5000 [35:43&lt;8:29:50,  6.52s/it]
+  6%|▌         | 310/5000 [35:50&lt;8:29:48,  6.52s/it]
+  6%|▌         | 311/5000 [35:56&lt;8:34:42,  6.59s/it]
+  6%|▌         | 312/5000 [36:04&lt;9:08:21,  7.02s/it]
+  6%|▋         | 313/5000 [36:12&lt;9:17:14,  7.13s/it]
+  6%|▋         | 314/5000 [36:19&lt;9:12:27,  7.07s/it]
+  6%|▋         | 315/5000 [36:25&lt;8:52:44,  6.82s/it]
+  6%|▋         | 316/5000 [36:31&lt;8:40:23,  6.67s/it]
+  6%|▋         | 317/5000 [36:38&lt;8:38:27,  6.64s/it]
+  6%|▋         | 318/5000 [36:45&lt;8:52:13,  6.82s/it]
+  6%|▋         | 319/5000 [36:53&lt;9:09:56,  7.05s/it]
+  6%|▋         | 320/5000 [37:01&lt;9:27:45,  7.28s/it]
+  6%|▋         | 321/5000 [37:08&lt;9:28:22,  7.29s/it]
+  6%|▋         | 322/5000 [37:14&lt;9:10:55,  7.07s/it]
+  6%|▋         | 323/5000 [37:21&lt;8:55:12,  6.87s/it]
+  6%|▋         | 324/5000 [37:27&lt;8:45:21,  6.74s/it]
+  6%|▋         | 325/5000 [37:34&lt;8:41:16,  6.69s/it]
+  7%|▋         | 326/5000 [37:41&lt;8:48:33,  6.79s/it]
+  7%|▋         | 327/5000 [37:48&lt;8:51:14,  6.82s/it]
+  7%|▋         | 328/5000 [37:54&lt;8:42:20,  6.71s/it]
+  7%|▋         | 329/5000 [38:01&lt;8:33:59,  6.60s/it]
+  7%|▋         | 330/5000 [38:07&lt;8:24:19,  6.48s/it]
+  7%|▋         | 331/5000 [38:13&lt;8:23:47,  6.47s/it]
+  7%|▋         | 332/5000 [38:20&lt;8:29:10,  6.54s/it]
+  7%|▋         | 333/5000 [38:27&lt;8:37:37,  6.65s/it]
+  7%|▋         | 334/5000 [38:34&lt;8:59:34,  6.94s/it]
+  7%|▋         | 335/5000 [38:42&lt;9:13:33,  7.12s/it]
+  7%|▋         | 336/5000 [38:49&lt;9:18:15,  7.18s/it]
+  7%|▋         | 337/5000 [38:56&lt;9:04:36,  7.01s/it]
+  7%|▋         | 338/5000 [39:02&lt;8:48:11,  6.80s/it]
+  7%|▋         | 339/5000 [39:09&lt;8:56:19,  6.90s/it]
+  7%|▋         | 340/5000 [39:16&lt;8:46:05,  6.77s/it]
+  7%|▋         | 341/5000 [39:22&lt;8:36:56,  6.66s/it]
+  7%|▋         | 342/5000 [39:29&lt;8:31:44,  6.59s/it]
+  7%|▋         | 343/5000 [39:35&lt;8:25:28,  6.51s/it]
+  7%|▋         | 344/5000 [39:41&lt;8:22:35,  6.48s/it]
+  7%|▋         | 345/5000 [39:48&lt;8:19:58,  6.44s/it]
+  7%|▋         | 346/5000 [39:56&lt;8:52:19,  6.86s/it]
+  7%|▋         | 347/5000 [40:02&lt;8:36:15,  6.66s/it]
+  7%|▋         | 348/5000 [40:08&lt;8:29:09,  6.57s/it]
+  7%|▋         | 349/5000 [40:15&lt;8:40:27,  6.71s/it]
+  7%|▋         | 350/5000 [40:22&lt;8:52:43,  6.87s/it]
+  7%|▋         | 351/5000 [40:29&lt;8:38:06,  6.69s/it]
+  7%|▋         | 352/5000 [40:36&lt;8:41:09,  6.73s/it]
+  7%|▋         | 353/5000 [40:43&lt;9:06:49,  7.06s/it]
+  7%|▋         | 354/5000 [40:50&lt;8:53:28,  6.89s/it]
+  7%|▋         | 355/5000 [40:56&lt;8:42:50,  6.75s/it]
+  7%|▋         | 356/5000 [41:03&lt;8:31:09,  6.60s/it]
+  7%|▋         | 357/5000 [41:09&lt;8:24:49,  6.52s/it]
+  7%|▋         | 358/5000 [41:15&lt;8:17:39,  6.43s/it]
+  7%|▋         | 359/5000 [41:21&lt;8:14:00,  6.39s/it]
+  7%|▋         | 360/5000 [41:28&lt;8:09:40,  6.33s/it]
+  7%|▋         | 361/5000 [41:34&lt;8:11:23,  6.36s/it]
+  7%|▋         | 362/5000 [41:40&lt;8:09:41,  6.34s/it]
+  7%|▋         | 363/5000 [41:47&lt;8:09:23,  6.33s/it]
+  7%|▋         | 364/5000 [41:53&lt;8:10:56,  6.35s/it]
+  7%|▋         | 365/5000 [42:01&lt;8:45:56,  6.81s/it]
+  7%|▋         | 366/5000 [42:08&lt;8:47:41,  6.83s/it]
+  7%|▋         | 367/5000 [42:14&lt;8:33:18,  6.65s/it]
+  7%|▋         | 368/5000 [42:20&lt;8:27:45,  6.58s/it]
+  7%|▋         | 369/5000 [42:27&lt;8:21:32,  6.50s/it]
+  7%|▋         | 370/5000 [42:33&lt;8:16:40,  6.44s/it]
+  7%|▋         | 371/5000 [42:39&lt;8:12:50,  6.39s/it]
+  7%|▋         | 372/5000 [42:46&lt;8:09:30,  6.35s/it]
+  7%|▋         | 373/5000 [42:53&lt;8:30:32,  6.62s/it]
+  7%|▋         | 374/5000 [43:00&lt;8:39:13,  6.73s/it]
+  8%|▊         | 375/5000 [43:07&lt;9:01:21,  7.02s/it]
+  8%|▊         | 376/5000 [43:14&lt;8:46:54,  6.84s/it]
+  8%|▊         | 377/5000 [43:20&lt;8:38:02,  6.72s/it]
+  8%|▊         | 378/5000 [43:28&lt;8:55:14,  6.95s/it]
+  8%|▊         | 379/5000 [43:35&lt;8:58:42,  6.99s/it]
+  8%|▊         | 380/5000 [43:42&lt;9:01:43,  7.04s/it]
+  8%|▊         | 381/5000 [43:48&lt;8:42:52,  6.79s/it]
+  8%|▊         | 382/5000 [43:55&lt;8:34:45,  6.69s/it]
+  8%|▊         | 383/5000 [44:01&lt;8:24:22,  6.55s/it]
+  8%|▊         | 384/5000 [44:07&lt;8:15:24,  6.44s/it]
+  8%|▊         | 385/5000 [44:13&lt;8:09:07,  6.36s/it]
+  8%|▊         | 386/5000 [44:19&lt;8:04:37,  6.30s/it]
+  8%|▊         | 387/5000 [44:26&lt;8:03:39,  6.29s/it]
+  8%|▊         | 388/5000 [44:32&lt;8:02:24,  6.28s/it]
+  8%|▊         | 389/5000 [44:38&lt;8:02:19,  6.28s/it]
+  8%|▊         | 390/5000 [44:45&lt;8:03:10,  6.29s/it]
+  8%|▊         | 391/5000 [44:51&lt;8:13:47,  6.43s/it]
+  8%|▊         | 392/5000 [44:59&lt;8:31:39,  6.66s/it]
+  8%|▊         | 393/5000 [45:07&lt;9:04:40,  7.09s/it]
+  8%|▊         | 394/5000 [45:13&lt;8:52:12,  6.93s/it]
+  8%|▊         | 395/5000 [45:20&lt;8:49:51,  6.90s/it]
+  8%|▊         | 396/5000 [45:27&lt;8:43:59,  6.83s/it]
+  8%|▊         | 397/5000 [45:33&lt;8:41:04,  6.79s/it]
+  8%|▊         | 398/5000 [45:40&lt;8:32:39,  6.68s/it]
+  8%|▊         | 399/5000 [45:46&lt;8:22:12,  6.55s/it]
+  8%|▊         | 400/5000 [45:52&lt;8:17:49,  6.49s/it]
+  8%|▊         | 401/5000 [45:59&lt;8:15:17,  6.46s/it]
+  8%|▊         | 402/5000 [46:06&lt;8:24:32,  6.58s/it]
+  8%|▊         | 403/5000 [46:12&lt;8:25:47,  6.60s/it]
+  8%|▊         | 404/5000 [46:18&lt;8:15:57,  6.47s/it]
+  8%|▊         | 405/5000 [46:25&lt;8:08:40,  6.38s/it]
+  8%|▊         | 406/5000 [46:31&lt;8:03:59,  6.32s/it]
+  8%|▊         | 407/5000 [46:38&lt;8:17:20,  6.50s/it]
+  8%|▊         | 408/5000 [46:45&lt;8:24:46,  6.60s/it]
+  8%|▊         | 409/5000 [46:53&lt;9:03:11,  7.10s/it]
+  8%|▊         | 410/5000 [47:04&lt;10:41:52,  8.39s/it]
+  8%|▊         | 411/5000 [47:13&lt;10:57:30,  8.60s/it]
+  8%|▊         | 412/5000 [47:22&lt;10:54:51,  8.56s/it]
+  8%|▊         | 413/5000 [47:30&lt;10:39:13,  8.36s/it]
+  8%|▊         | 414/5000 [47:37&lt;10:15:35,  8.05s/it]
+  8%|▊         | 415/5000 [47:47&lt;10:59:05,  8.63s/it]
+  8%|▊         | 416/5000 [47:55&lt;10:35:42,  8.32s/it]
+  8%|▊         | 417/5000 [48:02&lt;10:18:08,  8.09s/it]
+  8%|▊         | 418/5000 [48:10&lt;10:05:17,  7.93s/it]
+  8%|▊         | 419/5000 [48:17&lt;9:56:43,  7.82s/it]
+  8%|▊         | 420/5000 [48:25&lt;9:46:39,  7.69s/it]
+  8%|▊         | 421/5000 [48:33&lt;9:52:19,  7.76s/it]
+  8%|▊         | 422/5000 [48:40&lt;9:42:33,  7.64s/it]
+  8%|▊         | 423/5000 [48:47&lt;9:32:37,  7.51s/it]
+  8%|▊         | 424/5000 [48:57&lt;10:32:35,  8.29s/it]
+  8%|▊         | 425/5000 [49:05&lt;10:27:26,  8.23s/it]
+  9%|▊         | 426/5000 [49:14&lt;10:37:49,  8.37s/it]
+  9%|▊         | 427/5000 [49:22&lt;10:39:06,  8.39s/it]
+  9%|▊         | 428/5000 [49:30&lt;10:23:45,  8.19s/it]
+  9%|▊         | 429/5000 [49:38&lt;10:08:13,  7.98s/it]
+  9%|▊         | 430/5000 [49:45&lt;9:49:15,  7.74s/it]
+  9%|▊         | 431/5000 [49:52&lt;9:38:58,  7.60s/it]
+  9%|▊         | 432/5000 [50:00&lt;9:38:06,  7.59s/it]
+  9%|▊         | 433/5000 [50:07&lt;9:42:13,  7.65s/it]
+  9%|▊         | 434/5000 [50:15&lt;9:28:55,  7.48s/it]
+  9%|▊         | 435/5000 [50:24&lt;10:11:00,  8.03s/it]
+  9%|▊         | 436/5000 [50:33&lt;10:36:06,  8.36s/it]
+  9%|▊         | 437/5000 [50:42&lt;10:43:46,  8.47s/it]
+  9%|▉         | 438/5000 [50:51&lt;10:58:26,  8.66s/it]
+  9%|▉         | 439/5000 [51:00&lt;11:19:38,  8.94s/it]
+  9%|▉         | 440/5000 [51:10&lt;11:33:40,  9.13s/it]
+  9%|▉         | 441/5000 [51:18&lt;11:12:57,  8.86s/it]
+  9%|▉         | 442/5000 [51:26&lt;10:42:29,  8.46s/it]
+  9%|▉         | 443/5000 [51:35&lt;11:03:49,  8.74s/it]
+  9%|▉         | 444/5000 [51:45&lt;11:24:13,  9.01s/it]
+  9%|▉         | 445/5000 [51:57&lt;12:28:13,  9.86s/it]
+  9%|▉         | 446/5000 [52:11&lt;14:14:51, 11.26s/it]
+  9%|▉         | 447/5000 [52:22&lt;14:08:06, 11.18s/it]
+  9%|▉         | 448/5000 [52:31&lt;13:23:53, 10.60s/it]
+  9%|▉         | 449/5000 [52:41&lt;13:04:44, 10.35s/it]
+  9%|▉         | 450/5000 [52:50&lt;12:40:22, 10.03s/it]
+  9%|▉         | 451/5000 [53:00&lt;12:19:30,  9.75s/it]
+  9%|▉         | 452/5000 [53:09&lt;12:18:18,  9.74s/it]
+  9%|▉         | 453/5000 [53:19&lt;12:11:46,  9.66s/it]
+  9%|▉         | 454/5000 [53:28&lt;12:08:47,  9.62s/it]
+  9%|▉         | 455/5000 [53:38&lt;12:15:49,  9.71s/it]
+  9%|▉         | 456/5000 [53:48&lt;12:17:24,  9.74s/it]
+  9%|▉         | 457/5000 [53:56&lt;11:32:41,  9.15s/it]
+  9%|▉         | 458/5000 [54:05&lt;11:36:14,  9.20s/it]
+  9%|▉         | 459/5000 [54:16&lt;12:05:44,  9.59s/it]
+  9%|▉         | 460/5000 [54:27&lt;12:39:49, 10.04s/it]
+  9%|▉         | 461/5000 [54:36&lt;12:26:40,  9.87s/it]
+  9%|▉         | 462/5000 [54:45&lt;12:01:12,  9.54s/it]
+  9%|▉         | 463/5000 [54:53&lt;11:39:11,  9.25s/it]
+  9%|▉         | 464/5000 [55:02&lt;11:15:24,  8.93s/it]
+  9%|▉         | 465/5000 [55:09&lt;10:31:47,  8.36s/it]
+  9%|▉         | 466/5000 [55:16&lt;10:09:55,  8.07s/it]
+  9%|▉         | 467/5000 [55:23&lt;9:50:03,  7.81s/it]
+  9%|▉         | 468/5000 [55:31&lt;9:49:48,  7.81s/it]
+  9%|▉         | 469/5000 [55:38&lt;9:37:57,  7.65s/it]
+  9%|▉         | 470/5000 [55:46&lt;9:43:45,  7.73s/it]
+  9%|▉         | 471/5000 [55:54&lt;9:43:53,  7.74s/it]
+  9%|▉         | 472/5000 [56:02&lt;9:45:41,  7.76s/it]
+  9%|▉         | 473/5000 [56:09&lt;9:32:08,  7.58s/it]
+  9%|▉         | 474/5000 [56:16&lt;9:19:17,  7.41s/it]
+ 10%|▉         | 475/5000 [56:23&lt;9:10:31,  7.30s/it]
+ 10%|▉         | 476/5000 [56:30&lt;9:06:12,  7.24s/it]
+ 10%|▉         | 477/5000 [56:38&lt;9:22:25,  7.46s/it]
+ 10%|▉         | 478/5000 [56:47&lt;9:51:45,  7.85s/it]
+ 10%|▉         | 479/5000 [56:54&lt;9:44:28,  7.76s/it]
+ 10%|▉         | 480/5000 [57:05&lt;10:41:00,  8.51s/it]
+ 10%|▉         | 481/5000 [57:12&lt;10:13:20,  8.14s/it]
+ 10%|▉         | 482/5000 [57:19&lt;9:52:10,  7.86s/it]
+ 10%|▉         | 483/5000 [57:26&lt;9:35:28,  7.64s/it]
+ 10%|▉         | 484/5000 [57:33&lt;9:23:46,  7.49s/it]
+ 10%|▉         | 485/5000 [57:41&lt;9:29:35,  7.57s/it]
+ 10%|▉         | 486/5000 [57:49&lt;9:37:51,  7.68s/it]
+ 10%|▉         | 487/5000 [57:58&lt;10:06:39,  8.07s/it]
+ 10%|▉         | 488/5000 [58:08&lt;10:51:42,  8.67s/it]
+ 10%|▉         | 489/5000 [58:19&lt;11:29:30,  9.17s/it]
+ 10%|▉         | 490/5000 [58:27&lt;11:08:41,  8.90s/it]
+ 10%|▉         | 491/5000 [58:36&lt;11:15:00,  8.98s/it]
+ 10%|▉         | 492/5000 [58:45&lt;11:17:22,  9.02s/it]
+ 10%|▉         | 493/5000 [58:54&lt;11:16:58,  9.01s/it]
+ 10%|▉         | 494/5000 [59:03&lt;11:24:46,  9.12s/it]
+ 10%|▉         | 495/5000 [59:12&lt;11:17:46,  9.03s/it]
+ 10%|▉         | 496/5000 [59:22&lt;11:27:51,  9.16s/it]
+ 10%|▉         | 497/5000 [59:32&lt;11:54:12,  9.52s/it]
+ 10%|▉         | 498/5000 [59:43&lt;12:28:48,  9.98s/it]
+ 10%|▉         | 499/5000 [59:52&lt;12:04:59,  9.66s/it]
+ 10%|█         | 500/5000 [1:00:02&lt;12:11:59,  9.76s/it]
+ 10%|█         | 501/5000 [1:00:11&lt;11:51:57,  9.49s/it]
+ 10%|█         | 502/5000 [1:00:20&lt;11:39:05,  9.33s/it]
+ 10%|█         | 503/5000 [1:00:31&lt;12:21:00,  9.89s/it]
+ 10%|█         | 504/5000 [1:00:40&lt;11:58:33,  9.59s/it]
+ 10%|█         | 505/5000 [1:00:50&lt;12:12:46,  9.78s/it]
+ 10%|█         | 506/5000 [1:00:58&lt;11:32:31,  9.25s/it]
+ 10%|█         | 507/5000 [1:01:06&lt;10:59:44,  8.81s/it]
+ 10%|█         | 508/5000 [1:01:14&lt;10:34:43,  8.48s/it]
+ 10%|█         | 509/5000 [1:01:22&lt;10:34:17,  8.47s/it]
+ 10%|█         | 510/5000 [1:01:32&lt;10:55:42,  8.76s/it]
+ 10%|█         | 511/5000 [1:01:40&lt;10:39:08,  8.54s/it]
+ 10%|█         | 512/5000 [1:01:50&lt;11:09:48,  8.95s/it]
+ 10%|█         | 513/5000 [1:01:58&lt;11:07:55,  8.93s/it]
+ 10%|█         | 514/5000 [1:02:08&lt;11:23:03,  9.14s/it]
+ 10%|█         | 515/5000 [1:02:17&lt;11:14:20,  9.02s/it]
+ 10%|█         | 516/5000 [1:02:26&lt;11:16:46,  9.06s/it]
+ 10%|█         | 517/5000 [1:02:34&lt;10:52:56,  8.74s/it]
+ 10%|█         | 518/5000 [1:02:41&lt;10:26:29,  8.39s/it]
+ 10%|█         | 519/5000 [1:02:50&lt;10:20:36,  8.31s/it]
+ 10%|█         | 520/5000 [1:02:58&lt;10:27:46,  8.41s/it]
+ 10%|█         | 521/5000 [1:03:07&lt;10:44:21,  8.63s/it]
+ 10%|█         | 522/5000 [1:03:16&lt;10:36:03,  8.52s/it]
+ 10%|█         | 523/5000 [1:03:23&lt;10:15:45,  8.25s/it]
+ 10%|█         | 524/5000 [1:03:33&lt;10:42:37,  8.61s/it]
+ 10%|█         | 525/5000 [1:03:41&lt;10:35:50,  8.53s/it]
+ 11%|█         | 526/5000 [1:03:48&lt;10:09:05,  8.17s/it]
+ 11%|█         | 527/5000 [1:03:56&lt;9:52:20,  7.95s/it]
+ 11%|█         | 528/5000 [1:04:05&lt;10:15:07,  8.25s/it]
+ 11%|█         | 529/5000 [1:04:14&lt;10:34:49,  8.52s/it]
+ 11%|█         | 530/5000 [1:04:22&lt;10:22:52,  8.36s/it]
+ 11%|█         | 531/5000 [1:04:29&lt;10:04:38,  8.12s/it]
+ 11%|█         | 532/5000 [1:04:37&lt;9:50:51,  7.93s/it]
+ 11%|█         | 533/5000 [1:04:44&lt;9:38:38,  7.77s/it]
+ 11%|█         | 534/5000 [1:04:52&lt;9:34:21,  7.72s/it]
+ 11%|█         | 535/5000 [1:04:59&lt;9:27:58,  7.63s/it]
+ 11%|█         | 536/5000 [1:05:07&lt;9:19:47,  7.52s/it]
+ 11%|█         | 537/5000 [1:05:14&lt;9:14:36,  7.46s/it]
+ 11%|█         | 538/5000 [1:05:21&lt;9:16:09,  7.48s/it]
+ 11%|█         | 539/5000 [1:05:29&lt;9:10:27,  7.40s/it]
+ 11%|█         | 540/5000 [1:05:36&lt;9:05:49,  7.34s/it]
+ 11%|█         | 541/5000 [1:05:43&lt;9:03:47,  7.32s/it]
+ 11%|█         | 542/5000 [1:05:52&lt;9:45:38,  7.88s/it]
+ 11%|█         | 543/5000 [1:05:59&lt;9:13:37,  7.45s/it]
+ 11%|█         | 544/5000 [1:06:05&lt;8:44:19,  7.06s/it]
+ 11%|█         | 545/5000 [1:06:11&lt;8:25:21,  6.81s/it]
+ 11%|█         | 546/5000 [1:06:17&lt;8:11:22,  6.62s/it]
+ 11%|█         | 547/5000 [1:06:24&lt;8:04:15,  6.52s/it]
+ 11%|█         | 548/5000 [1:06:30&lt;7:56:09,  6.42s/it]
+ 11%|█         | 549/5000 [1:06:36&lt;7:51:36,  6.36s/it]
+ 11%|█         | 550/5000 [1:06:45&lt;8:46:34,  7.10s/it]
+ 11%|█         | 551/5000 [1:06:53&lt;9:12:57,  7.46s/it]
+ 11%|█         | 552/5000 [1:07:02&lt;9:50:26,  7.96s/it]
+ 11%|█         | 553/5000 [1:07:09&lt;9:18:43,  7.54s/it]
+ 11%|█         | 554/5000 [1:07:15&lt;8:46:47,  7.11s/it]
+ 11%|█         | 555/5000 [1:07:21&lt;8:24:20,  6.81s/it]
+ 11%|█         | 556/5000 [1:07:27&lt;8:10:34,  6.62s/it]
+ 11%|█         | 557/5000 [1:07:33&lt;7:59:00,  6.47s/it]
+ 11%|█         | 558/5000 [1:07:39&lt;7:50:49,  6.36s/it]
+ 11%|█         | 559/5000 [1:07:46&lt;7:45:39,  6.29s/it]
+ 11%|█         | 560/5000 [1:07:52&lt;7:41:57,  6.24s/it]
+ 11%|█         | 561/5000 [1:07:58&lt;7:39:32,  6.21s/it]
+ 11%|█         | 562/5000 [1:08:04&lt;7:40:10,  6.22s/it]
+ 11%|█▏        | 563/5000 [1:08:10&lt;7:43:10,  6.26s/it]
+ 11%|█▏        | 564/5000 [1:08:17&lt;7:40:39,  6.23s/it]
+ 11%|█▏        | 565/5000 [1:08:23&lt;7:40:35,  6.23s/it]
+ 11%|█▏        | 566/5000 [1:08:29&lt;7:40:39,  6.23s/it]
+ 11%|█▏        | 567/5000 [1:08:36&lt;7:48:17,  6.34s/it]
+ 11%|█▏        | 568/5000 [1:08:42&lt;7:44:39,  6.29s/it]
+ 11%|█▏        | 569/5000 [1:08:48&lt;7:41:13,  6.25s/it]
+ 11%|█▏        | 570/5000 [1:08:54&lt;7:40:22,  6.24s/it]
+ 11%|█▏        | 571/5000 [1:09:00&lt;7:39:02,  6.22s/it]
+ 11%|█▏        | 572/5000 [1:09:07&lt;7:49:45,  6.37s/it]
+ 11%|█▏        | 573/5000 [1:09:13&lt;7:46:51,  6.33s/it]
+ 11%|█▏        | 574/5000 [1:09:20&lt;7:44:08,  6.29s/it]
+ 12%|█▏        | 575/5000 [1:09:26&lt;7:43:58,  6.29s/it]
+ 12%|█▏        | 576/5000 [1:09:32&lt;7:45:14,  6.31s/it]
+ 12%|█▏        | 577/5000 [1:09:38&lt;7:42:41,  6.28s/it]
+ 12%|█▏        | 578/5000 [1:09:45&lt;7:42:38,  6.28s/it]
+ 12%|█▏        | 579/5000 [1:09:51&lt;7:40:36,  6.25s/it]
+ 12%|█▏        | 580/5000 [1:09:57&lt;7:39:43,  6.24s/it]
+ 12%|█▏        | 581/5000 [1:10:04&lt;7:47:42,  6.35s/it]
+ 12%|█▏        | 582/5000 [1:10:10&lt;7:43:53,  6.30s/it]
+ 12%|█▏        | 583/5000 [1:10:16&lt;7:39:57,  6.25s/it]
+ 12%|█▏        | 584/5000 [1:10:22&lt;7:36:24,  6.20s/it]
+ 12%|█▏        | 585/5000 [1:10:28&lt;7:34:56,  6.18s/it]
+ 12%|█▏        | 586/5000 [1:10:35&lt;7:36:35,  6.21s/it]
+ 12%|█▏        | 587/5000 [1:10:41&lt;7:34:26,  6.18s/it]
+ 12%|█▏        | 588/5000 [1:10:47&lt;7:33:43,  6.17s/it]
+ 12%|█▏        | 589/5000 [1:10:53&lt;7:32:11,  6.15s/it]
+ 12%|█▏        | 590/5000 [1:10:59&lt;7:31:10,  6.14s/it]
+ 12%|█▏        | 591/5000 [1:11:05&lt;7:32:17,  6.16s/it]
+ 12%|█▏        | 592/5000 [1:11:11&lt;7:31:35,  6.15s/it]
+ 12%|█▏        | 593/5000 [1:11:17&lt;7:32:06,  6.16s/it]
+ 12%|█▏        | 594/5000 [1:11:24&lt;7:32:06,  6.16s/it]
+ 12%|█▏        | 595/5000 [1:11:30&lt;7:32:28,  6.16s/it]
+ 12%|█▏        | 596/5000 [1:11:36&lt;7:39:48,  6.26s/it]
+ 12%|█▏        | 597/5000 [1:11:44&lt;8:03:56,  6.59s/it]
+ 12%|█▏        | 598/5000 [1:11:51&lt;8:27:29,  6.92s/it]
+ 12%|█▏        | 599/5000 [1:11:58&lt;8:25:38,  6.89s/it]
+ 12%|█▏        | 600/5000 [1:12:06&lt;8:41:42,  7.11s/it]
+ 12%|█▏        | 601/5000 [1:12:12&lt;8:19:38,  6.81s/it]
+ 12%|█▏        | 602/5000 [1:12:18&lt;8:04:50,  6.61s/it]
+ 12%|█▏        | 603/5000 [1:12:24&lt;7:54:19,  6.47s/it]
+ 12%|█▏        | 604/5000 [1:12:30&lt;7:45:55,  6.36s/it]
+ 12%|█▏        | 605/5000 [1:12:36&lt;7:39:29,  6.27s/it]
+ 12%|█▏        | 606/5000 [1:12:43&lt;7:36:06,  6.23s/it]
+ 12%|█▏        | 607/5000 [1:12:49&lt;7:33:08,  6.19s/it]
+ 12%|█▏        | 608/5000 [1:12:55&lt;7:30:37,  6.16s/it]
+ 12%|█▏        | 609/5000 [1:13:01&lt;7:28:32,  6.13s/it]
+ 12%|█▏        | 610/5000 [1:13:07&lt;7:26:55,  6.11s/it]
+ 12%|█▏        | 611/5000 [1:13:13&lt;7:25:37,  6.09s/it]
+ 12%|█▏        | 612/5000 [1:13:19&lt;7:26:20,  6.10s/it]
+ 12%|█▏        | 613/5000 [1:13:25&lt;7:26:28,  6.11s/it]
+ 12%|█▏        | 614/5000 [1:13:32&lt;7:32:25,  6.19s/it]
+ 12%|█▏        | 615/5000 [1:13:39&lt;7:53:13,  6.48s/it]
+ 12%|█▏        | 616/5000 [1:13:46&lt;8:08:18,  6.68s/it]
+ 12%|█▏        | 617/5000 [1:13:52&lt;7:55:02,  6.50s/it]
+ 12%|█▏        | 618/5000 [1:13:59&lt;8:10:56,  6.72s/it]
+ 12%|█▏        | 619/5000 [1:14:05&lt;7:57:43,  6.54s/it]
+ 12%|█▏        | 620/5000 [1:14:11&lt;7:48:30,  6.42s/it]
+ 12%|█▏        | 621/5000 [1:14:18&lt;7:41:54,  6.33s/it]
+ 12%|█▏        | 622/5000 [1:14:24&lt;7:36:53,  6.26s/it]
+ 12%|█▏        | 623/5000 [1:14:30&lt;7:39:55,  6.30s/it]
+ 12%|█▏        | 624/5000 [1:14:36&lt;7:37:15,  6.27s/it]
+ 12%|█▎        | 625/5000 [1:14:42&lt;7:34:53,  6.24s/it]
+ 13%|█▎        | 626/5000 [1:14:51&lt;8:25:52,  6.94s/it]
+ 13%|█▎        | 627/5000 [1:14:58&lt;8:20:01,  6.86s/it]
+ 13%|█▎        | 628/5000 [1:15:04&lt;8:04:02,  6.64s/it]
+ 13%|█▎        | 629/5000 [1:15:10&lt;7:52:58,  6.49s/it]
+ 13%|█▎        | 630/5000 [1:15:16&lt;7:45:38,  6.39s/it]
+ 13%|█▎        | 631/5000 [1:15:22&lt;7:40:03,  6.32s/it]
+ 13%|█▎        | 632/5000 [1:15:28&lt;7:34:36,  6.24s/it]
+ 13%|█▎        | 633/5000 [1:15:34&lt;7:31:54,  6.21s/it]
+ 13%|█▎        | 634/5000 [1:15:41&lt;7:30:41,  6.19s/it]
+ 13%|█▎        | 635/5000 [1:15:48&lt;7:50:07,  6.46s/it]
+ 13%|█▎        | 636/5000 [1:15:54&lt;7:49:50,  6.46s/it]
+ 13%|█▎        | 637/5000 [1:16:01&lt;8:01:34,  6.62s/it]
+ 13%|█▎        | 638/5000 [1:16:07&lt;7:50:11,  6.47s/it]
+ 13%|█▎        | 639/5000 [1:16:13&lt;7:41:13,  6.35s/it]
+ 13%|█▎        | 640/5000 [1:16:19&lt;7:35:28,  6.27s/it]
+ 13%|█▎        | 641/5000 [1:16:26&lt;7:33:15,  6.24s/it]
+ 13%|█▎        | 642/5000 [1:16:32&lt;7:29:42,  6.19s/it]
+ 13%|█▎        | 643/5000 [1:16:38&lt;7:29:33,  6.19s/it]
+ 13%|█▎        | 644/5000 [1:16:44&lt;7:34:31,  6.26s/it]
+ 13%|█▎        | 645/5000 [1:16:52&lt;7:57:35,  6.58s/it]
+ 13%|█▎        | 646/5000 [1:16:59&lt;8:24:34,  6.95s/it]
+ 13%|█▎        | 647/5000 [1:17:08&lt;9:08:37,  7.56s/it]
+ 13%|█▎        | 648/5000 [1:17:20&lt;10:26:57,  8.64s/it]
+ 13%|█▎        | 649/5000 [1:17:29&lt;10:47:08,  8.92s/it]
+ 13%|█▎        | 650/5000 [1:17:36&lt;10:06:20,  8.36s/it]
+ 13%|█▎        | 651/5000 [1:17:44&lt;9:54:13,  8.20s/it]
+ 13%|█▎        | 652/5000 [1:17:51&lt;9:29:10,  7.85s/it]
+ 13%|█▎        | 653/5000 [1:17:58&lt;9:07:56,  7.56s/it]
+ 13%|█▎        | 654/5000 [1:18:05&lt;8:55:57,  7.40s/it]
+ 13%|█▎        | 655/5000 [1:18:11&lt;8:31:31,  7.06s/it]
+ 13%|█▎        | 656/5000 [1:18:17&lt;8:10:40,  6.78s/it]
+ 13%|█▎        | 657/5000 [1:18:23&lt;7:56:28,  6.58s/it]
+ 13%|█▎        | 658/5000 [1:18:30&lt;7:45:57,  6.44s/it]
+ 13%|█▎        | 659/5000 [1:18:36&lt;7:38:54,  6.34s/it]
+ 13%|█▎        | 660/5000 [1:18:42&lt;7:36:05,  6.31s/it]
+ 13%|█▎        | 661/5000 [1:18:48&lt;7:39:21,  6.35s/it]
+ 13%|█▎        | 662/5000 [1:18:55&lt;7:47:17,  6.46s/it]
+ 13%|█▎        | 663/5000 [1:19:02&lt;7:56:59,  6.60s/it]
+ 13%|█▎        | 664/5000 [1:19:09&lt;8:00:19,  6.65s/it]
+ 13%|█▎        | 665/5000 [1:19:15&lt;8:02:26,  6.68s/it]
+ 13%|█▎        | 666/5000 [1:19:22&lt;7:52:52,  6.55s/it]
+ 13%|█▎        | 667/5000 [1:19:29&lt;8:18:56,  6.91s/it]
+ 13%|█▎        | 668/5000 [1:19:36&lt;8:21:09,  6.94s/it]
+ 13%|█▎        | 669/5000 [1:19:43&lt;8:03:10,  6.69s/it]
+ 13%|█▎        | 670/5000 [1:19:49&lt;8:06:09,  6.74s/it]
+ 13%|█▎        | 671/5000 [1:19:56&lt;7:52:31,  6.55s/it]
+ 13%|█▎        | 672/5000 [1:20:02&lt;7:42:24,  6.41s/it]
+ 13%|█▎        | 673/5000 [1:20:08&lt;7:35:08,  6.31s/it]
+ 13%|█▎        | 674/5000 [1:20:14&lt;7:30:11,  6.24s/it]
+ 14%|█▎        | 675/5000 [1:20:20&lt;7:29:37,  6.24s/it]
+ 14%|█▎        | 676/5000 [1:20:26&lt;7:26:18,  6.19s/it]
+ 14%|█▎        | 677/5000 [1:20:32&lt;7:23:55,  6.16s/it]
+ 14%|█▎        | 678/5000 [1:20:38&lt;7:22:10,  6.14s/it]
+ 14%|█▎        | 679/5000 [1:20:44&lt;7:20:59,  6.12s/it]
+ 14%|█▎        | 680/5000 [1:20:50&lt;7:19:38,  6.11s/it]
+ 14%|█▎        | 681/5000 [1:20:57&lt;7:18:36,  6.09s/it]
+ 14%|█▎        | 682/5000 [1:21:03&lt;7:18:25,  6.09s/it]
+ 14%|█▎        | 683/5000 [1:21:09&lt;7:18:07,  6.09s/it]
+ 14%|█▎        | 684/5000 [1:21:15&lt;7:18:35,  6.10s/it]
+ 14%|█▎        | 685/5000 [1:21:21&lt;7:18:06,  6.09s/it]
+ 14%|█▎        | 686/5000 [1:21:27&lt;7:18:18,  6.10s/it]
+ 14%|█▎        | 687/5000 [1:21:33&lt;7:18:00,  6.09s/it]
+ 14%|█▍        | 688/5000 [1:21:39&lt;7:18:23,  6.10s/it]
+ 14%|█▍        | 689/5000 [1:21:45&lt;7:17:52,  6.09s/it]
+ 14%|█▍        | 690/5000 [1:21:51&lt;7:17:37,  6.09s/it]
+ 14%|█▍        | 691/5000 [1:21:58&lt;7:27:49,  6.24s/it]
+ 14%|█▍        | 692/5000 [1:22:06&lt;7:56:55,  6.64s/it]
+ 14%|█▍        | 693/5000 [1:22:12&lt;7:44:49,  6.48s/it]
+ 14%|█▍        | 694/5000 [1:22:18&lt;7:36:53,  6.37s/it]
+ 14%|█▍        | 695/5000 [1:22:24&lt;7:30:48,  6.28s/it]
+ 14%|█▍        | 696/5000 [1:22:30&lt;7:26:00,  6.22s/it]
+ 14%|█▍        | 697/5000 [1:22:36&lt;7:22:31,  6.17s/it]
+ 14%|█▍        | 698/5000 [1:22:42&lt;7:20:32,  6.14s/it]
+ 14%|█▍        | 699/5000 [1:22:48&lt;7:18:54,  6.12s/it]
+ 14%|█▍        | 700/5000 [1:22:54&lt;7:17:51,  6.11s/it]
+ 14%|█▍        | 701/5000 [1:23:00&lt;7:16:43,  6.10s/it]
+ 14%|█▍        | 702/5000 [1:23:06&lt;7:16:31,  6.09s/it]
+ 14%|█▍        | 703/5000 [1:23:12&lt;7:15:52,  6.09s/it]
+ 14%|█▍        | 704/5000 [1:23:18&lt;7:15:56,  6.09s/it]
+ 14%|█▍        | 705/5000 [1:23:25&lt;7:15:40,  6.09s/it]
+ 14%|█▍        | 706/5000 [1:23:31&lt;7:15:23,  6.08s/it]
+ 14%|█▍        | 707/5000 [1:23:37&lt;7:15:04,  6.08s/it]
+ 14%|█▍        | 708/5000 [1:23:43&lt;7:14:55,  6.08s/it]
+ 14%|█▍        | 709/5000 [1:23:49&lt;7:18:52,  6.14s/it]
+ 14%|█▍        | 710/5000 [1:23:55&lt;7:22:32,  6.19s/it]
+ 14%|█▍        | 711/5000 [1:24:02&lt;7:25:04,  6.23s/it]
+ 14%|█▍        | 712/5000 [1:24:08&lt;7:26:24,  6.25s/it]
+ 14%|█▍        | 713/5000 [1:24:14&lt;7:27:17,  6.26s/it]
+ 14%|█▍        | 714/5000 [1:24:21&lt;7:27:35,  6.27s/it]
+ 14%|█▍        | 715/5000 [1:24:27&lt;7:28:02,  6.27s/it]
+ 14%|█▍        | 716/5000 [1:24:33&lt;7:28:12,  6.28s/it]
+ 14%|█▍        | 717/5000 [1:24:39&lt;7:28:03,  6.28s/it]
+ 14%|█▍        | 718/5000 [1:24:46&lt;7:27:59,  6.28s/it]
+ 14%|█▍        | 719/5000 [1:24:52&lt;7:27:39,  6.27s/it]
+ 14%|█▍        | 720/5000 [1:24:59&lt;7:33:30,  6.36s/it]
+ 14%|█▍        | 721/5000 [1:25:05&lt;7:32:24,  6.34s/it]
+ 14%|█▍        | 722/5000 [1:25:11&lt;7:33:04,  6.35s/it]
+ 14%|█▍        | 723/5000 [1:25:18&lt;7:32:24,  6.35s/it]
+ 14%|█▍        | 724/5000 [1:25:24&lt;7:31:30,  6.34s/it]
+ 14%|█▍        | 725/5000 [1:25:30&lt;7:31:10,  6.33s/it]
+ 15%|█▍        | 726/5000 [1:25:36&lt;7:30:18,  6.32s/it]
+ 15%|█▍        | 727/5000 [1:25:43&lt;7:29:32,  6.31s/it]
+ 15%|█▍        | 728/5000 [1:25:49&lt;7:28:41,  6.30s/it]
+ 15%|█▍        | 729/5000 [1:25:55&lt;7:25:46,  6.26s/it]
+ 15%|█▍        | 730/5000 [1:26:01&lt;7:21:43,  6.21s/it]
+ 15%|█▍        | 731/5000 [1:26:07&lt;7:18:21,  6.16s/it]
+ 15%|█▍        | 732/5000 [1:26:13&lt;7:16:40,  6.14s/it]
+ 15%|█▍        | 733/5000 [1:26:19&lt;7:15:29,  6.12s/it]
+ 15%|█▍        | 734/5000 [1:26:26&lt;7:13:55,  6.10s/it]
+ 15%|█▍        | 735/5000 [1:26:32&lt;7:13:31,  6.10s/it]
+ 15%|█▍        | 736/5000 [1:26:38&lt;7:13:42,  6.10s/it]
+ 15%|█▍        | 737/5000 [1:26:44&lt;7:13:13,  6.10s/it]
+ 15%|█▍        | 738/5000 [1:26:50&lt;7:13:36,  6.10s/it]
+ 15%|█▍        | 739/5000 [1:26:57&lt;7:29:19,  6.33s/it]
+ 15%|█▍        | 740/5000 [1:27:05&lt;7:58:54,  6.75s/it]
+ 15%|█▍        | 741/5000 [1:27:11&lt;7:44:29,  6.54s/it]
+ 15%|█▍        | 742/5000 [1:27:17&lt;7:35:57,  6.42s/it]
+ 15%|█▍        | 743/5000 [1:27:23&lt;7:33:25,  6.39s/it]
+ 15%|█▍        | 744/5000 [1:27:29&lt;7:26:14,  6.29s/it]
+ 15%|█▍        | 745/5000 [1:27:35&lt;7:21:02,  6.22s/it]
+ 15%|█▍        | 746/5000 [1:27:41&lt;7:17:38,  6.17s/it]
+ 15%|█▍        | 747/5000 [1:27:47&lt;7:17:14,  6.17s/it]
+ 15%|█▍        | 748/5000 [1:27:53&lt;7:14:20,  6.13s/it]
+ 15%|█▍        | 749/5000 [1:27:59&lt;7:12:20,  6.10s/it]
+ 15%|█▌        | 750/5000 [1:28:05&lt;7:10:43,  6.08s/it]
+ 15%|█▌        | 751/5000 [1:28:12&lt;7:10:24,  6.08s/it]
+ 15%|█▌        | 752/5000 [1:28:18&lt;7:09:49,  6.07s/it]
+ 15%|█▌        | 753/5000 [1:28:24&lt;7:09:21,  6.07s/it]
+ 15%|█▌        | 754/5000 [1:28:30&lt;7:12:42,  6.11s/it]
+ 15%|█▌        | 755/5000 [1:28:36&lt;7:11:15,  6.10s/it]
+ 15%|█▌        | 756/5000 [1:28:42&lt;7:14:06,  6.14s/it]
+ 15%|█▌        | 757/5000 [1:28:48&lt;7:12:21,  6.11s/it]
+ 15%|█▌        | 758/5000 [1:28:54&lt;7:11:03,  6.10s/it]
+ 15%|█▌        | 759/5000 [1:29:00&lt;7:10:27,  6.09s/it]
+ 15%|█▌        | 760/5000 [1:29:06&lt;7:09:44,  6.08s/it]
+ 15%|█▌        | 761/5000 [1:29:13&lt;7:09:57,  6.09s/it]
+ 15%|█▌        | 762/5000 [1:29:19&lt;7:10:17,  6.09s/it]
+ 15%|█▌        | 763/5000 [1:29:25&lt;7:09:26,  6.08s/it]
+ 15%|█▌        | 764/5000 [1:29:31&lt;7:09:16,  6.08s/it]
+ 15%|█▌        | 765/5000 [1:29:37&lt;7:09:04,  6.08s/it]
+ 15%|█▌        | 766/5000 [1:29:43&lt;7:11:01,  6.11s/it]
+ 15%|█▌        | 767/5000 [1:29:49&lt;7:17:02,  6.19s/it]
+ 15%|█▌        | 768/5000 [1:29:55&lt;7:14:01,  6.15s/it]
+ 15%|█▌        | 769/5000 [1:30:02&lt;7:11:57,  6.13s/it]
+ 15%|█▌        | 770/5000 [1:30:08&lt;7:10:28,  6.11s/it]
+ 15%|█▌        | 771/5000 [1:30:14&lt;7:09:26,  6.09s/it]
+ 15%|█▌        | 772/5000 [1:30:20&lt;7:08:16,  6.08s/it]
+ 15%|█▌        | 773/5000 [1:30:26&lt;7:09:04,  6.09s/it]
+ 15%|█▌        | 774/5000 [1:30:32&lt;7:09:25,  6.10s/it]
+ 16%|█▌        | 775/5000 [1:30:38&lt;7:08:29,  6.09s/it]
+ 16%|█▌        | 776/5000 [1:30:44&lt;7:09:33,  6.10s/it]
+ 16%|█▌        | 777/5000 [1:30:51&lt;7:16:39,  6.20s/it]
+ 16%|█▌        | 778/5000 [1:30:57&lt;7:14:48,  6.18s/it]
+ 16%|█▌        | 779/5000 [1:31:03&lt;7:13:05,  6.16s/it]
+ 16%|█▌        | 780/5000 [1:31:09&lt;7:12:16,  6.15s/it]
+ 16%|█▌        | 781/5000 [1:31:15&lt;7:13:22,  6.16s/it]
+ 16%|█▌        | 782/5000 [1:31:21&lt;7:12:14,  6.15s/it]
+ 16%|█▌        | 783/5000 [1:31:27&lt;7:10:51,  6.13s/it]
+ 16%|█▌        | 784/5000 [1:31:34&lt;7:17:53,  6.23s/it]
+ 16%|█▌        | 785/5000 [1:31:40&lt;7:15:18,  6.20s/it]
+ 16%|█▌        | 786/5000 [1:31:47&lt;7:26:50,  6.36s/it]
+ 16%|█▌        | 787/5000 [1:31:53&lt;7:30:56,  6.42s/it]
+ 16%|█▌        | 788/5000 [1:32:00&lt;7:47:29,  6.66s/it]
+ 16%|█▌        | 789/5000 [1:32:08&lt;7:58:51,  6.82s/it]
+ 16%|█▌        | 790/5000 [1:32:14&lt;7:54:29,  6.76s/it]
+ 16%|█▌        | 791/5000 [1:32:20&lt;7:40:15,  6.56s/it]
+ 16%|█▌        | 792/5000 [1:32:26&lt;7:29:52,  6.41s/it]
+ 16%|█▌        | 793/5000 [1:32:32&lt;7:22:18,  6.31s/it]
+ 16%|█▌        | 794/5000 [1:32:39&lt;7:16:33,  6.23s/it]
+ 16%|█▌        | 795/5000 [1:32:45&lt;7:12:30,  6.17s/it]
+ 16%|█▌        | 796/5000 [1:32:51&lt;7:09:44,  6.13s/it]
+ 16%|█▌        | 797/5000 [1:32:57&lt;7:08:15,  6.11s/it]
+ 16%|█▌        | 798/5000 [1:33:03&lt;7:07:43,  6.11s/it]
+ 16%|█▌        | 799/5000 [1:33:09&lt;7:06:48,  6.10s/it]
+ 16%|█▌        | 800/5000 [1:33:15&lt;7:14:54,  6.21s/it]
+ 16%|█▌        | 801/5000 [1:33:21&lt;7:11:43,  6.17s/it]
+ 16%|█▌        | 802/5000 [1:33:27&lt;7:09:10,  6.13s/it]
+ 16%|█▌        | 803/5000 [1:33:34&lt;7:07:18,  6.11s/it]
+ 16%|█▌        | 804/5000 [1:33:40&lt;7:06:34,  6.10s/it]
+ 16%|█▌        | 805/5000 [1:33:46&lt;7:05:55,  6.09s/it]
+ 16%|█▌        | 806/5000 [1:33:52&lt;7:05:43,  6.09s/it]
+ 16%|█▌        | 807/5000 [1:33:58&lt;7:05:03,  6.08s/it]
+ 16%|█▌        | 808/5000 [1:34:04&lt;7:03:59,  6.07s/it]
+ 16%|█▌        | 809/5000 [1:34:10&lt;7:04:24,  6.08s/it]
+ 16%|█▌        | 810/5000 [1:34:16&lt;7:04:46,  6.08s/it]
+ 16%|█▌        | 811/5000 [1:34:23&lt;7:16:48,  6.26s/it]
+ 16%|█▌        | 812/5000 [1:34:29&lt;7:12:12,  6.19s/it]
+ 16%|█▋        | 813/5000 [1:34:35&lt;7:08:59,  6.15s/it]
+ 16%|█▋        | 814/5000 [1:34:41&lt;7:08:41,  6.14s/it]
+ 16%|█▋        | 815/5000 [1:34:47&lt;7:16:54,  6.26s/it]
+ 16%|█▋        | 816/5000 [1:34:54&lt;7:18:20,  6.29s/it]
+ 16%|█▋        | 817/5000 [1:35:00&lt;7:14:25,  6.23s/it]
+ 16%|█▋        | 818/5000 [1:35:06&lt;7:12:19,  6.20s/it]
+ 16%|█▋        | 819/5000 [1:35:12&lt;7:10:03,  6.17s/it]
+ 16%|█▋        | 820/5000 [1:35:18&lt;7:11:03,  6.19s/it]
+ 16%|█▋        | 821/5000 [1:35:24&lt;7:08:04,  6.15s/it]
+ 16%|█▋        | 822/5000 [1:35:30&lt;7:05:59,  6.12s/it]
+ 16%|█▋        | 823/5000 [1:35:37&lt;7:04:14,  6.09s/it]
+ 16%|█▋        | 824/5000 [1:35:43&lt;7:03:18,  6.08s/it]
+ 16%|█▋        | 825/5000 [1:35:49&lt;7:02:06,  6.07s/it]
+ 17%|█▋        | 826/5000 [1:35:55&lt;7:02:08,  6.07s/it]
+ 17%|█▋        | 827/5000 [1:36:01&lt;7:03:44,  6.09s/it]
+ 17%|█▋        | 828/5000 [1:36:07&lt;7:08:26,  6.16s/it]
+ 17%|█▋        | 829/5000 [1:36:13&lt;7:06:16,  6.13s/it]
+ 17%|█▋        | 830/5000 [1:36:20&lt;7:10:13,  6.19s/it]
+ 17%|█▋        | 831/5000 [1:36:26&lt;7:07:44,  6.16s/it]
+ 17%|█▋        | 832/5000 [1:36:32&lt;7:09:13,  6.18s/it]
+ 17%|█▋        | 833/5000 [1:36:38&lt;7:05:29,  6.13s/it]
+ 17%|█▋        | 834/5000 [1:36:44&lt;7:03:00,  6.09s/it]
+ 17%|█▋        | 835/5000 [1:36:50&lt;7:01:56,  6.08s/it]
+ 17%|█▋        | 836/5000 [1:36:56&lt;7:10:02,  6.20s/it]
+ 17%|█▋        | 837/5000 [1:37:04&lt;7:39:26,  6.62s/it]
+ 17%|█▋        | 838/5000 [1:37:10&lt;7:27:43,  6.45s/it]
+ 17%|█▋        | 839/5000 [1:37:16&lt;7:20:59,  6.36s/it]
+ 17%|█▋        | 840/5000 [1:37:22&lt;7:14:46,  6.27s/it]
+ 17%|█▋        | 841/5000 [1:37:28&lt;7:12:08,  6.23s/it]
+ 17%|█▋        | 842/5000 [1:37:34&lt;7:08:55,  6.19s/it]
+ 17%|█▋        | 843/5000 [1:37:41&lt;7:07:19,  6.17s/it]
+ 17%|█▋        | 844/5000 [1:37:47&lt;7:04:59,  6.14s/it]
+ 17%|█▋        | 845/5000 [1:37:53&lt;7:03:14,  6.11s/it]
+ 17%|█▋        | 846/5000 [1:37:59&lt;7:03:17,  6.11s/it]
+ 17%|█▋        | 847/5000 [1:38:05&lt;7:01:39,  6.09s/it]
+ 17%|█▋        | 848/5000 [1:38:11&lt;7:01:55,  6.10s/it]
+ 17%|█▋        | 849/5000 [1:38:18&lt;7:14:55,  6.29s/it]
+ 17%|█▋        | 850/5000 [1:38:24&lt;7:11:19,  6.24s/it]
+ 17%|█▋        | 851/5000 [1:38:30&lt;7:07:55,  6.19s/it]
+ 17%|█▋        | 852/5000 [1:38:36&lt;7:05:21,  6.15s/it]
+ 17%|█▋        | 853/5000 [1:38:42&lt;7:03:25,  6.13s/it]
+ 17%|█▋        | 854/5000 [1:38:48&lt;7:02:45,  6.12s/it]
+ 17%|█▋        | 855/5000 [1:38:54&lt;7:01:26,  6.10s/it]
+ 17%|█▋        | 856/5000 [1:39:00&lt;7:01:22,  6.10s/it]
+ 17%|█▋        | 857/5000 [1:39:06&lt;7:00:35,  6.09s/it]
+ 17%|█▋        | 858/5000 [1:39:12&lt;7:00:29,  6.09s/it]
+ 17%|█▋        | 859/5000 [1:39:19&lt;7:01:14,  6.10s/it]
+ 17%|█▋        | 860/5000 [1:39:25&lt;7:00:36,  6.10s/it]
+ 17%|█▋        | 861/5000 [1:39:31&lt;6:59:21,  6.08s/it]
+ 17%|█▋        | 862/5000 [1:39:37&lt;7:03:35,  6.14s/it]
+ 17%|█▋        | 863/5000 [1:39:44&lt;7:15:42,  6.32s/it]
+ 17%|█▋        | 864/5000 [1:39:51&lt;7:34:59,  6.60s/it]
+ 17%|█▋        | 865/5000 [1:39:57&lt;7:24:41,  6.45s/it]
+ 17%|█▋        | 866/5000 [1:40:03&lt;7:22:43,  6.43s/it]
+ 17%|█▋        | 867/5000 [1:40:10&lt;7:15:50,  6.33s/it]
+ 17%|█▋        | 868/5000 [1:40:16&lt;7:11:33,  6.27s/it]
+ 17%|█▋        | 869/5000 [1:40:22&lt;7:09:06,  6.23s/it]
+ 17%|█▋        | 870/5000 [1:40:28&lt;7:06:43,  6.20s/it]
+ 17%|█▋        | 871/5000 [1:40:34&lt;7:06:19,  6.19s/it]
+ 17%|█▋        | 872/5000 [1:40:40&lt;7:06:32,  6.20s/it]
+ 17%|█▋        | 873/5000 [1:40:47&lt;7:06:27,  6.20s/it]
+ 17%|█▋        | 874/5000 [1:40:53&lt;7:04:10,  6.17s/it]
+ 18%|█▊        | 875/5000 [1:40:59&lt;7:03:57,  6.17s/it]
+ 18%|█▊        | 876/5000 [1:41:05&lt;7:07:05,  6.21s/it]
+ 18%|█▊        | 877/5000 [1:41:11&lt;7:05:24,  6.19s/it]
+ 18%|█▊        | 878/5000 [1:41:17&lt;7:03:55,  6.17s/it]
+ 18%|█▊        | 879/5000 [1:41:24&lt;7:02:49,  6.16s/it]
+ 18%|█▊        | 880/5000 [1:41:30&lt;7:01:11,  6.13s/it]
+ 18%|█▊        | 881/5000 [1:41:36&lt;6:59:33,  6.11s/it]
+ 18%|█▊        | 882/5000 [1:41:42&lt;6:58:49,  6.10s/it]
+ 18%|█▊        | 883/5000 [1:41:48&lt;6:57:46,  6.09s/it]
+ 18%|█▊        | 884/5000 [1:41:54&lt;6:57:08,  6.08s/it]
+ 18%|█▊        | 885/5000 [1:42:01&lt;7:22:41,  6.45s/it]
+ 18%|█▊        | 886/5000 [1:42:08&lt;7:30:41,  6.57s/it]
+ 18%|█▊        | 887/5000 [1:42:14&lt;7:19:28,  6.41s/it]
+ 18%|█▊        | 888/5000 [1:42:20&lt;7:12:16,  6.31s/it]
+ 18%|█▊        | 889/5000 [1:42:26&lt;7:06:53,  6.23s/it]
+ 18%|█▊        | 890/5000 [1:42:32&lt;7:02:41,  6.17s/it]
+ 18%|█▊        | 891/5000 [1:42:38&lt;7:03:25,  6.18s/it]
+ 18%|█▊        | 892/5000 [1:42:45&lt;7:01:43,  6.16s/it]
+ 18%|█▊        | 893/5000 [1:42:51&lt;6:59:10,  6.12s/it]
+ 18%|█▊        | 894/5000 [1:42:57&lt;6:57:24,  6.10s/it]
+ 18%|█▊        | 895/5000 [1:43:03&lt;6:56:19,  6.09s/it]
+ 18%|█▊        | 896/5000 [1:43:09&lt;6:55:17,  6.07s/it]
+ 18%|█▊        | 897/5000 [1:43:15&lt;6:55:58,  6.08s/it]
+ 18%|█▊        | 898/5000 [1:43:21&lt;6:56:16,  6.09s/it]
+ 18%|█▊        | 899/5000 [1:43:27&lt;6:55:57,  6.09s/it]
+ 18%|█▊        | 900/5000 [1:43:33&lt;6:55:13,  6.08s/it]
+ 18%|█▊        | 901/5000 [1:43:39&lt;6:54:14,  6.06s/it]
+ 18%|█▊        | 902/5000 [1:43:45&lt;6:54:10,  6.06s/it]
+ 18%|█▊        | 903/5000 [1:43:51&lt;6:54:04,  6.06s/it]
+ 18%|█▊        | 904/5000 [1:43:57&lt;6:54:15,  6.07s/it]
+ 18%|█▊        | 905/5000 [1:44:03&lt;6:55:51,  6.09s/it]
+ 18%|█▊        | 906/5000 [1:44:10&lt;6:55:57,  6.10s/it]
+ 18%|█▊        | 907/5000 [1:44:16&lt;6:57:03,  6.11s/it]
+ 18%|█▊        | 908/5000 [1:44:22&lt;6:56:23,  6.11s/it]
+ 18%|█▊        | 909/5000 [1:44:28&lt;6:55:25,  6.09s/it]
+ 18%|█▊        | 910/5000 [1:44:34&lt;6:54:23,  6.08s/it]
+ 18%|█▊        | 911/5000 [1:44:40&lt;6:53:55,  6.07s/it]
+ 18%|█▊        | 912/5000 [1:44:46&lt;6:53:35,  6.07s/it]
+ 18%|█▊        | 913/5000 [1:44:52&lt;6:53:08,  6.07s/it]
+ 18%|█▊        | 914/5000 [1:44:58&lt;6:52:18,  6.05s/it]
+ 18%|█▊        | 915/5000 [1:45:04&lt;6:52:02,  6.05s/it]
+ 18%|█▊        | 916/5000 [1:45:10&lt;6:51:53,  6.05s/it]
+ 18%|█▊        | 917/5000 [1:45:16&lt;6:54:00,  6.08s/it]
+ 18%|█▊        | 918/5000 [1:45:22&lt;6:54:00,  6.09s/it]
+ 18%|█▊        | 919/5000 [1:45:28&lt;6:53:14,  6.08s/it]
+ 18%|█▊        | 920/5000 [1:45:35&lt;6:53:30,  6.08s/it]
+ 18%|█▊        | 921/5000 [1:45:41&lt;6:55:20,  6.11s/it]
+ 18%|█▊        | 922/5000 [1:45:47&lt;6:54:18,  6.10s/it]
+ 18%|█▊        | 923/5000 [1:45:53&lt;6:54:18,  6.10s/it]
+ 18%|█▊        | 924/5000 [1:45:59&lt;6:54:33,  6.10s/it]
+ 18%|█▊        | 925/5000 [1:46:05&lt;6:52:05,  6.07s/it]
+ 19%|█▊        | 926/5000 [1:46:11&lt;6:51:18,  6.06s/it]
+ 19%|█▊        | 927/5000 [1:46:17&lt;6:50:31,  6.05s/it]
+ 19%|█▊        | 928/5000 [1:46:23&lt;6:50:38,  6.05s/it]
+ 19%|█▊        | 929/5000 [1:46:29&lt;6:50:21,  6.05s/it]
+ 19%|█▊        | 930/5000 [1:46:35&lt;6:50:28,  6.05s/it]
+ 19%|█▊        | 931/5000 [1:46:41&lt;6:51:18,  6.07s/it]
+ 19%|█▊        | 932/5000 [1:46:47&lt;6:50:45,  6.06s/it]
+ 19%|█▊        | 933/5000 [1:46:54&lt;6:52:26,  6.08s/it]
+ 19%|█▊        | 934/5000 [1:47:01&lt;7:16:51,  6.45s/it]
+ 19%|█▊        | 935/5000 [1:47:08&lt;7:27:38,  6.61s/it]
+ 19%|█▊        | 936/5000 [1:47:14&lt;7:19:00,  6.48s/it]
+ 19%|█▊        | 937/5000 [1:47:20&lt;7:13:06,  6.40s/it]
+ 19%|█▉        | 938/5000 [1:47:27&lt;7:12:40,  6.39s/it]
+ 19%|█▉        | 939/5000 [1:47:33&lt;7:12:29,  6.39s/it]
+ 19%|█▉        | 940/5000 [1:47:39&lt;7:06:36,  6.30s/it]
+ 19%|█▉        | 941/5000 [1:47:45&lt;7:06:53,  6.31s/it]
+ 19%|█▉        | 942/5000 [1:47:51&lt;7:01:37,  6.23s/it]
+ 19%|█▉        | 943/5000 [1:47:58&lt;6:58:08,  6.18s/it]
+ 19%|█▉        | 944/5000 [1:48:04&lt;6:55:42,  6.15s/it]
+ 19%|█▉        | 945/5000 [1:48:10&lt;6:54:17,  6.13s/it]
+ 19%|█▉        | 946/5000 [1:48:16&lt;6:53:48,  6.12s/it]
+ 19%|█▉        | 947/5000 [1:48:22&lt;6:53:14,  6.12s/it]
+ 19%|█▉        | 948/5000 [1:48:28&lt;6:52:33,  6.11s/it]
+ 19%|█▉        | 949/5000 [1:48:34&lt;6:52:02,  6.10s/it]
+ 19%|█▉        | 950/5000 [1:48:40&lt;6:51:40,  6.10s/it]
+ 19%|█▉        | 951/5000 [1:48:46&lt;6:51:19,  6.10s/it]
+ 19%|█▉        | 952/5000 [1:48:52&lt;6:50:50,  6.09s/it]
+ 19%|█▉        | 953/5000 [1:48:58&lt;6:51:28,  6.10s/it]
+ 19%|█▉        | 954/5000 [1:49:05&lt;6:58:27,  6.21s/it]
+ 19%|█▉        | 955/5000 [1:49:11&lt;6:53:50,  6.14s/it]
+ 19%|█▉        | 956/5000 [1:49:17&lt;6:57:16,  6.19s/it]
+ 19%|█▉        | 957/5000 [1:49:23&lt;6:56:11,  6.18s/it]
+ 19%|█▉        | 958/5000 [1:49:29&lt;6:54:09,  6.15s/it]
+ 19%|█▉        | 959/5000 [1:49:35&lt;6:51:46,  6.11s/it]
+ 19%|█▉        | 960/5000 [1:49:41&lt;6:49:35,  6.08s/it]
+ 19%|█▉        | 961/5000 [1:49:48&lt;6:49:32,  6.08s/it]
+ 19%|█▉        | 962/5000 [1:49:54&lt;6:49:37,  6.09s/it]
+ 19%|█▉        | 963/5000 [1:50:00&lt;6:47:44,  6.06s/it]
+ 19%|█▉        | 964/5000 [1:50:06&lt;6:46:31,  6.04s/it]
+ 19%|█▉        | 965/5000 [1:50:12&lt;6:45:57,  6.04s/it]
+ 19%|█▉        | 966/5000 [1:50:18&lt;6:46:23,  6.04s/it]
+ 19%|█▉        | 967/5000 [1:50:24&lt;6:49:10,  6.09s/it]
+ 19%|█▉        | 968/5000 [1:50:30&lt;6:47:53,  6.07s/it]
+ 19%|█▉        | 969/5000 [1:50:36&lt;6:46:59,  6.06s/it]
+ 19%|█▉        | 970/5000 [1:50:42&lt;6:46:15,  6.05s/it]
+ 19%|█▉        | 971/5000 [1:50:48&lt;6:46:08,  6.05s/it]
+ 19%|█▉        | 972/5000 [1:50:54&lt;6:44:53,  6.03s/it]
+ 19%|█▉        | 973/5000 [1:51:00&lt;6:44:04,  6.02s/it]
+ 19%|█▉        | 974/5000 [1:51:06&lt;6:43:52,  6.02s/it]
+ 20%|█▉        | 975/5000 [1:51:12&lt;6:50:08,  6.11s/it]
+ 20%|█▉        | 976/5000 [1:51:18&lt;6:49:00,  6.10s/it]
+ 20%|█▉        | 977/5000 [1:51:24&lt;6:47:31,  6.08s/it]
+ 20%|█▉        | 978/5000 [1:51:30&lt;6:46:09,  6.06s/it]
+ 20%|█▉        | 979/5000 [1:51:36&lt;6:44:50,  6.04s/it]
+ 20%|█▉        | 980/5000 [1:51:42&lt;6:43:51,  6.03s/it]
+ 20%|█▉        | 981/5000 [1:51:49&lt;6:43:55,  6.03s/it]
+ 20%|█▉        | 982/5000 [1:51:55&lt;6:48:37,  6.10s/it]
+ 20%|█▉        | 983/5000 [1:52:02&lt;7:13:44,  6.48s/it]
+ 20%|█▉        | 984/5000 [1:52:09&lt;7:11:45,  6.45s/it]
+ 20%|█▉        | 985/5000 [1:52:15&lt;7:03:22,  6.33s/it]
+ 20%|█▉        | 986/5000 [1:52:21&lt;6:57:34,  6.24s/it]
+ 20%|█▉        | 987/5000 [1:52:27&lt;6:53:04,  6.18s/it]
+ 20%|█▉        | 988/5000 [1:52:33&lt;6:50:58,  6.15s/it]
+ 20%|█▉        | 989/5000 [1:52:39&lt;6:48:55,  6.12s/it]
+ 20%|█▉        | 990/5000 [1:52:45&lt;6:47:05,  6.09s/it]
+ 20%|█▉        | 991/5000 [1:52:51&lt;6:45:31,  6.07s/it]
+ 20%|█▉        | 992/5000 [1:52:57&lt;6:44:22,  6.05s/it]
+ 20%|█▉        | 993/5000 [1:53:03&lt;6:44:20,  6.05s/it]
+ 20%|█▉        | 994/5000 [1:53:09&lt;6:45:35,  6.07s/it]
+ 20%|█▉        | 995/5000 [1:53:16&lt;6:57:43,  6.26s/it]
+ 20%|█▉        | 996/5000 [1:53:22&lt;6:53:48,  6.20s/it]
+ 20%|█▉        | 997/5000 [1:53:28&lt;6:50:15,  6.15s/it]
+ 20%|█▉        | 998/5000 [1:53:34&lt;6:48:16,  6.12s/it]
+ 20%|█▉        | 999/5000 [1:53:40&lt;6:46:54,  6.10s/it]
+ 20%|██        | 1000/5000 [1:53:46&lt;6:45:36,  6.08s/it]
+ 20%|██        | 1001/5000 [1:53:52&lt;6:45:04,  6.08s/it]
+ 20%|██        | 1002/5000 [1:53:58&lt;6:45:53,  6.09s/it]
+ 20%|██        | 1003/5000 [1:54:04&lt;6:47:08,  6.11s/it]
+ 20%|██        | 1004/5000 [1:54:10&lt;6:47:15,  6.12s/it]
+ 20%|██        | 1005/5000 [1:54:16&lt;6:45:58,  6.10s/it]
+ 20%|██        | 1006/5000 [1:54:23&lt;6:46:11,  6.10s/it]
+ 20%|██        | 1007/5000 [1:54:29&lt;6:44:39,  6.08s/it]
+ 20%|██        | 1008/5000 [1:54:35&lt;6:48:19,  6.14s/it]
+ 20%|██        | 1009/5000 [1:54:41&lt;6:46:13,  6.11s/it]
+ 20%|██        | 1010/5000 [1:54:47&lt;6:44:15,  6.08s/it]
+ 20%|██        | 1011/5000 [1:54:53&lt;6:43:25,  6.07s/it]
+ 20%|██        | 1012/5000 [1:54:59&lt;6:43:04,  6.06s/it]
+ 20%|██        | 1013/5000 [1:55:05&lt;6:46:29,  6.12s/it]
+ 20%|██        | 1014/5000 [1:55:11&lt;6:44:55,  6.10s/it]
+ 20%|██        | 1015/5000 [1:55:17&lt;6:43:31,  6.08s/it]
+ 20%|██        | 1016/5000 [1:55:23&lt;6:42:50,  6.07s/it]
+ 20%|██        | 1017/5000 [1:55:29&lt;6:41:08,  6.04s/it]
+ 20%|██        | 1018/5000 [1:55:35&lt;6:40:34,  6.04s/it]
+ 20%|██        | 1019/5000 [1:55:42&lt;6:48:20,  6.15s/it]
+ 20%|██        | 1020/5000 [1:55:48&lt;6:46:07,  6.12s/it]
+ 20%|██        | 1021/5000 [1:55:54&lt;6:53:48,  6.24s/it]
+ 20%|██        | 1022/5000 [1:56:01&lt;6:57:41,  6.30s/it]
+ 20%|██        | 1023/5000 [1:56:07&lt;6:56:21,  6.28s/it]
+ 20%|██        | 1024/5000 [1:56:13&lt;6:55:27,  6.27s/it]
+ 20%|██        | 1025/5000 [1:56:20&lt;6:55:50,  6.28s/it]
+ 21%|██        | 1026/5000 [1:56:26&lt;6:55:22,  6.27s/it]
+ 21%|██        | 1027/5000 [1:56:32&lt;6:55:06,  6.27s/it]
+ 21%|██        | 1028/5000 [1:56:38&lt;6:54:53,  6.27s/it]
+ 21%|██        | 1029/5000 [1:56:45&lt;6:54:10,  6.26s/it]
+ 21%|██        | 1030/5000 [1:56:51&lt;7:02:19,  6.38s/it]
+ 21%|██        | 1031/5000 [1:56:58&lt;7:14:50,  6.57s/it]
+ 21%|██        | 1032/5000 [1:57:06&lt;7:35:08,  6.88s/it]
+ 21%|██        | 1033/5000 [1:57:12&lt;7:22:33,  6.69s/it]
+ 21%|██        | 1034/5000 [1:57:18&lt;7:13:32,  6.56s/it]
+ 21%|██        | 1035/5000 [1:57:25&lt;7:07:01,  6.46s/it]
+ 21%|██        | 1036/5000 [1:57:31&lt;7:02:41,  6.40s/it]
+ 21%|██        | 1037/5000 [1:57:37&lt;6:59:05,  6.35s/it]
+ 21%|██        | 1038/5000 [1:57:43&lt;6:56:38,  6.31s/it]
+ 21%|██        | 1039/5000 [1:57:50&lt;6:55:19,  6.29s/it]
+ 21%|██        | 1040/5000 [1:57:56&lt;6:54:36,  6.28s/it]
+ 21%|██        | 1041/5000 [1:58:02&lt;6:51:32,  6.24s/it]
+ 21%|██        | 1042/5000 [1:58:08&lt;6:47:31,  6.18s/it]
+ 21%|██        | 1043/5000 [1:58:14&lt;6:44:09,  6.13s/it]
+ 21%|██        | 1044/5000 [1:58:20&lt;6:41:43,  6.09s/it]
+ 21%|██        | 1045/5000 [1:58:26&lt;6:40:03,  6.07s/it]
+ 21%|██        | 1046/5000 [1:58:32&lt;6:39:02,  6.06s/it]
+ 21%|██        | 1047/5000 [1:58:39&lt;6:47:10,  6.18s/it]
+ 21%|██        | 1048/5000 [1:58:47&lt;7:23:24,  6.73s/it]
+ 21%|██        | 1049/5000 [1:58:54&lt;7:43:25,  7.04s/it]
+ 21%|██        | 1050/5000 [1:59:03&lt;8:05:57,  7.38s/it]
+ 21%|██        | 1051/5000 [1:59:10&lt;7:58:36,  7.27s/it]
+ 21%|██        | 1052/5000 [1:59:17&lt;8:11:12,  7.47s/it]
+ 21%|██        | 1053/5000 [1:59:24&lt;8:02:33,  7.34s/it]
+ 21%|██        | 1054/5000 [1:59:31&lt;7:54:17,  7.21s/it]
+ 21%|██        | 1055/5000 [1:59:37&lt;7:30:36,  6.85s/it]
+ 21%|██        | 1056/5000 [1:59:44&lt;7:16:53,  6.65s/it]
+ 21%|██        | 1057/5000 [1:59:50&lt;7:16:24,  6.64s/it]
+ 21%|██        | 1058/5000 [1:59:57&lt;7:16:16,  6.64s/it]
+ 21%|██        | 1059/5000 [2:00:03&lt;7:14:56,  6.62s/it]
+ 21%|██        | 1060/5000 [2:00:11&lt;7:24:31,  6.77s/it]
+ 21%|██        | 1061/5000 [2:00:17&lt;7:15:24,  6.63s/it]
+ 21%|██        | 1062/5000 [2:00:23&lt;7:07:51,  6.52s/it]
+ 21%|██▏       | 1063/5000 [2:00:30&lt;7:19:13,  6.69s/it]
+ 21%|██▏       | 1064/5000 [2:00:38&lt;7:42:41,  7.05s/it]
+ 21%|██▏       | 1065/5000 [2:00:45&lt;7:38:55,  7.00s/it]
+ 21%|██▏       | 1066/5000 [2:00:51&lt;7:27:43,  6.83s/it]
+ 21%|██▏       | 1067/5000 [2:00:59&lt;7:50:03,  7.17s/it]
+ 21%|██▏       | 1068/5000 [2:01:06&lt;7:49:00,  7.16s/it]
+ 21%|██▏       | 1069/5000 [2:01:13&lt;7:40:37,  7.03s/it]
+ 21%|██▏       | 1070/5000 [2:01:20&lt;7:37:42,  6.99s/it]
+ 21%|██▏       | 1071/5000 [2:01:26&lt;7:20:32,  6.73s/it]
+ 21%|██▏       | 1072/5000 [2:01:32&lt;7:06:42,  6.52s/it]
+ 21%|██▏       | 1073/5000 [2:01:38&lt;6:57:38,  6.38s/it]
+ 21%|██▏       | 1074/5000 [2:01:45&lt;6:56:00,  6.36s/it]
+ 22%|██▏       | 1075/5000 [2:01:51&lt;6:53:23,  6.32s/it]
+ 22%|██▏       | 1076/5000 [2:02:00&lt;7:38:50,  7.02s/it]
+ 22%|██▏       | 1077/5000 [2:02:10&lt;8:51:56,  8.14s/it]
+ 22%|██▏       | 1078/5000 [2:02:17&lt;8:23:32,  7.70s/it]
+ 22%|██▏       | 1079/5000 [2:02:25&lt;8:22:44,  7.69s/it]
+ 22%|██▏       | 1080/5000 [2:02:32&lt;8:14:02,  7.56s/it]
+ 22%|██▏       | 1081/5000 [2:02:39&lt;8:13:29,  7.56s/it]
+ 22%|██▏       | 1082/5000 [2:02:47&lt;8:11:06,  7.52s/it]
+ 22%|██▏       | 1083/5000 [2:02:55&lt;8:20:20,  7.66s/it]
+ 22%|██▏       | 1084/5000 [2:03:01&lt;7:59:34,  7.35s/it]
+ 22%|██▏       | 1085/5000 [2:03:08&lt;7:41:29,  7.07s/it]
+ 22%|██▏       | 1086/5000 [2:03:14&lt;7:27:25,  6.86s/it]
+ 22%|██▏       | 1087/5000 [2:03:20&lt;7:13:04,  6.64s/it]
+ 22%|██▏       | 1088/5000 [2:03:26&lt;7:01:51,  6.47s/it]
+ 22%|██▏       | 1089/5000 [2:03:33&lt;6:54:09,  6.35s/it]
+ 22%|██▏       | 1090/5000 [2:03:39&lt;6:48:28,  6.27s/it]
+ 22%|██▏       | 1091/5000 [2:03:45&lt;6:45:33,  6.22s/it]
+ 22%|██▏       | 1092/5000 [2:03:51&lt;6:42:54,  6.19s/it]
+ 22%|██▏       | 1093/5000 [2:03:57&lt;6:41:03,  6.16s/it]
+ 22%|██▏       | 1094/5000 [2:04:03&lt;6:40:56,  6.16s/it]
+ 22%|██▏       | 1095/5000 [2:04:09&lt;6:40:58,  6.16s/it]
+ 22%|██▏       | 1096/5000 [2:04:15&lt;6:39:40,  6.14s/it]
+ 22%|██▏       | 1097/5000 [2:04:22&lt;6:43:23,  6.20s/it]
+ 22%|██▏       | 1098/5000 [2:04:30&lt;7:21:07,  6.78s/it]
+ 22%|██▏       | 1099/5000 [2:04:37&lt;7:35:23,  7.00s/it]
+ 22%|██▏       | 1100/5000 [2:04:43&lt;7:16:32,  6.72s/it]
+ 22%|██▏       | 1101/5000 [2:04:50&lt;7:04:43,  6.54s/it]
+ 22%|██▏       | 1102/5000 [2:04:56&lt;6:54:45,  6.38s/it]
+ 22%|██▏       | 1103/5000 [2:05:02&lt;6:50:23,  6.32s/it]
+ 22%|██▏       | 1104/5000 [2:05:08&lt;6:44:01,  6.22s/it]
+ 22%|██▏       | 1105/5000 [2:05:14&lt;6:39:06,  6.15s/it]
+ 22%|██▏       | 1106/5000 [2:05:20&lt;6:41:23,  6.18s/it]
+ 22%|██▏       | 1107/5000 [2:05:26&lt;6:38:02,  6.13s/it]
+ 22%|██▏       | 1108/5000 [2:05:32&lt;6:37:12,  6.12s/it]
+ 22%|██▏       | 1109/5000 [2:05:38&lt;6:37:07,  6.12s/it]
+ 22%|██▏       | 1110/5000 [2:05:45&lt;6:41:03,  6.19s/it]
+ 22%|██▏       | 1111/5000 [2:05:51&lt;6:37:52,  6.14s/it]
+ 22%|██▏       | 1112/5000 [2:05:57&lt;6:35:15,  6.10s/it]
+ 22%|██▏       | 1113/5000 [2:06:03&lt;6:34:04,  6.08s/it]
+ 22%|██▏       | 1114/5000 [2:06:09&lt;6:34:32,  6.09s/it]
+ 22%|██▏       | 1115/5000 [2:06:15&lt;6:34:04,  6.09s/it]
+ 22%|██▏       | 1116/5000 [2:06:21&lt;6:36:16,  6.12s/it]
+ 22%|██▏       | 1117/5000 [2:06:27&lt;6:34:35,  6.10s/it]
+ 22%|██▏       | 1118/5000 [2:06:33&lt;6:33:49,  6.09s/it]
+ 22%|██▏       | 1119/5000 [2:06:39&lt;6:32:29,  6.07s/it]
+ 22%|██▏       | 1120/5000 [2:06:45&lt;6:33:00,  6.08s/it]
+ 22%|██▏       | 1121/5000 [2:06:51&lt;6:35:16,  6.11s/it]
+ 22%|██▏       | 1122/5000 [2:06:58&lt;6:43:25,  6.24s/it]
+ 22%|██▏       | 1123/5000 [2:07:06&lt;7:10:14,  6.66s/it]
+ 22%|██▏       | 1124/5000 [2:07:12&lt;6:58:47,  6.48s/it]
+ 22%|██▎       | 1125/5000 [2:07:18&lt;6:57:10,  6.46s/it]
+ 23%|██▎       | 1126/5000 [2:07:26&lt;7:28:40,  6.95s/it]
+ 23%|██▎       | 1127/5000 [2:07:33&lt;7:33:34,  7.03s/it]
+ 23%|██▎       | 1128/5000 [2:07:41&lt;7:43:00,  7.17s/it]
+ 23%|██▎       | 1129/5000 [2:07:48&lt;7:39:22,  7.12s/it]
+ 23%|██▎       | 1130/5000 [2:07:56&lt;7:51:08,  7.30s/it]
+ 23%|██▎       | 1131/5000 [2:08:03&lt;7:56:36,  7.39s/it]
+ 23%|██▎       | 1132/5000 [2:08:10&lt;7:36:48,  7.09s/it]
+ 23%|██▎       | 1133/5000 [2:08:16&lt;7:28:17,  6.96s/it]
+ 23%|██▎       | 1134/5000 [2:08:24&lt;7:35:37,  7.07s/it]
+ 23%|██▎       | 1135/5000 [2:08:30&lt;7:22:33,  6.87s/it]
+ 23%|██▎       | 1136/5000 [2:08:38&lt;7:40:59,  7.16s/it]
+ 23%|██▎       | 1137/5000 [2:08:44&lt;7:26:12,  6.93s/it]
+ 23%|██▎       | 1138/5000 [2:08:51&lt;7:18:37,  6.81s/it]
+ 23%|██▎       | 1139/5000 [2:08:57&lt;7:15:21,  6.77s/it]
+ 23%|██▎       | 1140/5000 [2:09:04&lt;7:10:27,  6.69s/it]
+ 23%|██▎       | 1141/5000 [2:09:11&lt;7:14:10,  6.75s/it]
+ 23%|██▎       | 1142/5000 [2:09:19&lt;7:36:39,  7.10s/it]
+ 23%|██▎       | 1143/5000 [2:09:28&lt;8:11:16,  7.64s/it]
+ 23%|██▎       | 1144/5000 [2:09:35&lt;8:10:12,  7.63s/it]
+ 23%|██▎       | 1145/5000 [2:09:42&lt;7:51:49,  7.34s/it]
+ 23%|██▎       | 1146/5000 [2:09:49&lt;7:40:47,  7.17s/it]
+ 23%|██▎       | 1147/5000 [2:09:57&lt;7:57:09,  7.43s/it]
+ 23%|██▎       | 1148/5000 [2:10:04&lt;7:49:54,  7.32s/it]
+ 23%|██▎       | 1149/5000 [2:10:12&lt;8:10:18,  7.64s/it]
+ 23%|██▎       | 1150/5000 [2:10:25&lt;9:47:22,  9.15s/it]
+ 23%|██▎       | 1151/5000 [2:10:38&lt;11:08:06, 10.41s/it]
+ 23%|██▎       | 1152/5000 [2:10:48&lt;10:52:30, 10.17s/it]
+ 23%|██▎       | 1153/5000 [2:10:58&lt;10:51:48, 10.17s/it]
+ 23%|██▎       | 1154/5000 [2:11:08&lt;10:51:18, 10.16s/it]
+ 23%|██▎       | 1155/5000 [2:11:17&lt;10:33:31,  9.89s/it]
+ 23%|██▎       | 1156/5000 [2:11:28&lt;10:42:19, 10.03s/it]
+ 23%|██▎       | 1157/5000 [2:11:39&lt;11:00:56, 10.32s/it]
+ 23%|██▎       | 1158/5000 [2:11:50&lt;11:23:13, 10.67s/it]
+ 23%|██▎       | 1159/5000 [2:12:03&lt;11:55:16, 11.17s/it]
+ 23%|██▎       | 1160/5000 [2:12:15&lt;12:21:51, 11.59s/it]
+ 23%|██▎       | 1161/5000 [2:12:30&lt;13:21:15, 12.52s/it]
+ 23%|██▎       | 1162/5000 [2:12:40&lt;12:38:38, 11.86s/it]
+ 23%|██▎       | 1163/5000 [2:12:50&lt;11:56:22, 11.20s/it]
+ 23%|██▎       | 1164/5000 [2:13:00&lt;11:29:33, 10.79s/it]
+ 23%|██▎       | 1165/5000 [2:13:13&lt;12:16:57, 11.53s/it]
+ 23%|██▎       | 1166/5000 [2:13:22&lt;11:36:23, 10.90s/it]
+ 23%|██▎       | 1167/5000 [2:13:30&lt;10:40:16, 10.02s/it]
+ 23%|██▎       | 1168/5000 [2:13:39&lt;10:16:19,  9.65s/it]
+ 23%|██▎       | 1169/5000 [2:13:49&lt;10:19:56,  9.71s/it]
+ 23%|██▎       | 1170/5000 [2:13:58&lt;10:00:13,  9.40s/it]
+ 23%|██▎       | 1171/5000 [2:14:07&lt;9:58:17,  9.38s/it]
+ 23%|██▎       | 1172/5000 [2:14:17&lt;10:04:36,  9.48s/it]
+ 23%|██▎       | 1173/5000 [2:14:27&lt;10:24:25,  9.79s/it]
+ 23%|██▎       | 1174/5000 [2:14:37&lt;10:19:02,  9.71s/it]
+ 24%|██▎       | 1175/5000 [2:14:49&lt;11:11:44, 10.54s/it]
+ 24%|██▎       | 1176/5000 [2:15:00&lt;11:13:33, 10.57s/it]
+ 24%|██▎       | 1177/5000 [2:15:12&lt;11:38:52, 10.97s/it]
+ 24%|██▎       | 1178/5000 [2:15:24&lt;12:07:37, 11.42s/it]
+ 24%|██▎       | 1179/5000 [2:15:35&lt;12:02:52, 11.35s/it]
+ 24%|██▎       | 1180/5000 [2:15:47&lt;12:01:39, 11.33s/it]
+ 24%|██▎       | 1181/5000 [2:16:01&lt;12:52:16, 12.13s/it]
+ 24%|██▎       | 1182/5000 [2:16:14&lt;13:09:28, 12.41s/it]
+ 24%|██▎       | 1183/5000 [2:16:23&lt;12:12:28, 11.51s/it]
+ 24%|██▎       | 1184/5000 [2:16:32&lt;11:25:35, 10.78s/it]
+ 24%|██▎       | 1185/5000 [2:16:46&lt;12:28:30, 11.77s/it]
+ 24%|██▎       | 1186/5000 [2:17:00&lt;13:03:46, 12.33s/it]
+ 24%|██▎       | 1187/5000 [2:17:16&lt;14:13:20, 13.43s/it]
+ 24%|██▍       | 1188/5000 [2:17:30&lt;14:23:39, 13.59s/it]
+ 24%|██▍       | 1189/5000 [2:17:44&lt;14:27:57, 13.66s/it]
+ 24%|██▍       | 1190/5000 [2:17:56&lt;14:06:44, 13.33s/it]
+ 24%|██▍       | 1191/5000 [2:18:07&lt;13:22:39, 12.64s/it]
+ 24%|██▍       | 1192/5000 [2:18:18&lt;12:46:45, 12.08s/it]
+ 24%|██▍       | 1193/5000 [2:18:30&lt;12:41:56, 12.01s/it]
+ 24%|██▍       | 1194/5000 [2:18:42&lt;12:52:48, 12.18s/it]
+</pre></div></div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">KeyboardInterrupt</span>                         Traceback (most recent call last)
+<span class="ansi-green-fg">&lt;ipython-input-16-65036a5effdf&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-intense-fg ansi-bold">      1</span> <span class="ansi-green-fg">with</span> pm<span class="ansi-blue-fg">.</span>Model<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">as</span> neural_network_conv<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">      2</span>     likelihood <span class="ansi-blue-fg">=</span> build_ann_conv<span class="ansi-blue-fg">(</span>GaussWeights<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">----&gt; 3</span><span class="ansi-red-fg">     </span>trace <span class="ansi-blue-fg">=</span> pm<span class="ansi-blue-fg">.</span>variational<span class="ansi-blue-fg">.</span>svgd<span class="ansi-blue-fg">(</span>n_particles<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">10</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">      4</span>     <span class="ansi-red-fg">#v_params, trace, ppc, y_pred = run_advi(likelihood, advi_iters=50000)</span>
+
+<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/variational/svgd.py</span> in <span class="ansi-cyan-fg">svgd</span><span class="ansi-blue-fg">(vars, n, learning_rate, epsilon, n_particles, jitter, optimizer, start, progressbar, random_seed, model)</span>
+
+<span class="ansi-green-fg">/home/wiecki/working/projects/pymc/pymc3/variational/svgd.py</span> in <span class="ansi-cyan-fg">_svgd_run</span><span class="ansi-blue-fg">(x0, svgd_grad, n_iter, stepsize, bandwidth, alpha, progressbar)</span>
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/compile/function_module.py</span> in <span class="ansi-cyan-fg">__call__</span><span class="ansi-blue-fg">(self, *args, **kwargs)</span>
+<span class="ansi-green-intense-fg ansi-bold">    871</span>         <span class="ansi-green-fg">try</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    872</span>             outputs <span class="ansi-blue-fg">=</span><span class="ansi-red-fg">\</span>
+<span class="ansi-green-fg">--&gt; 873</span><span class="ansi-red-fg">                 </span>self<span class="ansi-blue-fg">.</span>fn<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">if</span> output_subset <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">None</span> <span class="ansi-green-fg">else</span><span class="ansi-red-fg">\</span>
+<span class="ansi-green-intense-fg ansi-bold">    874</span>                 self<span class="ansi-blue-fg">.</span>fn<span class="ansi-blue-fg">(</span>output_subset<span class="ansi-blue-fg">=</span>output_subset<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    875</span>         <span class="ansi-green-fg">except</span> Exception<span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/scan_module/scan_op.py</span> in <span class="ansi-cyan-fg">rval</span><span class="ansi-blue-fg">(p, i, o, n, allow_gc)</span>
+<span class="ansi-green-intense-fg ansi-bold">    951</span>         def rval(p=p, i=node_input_storage, o=node_output_storage, n=node,
+<span class="ansi-green-intense-fg ansi-bold">    952</span>                  allow_gc=allow_gc):
+<span class="ansi-green-fg">--&gt; 953</span><span class="ansi-red-fg">             </span>r <span class="ansi-blue-fg">=</span> p<span class="ansi-blue-fg">(</span>n<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">[</span>x<span class="ansi-blue-fg">[</span><span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">]</span> <span class="ansi-green-fg">for</span> x <span class="ansi-green-fg">in</span> i<span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> o<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    954</span>             <span class="ansi-green-fg">for</span> o <span class="ansi-green-fg">in</span> node<span class="ansi-blue-fg">.</span>outputs<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    955</span>                 compute_map<span class="ansi-blue-fg">[</span>o<span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">[</span><span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">]</span> <span class="ansi-blue-fg">=</span> <span class="ansi-green-fg">True</span>
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/scan_module/scan_op.py</span> in <span class="ansi-cyan-fg">p</span><span class="ansi-blue-fg">(node, args, outs)</span>
+<span class="ansi-green-intense-fg ansi-bold">    940</span>                                                 args<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-intense-fg ansi-bold">    941</span>                                                 outs<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg">--&gt; 942</span><span class="ansi-red-fg">                                                 self, node)
+</span><span class="ansi-green-intense-fg ansi-bold">    943</span>         <span class="ansi-green-fg">except</span> <span class="ansi-blue-fg">(</span>ImportError<span class="ansi-blue-fg">,</span> theano<span class="ansi-blue-fg">.</span>gof<span class="ansi-blue-fg">.</span>cmodule<span class="ansi-blue-fg">.</span>MissingGXX<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    944</span>             p <span class="ansi-blue-fg">=</span> self<span class="ansi-blue-fg">.</span>execute
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/scan_module/scan_perform.pyx</span> in <span class="ansi-cyan-fg">theano.scan_module.scan_perform.perform (/home/wiecki/.theano/compiledir_Linux-4.4--generic-x86_64-with-debian-stretch-sid-x86_64-3.5.2-64/scan_perform/mod.cpp:4482)</span><span class="ansi-blue-fg">()</span>
+
+<span class="ansi-green-fg">/home/wiecki/tools/theano/theano/gof/op.py</span> in <span class="ansi-cyan-fg">rval</span><span class="ansi-blue-fg">(p, i, o, n)</span>
+<span class="ansi-green-intense-fg ansi-bold">    858</span>         <span class="ansi-green-fg">if</span> params <span class="ansi-green-fg">is</span> graph<span class="ansi-blue-fg">.</span>NoParams<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    859</span>             <span class="ansi-red-fg"># default arguments are stored in the closure of `rval`</span>
+<span class="ansi-green-fg">--&gt; 860</span><span class="ansi-red-fg">             </span><span class="ansi-green-fg">def</span> rval<span class="ansi-blue-fg">(</span>p<span class="ansi-blue-fg">=</span>p<span class="ansi-blue-fg">,</span> i<span class="ansi-blue-fg">=</span>node_input_storage<span class="ansi-blue-fg">,</span> o<span class="ansi-blue-fg">=</span>node_output_storage<span class="ansi-blue-fg">,</span> n<span class="ansi-blue-fg">=</span>node<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    861</span>                 r <span class="ansi-blue-fg">=</span> p<span class="ansi-blue-fg">(</span>n<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">[</span>x<span class="ansi-blue-fg">[</span><span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">]</span> <span class="ansi-green-fg">for</span> x <span class="ansi-green-fg">in</span> i<span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> o<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    862</span>                 <span class="ansi-green-fg">for</span> o <span class="ansi-green-fg">in</span> node<span class="ansi-blue-fg">.</span>outputs<span class="ansi-blue-fg">:</span>
+
+<span class="ansi-red-fg">KeyboardInterrupt</span>:
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [ ]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="k">print</span><span class="p">(</span><span class="s1">&#39;Accuracy on test data = {}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">accuracy_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>Much higher accuracy &#8211; nice. I also tried this with the hierarchical
+model but it achieved lower accuracy (95%), I assume due to overfitting.</p>
+<p>Lets make more use of the fact that we&#8217;re in a Bayesian framework and
+explore uncertainty in our predictions. As our predictions are
+categories, we can&#8217;t simply compute the posterior predictive standard
+deviation. Instead, we compute the <a class="reference external" href="https://en.wikipedia.org/wiki/Chi-squared_test">chi-square
+statistic</a> which
+tells us how uniform a sample is. The more uniform, the higher our
+uncertainty. I&#8217;m not quite sure if this is the best way to do this,
+leave a comment if there&#8217;s a more established method that I don&#8217;t know
+about.</p>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [14]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">miss_class</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y_test</span> <span class="o">!=</span> <span class="n">y_pred</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">corr_class</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y_test</span> <span class="o">==</span> <span class="n">y_pred</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [15]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">preds</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">ppc</span><span class="p">[</span><span class="s1">&#39;out&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [16]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">chis</span> <span class="o">=</span> <span class="n">preds</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">chisquare</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">statistic</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s1">&#39;columns&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [18]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">chis</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">miss_class</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">(),</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Error&#39;</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">chis</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">corr_class</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">(),</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Correct&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Chi-Square statistic&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_bayesian_neural_network_lasagne_35_0.png" src="../_images/notebooks_bayesian_neural_network_lasagne_35_0.png" />
+</div>
+</div>
+<p>As we can see, when the model makes an error, it is much more uncertain
+in the answer (i.e. the answers provided are more uniform). You might
+argue, that you get the same effect with a multinomial prediction from a
+regular ANN, however, <a class="reference external" href="http://mlg.eng.cam.ac.uk/yarin/blog_3d801aa532c1ce.html">this is not
+so</a>.</p>
+</div>
+<div class="section" id="Conclusions">
+<h2>Conclusions<a class="headerlink" href="#Conclusions" title="Permalink to this headline">¶</a></h2>
+<p>By bridging <code class="docutils literal"><span class="pre">Lasagne</span></code> and <code class="docutils literal"><span class="pre">PyMC3</span></code> and by using mini-batch ADVI to
+train a Bayesian Neural Network on a decently sized and complex data set
+(MNIST) we took a big step towards practical Bayesian Deep Learning on
+real-world problems.</p>
+<p>Kudos to the <code class="docutils literal"><span class="pre">Lasagne</span></code> developers for designing their API to make it
+trivial to integrate for this unforseen application. They were also very
+helpful and forthcoming in getting this to work.</p>
+<p>Finally, I also think this shows the benefits of <code class="docutils literal"><span class="pre">PyMC3</span></code>. By relying
+on a commonly used language (Python) and abstracting the computational
+backend (<code class="docutils literal"><span class="pre">Theano</span></code>) we were able to quite easily leverage the power of
+that ecosystem and use <code class="docutils literal"><span class="pre">PyMC3</span></code> in a manner that was never thought
+about when creating it. I look forward to extending it to new domains.</p>
+<p>This blog post was written in a Jupyter Notebook. You can get access the
+notebook
+<a class="reference external" href="https://github.com/twiecki/twiecki.github.io/blob/master/downloads/notebooks/bayesian_neural_network_lasagne.ipynb">here</a>
+and <a class="reference external" href="https://twitter.com/twiecki">follow me on Twitter</a> to stay up to
+date.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, John Salvatier, Christopher Fonnesbeck, Thomas Wiecki.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'3.0.rc1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
