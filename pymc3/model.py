@@ -97,6 +97,7 @@ class Context(object):
     """Functionality for objects that put themselves in a context using
     the `with` statement.
     """
+    contexts = threading.local()
 
     def __enter__(self):
         type(self).get_contexts().append(self)
@@ -107,10 +108,10 @@ class Context(object):
 
     @classmethod
     def get_contexts(cls):
-        if not hasattr(cls, "contexts"):
-            cls.contexts = threading.local()
+        # no race-condition here, cls.contexts is a thread-local object
+        # be sure not to override contexts in a subclass however!
+        if not hasattr(cls.contexts, 'stack'):
             cls.contexts.stack = []
-
         return cls.contexts.stack
 
     @classmethod
