@@ -35,9 +35,7 @@ Features
 Getting started
 ---------------
 
--  The `PyMC3
-   tutorial <http://pymc-devs.github.io/pymc3/notebooks/getting_started.html>`__ or
-   `journal publication <https://peerj.com/articles/cs-55/>`__
+-  The `PyMC3 tutorial <http://pymc-devs.github.io/pymc3/notebooks/getting_started.html>`__ 
 -  `PyMC3 examples <http://pymc-devs.github.io/pymc3/examples.html>`__
    and the `API reference <http://pymc-devs.github.io/pymc3/api.html>`__
 -  `Probabilistic Programming and Bayesian Methods for Hackers <https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers>`__

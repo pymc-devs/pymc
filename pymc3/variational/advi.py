@@ -180,7 +180,7 @@ def _calc_elbo(vars, model, n_mcsamples, random_seed):
 
     [logp], inarray = pm.join_nonshared_inputs([logpt], vars, shared)
 
-    uw = tt.dvector('uw')
+    uw = tt.vector('uw')
     uw.tag.test_value = np.concatenate([inarray.tag.test_value,
                                         inarray.tag.test_value])
 
@@ -192,9 +192,10 @@ def _calc_elbo(vars, model, n_mcsamples, random_seed):
 def _elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
     """Create Theano tensor of approximate ELBO by Monte Carlo sampling.
     """
-    l = (uw.size / 2).astype('int64')
-    u = uw[:l]
-    w = uw[l:]
+    l = (uw.size / 2)
+    l_int = l.astype('int64')
+    u = uw[:l_int]
+    w = uw[l_int:]
 
     # Callable tensor
     def logp_(input):
@@ -209,14 +210,14 @@ def _elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
     if n_mcsamples == 1:
         n = r.normal(size=inarray.tag.test_value.shape)
         q = n * tt.exp(w) + u
-        elbo = logp_(q) + tt.sum(w) + 0.5 * l * (1 + np.log(2.0 * np.pi))
+        elbo = logp_(q) + tt.sum(w) + 0.5 * l * (1 + tt.log(2.0 * np.pi))
     else:
         n = r.normal(size=(n_mcsamples, u.tag.test_value.shape[0]))
         qs = n * tt.exp(w) + u
         logps, _ = theano.scan(fn=lambda q: logp_(q),
                                outputs_info=None,
                                sequences=[qs])
-        elbo = tt.mean(logps) + tt.sum(w) + 0.5 * l * (1 + np.log(2.0 * np.pi))
+        elbo = tt.mean(logps) + tt.sum(w) + 0.5 * l * (1 + tt.log(2.0 * np.pi))
 
     return elbo
 
@@ -250,14 +251,15 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
             param = list(param)
 
         for param_ in param:
-            i = theano.shared(np.array(0))
+            i = theano.shared(np.array(0, dtype=theano.config.floatX))
+            i_int = i.astype('int64')
             value = param_.get_value(borrow=True)
             accu = theano.shared(
                 np.zeros(value.shape + (n_win,), dtype=value.dtype))
             grad = tt.grad(loss, param_)
 
             # Append squared gradient vector to accu_new
-            accu_new = tt.set_subtensor(accu[:, i], grad ** 2)
+            accu_new = tt.set_subtensor(accu[:, i_int], grad ** 2)
             i_new = tt.switch((i + 1) < n_win, i + 1, 0)
 
             updates[accu] = accu_new
