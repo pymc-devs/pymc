@@ -6,7 +6,7 @@ from pymc3 import Model, Normal
 
 class TestModelContext(unittest.TestCase):
     def test_thread_safety(self):
-        """ Regression test for issue #1555: Thread safety of model context manager
+        """ Regression test for issue #1552: Thread safety of model context manager
 
         This test creates two threads that attempt to construct two
         unrelated models at the same time.
