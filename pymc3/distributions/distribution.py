@@ -10,10 +10,14 @@ from ..vartypes import string_types
 __all__ = ['DensityDist', 'Distribution', 'Continuous',
            'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
 
+class _Unpickling(object):
+    pass
 
 class Distribution(object):
     """Statistical distribution"""
     def __new__(cls, name, *args, **kwargs):
+        if name is _Unpickling:
+            return object.__new__(cls)  # for pickle
         try:
             model = Model.get_context()
         except TypeError:
@@ -25,13 +29,11 @@ class Distribution(object):
             data = kwargs.pop('observed', None)
             dist = cls.dist(*args, **kwargs)
             return model.Var(name, dist, data)
-        elif name is None:
-            return object.__new__(cls)  # for pickle
         else:
-            raise TypeError("needed name or None but got: %s" % name)
+            raise TypeError("Name needs to be a string but got: %s" % name)
 
     def __getnewargs__(self):
-        return None,
+        return _Unpickling,
 
     @classmethod
     def dist(cls, *args, **kwargs):
