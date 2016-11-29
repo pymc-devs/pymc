@@ -59,7 +59,18 @@ class TestSample(SeededTest):
         with self.model:
             for njobs in test_njobs:
                 for steps in [1, 10, 300]:
-                    pm.sample(steps, self.step, {}, None, njobs=njobs, random_seed=self.random_seed)
+                    pm.sample(steps, self.step, njobs=njobs,
+                              random_seed=self.random_seed)
+
+    def test_sample_burn_thin(self):
+        steps = 100
+        with self.model:
+            for burn in [0, 10, 20, 30]:
+                for thin in [1, 5, 10, 13]:
+                    trace = pm.sample(steps, self.step, burn=burn,
+                                      thin=thin,
+                                      random_seed=self.random_seed)
+                    assert len(trace) == round((steps - burn) / thin)
 
     def test_sample_init(self):
         with self.model:
@@ -71,7 +82,8 @@ class TestSample(SeededTest):
 
     def test_iter_sample(self):
         with self.model:
-            samps = pm.sampling.iter_sample(5, self.step, self.start, random_seed=self.random_seed)
+            samps = pm.sampling.iter_sample(5, self.step,
+                                            start=self.start, random_seed=self.random_seed)
             for i, trace in enumerate(samps):
                 self.assertEqual(i, len(trace) - 1, "Trace does not have correct length.")
 
