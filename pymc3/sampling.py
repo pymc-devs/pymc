@@ -393,7 +393,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def init_nuts(init='advi', n_init=500000, model=None):
+def init_nuts(init='advi', n_init=500000, model=None, **kwargs):
     """Initialize and sample from posterior of a continuous model.
 
     This is a convenience function. NUTS convergence and sampling speed is extremely
@@ -413,6 +413,8 @@ def init_nuts(init='advi', n_init=500000, model=None):
         Number of iterations of initializer
         If 'advi', number of iterations, if 'metropolis', number of draws.
     model : Model (optional if in `with` context)
+    **kwargs : keyword arguments
+        Extra keyword arguments are forwarded to pymc3.NUTS.
 
     Returns
     -------
@@ -448,6 +450,6 @@ def init_nuts(init='advi', n_init=500000, model=None):
     else:
         raise NotImplemented('Initializer {} is not supported.'.format(init))
 
-    step = pm.NUTS(scaling=cov, is_cov=True)
+    step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
 
     return start, step

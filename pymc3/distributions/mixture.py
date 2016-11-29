@@ -71,10 +71,10 @@ class Mixture(Distribution):
 
         super(Mixture, self).__init__(shape, dtype, defaults=defaults,
                                       *args, **kwargs)
-    
+
     def _comp_logp(self, value):
         comp_dists = self.comp_dists
-        
+
         try:
             value_ = value if value.ndim > 1 else tt.shape_padright(value)
 
@@ -85,14 +85,14 @@ class Mixture(Distribution):
 
     def _comp_means(self):
         try:
-            return self.comp_dists.mean
+            return tt.as_tensor_variable(self.comp_dists.mean)
         except AttributeError:
             return tt.stack([comp_dist.mean for comp_dist in self.comp_dists],
                             axis=1)
 
     def _comp_modes(self):
         try:
-            return self.comp_dists.mode
+            return tt.as_tensor_variable(self.comp_dists.mode)
         except AttributeError:
             return tt.stack([comp_dist.mode for comp_dist in self.comp_dists],
                             axis=1)
@@ -137,7 +137,7 @@ class Mixture(Distribution):
         else:
             return np.squeeze(comp_samples[w_samples])
 
-    
+
 class NormalMixture(Mixture):
     R"""
     Normal mixture log-likelihood
@@ -164,6 +164,6 @@ class NormalMixture(Mixture):
     def __init__(self, w, mu, *args, **kwargs):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
                            sd=kwargs.pop('sd', None))
-        
+
         super(NormalMixture, self).__init__(w, Normal.dist(mu, sd=sd),
                                             *args, **kwargs)

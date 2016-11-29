@@ -3,6 +3,7 @@ import numpy as np
 import pymc3 as pm
 from itertools import product
 import theano.tensor as tt
+from theano.compile.ops import as_op
 
 
 def simple_model():
@@ -32,6 +33,20 @@ def multidimensional_model():
         Normal('x', mu, tau=tau, shape=(3, 2), testval=.1 * np.ones((3, 2)))
 
     return model.test_point, model, (mu, tau ** -1)
+
+
+def simple_arbitrary_det():
+    @as_op(itypes=[tt.dscalar], otypes=[tt.dscalar])
+    def arbitrary_det(value):
+        return value
+
+    with Model() as model:
+        a = Normal('a')
+        b = arbitrary_det(a)
+        c = Normal('obs', mu=b.astype('float64'),
+                   observed=np.array([1, 3, 5]))
+
+    return model.test_point, model
 
 
 def simple_init():
