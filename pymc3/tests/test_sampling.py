@@ -82,7 +82,8 @@ class TestSample(SeededTest):
 
     def test_iter_sample(self):
         with self.model:
-            samps = pm.sampling.iter_sample(5, self.step, self.start, random_seed=self.random_seed)
+            samps = pm.sampling.iter_sample(5, self.step,
+                                            start=self.start, random_seed=self.random_seed)
             for i, trace in enumerate(samps):
                 self.assertEqual(i, len(trace) - 1, "Trace does not have correct length.")
 

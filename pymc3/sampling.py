@@ -162,9 +162,9 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
 
     sample_args = {'draws': draws,
                    'step': step,
+                   'start': start,
                    'thin': thin,
                    'burn': burn,
-                   'start': start,
                    'trace': trace,
                    'chain': chain,
                    'tune': tune,
@@ -181,10 +181,10 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     return sample_func(**sample_args)
 
 
-def _sample(draws, step=None, thin=1, burn=0, start=None, trace=None,
+def _sample(draws, step=None, start=None, thin=1, burn=0, trace=None,
             chain=0, tune=None, progressbar=True, model=None,
             random_seed=-1):
-    sampling = _iter_sample(draws, step, thin, burn, start, trace,
+    sampling = _iter_sample(draws, step, start, thin, burn, trace,
                             chain, tune, model, random_seed)
     if progressbar:
         sampling = tqdm(sampling, total=round((draws - burn) / thin))
@@ -196,7 +196,7 @@ def _sample(draws, step=None, thin=1, burn=0, start=None, trace=None,
     return MultiTrace([strace])
 
 
-def iter_sample(draws, step, thin=1, burn=0, start=None, trace=None,
+def iter_sample(draws, step, start=None, thin=1, burn=0, trace=None,
                 chain=0, tune=None, model=None, random_seed=-1):
     """
     Generator that returns a trace on each iteration using the given
@@ -239,13 +239,13 @@ def iter_sample(draws, step, thin=1, burn=0, start=None, trace=None,
     for trace in iter_sample(500, step):
         ...
     """
-    sampling = _iter_sample(draws, step, thin, burn, start, trace,
+    sampling = _iter_sample(draws, step, start, thin, burn, trace,
                             chain, tune, model, random_seed)
     for i, strace in enumerate(sampling):
         yield MultiTrace([strace[:i + 1]])
 
 
-def _iter_sample(draws, step, thin=1, burn=0, start=None, trace=None,
+def _iter_sample(draws, step, start=None, thin=1, burn=0, trace=None,
                  chain=0, tune=None, model=None, random_seed=-1):
     model = modelcontext(model)
     draws = int(draws)
