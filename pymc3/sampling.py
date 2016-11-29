@@ -82,8 +82,8 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
 
 
 def sample(draws, step=None, init='advi', n_init=200000, start=None,
-           trace=None, thin=1, burn=0, chain=0, njobs=1, tune=None,
-           progressbar=True, model=None, random_seed=-1):
+           trace=None, chain=0, njobs=1, tune=None, progressbar=True,
+           model=None, random_seed=-1):
     """
     Draw a number of samples using the given step method.
     Multiple step methods supported via compound step method
@@ -120,10 +120,6 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         Passing either "text" or "sqlite" is taken as a shortcut to set
         up the corresponding backend (with "mcmc" used as the base
         name).
-    thin : int
-        Only store every <thin>'th sample.
-    burn : int
-        Do not store <burn> number of first samples.
     chain : int
         Chain number used to store sample in backend. If `njobs` is
         greater than one, chain numbers will start here.
@@ -163,8 +159,6 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     sample_args = {'draws': draws,
                    'step': step,
                    'start': start,
-                   'thin': thin,
-                   'burn': burn,
                    'trace': trace,
                    'chain': chain,
                    'tune': tune,
@@ -181,13 +175,12 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     return sample_func(**sample_args)
 
 
-def _sample(draws, step=None, start=None, thin=1, burn=0, trace=None,
-            chain=0, tune=None, progressbar=True, model=None,
-            random_seed=-1):
-    sampling = _iter_sample(draws, step, start, thin, burn, trace,
-                            chain, tune, model, random_seed)
+def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
+            progressbar=True, model=None, random_seed=-1):
+    sampling = _iter_sample(draws, step, start, trace, chain,
+                            tune, model, random_seed)
     if progressbar:
-        sampling = tqdm(sampling, total=round((draws - burn) / thin))
+        sampling = tqdm(sampling, total=draws)
     try:
         for strace in sampling:
             pass
@@ -196,8 +189,8 @@ def _sample(draws, step=None, start=None, thin=1, burn=0, trace=None,
     return MultiTrace([strace])
 
 
-def iter_sample(draws, step, start=None, thin=1, burn=0, trace=None,
-                chain=0, tune=None, model=None, random_seed=-1):
+def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
+                model=None, random_seed=-1):
     """
     Generator that returns a trace on each iteration using the given
     step method.  Multiple step methods supported via compound step
@@ -211,10 +204,6 @@ def iter_sample(draws, step, start=None, thin=1, burn=0, trace=None,
         The number of samples to draw
     step : function
         Step function
-    thin : int
-        Only store every <thin>'th sample.
-    burn : int
-        Do not store <burn> number of first samples.
     start : dict
         Starting point in parameter space (or partial point)
         Defaults to trace.point(-1)) if there is a trace provided and
@@ -239,14 +228,14 @@ def iter_sample(draws, step, start=None, thin=1, burn=0, trace=None,
     for trace in iter_sample(500, step):
         ...
     """
-    sampling = _iter_sample(draws, step, start, thin, burn, trace,
-                            chain, tune, model, random_seed)
+    sampling = _iter_sample(draws, step, start, trace, chain, tune,
+                            model, random_seed)
     for i, strace in enumerate(sampling):
         yield MultiTrace([strace[:i + 1]])
 
 
-def _iter_sample(draws, step, start=None, thin=1, burn=0, trace=None,
-                 chain=0, tune=None, model=None, random_seed=-1):
+def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
+                 model=None, random_seed=-1):
     model = modelcontext(model)
     draws = int(draws)
     if random_seed != -1:
@@ -276,9 +265,8 @@ def _iter_sample(draws, step, start=None, thin=1, burn=0, trace=None,
         if i == tune:
             step = stop_tuning(step)
         point = step.step(point)
-        if (i % thin == 0) and (i >= burn):
-            strace.record(point)
-            yield strace
+        strace.record(point)
+        yield strace
     else:
         strace.close()
 
