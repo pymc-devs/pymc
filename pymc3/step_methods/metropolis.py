@@ -111,13 +111,13 @@ class Metropolis(ArrayStepShared):
 
         if self.any_discrete:
             if self.all_discrete:
-                delta = np.round(delta, 0).astype(int)
-                q0 = q0.astype(int)
-                q = (q0 + delta).astype(int)
+                delta = np.round(delta, 0).astype('int64')
+                q0 = q0.astype('int64')
+                q = (q0 + delta).astype('int64')
             else:
                 delta[self.discrete] = np.round(
-                    delta[self.discrete], 0).astype(int)
-                q = q0 + delta
+                    delta[self.discrete], 0).astype('int64')
+                q = (q0 + delta).astype('int64')
         else:
             q = q0 + delta
 
@@ -431,5 +431,5 @@ def delta_logp(logp, vars, shared):
     logp1 = pm.CallableTensor(logp0)(inarray1)
 
     f = theano.function([inarray1, inarray0], logp1 - logp0)
-    f.trust_input = True
+    # f.trust_input = True
     return f

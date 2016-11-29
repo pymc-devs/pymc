@@ -105,6 +105,8 @@ class Discrete(Distribution):
     """Base class for discrete distributions"""
 
     def __init__(self, shape=(), dtype='int64', defaults=['mode'], *args, **kwargs):
+        if dtype != 'int64':
+            raise TypeError('Discrete classes expect dtype to be int64.')
         super(Discrete, self).__init__(
             shape, dtype, defaults=defaults, *args, **kwargs)
 
