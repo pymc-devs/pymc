@@ -805,7 +805,7 @@ def fast_kde(x):
 
     grid: A gridded 1D KDE of the input points (x).
     xmin: minimum value of x
-    xmax: mmaximum value of x
+    xmax: maximum value of x
     
     """
     
