@@ -16,7 +16,6 @@ import numpy as np
 import pymc3 as pm
 from tqdm import tqdm
 
-import logging
 import os
 import shutil
 import theano
@@ -24,7 +23,8 @@ import copy
 
 from ..model import modelcontext
 from ..vartypes import discrete_types
-from ..theanof import inputvars, make_shared_replacements, join_nonshared_inputs
+from ..theanof import inputvars, make_shared_replacements, \
+    join_nonshared_inputs
 from .metropolis import MultivariateNormalProposal as MvNPd
 from numpy.random import seed
 
@@ -32,8 +32,6 @@ from .arraystep import metrop_select
 from ..backends import atmcmc_text as atext
 
 __all__ = ['ATMCMC', 'ATMIP_sample', 'logp_forw']
-
-logger = logging.getLogger('ATMCMC')
 
 
 class ATMCMC(atext.ArrayStepSharedLLK):
@@ -547,7 +545,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
             # continue sampling final stage
             last = atext.get_highest_sampled_stage(homepath)
 
-            logger.info(
+            pm._log.info(
                 'Loading parameters from completed stage_%i' % last)
             project_dir = os.path.dirname(homepath)
             mode = os.path.basename(homepath)
@@ -560,7 +558,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
         else:
             # continue sampling intermediate
             stage = int(stage)
-            logger.info(
+            pm._log.info(
                 'Loading parameters from completed stage_%i' % (stage - 1))
             project_dir = os.path.dirname(homepath)
             mode = os.path.basename(homepath)
@@ -575,24 +573,24 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
         if rm_flag:
             chains = None
             if os.path.exists(stage_path):
-                logger.info('Removing previous sampling results ... '
+                pm._log.info('Removing previous sampling results ... '
                     '%s' % stage_path)
                 shutil.rmtree(stage_path)
         else:
             with model:
                 if os.path.exists(stage_path):
                     # load incomplete stage results
-                    logger.info('Reloading existing results ...')
+                    pm._log.info('Reloading existing results ...')
                     mtrace = atext.load(stage_path, model=model)
                     if len(mtrace) > 0:
                         # continue sampling if traces exist
-                        logger.info('Checking for corrupted files ...')
+                        pm._log.info('Checking for corrupted files ...')
                         chains = atext.check_multitrace(
                             mtrace, draws=draws, n_chains=step.n_chains)
                         rest = len(chains) % n_jobs
 
                         if rest > 0.:
-                            logger.info('Fixing %i chains ...' % rest)
+                            pm._log.info('Fixing %i chains ...' % rest)
                             rest_chains = atext.split_off_list(chains, rest)
                             # process traces that are not a multiple of n_jobs
                             sample_args = {
@@ -605,9 +603,9 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
                                 'chains': rest_chains}
 
                             _iter_parallel_chains(**sample_args)
-                            logger.info('Back to normal!')
+                            pm._log.info('Back to normal!')
                 else:
-                    logger.info('Init new trace!')
+                    pm._log.info('Init new trace!')
                     chains = None
     else:
         raise Exception('stage has to be not None!')
@@ -616,12 +614,12 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
         while step.beta < 1.:
             if step.stage == 0:
                 # Initial stage
-                logger.info('Sample initial stage: ...')
+                pm._log.info('Sample initial stage: ...')
                 draws = 1
             else:
                 draws = n_steps
 
-            logger.info('Beta: %f Stage: %i' % (step.beta, step.stage))
+            pm._log.info('Beta: %f Stage: %i' % (step.beta, step.stage))
 
             # Metropolis sampling intermediate stages
             stage_path = os.path.join(homepath, 'stage_%i' % step.stage)
@@ -649,7 +647,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
             step.chain_previous_lpoint = step.get_chain_previous_lpoint(mtrace)
 
             if step.beta > 1.:
-                logger.info('Beta > 1.: %f' % step.beta)
+                pm._log.info('Beta > 1.: %f' % step.beta)
                 step.beta = 1.
                 outpath = os.path.join(stage_path, 'atmip.params')
                 outparam_list = [step]
@@ -673,7 +671,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
             del(mtrace)
 
         # Metropolis sampling final stage
-        logger.info('Sample final stage')
+        pm._log.info('Sample final stage')
         stage_path = os.path.join(homepath, 'stage_final')
         temp = np.exp((1 - step.old_beta) * \
                            (step.likelihoods - step.likelihoods.max()))
@@ -803,11 +801,11 @@ def _iter_parallel_chains(draws, step, stage_path, progressbar, model, n_jobs,
 
     map(list_pb.extend, block_pb)
 
-    logger.info('Initialising chain traces ...')
+    pm._log.info('Initialising chain traces ...')
     for chain in chains:
         trace_list.append(atext.Text(stage_path, model=model))
 
-    logger.info('Sampling ...')
+    pm._log.info('Sampling ...')
 
     pshared = dict(
         draws=draws,
