@@ -26,7 +26,7 @@ w2 = (1 - stdev)
 
 
 def last_sample(x):
-    return x[(n_steps - 1)::n_steps].flatten()
+    return x[(n_steps - 1)::n_steps]
 
 
 def two_gaussians(x):
