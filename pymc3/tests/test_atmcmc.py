@@ -74,4 +74,4 @@ class TestATMCMC(SeededTest):
         x = last_sample(d)
         mu1d = np.abs(x).mean(axis=0)
 
-        np.testing.allclose(mu1, mu1d, rtol=0., atol=0.01)
+        np.testing.assert_allclose(mu1, mu1d, rtol=0., atol=0.01)
