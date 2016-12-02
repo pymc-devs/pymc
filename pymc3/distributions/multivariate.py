@@ -19,7 +19,7 @@ from .continuous import ChiSquared, Normal
 from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln
 
-__all__ = ['MvNormal', 'MvNormal2', 'MvStudentT', 'Dirichlet',
+__all__ = ['MvNormal', 'MvStudentT', 'Dirichlet',
            'Multinomial', 'Wishart', 'WishartBartlett', 'LKJCorr']
 
 
@@ -119,42 +119,6 @@ class MvNormal(Continuous):
         result += (delta.dot(tau) * delta).sum(axis=delta.ndim - 1)
         return -1 / 2. * result
 
-
-class MvNormal2(Continuous):
-    """ uses cholesky isntead of direct inverse, need to add support for tau input"""
-    def __init__(self, mu, cov, *args, **kwargs):
-        super(MvNormal2, self).__init__(*args, **kwargs)
-        warnings.warn(('The calling signature of MvNormal() has changed. The new signature is:\n'
-                       'MvNormal(name, mu, cov) instead of MvNormal(name, mu, tau).'
-                       'You do not need to explicitly invert the covariance matrix anymore.'),
-                      DeprecationWarning)
-        self.mean = self.median = self.mode = self.mu = mu
-        self.cov = cov
-
-    def random(self, point=None, size=None):
-        mu, cov = draw_values([self.mu, self.cov], point=point)
-
-        def _random(mean, cov, size=None):
-            return stats.multivariate_normal.rvs(
-                mean, cov, None if size == mean.shape else size)
-
-        samples = generate_samples(_random,
-                                   mean=mu, cov=cov,
-                                   dist_shape=self.shape,
-                                   broadcast_shape=mu.shape,
-                                   size=size)
-        return samples
-
-    def logp(self, value):
-        mu = self.mu
-        cov = self.cov
-
-        diff = value - mu
-        n = cov.shape[0]
-        L = tt.slinalg.cholesky(cov + 1e-8 * tt.eye(n))
-        tmp = tt.slinalg.solve_lower_triangular(L, diff)
-        logdet = 2.0 * tt.sum(tt.log(tt.diag(L)))
-        return -0.5 * (tt.dot(tmp.T, tmp) + logdet + n*tt.log(2*np.pi))
 
 class MvStudentT(Continuous):
     R"""
