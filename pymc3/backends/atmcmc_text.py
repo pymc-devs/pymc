@@ -50,7 +50,7 @@ def worker(q_in, q_out, function, eprintignore, pshared):
         r, e = None, None
         try:
             r = function(*args, **kwargs)
-        except Exception, e:
+        except Exception as e:
             if eprintignore is not None and not isinstance(e, eprintignore):
                 traceback.print_exc()
 
@@ -128,7 +128,7 @@ def parimap(function, *iterables, **kwargs):
                         try:
                             results.append(q_out.get())
                             break
-                        except IOError, e:
+                        except IOError as e:
                             if e.errno != errno.EINTR:
                                 raise
 
