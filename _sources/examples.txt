@@ -34,6 +34,7 @@ GLM
    notebooks/GLM-rolling-regression.ipynb
    notebooks/GLM-hierarchical.ipynb
    notebooks/GLM-poisson-regression.ipynb
+   notebooks/hierarchical_partial_pooling.ipynb
 
 Mixture Models
 ==============

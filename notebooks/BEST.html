@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Bayesian Estimation Supersedes the T-Test &mdash; PyMC3 3.0.rc1 documentation</title>
+  <title>Bayesian Estimation Supersedes the T-Test &mdash; PyMC3 3.0.rc4 documentation</title>
   
 
   
@@ -33,7 +33,7 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/>
+    <link rel="top" title="PyMC3 3.0.rc4 documentation" href="../index.html"/>
         <link rel="up" title="Examples" href="../examples.html"/>
         <link rel="next" title="Stochastic Volatility model" href="stochastic_volatility.html"/>
         <link rel="prev" title="LKJ Prior for fitting a Multivariate Normal Model" href="LKJ.html"/> 
@@ -569,7 +569,7 @@ function of all four estimated parameters.</p>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
 <span></span><span class="k">with</span> <span class="n">model</span><span class="p">:</span>
-    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">njobs</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -578,12 +578,12 @@ function of all four estimated parameters.</p>
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
-Auto-assigning NUTS sampler...
-Initializing NUTS using advi...
-Average ELBO = -230.26: 100%|██████████| 500000/500000 [02:14&lt;00:00, 3712.05it/s]
-Finished [100%]: Average ELBO = -230.24
-100%|██████████| 1/1 [00:00&lt;00:00, 2259.86it/s]
-100%|██████████| 2000/2000 [00:10&lt;00:00, 195.55it/s]
+Assigned NUTS to group1_mean
+Assigned NUTS to group2_mean
+Assigned NUTS to group1_std_interval_
+Assigned NUTS to group2_std_interval_
+Assigned NUTS to ν_minus_one_log_
+100%|██████████| 2000/2000 [00:22&lt;00:00, 89.46it/s]
 </pre></div></div>
 </div>
 <p>We can plot the stochastic parameters of the model. PyMC&#8217;s
@@ -654,7 +654,7 @@ here, suggest that the model has converged.</p>
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
-<span></span><span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">])</span>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">[:</span><span class="mi">2</span><span class="p">]])</span>
 </pre></div>
 </div>
 </div>
@@ -664,7 +664,7 @@ here, suggest that the model has converged.</p>
 </pre></div>
 </div>
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.gridspec.GridSpec at 0x7f15b0098278&gt;
+<span></span>&lt;matplotlib.gridspec.GridSpec at 0x11d91a320&gt;
 </pre></div>
 </div>
 </div>
@@ -678,6 +678,33 @@ here, suggest that the model has converged.</p>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
 <span></span>In [12]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="n">pm</span><span class="o">.</span><span class="n">forestplot</span><span class="p">(</span><span class="n">trace</span><span class="p">[</span><span class="mi">1000</span><span class="p">:],</span> <span class="n">varnames</span><span class="o">=</span><span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">vars</span><span class="p">[</span><span class="mi">2</span><span class="p">:]])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>Out[12]:
+</pre></div>
+</div>
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>&lt;matplotlib.gridspec.GridSpec at 0x11b9bd5f8&gt;
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<img alt="../_images/notebooks_BEST_24_1.png" src="../_images/notebooks_BEST_24_1.png" />
+</div>
+</div>
+<div class="nbinput container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [13]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -697,13 +724,13 @@ difference of means:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  1.020            0.436            0.007            [0.180, 1.862]
+  1.003            0.441            0.011            [0.200, 1.917]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.181          0.733          1.030          1.298          1.863
+  0.083          0.718          1.007          1.301          1.873
 
 
 difference of stds:
@@ -711,13 +738,13 @@ difference of stds:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.928            0.444            0.010            [0.119, 1.819]
+  0.910            0.458            0.015            [0.022, 1.780]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.155          0.620          0.895          1.203          1.890
+  0.105          0.591          0.875          1.183          1.908
 
 
 effect size:
@@ -725,13 +752,13 @@ effect size:
   Mean             SD               MC Error         95% HPD interval
   -------------------------------------------------------------------
 
-  0.608            0.273            0.005            [0.097, 1.142]
+  0.602            0.279            0.008            [0.107, 1.194]
 
   Posterior quantiles:
   2.5            25             50             75             97.5
   |--------------|==============|==============|--------------|
 
-  0.100          0.427          0.601          0.781          1.149
+  0.044          0.412          0.594          0.799          1.155
 
 </pre></div></div>
 </div>
@@ -792,7 +819,7 @@ Gen. 2013;142(2):573-603. doi:10.1037/a0029146.</li>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0.rc1',
+            VERSION:'3.0.rc4',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Lets look at what the classifier has learned &mdash; PyMC3 3.0.rc1 documentation</title>
+  <title>Lets look at what the classifier has learned &mdash; PyMC3 3.0.rc4 documentation</title>
   
 
   
@@ -33,7 +33,7 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0.rc4 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -297,7 +297,7 @@ div.nboutput  > :nth-child(2).stderr {
 </style>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [1]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -329,7 +329,7 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 <div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [2]:
+<span></span>In [3]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -340,7 +340,7 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [3]:
+<span></span>In [4]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -357,6 +357,46 @@ div.nboutput  > :nth-child(2).stderr {
 </div>
 <div class="container">
 <img alt="../_images/notebooks_bayesian_neural_network_keras_svgd_2_0.png" src="../_images/notebooks_bayesian_neural_network_keras_svgd_2_0.png" />
+</div>
+</div>
+<div class="nbinput nblast container">
+<div class="highlight-none"><div class="highlight"><pre>
+<span></span>In [7]:
+</pre></div>
+</div>
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">theano</span> <span class="kn">import</span> <span class="n">shared</span>
+<span class="kn">import</span> <span class="nn">keras</span>
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="kn">import</span> <span class="n">Sequential</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="kn">import</span> <span class="n">Dense</span><span class="p">,</span> <span class="n">BatchNormalization</span>
+
+<span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get parameters and updates from Keras model</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">shared_in_updates</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">updates</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+        <span class="n">attrs</span> <span class="o">=</span> <span class="nb">dir</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+        <span class="c1"># Updates</span>
+        <span class="k">if</span> <span class="s1">&#39;updates&#39;</span> <span class="ow">in</span> <span class="n">attrs</span><span class="p">:</span>
+            <span class="n">updates</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">l</span><span class="o">.</span><span class="n">updates</span><span class="p">)</span>
+            <span class="n">shared_in_updates</span> <span class="o">+=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">l</span><span class="o">.</span><span class="n">updates</span><span class="p">]</span>
+
+        <span class="c1"># Shared variables</span>
+        <span class="k">for</span> <span class="n">attr_str</span> <span class="ow">in</span> <span class="n">attrs</span><span class="p">:</span>
+            <span class="n">attr</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">attr_str</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span> <span class="ow">is</span> <span class="n">tt</span><span class="o">.</span><span class="n">sharedvar</span><span class="o">.</span><span class="n">TensorSharedVariable</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">attr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">model</span><span class="o">.</span><span class="n">get_input_at</span><span class="p">(</span><span class="mi">0</span><span class="p">):</span>
+                    <span class="n">params</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">shared_in_updates</span><span class="p">)),</span> <span class="n">updates</span>
+
+<span class="c1"># This code is required when using BatchNormalization layer</span>
+<span class="n">keras</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">theano_backend</span><span class="o">.</span><span class="n">_LEARNING_PHASE</span> <span class="o">=</span> \
+    <span class="n">shared</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;keras_learning_phase&#39;</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
 <div class="nbinput container">
@@ -381,11 +421,13 @@ div.nboutput  > :nth-child(2).stderr {
 
 <span class="k">def</span> <span class="nf">build_ann</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">init</span><span class="p">):</span>
     <span class="k">with</span> <span class="n">pm</span><span class="o">.</span><span class="n">Model</span><span class="p">()</span> <span class="k">as</span> <span class="n">model</span><span class="p">:</span>
-        <span class="n">i</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">tensor</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],))</span>
-        <span class="n">m1</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="n">init</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;tanh&#39;</span><span class="p">)(</span><span class="n">i</span><span class="p">)</span>
-        <span class="n">m2</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="n">init</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;tanh&#39;</span><span class="p">)(</span><span class="n">m1</span><span class="p">)</span>
-        <span class="n">m3</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="n">init</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;sigmoid&#39;</span><span class="p">)(</span><span class="n">m2</span><span class="p">)</span>
-        <span class="n">b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Bernoulli</span><span class="p">(</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">m3</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">keras_model</span> <span class="o">=</span> <span class="n">Sequential</span><span class="p">()</span>
+        <span class="n">keras_model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Input</span><span class="p">(</span><span class="n">tensor</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],)))</span>
+        <span class="n">keras_model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="n">init</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;tanh&#39;</span><span class="p">))</span>
+        <span class="n">keras_model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="n">init</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;tanh&#39;</span><span class="p">))</span>
+        <span class="n">keras_model</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Dense</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="n">init</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;sigmoid&#39;</span><span class="p">))</span>
+
+        <span class="n">b</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Bernoulli</span><span class="p">(</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">keras_model</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">observed</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">model</span>
 
 <span class="n">ann_input</span> <span class="o">=</span> <span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
@@ -458,7 +500,7 @@ Average ELBO = -853.79:  18%|█▊        | 92019/500000 [00:57&lt;04:01, 1690.
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_bayesian_neural_network_keras_svgd_6_0.png" src="../_images/notebooks_bayesian_neural_network_keras_svgd_6_0.png" />
+<img alt="../_images/notebooks_bayesian_neural_network_keras_svgd_7_0.png" src="../_images/notebooks_bayesian_neural_network_keras_svgd_7_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -567,7 +609,7 @@ the whole input space.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_bayesian_neural_network_keras_svgd_14_0.png" src="../_images/notebooks_bayesian_neural_network_keras_svgd_14_0.png" />
+<img alt="../_images/notebooks_bayesian_neural_network_keras_svgd_15_0.png" src="../_images/notebooks_bayesian_neural_network_keras_svgd_15_0.png" />
 </div>
 </div>
 </div>
@@ -600,7 +642,7 @@ is what that looks like:</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_bayesian_neural_network_keras_svgd_16_0.png" src="../_images/notebooks_bayesian_neural_network_keras_svgd_16_0.png" />
+<img alt="../_images/notebooks_bayesian_neural_network_keras_svgd_17_0.png" src="../_images/notebooks_bayesian_neural_network_keras_svgd_17_0.png" />
 </div>
 </div>
 <p>We can see that very close to the decision boundary, our uncertainty as
@@ -685,7 +727,7 @@ some setting up:</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0.rc1',
+            VERSION:'3.0.rc4',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

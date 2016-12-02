@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Lets look at what the classifier has learned &mdash; PyMC3 3.0.rc1 documentation</title>
+  <title>Lets look at what the classifier has learned &mdash; PyMC3 3.0.rc4 documentation</title>
   
 
   
@@ -33,7 +33,7 @@
         <link rel="index" title="Index"
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="PyMC3 3.0.rc1 documentation" href="../index.html"/> 
+    <link rel="top" title="PyMC3 3.0.rc4 documentation" href="../index.html"/> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -445,7 +445,7 @@ Automatic pdb calling has been turned ON
 </div>
 <div class="nbinput container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [20]:
+<span></span>In [2]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -460,22 +460,36 @@ Automatic pdb calling has been turned ON
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast container">
+<div class="nboutput container">
 <div class="container">
 </div>
 <div class="stderr container">
 <div class="highlight"><pre>
 Auto-assigning NUTS sampler...
 Initializing NUTS using advi...
-Average ELBO = -0.23701: 100%|██████████| 200000/200000 [00:12&lt;00:00, 16558.66it/s]
-Finished [100%]: Average ELBO = -0.23132
-100%|██████████| 500/500 [00:00&lt;00:00, 1319.39it/s]
-100%|██████████| 400/400 [00:42&lt;00:00,  7.77it/s]
+Average ELBO = -0.22884: 100%|██████████| 200000/200000 [00:12&lt;00:00, 16595.24it/s]
+Finished [100%]: Average ELBO = -0.23082
+100%|██████████| 500/500 [00:00&lt;00:00, 1242.86it/s]
 </pre></div></div>
 </div>
-<div class="nbinput container">
+<div class="nboutput nblast container">
+<div class="container">
+</div>
+<div class="container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">AttributeError</span>                            Traceback (most recent call last)
+<span class="ansi-green-fg">&lt;ipython-input-2-51fc4780bff4&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-intense-fg ansi-bold">      6</span>
+<span class="ansi-green-intense-fg ansi-bold">      7</span>     trace_nuts <span class="ansi-blue-fg">=</span> pm<span class="ansi-blue-fg">.</span>sample<span class="ansi-blue-fg">(</span><span class="ansi-cyan-fg">500</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">----&gt; 8</span><span class="ansi-red-fg">     </span>trace_svgd <span class="ansi-blue-fg">=</span> pm<span class="ansi-blue-fg">.</span>variational<span class="ansi-blue-fg">.</span>svgd<span class="ansi-blue-fg">(</span>jitter<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">4.</span><span class="ansi-blue-fg">,</span> n_particles<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">800</span><span class="ansi-blue-fg">,</span> n<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">400</span><span class="ansi-blue-fg">)</span>
+
+<span class="ansi-red-fg">AttributeError</span>: module &#39;pymc3.variational&#39; has no attribute &#39;svgd&#39;
+</pre></div></div>
+</div>
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>In [21]:
+<span></span>In [ ]:
 </pre></div>
 </div>
 <div class="highlight-ipython3"><div class="highlight"><pre>
@@ -494,30 +508,14 @@ Finished [100%]: Average ELBO = -0.23132
 </pre></div>
 </div>
 </div>
-<div class="nboutput container">
-<div class="container">
-</div>
-<div class="stderr container">
-<div class="highlight"><pre>
-/home/wiecki/miniconda3/lib/python3.5/site-packages/statsmodels/nonparametric/kdetools.py:20: VisibleDeprecationWarning: using a non-integer number instead of an integer will result in an error in the future
-  y = X[:m/2+1] + np.r_[0,X[m/2+1:],0]*1j
-</pre></div></div>
-</div>
-<div class="nboutput container">
+<div class="nbinput nblast container">
 <div class="highlight-none"><div class="highlight"><pre>
-<span></span>Out[21]:
+<span></span>In [24]:
 </pre></div>
 </div>
-<div class="highlight-none"><div class="highlight"><pre>
-<span></span>&lt;matplotlib.legend.Legend at 0x7fe28979d390&gt;
+<div class="highlight-ipython3"><div class="highlight"><pre>
+<span></span>theano.tensor.Split<span class="o">??</span>
 </pre></div>
-</div>
-</div>
-<div class="nboutput nblast container">
-<div class="container">
-</div>
-<div class="container">
-<img alt="../_images/notebooks_svgd_test_9_2.png" src="../_images/notebooks_svgd_test_9_2.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -534,7 +532,7 @@ Finished [100%]: Average ELBO = -0.23132
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_svgd_test_10_0.png" src="../_images/notebooks_svgd_test_10_0.png" />
+<img alt="../_images/notebooks_svgd_test_11_0.png" src="../_images/notebooks_svgd_test_11_0.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -673,7 +671,7 @@ Finished [100%]: Average ELBO = -0.23132
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_svgd_test_13_1.png" src="../_images/notebooks_svgd_test_13_1.png" />
+<img alt="../_images/notebooks_svgd_test_14_1.png" src="../_images/notebooks_svgd_test_14_1.png" />
 </div>
 </div>
 <div class="nbinput container">
@@ -823,7 +821,7 @@ the whole input space.</p>
 <div class="container">
 </div>
 <div class="container">
-<img alt="../_images/notebooks_svgd_test_20_1.png" src="../_images/notebooks_svgd_test_20_1.png" />
+<img alt="../_images/notebooks_svgd_test_21_1.png" src="../_images/notebooks_svgd_test_21_1.png" />
 </div>
 </div>
 <div class="nboutput nblast container">
@@ -942,7 +940,7 @@ some setting up:</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
-            VERSION:'3.0.rc1',
+            VERSION:'3.0.rc4',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
