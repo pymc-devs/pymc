@@ -26,7 +26,7 @@ with pm.Model() as model:
     f_cov = tau * pm.gp.cov.RBF(1, l)
     n_cov = sigma2 * tt.eye(n)
 
-    y_obs = pm.MvNormal2('y_obs', mu=0.0, cov=f_cov.K(X,X) + n_cov, observed=y)
+    y_obs = pm.gp.GP('y_obs', mu=0.0, cov=f_cov, observed=y)
 
 with model:
     trace = pm.sample(2000, init='map')
