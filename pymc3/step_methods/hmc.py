@@ -59,7 +59,7 @@ class HamiltonianMC(ArrayStep):
             scaling = model.test_point
 
         if isinstance(scaling, dict):
-            scaling = guess_scaling(Point(scaling, model=model), model=model)
+            scaling = guess_scaling(Point(scaling, model=model), vars=vars, model=model)
 
         n = scaling.shape[0]
 
