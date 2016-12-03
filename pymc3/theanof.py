@@ -210,8 +210,8 @@ def reshape_t(x, shape):
 
 
 class CallableTensor(object):
-    """Turns a symbolic variable with one input into a function that returns symbolic arguments with the one variable replaced with the input.
-
+    """Turns a symbolic variable with one input into a function that returns symbolic arguments
+    with the one variable replaced with the input.
     """
 
     def __init__(self, tensor):
