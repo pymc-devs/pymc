@@ -5,7 +5,7 @@ import theano
 import theano.tensor as tt
 import numpy as np
 
-__all__ = ["RBF"]
+__all__ = ["RBF", "White"]
 
 """
 Modeled *very* closely after GPy and GPFlow so far
@@ -69,6 +69,7 @@ class Prod(Combination):
         return reduce((lambda x, y: x * y),
                       [k.K(X, Z) if isinstance(k, Covariance) else k for k in self.factor_list])
 
+
 class Stationary(Covariance):
     def __init__(self, input_dim, lengthscales, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
@@ -87,35 +88,38 @@ class Stationary(Covariance):
             return -2.0 * tt.dot(X, tt.transpose(Z)) +\
                    tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1))
 
-    def euclidian_dist(self, X, Z):
+    def euclidean_dist(self, X, Z):
         r2 = self.square_dist(X, Z)
         return tt.sqrt(r2 + 1e-12)
 
-class RBF(Stationary):
+class ExpQuad(Stationary):
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.exp( -0.5 * self.square_dist(X, Z))
 
+class RatQuad(Stationary):
+    def __init__(self, input_dim, lengthscales, alpha, active_dims=None):
+        Covariance.__init__(self, input_dim, active_dims)
+        self.lengthscales = lengthscales
+        self.alpha = alpha
+    def K(self, X, Z=None):
+        X, Z = self._slice(X, Z)
+        return tt.power((1.0 + 0.5 * self.square_dist(X, Z) * (1.0 / self.alpha)), -1.0 * self.alpha)
 
+class Matern52(Stationary):
+    def K(self, X, Z=None):
+        X, Z = self._slice(X, Z)
+        r = self.euclidean_dist(X, Z)
+        return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * tt.square(r)) * tt.exp(-1.0 * np.sqrt(5.0) * r)
 
+class Matern32(Stationary):
+    def K(self, X, Z=None):
+        X, Z = self._slice(X, Z)
+        r = self.euclidean_dist(X, Z)
+        return (1.0 + np.sqrt(3.0) * r) * tt.exp(-np.sqrt(3.0) * r)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+class Exponential(Stationary):
+    def K(self, X, Z=None):
+        X, Z = self._slice(X, Z)
+        return tt.exp(-0.5 * self.euclidean_dist(X, Z))
 
