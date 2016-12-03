@@ -28,17 +28,17 @@ class NUTS(BaseHMC):
         """
         Parameters
         ----------
-            vars : list of Theano variables, default continuous vars
-            Emax : float, default 1000
-                maximum energy
-            target_accept : float (0,1) default .8
-                target for avg accept probability between final branch and initial position
-            gamma : float, default .05
-            k : float (.5,1) default .75
-                scaling of speed of adaptation
-            t0 : int, default 10
-                slows inital adapatation
-            kwargs: passed to BaseHMC
+        vars : list of Theano variables, default continuous vars
+        Emax : float, default 1000
+            maximum energy
+        target_accept : float (0,1) default .8
+            target for avg accept probability between final branch and initial position
+        gamma : float, default .05
+        k : float (.5,1) default .75
+            scaling of speed of adaptation
+        t0 : int, default 10
+            slows inital adapatation
+        kwargs: passed to BaseHMC
         """
         super(NUTS, self).__init__(vars, use_single_leapfrog=True, **kwargs)
 

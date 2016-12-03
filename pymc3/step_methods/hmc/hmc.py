@@ -27,13 +27,13 @@ class HamiltonianMC(BaseHMC):
         """
         Parameters
         ----------
-            vars : list of theano variables
-            path_length : float, default=2
-                total length to travel
-            step_rand : function float -> float, default=unif
-                A function which takes the step size and returns an new one used to
-                randomize the step size at each iteration.
-            **kwargs : passed to BaseHMC
+        vars : list of theano variables
+        path_length : float, default=2
+            total length to travel
+        step_rand : function float -> float, default=unif
+            A function which takes the step size and returns an new one used to
+            randomize the step size at each iteration.
+        **kwargs : passed to BaseHMC
         """
         super(HamiltonianMC, self).__init__(vars, **kwargs)
         self.path_length = path_length

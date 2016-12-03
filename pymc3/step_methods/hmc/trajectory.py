@@ -14,15 +14,15 @@ def _theano_hamiltonian(model_vars, shared, logpt, potential):
 
     Parameters
     ----------
-    model_vars: array of variables to be sampled
-    shared theano tensors that are already shared
-    logpt: model log probability
-    potential: hamiltonian potential
+    model_vars : array of variables to be sampled
+    shared : theano tensors that are already shared
+    logpt : model log probability
+    potential : hamiltonian potential
 
     Returns
     -------
-    Hamiltonian: namedtuple with log pdf, gradient of log pdf, and potential functions
-    q: Starting position variable.
+    Hamiltonian : namedtuple with log pdf, gradient of log pdf, and potential functions
+    q : Starting position variable.
     """
     dlogp = gradient(logpt, model_vars)
     (logp, dlogp), q = join_nonshared_inputs([logpt, dlogp], model_vars, shared)
@@ -36,14 +36,14 @@ def _theano_energy_function(H, q, **theano_kwargs):
 
     Parameters
     ----------
-    H: Hamiltonian namedtuple
-    q: theano variable, starting position
-    theano_kwargs: passed to theano.function
+    H : Hamiltonian namedtuple
+    q : theano variable, starting position
+    theano_kwargs : passed to theano.function
 
     Returns
     -------
-    energy_function: theano function that computes the energy at a point (p, q) in phase space
-    p: Starting momentum variable.
+    energy_function : theano function that computes the energy at a point (p, q) in phase space
+    p : Starting momentum variable.
     """
     p = tt.dvector('p')
     p.tag.test_value = q.tag.test_value
@@ -91,19 +91,19 @@ def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
     Parameters
     ----------
     model_vars : array of variables to be sampled
-    shared theano tensors that are already shared
-    logpt: model log probability
-    potential: hamiltonian potential
+    shared : theano tensors that are already shared
+    logpt : model log probability
+    potential : Hamiltonian potential
     theano_kwargs : dictionary of keyword arguments to pass to theano functions
-    use_single_leapfrog: Boolean, if only 1 integration step is done at a time (as in NUTS),
-                         this provides a ~2x speedup
+    use_single_leapfrog : Boolean, if only 1 integration step is done at a time (as in NUTS),
+                          this provides a ~2x speedup
 
     Returns
     -------
-    H: Hamiltonian namedtuple
-    energy_function: theano function computing energy at a point in phase space
-    leapfrog_integrator: theano function integrating the Hamiltonian from a point in phase space
-    theano_variables: dictionary of variables used in the computation graph which may be useful
+    H : Hamiltonian namedtuple
+    energy_function : theano function computing energy at a point in phase space
+    leapfrog_integrator : theano function integrating the Hamiltonian from a point in phase space
+    theano_variables : dictionary of variables used in the computation graph which may be useful
     """
     H, q = _theano_hamiltonian(model_vars, shared, logpt, potential)
     energy_function, p = _theano_energy_function(H, q, **theano_kwargs)
@@ -137,18 +137,18 @@ def leapfrog(H, q, p, epsilon, n_steps):
     ----------
     H : Hamiltonian instance.
         Tuple of `logp, dlogp, potential`.
-    q: Theano.tensor
+    q : Theano.tensor
         initial position vector
-    p: Theano.tensor
+    p : Theano.tensor
         initial momentum vector
-    epsilon: float, step size
-    n_steps: int, number of iterations
+    epsilon : float, step size
+    n_steps : int, number of iterations
 
     Returns
     -------
-    position: Theano.tensor
+    position : Theano.tensor
         position estimate at time :math:`n \cdot e`.
-    momentum: Theano.tensor
+    momentum : Theano.tensor
         momentum estimate at time :math:`n \cdot e`.
     """
     def full_update(p, q):
