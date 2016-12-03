@@ -12,24 +12,25 @@ class BaseHMC(ArrayStepShared):
 
     def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False,
                  model=None, blocked=True, use_single_leapfrog=False, **theano_kwargs):
-        """
+        """Superclass to implement Hamiltonian/hybrid monte carlo
+
         Parameters
         ----------
-            vars : list of theano variables
-            scaling : array_like, ndim = {1,2}
-                Scaling for momentum distribution. 1d arrays interpreted matrix diagonal.
-            step_scale : float, default=0.25
-                Size of steps to take, automatically scaled down by 1/n**(1/4)
-            is_cov : bool, default=False
-                Treat scaling as a covariance matrix/vector if True, else treat it as a
-                precision matrix/vector
-            state
-                State object
-            model : pymc3 Model instance.  default=Context model
-            blocked: Boolean, default True
-            use_single_leapfrog: Boolean, will leapfrog steps take a single step at a time.
-                default False.
-            **theano_kwargs: passed to theano functions
+        vars : list of theano variables
+        scaling : array_like, ndim = {1,2}
+            Scaling for momentum distribution. 1d arrays interpreted matrix diagonal.
+        step_scale : float, default=0.25
+            Size of steps to take, automatically scaled down by 1/n**(1/4)
+        is_cov : bool, default=False
+            Treat scaling as a covariance matrix/vector if True, else treat it as a
+            precision matrix/vector
+        state
+            State object
+        model : pymc3 Model instance.  default=Context model
+        blocked: Boolean, default True
+        use_single_leapfrog: Boolean, will leapfrog steps take a single step at a time.
+            default False.
+        **theano_kwargs: passed to theano functions
         """
         model = modelcontext(model)
 
