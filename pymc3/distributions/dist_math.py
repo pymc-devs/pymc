@@ -10,6 +10,8 @@ import theano.tensor as tt
 
 from .special import gammaln, multigammaln
 
+c = - 0.5 * np.log(2 * np.pi)
+
 
 def bound(logp, *conditions):
     """
@@ -77,3 +79,39 @@ def i1(x):
                      x**9 / 1474560 + x**11 / 176947200 + x**13 / 29727129600,
                      np.e**x / (2 * np.pi * x)**0.5 * (1 - 3 / (8 * x) + 15 / (128 * x**2) + 315 / (3072 * x**3)
                                                        + 14175 / (98304 * x**4)))
+
+
+def sd2rho(sd):
+    """sd -> rho
+    theano converter
+    mu + sd*e = mu + log(1+exp(rho))*e"""
+    return tt.log(tt.exp(sd) - 1)
+
+
+def rho2sd(rho):
+    """rho -> sd
+    theano converter
+    mu + sd*e = mu + log(1+exp(rho))*e"""
+    return tt.log1p(tt.exp(rho))
+
+
+def kl_divergence_normal_pair(mu1, mu2, sd1, sd2):
+    elemwise_kl = (tt.log(sd2/sd1) +
+                   (sd2**2 + (mu1-mu2)**2)/(2.*sd2**2) -
+                   0.5)
+    return tt.sum(elemwise_kl)
+
+
+def kl_divergence_normal_pair3(mu1, mu2, rho1, rho2):
+    sd1, sd2 = rho2sd(rho1), rho2sd(rho2)
+    return kl_divergence_normal_pair(mu1, mu2, sd1, sd2)
+
+
+def log_normal(x, mean, std, eps=0.0):
+    std += eps
+    return c - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2 * std ** 2)
+
+
+def log_normal3(x, mean, rho, eps=0.0):
+    std = rho2sd(rho)
+    return log_normal(x, mean, std, eps)

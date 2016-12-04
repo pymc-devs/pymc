@@ -3,9 +3,19 @@ from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
 from .memoize import memoize
 from .blocking import ArrayOrdering
+from theano.sandbox.rng_mrg import MRG_RandomStreams
 
-__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars', 'cont_inputs',
-           'jacobian', 'CallableTensor', 'join_nonshared_inputs', 'make_shared_replacements']
+__all__ = ['gradient',
+           'hessian',
+           'hessian_diag',
+           'inputvars',
+           'cont_inputs',
+           'jacobian',
+           'CallableTensor',
+           'join_nonshared_inputs',
+           'make_shared_replacements',
+           'tt_rng',
+           'set_tt_rng']
 
 
 def inputvars(a):
@@ -229,3 +239,27 @@ class CallableTensor(object):
 
 scalar_identity = IdentityOp(scalar.upgrade_to_float, name='scalar_identity')
 identity = tt.Elemwise(scalar_identity, name='identity')
+
+_tt_rng = MRG_RandomStreams()
+
+
+def tt_rng():
+    """Get the package-level random number generator.
+    Returns
+    -------
+    :class:`theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+        The :class:`theano.sandbox.rng_mrg.MRG_RandomStreams`
+        instance passed to the most recent call of :func:`set_tt_rng`
+    """
+    return _tt_rng
+
+
+def set_tt_rng(new_rng):
+    """Set the package-level random number generator.
+    Parameters
+    ----------
+    new_rng : :class:`theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+        The random number generator to use.
+    """
+    global _tt_rng
+    _tt_rng = new_rng
