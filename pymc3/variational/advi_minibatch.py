@@ -326,8 +326,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
 
     When using mini-batches, :math:`c_{o}^{k}` and :math:`c_{l}^{k}` should be
     set to :math:`N/M`, where :math:`M` is the number of observations in each
-    mini-batch. Other weighting scheme were proposed in (Blundell et al., 2015)
-    for accelarating model fitting.
+    mini-batch. Another weighting scheme was proposed in
+    (Blundell et al., 2015) for accelarating model fitting.
 
     For working with ADVI, we need to give the probabilistic model
     (:code:`model`), the three types of RVs (:code:`observed_RVs`,
