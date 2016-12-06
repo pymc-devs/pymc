@@ -4,8 +4,8 @@
 
 |Gitter| |Build Status| |Coverage|
 
-PyMC3 is a python module for Bayesian statistical modeling and model
-fitting which focuses on advanced Markov chain Monte Carlo and variational fitting
+PyMC3 is a Python package for Bayesian statistical modeling and Probabilistic Machine Learning
+which focuses on advanced Markov chain Monte Carlo and variational fitting
 algorithms. Its flexibility and extensibility make it applicable to a
 large suite of problems.
 
@@ -24,11 +24,10 @@ Features
 -  **Variational inference**: `ADVI <http://arxiv.org/abs/1506.03431>`__
    for fast approximate posterior estimation as well as mini-batch ADVI
    for large data sets.
--  Easy optimization for finding the *maximum a posteriori* (MAP) point
 -  Relies on `Theano <http://deeplearning.net/software/theano/>`__ which provides:
+    *  Computation optimization and dynamic C compilation
     *  Numpy broadcasting and advanced indexing
     *  Linear algebra operators
-    *  Computation optimization and dynamic C compilation
     *  Simple extensibility
 -  Transparent support for missing value imputation
 
