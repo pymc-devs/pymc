@@ -238,7 +238,7 @@ def _make_elbo_t(
 def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                    minibatch_RVs=None, minibatch_tensors=None,
                    minibatches=None, global_RVs=None, local_RVs=None,
-                   observed_RVs=None, encoder_params=[], total_size=None,
+                   observed_RVs=None, encoder_params=None, total_size=None,
                    optimizer=None, learning_rate=.001, epsilon=.1,
                    random_seed=None, mode=None):
     """Perform mini-batch ADVI.
@@ -449,6 +449,9 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     """
     theano.config.compute_test_value = 'ignore'
 
+    if encoder_params is None:
+        encoder_params = []
+
     model = pm.modelcontext(model)
     vars = inputvars(vars if vars is not None else model.vars)
     start = start if start is not None else model.test_point
@@ -481,8 +484,12 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     grvs = list(set(vars) - set(list(local_RVs) + list(observed_RVs)))
     if global_RVs is None:
         global_RVs = OrderedDict({v: 1 for v in grvs})
-    else:
-        assert(len(grvs) == len(global_RVs))
+    elif len(grvs) != len(global_RVs):
+        _value_error(
+            'global_RVs ({}) must have all global RVs: {}'.format(
+                [v for v in global_RVs], grvs
+            )
+        )
 
     # ELBO wrt variational parameters
     elbo, uw_l, uw_g = _make_elbo_t(observed_RVs, global_RVs, local_RVs, 
@@ -529,7 +536,9 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     for i in progress:
         e = f(*next(minibatches))
         elbos[i] = e
-        if i % (n // 10) == 0 and i > 0:
+        if n < 10:
+            progress.set_description('ELBO = {:,.2f}'.format(elbos[i]))
+        elif i % (n // 10) == 0 and i > 0:
             avg_elbo = elbos[i - n // 10:i].mean()
             progress.set_description('Average ELBO = {:,.2f}'.format(avg_elbo))
 
