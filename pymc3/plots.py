@@ -48,7 +48,12 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
     prior_style : str
         Line style for prior plot. Defaults to '--' (dashed line).
     ax : axes
-        Matplotlib axes. Defaults to None.
+        Matplotlib axes. Accepts an array of axes, e.g.:
+
+        >>> fig, axs = plt.subplots(3, 2) # 3 RVs
+        >>> pymc3.traceplot(trace, ax=axs)
+
+        Creates own axes by default.
 
     Returns
     -------
