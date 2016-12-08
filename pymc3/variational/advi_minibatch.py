@@ -470,10 +470,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                                         minibatch_tensors, total_size)
 
     # Replace local_RVs with transformed variables
-    ds = model.deterministics
-
     def get_transformed(v):
-        if v in ds:
+        if hasattr(v, 'transformed'):
             return v.transformed
         return v
     local_RVs = OrderedDict(
