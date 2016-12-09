@@ -178,6 +178,7 @@ class MeanField(Replacement):
         return (list(self.global_dict['means'].values()) +
                 list(self.global_dict['rhos'].values()))
 
+    @property
     def deterministic_replacements(self):
         return collections.OrderedDict(
             [(self.model[k], v for k, v in self.global_dict.items())]
