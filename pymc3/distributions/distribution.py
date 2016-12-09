@@ -10,8 +10,10 @@ from ..vartypes import string_types
 __all__ = ['DensityDist', 'Distribution', 'Continuous',
            'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
 
+
 class _Unpickling(object):
     pass
+
 
 class Distribution(object):
     """Statistical distribution"""
@@ -129,12 +131,10 @@ class DensityDist(Distribution):
 
 
 class MultivariateContinuous(Continuous):
-
     pass
 
 
 class MultivariateDiscrete(Discrete):
-
     pass
 
 
@@ -265,6 +265,22 @@ def broadcast_shapes(*args):
     return tuple(x)
 
 
+def infer_shape(shape):
+    try:
+        shape = tuple(shape or ())
+    except TypeError:  # If size is an int
+        shape = tuple((shape,))
+    except ValueError:  # If size is np.array
+        shape = tuple(shape)
+    return shape
+
+
+def reshape_sampled(sampled, size, dist_shape):
+    dist_shape = infer_shape(dist_shape)
+    repeat_shape = infer_shape(size)
+    return np.reshape(sampled, repeat_shape + dist_shape)
+
+
 def replicate_samples(generator, size, repeats, *args, **kwargs):
     n = int(np.prod(repeats))
     if n == 1:
@@ -326,10 +342,7 @@ def generate_samples(generator, *args, **kwargs):
     else:
         prefix_shape = tuple(dist_shape)
 
-    try:
-        repeat_shape = tuple(size or ())
-    except TypeError:  # If size is an int
-        repeat_shape = tuple((size,))
+    repeat_shape = infer_shape(size)
 
     if broadcast_shape == (1,) and prefix_shape == ():
         if size is not None:
@@ -342,13 +355,9 @@ def generate_samples(generator, *args, **kwargs):
                                         broadcast_shape,
                                         repeat_shape + prefix_shape,
                                         *args, **kwargs)
-            if broadcast_shape == (1,) and not prefix_shape == ():
-                samples = np.reshape(samples, repeat_shape + prefix_shape)
         else:
             samples = replicate_samples(generator,
                                         broadcast_shape,
                                         prefix_shape,
                                         *args, **kwargs)
-            if broadcast_shape == (1,):
-                samples = np.reshape(samples, prefix_shape)
-    return samples
+    return reshape_sampled(samples, size, dist_shape)

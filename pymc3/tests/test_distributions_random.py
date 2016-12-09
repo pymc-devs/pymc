@@ -178,8 +178,10 @@ class BaseTestCases(object):
                         except TypeError:
                             s = [size]
                     s.extend(shape)
-                    expected.append(tuple(s))
-                    actual.append(self.sample_random_variable(rv, size).shape)
+                    e = tuple(s)
+                    a = self.sample_random_variable(rv, size).shape
+                    expected.append(e)
+                    actual.append(a)
             self.assertSequenceEqual(expected, actual)
 
 
@@ -332,8 +334,8 @@ class TestCategorical(BaseTestCases.BaseTestCase):
     distribution = pm.Categorical
     params = {'p': np.ones(BaseTestCases.BaseTestCase.shape)}
 
-    def get_random_variable(self, shape, with_vector_params=False):  # don't transform categories
-        return super(TestCategorical, self).get_random_variable(shape, with_vector_params=False)
+    def get_random_variable(self, shape, with_vector_params=False, **kwargs):  # don't transform categories
+        return super(TestCategorical, self).get_random_variable(shape, with_vector_params=False, **kwargs)
 
 
 @attr('scalar_parameter_samples')
