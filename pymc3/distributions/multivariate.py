@@ -56,7 +56,8 @@ def get_tau_cov(mu, tau=None, cov=None):
         else:
             cov = tt.nlinalg.matrix_inverse(tau)
 
-    return (tau, cov)
+    return tau, cov
+
 
 class MvNormal(Continuous):
     R"""
@@ -301,7 +302,8 @@ class Multinomial(Discrete):
         self.mean = self.n * self.p
         self.mode = tt.cast(tt.round(self.mean), 'int32')
 
-    def _random(self, n, p, size=None):
+    @staticmethod
+    def _random(n, p, size=None):
         if size == p.shape:
             size = None
         return np.random.multinomial(n, p, size=size)
@@ -575,7 +577,8 @@ class LKJCorr(Continuous):
         self.tri_index[np.triu_indices(p, k=1)] = np.arange(n_elem)
         self.tri_index[np.triu_indices(p, k=1)[::-1]] = np.arange(n_elem)
 
-    def _normalizing_constant(self, n, p):
+    @staticmethod
+    def _normalizing_constant(n, p):
         if n == 1:
             result = gammaln(2. * tt.arange(1, int((p - 1) / 2) + 1)).sum()
             if p % 2 == 1:

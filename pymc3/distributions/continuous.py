@@ -38,6 +38,7 @@ class UnitContinuous(Continuous):
         super(UnitContinuous, self).__init__(
             transform=transform, *args, **kwargs)
 
+
 def assert_negative_support(var, label, distname, value=-1e-6):
     # Checks for evidence of positive support for a variable
     if var is None:
@@ -98,7 +99,7 @@ def get_tau_sd(tau=None, sd=None):
     tau = 1. * tau
     sd = 1. * sd
 
-    return (tau, sd)
+    return tau, sd
 
 
 class Uniform(Continuous):
@@ -363,7 +364,8 @@ class Wald(PositiveContinuous):
         assert_negative_support(mu, 'mu', 'Wald')
         assert_negative_support(lam, 'lam', 'Wald')
 
-    def get_mu_lam_phi(self, mu, lam, phi):
+    @staticmethod
+    def get_mu_lam_phi(mu, lam, phi):
         if mu is None:
             if lam is not None and phi is not None:
                 return lam / phi, lam, phi
@@ -468,7 +470,8 @@ class Beta(UnitContinuous):
         assert_negative_support(alpha, 'alpha', 'Beta')
         assert_negative_support(beta, 'beta', 'Beta')
 
-    def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
+    @staticmethod
+    def get_alpha_beta(alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sd is not None):
@@ -628,7 +631,8 @@ class Lognormal(PositiveContinuous):
         assert_negative_support(tau, 'tau', 'Lognormal')
         assert_negative_support(sd, 'sd', 'Lognormal')
 
-    def _random(self, mu, tau, size=None):
+    @staticmethod
+    def _random(mu, tau, size=None):
         samples = np.random.normal(size=size)
         return np.exp(mu + (tau**-0.5) * samples)
 
@@ -750,8 +754,8 @@ class Pareto(PositiveContinuous):
         assert_negative_support(alpha, 'alpha', 'Pareto')
         assert_negative_support(m, 'm', 'Pareto')
 
-
-    def _random(self, alpha, m, size=None):
+    @staticmethod
+    def _random(alpha, m, size=None):
         u = np.random.uniform(size=size)
         return m * (1. - u)**(-1. / alpha)
 
@@ -803,7 +807,8 @@ class Cauchy(Continuous):
 
         assert_negative_support(beta, 'beta', 'Cauchy')
 
-    def _random(self, alpha, beta, size=None):
+    @staticmethod
+    def _random(alpha, beta, size=None):
         u = np.random.uniform(size=size)
         return alpha + beta * np.tan(np.pi * (u - 0.5))
 
@@ -851,7 +856,8 @@ class HalfCauchy(PositiveContinuous):
 
         assert_negative_support(beta, 'beta', 'HalfCauchy')
 
-    def _random(self, beta, size=None):
+    @staticmethod
+    def _random(beta, size=None):
         u = np.random.uniform(size=size)
         return beta * np.abs(np.tan(np.pi * (u - 0.5)))
 
@@ -920,7 +926,8 @@ class Gamma(PositiveContinuous):
         assert_negative_support(alpha, 'alpha', 'Gamma')
         assert_negative_support(beta, 'beta', 'Gamma')
 
-    def get_alpha_beta(self, alpha=None, beta=None, mu=None, sd=None):
+    @staticmethod
+    def get_alpha_beta(alpha=None, beta=None, mu=None, sd=None):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sd is not None):
@@ -1074,14 +1081,15 @@ class Weibull(PositiveContinuous):
         assert_negative_support(alpha, 'alpha', 'Weibull')
         assert_negative_support(beta, 'beta', 'Weibull')
 
+    @staticmethod
+    def _random(a, b, size=None):
+        return b * (-np.log(np.random.uniform(size=size)))**(1 / a)
+
     def random(self, point=None, size=None, repeat=None):
         alpha, beta = draw_values([self.alpha, self.beta],
                                   point=point)
 
-        def _random(a, b, size=None):
-            return b * (-np.log(np.random.uniform(size=size)))**(1 / a)
-
-        return generate_samples(_random, alpha, beta,
+        return generate_samples(self._random, alpha, beta,
                                 dist_shape=self.shape,
                                 size=size)
 
@@ -1377,6 +1385,7 @@ class SkewNormal(Continuous):
     approaching plus/minus infinite we get a half-normal distribution.
 
     """
+
     def __init__(self, mu=0.0, sd=None, tau=None, alpha=1,  *args, **kwargs):
         super(SkewNormal, self).__init__(*args, **kwargs)
         self.mu = mu
