@@ -126,6 +126,7 @@ Software using PyMC3
  - `Bambi <https://github.com/bambinos/bambi>`__: BAyesian Model-Building Interface (BAMBI) in Python.
  - `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python
  - `gelato <https://github.com/ferrine/gelato>`__: Bayesian Neural Networks with PyMC3 and Lasagne
+ - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool
 
 Please contact us if your software is not listed here.
 
