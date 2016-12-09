@@ -19,13 +19,13 @@ class Replacement(object):
             population = dict()
         self.population = population
         self.model = model
-        self.local_x = []
         self._prepare_local_dict()
         self.stochastic_replacements, \
             self.global_dict = \
             self.create_mapping(model, local)
 
     def _prepare_local_dict(self):
+        self.local_x = []
         self.local_dict = collections.OrderedDict()
         self.local_dict['means'] = collections.OrderedDict()
         self.local_dict['rhos'] = collections.OrderedDict()
