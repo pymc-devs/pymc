@@ -12,37 +12,55 @@ def flatten(tensors):
 
 
 class Replacement(object):
-    def __init__(self, model, local=None, population=None):
+    def __init__(self, model, population=None, local=None):
         if local is None:
             local = dict()
         if population is None:
             population = dict()
         self.population = population
         self.model = model
-        self._prepare_local_dict()
-        self.stochastic_replacements, \
-            self.global_dict = \
-            self.create_mapping(model, local)
+        s, g, l = self.create_mapping(model, local)
+        self.stochastic_replacements = s
+        self.global_dict = g
+        self.local_dict = l
 
-    def _prepare_local_dict(self):
-        self.local_x = []
-        self.local_dict = collections.OrderedDict()
-        self.local_dict['means'] = collections.OrderedDict()
-        self.local_dict['rhos'] = collections.OrderedDict()
+    @staticmethod
+    def new_local_dict():
+        local_dict = dict(
+            means=collections.OrderedDict(),
+            rhos=collections.OrderedDict(),
+            x=list()
+        )
+        return local_dict
 
-    def known_node(self, _for_, mu, rho):
+    @staticmethod
+    def new_global_dict():
+        raise NotImplementedError
+
+    @staticmethod
+    def known_node(local_dict, node, mu, rho):
         e = tt_rng().normal(rho.shape)
         v = mu + rho2sd(rho) * e
-        self.local_dict['means'][_for_.name] = mu
-        self.local_dict['rhos'][_for_.name] = rho
-        self.local_x.append(v)
+        local_dict['means'][node.name] = mu
+        local_dict['rhos'][node.name] = rho
+        local_dict['x'].append(v)
         return v
 
     def names2nodes(self, names):
         return [self.model[n] for n in names]
 
     def create_mapping(self, model, local):
-        # returns tuple(mapping, dict with shared trainable params)
+        """
+
+        Parameters
+        ----------
+        model - pm.Model
+        local - local_RV
+
+        Returns
+        -------
+        replacements, global_dict, local_dict
+        """
         raise NotImplementedError
 
     @property
@@ -59,7 +77,7 @@ class Replacement(object):
 
     @property
     def log_q_W_local(self):
-        x = flatten(self.local_x)
+        x = flatten(self.local_dict['x'])
         mu = flatten(self.local_dict['means'].values())
         rho = flatten(self.local_dict['rhos'].values())
         _log_q_W_local_ = tt.sum(log_normal3(x, mu, rho))
@@ -102,8 +120,7 @@ class Replacement(object):
         if tot is not None:
             tot = tt.as_tensor(tot)
             logpt *= tot
-            if var.ndim >= 1:
-                logpt /= var.shape[0]
+            logpt /= var.size
         return logpt
 
     def sample_elbo(self, samples=1, pi=1):
@@ -118,16 +135,18 @@ class Replacement(object):
 
 class MeanField(Replacement):
     @staticmethod
-    def random_node(old):
-        """Creates random node with shared params
+    def random_node(global_dict, old):
+        """Creates random node with shared params and
+        places shared parameters to global dict
 
         Parameters
         ----------
+        global_dict : dict - placeholder for parameters
         old : pm.FreeRV
 
         Returns
         -------
-        tuple : (new node, shared mu, shared rho)
+        tt.Variable : new node
         """
         if len(old.broadcastable) > 0:
             rho = theano.shared(
@@ -148,26 +167,36 @@ class MeanField(Replacement):
                 old.tag.test_value,
                 name='{}_mu_shared'.format(old.name))
             e = tt_rng().normal(rho.shape)
-        return mu + rho2sd(rho) * e, mu, rho
+        v = mu + rho2sd(rho) * e
+        global_dict['means'][old.name] = mu
+        global_dict['rhos'][old.name] = rho
+        global_dict['x'].append(v)
+        return v
+
+    @staticmethod
+    def new_global_dict():
+        global_dict = dict(
+            x=list(),
+            means=collections.OrderedDict(),
+            rhos=collections.OrderedDict()
+        )
+        return global_dict
 
     def create_mapping(self, model, local):
+        local_dict = self.new_local_dict()
+        global_dict = self.new_global_dict()
         replacements = collections.OrderedDict()
-        global_means = collections.OrderedDict()
-        global_rhos = collections.OrderedDict()
         for var in model.vars:
             if var in local:
-                v = self.known_node(var, *local[var])
+                v = self.known_node(local_dict, var, *local[var])
             else:
-                v, mu, rho = self.random_node(var)
-                global_means[var.name] = mu
-                global_rhos[var.name] = rho
+                v = self.random_node(global_dict, var)
             replacements[var] = v
-        return (replacements,
-                dict(means=global_means, rhos=global_rhos))
+        return replacements, global_dict, local_dict
 
     @property
     def log_q_W_global(self):
-        x = flatten(self.names2nodes(self.global_dict['means'].keys()))
+        x = flatten(self.global_dict['x'])
         mu = flatten(self.global_dict['means'].values())
         rho = flatten(self.global_dict['rhos'].values())
         _log_q_W_global_ = tt.sum(log_normal3(x, mu, rho))
