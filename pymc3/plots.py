@@ -134,11 +134,11 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
                 ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style)
 
             ax.plot(x, density)
-            ax.set_ylim(bottom=0)
 
         except LinAlgError:
             errored.append(i)
 
+    ax.set_ylim(ymin=0)
     if errored:
         ax.text(.27, .47, 'WARNING: KDE plot failed for: ' + str(errored), style='italic',
                 bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 10})
