@@ -31,7 +31,11 @@ from ..blocking import DictToArrayBijection, ArrayOrdering,\
                        ListArrayOrdering, ListToArrayBijection
 from ..step_methods.arraystep import BlockedStep
 
-import Queue
+try:
+    from Queue import Queue
+except:
+    from queue import Queue
+
 import multiprocessing
 import traceback
 import errno
