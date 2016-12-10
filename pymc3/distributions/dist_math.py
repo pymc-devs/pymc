@@ -7,6 +7,7 @@ from __future__ import division
 
 import numpy as np
 import theano.tensor as tt
+from theano import shared
 
 from .special import gammaln, multigammaln
 
@@ -29,8 +30,12 @@ def bound(logp, *conditions):
 
 
 def alltrue(vals):
-    return tt.all([tt.all(1 * val) for val in vals])
-
+    """
+    Asserts truth of all elements in vals, across the lowest axis. This maintains
+    element-wise evaluations for multivariate inputs.
+    """
+    return tt.all(tt.stack([1*v for v in vals]), axis=0)
+    
 
 def logpow(x, m):
     """
