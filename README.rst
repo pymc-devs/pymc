@@ -106,7 +106,6 @@ In addtion to the above dependencies, the GLM submodule relies on
 `scikits.sparse <https://github.com/njsmith/scikits-sparse>`__
 enables sparse scaling matrices which are useful for large problems.
 
-
 Citing PyMC3
 ------------
 
@@ -120,6 +119,21 @@ License
 `Apache License, Version
 2.0 <https://github.com/pymc-devs/pymc3/blob/master/LICENSE>`__
 
+
+Software using PyMC3
+--------------------
+
+ - `Bambi <https://github.com/bambinos/bambi>`__: BAyesian Model-Building Interface (BAMBI) in Python.
+ - `NiPyMC <https://github.com/PsychoinformaticsLab/nipymc>`__: Bayesian mixed-effects modeling of fMRI data in Python
+ - `gelato <https://github.com/ferrine/gelato>`__: Bayesian Neural Networks with PyMC3 and Lasagne
+ - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool
+
+Please contact us if your software is not listed here.
+
+Papers citing PyMC3
+-------------------
+
+See `Google Scholar <https://scholar.google.de/scholar?oi=bibs&hl=en&authuser=1&cites=6936955228135731011>`__ for a continuously updated list.
 
 Contributors
 ------------
