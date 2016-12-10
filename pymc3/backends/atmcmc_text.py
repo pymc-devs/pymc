@@ -19,7 +19,7 @@ shape of (3, 2).
 """
 from glob import glob
 
-import cPickle as pickle
+import pickle
 import os
 import pandas as pd
 
