@@ -80,7 +80,7 @@ def product(domains, n_samples=-1):
         return []
     all_vals = [zip(names, val) for val in itertools.product(*[d.vals for d in domains])]
     if n_samples > 0 and len(all_vals) > n_samples:
-            return nr.choice(np.atleast_1d(all_vals), n_samples, replace=False)
+            return (all_vals[j] for j in nr.choice(len(all_vals), n_samples, replace=False))
     return all_vals
 
 
@@ -90,7 +90,7 @@ Rplusbig = Domain([0, .5, .9, .99, 1, 1.5, 2, 20, inf])
 Rminusbig = Domain([-inf, -2, -1.5, -1, -.99, -.9, -.5, -0.01, 0])
 Unit = Domain([0, .001, .1, .5, .75, .99, 1])
 
-Circ = Domain([-np.pi -2.1, -1, -.01, .0, .01, 1, 2.1, np.pi])
+Circ = Domain([-np.pi, -2.1, -1, -.01, .0, .01, 1, 2.1, np.pi])
 
 Runif = Domain([-1, -.4, 0, .4, 1])
 Rdunif = Domain([-10, 0, 10.])

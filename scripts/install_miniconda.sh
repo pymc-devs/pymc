@@ -3,7 +3,7 @@
 set -e # fail on first error
 
 if conda --version > /dev/null 2>&1; then
-   echo "conda appears to alreaday be installed"
+   echo "conda appears to already be installed"
    exit 0
  fi
 
@@ -22,10 +22,10 @@ DOWNLOAD_PATH="miniconda.sh"
 
 if [ ${PYTHON_VERSION} == "2.7" ]; then
   wget http://repo.continuum.io/miniconda/Miniconda-latest-$URL_OS-x86_64.sh -O ${DOWNLOAD_PATH};
-  INSTALL_FOLDER="$HOME/minconda2"
+  INSTALL_FOLDER="$HOME/miniconda2"
 else
   wget http://repo.continuum.io/miniconda/Miniconda3-latest-$URL_OS-x86_64.sh -O ${DOWNLOAD_PATH};
-  INSTALL_FOLDER="$HOME/minconda3"
+  INSTALL_FOLDER="$HOME/miniconda3"
 fi
 
 
