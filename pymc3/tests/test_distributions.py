@@ -80,7 +80,7 @@ def product(domains, n_samples=-1):
         return []
     all_vals = [zip(names, val) for val in itertools.product(*[d.vals for d in domains])]
     if n_samples > 0 and len(all_vals) > n_samples:
-            return nr.choice(all_vals, n_samples, replace=False)
+            return nr.choice(np.atleast_1d(all_vals), n_samples, replace=False)
     return all_vals
 
 
