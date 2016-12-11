@@ -217,9 +217,6 @@ class ATMCMC(atext.ArrayStepSharedLLK):
                     self.beta * (l[self._llk_index] - l0[self._llk_index]),
                     q, q0)
 
-                self.chain_previous_lpoint[
-                    self.resampling_indexes[self.chain_index]] = l_new
-
                 if q_new is q:
                     self.accepted += 1
                     l_new = l
@@ -690,6 +687,7 @@ def ATMIP_sample(n_steps, step=None, start=None, trace=None, chain=0,
         atext.dump_objects(outpath, outparam_list)
         return atext.load(stage_path, model)
 
+
 def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
             progressbar=True, model=None, random_seed=None):
 
@@ -727,6 +725,7 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         start = {}
 
     point = pm.Point(start, model=model)
+    step.chain_index = chain
 
     trace.setup(draws, chain)
     for i in range(draws):
