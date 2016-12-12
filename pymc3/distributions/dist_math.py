@@ -37,6 +37,7 @@ def alltrue(vals):
         return tt.all(tt.stack([1*val for val in vals]), axis=0)
     except TypeError:
         return tt.all([tt.all(1 * val) for val in vals])
+
     
 
 def logpow(x, m):
