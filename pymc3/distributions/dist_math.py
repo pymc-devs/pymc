@@ -35,7 +35,7 @@ def alltrue(vals):
     """
     try:
         return tt.all(tt.stack([1*val for val in vals]), axis=0)
-    except TypeError, IndexError:
+    except (TypeError, IndexError):
         return tt.all([tt.all(1 * val) for val in vals])
 
     
