@@ -33,7 +33,10 @@ def alltrue(vals):
     Asserts truth of all elements in vals, across the lowest axis. This maintains
     element-wise evaluations for multivariate inputs.
     """
-    return tt.all(tt.stack([1*v for v in vals]), axis=0)
+    try:
+        return tt.all(tt.stack([1*val for val in vals]), axis=0)
+    except TypeError:
+        return tt.all([tt.all(1 * val) for val in vals])
     
 
 def logpow(x, m):
