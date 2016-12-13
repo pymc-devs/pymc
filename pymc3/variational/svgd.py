@@ -21,10 +21,10 @@ def vgd_kernel(X):
 
     # median distance
     h = tt.switch(tt.eq((V.shape[0] % 2), 0),
-        # if even vector
-        tt.mean(tt.sort(V)[ ((V.shape[0] // 2) - 1) : ((V.shape[0] // 2) + 1) ]),
-        # if odd vector
-        tt.sort(V)[V.shape[0] // 2])
+                  # if even vector
+                  tt.mean(tt.sort(V)[ ((V.shape[0] // 2) - 1) : ((V.shape[0] // 2) + 1) ]),
+                  # if odd vector
+                  tt.sort(V)[V.shape[0] // 2])
 
     h = tt.sqrt(0.5 * h / tt.log(X.shape[0].astype('float32') + 1.0)) / 2.
 
@@ -36,33 +36,24 @@ def vgd_kernel(X):
     return (Kxy, dxkxy)
 
 
-def _svgd_run(x0, svgd_grad, n_iter=1000, stepsize=1e-3,
-              bandwidth=-1, alpha=0.9, progressbar=True):
-
-    theta = np.copy(x0)
-
+def _make_svgd_step(theta, svgd_grad, stepsize=1e-3, bandwidth=-1,
+                    alpha=0.9):
     # adagrad with momentum
     fudge_factor = 1e-6
     historical_grad = 0
 
-    if progressbar:
-        progress = tqdm(np.arange(n_iter))
-    else:
-        progress = np.arange(n_iter)
+    # Define optimization step
+    i = tt.iscalar('i')
+    grad_theta = svgd_grad[0]
+    historical_grad = tt.switch(i,
+                                historical_grad + grad_theta ** 2,
+                                alpha * historical_grad + (1 - alpha) * (grad_theta ** 2))
 
-    lnpgrad = np.empty_like(theta)
-    for i in progress:
-        grad_theta = svgd_grad(theta)[0]
+    adj_grad = grad_theta / (fudge_factor + tt.sqrt(historical_grad))
+    svgd_grad_func = theano.function([i], [],
+                                     updates=[(theta, theta + stepsize * adj_grad)])
 
-        # adagrad
-        if iter == 0:
-            historical_grad = historical_grad + grad_theta ** 2
-        else:
-            historical_grad = alpha * historical_grad + (1 - alpha) * (grad_theta ** 2)
-        adj_grad = np.divide(grad_theta, fudge_factor+np.sqrt(historical_grad))
-        theta = theta + stepsize * adj_grad
-
-    return theta
+    return svgd_grad_func
 
 def _make_vectorized_logp_grad(vars, model, X):
     theano.config.compute_test_value = 'ignore'
@@ -108,25 +99,31 @@ def svgd(vars=None, n=5000, learning_rate=0.01, epsilon=.1, n_particles=100, jit
     x0 = np.tile(start, (n_particles, 1))
     x0 += np.random.normal(0, jitter, x0.shape)
 
-    theta = tt.dmatrix('theta')
-    theta.tag.test_value = x0
+    theta = theano.shared(x0)
 
     # Create theano svgd gradient expression and function
     logp_grad_vec = _make_vectorized_logp_grad(vars, model, theta)
     svgd_grad = _svgd_gradient(vars, model, theta, logp_grad_vec)
-    svgd_grad_func = theano.function([theta], [svgd_grad])
 
     # Run svgd optimization
-    theta = _svgd_run(x0, svgd_grad_func,
-                     n_iter=n, stepsize=learning_rate,
-                     progressbar=progressbar)
+    svgd_step = _make_svgd_step(theta, svgd_grad,
+                                stepsize=learning_rate)
 
+    if progressbar:
+        progress = tqdm(np.arange(n))
+    else:
+        progress = np.arange(n)
+
+    for ii in progress:
+        svgd_step(ii)
+
+    theta_val = theta.get_value()
 
     # Build trace
     strace = pm.backends.NDArray()
-    strace.setup(theta.shape[0], 1)
+    strace.setup(theta_val.shape[0], 1)
 
-    for p in theta:
+    for p in theta_val:
         strace.record(model.bijection.rmap(p))
     strace.close()
 
