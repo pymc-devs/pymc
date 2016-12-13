@@ -11,6 +11,32 @@ import theano.tensor as tt
 from .special import gammaln, multigammaln
 
 
+def bound_elemwise(logp, *conditions):
+    """
+    Bounds a log probability density with several conditions.
+
+    Respects shape of logp and performs broadcasting when
+    conditions.shape > logp.shape.
+
+    Parameters
+    ----------
+    logp : float
+    *conditions : booleans
+
+    Returns
+    -------
+    logp with elements set to -inf where any condition is False
+    """
+    return tt.switch(alltrue_elemwise(conditions), logp, -np.inf)
+
+
+def alltrue_elemwise(vals):
+    ret = 1
+    for c in vals:
+        ret = ret * (1 * c)
+    return ret
+
+
 def bound(logp, *conditions):
     """
     Bounds a log probability density with several conditions
@@ -26,7 +52,6 @@ def bound(logp, *conditions):
     -inf if some are false
     """
     return tt.switch(alltrue(conditions), logp, -np.inf)
-
 
 def alltrue(vals):
     return tt.all([tt.all(1 * val) for val in vals])

@@ -13,7 +13,7 @@ from scipy import stats
 import warnings
 
 from . import transforms
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
+from .dist_math import bound, bound_elemwise, logpow, gammaln, betaln, std_cdf, i0, i1
 from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -146,8 +146,8 @@ class Uniform(Continuous):
     def logp(self, value):
         lower = self.lower
         upper = self.upper
-        return bound(-tt.log(upper - lower),
-                     value >= lower, value <= upper)
+        return bound_elemwise(-tt.log(upper - lower),
+                              value >= lower, value <= upper)
 
 
 class Flat(Continuous):
