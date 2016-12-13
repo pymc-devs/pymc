@@ -1131,12 +1131,12 @@ class Bounded(Continuous):
                     self.testval = 0.5 * (upper + lower)
 
             if not np.isinf(lower) and np.isinf(upper):
-                self.transform = transforms.lowerbound_elemwise(lower)
+                self.transform = transforms.lowerbound(lower)
                 if default <= lower:
                     self.testval = lower + 1
 
             if np.isinf(lower) and not np.isinf(upper):
-                self.transform = transforms.upperbound_elemwise(upper)
+                self.transform = transforms.upperbound(upper)
                 if default >= upper:
                     self.testval = upper - 1
 
