@@ -10,7 +10,7 @@ before_install:
 
 install:
   - . ./scripts/create_testenv.sh
-  - pip install coveralls
+  - pip install coveralls pylint
 
 env:
   - PYTHON_VERSION=2.7 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 -e test_examples -e test_distributions"
@@ -21,6 +21,7 @@ env:
   - PYTHON_VERSION=3.6 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions_random"
 script:
   - . ./scripts/test.sh $TESTCMD
+  - . ./scripts/lint.sh
 
 after_success:
   - coveralls
