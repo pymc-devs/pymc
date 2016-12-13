@@ -206,7 +206,7 @@ def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
 def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                    minibatch_RVs=None, minibatch_tensors=None,
                    minibatches=None, local_RVs=None, observed_RVs=None,
-                   encoder_params=[], total_size=None, optimizer=None,
+                   encoder_params=None, total_size=None, optimizer=None,
                    learning_rate=.001, epsilon=.1, random_seed=None):
     """Perform mini-batch ADVI.
 
@@ -310,6 +310,9 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     start = start if start is not None else model.test_point
     check_discrete_rvs(vars)
     _check_minibatches(minibatch_tensors, minibatches)
+    
+    if encoder_params is None:
+        encoder_params = []
 
     # Prepare optimizer
     if optimizer is None:
