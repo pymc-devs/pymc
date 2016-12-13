@@ -3,12 +3,8 @@ import theano.tensor as tt
 import theano
 from ..theanof import tt_rng
 from ..distributions.dist_math import rho2sd, log_normal3
+from ..math import flatten
 import numpy as np
-
-
-def flatten(tensors):
-    joined = tt.concatenate([var.ravel() for var in tensors])
-    return joined
 
 
 class Replacement(object):
