@@ -20,17 +20,16 @@ class Replacement(object):
         self.global_dict = g
         self.local_dict = l
 
-    @staticmethod
-    def new_local_dict():
+    def new_local_dict(self):
         local_dict = dict(
             means=collections.OrderedDict(),
             rhos=collections.OrderedDict(),
-            x=list()
+            x=list(),
+            replacement=self.__class__.__name__
         )
         return local_dict
 
-    @staticmethod
-    def new_global_dict():
+    def new_global_dict(self):
         raise NotImplementedError
 
     @staticmethod
@@ -169,12 +168,12 @@ class MeanField(Replacement):
         global_dict['x'].append(v)
         return v
 
-    @staticmethod
-    def new_global_dict():
+    def new_global_dict(self):
         global_dict = dict(
             x=list(),
             means=collections.OrderedDict(),
-            rhos=collections.OrderedDict()
+            rhos=collections.OrderedDict(),
+            replacement=self.__class__.__name__
         )
         return global_dict
 
