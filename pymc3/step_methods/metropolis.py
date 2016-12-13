@@ -114,13 +114,13 @@ class Metropolis(ArrayStepShared):
 
         if self.any_discrete:
             if self.all_discrete:
-                delta = np.round(delta, 0).astype(int)
-                q0 = q0.astype(int)
-                q = (q0 + delta).astype(int)
+                delta = np.round(delta, 0).astype('int64')
+                q0 = q0.astype('int64')
+                q = (q0 + delta).astype('int64')
             else:
                 delta[self.discrete] = np.round(
-                    delta[self.discrete], 0).astype(int)
-                q = q0 + delta
+                    delta[self.discrete], 0).astype('int64')
+                q = (q0 + delta).astype('int64')
         else:
             q = q0 + delta
 
