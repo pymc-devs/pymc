@@ -1114,7 +1114,6 @@ class Bounded(Continuous):
 
     def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
         self.dist = distribution.dist(*args, **kwargs)
-
         self.__dict__.update(self.dist.__dict__)
         self.__dict__.update(locals())
 
@@ -1122,23 +1121,48 @@ class Bounded(Continuous):
             self.mode = self.dist.mode
 
         if transform == 'infer':
+            self.transform, self.testval = self._infer(lower, upper)
 
-            default = self.dist.default()
+    def _infer(self, lower, upper):
+        """Infer proper transforms for the variable, and adjust test_value.
 
-            if not np.isinf(lower) and not np.isinf(upper):
-                self.transform = transforms.interval(lower, upper)
-                if default <= lower or default >= upper:
-                    self.testval = 0.5 * (upper + lower)
+        In particular, this deals with the case where lower or upper may be +/-inf, or an
+        `ndarray` or a `theano.tensor.TensorVariable`
+        """
+        if isinstance(upper, tt.TensorVariable):
+            _upper = upper.tag.test_value
+        else:
+            _upper = upper
+        if isinstance(lower, tt.TensorVariable):
+            _lower = lower.tag.test_value
+        else:
+            _lower = lower
 
-            if not np.isinf(lower) and np.isinf(upper):
-                self.transform = transforms.lowerbound(lower)
-                if default <= lower:
-                    self.testval = lower + 1
+        testval = self.dist.default()
+        if not self._isinf(_lower) and not self._isinf(_upper):
+            transform = transforms.interval(lower, upper)
+            if (testval <= _lower).any() or (testval >= _upper).any():
+                testval = 0.5 * (_upper + _lower)
+        elif not self._isinf(_lower) and self._isinf(_upper):
+            transform = transforms.lowerbound(lower)
+            if (testval <= _lower).any():
+                testval = lower + 1
+        elif self._isinf(_lower) and not self._isinf(_upper):
+            transform = transforms.upperbound(upper)
+            if (testval >= _upper).any():
+                testval = _upper - 1
+        else:
+            transform = None
+        return transform, testval
 
-            if np.isinf(lower) and not np.isinf(upper):
-                self.transform = transforms.upperbound(upper)
-                if default >= upper:
-                    self.testval = upper - 1
+    def _isinf(self, value):
+        """Checks whether the value is +/-inf, or else returns 0 (even if an ndarray with
+        entries that are +/-inf)
+        """
+        try:
+            return bool(np.isinf(value))
+        except ValueError:
+            return False
 
     def _random(self, lower, upper, point=None, size=None):
         samples = np.zeros(size).flatten()
