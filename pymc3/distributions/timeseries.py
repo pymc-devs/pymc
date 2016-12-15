@@ -131,8 +131,7 @@ class GARCH11(Continuous):
 
     def logp(self, x):
         vol = self.get_volatility(x)
-        return (Normal.dist(0., sd=vol[0]).logp(x[0]) +
-                tt.sum(Normal.dist(0, sd=vol[1:]).logp(x[1:])))
+        return tt.sum(Normal.dist(0, sd=vol).logp(x))
 
 
 class EulerMaruyama(Continuous):
