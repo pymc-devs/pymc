@@ -1,4 +1,5 @@
 import collections
+import functools
 import theano.tensor as tt
 import theano
 from ..theanof import tt_rng
@@ -7,20 +8,38 @@ from ..math import flatten
 import numpy as np
 
 
-class Replacement(object):
-    def __init__(self, model, population=None, local=None):
-        if local is None:
-            local = dict()
+def replace_out(func):
+    @functools.wraps(func)
+    def wrapped(self, *args, **kwargs):
+        out = func(self, *args, **kwargs)
+        return self.apply_replacements(out)
+    return wrapped
+
+
+class BaseReplacement(object):
+    def __init__(self, model, population=None, known=None):
+        if known is None:
+            known = dict()
         if population is None:
             population = dict()
         self.population = population
         self.model = model
-        s, g, l = self.create_mapping(model, local)
+        self.known = known
+        s, g, l = self.create_mapping()
         self.stochastic_replacements = s
         self.global_dict = g
         self.local_dict = l
 
+    def new_global_dict(self):
+        """
+        :return: dict
+        """
+        raise NotImplementedError
+
     def new_local_dict(self):
+        """
+        :return: dict
+        """
         local_dict = dict(
             means=collections.OrderedDict(),
             rhos=collections.OrderedDict(),
@@ -29,11 +48,21 @@ class Replacement(object):
         )
         return local_dict
 
-    def new_global_dict(self):
-        raise NotImplementedError
+    def new_rep_glob_loc(self):
+        """
+        :return: empty_replacements, new_global_dict, new_local_dict
+        """
+        return collections.OrderedDict(), self.new_global_dict(), self.new_local_dict()
 
     @staticmethod
-    def known_node(local_dict, node, mu, rho):
+    def known_node(local_dict, node, *args):
+        """
+        :param local_dict: placeholder for local params
+        :param node: node to be replaced
+        :param args: mu, rho
+        :return: replacement for given node
+        """
+        mu, rho = args
         e = tt_rng().normal(rho.shape)
         v = mu + rho2sd(rho) * e
         local_dict['means'][node.name] = mu
@@ -42,16 +71,14 @@ class Replacement(object):
         return v
 
     def names2nodes(self, names):
+        """Create a list of nodes with names order
+        :param names: list
+        :return: list - ordered list of variables
+        """
         return [self.model[n] for n in names]
 
-    def create_mapping(self, model, local):
-        """
-
-        Parameters
-        ----------
-        model - pm.Model
-        local - local_RV
-
+    def create_mapping(self):
+        """Implements creation of new replacements and parameters
         Returns
         -------
         replacements, global_dict, local_dict
@@ -60,28 +87,62 @@ class Replacement(object):
 
     @property
     def deterministic_replacements(self):
-        """Method specific deterministic replacements
+        """
+        :return: dict
+        """
+        replacements = collections.OrderedDict()
+        replacements.update(self.deterministic_replacements_global)
+        replacements.update(self.deterministic_replacements_local)
+        return replacements
+
+    @property
+    def deterministic_replacements_local(self):
+        """
+        :return: dict
+        """
+        return collections.OrderedDict(
+            [(self.model[k], v) for k, v in self.local_dict['means'].items()]
+        )
+
+    @property
+    def deterministic_replacements_global(self):
+        """
+        :return: dict
         """
         raise NotImplementedError
 
     @property
     def params(self):
-        """Method specific parametrization
+        """
+        :return: list - shared params to fit
+        """
+        return self.params_local + self.params_global
+
+    @property
+    def params_local(self):
+        """
+        :return: list - shared params for local replacements
+        """
+        return []
+
+    @property
+    def params_global(self):
+        """
+        :return: list - shared params for global replacements
         """
         raise NotImplementedError
 
     @property
+    @replace_out
     def log_q_W_local(self):
         x = flatten(self.local_dict['x'])
         mu = flatten(self.local_dict['means'].values())
         rho = flatten(self.local_dict['rhos'].values())
         _log_q_W_local_ = tt.sum(log_normal3(x, mu, rho))
-        return self.apply_replacements(_log_q_W_local_)
+        return _log_q_W_local_
 
     @property
     def log_q_W_global(self):
-        """Method specific log_q_W_global
-        """
         raise NotImplementedError
 
     @property
@@ -89,16 +150,18 @@ class Replacement(object):
         return self.log_q_W_global + self.log_q_W_local
 
     @property
+    @replace_out
     def log_p_D(self):
         _log_p_D_ = tt.add(
             *map(self.weighted_likelihood, self.model.observed_RVs)
         )
-        return self.apply_replacements(_log_p_D_)
+        return _log_p_D_
 
     @property
+    @replace_out
     def log_p_W(self):
         _log_p_W_ = self.model.varlogpt + tt.sum(self.model.potentials)
-        return self.apply_replacements(_log_p_W_)
+        return _log_p_W_
 
     def apply_replacements(self, node, deterministic=False):
         if deterministic:
@@ -128,7 +191,7 @@ class Replacement(object):
         return elbos, updates
 
 
-class MeanField(Replacement):
+class MeanField(BaseReplacement):
     @staticmethod
     def random_node(global_dict, old):
         """Creates random node with shared params and
@@ -177,33 +240,32 @@ class MeanField(Replacement):
         )
         return global_dict
 
-    def create_mapping(self, model, local):
-        local_dict = self.new_local_dict()
-        global_dict = self.new_global_dict()
-        replacements = collections.OrderedDict()
-        for var in model.vars:
-            if var in local:
-                v = self.known_node(local_dict, var, *local[var])
+    def create_mapping(self):
+        replacements, global_dict, local_dict = self.new_rep_glob_loc()
+        for var in self.model.vars:
+            if var in self.known:
+                v = self.known_node(local_dict, var, *self.known[var])
             else:
                 v = self.random_node(global_dict, var)
             replacements[var] = v
         return replacements, global_dict, local_dict
 
     @property
+    @replace_out
     def log_q_W_global(self):
         x = flatten(self.global_dict['x'])
         mu = flatten(self.global_dict['means'].values())
         rho = flatten(self.global_dict['rhos'].values())
         _log_q_W_global_ = tt.sum(log_normal3(x, mu, rho))
-        return self.apply_replacements(_log_q_W_global_)
+        return _log_q_W_global_
 
     @property
-    def params(self):
+    def params_global(self):
         return (list(self.global_dict['means'].values()) +
                 list(self.global_dict['rhos'].values()))
 
     @property
-    def deterministic_replacements(self):
+    def deterministic_replacements_global(self):
         return collections.OrderedDict(
-            [(self.model[k], v for k, v in self.global_dict.items())]
+            [(self.model[k], v) for k, v in self.global_dict['means'].items()]
         )
