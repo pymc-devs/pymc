@@ -70,13 +70,6 @@ class BaseReplacement(object):
         local_dict['x'].append(v)
         return v
 
-    def names2nodes(self, names):
-        """Create a list of nodes with names order
-        :param names: list
-        :return: list - ordered list of variables
-        """
-        return [self.model[n] for n in names]
-
     def create_mapping(self):
         """Implements creation of new replacements and parameters
         Returns
