@@ -4,6 +4,7 @@ import numpy as np
 import theano
 import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
+from theano.configparser import change_flags
 import tqdm
 
 import pymc3 as pm
@@ -235,6 +236,7 @@ def _make_elbo_t(
     return elbo, uw_l, uw_g
 
 
+@change_flags(compute_test_value='ignore')
 def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                    minibatch_RVs=None, minibatch_tensors=None,
                    minibatches=None, global_RVs=None, local_RVs=None,
@@ -447,8 +449,6 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
       Weight Uncertainty in Neural Network. In Proceedings of the 32nd
       International Conference on Machine Learning (ICML-15) (pp. 1613-1622).
     """
-    theano.config.compute_test_value = 'ignore'
-
     if encoder_params is None:
         encoder_params = []
 
