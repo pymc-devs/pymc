@@ -2,7 +2,7 @@ from __future__ import division
 import sys
 import theano
 import theano.tensor as tt
-from theano.tensor import (constant, flatten as _flatten, zeros_like, ones_like, stack, concatenate, sum, prod,
+from theano.tensor import (constant, flatten, zeros_like, ones_like, stack, concatenate, sum, prod,
                            lt, gt, le, ge, eq, neq, switch, clip, where, and_, or_, abs_, exp, log,
                            cos, sin, tan, cosh, sinh, tanh, sqr, sqrt, erf, erfinv, dot, maximum,
                            minimum, sgn, ceil, floor)
@@ -24,8 +24,5 @@ def logit(p):
     return tt.log(p / (1 - p))
 
 
-def flatten(tensors, outdim=1):
-    if not isinstance(tensors, list):
-        return _flatten(tensors, outdim)
-    else:
-        return tt.concatenate([var.ravel() for var in tensors])
+def flatten_list(tensors):
+    return tt.concatenate([var.ravel() for var in tensors])

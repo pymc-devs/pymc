@@ -4,7 +4,7 @@ import theano.tensor as tt
 import theano
 from ..theanof import tt_rng
 from ..distributions.dist_math import rho2sd, log_normal3
-from ..math import flatten
+from ..math import flatten_list
 import numpy as np
 
 
@@ -128,9 +128,9 @@ class BaseReplacement(object):
     @property
     @replace_out
     def log_q_W_local(self):
-        x = flatten(self.local_dict['x'])
-        mu = flatten(self.local_dict['means'].values())
-        rho = flatten(self.local_dict['rhos'].values())
+        x = flatten_list(self.local_dict['x'])
+        mu = flatten_list(self.local_dict['means'].values())
+        rho = flatten_list(self.local_dict['rhos'].values())
         _log_q_W_local_ = tt.sum(log_normal3(x, mu, rho))
         return _log_q_W_local_
 
@@ -246,9 +246,9 @@ class MeanField(BaseReplacement):
     @property
     @replace_out
     def log_q_W_global(self):
-        x = flatten(self.global_dict['x'])
-        mu = flatten(self.global_dict['means'].values())
-        rho = flatten(self.global_dict['rhos'].values())
+        x = flatten_list(self.global_dict['x'])
+        mu = flatten_list(self.global_dict['means'].values())
+        rho = flatten_list(self.global_dict['rhos'].values())
         _log_q_W_global_ = tt.sum(log_normal3(x, mu, rho))
         return _log_q_W_global_
 
