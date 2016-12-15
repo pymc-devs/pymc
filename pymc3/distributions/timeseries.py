@@ -167,12 +167,12 @@ class MvGaussianRandomWalk(Continuous):
 
     Parameters
     ----------
-    tau : tensor
-        tau > 0, innovation precision
-    sd : tensor
-        cov - pos def matrix, innovation standard covariance matrix (alternative to specifying tau)
-    mu: tensor
+    mu : tensor
         innovation drift, defaults to 0.0
+    cov : tensor
+        cov - pos def matrix, innovation standard covariance matrix
+    tau : tensor
+        tau > 0, innovation precision (alternative to specifying tau)
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
@@ -205,13 +205,12 @@ class MvStudentTRandomWalk(Continuous):
     Parameters
     ----------
     nu : degrees of freedom
-
-    tau : tensor
-        tau > 0, innovation precision
-    sd : tensor
-        cov - pos def matrix, innovation standard covariance matrix (alternative to specifying tau)
-    mu: tensor
+    mu : tensor
         innovation drift, defaults to 0.0
+    cov : tensor
+        cov - pos def matrix, innovation standard covariance matrix
+    tau : tensor
+        tau > 0, innovation precision (alternative to specifying tau)
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
