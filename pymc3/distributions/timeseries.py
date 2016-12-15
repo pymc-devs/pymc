@@ -172,7 +172,7 @@ class MvGaussianRandomWalk(Continuous):
     cov : tensor
         pos def matrix, innovation covariance matrix
     tau : tensor
-        tau > 0, innovation precision (alternative to specifying cov)
+        pos def matrix, innovation precision (alternative to specifying cov)
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
@@ -210,7 +210,7 @@ class MvStudentTRandomWalk(Continuous):
     cov : tensor
         pos def matrix, innovation covariance matrix
     tau : tensor
-        tau > 0, innovation precision (alternative to specifying cov)
+        pos def matrix, innovation precision (alternative to specifying cov)
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
