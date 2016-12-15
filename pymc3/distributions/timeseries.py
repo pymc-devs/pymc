@@ -162,6 +162,20 @@ class EulerMaruyama(Continuous):
 
 
 class MvGaussianRandomWalk(Continuous):
+    """
+    Multivariate Random Walk with Normal innovations
+
+    Parameters
+    ----------
+    tau : tensor
+        tau > 0, innovation precision
+    sd : tensor
+        cov - pos def matrix, innovation standard covariance matrix (alternative to specifying tau)
+    mu: tensor
+        innovation drift, defaults to 0.0
+    init : distribution
+        distribution for initial value (Defaults to Flat())
+    """
     def __init__(self, mu=0., cov=None, tau=None, init=Flat.dist(),
                  *args, **kwargs):
         super(MvGaussianRandomWalk, self).__init__(*args, **kwargs)
@@ -185,6 +199,22 @@ class MvGaussianRandomWalk(Continuous):
 
 
 class MvStudentTRandomWalk(Continuous):
+    """
+    Multivariate Random Walk with StudentT innovations
+
+    Parameters
+    ----------
+    nu : degrees of freedom
+
+    tau : tensor
+        tau > 0, innovation precision
+    sd : tensor
+        cov - pos def matrix, innovation standard covariance matrix (alternative to specifying tau)
+    mu: tensor
+        innovation drift, defaults to 0.0
+    init : distribution
+        distribution for initial value (Defaults to Flat())
+    """
     def __init__(self, nu, mu=0., cov=None, tau=None, init=Flat.dist(),
                  *args, **kwargs):
         super(MvStudentTRandomWalk, self).__init__(*args, **kwargs)
