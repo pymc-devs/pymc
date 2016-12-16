@@ -27,9 +27,6 @@ class BaseReplacement(object):
         self.model = model
         self.known = known
         s, g, l = self.create_mapping()
-        # add a name of replacement in case of some generic interface
-        g['__type__'] = self.__class__.__name__
-        l['__type__'] = self.__class__.__name__
         self.stochastic_replacements = s
         self.global_dict = g
         self.local_dict = l
@@ -55,7 +52,11 @@ class BaseReplacement(object):
         """
         :return: empty_replacements, new_global_dict, new_local_dict
         """
-        return collections.OrderedDict(), self.new_global_dict(), self.new_local_dict()
+        g, l = self.new_global_dict(), self.new_local_dict()
+        # specify type for some probable generic purposes
+        g['__type__'] = self.__class__.__name__
+        l['__type__'] = self.__class__.__name__
+        return collections.OrderedDict(), g, l
 
     @staticmethod
     def known_node(local_dict, node, *args):
