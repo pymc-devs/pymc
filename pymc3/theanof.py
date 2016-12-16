@@ -1,9 +1,12 @@
+import contextlib
 from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
+from theano.configparser import change_flags
 from .memoize import memoize
 from .blocking import ArrayOrdering
 from theano.sandbox.rng_mrg import MRG_RandomStreams
+
 
 __all__ = ['gradient',
            'hessian',
@@ -16,6 +19,17 @@ __all__ = ['gradient',
            'make_shared_replacements',
            'tt_rng',
            'set_tt_rng']
+
+
+@contextlib.contextmanager
+def no_test_val():
+    """
+    for functions use theano.configparser.change_flags
+    :return:
+    """
+    theano.config.compute_test_value = 'off'
+    yield
+    theano.config.compute_test_value = 'raise'
 
 
 def inputvars(a):
@@ -240,7 +254,19 @@ class CallableTensor(object):
 scalar_identity = IdentityOp(scalar.upgrade_to_float, name='scalar_identity')
 identity = tt.Elemwise(scalar_identity, name='identity')
 
+
+@change_flags(compute_test_value='off')
+def launch_rng(rng):
+    """or else test value is not available
+    :param rng: MRG_RandomStreams
+    :return:
+    """
+    state = rng.rstate
+    rng.inc_rstate()
+    rng.set_rstate(state)
+
 _tt_rng = MRG_RandomStreams()
+launch_rng(_tt_rng)
 
 
 def tt_rng():
@@ -263,3 +289,6 @@ def set_tt_rng(new_rng):
     """
     global _tt_rng
     _tt_rng = new_rng
+    launch_rng(_tt_rng)
+
+

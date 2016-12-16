@@ -12,6 +12,7 @@ def replace_out(func):
     @functools.wraps(func)
     def wrapped(self, *args, **kwargs):
         out = func(self, *args, **kwargs)
+        out = tt.as_tensor(out)
         return self.apply_replacements(out)
     return wrapped
 
@@ -128,11 +129,14 @@ class BaseReplacement(object):
     @property
     @replace_out
     def log_q_W_local(self):
-        x = flatten_list(self.local_dict['x'])
-        mu = flatten_list(self.local_dict['means'].values())
-        rho = flatten_list(self.local_dict['rhos'].values())
-        _log_q_W_local_ = tt.sum(log_normal3(x, mu, rho))
-        return _log_q_W_local_
+        if self.local_dict['x']:
+            x = flatten_list(self.local_dict['x'])
+            mu = flatten_list(self.local_dict['means'].values())
+            rho = flatten_list(self.local_dict['rhos'].values())
+            _log_q_W_local_ = tt.sum(log_normal3(x, mu, rho))
+            return _log_q_W_local_
+        else:
+            return 0
 
     @property
     def log_q_W_global(self):
@@ -186,41 +190,41 @@ class BaseReplacement(object):
 
 class MeanField(BaseReplacement):
     @staticmethod
-    def random_node(global_dict, old):
+    def random_node(global_dict, node):
         """Creates random node with shared params and
         places shared parameters to global dict
 
         Parameters
         ----------
         global_dict : dict - placeholder for parameters
-        old : pm.FreeRV
+        node : pm.FreeRV
 
         Returns
         -------
         tt.Variable : new node
         """
-        if len(old.broadcastable) > 0:
+        if len(node.broadcastable) > 0:
             rho = theano.shared(
-                np.ones(old.tag.test_value.shape),
-                name='{}_rho_shared'.format(old.name),
-                broadcastable=old.broadcastable)
+                np.ones(node.tag.test_value.shape),
+                name='{}_rho_shared'.format(node.name),
+                broadcastable=node.broadcastable)
             mu = theano.shared(
-                old.tag.test_value,
-                name='{}_mu_shared'.format(old.name),
-                broadcastable=old.broadcastable)
+                node.tag.test_value,
+                name='{}_mu_shared'.format(node.name),
+                broadcastable=node.broadcastable)
             e = tt.patternbroadcast(
-                tt_rng().normal(rho.shape), old.broadcastable)
+                tt_rng().normal(rho.shape), node.broadcastable)
         else:
             rho = theano.shared(
-                np.ones(old.tag.test_value.shape),
-                name='{}_rho_shared'.format(old.name))
+                np.ones(node.tag.test_value.shape),
+                name='{}_rho_shared'.format(node.name))
             mu = theano.shared(
-                old.tag.test_value,
-                name='{}_mu_shared'.format(old.name))
+                node.tag.test_value,
+                name='{}_mu_shared'.format(node.name))
             e = tt_rng().normal(rho.shape)
         v = mu + rho2sd(rho) * e
-        global_dict['means'][old.name] = mu
-        global_dict['rhos'][old.name] = rho
+        global_dict['means'][node.name] = mu
+        global_dict['rhos'][node.name] = rho
         global_dict['x'].append(v)
         return v
 
@@ -246,11 +250,14 @@ class MeanField(BaseReplacement):
     @property
     @replace_out
     def log_q_W_global(self):
-        x = flatten_list(self.global_dict['x'])
-        mu = flatten_list(self.global_dict['means'].values())
-        rho = flatten_list(self.global_dict['rhos'].values())
-        _log_q_W_global_ = tt.sum(log_normal3(x, mu, rho))
-        return _log_q_W_global_
+        if self.global_dict['x']:
+            x = flatten_list(self.global_dict['x'])
+            mu = flatten_list(self.global_dict['means'].values())
+            rho = flatten_list(self.global_dict['rhos'].values())
+            _log_q_W_global_ = tt.sum(log_normal3(x, mu, rho))
+            return _log_q_W_global_
+        else:
+            return 0
 
     @property
     def params_global(self):
