@@ -27,6 +27,9 @@ class BaseReplacement(object):
         self.model = model
         self.known = known
         s, g, l = self.create_mapping()
+        # add a name of replacement in case of some generic interface
+        g['__type__'] = self.__class__.__name__
+        l['__type__'] = self.__class__.__name__
         self.stochastic_replacements = s
         self.global_dict = g
         self.local_dict = l
@@ -45,7 +48,6 @@ class BaseReplacement(object):
             means=collections.OrderedDict(),
             rhos=collections.OrderedDict(),
             x=list(),
-            replacement=self.__class__.__name__
         )
         return local_dict
 
@@ -73,6 +75,9 @@ class BaseReplacement(object):
 
     def create_mapping(self):
         """Implements creation of new replacements and parameters
+        starting poing is always the following:
+        >>> replacements, global_dict, local_dict = self.new_rep_glob_loc()
+        Just for not having any side effect
         Returns
         -------
         replacements, global_dict, local_dict
@@ -232,8 +237,7 @@ class MeanField(BaseReplacement):
         global_dict = dict(
             x=list(),
             means=collections.OrderedDict(),
-            rhos=collections.OrderedDict(),
-            replacement=self.__class__.__name__
+            rhos=collections.OrderedDict()
         )
         return global_dict
 
