@@ -1,20 +1,10 @@
 import collections
-import functools
 import theano.tensor as tt
 import theano
 from ..theanof import tt_rng
 from ..distributions.dist_math import rho2sd, log_normal3
 from ..math import flatten_list
 import numpy as np
-
-
-def replace_out(func):
-    @functools.wraps(func)
-    def wrapped(self, *args, **kwargs):
-        out = func(self, *args, **kwargs)
-        out = tt.as_tensor(out)
-        return self.apply_replacements(out)
-    return wrapped
 
 
 class BaseReplacement(object):
@@ -133,7 +123,6 @@ class BaseReplacement(object):
         raise NotImplementedError
 
     @property
-    @replace_out
     def log_q_W_local(self):
         if self.local_dict['x']:
             x = flatten_list(self.local_dict['x'])
@@ -153,7 +142,6 @@ class BaseReplacement(object):
         return self.log_q_W_global + self.log_q_W_local
 
     @property
-    @replace_out
     def log_p_D(self):
         _log_p_D_ = tt.add(
             *map(self.weighted_likelihood, self.model.observed_RVs)
@@ -161,7 +149,6 @@ class BaseReplacement(object):
         return _log_p_D_
 
     @property
-    @replace_out
     def log_p_W(self):
         _log_p_W_ = self.model.varlogpt + tt.sum(self.model.potentials)
         return _log_p_W_
@@ -188,6 +175,7 @@ class BaseReplacement(object):
         samples = tt.as_tensor(samples)
         pi = tt.as_tensor(pi)
         _elbo_ = self.log_p_D + pi * (self.log_p_W - self.log_q_W)
+        _elbo_ = self.apply_replacements(_elbo_)
         elbos, updates = theano.scan(fn=lambda: _elbo_,
                                      outputs_info=None,
                                      n_steps=samples)
@@ -253,7 +241,6 @@ class MeanField(BaseReplacement):
         return replacements, global_dict, local_dict
 
     @property
-    @replace_out
     def log_q_W_global(self):
         if self.global_dict['x']:
             x = flatten_list(self.global_dict['x'])
