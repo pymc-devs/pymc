@@ -21,16 +21,12 @@ class BaseReplacement(object):
         self.global_dict = g
         self.local_dict = l
 
-    def new_global_dict(self):
-        """
-        :return: dict
-        """
+    @staticmethod
+    def new_global_dict():
         raise NotImplementedError
 
-    def new_local_dict(self):
-        """
-        :return: dict
-        """
+    @staticmethod
+    def new_local_dict():
         local_dict = dict(
             means=collections.OrderedDict(),
             rhos=collections.OrderedDict(),
@@ -40,7 +36,9 @@ class BaseReplacement(object):
 
     def new_rep_glob_loc(self):
         """
-        :return: empty_replacements, new_global_dict, new_local_dict
+        Returns
+        -------
+        empty_replacements, new_global_dict, new_local_dict
         """
         g, l = self.new_global_dict(), self.new_local_dict()
         # specify type for some probable generic purposes
@@ -51,10 +49,15 @@ class BaseReplacement(object):
     @staticmethod
     def known_node(local_dict, node, *args):
         """
-        :param local_dict: placeholder for local params
-        :param node: node to be replaced
-        :param args: mu, rho
-        :return: replacement for given node
+        Parameters
+        ----------
+        local_dict: placeholder for local params
+        node : node to be replaced
+        args : mu, rho
+
+        Returns
+        -------
+        replacement for given node
         """
         mu, rho = args
         e = tt_rng().normal(rho.shape)
@@ -69,6 +72,7 @@ class BaseReplacement(object):
         starting poing is always the following:
         >>> replacements, global_dict, local_dict = self.new_rep_glob_loc()
         Just for not having any side effect
+
         Returns
         -------
         replacements, global_dict, local_dict
@@ -77,9 +81,6 @@ class BaseReplacement(object):
 
     @property
     def deterministic_replacements(self):
-        """
-        :return: dict
-        """
         replacements = collections.OrderedDict()
         replacements.update(self.deterministic_replacements_global)
         replacements.update(self.deterministic_replacements_local)
@@ -87,38 +88,38 @@ class BaseReplacement(object):
 
     @property
     def deterministic_replacements_local(self):
-        """
-        :return: dict
-        """
         return collections.OrderedDict(
             [(self.model[k], v) for k, v in self.local_dict['means'].items()]
         )
 
     @property
     def deterministic_replacements_global(self):
-        """
-        :return: dict
-        """
         raise NotImplementedError
 
     @property
     def params(self):
         """
-        :return: list - shared params to fit
+        Returns
+        -------
+        list - shared params to fit
         """
         return self.params_local + self.params_global
 
     @property
     def params_local(self):
         """
-        :return: list - shared params for local replacements
+        Returns
+        -------
+        list - shared params for local replacements
         """
         return []
 
     @property
     def params_global(self):
         """
-        :return: list - shared params for global replacements
+        Returns
+        -------
+        list - shared params for global replacements
         """
         raise NotImplementedError
 
@@ -153,6 +154,10 @@ class BaseReplacement(object):
         _log_p_W_ = self.model.varlogpt + tt.sum(self.model.potentials)
         return _log_p_W_
 
+    @property
+    def elbo(self):
+        return self.log_p_D + self.log_p_W - self.log_q_W
+
     def apply_replacements(self, node, deterministic=False):
         if deterministic:
             return theano.clone(
@@ -172,6 +177,22 @@ class BaseReplacement(object):
         return logpt
 
     def sample_elbo(self, samples=1, pi=1):
+        """Output of this function should be used for fitting a model
+
+        Parameters
+        ----------
+        samples : Tensor - number of samples
+        pi : Tensor - weight of variational part
+
+
+        Notes
+        -----
+        In case of samples == 1 updates are empty and can be ignored
+
+        Returns
+        -------
+        elbos, updates
+        """
         samples = tt.as_tensor(samples)
         pi = tt.as_tensor(pi)
         _elbo_ = self.log_p_D + pi * (self.log_p_W - self.log_q_W)
@@ -222,7 +243,8 @@ class MeanField(BaseReplacement):
         global_dict['x'].append(v)
         return v
 
-    def new_global_dict(self):
+    @staticmethod
+    def new_global_dict():
         global_dict = dict(
             x=list(),
             means=collections.OrderedDict(),
