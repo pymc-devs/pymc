@@ -1189,38 +1189,17 @@ class Bounded(Continuous):
                      value >= self.lower, value <= self.upper)
 
 
-class Bound(object):
-    R"""
-    Creates a new upper, lower or upper+lower bounded distribution
+def Bound(distribution, lower=-np.inf, upper=np.inf):
+    class _BoundedDist(Bounded):
+        def __init__(self, *args, **kwargs):
+            first, args = args[0], args[1:]
+            super(self, _BoundedDist).__init__(first, distribution, lower, upper, *args, **kwargs)
 
-    Parameters
-    ----------
-    distribution : pymc3 distribution
-        Distribution to be transformed into a bounded distribution
-    lower : float (optional)
-        Lower bound of the distribution
-    upper : float (optional)
+        @classmethod
+        def dist(cls, *args, **kwargs):
+            return Bounded.dist(distribution, lower, upper, *args, **kwargs)
 
-    Example
-    -------
-    boundedNormal = pymc3.Bound(pymc3.Normal, lower=0.0)
-    par = boundedNormal(mu=0.0, sd=1.0, testval=1.0)
-    """
-
-    def __init__(self, distribution, lower=-np.inf, upper=np.inf):
-        self.distribution = distribution
-        self.lower = lower
-        self.upper = upper
-
-    def __call__(self, *args, **kwargs):
-        first, args = args[0], args[1:]
-
-        return Bounded(first, self.distribution, self.lower, self.upper,
-                       *args, **kwargs)
-
-    def dist(self, *args, **kwargs):
-        return Bounded.dist(self.distribution, self.lower, self.upper,
-                            *args, **kwargs)
+    return _BoundedDist
 
 
 def StudentTpos(*args, **kwargs):
