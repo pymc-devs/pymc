@@ -1,34 +1,10 @@
 [MASTER]
-
-# Specify a configuration file.
-#rcfile=
-
-# Python code to execute, usually for sys.path manipulation such as
-# pygtk.require().
-#init-hook=
-
-# Add files or directories to the blacklist. They should be base names, not
-# paths.
-ignore=CVS
-
-# Pickle collected data for later comparisons.
-persistent=yes
-
-# List of plugins (as comma separated values of python modules names) to load,
-# usually to register additional checkers.
-load-plugins=
-
 # Use multiple processes to speed up Pylint.
 jobs=2
 
 # Allow loading of arbitrary C extensions. Extensions are imported into the
 # active Python interpreter and may run arbitrary code.
 unsafe-load-any-extension=no
-
-# A comma-separated list of package or module names from where C extensions may
-# be loaded. Extensions are loading into the active Python interpreter and may
-# run arbitrary code
-extension-pkg-whitelist=
 
 # Allow optimization of some AST trees. This will activate a peephole AST
 # optimizer, which will apply various small optimizations. For instance, it can
@@ -59,7 +35,7 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=apply-builtin,indexing-exception,round-builtin,no-absolute-import,useless-suppression,raising-string,hex-method,long-suffix,execfile-builtin,raw_input-builtin,coerce-method,import-star-module-level,cmp-builtin,cmp-method,old-raise-syntax,long-builtin,filter-builtin-not-iterating,unpacking-in-except,setslice-method,basestring-builtin,standarderror-builtin,unicode-builtin,oct-method,parameter-unpacking,using-cmp-argument,old-ne-operator,nonzero-method,metaclass-assignment,range-builtin-not-iterating,map-builtin-not-iterating,intern-builtin,buffer-builtin,reduce-builtin,getslice-method,old-octal-literal,backtick,dict-view-method,print-statement,delslice-method,reload-builtin,file-builtin,coerce-builtin,input-builtin,old-division,suppressed-message,next-method-called,zip-builtin-not-iterating,unichr-builtin,dict-iter-method,xrange-builtin
+disable=all
 
 
 [REPORTS]
@@ -67,7 +43,7 @@ disable=apply-builtin,indexing-exception,round-builtin,no-absolute-import,useles
 # Set the output format. Available formats are text, parseable, colorized, msvs
 # (visual studio) and html. You can also give a reporter class, eg
 # mypackage.mymodule.MyReporterClass.
-output-format=text
+output-format=colorized
 
 # Put messages in a separate file for each module / package specified on the
 # command line instead of printing them on stdout. Reports (if any) will be
@@ -83,11 +59,6 @@ reports=yes
 # number of statements analyzed. This is used by the global evaluation report
 # (RP0004).
 evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
-
-# Template used to display messages. This is a python new-style format string
-# used to format the message information. See doc for all details
-#msg-template=
-
 
 [BASIC]
 
@@ -105,7 +76,7 @@ bad-names=foo,bar,baz,toto,tutu,tata
 name-group=
 
 # Include a hint for the correct naming format with invalid-name
-include-naming-hint=no
+include-naming-hint=yes
 
 # Regular expression matching correct method names
 method-rgx=[a-z_][a-z0-9_]{2,30}$
