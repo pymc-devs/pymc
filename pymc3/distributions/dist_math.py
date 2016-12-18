@@ -29,8 +29,16 @@ def bound(logp, *conditions):
 
 
 def alltrue(vals):
-    return tt.all([tt.all(1 * val) for val in vals])
+    """
+    Asserts truth of all elements in vals, across the lowest axis. This maintains
+    element-wise evaluations for multivariate inputs.
+    """
+    try:
+        return tt.all(tt.stack([1*val for val in vals]), axis=0)
+    except (TypeError, IndexError):
+        return tt.all([tt.all(1 * val) for val in vals])
 
+    
 
 def logpow(x, m):
     """

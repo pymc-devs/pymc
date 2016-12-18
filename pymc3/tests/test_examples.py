@@ -183,6 +183,37 @@ class TestDisasterModel(SeededTest):
             pm.summary(tr)
 
 
+class TestTanks(SeededTest):
+    
+    # D: the data
+    y = np.array([10, 256, 202, 97])
+    
+    def build_model(self):
+
+        model = pm.Model()
+        with model:
+    
+            # prior - P(N): N ~ uniform(max(y), 10000)
+            # note: we use a large-ish number for the upper bound
+            N = pm.DiscreteUniform("N", lower=self.y.max(), upper=10000)
+
+            # likelihood - P(D|N): y ~ uniform(0, N)
+            y_obs = pm.DiscreteUniform("y_obs", lower=0, upper=N, observed=self.y)
+            
+        return model
+        
+    def test_run(self):
+    
+        with self.build_model():
+            
+            start = {"N": self.y.max()} # the highest number is a reasonable starting point
+            trace = pm.sample(5000, start=start)
+    
+            pm.summary(trace[-1000:])
+            
+            assert trace['N', -1000:].mean() < 1000
+
+
 class TestGLMLinear(SeededTest):
     def build_model(self):
         size = 50
