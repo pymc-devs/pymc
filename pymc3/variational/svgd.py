@@ -28,7 +28,7 @@ def rbf_kernel(X):
                   # if odd vector
                   tt.sort(V)[V.shape[0] // 2])
 
-    h = tt.sqrt(0.5 * h / tt.log(X.shape[0].astype('float32') + 1.0)) 
+    h = tt.sqrt(0.5 * h / tt.log(X.shape[0].astype('float32') + 1.0))
 
     Kxy = tt.exp(-H / h ** 2 / 2.0)
     dxkxy = -tt.dot(Kxy, X)
@@ -92,7 +92,7 @@ def svgd(vars=None, n=5000, n_particles=100, jitter=.01,
 
     # Initialize optimizer
     if optimizer is None:
-        optimizer = Adagrad(lr=1e-3, regularizer=Regularizer(l2=1e-5))  # TODO works better with regularizer for high dimension data  
+        optimizer = Adagrad(lr=1e-3)  # TODO. works better with regularizer for high dimension data  
 
     svgd_updates = optimizer(theta, svgd_grad)
 
