@@ -25,7 +25,7 @@ class TestMeanField(unittest.TestCase):
         mean_field.global_dict['means']['mu'].set_value(post_mu)
         mean_field.global_dict['rhos']['mu'].set_value(np.log(np.exp(post_sd) - 1))
 
-        f = theano.function([], elbos, updates=updates)
+        f = theano.function([], elbos.mean(), updates=updates)
         elbo_mc = f()
 
         # Exact value
@@ -33,7 +33,7 @@ class TestMeanField(unittest.TestCase):
             3 + 3 * post_mu**2 - 2 * (y_obs[0] + y_obs[1] + mu0) * post_mu +
             y_obs[0]**2 + y_obs[1]**2 + mu0**2 + 3 * np.log(2 * np.pi)) +
             0.5 * (np.log(2 * np.pi) + 1))
-        np.testing.assert_allclose(elbo_mc.mean(), elbo_true, rtol=0, atol=1e-1)
+        np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
 
 if __name__ == '__main__':
     unittest.main()
