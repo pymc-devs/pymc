@@ -20,7 +20,7 @@ class TestMeanField(unittest.TestCase):
 
         # Create variational gradient tensor
         mean_field = MeanField(model)
-        elbos, updates = mean_field.sample_elbo(samples=10000)
+        elbos, updates = mean_field.sample_elbo(samples=1000)
 
         mean_field.global_dict['means']['mu'].set_value(post_mu)
         mean_field.global_dict['rhos']['mu'].set_value(np.log(np.exp(post_sd) - 1))
