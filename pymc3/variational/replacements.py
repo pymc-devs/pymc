@@ -1,10 +1,12 @@
 import collections
 import theano.tensor as tt
 import theano
+import pymc3 as pm
 from ..theanof import tt_rng
 from ..blocking import ArrayOrdering
 from ..distributions.dist_math import rho2sd, log_normal3
 from ..math import flatten_list
+from ..model import modelcontext
 import numpy as np
 
 
@@ -12,7 +14,9 @@ FlatView = collections.namedtuple('FlatView', 'input, replacements')
 
 
 class BaseReplacement(object):
-    def __init__(self, model, population=None, known=None):
+    def __init__(self, model=None, population=None, known=None):
+        model = modelcontext(model)
+        self.check_model(model)
         if known is None:
             known = dict()
         if population is None:
@@ -30,6 +34,14 @@ class BaseReplacement(object):
         self.flat_view = FlatView(inputvar, replacements)
         self.view = {vm.var: vm for vm in self.order.vmap}
         self.shared_params = self.create_shared_params()
+
+    @staticmethod
+    def check_model(model):
+        """Checks that model is valid for variational inference
+        """
+        vars_ = [var for var in model.vars if not isinstance(var, pm.model.ObservedRV)]
+        if any([var.dtype in pm.discrete_types for var in vars_]):
+            raise ValueError('Model should not include discrete RVs')
 
     @property
     def input(self):
@@ -54,7 +66,7 @@ class BaseReplacement(object):
 
         Returns
         -------
-        matrix
+        Tensor
             sampled latent space shape(samples, size)
         """
         if not zeros:
@@ -110,7 +122,8 @@ class BaseReplacement(object):
 
         Returns
         -------
-        posterior space
+        Tensor
+            posterior space
         """
         return tt.concatenate([
             self.posterior_local(initial[:, self.local_slc]),
@@ -130,16 +143,6 @@ class BaseReplacement(object):
         """
         raise NotImplementedError
 
-    def __local_mu_rho(self):
-        mu = []
-        rho = []
-        for var in self.local_vars:
-            mu.append(self.known[var][0].ravel())
-            rho.append(self.known[var][1].ravel())
-        mu = tt.concatenate(mu)
-        rho = tt.concatenate(rho)
-        return mu, rho
-
     def posterior_local(self, initial):
         """Implements posterior distribution from initial latent space
 
@@ -156,6 +159,16 @@ class BaseReplacement(object):
         mu, rho = self.__local_mu_rho()
         x = initial * rho2sd(rho) + mu
         return x
+
+    def __local_mu_rho(self):
+        mu = []
+        rho = []
+        for var in self.local_vars:
+            mu.append(self.known[var][0].ravel())
+            rho.append(self.known[var][1].ravel())
+        mu = tt.concatenate(mu)
+        rho = tt.concatenate(rho)
+        return mu, rho
 
     def to_flat_input(self, node):
         """Replaces vars with flattened view stored in self.input
