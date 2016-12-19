@@ -33,6 +33,8 @@ class BaseReplacement(object):
 
     @property
     def input(self):
+        """Shortcut to flattened input
+        """
         return self.flat_view.input
 
     def create_shared_params(self):
@@ -52,15 +54,43 @@ class BaseReplacement(object):
 
         Returns
         -------
-        matrix/vector
-            sampled latent space
+        matrix
+            sampled latent space shape(samples, size)
         """
         if not zeros:
             return tt_rng().normal((samples, self.total_size))
         else:
             return tt.zeros((samples, self.total_size))
 
+    def sample_over_space(self, space, node):
+        """
+        Parameters
+        ----------
+        space : space to sample over
+        node : node that has flattened input
+
+        Returns
+        -------
+        samples
+        """
+        def replace_node(post):
+            return theano.clone(node, {self.input: post})
+        samples, _ = theano.map(replace_node, space)
+        return samples
+
     def view_from(self, space, name, subset='all'):
+        """
+        Parameters
+        ----------
+        space : space to take view of variable from
+        name : name of variable
+        subset : determines what space is used can be {all|local|global}
+
+        Returns
+        -------
+        variable
+            shape == (samples,) + variable.shape
+        """
         assert subset in {'all', 'local', 'global'}
         if subset in {'all', 'local'}:
             slc = self.view[name].slc
@@ -68,15 +98,36 @@ class BaseReplacement(object):
             s = self.view[name].slc.start
             e = self.view[name].slc.stop
             slc = slice(s - self.global_size, e - self.global_size)
-        return space[:, slc]
+        _, _, shape, dtype = self.view[name]
+        return space[:, slc].reshape((space.shape[0],) + shape).astype(dtype)
 
     def posterior(self, initial):
+        """Transforms initial latent space to posterior distribution
+
+        Parameters
+        ----------
+        initial : initial latent space shape(samples, size)
+
+        Returns
+        -------
+        posterior space
+        """
         return tt.concatenate([
             self.posterior_local(initial[:, self.local_slc]),
             self.posterior_global(initial[:, self.global_slc])
             ], axis=1)
 
     def posterior_global(self, initial):
+        """Implements posterior distribution from initial latent space
+
+        Parameters
+        ----------
+        initial : initial latent space shape(samples, size)
+
+        Returns
+        -------
+        global posterior space
+        """
         raise NotImplementedError
 
     def __local_mu_rho(self):
@@ -90,14 +141,109 @@ class BaseReplacement(object):
         return mu, rho
 
     def posterior_local(self, initial):
-        if not self.known:
+        """Implements posterior distribution from initial latent space
+
+        Parameters
+        ----------
+        initial : initial latent space shape(samples, size)
+
+        Returns
+        -------
+        local posterior space
+        """
+        if not self.local_vars:
             return initial
         mu, rho = self.__local_mu_rho()
         x = initial * rho2sd(rho) + mu
         return x
 
     def to_flat_input(self, node):
+        """Replaces vars with flattened view stored in self.input
+        """
         return theano.clone(node, self.flat_view.replacements, strict=False)
+
+    def log_q_W_local(self, posterior):
+        """log_q_W samples over q for local vars"""
+        if not self.local_vars:
+            return 0
+        mu, rho = self.__local_mu_rho()
+        samples = tt.sum(log_normal3(posterior, mu, rho), axis=1)
+        return samples
+
+    def log_q_W_global(self, posterior):
+        """log_q_W samples over q for global vars"""
+        raise NotImplementedError
+
+    def log_q_W(self, posterior):
+        """log_q_W samples over q"""
+        return self.log_q_W_global(posterior) + self.log_q_W_local(posterior)
+
+    def log_p_D(self, posterior):
+        """log_p_D samples over q"""
+        _log_p_D_ = tt.add(
+            *map(self.weighted_likelihood, self.model.observed_RVs)
+        )
+        _log_p_D_ = self.to_flat_input(_log_p_D_)
+        samples = self.sample_over_space(posterior, _log_p_D_)
+        return samples
+
+    def weighted_likelihood(self, var):
+        """Weight likelihood according to given population size"""
+        tot = self.population.get(
+            var, self.population.get(var.name))
+        logpt = tt.sum(var.logpt)
+        if tot is not None:
+            tot = tt.as_tensor(tot)
+            logpt *= tot
+            logpt /= var.size
+        return logpt
+
+    def KL_q_p_W(self, posterior):
+        """KL(q||p) samples over q"""
+        return self.log_q_W(posterior) - self.log_p_W(posterior)
+
+    def log_p_W(self, posterior):
+        """log_p_W samples over q"""
+        _log_p_W_ = self.model.varlogpt + tt.sum(self.model.potentials)
+        _log_p_W_ = self.to_flat_input(_log_p_W_)
+        samples = self.sample_over_space(posterior, _log_p_W_)
+        return samples
+
+    def apply_replacements(self, node, deterministic=False):
+        """Replace variables in graph with variational approximation
+
+        Parameters
+        ----------
+        node : node for replacements
+        deterministic : whether to use zeros as initial distribution
+            if True - median point will be sampled
+
+        Returns
+        -------
+        node with replacements
+        """
+        initial = self.initial(zeros=deterministic)
+        posterior = self.posterior(initial)[0]
+        node = self.to_flat_input(node)
+        return theano.clone(node, {self.input: posterior})
+
+    def elbo(self, samples=1, pi=1):
+        """Output of this function should be used for fitting a model
+
+        Parameters
+        ----------
+        samples : Tensor - number of samples
+        pi : Tensor - weight of variational part
+
+        Returns
+        -------
+        ELBO samples
+        """
+        samples = tt.as_tensor(samples)
+        pi = tt.as_tensor(pi)
+        posterior = self.posterior(self.initial(samples))
+        elbo = self.log_p_D(posterior) - pi * (self.KL_q_p_W(posterior))
+        return elbo
 
     @property
     def local_vmap(self):
@@ -128,84 +274,6 @@ class BaseReplacement(object):
     def global_slc(self):
         return slice(self.local_size, self.total_size)
 
-    def log_q_W_local(self, posterior):
-        if not self.known:
-            return 0
-        mu, rho = self.__local_mu_rho()
-        logp = tt.sum(log_normal3(posterior, mu, rho), axis=1).mean(axis=0)
-        return logp
-
-    def log_q_W_global(self, posterior):
-        raise NotImplementedError
-
-    def log_q_W(self, posterior):
-        return self.log_q_W_global(posterior) + self.log_q_W_local(posterior)
-
-    def log_p_D(self, posterior):
-        _log_p_D_ = tt.add(
-            *map(self.weighted_likelihood, self.model.observed_RVs)
-        )
-        _log_p_D_ = self.to_flat_input(_log_p_D_)
-
-        def replace_log_p_D(post):
-            return theano.clone(_log_p_D_, {self.input: post})
-
-        results, _ = theano.map(replace_log_p_D, posterior)
-        return results.mean()
-
-    def weighted_likelihood(self, var):
-        tot = self.population.get(
-            var, self.population.get(var.name))
-        logpt = tt.sum(var.logpt)
-        if tot is not None:
-            tot = tt.as_tensor(tot)
-            logpt *= tot
-            logpt /= var.size
-        return logpt
-
-    def log_p_W(self, posterior):
-        _log_p_W_ = self.model.varlogpt + tt.sum(self.model.potentials)
-        _log_p_W_ = self.to_flat_input(_log_p_W_)
-
-        def replace_log_p_W(post):
-            return theano.clone(_log_p_W_, {self.input: post})
-
-        results, _ = theano.map(replace_log_p_W, posterior)
-        return results.mean()
-
-    def elbo(self, posterior):
-        return self.log_p_D(posterior) + self.log_p_W(posterior) - self.log_q_W(posterior)
-
-    def apply_replacements(self, node, deterministic=False):
-        node = self.to_flat_input(node)
-        initial = self.initial(zeros=deterministic)
-        posterior = self.posterior(initial)[0]
-        return theano.clone(node, {self.input: posterior})
-
-    def sample_elbo(self, samples=1, pi=1):
-        """Output of this function should be used for fitting a model
-
-        Parameters
-        ----------
-        samples : Tensor - number of samples
-        pi : Tensor - weight of variational part
-
-
-        Notes
-        -----
-        In case of samples == 1 updates are empty and can be ignored
-
-        Returns
-        -------
-        elbos, updates
-        """
-        samples = tt.as_tensor(samples)
-        pi = tt.as_tensor(pi)
-        posterior = self.posterior(self.initial(samples))
-        elbo = (self.log_p_D(posterior) +
-                pi * (self.log_p_W(posterior) - self.log_q_W(posterior)))
-        return elbo
-
 
 class MeanField(BaseReplacement):
     def create_shared_params(self):
@@ -220,5 +288,5 @@ class MeanField(BaseReplacement):
     def log_q_W_global(self, posterior):
         mu = self.shared_params['mu']
         rho = self.shared_params['rho']
-        logp = tt.sum(log_normal3(posterior, mu, rho), axis=1).mean(axis=0)
-        return logp
+        samples = tt.sum(log_normal3(posterior, mu, rho), axis=1)
+        return samples

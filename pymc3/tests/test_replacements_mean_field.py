@@ -20,12 +20,12 @@ class TestMeanField(unittest.TestCase):
 
         # Create variational gradient tensor
         mean_field = MeanField(model)
-        elbo = mean_field.sample_elbo(samples=10000)
+        elbo = mean_field.elbo(samples=10000)
 
         mean_field.shared_params['mu'].set_value(post_mu)
         mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
 
-        f = theano.function([], elbo)
+        f = theano.function([], elbo.mean())
         elbo_mc = f()
 
         # Exact value
