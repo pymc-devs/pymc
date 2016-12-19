@@ -18,14 +18,19 @@ __all__ = ['gradient',
            'join_nonshared_inputs',
            'make_shared_replacements',
            'tt_rng',
-           'set_tt_rng']
+           'set_tt_rng',
+           'no_test_val',
+           'change_flags']
 
 
 @contextlib.contextmanager
 def no_test_val():
-    """
-    for functions use theano.configparser.change_flags
-    :return:
+    """for functions use theano.configparser.change_flags
+
+    Usage
+    -----
+    >>> with no_test_val():
+        ...
     """
     theano.config.compute_test_value = 'off'
     yield
@@ -257,9 +262,12 @@ identity = tt.Elemwise(scalar_identity, name='identity')
 
 @change_flags(compute_test_value='off')
 def launch_rng(rng):
-    """or else test value is not available
-    :param rng: MRG_RandomStreams
-    :return:
+    """Helper function for safe launch of rng.
+    If not launched, there will be problems with test_value
+
+    Parameters
+    ----------
+    rng : theano.sandbox.rng_mrg.MRG_RandomStreams` instance
     """
     state = rng.rstate
     rng.inc_rstate()
@@ -273,9 +281,9 @@ def tt_rng():
     """Get the package-level random number generator.
     Returns
     -------
-    :class:`theano.sandbox.rng_mrg.MRG_RandomStreams` instance
-        The :class:`theano.sandbox.rng_mrg.MRG_RandomStreams`
-        instance passed to the most recent call of :func:`set_tt_rng`
+    `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+        `theano.sandbox.rng_mrg.MRG_RandomStreams`
+        instance passed to the most recent call of `set_tt_rng`
     """
     return _tt_rng
 
@@ -284,7 +292,7 @@ def set_tt_rng(new_rng):
     """Set the package-level random number generator.
     Parameters
     ----------
-    new_rng : :class:`theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+    new_rng : `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
         The random number generator to use.
     """
     global _tt_rng

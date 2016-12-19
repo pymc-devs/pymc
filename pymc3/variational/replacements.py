@@ -163,7 +163,8 @@ class BaseReplacement(object):
         return theano.clone(node, self.flat_view.replacements, strict=False)
 
     def log_q_W_local(self, posterior):
-        """log_q_W samples over q for local vars"""
+        """log_q_W samples over q for local vars
+        """
         if not self.local_vars:
             return 0
         mu, rho = self.__local_mu_rho()
@@ -171,15 +172,18 @@ class BaseReplacement(object):
         return samples
 
     def log_q_W_global(self, posterior):
-        """log_q_W samples over q for global vars"""
+        """log_q_W samples over q for global vars
+        """
         raise NotImplementedError
 
     def log_q_W(self, posterior):
-        """log_q_W samples over q"""
+        """log_q_W samples over q
+        """
         return self.log_q_W_global(posterior) + self.log_q_W_local(posterior)
 
     def log_p_D(self, posterior):
-        """log_p_D samples over q"""
+        """log_p_D samples over q
+        """
         _log_p_D_ = tt.add(
             *map(self.weighted_likelihood, self.model.observed_RVs)
         )
@@ -188,7 +192,8 @@ class BaseReplacement(object):
         return samples
 
     def weighted_likelihood(self, var):
-        """Weight likelihood according to given population size"""
+        """Weight likelihood according to given population size
+        """
         tot = self.population.get(
             var, self.population.get(var.name))
         logpt = tt.sum(var.logpt)
@@ -199,11 +204,13 @@ class BaseReplacement(object):
         return logpt
 
     def KL_q_p_W(self, posterior):
-        """KL(q||p) samples over q"""
+        """KL(q||p) samples over q
+        """
         return self.log_q_W(posterior) - self.log_p_W(posterior)
 
     def log_p_W(self, posterior):
-        """log_p_W samples over q"""
+        """log_p_W samples over q
+        """
         _log_p_W_ = self.model.varlogpt + tt.sum(self.model.potentials)
         _log_p_W_ = self.to_flat_input(_log_p_W_)
         samples = self.sample_over_space(posterior, _log_p_W_)
@@ -242,7 +249,7 @@ class BaseReplacement(object):
         samples = tt.as_tensor(samples)
         pi = tt.as_tensor(pi)
         posterior = self.posterior(self.initial(samples))
-        elbo = self.log_p_D(posterior) - pi * (self.KL_q_p_W(posterior))
+        elbo = self.log_p_D(posterior) - pi * self.KL_q_p_W(posterior)
         return elbo
 
     @property
