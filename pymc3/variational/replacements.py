@@ -2,9 +2,13 @@ import collections
 import theano.tensor as tt
 import theano
 from ..theanof import tt_rng
+from ..blocking import ArrayOrdering
 from ..distributions.dist_math import rho2sd, log_normal3
 from ..math import flatten_list
 import numpy as np
+
+
+FlatView = collections.namedtuple('FlatView', 'input, replacements')
 
 
 class BaseReplacement(object):
@@ -16,155 +20,138 @@ class BaseReplacement(object):
         self.population = population
         self.model = model
         self.known = known
-        s, g, l = self.create_mapping()
-        self.stochastic_replacements = s
-        self.global_dict = g
-        self.local_dict = l
+        self.local_vars = [v for v in model.vars if v in known]
+        self.global_vars = [v for v in model.vars if v not in known]
+        self.order = ArrayOrdering(self.local_vars + self.global_vars)
+        inputvar = tt.vector('flat_view')
+        inputvar.tag.test_value = flatten_list(self.local_vars + self.global_vars).tag.test_value
+        replacements = {self.model.named_vars[name]: inputvar[slc].reshape(shape).astype(dtype)
+                        for name, slc, shape, dtype in self.order.vmap}
+        self.flat_view = FlatView(inputvar, replacements)
+        self.view = {vm.var: vm for vm in self.order.vmap}
+        self.shared_params = self.create_shared_params()
 
-    @staticmethod
-    def new_global_dict():
-        raise NotImplementedError
+    @property
+    def input(self):
+        return self.flat_view.input
 
-    @staticmethod
-    def new_local_dict():
-        local_dict = dict(
-            means=collections.OrderedDict(),
-            rhos=collections.OrderedDict(),
-            x=list(),
-        )
-        return local_dict
-
-    def new_rep_glob_loc(self):
-        """
+    def create_shared_params(self):
+        """Any stuff you need will be here
         Returns
         -------
-        empty_replacements, new_global_dict, new_local_dict
+        dict : shared params
         """
-        g, l = self.new_global_dict(), self.new_local_dict()
-        # specify type for some probable generic purposes
-        g['__type__'] = self.__class__.__name__
-        l['__type__'] = self.__class__.__name__
-        return collections.OrderedDict(), g, l
+        raise NotImplementedError
 
-    @staticmethod
-    def known_node(local_dict, node, *args):
+    def initial(self, samples=1, zeros=False):
         """
         Parameters
         ----------
-        local_dict: placeholder for local params
-        node : node to be replaced
-        args : mu, rho
+        samples : int - number of samples
+        zeros : bool - return zeros if True
 
         Returns
         -------
-        replacement for given node
+        matrix/vector
+            sampled latent space
         """
-        mu, rho = args
-        e = tt_rng().normal(rho.shape)
-        v = mu + rho2sd(rho) * e
-        local_dict['means'][node.name] = mu
-        local_dict['rhos'][node.name] = rho
-        local_dict['x'].append(v)
-        return v
-
-    def create_mapping(self):
-        """Implements creation of new replacements and parameters
-        starting poing is always the following:
-        >>> replacements, global_dict, local_dict = self.new_rep_glob_loc()
-        Just for not having any side effect
-
-        Returns
-        -------
-        replacements, global_dict, local_dict
-        """
-        raise NotImplementedError
-
-    @property
-    def deterministic_replacements(self):
-        replacements = collections.OrderedDict()
-        replacements.update(self.deterministic_replacements_global)
-        replacements.update(self.deterministic_replacements_local)
-        return replacements
-
-    @property
-    def deterministic_replacements_local(self):
-        return collections.OrderedDict(
-            [(self.model[k], v) for k, v in self.local_dict['means'].items()]
-        )
-
-    @property
-    def deterministic_replacements_global(self):
-        raise NotImplementedError
-
-    @property
-    def params(self):
-        """
-        Returns
-        -------
-        list - shared params to fit
-        """
-        return self.params_local + self.params_global
-
-    @property
-    def params_local(self):
-        """
-        Returns
-        -------
-        list - shared params for local replacements
-        """
-        return []
-
-    @property
-    def params_global(self):
-        """
-        Returns
-        -------
-        list - shared params for global replacements
-        """
-        raise NotImplementedError
-
-    @property
-    def log_q_W_local(self):
-        if self.local_dict['x']:
-            x = flatten_list(self.local_dict['x'])
-            mu = flatten_list(self.local_dict['means'].values())
-            rho = flatten_list(self.local_dict['rhos'].values())
-            _log_q_W_local_ = tt.sum(log_normal3(x, mu, rho))
-            return _log_q_W_local_
+        if not zeros:
+            return tt_rng().normal((samples, self.total_size))
         else:
-            return 0
+            return tt.zeros((samples, self.total_size))
 
-    @property
-    def log_q_W_global(self):
+    def view_from(self, space, name, subset='all'):
+        assert subset in {'all', 'local', 'global'}
+        if subset in {'all', 'local'}:
+            slc = self.view[name].slc
+        else:
+            s = self.view[name].slc.start
+            e = self.view[name].slc.stop
+            slc = slice(s - self.global_size, e - self.global_size)
+        return space[:, slc]
+
+    def posterior(self, initial):
+        return tt.concatenate([
+            self.posterior_local(initial[:, self.local_slc]),
+            self.posterior_global(initial[:, self.global_slc])
+            ], axis=1)
+
+    def posterior_global(self, initial):
         raise NotImplementedError
 
-    @property
-    def log_q_W(self):
-        return self.log_q_W_global + self.log_q_W_local
+    def __local_mu_rho(self):
+        mu = []
+        rho = []
+        for var in self.local_vars:
+            mu.append(self.known[var][0].ravel())
+            rho.append(self.known[var][1].ravel())
+        mu = tt.concatenate(mu)
+        rho = tt.concatenate(rho)
+        return mu, rho
+
+    def posterior_local(self, initial):
+        if not self.known:
+            return initial
+        mu, rho = self.__local_mu_rho()
+        x = initial * rho2sd(rho) + mu
+        return x
+
+    def to_flat_input(self, node):
+        return theano.clone(node, self.flat_view.replacements, strict=False)
 
     @property
-    def log_p_D(self):
+    def local_vmap(self):
+        return self.order.vmap[:len(self.local_vars)]
+
+    @property
+    def global_vmap(self):
+        return self.order.vmap[len(self.local_vars):]
+
+    @property
+    def local_size(self):
+        size = sum([0] + [v.size for v in self.local_vars])
+        return size
+
+    @property
+    def global_size(self):
+        return self.total_size - self.local_size
+
+    @property
+    def total_size(self):
+        return self.order.dimensions
+
+    @property
+    def local_slc(self):
+        return slice(0, self.local_size)
+
+    @property
+    def global_slc(self):
+        return slice(self.local_size, self.total_size)
+
+    def log_q_W_local(self, posterior):
+        if not self.known:
+            return 0
+        mu, rho = self.__local_mu_rho()
+        logp = tt.sum(log_normal3(posterior, mu, rho), axis=1).mean(axis=0)
+        return logp
+
+    def log_q_W_global(self, posterior):
+        raise NotImplementedError
+
+    def log_q_W(self, posterior):
+        return self.log_q_W_global(posterior) + self.log_q_W_local(posterior)
+
+    def log_p_D(self, posterior):
         _log_p_D_ = tt.add(
             *map(self.weighted_likelihood, self.model.observed_RVs)
         )
-        return _log_p_D_
+        _log_p_D_ = self.to_flat_input(_log_p_D_)
 
-    @property
-    def log_p_W(self):
-        _log_p_W_ = self.model.varlogpt + tt.sum(self.model.potentials)
-        return _log_p_W_
+        def replace_log_p_D(post):
+            return theano.clone(_log_p_D_, {self.input: post})
 
-    @property
-    def elbo(self):
-        return self.log_p_D + self.log_p_W - self.log_q_W
-
-    def apply_replacements(self, node, deterministic=False):
-        if deterministic:
-            return theano.clone(
-                node, self.deterministic_replacements, strict=False)
-        else:
-            return theano.clone(
-                node, self.stochastic_replacements, strict=False)
+        results, _ = theano.map(replace_log_p_D, posterior)
+        return results.mean()
 
     def weighted_likelihood(self, var):
         tot = self.population.get(
@@ -175,6 +162,25 @@ class BaseReplacement(object):
             logpt *= tot
             logpt /= var.size
         return logpt
+
+    def log_p_W(self, posterior):
+        _log_p_W_ = self.model.varlogpt + tt.sum(self.model.potentials)
+        _log_p_W_ = self.to_flat_input(_log_p_W_)
+
+        def replace_log_p_W(post):
+            return theano.clone(_log_p_W_, {self.input: post})
+
+        results, _ = theano.map(replace_log_p_W, posterior)
+        return results.mean()
+
+    def elbo(self, posterior):
+        return self.log_p_D(posterior) + self.log_p_W(posterior) - self.log_q_W(posterior)
+
+    def apply_replacements(self, node, deterministic=False):
+        node = self.to_flat_input(node)
+        initial = self.initial(zeros=deterministic)
+        posterior = self.posterior(initial)[0]
+        return theano.clone(node, {self.input: posterior})
 
     def sample_elbo(self, samples=1, pi=1):
         """Output of this function should be used for fitting a model
@@ -195,91 +201,24 @@ class BaseReplacement(object):
         """
         samples = tt.as_tensor(samples)
         pi = tt.as_tensor(pi)
-        _elbo_ = self.log_p_D + pi * (self.log_p_W - self.log_q_W)
-        _elbo_ = self.apply_replacements(_elbo_)
-        elbos, updates = theano.scan(fn=lambda: _elbo_,
-                                     outputs_info=None,
-                                     n_steps=samples)
-        return elbos, updates
+        posterior = self.posterior(self.initial(samples))
+        elbo = (self.log_p_D(posterior) +
+                pi * (self.log_p_W(posterior) - self.log_q_W(posterior)))
+        return elbo
 
 
 class MeanField(BaseReplacement):
-    @staticmethod
-    def random_node(global_dict, node):
-        """Creates random node with shared params and
-        places shared parameters to global dict
+    def create_shared_params(self):
+        return {'mu': theano.shared(self.input.tag.test_value[self.global_slc]),
+                'rho': theano.shared(np.ones((self.global_size,)))}
 
-        Parameters
-        ----------
-        global_dict : dict - placeholder for parameters
-        node : pm.FreeRV
+    def posterior_global(self, initial):
+        sd = rho2sd(self.shared_params['rho'])
+        mu = self.shared_params['mu']
+        return sd * initial + mu
 
-        Returns
-        -------
-        tt.Variable : new node
-        """
-        if len(node.broadcastable) > 0:
-            rho = theano.shared(
-                np.ones(node.tag.test_value.shape),
-                name='{}_rho_shared'.format(node.name),
-                broadcastable=node.broadcastable)
-            mu = theano.shared(
-                node.tag.test_value,
-                name='{}_mu_shared'.format(node.name),
-                broadcastable=node.broadcastable)
-            e = tt.patternbroadcast(
-                tt_rng().normal(rho.shape), node.broadcastable)
-        else:
-            rho = theano.shared(
-                np.ones(node.tag.test_value.shape),
-                name='{}_rho_shared'.format(node.name))
-            mu = theano.shared(
-                node.tag.test_value,
-                name='{}_mu_shared'.format(node.name))
-            e = tt_rng().normal(rho.shape)
-        v = mu + rho2sd(rho) * e
-        global_dict['means'][node.name] = mu
-        global_dict['rhos'][node.name] = rho
-        global_dict['x'].append(v)
-        return v
-
-    @staticmethod
-    def new_global_dict():
-        global_dict = dict(
-            x=list(),
-            means=collections.OrderedDict(),
-            rhos=collections.OrderedDict()
-        )
-        return global_dict
-
-    def create_mapping(self):
-        replacements, global_dict, local_dict = self.new_rep_glob_loc()
-        for var in self.model.vars:
-            if var in self.known:
-                v = self.known_node(local_dict, var, *self.known[var])
-            else:
-                v = self.random_node(global_dict, var)
-            replacements[var] = v
-        return replacements, global_dict, local_dict
-
-    @property
-    def log_q_W_global(self):
-        if self.global_dict['x']:
-            x = flatten_list(self.global_dict['x'])
-            mu = flatten_list(self.global_dict['means'].values())
-            rho = flatten_list(self.global_dict['rhos'].values())
-            _log_q_W_global_ = tt.sum(log_normal3(x, mu, rho))
-            return _log_q_W_global_
-        else:
-            return 0
-
-    @property
-    def params_global(self):
-        return (list(self.global_dict['means'].values()) +
-                list(self.global_dict['rhos'].values()))
-
-    @property
-    def deterministic_replacements_global(self):
-        return collections.OrderedDict(
-            [(self.model[k], v) for k, v in self.global_dict['means'].items()]
-        )
+    def log_q_W_global(self, posterior):
+        mu = self.shared_params['mu']
+        rho = self.shared_params['rho']
+        logp = tt.sum(log_normal3(posterior, mu, rho), axis=1).mean(axis=0)
+        return logp

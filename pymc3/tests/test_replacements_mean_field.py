@@ -11,8 +11,8 @@ class TestMeanField(unittest.TestCase):
         sigma = 1.0
         y_obs = np.array([1.6, 1.4])
 
-        post_mu = 1.88
-        post_sd = 1
+        post_mu = np.array([1.88])
+        post_sd = np.array([1])
         # Create a model for test
         with Model() as model:
             mu = Normal('mu', mu=mu0, sd=sigma)
@@ -20,12 +20,12 @@ class TestMeanField(unittest.TestCase):
 
         # Create variational gradient tensor
         mean_field = MeanField(model)
-        elbos, updates = mean_field.sample_elbo(samples=1000)
+        elbo = mean_field.sample_elbo(samples=10000)
 
-        mean_field.global_dict['means']['mu'].set_value(post_mu)
-        mean_field.global_dict['rhos']['mu'].set_value(np.log(np.exp(post_sd) - 1))
+        mean_field.shared_params['mu'].set_value(post_mu)
+        mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
 
-        f = theano.function([], elbos.mean(), updates=updates)
+        f = theano.function([], elbo)
         elbo_mc = f()
 
         # Exact value
