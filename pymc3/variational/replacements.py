@@ -35,6 +35,9 @@ class BaseReplacement(object):
         self.view = {vm.var: vm for vm in self.order.vmap}
         self.shared_params = self.create_shared_params()
 
+    def set_params(self, params):
+        self.shared_params.update(params)
+
     @staticmethod
     def check_model(model):
         """Checks that model is valid for variational inference
