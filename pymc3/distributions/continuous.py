@@ -13,7 +13,7 @@ from scipy import stats
 import warnings
 
 from . import transforms
-from .dist_math import bound, bound_elemwise, logpow, gammaln, betaln, std_cdf, i0, i1
+from .dist_math import bound, bound, logpow, gammaln, betaln, std_cdf, i0, i1
 from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -146,7 +146,7 @@ class Uniform(Continuous):
     def logp(self, value):
         lower = self.lower
         upper = self.upper
-        return bound_elemwise(-tt.log(upper - lower),
+        return bound(-tt.log(upper - lower),
                               value >= lower, value <= upper)
 
 
@@ -243,7 +243,7 @@ class Normal(Continuous):
         sd = self.sd
         tau = self.tau
         mu = self.mu
-        return bound_elemwise((-tau * (value - mu)**2 + tt.log(tau / np.pi / 2.)) / 2.,
+        return bound((-tau * (value - mu)**2 + tt.log(tau / np.pi / 2.)) / 2.,
                      sd > 0)
 
 
@@ -289,7 +289,7 @@ class HalfNormal(PositiveContinuous):
     def logp(self, value):
         tau = self.tau
         sd = self.sd
-        return bound_elemwise(-0.5 * tau * value**2 + 0.5 * tt.log(tau * 2. / np.pi),
+        return bound(-0.5 * tau * value**2 + 0.5 * tt.log(tau * 2. / np.pi),
                      value >= 0,
                      tau > 0, sd > 0)
 
@@ -402,7 +402,7 @@ class Wald(PositiveContinuous):
         lam = self.lam
         alpha = self.alpha
         # value *must* be iid. Otherwise this is wrong.
-        return bound_elemwise(logpow(lam / (2. * np.pi), 0.5)
+        return bound(logpow(lam / (2. * np.pi), 0.5)
                      - logpow(value - alpha, 1.5)
                      - (0.5 * lam / (value - alpha)
                         * ((value - alpha - mu) / mu)**2),
@@ -492,7 +492,7 @@ class Beta(UnitContinuous):
         alpha = self.alpha
         beta = self.beta
 
-        return bound_elemwise(logpow(value, alpha - 1) + logpow(1 - value, beta - 1)
+        return bound(logpow(value, alpha - 1) + logpow(1 - value, beta - 1)
                      - betaln(alpha, beta),
                      value >= 0, value <= 1,
                      alpha > 0, beta > 0)
@@ -537,7 +537,7 @@ class Exponential(PositiveContinuous):
 
     def logp(self, value):
         lam = self.lam
-        return bound_elemwise(tt.log(lam) - lam * value, value > 0, lam > 0)
+        return bound(tt.log(lam) - lam * value, value > 0, lam > 0)
 
 
 class Laplace(Continuous):
@@ -641,7 +641,7 @@ class Lognormal(PositiveContinuous):
     def logp(self, value):
         mu = self.mu
         tau = self.tau
-        return bound_elemwise(-0.5 * tau * (tt.log(value) - mu)**2
+        return bound(-0.5 * tau * (tt.log(value) - mu)**2
                      + 0.5 * tt.log(tau / (2. * np.pi))
                      - tt.log(value),
                      tau > 0)
@@ -702,7 +702,7 @@ class StudentT(Continuous):
         lam = self.lam
         sd = self.sd
 
-        return bound_elemwise(gammaln((nu + 1.0) / 2.0)
+        return bound(gammaln((nu + 1.0) / 2.0)
                      + .5 * tt.log(lam / (nu * np.pi))
                      - gammaln(nu / 2.0)
                      - (nu + 1.0) / 2.0 * tt.log1p(lam * (value - mu)**2 / nu),
@@ -765,7 +765,7 @@ class Pareto(PositiveContinuous):
     def logp(self, value):
         alpha = self.alpha
         m = self.m
-        return bound_elemwise(tt.log(alpha) + logpow(m, alpha)
+        return bound(tt.log(alpha) + logpow(m, alpha)
                      - logpow(value, alpha + 1),
                      value >= m, alpha > 0, m > 0)
 
@@ -817,7 +817,7 @@ class Cauchy(Continuous):
     def logp(self, value):
         alpha = self.alpha
         beta = self.beta
-        return bound_elemwise(- tt.log(np.pi) - tt.log(beta)
+        return bound(- tt.log(np.pi) - tt.log(beta)
                      - tt.log1p(((value - alpha) / beta)**2),
                      beta > 0)
 
@@ -863,7 +863,7 @@ class HalfCauchy(PositiveContinuous):
 
     def logp(self, value):
         beta = self.beta
-        return bound_elemwise(tt.log(2) - tt.log(np.pi) - tt.log(beta)
+        return bound(tt.log(2) - tt.log(np.pi) - tt.log(beta)
                      - tt.log1p((value / beta)**2),
                      value >= 0, beta > 0)
 
@@ -943,7 +943,7 @@ class Gamma(PositiveContinuous):
     def logp(self, value):
         alpha = self.alpha
         beta = self.beta
-        return bound_elemwise(
+        return bound(
             -gammaln(alpha) + logpow(
                 beta, alpha) - beta * value + logpow(value, alpha - 1),
 
@@ -1007,7 +1007,7 @@ class InverseGamma(PositiveContinuous):
     def logp(self, value):
         alpha = self.alpha
         beta = self.beta
-        return bound_elemwise(logpow(beta, alpha) - gammaln(alpha) - beta / value
+        return bound(logpow(beta, alpha) - gammaln(alpha) - beta / value
                      + logpow(value, -alpha - 1),
                      value > 0, alpha > 0, beta > 0)
 
@@ -1088,7 +1088,7 @@ class Weibull(PositiveContinuous):
     def logp(self, value):
         alpha = self.alpha
         beta = self.beta
-        return bound_elemwise(tt.log(alpha) - tt.log(beta)
+        return bound(tt.log(alpha) - tt.log(beta)
                      + (alpha - 1) * tt.log(value / beta)
                      - (value / beta)**alpha,
                      value >= 0, alpha > 0, beta > 0)
@@ -1161,7 +1161,7 @@ class Bounded(Continuous):
                                 size=size)
 
     def logp(self, value):
-        return bound_elemwise(self.dist.logp(value),
+        return bound(self.dist.logp(value),
                      value >= self.lower, value <= self.upper)
 
 
@@ -1286,7 +1286,7 @@ class ExGaussian(Continuous):
                        + logpow(std_cdf((value - mu) / sigma - sigma / nu), 1.),
                        - tt.log(sigma * tt.sqrt(2 * np.pi))
                        - 0.5 * ((value - mu) / sigma)**2)
-        return bound_elemwise(lp, sigma > 0., nu > 0.)
+        return bound(lp, sigma > 0., nu > 0.)
 
 
 class VonMises(Continuous):
@@ -1335,7 +1335,7 @@ class VonMises(Continuous):
     def logp(self, value):
         mu = self.mu
         kappa = self.kappa
-        return bound_elemwise(kappa * tt.cos(mu - value) - tt.log(2 * np.pi * i0(kappa)), value >= -np.pi, value <= np.pi, kappa >= 0)
+        return bound(kappa * tt.cos(mu - value) - tt.log(2 * np.pi * i0(kappa)), value >= -np.pi, value <= np.pi, kappa >= 0)
 
 
 class SkewNormal(Continuous):
@@ -1401,7 +1401,7 @@ class SkewNormal(Continuous):
         sd = self.sd
         mu = self.mu
         alpha = self.alpha
-        return bound_elemwise(
+        return bound(
             tt.log(1 +
             tt.erf(((value - mu) * tt.sqrt(tau) * alpha) / tt.sqrt(2)))
             + (-tau * (value - mu)**2

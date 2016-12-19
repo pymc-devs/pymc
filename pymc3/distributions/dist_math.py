@@ -10,24 +10,33 @@ import theano.tensor as tt
 
 from .special import gammaln, multigammaln
 
-
-def bound_elemwise(logp, *conditions):
+def bound(logp, *conditions, **kwargs):
     """
     Bounds a log probability density with several conditions.
-
-    Respects shape of logp and performs broadcasting when
-    conditions.shape > logp.shape.
 
     Parameters
     ----------
     logp : float
     *conditions : booleans
+    broadcast_conditions : bool (optional, default=True)
+        If True, broadcasts logp to match the largest shape of the conditions.
+        This is used e.g. in DiscreteUniform where logp is a scalar constant and the shape
+        is specified via the conditions.
+        If False, will return the same shape as logp.
+        This is used e.g. in Multinomial where broadcasting can lead to differences in the logp.
 
     Returns
     -------
     logp with elements set to -inf where any condition is False
     """
-    return tt.switch(alltrue_elemwise(conditions), logp, -np.inf)
+    broadcast_conditions = kwargs.get('broadcast_conditions', True)
+
+    if broadcast_conditions:
+        alltrue = alltrue_elemwise
+    else:
+        alltrue = alltrue_scalar
+
+    return tt.switch(alltrue(conditions), logp, -np.inf)
 
 
 def alltrue_elemwise(vals):
@@ -37,23 +46,7 @@ def alltrue_elemwise(vals):
     return ret
 
 
-def bound(logp, *conditions):
-    """
-    Bounds a log probability density with several conditions
-
-    Parameters
-    ----------
-    logp : float
-    *conditions : booleans
-
-    Returns
-    -------
-    logp if all conditions are true
-    -inf if some are false
-    """
-    return tt.switch(alltrue(conditions), logp, -np.inf)
-
-def alltrue(vals):
+def alltrue_scalar(vals):
     return tt.all([tt.all(1 * val) for val in vals])
 
 

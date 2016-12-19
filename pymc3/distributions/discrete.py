@@ -5,7 +5,7 @@ import theano
 import theano.tensor as tt
 from scipy import stats
 
-from .dist_math import bound, bound_elemwise, factln, binomln, betaln, logpow
+from .dist_math import bound, bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
@@ -54,7 +54,7 @@ class Binomial(Discrete):
         n = self.n
         p = self.p
 
-        return bound_elemwise(
+        return bound(
             binomln(n, value) + logpow(p, value) + logpow(1 - p, n - value),
             0 <= value, value <= n,
             0 <= p, p <= 1)
@@ -118,7 +118,7 @@ class BetaBinomial(Discrete):
     def logp(self, value):
         alpha = self.alpha
         beta = self.beta
-        return bound_elemwise(binomln(self.n, value)
+        return bound(binomln(self.n, value)
                      + betaln(value + alpha, self.n - value + beta)
                      - betaln(alpha, beta),
                      value >= 0, value <= self.n,
@@ -158,7 +158,7 @@ class Bernoulli(Discrete):
 
     def logp(self, value):
         p = self.p
-        return bound_elemwise(
+        return bound(
             tt.switch(value, tt.log(p), tt.log(1 - p)),
             value >= 0, value <= 1,
             p >= 0, p <= 1)
@@ -204,7 +204,7 @@ class Poisson(Discrete):
 
     def logp(self, value):
         mu = self.mu
-        log_prob = bound_elemwise(
+        log_prob = bound(
             logpow(mu, value) - factln(value) - mu,
             mu >= 0, value >= 0)
         # Return zero when mu and value are both zero
@@ -255,7 +255,7 @@ class NegativeBinomial(Discrete):
     def logp(self, value):
         mu = self.mu
         alpha = self.alpha
-        negbinom = bound_elemwise(binomln(value + alpha - 1, value)
+        negbinom = bound(binomln(value + alpha - 1, value)
                          + logpow(mu / (mu + alpha), value)
                          + logpow(alpha / (mu + alpha), alpha),
                          value >= 0, mu > 0, alpha > 0)
@@ -300,7 +300,7 @@ class Geometric(Discrete):
 
     def logp(self, value):
         p = self.p
-        return bound_elemwise(tt.log(p) + logpow(1 - p, value - 1),
+        return bound(tt.log(p) + logpow(1 - p, value - 1),
                      0 <= p, p <= 1, value >= 1)
 
 
@@ -348,8 +348,8 @@ class DiscreteUniform(Discrete):
     def logp(self, value):
         upper = self.upper
         lower = self.lower
-        return bound_elemwise(-tt.log(upper - lower + 1),
-                              lower <= value, value <= upper)
+        return bound(-tt.log(upper - lower + 1),
+                     lower <= value, value <= upper)
 
 
 class Categorical(Discrete):
@@ -408,7 +408,7 @@ class Categorical(Discrete):
             a = tt.log(p[tt.arange(p.shape[0]), value])
         else:
             a = tt.log(p[value])
-        return bound_elemwise(a,
+        return bound(a,
                      value >= 0, value <= (k - 1),
                      sumto1)
 
@@ -439,7 +439,7 @@ class Constant(Discrete):
 
     def logp(self, value):
         c = self.c
-        return bound_elemwise(0, tt.eq(value, c))
+        return bound(0, tt.eq(value, c))
 
 def ConstantDist(*args, **kwargs):
     warnings.warn("ConstantDist has been deprecated. In future, use Constant instead.",
