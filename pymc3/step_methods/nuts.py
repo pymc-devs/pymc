@@ -71,7 +71,7 @@ class NUTS(ArrayStepShared):
             scaling = guess_scaling(
                 Point(scaling, model=model), model=model, vars=vars)
 
-	scaling = scaling.astype(theano.config.floatX)
+        scaling = scaling.astype(theano.config.floatX)
         n = scaling.shape[0]
 
         self.step_size = step_scale / n**(1 / 4.)
@@ -122,7 +122,7 @@ class NUTS(ArrayStepShared):
     def astep(self, q0):
         # Hamiltonian(self.logp, self.dlogp, self.potential)
         H = self.leapfrog1_dE
-	q0 = q0.astype(theano.config.floatX)
+        q0 = q0.astype(theano.config.floatX)
         Emax = self.Emax
         e = array(self.step_size, dtype=theano.config.floatX)
 
