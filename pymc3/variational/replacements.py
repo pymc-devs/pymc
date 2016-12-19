@@ -38,6 +38,10 @@ class BaseReplacement(object):
     def set_params(self, params):
         self.shared_params.update(params)
 
+    @property
+    def params(self):
+        return list(self.shared_params.values())
+
     @staticmethod
     def check_model(model):
         """Checks that model is valid for variational inference
@@ -54,6 +58,7 @@ class BaseReplacement(object):
 
     def create_shared_params(self):
         """Any stuff you need will be here
+
         Returns
         -------
         dict : shared params
