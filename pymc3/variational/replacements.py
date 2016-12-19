@@ -69,10 +69,11 @@ class BaseReplacement(object):
         Tensor
             sampled latent space shape(samples, size)
         """
+        shape = tt.stack([tt.as_tensor(samples), tt.as_tensor(self.total_size)])
         if not zeros:
-            return tt_rng().normal((samples, self.total_size))
+            return tt_rng().normal(shape)
         else:
-            return tt.zeros((samples, self.total_size))
+            return tt.zeros(shape)
 
     def sample_over_space(self, space, node):
         """
@@ -197,8 +198,8 @@ class BaseReplacement(object):
     def log_p_D(self, posterior):
         """log_p_D samples over q
         """
-        _log_p_D_ = tt.add(
-            *map(self.weighted_likelihood, self.model.observed_RVs)
+        _log_p_D_ = tt.sum(
+            list(map(self.weighted_likelihood, self.model.observed_RVs))
         )
         _log_p_D_ = self.to_flat_input(_log_p_D_)
         samples = self.sample_over_space(posterior, _log_p_D_)

@@ -1,8 +1,10 @@
 import unittest
 import numpy as np
 import theano
+import theano.tensor as tt
 from pymc3 import Model, Normal
 from pymc3.variational.replacements import MeanField
+from . import models
 
 
 class TestMeanField(unittest.TestCase):
@@ -34,6 +36,25 @@ class TestMeanField(unittest.TestCase):
             y_obs[0]**2 + y_obs[1]**2 + mu0**2 + 3 * np.log(2 * np.pi)) +
             0.5 * (np.log(2 * np.pi) + 1))
         np.testing.assert_allclose(elbo_mc, elbo_true, rtol=0, atol=1e-1)
+
+    def test_vary_samples(self):
+        _, model, _ = models.simple_model()
+        i = tt.iscalar('i')
+        i.tag.test_value = 1
+        with model:
+            mf = MeanField()
+            elbo = mf.elbo(i)
+        elbos = theano.function([i], elbo)
+        self.assertEqual(elbos(1).shape[0], 1)
+        self.assertEqual(elbos(10).shape[0], 10)
+
+    def test_vars_view(self):
+        _, model, _ = models.multidimensional_model()
+        with model:
+            mf = MeanField()
+            posterior = mf.posterior(mf.initial(10))
+            x_sampled = mf.view_from(posterior, 'x').eval()
+        self.assertEqual(x_sampled.shape, (10,) + model['x'].dshape)
 
 if __name__ == '__main__':
     unittest.main()
