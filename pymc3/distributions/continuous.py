@@ -147,7 +147,7 @@ class Uniform(Continuous):
         lower = self.lower
         upper = self.upper
         return bound(-tt.log(upper - lower),
-                     value >= lower, value <= upper)
+                              value >= lower, value <= upper)
 
 
 class Flat(Continuous):

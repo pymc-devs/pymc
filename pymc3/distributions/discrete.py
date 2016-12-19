@@ -454,7 +454,7 @@ class ZeroInflatedPoisson(Discrete):
     Often used to model the number of events occurring in a fixed period
     of time when the times at which events occur are independent.
 
-    .. math:: 
+    .. math::
 
         f(x \mid \theta, \psi) = \left\{ \begin{array}{l}
             (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
@@ -503,7 +503,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     The Zero-inflated version of the Negative Binomial (NB).
     The NB distribution describes a Poisson random variable
-    whose rate parameter is gamma distributed. 
+    whose rate parameter is gamma distributed.
 
     .. math::
 
