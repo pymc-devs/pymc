@@ -13,7 +13,7 @@ from scipy import stats
 import warnings
 
 from . import transforms
-from .dist_math import bound, bound, logpow, gammaln, betaln, std_cdf, i0, i1
+from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
 from .distribution import Continuous, draw_values, generate_samples
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',

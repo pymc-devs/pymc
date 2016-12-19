@@ -5,7 +5,7 @@ import theano
 import theano.tensor as tt
 from scipy import stats
 
-from .dist_math import bound, bound, factln, binomln, betaln, logpow
+from .dist_math import bound, factln, binomln, betaln, logpow
 from .distribution import Discrete, draw_values, generate_samples
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
