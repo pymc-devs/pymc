@@ -1,4 +1,5 @@
 import threading
+import sys
 
 import numpy as np
 import theano
@@ -136,6 +137,7 @@ class Factor(object):
     """Common functionality for objects with a log probability density
     associated with them.
     """
+
     @property
     def logp(self):
         """Compiled log probability density function"""
@@ -284,9 +286,9 @@ class Model(Context, Factor):
                                     transform=dist.transform)
                 pm._log.debug('Applied {transform}-transform to {name}'
                               ' and added transformed {orig_name} to model.'.format(
-                                transform=dist.transform.name,
-                                name=name,
-                                orig_name='{}_{}_'.format(name, dist.transform.name)))
+                    transform=dist.transform.name,
+                    name=name,
+                    orig_name='{}_{}_'.format(name, dist.transform.name)))
                 self.deterministics.append(var)
                 return var
         elif isinstance(data, dict):
@@ -313,8 +315,7 @@ class Model(Context, Factor):
     def add_random_variable(self, var):
         """Add a random variable to the named variables of the model."""
         if var.name in self.named_vars:
-            raise ValueError(
-                "Variable name {} already exists.".format(var.name))
+            raise ValueError("Variable name {} already exists.".format(var.name))
         self.named_vars[var.name] = var
         if not hasattr(self, var.name):
             setattr(self, var.name, var)
@@ -479,6 +480,7 @@ class LoosePointFunc(object):
         point = Point(model=self.model, *args, **kwargs)
         return self.f(**point)
 
+
 compilef = fastfn
 
 
@@ -503,8 +505,7 @@ class FreeRV(Factor, TensorVariable):
             self.dshape = tuple(distribution.shape)
             self.dsize = int(np.prod(distribution.shape))
             self.distribution = distribution
-            self.tag.test_value = np.ones(
-                distribution.shape, distribution.dtype) * distribution.default()
+            self.tag.test_value = np.ones(distribution.shape, distribution.dtype) * distribution.default()
             self.logp_elemwiset = distribution.logp(self)
             self.model = model
 
@@ -545,8 +546,7 @@ def as_tensor(data, name, model, distribution):
                                 model=model)
         constant = tt.as_tensor_variable(data.filled())
 
-        dataTensor = tt.set_subtensor(
-            constant[data.mask.nonzero()], missing_values)
+        dataTensor = tt.set_subtensor(constant[data.mask.nonzero()], missing_values)
         dataTensor.missing_values = missing_values
         return dataTensor
     else:
@@ -579,7 +579,6 @@ class ObservedRV(Factor, TensorVariable):
         super(TensorVariable, self).__init__(type, None, None, name)
 
         if distribution is not None:
-
             data = as_tensor(data, name, model, distribution)
             self.missing_values = data.missing_values
 
@@ -661,7 +660,6 @@ def Potential(name, var, model=None):
 
 
 class TransformedRV(TensorVariable):
-
     def __init__(self, type=None, owner=None, index=None, name=None,
                  distribution=None, model=None, transform=None):
         """
@@ -687,8 +685,7 @@ class TransformedRV(TensorVariable):
 
             normalRV = transform.backward(self.transformed)
 
-            theano.Apply(theano.compile.view_op, inputs=[
-                         normalRV], outputs=[self])
+            theano.Apply(theano.compile.view_op, inputs=[normalRV], outputs=[self])
             self.tag.test_value = normalRV.tag.test_value
 
             incorporate_methods(source=distribution, destination=self,
@@ -717,6 +714,34 @@ def all_continuous(vars):
     else:
         return True
 
+
 # theano stuff
 theano.config.warn.sum_div_dimshuffle_bug = False
 theano.config.compute_test_value = 'raise'
+
+
+# Replace theano as_op decorator with something friendly
+
+def deterministic(f=None, **kwds):
+    itypes = kwds.get('itypes')
+    otypes = kwds.get('otypes') or [t.dvector]
+
+    # Wrapper infers types of inputs
+    @wraps(f)
+    def wrapper(*inputs, **kwinputs):
+
+        if sys.version_info < [3]:
+            global itypes, otypes
+        else:
+            nonlocal itypes, otypes
+
+        if not itypes:
+            itypes = [arg.type for arg in inputs]
+
+        @theano.compile.ops.as_op(itypes=itypes, otypes=otypes)
+        def wrapped_f(*inputs, **kwinputs):
+            return f(*inputs, **kwinputs)
+
+        return wrapped_f
+
+    return wrapper
