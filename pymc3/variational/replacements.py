@@ -35,6 +35,14 @@ class BaseReplacement(object):
         self.view = {vm.var: vm for vm in self.order.vmap}
         self.shared_params = self.create_shared_params()
 
+    @property
+    def constant_shared_params(self):
+        """Constant view on shared params
+        """
+        return collections.OrderedDict(
+                [(name, theano.gradient.zero_grad(shared))
+                    for name, shared in self.shared_params.items()])
+
     def set_params(self, params):
         self.shared_params.update(params)
 
@@ -315,7 +323,7 @@ class MeanField(BaseReplacement):
         return sd * initial + mu
 
     def log_q_W_global(self, posterior):
-        mu = self.shared_params['mu']
-        rho = self.shared_params['rho']
+        mu = self.constant_shared_params['mu']
+        rho = self.constant_shared_params['rho']
         samples = tt.sum(log_normal3(posterior, mu, rho), axis=1)
         return samples
