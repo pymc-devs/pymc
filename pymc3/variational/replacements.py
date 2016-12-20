@@ -187,6 +187,10 @@ class BaseReplacement(object):
         rho = tt.concatenate(rho)
         return mu, rho
 
+    def __constant_local_mu_rho(self):
+        mu, rho = self.__local_mu_rho()
+        return theano.gradient.zero_grad(mu), theano.gradient.zero_grad(rho)
+
     def to_flat_input(self, node):
         """Replaces vars with flattened view stored in self.input
         """
@@ -197,7 +201,7 @@ class BaseReplacement(object):
         """
         if not self.local_vars:
             return 0
-        mu, rho = self.__local_mu_rho()
+        mu, rho = self.__constant_local_mu_rho()
         samples = tt.sum(log_normal3(posterior, mu, rho), axis=1)
         return samples
 
