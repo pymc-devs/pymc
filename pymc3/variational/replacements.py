@@ -126,7 +126,7 @@ class BaseReplacement(object):
         else:
             s = self.view[name].slc.start
             e = self.view[name].slc.stop
-            slc = slice(s - self.global_size, e - self.global_size)
+            slc = slice(s - self.local_size, e - self.local_size)
         _, _, shape, dtype = self.view[name]
         return space[:, slc].reshape((space.shape[0],) + shape).astype(dtype)
 
