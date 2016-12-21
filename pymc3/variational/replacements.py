@@ -104,7 +104,7 @@ class BaseReplacement(object):
         """
         def replace_node(post):
             return theano.clone(node, {self.input: post})
-        samples, _ = theano.map(replace_node, space)
+        samples, _ = theano.scan(replace_node, space, n_steps=space.shape[0])
         return samples
 
     def view_from(self, space, name, subset='all'):
@@ -142,10 +142,13 @@ class BaseReplacement(object):
         Tensor
             posterior space
         """
-        return tt.concatenate([
-            self.posterior_local(initial[:, self.local_slc]),
-            self.posterior_global(initial[:, self.global_slc])
-            ], axis=1)
+        if self.local_vars:
+            return tt.concatenate([
+                self.posterior_local(initial[:, self.local_slc]),
+                self.posterior_global(initial[:, self.global_slc])
+                ], axis=1)
+        else:
+            return self.posterior_global(initial)
 
     def posterior_global(self, initial):
         """Implements posterior distribution from initial latent space
