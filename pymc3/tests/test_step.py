@@ -3,16 +3,19 @@ import unittest
 
 from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model
+from .helpers import SeededTest
+from pymc3 import df_summary, traceplot
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                                 Metropolis, Slice, CompoundStep,
                                 MultivariateNormalProposal, HamiltonianMC)
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical
+from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Uniform
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
 from tqdm import tqdm
+from scipy import stats
 
 
 class TestStepMethods(object):  # yield test doesn't work subclassing unittest.TestCase
@@ -238,3 +241,48 @@ class TestAssignStepMethods(unittest.TestCase):
             Binomial('x', 10, 0.5)
             steps = assign_step_methods(model, [])
         self.assertIsInstance(steps, Metropolis)
+
+
+class TestSampleEstimates(SeededTest):
+    def test_posterior_estimate(self):
+        alpha_true, sigma_true = 1, 0.5
+        beta_true = np.array([1, 2.5])
+
+        size = 100
+
+        X1 = np.random.randn(size)
+        X2 = np.random.randn(size) * 0.2
+        Y = alpha_true + beta_true[0] * X1 + beta_true[1] * X2 + np.random.randn(size) * sigma_true
+
+
+        with Model() as model:
+
+            alpha = Normal('alpha', mu=0, sd=10)
+            beta = Normal('beta', mu=0, sd=10, shape=2)
+            sigma = Uniform('sigma', lower=0.0, upper=1.0)
+            mu = alpha + beta[0] * X1 + beta[1] * X2
+            Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
+
+            for step_method in (NUTS(), NUTS(is_cov=True),
+                                Metropolis()):
+                trace = sample(100000, step=step_method, progressbar=False)
+
+                # Using the Normal test from SciPy `scipy.stats.normaltest`
+                # See `https://github.com/scipy/scipy/blob/v0.18.1/scipy/stats/stats.py#L1352`
+                # `normaltest` returns a 2-tuple of the chi-squared statistic, and the associated
+                # p-value. Given the null hypothesis that `trace[-1000:]` came from the a normal
+                # distribution, the p-value represents the probability that a chi-squared statistic
+                # that large (or larger) would be seen.
+
+                # If the p-value is very small, it means it's unlikely that the data came from a
+                # normal distribution.
+                # We define very small as 0.05, for the sake of this argument.
+                # We test this by evaluating if the p-value is above 0.05.
+                # We do the same for beta - using more burnin.
+                _, p_normal = stats.normaltest(trace[-3000:].alpha)
+                _, p_beta_0_normal = stats.normaltest(trace[-10000:].beta[:, 0])
+                np.isclose(np.median(trace[-3000:].beta, 0), beta_true, rtol=0.1).all()
+                np.testing.assert_array_almost_equal(trace[-3000:].alpha, alpha_true, decimal=0)
+                np.testing.assert_array_almost_equal(np.median(trace[-3000:].sigma), sigma_true, decimal=1)
+                np.testing.assert_array_less(0.05, p_normal, verbose=True)
+                np.testing.assert_array_less(0.05, p_beta_0_normal, verbose=True)
