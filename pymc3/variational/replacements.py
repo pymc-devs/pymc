@@ -296,7 +296,7 @@ class BaseReplacement(object):
 
     @property
     def local_size(self):
-        size = sum([0] + [v.size for v in self.local_vars])
+        size = sum([0] + [v.dsize for v in self.local_vars])
         return size
 
     @property
