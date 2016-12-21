@@ -5,7 +5,7 @@ from ..distributions.continuous import Flat, Normal
 from ..distributions.timeseries import EulerMaruyama
 from ..tuning.starting import find_MAP
 from ..sampling import sample, sample_ppc
-from ..step_methods.nuts import NUTS
+from ..step_methods import NUTS
 
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
