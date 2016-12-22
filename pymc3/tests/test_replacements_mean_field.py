@@ -52,7 +52,7 @@ class TestMeanField(unittest.TestCase):
         _, model, _ = models.multidimensional_model()
         with model:
             mf = MeanField()
-            posterior = mf.posterior(mf.initial(10))
+            posterior = mf.posterior(10)
             x_sampled = mf.view_from(posterior, 'x').eval()
         self.assertEqual(x_sampled.shape, (10,) + model['x'].dshape)
 

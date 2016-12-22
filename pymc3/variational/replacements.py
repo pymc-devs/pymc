@@ -73,11 +73,12 @@ class BaseReplacement(object):
         """
         raise NotImplementedError
 
-    def initial(self, samples=1, zeros=False):
+    def initial(self, samples, subset, zeros=False):
         """
         Parameters
         ----------
         samples : int - number of samples
+        subset : determines what space is used can be {all|local|global}
         zeros : bool - return zeros if True
 
         Returns
@@ -85,11 +86,43 @@ class BaseReplacement(object):
         Tensor
             sampled latent space shape(samples, size)
         """
-        shape = tt.stack([tt.as_tensor(samples), tt.as_tensor(self.total_size)])
+        assert subset in {'all', 'local', 'global'}
+        if subset == 'all':
+            size = self.total_size
+        elif subset == 'global':
+            size = self.global_size
+        else:
+            size = self.local_size
+        shape = tt.stack([tt.as_tensor(samples), tt.as_tensor(size)])
         if not zeros:
             return tt_rng().normal(shape)
         else:
             return tt.zeros(shape)
+
+    def posterior(self, samples=1, zeros=False):
+        """Transforms initial latent space to posterior distribution
+
+        Parameters
+        ----------
+        samples : number of samples
+        zeros : set initial distribution to zeros
+
+        Returns
+        -------
+        Tensor
+            posterior space
+        """
+        if self.local_vars and self.global_vars:
+            return tt.concatenate([
+                self.posterior_local(self.initial(samples, 'local', zeros)),
+                self.posterior_global(self.initial(samples, 'global', zeros))
+                ], axis=1)
+        elif self.local_vars:
+            return self.posterior_local(self.initial(samples, 'local', zeros))
+        elif self.global_vars:
+            return self.posterior_global(self.initial(samples, 'global', zeros))
+        else:
+            raise ValueError('No FreeVARs in model')
 
     def sample_over_space(self, space, node):
         """
@@ -129,26 +162,6 @@ class BaseReplacement(object):
             slc = slice(s - self.local_size, e - self.local_size)
         _, _, shape, dtype = self.view[name]
         return space[:, slc].reshape((space.shape[0],) + shape).astype(dtype)
-
-    def posterior(self, initial):
-        """Transforms initial latent space to posterior distribution
-
-        Parameters
-        ----------
-        initial : initial latent space shape(samples, size)
-
-        Returns
-        -------
-        Tensor
-            posterior space
-        """
-        if self.local_vars:
-            return tt.concatenate([
-                self.posterior_local(initial[:, self.local_slc]),
-                self.posterior_global(initial[:, self.global_slc])
-                ], axis=1)
-        else:
-            return self.posterior_global(initial)
 
     def posterior_global(self, initial):
         """Implements posterior distribution from initial latent space
@@ -266,8 +279,7 @@ class BaseReplacement(object):
         -------
         node with replacements
         """
-        initial = self.initial(zeros=deterministic)
-        posterior = self.posterior(initial)[0]
+        posterior = self.posterior(zeros=deterministic)[0]
         node = self.to_flat_input(node)
         return theano.clone(node, {self.input: posterior})
 
@@ -285,7 +297,7 @@ class BaseReplacement(object):
         """
         samples = tt.as_tensor(samples)
         pi = tt.as_tensor(pi)
-        posterior = self.posterior(self.initial(samples))
+        posterior = self.posterior(samples)
         elbo = self.log_p_D(posterior) - pi * self.KL_q_p_W(posterior)
         return elbo
 
