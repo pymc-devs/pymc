@@ -9,8 +9,10 @@ from ..math import flatten_list
 from ..model import modelcontext
 import numpy as np
 
-
+# helper class
 FlatView = collections.namedtuple('FlatView', 'input, replacements')
+# shortcut for zero grad
+Z = theano.gradient.zero_grad
 
 
 class BaseReplacement(object):
@@ -34,14 +36,6 @@ class BaseReplacement(object):
         self.flat_view = FlatView(inputvar, replacements)
         self.view = {vm.var: vm for vm in self.order.vmap}
         self.shared_params = self.create_shared_params()
-
-    @property
-    def constant_shared_params(self):
-        """Constant view on shared params
-        """
-        return collections.OrderedDict(
-                [(name, theano.gradient.zero_grad(shared))
-                    for name, shared in self.shared_params.items()])
 
     def set_params(self, params):
         self.shared_params.update(params)
@@ -203,10 +197,6 @@ class BaseReplacement(object):
         rho = tt.concatenate(rho)
         return mu, rho
 
-    def __constant_local_mu_rho(self):
-        mu, rho = self.__local_mu_rho()
-        return theano.gradient.zero_grad(mu), theano.gradient.zero_grad(rho)
-
     def to_flat_input(self, node):
         """Replaces vars with flattened view stored in self.input
         """
@@ -214,11 +204,14 @@ class BaseReplacement(object):
 
     def log_q_W_local(self, posterior):
         """log_q_W samples over q for local vars
+
+        Gradient wrt mu, rho in density parametrization
+        is set to zero to lower variance of ELBO
         """
         if not self.local_vars:
             return 0
-        mu, rho = self.__constant_local_mu_rho()
-        samples = tt.sum(log_normal3(posterior, mu, rho), axis=1)
+        mu, rho = self.__local_mu_rho()
+        samples = tt.sum(log_normal3(posterior, Z(mu), Z(rho)), axis=1)
         return samples
 
     def log_q_W_global(self, posterior):
@@ -342,7 +335,9 @@ class MeanField(BaseReplacement):
         return sd * initial + mu
 
     def log_q_W_global(self, posterior):
-        mu = self.constant_shared_params['mu']
-        rho = self.constant_shared_params['rho']
-        samples = tt.sum(log_normal3(posterior, mu, rho), axis=1)
+        """Gradient wrt mu, rho in density parametrization
+        is set to zero to lower variance of ELBO"""
+        mu = self.shared_params['mu']
+        rho = self.shared_params['rho']
+        samples = tt.sum(log_normal3(posterior, Z(mu), Z(rho)), axis=1)
         return samples
