@@ -259,21 +259,33 @@ class BaseReplacement(object):
         samples = self.sample_over_space(posterior, _log_p_W_)
         return samples
 
-    def apply_replacements(self, node, deterministic=False):
-        """Replace variables in graph with variational approximation
+    def apply_replacements(self, node, deterministic=False, include=None, exclude=None):
+        """Replace variables in graph with variational approximation. By default, replaces all variables
 
         Parameters
         ----------
         node : node for replacements
         deterministic : whether to use zeros as initial distribution
-            if True - median point will be sampled
+            if True - zero initial point will produce constant latent variables
+        include : list - latent variables to be replaced
+        exclude : list - latent variables to be excluded for replacements
 
         Returns
         -------
         node with replacements
         """
+        if include is not None and exclude is not None:
+            raise ValueError('Only one parameter is supported {include|exclude}, got two')
+        if include is not None:
+            replacements = {k: v for k, v
+                            in self.flat_view.replacements.items() if k in include}
+        elif exclude is not None:
+            replacements = {k: v for k, v
+                            in self.flat_view.replacements.items() if k not in exclude}
+        else:
+            replacements = self.flat_view.replacements
+        node = theano.clone(node, replacements, strict=False)
         posterior = self.posterior(zeros=deterministic)[0]
-        node = self.to_flat_input(node)
         return theano.clone(node, {self.input: posterior})
 
     def elbo(self, samples=1, pi=1):
