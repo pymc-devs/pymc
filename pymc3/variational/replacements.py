@@ -1,8 +1,9 @@
 import collections
 import theano.tensor as tt
+from theano.ifelse import ifelse
 import theano
 import pymc3 as pm
-from ..theanof import tt_rng
+from ..theanof import tt_rng, memoize, change_flags
 from ..blocking import ArrayOrdering
 from ..distributions.dist_math import rho2sd, log_normal3
 from ..math import flatten_list
@@ -88,10 +89,13 @@ class BaseReplacement(object):
         else:
             size = self.local_size
         shape = tt.stack([tt.as_tensor(samples), tt.as_tensor(size)])
-        if not zeros:
-            return tt_rng().normal(shape)
-        else:
-            return tt.zeros(shape)
+        if isinstance(zeros, bool):
+            zeros = int(zeros)
+        zeros = tt.as_tensor(zeros)
+        space = ifelse(zeros,
+                       tt.zeros(shape),
+                       tt_rng().normal(shape))
+        return space
 
     def posterior(self, samples=1, zeros=False):
         """Transforms initial latent space to posterior distribution
@@ -305,6 +309,67 @@ class BaseReplacement(object):
         posterior = self.posterior(samples)
         elbo = self.log_p_D(posterior) - pi * self.KL_q_p_W(posterior)
         return elbo
+
+    @property
+    @memoize
+    @change_flags(compute_test_value='off')
+    def posterior_fn(self):
+        In = theano.In
+        samples = tt.iscalar('n_samples')
+        zeros = tt.bscalar('zeros')
+        posterior = self.posterior(samples, zeros)
+        fn = theano.function([In(samples, 'samples', 1, allow_downcast=True),
+                              In(zeros, 'zeros', 0, allow_downcast=True)],
+                             posterior)
+
+        def inner(samples=1, zeros=False):
+            return fn(samples, int(zeros))
+        return inner
+
+    def sample_vp(self, draws=1, zeros=False, hide_transformed=False):
+        if hide_transformed:
+            vars_sampled = [v_ for v_ in self.model.unobserved_RVs
+                            if not str(v_).endswith('_')]
+        else:
+            vars_sampled = [v_ for v_ in self.model.unobserved_RVs]
+        posterior = self.posterior_fn(draws, zeros)
+        names = [var.name for var in self.local_vars + self.global_vars]
+        samples = {name: self.view_from(posterior, name)
+                   for name in names}
+
+        def points():
+            for i in range(draws):
+                yield {name: samples[name][i]
+                       for name in names}
+
+        trace = pm.sampling.NDArray(model=self.model, vars=vars_sampled)
+        trace.setup(draws=draws, chain=0)
+        for point in points():
+            trace.record(point)
+        return pm.sampling.MultiTrace([trace])
+
+    @property
+    @memoize
+    def posterior_to_point_fn(self):
+        names = [var.name for var in self.local_vars + self.global_vars]
+        point_fn = self.model.fastfn(self.local_vars + self.global_vars)
+
+        def inner(posterior):
+            if posterior.shape[0] > 1:
+                raise ValueError('Posterior should have one sample')
+            point = {name: self.view_from(posterior, name)[0]
+                     for name in names}
+            return dict(zip(names, point_fn(point)))
+        return inner
+
+    @property
+    def median(self):
+        posterior = self.posterior_fn(samples=1, zeros=True)
+        return self.posterior_to_point_fn(posterior)
+
+    def random(self):
+        posterior = self.posterior_fn(samples=1, zeros=False)
+        return self.posterior_to_point_fn(posterior)
 
     @property
     def local_vmap(self):
