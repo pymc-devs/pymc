@@ -2,15 +2,20 @@ import unittest
 import numpy as np
 import theano
 import theano.tensor as tt
+from theano.sandbox.rng_mrg import MRG_RandomStreams
 import pymc3 as pm
 from pymc3 import Model, Normal
 from pymc3.variational.replacements import MeanField
+from pymc3.variational.inference import approximate
+from ..theanof import set_tt_rng
 from . import models
+set_tt_rng(MRG_RandomStreams(42))
 
 
 class TestApproximates:
     class Base(unittest.TestCase):
         approx = None
+        NITER = 30000
 
         def test_elbo(self):
             if self.approx is not MeanField:
@@ -75,7 +80,6 @@ class TestApproximates:
                 self.assertListEqual(sorted(trace.varnames), ['p', 'p_logodds_'])
 
         def test_advi_optimizer(self):
-            from pymc3.variational.advi import adagrad_optimizer
             n = 1000
             sd0 = 2.
             mu0 = 4.
@@ -90,13 +94,8 @@ class TestApproximates:
             with Model():
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data)
-                optimizer = adagrad_optimizer(learning_rate=0.1, epsilon=0.1)
                 mf = self.approx()
-                elbo = mf.elbo().mean()
-                upd = optimizer(-elbo, mf.params)
-                step = theano.function([], elbo, updates=upd)
-                for _ in range(1000):
-                    step()
+                approximate(self.NITER, method=mf)
                 trace = mf.sample_vp(10000)
 
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
