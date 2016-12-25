@@ -362,15 +362,16 @@ class BaseApproximation(object):
     @property
     @memoize
     def posterior_to_point_fn(self):
-        names = [var.name for var in self.local_vars + self.global_vars]
-        point_fn = self.model.fastfn(self.local_vars + self.global_vars)
+        names_vars = [var.name for var in self.local_vars + self.global_vars]
+        names_point = names_vars + [var.name for var in self.model.deterministics]
+        point_fn = self.model.fastfn(self.local_vars + self.global_vars + self.model.deterministics)
 
         def inner(posterior):
             if posterior.shape[0] > 1:
                 raise ValueError('Posterior should have one sample')
             point = {name: self.view_from(posterior, name)[0]
-                     for name in names}
-            return dict(zip(names, point_fn(point)))
+                     for name in names_vars}
+            return dict(zip(names_point, point_fn(point)))
         return inner
 
     @property

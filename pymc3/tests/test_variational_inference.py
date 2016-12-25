@@ -94,6 +94,7 @@ class TestApproximates:
             with Model():
                 mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
                 Normal('x', mu=mu_, sd=sd, observed=data)
+                pm.Deterministic('mu_sq', mu_**2)
                 mf = self.approx()
                 approximate(self.NITER, method=mf)
                 trace = mf.sample_vp(10000)
@@ -101,6 +102,7 @@ class TestApproximates:
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
             np.testing.assert_allclose(mf.median['mu'], mu_post, rtol=0.1)
+            np.testing.assert_allclose(mf.median['mu_sq'], mu_post**2, rtol=0.1)
 
 
 class TestMeanField(TestApproximates.Base):
