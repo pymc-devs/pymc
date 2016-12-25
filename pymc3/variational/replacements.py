@@ -401,7 +401,7 @@ class BaseReplacement(object):
         return slice(self.local_size, self.total_size)
 
 
-class MeanField(BaseReplacement):
+class Advi(BaseReplacement):
     def create_shared_params(self):
         return {'mu': theano.shared(self.input.tag.test_value[self.global_slc]),
                 'rho': theano.shared(np.ones((self.global_size,)))}

@@ -1,14 +1,13 @@
 import numpy as np
 import theano
 import pymc3 as pm
-from .replacements import MeanField, BaseReplacement
+from .replacements import Advi, BaseReplacement
 from .advi import adagrad_optimizer
 from tqdm import trange
 
 
 APPROXIMATIONS = {
-    'advi': MeanField,
-    'meanfield': MeanField
+    'advi': Advi,
 }
 
 
