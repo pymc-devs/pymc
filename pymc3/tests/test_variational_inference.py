@@ -5,7 +5,7 @@ import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 import pymc3 as pm
 from pymc3 import Model, Normal
-from pymc3.variational.replacements import Advi
+from pymc3.variational.approximations import Advi
 from pymc3.variational.inference import approximate
 from ..theanof import set_tt_rng
 from . import models

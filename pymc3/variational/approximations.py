@@ -16,7 +16,18 @@ FlatView = collections.namedtuple('FlatView', 'input, replacements')
 Z = theano.gradient.zero_grad
 
 
-class BaseReplacement(object):
+class BaseApproximation(object):
+    """Base class for variational methods
+    It uses the idea that we can map standard normal distribution
+    to the approximate posterior distribution. Thus there are three blank
+    places in the implementation:
+        1) creating shared parameters `create_shared_params()`
+        2) mapping initial distribution to posterior `posterior{_{global|local}}(initial)`
+        3) calculating log_q_W for approximation `log_q_W{_{global|local}}(posterior)`
+
+    Then ELBO can be calculated for given approximation
+        log_p_D(posterior) - KL_q_p_W(posterior)
+    """
     def __init__(self, model=None, population=None, known=None):
         model = modelcontext(model)
         self.check_model(model)
@@ -401,10 +412,10 @@ class BaseReplacement(object):
         return slice(self.local_size, self.total_size)
 
 
-class Advi(BaseReplacement):
+class Advi(BaseApproximation):
     def create_shared_params(self):
         return {'mu': theano.shared(self.input.tag.test_value[self.global_slc]),
-                'rho': theano.shared(np.ones((self.global_size,)))}
+                'rho': theano.shared(np.zeros((self.global_size,)))}
 
     def posterior_global(self, initial):
         sd = rho2sd(self.shared_params['rho'])
