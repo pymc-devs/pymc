@@ -198,11 +198,11 @@ class BaseApproximation(object):
         """
         if not self.local_vars:
             return initial
-        mu, rho = self.__local_mu_rho()
+        mu, rho = self._local_mu_rho()
         x = initial * rho2sd(rho) + mu
         return x
 
-    def __local_mu_rho(self):
+    def _local_mu_rho(self):
         mu = []
         rho = []
         for var in self.local_vars:
@@ -225,8 +225,13 @@ class BaseApproximation(object):
         """
         if not self.local_vars:
             return 0
-        mu, rho = self.__local_mu_rho()
-        samples = tt.sum(log_normal3(posterior, Z(mu), Z(rho)), axis=1)
+        logp = []
+        for var in self.local_vars:
+            mu = self.known[var][0].ravel()
+            rho = self.known[var][1].ravel()
+            q = log_normal3(self.view_from(posterior, var.name, 'local'), Z(mu), Z(rho))
+            logp.append(self.weighted_logp(var, q))
+        samples = tt.sum(tt.concatenate(logp, axis=1), axis=1)
         return samples
 
     def log_q_W_global(self, posterior):
@@ -243,23 +248,22 @@ class BaseApproximation(object):
         """log_p_D samples over q
         """
         _log_p_D_ = tt.sum(
-            list(map(self.weighted_likelihood, self.model.observed_RVs))
+            list(map(self.weighted_logp, self.model.observed_RVs))
         )
         _log_p_D_ = self.to_flat_input(_log_p_D_)
         samples = self.sample_over_space(posterior, _log_p_D_)
         return samples
 
-    def weighted_likelihood(self, var):
-        """Weight likelihood according to given population size
+    def weighted_logp(self, var, logp=None):
+        """Weight logp according to given population size
         """
-        tot = self.population.get(
-            var, self.population.get(var.name))
-        logpt = tt.sum(var.logpt)
+        tot = self.population.get(var)
+        if logp is None:
+            logp = tt.sum(var.logpt)
         if tot is not None:
             tot = tt.as_tensor(tot)
-            logpt *= tot
-            logpt /= var.size
-        return logpt
+            logp *= tot / var.shape[0]
+        return logp
 
     def KL_q_p_W(self, posterior):
         """KL(q||p) samples over q
@@ -424,7 +428,9 @@ class Advi(BaseApproximation):
         return sd * initial + mu
 
     def log_q_W_global(self, posterior):
-        """Gradient wrt mu, rho in density parametrization
+        """log_q_W samples over q for global vars
+
+        Gradient wrt mu, rho in density parametrization
         is set to zero to lower variance of ELBO"""
         mu = self.shared_params['mu']
         rho = self.shared_params['rho']

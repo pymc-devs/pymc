@@ -17,7 +17,7 @@ def approximate(n=10000, population=None, local_vars=None,
                 model=None, more_params=None, more_updates=None,
                 *args, **kwargs):
     """Interface for efficient variational inference with gradient
-    variance reduction described in [4]_
+    variance reduction as described in [4]_
 
 
     PyMC3 supports the following variational inference methods:
@@ -27,10 +27,10 @@ def approximate(n=10000, population=None, local_vars=None,
     ----------
     n : int
         number of training iterations
-    population : dict
+    population : dict[Variable->int]
         maps observed_RV to its population size
         if not provided defaults to full population
-        Note: population size is not `shape[0]` but `size` attr
+        Note: population size is `shape[0]` of the whole data
     local_vars : dict[Variable->(mu, rho)]
         maps random variable to mu and rho
         for posterior parametrization it is used for Autoencoding Variational Bayes
@@ -70,7 +70,7 @@ def approximate(n=10000, population=None, local_vars=None,
 
     Notes
     -----
-    Remember that you can manipulate with pi and samples with callbacks
+    Remember that you can manipulate pi and number of samples with callbacks
 
     References
     ----------
