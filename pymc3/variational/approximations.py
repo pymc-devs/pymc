@@ -270,10 +270,41 @@ class BaseApproximation(object):
         """
         return self.log_q_W(posterior) - self.log_p_W(posterior)
 
-    def log_p_W(self, posterior):
+    def log_p_W_local(self, posterior):
+        if not self.local_vars:
+            return 0
+        _log_p_W_local_ = tt.sum(
+            list(map(self.weighted_logp, self.local_vars))
+        )
+        _log_p_W_local_ = self.to_flat_input(_log_p_W_local_)
+        samples = self.sample_over_space(posterior, _log_p_W_local_)
+        return samples
+
+    def log_p_W_global(self, posterior):
         """log_p_W samples over q
         """
-        _log_p_W_ = self.model.varlogpt + tt.sum(self.model.potentials)
+        def logp(var):
+            return var.logpt
+        _log_p_W_global_ = tt.sum(
+            list(map(logp, self.global_vars))
+        )
+        _log_p_W_global_ = self.to_flat_input(_log_p_W_global_)
+        samples = self.sample_over_space(posterior, _log_p_W_global_)
+        return samples
+
+    def log_p_W(self, posterior):
+        def logp(var):
+            return var.logpt
+        if self.local_vars:
+            _log_p_W_local_ = tt.sum(
+                list(map(self.weighted_logp, self.local_vars))
+            )
+        else:
+            _log_p_W_local_ = 0
+        _log_p_W_global_ = tt.sum(
+            list(map(logp, self.global_vars))
+        )
+        _log_p_W_ = _log_p_W_global_ + _log_p_W_local_
         _log_p_W_ = self.to_flat_input(_log_p_W_)
         samples = self.sample_over_space(posterior, _log_p_W_)
         return samples
@@ -322,7 +353,12 @@ class BaseApproximation(object):
         samples = tt.as_tensor(samples)
         pi = tt.as_tensor(pi)
         posterior = self.posterior(samples)
-        elbo = self.log_p_D(posterior) - pi * self.KL_q_p_W(posterior)
+        elbo = (self.log_p_D(posterior)
+                - self.log_q_W_local(posterior)
+                - pi * self.log_q_W_global(posterior)
+                + self.log_p_W_local(posterior)
+                + pi * self.log_p_W_global(posterior))
+
         return elbo
 
     @property
