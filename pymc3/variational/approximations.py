@@ -28,7 +28,7 @@ class BaseApproximation(object):
     Then ELBO can be calculated for given approximation
         log_p_D(posterior) - KL_q_p_W(posterior)
     """
-    def __init__(self, model=None, population=None, known=None):
+    def __init__(self, population=None, known=None, model=None):
         model = modelcontext(model)
         self.check_model(model)
         if known is None:
@@ -455,6 +455,42 @@ class BaseApproximation(object):
 
 
 class Advi(BaseApproximation):
+    """ADVI algorithm as discribed in Kucukelbir[1]_ with
+    variance reduction [3]_. ADVI also supports Auto-Encoding
+    Variational Bayes described in [2]_ and minibatch training.
+
+    The main goal of advi is fast variational inference algorithm
+    that can be scaled on large problems. The limitation of this
+    approximation is that latent variables are assumed to be independent
+    and approximated with normal distribution. These assumptions don't hold
+    in regular practical task.
+
+    Parameters
+    ----------
+    population : dict[Variable->int]
+        maps observed_RV to its population size
+        if not provided defaults to full population
+        Note: population size is `shape[0]` of the whole data
+    known : dict[Variable->(mu, rho)]
+        maps local random variable to mu and rho for posterior parametrization
+        it is used for Autoencoding Variational Bayes
+        (AEVB; Kingma and Welling, 2014)[1]_
+    model : Model
+        PyMC3 model that's posterior is going to be approximated
+
+    References
+    ----------
+    .. [1] Kingma, D. P., & Welling, M. (2014).
+      Auto-Encoding Variational Bayes. stat, 1050, 1.
+
+    .. [2] Kucukelbir, A., Ranganath, R., Gelman, A., & Blei, D. (2015).
+      Automatic variational inference in Stan. In Advances in neural
+      information processing systems (pp. 568-576).
+
+    .. [3] Geoffrey, R., Yuhuai, W., David, D. (2016)
+        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI.
+        NIPS Workshop
+    """
     def create_shared_params(self):
         return {'mu': theano.shared(self.input.tag.test_value[self.global_slc]),
                 'rho': theano.shared(np.zeros((self.global_size,)))}

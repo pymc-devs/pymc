@@ -33,15 +33,16 @@ def approximate(n=10000, population=None, local_vars=None,
         if not provided defaults to full population
         Note: population size is `shape[0]` of the whole data
     local_vars : dict[Variable->(mu, rho)]
-        maps random variable to mu and rho
-        for posterior parametrization it is used for Autoencoding Variational Bayes
+        maps local random variable to mu and rho for posterior
+        parametrization, it is used for Autoencoding Variational Bayes
         (AEVB; Kingma and Welling, 2014)[1]_
     optimizer : callable
         optional custom optimizer to be called in the following way:
             :code:`updates = optimizer(-elbo, list_of_params)`
     method : str|Approximation
         string description of approximation to be used or
-        Approximation instance used to calculate elbo and provide for shared params
+        Approximation instance used to calculate elbo and provide
+        for shared params
     samples : int|Tensor
         number of Monte Carlo samples used for approximation,
         defaults to 1
