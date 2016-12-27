@@ -32,7 +32,7 @@ class TestApproximates:
                 Normal('y', mu=mu, sd=1, observed=y_obs)
 
             # Create variational gradient tensor
-            mean_field = self.approx(model)
+            mean_field = self.approx(model=model)
             elbo = mean_field.elbo(samples=10000)
 
             mean_field.shared_params['mu'].set_value(post_mu)

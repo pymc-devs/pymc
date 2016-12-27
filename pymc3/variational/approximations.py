@@ -37,11 +37,17 @@ class BaseApproximation(object):
             population = dict()
         self.population = population
         self.model = model
+
+        def get_transformed(v):
+            if hasattr(v, 'transformed'):
+                return v.transformed
+            return v
+        known = {get_transformed(k): v for k, v in known.items()}
         self.known = known
-        self.local_vars = [v for v in model.vars if v in known]
-        self.global_vars = [v for v in model.vars if v not in known]
+        self.local_vars = [v for v in model.free_RVs if v in known]
+        self.global_vars = [v for v in model.free_RVs if v not in known]
         self.order = ArrayOrdering(self.local_vars + self.global_vars)
-        inputvar = tt.vector('flat_view')
+        inputvar = tt.vector('flat_view', dtype=theano.config.floatX)
         inputvar.tag.test_value = flatten_list(self.local_vars + self.global_vars).tag.test_value
         replacements = {self.model.named_vars[name]: inputvar[slc].reshape(shape).astype(dtype)
                         for name, slc, shape, dtype in self.order.vmap}
@@ -149,14 +155,17 @@ class BaseApproximation(object):
         samples, _ = theano.scan(replace_node, space, n_steps=space.shape[0])
         return samples
 
-    def view_from(self, space, name, subset='all'):
+    def view_from(self, space, name, subset='all', reshape=True):
         """
         Parameters
         ----------
         space : space to take view of variable from
-        name : name of variable
-        subset : determines what space is used can be {all|local|global}
-
+        name : str
+            name of variable
+        subset : str
+            determines what space is used can be {all|local|global}
+        reshape : bool
+            whether to reshape variable form vectorized view
         Returns
         -------
         variable
@@ -170,7 +179,10 @@ class BaseApproximation(object):
             e = self.view[name].slc.stop
             slc = slice(s - self.local_size, e - self.local_size)
         _, _, shape, dtype = self.view[name]
-        return space[:, slc].reshape((space.shape[0],) + shape).astype(dtype)
+        view = space[:, slc]
+        if reshape:
+            view = view.reshape((space.shape[0],) + shape)
+        return view.astype(dtype)
 
     def posterior_global(self, initial):
         """Implements posterior distribution from initial latent space
@@ -229,7 +241,8 @@ class BaseApproximation(object):
         for var in self.local_vars:
             mu = self.known[var][0].ravel()
             rho = self.known[var][1].ravel()
-            q = log_normal3(self.view_from(posterior, var.name, 'local'), Z(mu), Z(rho))
+            x = self.view_from(posterior, var.name, 'all', reshape=False)
+            q = log_normal3(x, Z(mu), Z(rho))
             logp.append(self.weighted_logp(var, q))
         samples = tt.sum(tt.concatenate(logp, axis=1), axis=1)
         return samples
@@ -259,7 +272,7 @@ class BaseApproximation(object):
         """
         tot = self.population.get(var)
         if logp is None:
-            logp = tt.sum(var.logpt)
+            logp = var.logpt
         if tot is not None:
             tot = tt.as_tensor(tot)
             logp = logp * tot / var.shape[0]
@@ -492,8 +505,10 @@ class Advi(BaseApproximation):
         NIPS Workshop
     """
     def create_shared_params(self):
-        return {'mu': theano.shared(self.input.tag.test_value[self.global_slc]),
-                'rho': theano.shared(np.zeros((self.global_size,)))}
+        return {'mu': theano.shared(
+                    self.input.tag.test_value[self.global_slc]),
+                'rho': theano.shared(
+                    np.zeros((self.global_size,), dtype=theano.config.floatX))}
 
     def posterior_global(self, initial):
         sd = rho2sd(self.shared_params['rho'])
@@ -507,5 +522,5 @@ class Advi(BaseApproximation):
         is set to zero to lower variance of ELBO"""
         mu = self.shared_params['mu']
         rho = self.shared_params['rho']
-        samples = tt.sum(log_normal3(posterior, Z(mu), Z(rho)), axis=1)
+        samples = tt.sum(log_normal3(posterior[:, self.global_slc], Z(mu), Z(rho)), axis=1)
         return samples
