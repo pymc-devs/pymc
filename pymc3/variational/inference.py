@@ -12,7 +12,8 @@ APPROXIMATIONS = {
 
 
 def approximate(n=10000, population=None, local_vars=None,
-                optimizer=None, method='advi', samples=1, pi=1,
+                optimizer=None, method='advi',
+                samples=1, pi_local=1, pi_global=1,
                 callbacks=None, learning_rate=.001, epsilon=.1,
                 model=None, more_params=None, more_updates=None,
                 *args, **kwargs):
@@ -44,8 +45,11 @@ def approximate(n=10000, population=None, local_vars=None,
     samples : int|Tensor
         number of Monte Carlo samples used for approximation,
         defaults to 1
-    pi : float|Tensor
-        pi in [0;1] reweighting constant for KL divergence
+    pi_local : float|Tensor
+        pi_local in [0;1] reweighting constant for local KL divergence
+        this trick was described in [3]_ for fine-tuning minibatch ADVI
+    pi_global : float|Tensor
+        pi_global in [0;1] reweighting constant for global KL divergence
         this trick was described in [3]_ for fine-tuning minibatch ADVI
     callbacks : list[callable]
         callables that will be called in the following way
@@ -98,7 +102,9 @@ def approximate(n=10000, population=None, local_vars=None,
         callbacks = []
     if optimizer is None:
         optimizer = adagrad_optimizer(learning_rate, epsilon)
-    elbo = approx.elbo(samples=samples, pi=pi).mean()
+    elbo = approx.elbo(samples=samples,
+                       pi_local=pi_local,
+                       pi_global=pi_global).mean()
     params = approx.params
     if more_params is not None:
         params += more_params

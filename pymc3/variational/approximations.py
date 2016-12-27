@@ -262,7 +262,7 @@ class BaseApproximation(object):
             logp = tt.sum(var.logpt)
         if tot is not None:
             tot = tt.as_tensor(tot)
-            logp *= tot / var.shape[0]
+            logp = logp * tot / var.shape[0]
         return logp
 
     def KL_q_p_W(self, posterior):
@@ -338,27 +338,28 @@ class BaseApproximation(object):
         posterior = self.posterior(zeros=deterministic)[0]
         return theano.clone(node, {self.input: posterior})
 
-    def elbo(self, samples=1, pi=1):
+    def elbo(self, samples=1, pi_local=1, pi_global=1):
         """Output of this function should be used for fitting a model
 
         Parameters
         ----------
         samples : Tensor - number of samples
-        pi : Tensor - weight of variational part
+        pi_local : Tensor - weight of local variational part
+        pi_global : Tensor - weight of global variational part
 
         Returns
         -------
         ELBO samples
         """
         samples = tt.as_tensor(samples)
-        pi = tt.as_tensor(pi)
+        pi_local = tt.as_tensor(pi_local)
+        pi_global = tt.as_tensor(pi_global)
         posterior = self.posterior(samples)
         elbo = (self.log_p_D(posterior)
-                - self.log_q_W_local(posterior)
-                - pi * self.log_q_W_global(posterior)
-                + self.log_p_W_local(posterior)
-                + pi * self.log_p_W_global(posterior))
-
+                - pi_local * self.log_q_W_local(posterior)
+                - pi_global * self.log_q_W_global(posterior)
+                + pi_local * self.log_p_W_local(posterior)
+                + pi_global * self.log_p_W_global(posterior))
         return elbo
 
     @property
