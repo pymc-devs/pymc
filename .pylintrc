@@ -14,10 +14,6 @@ unsafe-load-any-extension=no
 # AST will be different than the one from reality.
 optimize-ast=no
 
-# Python code to execute, usually for sys.path manipulation such as
-# pygtk.require().
-init-hook="import pymc3"
-
 [MESSAGES CONTROL]
 
 # Only show warnings with the listed confidence levels. Leave empty to show
