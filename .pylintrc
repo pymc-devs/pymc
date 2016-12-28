@@ -1,6 +1,6 @@
 [MASTER]
 # Use multiple processes to speed up Pylint.
-jobs=2
+jobs=1
 
 # Allow loading of arbitrary C extensions. Extensions are imported into the
 # active Python interpreter and may run arbitrary code.
@@ -14,17 +14,15 @@ unsafe-load-any-extension=no
 # AST will be different than the one from reality.
 optimize-ast=no
 
+# Python code to execute, usually for sys.path manipulation such as
+# pygtk.require().
+init-hook="import pymc3"
 
 [MESSAGES CONTROL]
 
 # Only show warnings with the listed confidence levels. Leave empty to show
 # all. Valid levels: HIGH, INFERENCE, INFERENCE_FAILURE, UNDEFINED
 confidence=
-
-# Enable the message, report, category or checker with the given id(s). You can
-# either give multiple identifier separated by comma (,) or put this option
-# multiple time. See also the "--disable" option for examples.
-#enable=
 
 # Disable the message, report, category or checker with the given id(s). You
 # can either give multiple identifiers separated by comma (,) or put this
@@ -37,13 +35,42 @@ confidence=
 # --disable=W"
 disable=all
 
+# Enable the message, report, category or checker with the given id(s). You can
+# either give multiple identifier separated by comma (,) or put this option
+# multiple time. See also the "--disable" option for examples.
+enable=import-error,
+       import-self,
+       reimported,
+       wildcard-import,
+       misplaced-future,
+       relative-import,
+       deprecated-module,
+       unpacking-non-sequence,
+       invalid-all-object,
+       undefined-all-variable,
+       used-before-assignment,
+       cell-var-from-loop,
+       global-variable-undefined,
+       redefined-builtin,
+       redefine-in-handler,
+       unused-import,
+       # unused-wildcard-import,
+       global-variable-not-assigned,
+       undefined-loop-variable,
+       global-statement,
+       global-at-module-level,
+       bad-open-mode,
+       redundant-unittest-assert,
+       boolean-datetime,
+       unused-variable
+
 
 [REPORTS]
 
 # Set the output format. Available formats are text, parseable, colorized, msvs
 # (visual studio) and html. You can also give a reporter class, eg
 # mypackage.mymodule.MyReporterClass.
-output-format=colorized
+output-format=parseable
 
 # Put messages in a separate file for each module / package specified on the
 # command line instead of printing them on stdout. Reports (if any) will be
@@ -63,7 +90,7 @@ evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / stateme
 [BASIC]
 
 # List of builtins function names that should not be used, separated by a comma
-bad-functions=map,filter
+bad-functions=map,filter,input
 
 # Good variable names which should always be accepted, separated by a comma
 good-names=i,j,k,ex,Run,_
