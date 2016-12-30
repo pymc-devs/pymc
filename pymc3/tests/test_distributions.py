@@ -102,6 +102,7 @@ I = Domain([-1000, -3, -2, -1, 0, 1, 2, 3, 1000], 'int64')
 NatSmall = Domain([0, 3, 4, 5, 1000], 'int64')
 Nat = Domain([0, 1, 2, 3, 2000], 'int64')
 NatBig = Domain([0, 1, 2, 3, 5000, 50000], 'int64')
+PosNat = Domain([1, 2, 3, 2000], 'int64')
 
 Bool = Domain([0, 0, 1, 1], 'int64')
 
@@ -337,6 +338,8 @@ class TestMatchesScipy(SeededTest):
         PositiveNormal = Bound(Normal, lower=0.)
         self.pymc3_matches_scipy(PositiveNormal, Rplus, {'mu': Rplus, 'sd': Rplus},
                                  lambda value, mu, sd: sp.norm.logpdf(value, mu, sd))
+        with Model(): x = PositiveNormal('x', mu=0, sd=1, transform=None)
+        assert np.isinf(x.logp({'x':-1}))
 
     def test_discrete_unif(self):
         self.pymc3_matches_scipy(
@@ -477,7 +480,15 @@ class TestMatchesScipy(SeededTest):
     def test_poisson(self):
         self.pymc3_matches_scipy(Poisson, Nat, {'mu': Rplus},
                                  lambda value, mu: sp.poisson.logpmf(value, mu))
-
+                                 
+    def test_bound_poisson(self):
+        NonZeroPoisson = Bound(Poisson, lower=1.)
+        self.pymc3_matches_scipy(NonZeroPoisson, PosNat, {'mu': Rplus},
+                                lambda value, mu: sp.poisson.logpmf(value, mu))
+        
+        with Model(): x = NonZeroPoisson('x', mu=4)
+        assert np.isinf(x.logp({'x':0}))
+        
     def test_constantdist(self):
         self.pymc3_matches_scipy(Constant, I, {'c': I},
                                  lambda value, c: np.log(c == value))
