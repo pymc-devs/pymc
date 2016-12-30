@@ -12,7 +12,6 @@ from .continuous import Cauchy
 from .continuous import HalfCauchy
 from .continuous import Gamma
 from .continuous import Weibull
-from .continuous import Bound
 from .continuous import HalfStudentT
 from .continuous import Lognormal
 from .continuous import ChiSquared
@@ -38,6 +37,7 @@ from .discrete import DiscreteUniform
 from .discrete import Geometric
 from .discrete import Categorical
 
+from .distribution import Bound
 from .distribution import DensityDist
 from .distribution import Distribution
 from .distribution import Continuous
