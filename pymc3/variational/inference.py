@@ -1,13 +1,13 @@
 import numpy as np
 import theano
 import pymc3 as pm
-from .approximations import Advi, BaseApproximation
+from .approximations import ADVI, BaseApproximation
 from .advi import adagrad_optimizer
 from tqdm import trange
 
 
 APPROXIMATIONS = {
-    'advi': Advi,
+    'advi': ADVI,
 }
 
 
@@ -17,7 +17,8 @@ def approximate(n=10000, population=None, local_vars=None,
                 callbacks=None, learning_rate=.001, epsilon=.1,
                 model=None, more_params=None, more_updates=None,
                 *args, **kwargs):
-    """Interface for efficient variational inference with gradient
+    """
+    Interface for efficient variational inference with gradient
     variance reduction as described in [4]_
 
 

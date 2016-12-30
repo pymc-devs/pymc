@@ -17,16 +17,37 @@ Z = theano.gradient.zero_grad
 
 
 class BaseApproximation(object):
-    """Base class for variational methods
-    It uses the idea that we can map standard normal distribution
-    to the approximate posterior distribution. Thus there are three blank
-    places in the implementation:
+    """
+    Base class for variational methods
+
+    It uses the idea that we can map initial standard normal
+    distribution to the approximate posterior distribution.
+
+    Three methods are required for implementation:
         1) creating shared parameters `create_shared_params()`
         2) mapping initial distribution to posterior `posterior{_{global|local}}(initial)`
         3) calculating log_q_W for approximation `log_q_W{_{global|local}}(posterior)`
 
     Then ELBO can be calculated for given approximation
-        log_p_D(posterior) - KL_q_p_W(posterior)
+        `log_p_D(posterior) - KL_q_p_W(posterior)`
+
+    Parameters
+    ----------
+    population : dict[Variable->int]
+        maps observed_RV to its population size
+        if not provided defaults to full population
+        Note: population size is `shape[0]` of the whole data
+    known : dict[Variable->(mu, rho)]
+        maps local random variable to mu and rho for posterior parametrization
+        it is used for Autoencoding Variational Bayes
+        (AEVB; Kingma and Welling, 2014)[1]_
+    model : Model
+        PyMC3 model which posterior is going to be approximated
+
+    References
+    ----------
+    .. [1] Kingma, D. P., & Welling, M. (2014).
+      Auto-Encoding Variational Bayes. stat, 1050, 1.
     """
     def __init__(self, population=None, known=None, model=None):
         model = modelcontext(model)
@@ -64,7 +85,8 @@ class BaseApproximation(object):
 
     @staticmethod
     def check_model(model):
-        """Checks that model is valid for variational inference
+        """
+        Checks that model is valid for variational inference
         """
         vars_ = [var for var in model.vars if not isinstance(var, pm.model.ObservedRV)]
         if any([var.dtype in pm.discrete_types for var in vars_]):
@@ -72,12 +94,14 @@ class BaseApproximation(object):
 
     @property
     def input(self):
-        """Shortcut to flattened input
+        """
+        Shortcut to flattened input
         """
         return self.flat_view.input
 
     def create_shared_params(self):
-        """Any stuff you need will be here
+        """
+        Any stuff you need will be here
 
         Returns
         -------
@@ -85,8 +109,10 @@ class BaseApproximation(object):
         """
         raise NotImplementedError
 
-    def initial(self, samples, subset, zeros=False):
+    def initial(self, samples, subset='all', zeros=False):
         """
+        Initial distribution for constructing posterior
+
         Parameters
         ----------
         samples : int - number of samples
@@ -115,7 +141,8 @@ class BaseApproximation(object):
         return space
 
     def posterior(self, samples=1, zeros=False):
-        """Transforms initial latent space to posterior distribution
+        """
+        Transforms initial latent space to posterior distribution
 
         Parameters
         ----------
@@ -141,6 +168,8 @@ class BaseApproximation(object):
 
     def sample_over_space(self, space, node):
         """
+        Take samples of node using `space` as distribution of random variables
+
         Parameters
         ----------
         space : space to sample over
@@ -157,6 +186,8 @@ class BaseApproximation(object):
 
     def view_from(self, space, name, subset='all', reshape=True):
         """
+        Construct view on a variable from flattened `space`
+
         Parameters
         ----------
         space : space to take view of variable from
@@ -165,7 +196,7 @@ class BaseApproximation(object):
         subset : str
             determines what space is used can be {all|local|global}
         reshape : bool
-            whether to reshape variable form vectorized view
+            whether to reshape variable from vectorized view
         Returns
         -------
         variable
@@ -185,7 +216,8 @@ class BaseApproximation(object):
         return view.astype(dtype)
 
     def posterior_global(self, initial):
-        """Implements posterior distribution from initial latent space
+        """
+        Implements posterior distribution from initial latent space
 
         Parameters
         ----------
@@ -198,7 +230,8 @@ class BaseApproximation(object):
         raise NotImplementedError
 
     def posterior_local(self, initial):
-        """Implements posterior distribution from initial latent space
+        """
+        Implements posterior distribution from initial latent space
 
         Parameters
         ----------
@@ -225,12 +258,14 @@ class BaseApproximation(object):
         return mu, rho
 
     def to_flat_input(self, node):
-        """Replaces vars with flattened view stored in self.input
+        """
+        Replaces vars with flattened view stored in self.input
         """
         return theano.clone(node, self.flat_view.replacements, strict=False)
 
     def log_q_W_local(self, posterior):
-        """log_q_W samples over q for local vars
+        """
+        log_q_W samples over q for local vars
 
         Gradient wrt mu, rho in density parametrization
         is set to zero to lower variance of ELBO
@@ -248,17 +283,20 @@ class BaseApproximation(object):
         return samples
 
     def log_q_W_global(self, posterior):
-        """log_q_W samples over q for global vars
+        """
+        log_q_W samples over q for global vars
         """
         raise NotImplementedError
 
     def log_q_W(self, posterior):
-        """log_q_W samples over q
+        """
+        log_q_W samples over q
         """
         return self.log_q_W_global(posterior) + self.log_q_W_local(posterior)
 
     def log_p_D(self, posterior):
-        """log_p_D samples over q
+        """
+        log_p_D samples over q
         """
         _log_p_D_ = tt.sum(
             list(map(self.weighted_logp, self.model.observed_RVs))
@@ -268,7 +306,18 @@ class BaseApproximation(object):
         return samples
 
     def weighted_logp(self, var, logp=None):
-        """Weight logp according to given population size
+        """
+        Weight logp according to given population size
+
+        Parameters
+        ----------
+        var : Random Variable
+        logp : None or given density for variable
+
+        Returns
+        -------
+        Tensor
+            weighted logp
         """
         tot = self.population.get(var)
         if logp is None:
@@ -279,11 +328,15 @@ class BaseApproximation(object):
         return logp
 
     def KL_q_p_W(self, posterior):
-        """KL(q||p) samples over q
+        """
+        KL(q||p) samples over q
         """
         return self.log_q_W(posterior) - self.log_p_W(posterior)
 
     def log_p_W_local(self, posterior):
+        """
+        log_p_W_local samples over q
+        """
         if not self.local_vars:
             return 0
         _log_p_W_local_ = tt.sum(
@@ -294,7 +347,8 @@ class BaseApproximation(object):
         return samples
 
     def log_p_W_global(self, posterior):
-        """log_p_W samples over q
+        """
+        log_p_W_global samples over q
         """
         def logp(var):
             return var.logpt
@@ -306,6 +360,9 @@ class BaseApproximation(object):
         return samples
 
     def log_p_W(self, posterior):
+        """
+        log_p_W samples over q
+        """
         def logp(var):
             return var.logpt
         if self.local_vars:
@@ -323,15 +380,20 @@ class BaseApproximation(object):
         return samples
 
     def apply_replacements(self, node, deterministic=False, include=None, exclude=None):
-        """Replace variables in graph with variational approximation. By default, replaces all variables
+        """
+        Replace variables in graph with variational approximation. By default, replaces all variables
 
         Parameters
         ----------
-        node : node for replacements
-        deterministic : whether to use zeros as initial distribution
+        node : Variable
+            node for replacements
+        deterministic : bool
+            whether to use zeros as initial distribution
             if True - zero initial point will produce constant latent variables
-        include : list - latent variables to be replaced
-        exclude : list - latent variables to be excluded for replacements
+        include : list
+            latent variables to be replaced
+        exclude : list
+            latent variables to be excluded for replacements
 
         Returns
         -------
@@ -352,13 +414,20 @@ class BaseApproximation(object):
         return theano.clone(node, {self.input: posterior})
 
     def elbo(self, samples=1, pi_local=1, pi_global=1):
-        """Output of this function should be used for fitting a model
+        """
+        Evidence Lower Bound - ELBO
+
+        To fit variational posterior we need to maximize ELBO
+        wrt parameters
 
         Parameters
         ----------
-        samples : Tensor - number of samples
-        pi_local : Tensor - weight of local variational part
-        pi_global : Tensor - weight of global variational part
+        samples : Tensor
+            number of samples
+        pi_local : Tensor
+            weight of local variational part
+        pi_global : Tensor
+            weight of global variational part
 
         Returns
         -------
@@ -467,7 +536,7 @@ class BaseApproximation(object):
         return slice(self.local_size, self.total_size)
 
 
-class Advi(BaseApproximation):
+class ADVI(BaseApproximation):
     """ADVI algorithm as discribed in Kucukelbir[1]_ with
     variance reduction [3]_. ADVI also supports Auto-Encoding
     Variational Bayes described in [2]_ and minibatch training.
@@ -516,10 +585,12 @@ class Advi(BaseApproximation):
         return sd * initial + mu
 
     def log_q_W_global(self, posterior):
-        """log_q_W samples over q for global vars
+        """
+        log_q_W samples over q for global vars
 
         Gradient wrt mu, rho in density parametrization
-        is set to zero to lower variance of ELBO"""
+        is set to zero to lower variance of ELBO
+        """
         mu = self.shared_params['mu']
         rho = self.shared_params['rho']
         samples = tt.sum(log_normal3(posterior[:, self.global_slc], Z(mu), Z(rho)), axis=1)

@@ -82,36 +82,71 @@ def i1(x):
 
 
 def sd2rho(sd):
-    """sd -> rho
-    theano converter
-    mu + sd*e = mu + log(1+exp(rho))*e"""
+    """
+    `sd -> rho` theano converter
+
+    :math:`mu + sd*e = mu + log(1+exp(rho))*e`"""
     return tt.log(tt.exp(sd) - 1)
 
 
 def rho2sd(rho):
-    """rho -> sd
-    theano converter
-    mu + sd*e = mu + log(1+exp(rho))*e"""
+    """
+    `rho -> sd` theano converter
+
+    :math:`mu + sd*e = mu + log(1+exp(rho))*e`"""
     return tt.log1p(tt.exp(rho))
 
 
-def kl_divergence_normal_pair(mu1, mu2, sd1, sd2):
-    elemwise_kl = (tt.log(sd2/sd1) +
-                   (sd2**2 + (mu1-mu2)**2)/(2.*sd2**2) -
-                   0.5)
-    return tt.sum(elemwise_kl)
-
-
-def kl_divergence_normal_pair3(mu1, mu2, rho1, rho2):
-    sd1, sd2 = rho2sd(rho1), rho2sd(rho2)
-    return kl_divergence_normal_pair(mu1, mu2, sd1, sd2)
-
-
 def log_normal(x, mean, std, eps=0.0):
+    """
+    Calculate logarithm of normal distribution at point `x`
+    with given `mean` and `std`
+
+    Notes
+    -----
+    There are three variants for density evaluation function.
+    They use:
+        1) standard normal distribution - `std` (:code:`log_normal`)
+        2) `w`, logarithm of `std` :math:`w = log(std)` (:code:`log_normal2`)
+        3) `rho` that follows this equation :math:`rho = log(exp(std) - 1)` (:code:`log_normal3`)
+    ----
+    """
     std += eps
     return c - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2 * std ** 2)
 
 
+def log_normal2(x, mean, w, eps=0.0):
+    """
+    Calculate logarithm of normal distribution at point `x`
+    with given `mean` and `w`
+
+    Notes
+    -----
+    There are three variants for density evaluation function.
+    They use:
+        1) standard normal distribution - `std` (:code:`log_normal`)
+        2) `w`, logarithm of `std` :math:`w = log(std)` (:code:`log_normal2`)
+        3) `rho` that follows this equation :math:`rho = log(exp(std) - 1)` (:code:`log_normal3`)
+    ----
+    """
+    std = tt.exp(w)
+    return log_normal(x, mean, std, eps)
+
+
 def log_normal3(x, mean, rho, eps=0.0):
+    """
+    Calculate logarithm of normal distribution at point `x`
+    with given `mean` and `rho`
+
+    Notes
+    -----
+    There are three variants for density evaluation function.
+    They use:
+        1) standard normal distribution - `std` (:code:`log_normal`)
+        2) `w`, logarithm of `std` :math:`w = log(std)` (:code:`log_normal2`)
+        3) `rho` that follows this equation :math:`rho = log(exp(std) - 1)` (:code:`log_normal3`)
+    ----
+    """
     std = rho2sd(rho)
     return log_normal(x, mean, std, eps)
+

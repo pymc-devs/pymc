@@ -5,7 +5,7 @@ import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 import pymc3 as pm
 from pymc3 import Model, Normal
-from pymc3.variational.approximations import Advi
+from pymc3.variational.approximations import ADVI
 from pymc3.variational.inference import approximate
 from ..theanof import set_tt_rng
 from . import models
@@ -18,7 +18,7 @@ class TestApproximates:
         NITER = 30000
 
         def test_elbo(self):
-            if self.approx is not Advi:
+            if self.approx is not ADVI:
                 raise unittest.SkipTest
             mu0 = 1.5
             sigma = 1.0
@@ -106,7 +106,7 @@ class TestApproximates:
 
 
 class TestMeanField(TestApproximates.Base):
-    approx = Advi
+    approx = ADVI
 
 if __name__ == '__main__':
     unittest.main()
