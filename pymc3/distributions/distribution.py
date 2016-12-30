@@ -2,12 +2,14 @@ import numpy as np
 import theano.tensor as tt
 from theano import function
 
+from . import transforms
 from ..memoize import memoize
 from ..model import Model, get_named_nodes
 from ..vartypes import string_types
+from .dist_math import bound
 
 
-__all__ = ['DensityDist', 'Distribution', 'Continuous',
+__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Bound', 
            'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
 
 class _Unpickling(object):
@@ -352,3 +354,115 @@ def generate_samples(generator, *args, **kwargs):
             if broadcast_shape == (1,):
                 samples = np.reshape(samples, prefix_shape)
     return samples
+
+
+class Bounded(Distribution):
+    R"""
+    An upper, lower or upper+lower bounded distribution
+
+    Parameters
+    ----------
+    distribution : pymc3 distribution
+        Distribution to be transformed into a bounded distribution
+    lower : float (optional)
+        Lower bound of the distribution, set to -inf to disable.
+    upper : float (optional)
+        Upper bound of the distribibution, set to inf to disable.
+    tranform : 'infer' or object
+        If 'infer', infers the right transform to apply from the supplied bounds.
+        If transform object, has to supply .forward() and .backward() methods.
+        See pymc3.distributions.transforms for more information.
+    """
+
+    def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
+        self.dist = distribution.dist(*args, **kwargs)
+        self.__dict__.update(self.dist.__dict__)
+        self.__dict__.update(locals())
+
+        if hasattr(self.dist, 'mode'):
+            self.mode = self.dist.mode
+
+        if transform == 'infer':
+            self.transform, self.testval = self._infer(lower, upper)
+            
+        if issubclass(distribution, Discrete):
+            self.transform = None
+
+    def _infer(self, lower, upper):
+        """Infer proper transforms for the variable, and adjust test_value.
+
+        In particular, this deals with the case where lower or upper may be +/-inf, or an
+        `ndarray` or a `theano.tensor.TensorVariable`
+        """
+        if isinstance(upper, tt.TensorVariable):
+            _upper = upper.tag.test_value
+        else:
+            _upper = upper
+        if isinstance(lower, tt.TensorVariable):
+            _lower = lower.tag.test_value
+        else:
+            _lower = lower
+
+        testval = self.dist.default()
+        if not self._isinf(_lower) and not self._isinf(_upper):
+            transform = transforms.interval(lower, upper)
+            if np.any(testval <= _lower) or np.any(testval >= _upper):
+                testval = 0.5 * (_upper + _lower)
+        elif not self._isinf(_lower) and self._isinf(_upper):
+            transform = transforms.lowerbound(lower)
+            if np.any(testval <= _lower):
+                testval = lower + 1
+        elif self._isinf(_lower) and not self._isinf(_upper):
+            transform = transforms.upperbound(upper)
+            if np.any(testval >= _upper):
+                testval = _upper - 1
+        else:
+            transform = None
+        return transform, testval
+
+    def _isinf(self, value):
+        """Checks whether the value is +/-inf, or else returns 0 (even if an ndarray with
+        entries that are +/-inf)
+        """
+        try:
+            return bool(np.isinf(value))
+        except ValueError:
+            return False
+
+    def _random(self, lower, upper, point=None, size=None):
+        samples = np.zeros(size).flatten()
+        i, n = 0, len(samples)
+        while i < len(samples):
+            sample = self.dist.random(point=point, size=n)
+            select = sample[np.logical_and(sample > lower, sample <= upper)]
+            samples[i:(i + len(select))] = select[:]
+            i += len(select)
+            n -= len(select)
+        if size is not None:
+            return np.reshape(samples, size)
+        else:
+            return samples
+
+    def random(self, point=None, size=None, repeat=None):
+        lower, upper = draw_values([self.lower, self.upper], point=point)
+        return generate_samples(self._random, lower, upper, point,
+                                dist_shape=self.shape,
+                                size=size)
+
+    def logp(self, value):
+        return bound(self.dist.logp(value),
+                     value >= self.lower, value <= self.upper)
+
+
+def Bound(distribution, lower=-np.inf, upper=np.inf):
+    class _BoundedDist(Bounded):
+        def __init__(self, *args, **kwargs):
+            first, args = args[0], args[1:]
+            super(self, _BoundedDist).__init__(first, distribution, lower, upper, transform=transform, 
+                                                *args, **kwargs)
+
+        @classmethod
+        def dist(cls, *args, **kwargs):
+            return Bounded.dist(distribution, lower, upper, *args, **kwargs)
+
+    return _BoundedDist
