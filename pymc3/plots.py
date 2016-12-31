@@ -124,7 +124,6 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
     for i in range(data.shape[1]):
         d = data[:, i]
         density, l, u = fast_kde(d)
-        print(l, u)
         x = np.linspace(l, u, len(density))
 
         if prior is not None:
