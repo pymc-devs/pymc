@@ -8,23 +8,10 @@ from theano.configparser import change_flags
 import tqdm
 
 import pymc3 as pm
-from pymc3.theanof import reshape_t, inputvars
-from .advi import check_discrete_rvs, ADVIFit, adagrad_optimizer, gen_random_state
+from pymc3.theanof import reshape_t, inputvars, floatX, floatX_str, nan_
+from .advi import ADVIFit, adagrad_optimizer, gen_random_state
 
 __all__ = ['advi_minibatch']
-
-
-if theano.config.floatX == 'float32':
-    floatX = np.float32
-    floatX_str = 'float32'
-elif theano.config.floatX == 'float64':
-    floatX = np.float64
-    floatX_str = 'float64'
-else:
-    raise ValueError('float16 is not supported.')
-
-
-nan_ = floatX(np.nan)
 
 
 def _value_error(cond, str):
@@ -455,7 +442,10 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     model = pm.modelcontext(model)
     vars = inputvars(vars if vars is not None else model.vars)
     start = start if start is not None else model.test_point
-    check_discrete_rvs(vars)
+
+    if not pm.model.all_continuous(vars):
+        raise ValueError('Model can not include discrete RVs for ADVI.')
+
     _check_minibatches(minibatch_tensors, minibatches)
     
     if encoder_params is None:
