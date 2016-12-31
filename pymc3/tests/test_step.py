@@ -263,7 +263,7 @@ class TestSampleEstimates(SeededTest):
 
             for step_method in (NUTS, Slice, Metropolis):
                 trace = sample(100000, step=step_method(), progressbar=False)
-                trace_ = trace[-3000:]
+                trace_ = trace[-300::5]
 
                 # We do the same for beta - using more burnin.
                 np.testing.assert_almost_equal(np.mean(trace_.alpha),
