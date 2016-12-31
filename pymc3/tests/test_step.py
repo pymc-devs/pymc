@@ -10,7 +10,7 @@ from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
                                 Metropolis, Slice, CompoundStep,
                                 MultivariateNormalProposal, HamiltonianMC)
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, Uniform
+from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, InverseGamma
 
 from numpy.testing import assert_array_almost_equal
 import numpy as np
@@ -245,44 +245,38 @@ class TestAssignStepMethods(unittest.TestCase):
 
 class TestSampleEstimates(SeededTest):
     def test_posterior_estimate(self):
-        alpha_true, sigma_true = 1, 0.5
-        beta_true = np.array([1, 2.5])
+        alpha_true, sigma_true = 1., 0.5
+        beta_true = 1.
 
-        size = 100
+        size = 1000
 
-        X1 = np.random.randn(size)
-        X2 = np.random.randn(size) * 0.2
-        Y = alpha_true + beta_true[0] * X1 + beta_true[1] * X2 + np.random.randn(size) * sigma_true
+        X = np.random.randn(size)
+        Y = alpha_true + beta_true * X + np.random.randn(size) * sigma_true
 
-
+        decimal = 1
         with Model() as model:
-
-            alpha = Normal('alpha', mu=0, sd=10)
-            beta = Normal('beta', mu=0, sd=10, shape=2)
-            sigma = Uniform('sigma', lower=0.0, upper=1.0)
-            mu = alpha + beta[0] * X1 + beta[1] * X2
+            alpha = Normal('alpha', mu=0, sd=100, testval=alpha_true)
+            beta = Normal('beta', mu=0, sd=100, testval=beta_true)
+            sigma = InverseGamma('sigma', 10., testval=sigma_true)
+            mu = alpha + beta * X
             Y_obs = Normal('Y_obs', mu=mu, sd=sigma, observed=Y)
 
-            for step_method in (NUTS(), NUTS(is_cov=True),
-                                Metropolis()):
-                trace = sample(100000, step=step_method, progressbar=False)
+            for step_method in (NUTS, Slice, Metropolis):
+                trace = sample(100000, step=step_method(), progressbar=False)
+                trace_ = trace[-3000:]
 
-                # Using the Normal test from SciPy `scipy.stats.normaltest`
-                # See `https://github.com/scipy/scipy/blob/v0.18.1/scipy/stats/stats.py#L1352`
-                # `normaltest` returns a 2-tuple of the chi-squared statistic, and the associated
-                # p-value. Given the null hypothesis that `trace[-1000:]` came from the a normal
-                # distribution, the p-value represents the probability that a chi-squared statistic
-                # that large (or larger) would be seen.
-
-                # If the p-value is very small, it means it's unlikely that the data came from a
-                # normal distribution.
-                # We define very small as 0.05, for the sake of this argument.
-                # We test this by evaluating if the p-value is above 0.05.
                 # We do the same for beta - using more burnin.
-                _, p_normal = stats.normaltest(trace[-3000:].alpha)
-                _, p_beta_0_normal = stats.normaltest(trace[-10000:].beta[:, 0])
-                np.isclose(np.median(trace[-3000:].beta, 0), beta_true, rtol=0.1).all()
-                np.testing.assert_array_almost_equal(trace[-3000:].alpha, alpha_true, decimal=0)
-                np.testing.assert_array_almost_equal(np.median(trace[-3000:].sigma), sigma_true, decimal=1)
-                np.testing.assert_array_less(0.05, p_normal, verbose=True)
-                np.testing.assert_array_less(0.05, p_beta_0_normal, verbose=True)
+                np.testing.assert_almost_equal(np.mean(trace_.alpha),
+                                               alpha_true, decimal=decimal)
+                np.testing.assert_almost_equal(np.mean(trace_.beta),
+                                               beta_true,
+                                               decimal=decimal)
+                np.testing.assert_almost_equal(np.mean(trace_.sigma),
+                                               sigma_true, decimal=decimal)
+
+                # Make sure posteriors are normal
+                _, p_alpha = stats.normaltest(trace_.alpha)
+                _, p_beta = stats.normaltest(trace_.beta)
+                # p-values should be > .05 to indiciate
+                np.testing.assert_array_less(0.05, p_alpha, verbose=True)
+                np.testing.assert_array_less(0.05, p_beta, verbose=True)
