@@ -68,7 +68,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
     selected_steps = defaultdict(list)
     for var in model.free_RVs:
         if var not in assigned_vars:
-            selected = max(methods, key=lambda method: method._competence(var))
+            selected = max(methods, key=lambda method, var=var: method._competence(var))
             pm._log.info('Assigned {0} to {1}'.format(selected.__name__, var))
             selected_steps[selected].append(var)
 
