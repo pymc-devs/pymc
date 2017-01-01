@@ -365,7 +365,7 @@ def generate_samples(generator, *args, **kwargs):
     return reshape_sampled(samples, size, dist_shape)
 
 
-class Bounded(Continuous):
+class Bounded(Distribution):
     R"""
     An upper, lower or upper+lower bounded distribution
 
