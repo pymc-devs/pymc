@@ -12,7 +12,7 @@ AUTHOR = 'John Salvatier and Christopher Fonnesbeck'
 AUTHOR_EMAIL = 'chris.fonnesbeck@vanderbilt.edu'
 URL = "http://github.com/pymc-devs/pymc"
 LICENSE = "Apache License, Version 2.0"
-VERSION = "3.0.rc4"
+VERSION = "3.0.rc5"
 
 classifiers = ['Development Status :: 5 - Production/Stable',
                'Programming Language :: Python',
