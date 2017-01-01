@@ -182,7 +182,7 @@ def _calc_elbo(vars, model, n_mcsamples, random_seed):
 
     uw = tt.vector('uw')
     uw.tag.test_value = np.concatenate([inarray.tag.test_value,
-                                        inarray.tag.test_value]).astype(np.float32)
+                                        inarray.tag.test_value]).astype(theano.config.floatX)
 
     elbo = _elbo_t(logp, uw, inarray, n_mcsamples, random_seed)
 
