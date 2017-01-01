@@ -1,7 +1,7 @@
 import numpy as np
 import theano.tensor as tt
 from scipy import special
-from theano import scalar, tensor
+from theano import scalar
 
 __all__ = ['gammaln', 'multigammaln', 'psi', 'trigamma']
 
@@ -150,4 +150,4 @@ class Trigamma(scalar.UnaryScalarOp):
         return hash(type(self))
 
 scalar_trigamma = Trigamma(scalar.upgrade_to_float, name='scalar_trigamma')
-trigamma = tensor.Elemwise(scalar_trigamma, name='trigamma')
+trigamma = tt.Elemwise(scalar_trigamma, name='trigamma')
