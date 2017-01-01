@@ -37,7 +37,7 @@ disable=all
 enable=import-error,
        import-self,
        reimported,
-       wildcard-import,
+       # wildcard-import,
        misplaced-future,
        relative-import,
        deprecated-module,
@@ -47,18 +47,18 @@ enable=import-error,
        used-before-assignment,
        cell-var-from-loop,
        global-variable-undefined,
-       redefined-builtin,
+       # redefined-builtin,
        redefine-in-handler,
-       unused-import,
+       # unused-import,
        # unused-wildcard-import,
        global-variable-not-assigned,
-       undefined-loop-variable,
+       # undefined-loop-variable,
        global-statement,
        global-at-module-level,
        bad-open-mode,
        redundant-unittest-assert,
        boolean-datetime,
-       unused-variable
+       # unused-variable
 
 
 [REPORTS]
@@ -74,7 +74,7 @@ output-format=parseable
 files-output=no
 
 # Tells whether to display a full report or only the messages
-reports=yes
+reports=no
 
 # Python expression which should return a note less than 10 (10 is the highest
 # note). You have access to the variables errors warning, statement which
