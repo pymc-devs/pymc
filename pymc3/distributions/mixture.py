@@ -38,6 +38,7 @@ class Mixture(Distribution):
     comp_dists : multidimensional PyMC3 distribution or iterable of one-dimensional PyMC3 distributions
         the component distributions :math:`f_1, \ldots, f_n`
     """
+
     def __init__(self, w, comp_dists, *args, **kwargs):
         shape = kwargs.pop('shape', ())
 
@@ -161,6 +162,7 @@ class NormalMixture(Mixture):
     tau : array of floats
         the component precisions
     """
+
     def __init__(self, w, mu, *args, **kwargs):
         _, sd = get_tau_sd(tau=kwargs.pop('tau', None),
                            sd=kwargs.pop('sd', None))

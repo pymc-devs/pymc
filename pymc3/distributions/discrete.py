@@ -96,7 +96,8 @@ class BetaBinomial(Discrete):
         self.n = n
         self.mode = tt.cast(tt.round(alpha / (alpha + beta)), 'int8')
 
-    def _random(self, alpha, beta, n, size=None):
+    @staticmethod
+    def _random(alpha, beta, n, size=None):
         size = size or 1
         p = np.atleast_1d(stats.beta.rvs(a=alpha, b=beta, size=np.prod(size)))
         # Sometimes scipy.beta returns nan. Ugh.
@@ -331,7 +332,8 @@ class DiscreteUniform(Discrete):
         self.mode = tt.maximum(
             tt.floor((upper - lower) / 2.).astype('int32'), self.lower)
 
-    def _random(self, lower, upper, size=None):
+    @staticmethod
+    def _random(lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
         # as array-like.
         samples = stats.uniform.rvs(lower, upper - lower - np.finfo(float).eps,
