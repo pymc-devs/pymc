@@ -148,8 +148,8 @@ class SQLite(base.BaseTrace):
             values = (self.draw_idx, self.chain) + tuple(np.ravel(value))
             self._queue[varname].append(values)
 
-            if len(self._queue[varname]) > self._queue_limit:
-                self._execute_queue()
+        if len(self._queue[self.varnames[0]]) > self._queue_limit:
+            self._execute_queue()
         self.draw_idx += 1
 
     def _execute_queue(self):
