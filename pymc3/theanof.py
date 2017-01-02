@@ -46,7 +46,11 @@ def floatX(X):
     """
     Convert a theano tensor or numpy array to theano.config.floatX type.
     """
-    return X.astype(theano.config.floatX)
+    try:
+        return X.astype(theano.config.floatX)
+    except AttributeError:
+        # Scalar passed
+        return np.asarray(X, dtype=theano.config.floatX)
 
 """
 Theano derivative functions
