@@ -1,11 +1,15 @@
+import numpy as np
+
 from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
 from .memoize import memoize
 from .blocking import ArrayOrdering
 
-__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars', 'cont_inputs',
-           'jacobian', 'CallableTensor', 'join_nonshared_inputs', 'make_shared_replacements']
+__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars',
+           'cont_inputs', 'floatX', 'jacobian',
+           'CallableTensor', 'join_nonshared_inputs',
+           'make_shared_replacements']
 
 
 def inputvars(a):
@@ -38,10 +42,19 @@ def cont_inputs(f):
     return typefilter(inputvars(f), continuous_types)
 
 
+def floatX(X):
+    """
+    Convert a theano tensor or numpy array to theano.config.floatX type.
+    """
+    try:
+        return X.astype(theano.config.floatX)
+    except AttributeError:
+        # Scalar passed
+        return np.asarray(X, dtype=theano.config.floatX)
+
 """
 Theano derivative functions
 """
-
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
