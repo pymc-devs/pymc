@@ -7,7 +7,7 @@ from .memoize import memoize
 from .blocking import ArrayOrdering
 
 __all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars',
-           'cont_inputs', 'floatX', 'floatX_str', 'nan_', 'jacobian',
+           'cont_inputs', 'floatX', 'jacobian',
            'CallableTensor', 'join_nonshared_inputs',
            'make_shared_replacements']
 
@@ -43,9 +43,10 @@ def cont_inputs(f):
 
 
 def floatX(X):
+    """
+    Convert a theano tensor or numpy array to theano.config.floatX type.
+    """
     return X.astype(theano.config.floatX)
-
-nan_ = floatX(np.nan)
 
 """
 Theano derivative functions
