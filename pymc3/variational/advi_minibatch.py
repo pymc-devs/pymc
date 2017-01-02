@@ -8,7 +8,7 @@ from theano.configparser import change_flags
 import tqdm
 
 import pymc3 as pm
-from pymc3.theanof import reshape_t, inputvars, floatX, floatX_str, nan_
+from pymc3.theanof import reshape_t, inputvars, floatX
 from .advi import ADVIFit, adagrad_optimizer, gen_random_state
 
 __all__ = ['advi_minibatch']
@@ -139,7 +139,7 @@ def _make_logpt(global_RVs, local_RVs, observed_RVs, potentials):
 
 
 def _elbo_t(
-    logp, uw_g, uw_l, inarray_g, inarray_l, c_g, c_l, n_mcsamples, 
+    logp, uw_g, uw_l, inarray_g, inarray_l, c_g, c_l, n_mcsamples,
     random_seed):
     """Return expression of approximate ELBO based on Monte Carlo sampling.
     """
@@ -480,7 +480,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         )
 
     # ELBO wrt variational parameters
-    elbo, uw_l, uw_g = _make_elbo_t(observed_RVs, global_RVs, local_RVs, 
+    elbo, uw_l, uw_g = _make_elbo_t(observed_RVs, global_RVs, local_RVs,
                                     model.potentials, n_mcsamples, random_seed)
 
     # Replacements tensors of variational parameters in the graph
