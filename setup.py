@@ -12,7 +12,7 @@ AUTHOR = 'John Salvatier and Christopher Fonnesbeck'
 AUTHOR_EMAIL = 'chris.fonnesbeck@vanderbilt.edu'
 URL = "http://github.com/pymc-devs/pymc"
 LICENSE = "Apache License, Version 2.0"
-VERSION = "3.0.rc5"
+VERSION = "3.0.rc6"
 
 classifiers = ['Development Status :: 5 - Production/Stable',
                'Programming Language :: Python',
@@ -47,14 +47,14 @@ if __name__ == "__main__":
           license=LICENSE,
           url=URL,
           long_description=LONG_DESCRIPTION,
-          packages=['pymc3', 
-                    'pymc3.backends', 
+          packages=['pymc3',
+                    'pymc3.backends',
                     'pymc3.distributions',
                     'pymc3.examples',
-                    'pymc3.glm', 
-                    'pymc3.step_methods', 
+                    'pymc3.glm',
+                    'pymc3.step_methods',
                     'pymc3.tuning',
-                    'pymc3.tests', 
+                    'pymc3.tests',
                     'pymc3.variational'],
           classifiers=classifiers,
           install_requires=install_reqs,
