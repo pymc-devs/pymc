@@ -1,4 +1,5 @@
 from functools import partial
+import warnings
 
 import numpy as np
 import theano
@@ -421,6 +422,10 @@ class Categorical(Univariate, Discrete):
 
         p, k = draw_values([self.p, self.k], point=point)
         return generate_samples(partial(random_choice, np.arange(k)),
+                                p=p,
+                                broadcast_shape=p.shape[:-1] or (1,),
+                                dist_shape=self.shape,
+                                size=size)
 
     def logp(self, value):
         p = self.p
@@ -437,7 +442,7 @@ class Categorical(Univariate, Discrete):
                      sumto1)
 
 
-class ConstantDist(Univariate, Discrete):
+class Constant(Univariate, Discrete):
     """
     Constant log-likelihood.
 
@@ -450,7 +455,7 @@ class ConstantDist(Univariate, Discrete):
     def __init__(self, c, ndim=None, size=None, dtype=None, *args, **kwargs):
         self.mean = self.median = self.mode = self.c = tt.as_tensor_variable(c)
         self.dist_params = (self.c,)
-        super(ConstantDist, self).__init__(
+        super(Constant, self).__init__(
             self.dist_params, ndim, size, dtype, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
@@ -466,6 +471,7 @@ class ConstantDist(Univariate, Discrete):
     def logp(self, value):
         c = self.c
         return bound(0, tt.eq(value, c))
+
 
 def ConstantDist(*args, **kwargs):
     warnings.warn("ConstantDist has been deprecated. In future, use Constant instead.",
@@ -525,7 +531,7 @@ class ZeroInflatedPoisson(Univariate, Discrete):
                          tt.log((1. - self.psi) + self.psi * tt.exp(-self.theta)))
 
 
-class ZeroInflatedNegativeBinomial(UnivariateDiscrete):
+class ZeroInflatedNegativeBinomial(Univariate, Discrete):
     R"""
     Zero-Inflated Negative binomial log-likelihood.
 
