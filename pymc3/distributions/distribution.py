@@ -1,6 +1,9 @@
+import collections
+
 import numpy as np
 import theano.tensor as tt
 from theano import function
+from theano.gof import Constant
 from theano.tensor.raw_random import _infer_ndim_bcast
 
 from ..memoize import memoize
@@ -16,9 +19,11 @@ __all__ = ['DensityDist', 'Distribution',
 class _Unpickling(object):
     pass
 
+
 def _as_tensor_shape_variable(var):
-    """ Just a collection of useful shape stuff from
-    `_infer_ndim_bcast` """
+    r""" Just some useful shape object parsing steps.
+    Copied from `_infer_ndim_bcast`.
+    """
 
     if var is None:
         return tt.constant([], dtype='int64')
@@ -40,6 +45,24 @@ def _as_tensor_shape_variable(var):
         raise TypeError('shape must be an integer vector or list',
                         res.dtype)
     return res
+
+
+def has_const_inputs(nodes):
+    r"""Checks that nodes have only constant inputs for
+    their Ops.  Useful for justifying one-time evals.
+    """
+    if not isinstance(nodes, collections.Iterable):
+        nodes = [nodes]
+
+    for node in nodes:
+        owner = getattr(node, 'owner', None)
+        if owner is not None:
+            if not has_const_inputs(owner.inputs):
+                return False
+        elif not isinstance(node, Constant):
+            return False
+
+    return True
 
 
 class Distribution(object):
@@ -159,6 +182,12 @@ class Distribution(object):
             self.shape = tuple(self.shape_reps) +\
                 tuple(self.shape_ind) +\
                 tuple(self.shape_supp)
+            self.shape = tt.as_tensor_variable(self.shape)
+
+        if has_const_inputs(self.shape):
+            # FIXME: This feels like a hack.  Seems like it would be better to
+            # evaluate somewhere else (e.g. exactly where a value is needed).
+            self.shape = self.shape.eval()
 
         self.ndim = tt.get_vector_length(self.shape)
         self.defaults = defaults
@@ -270,30 +299,25 @@ class Univariate(Distribution):
 
     def __init__(self, dist_params, ndim=None, size=None, dtype=None,
                  bcast=None, *args, **kwargs):
+        r"""This constructor automates some of the shape determination, since
+        univariate distributions are simple in that regard.
         """
 
-        Parameters
-        ==========
+        self.dist_params = tuple(tt.as_tensor_variable(x) for x in dist_params)
 
-        dist_params
-            list or tuple of parameters to use for shape inference
-
-        """
-
-        self.shape_supp = ()
-        dist_params = tuple(tt.as_tensor_variable(x) for x in dist_params)
-
-        ndim, size, bcast = _infer_ndim_bcast(*(ndim, size) + dist_params)
+        ndim, size, bcast = _infer_ndim_bcast(*((ndim, size) +
+                                                self.dist_params))
         if dtype is None:
-            dtype = tt.scal.upcast(*(tt.config.floatX,) + tuple(x.dtype for x in dist_params))
+            dtype = tt.scal.upcast(*((tt.config.floatX,) +
+                                     tuple(x.dtype for x in self.dist_params)))
 
-        # We just assume
         super(Univariate, self).__init__(
             tuple(), tuple(), size, bcast, *args, **kwargs)
 
 
 class Multivariate(Distribution):
-
+    r"""TODO: Automate some of the multivariate shape determination?
+    """
     pass
 
 
