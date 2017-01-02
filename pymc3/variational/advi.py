@@ -11,6 +11,7 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 import pymc3 as pm
 from pymc3.backends.base import MultiTrace
+from ..theanof import floatX
 
 from tqdm import trange
 
@@ -90,7 +91,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         Seed to initialize random state. None uses current seed.
     mode :  string or `Mode` instance.
         Compilation mode passed to Theano functions
-         
+
     Returns
     -------
     ADVIFit
@@ -193,8 +194,8 @@ def _calc_elbo(vars, model, n_mcsamples, random_seed):
     [logp], inarray = pm.join_nonshared_inputs([logpt], vars, shared)
 
     uw = tt.vector('uw')
-    uw.tag.test_value = np.concatenate([inarray.tag.test_value,
-                                        inarray.tag.test_value]).astype(theano.config.floatX)
+    uw.tag.test_value = floatX(np.concatenate([inarray.tag.test_value,
+                                               inarray.tag.test_value]))
 
     elbo = _elbo_t(logp, uw, inarray, n_mcsamples, random_seed)
 
@@ -263,7 +264,7 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
             param = list(param)
 
         for param_ in param:
-            i = theano.shared(np.array(0, dtype=theano.config.floatX))
+            i = theano.shared(floatX(np.array(0)))
             i_int = i.astype('int64')
             value = param_.get_value(borrow=True)
             accu = theano.shared(
