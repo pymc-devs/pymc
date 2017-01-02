@@ -60,7 +60,7 @@ def _init_uw_global_shared(start, global_RVs):
     bij = pm.DictToArrayBijection(global_order, start)
     u_start = bij.map(start)
     w_start = np.zeros_like(u_start)
-    uw_start = np.concatenate([u_start, w_start]).astype(floatX_str)
+    uw_start = floatX(np.concatenate([u_start, w_start]))
     uw_global_shared = theano.shared(uw_start, 'uw_global_shared')
 
     return uw_global_shared, bij

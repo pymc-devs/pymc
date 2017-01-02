@@ -43,9 +43,8 @@ def cont_inputs(f):
 
 
 def floatX(X):
-    return np.asarray(X, dtype=theano.config.floatX)
+    return X.astype(theano.config.floatX)
 
-floatX_str = theano.config.floatX
 nan_ = floatX(np.nan)
 
 """
