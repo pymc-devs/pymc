@@ -88,17 +88,17 @@ def svgd(vars=None, n=5000, n_particles=100, jitter=.01,
 
     # Create theano svgd gradient expression and function
     logp_grad_vec = _make_vectorized_logp_grad(vars, model, theta)
-    svgd_grad = -1 * _svgd_gradient(vars, model, theta, logp_grad_vec)[0] # maximize 
+    svgd_grad = -1 * _svgd_gradient(vars, model, theta, logp_grad_vec) # maximize
 
     # Initialize optimizer
     if optimizer is None:
-        optimizer = Adagrad(lr=1e-3)  # TODO. works better with regularizer for high dimension data  
+        optimizer = Adagrad(lr=1e-3)  # TODO. works better with regularizer for high dimension data
 
     svgd_updates = optimizer(theta, svgd_grad)
 
     i = tt.iscalar('i')
     svgd_step = theano.function([i], [i],
-                                     updates=svgd_updates)
+                                updates=svgd_updates)
     # Run svgd optimization
     if progressbar:
         progress = tqdm(np.arange(n))
