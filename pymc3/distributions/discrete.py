@@ -7,9 +7,14 @@ import theano.tensor as tt
 from scipy import stats
 
 from .dist_math import bound, factln, binomln, betaln, logpow
-from .distribution import Univariate, Discrete, draw_values, generate_samples
+from .distribution import (
+    Univariate,
+    Discrete,
+    draw_values,
+    generate_samples,
+    has_const_inputs)
 
-__all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
+__all__ = ['Binomial', 'BetaBinomial', 'Bernoulli', 'Poisson',
            'NegativeBinomial', 'ConstantDist', 'Constant', 'ZeroInflatedPoisson',
            'ZeroInflatedNegativeBinomial', 'DiscreteUniform', 'Geometric',
            'Categorical']
@@ -38,15 +43,16 @@ class Binomial(Univariate, Discrete):
     p : float
         Probability of success in each trial (0 < p < 1).
     """
-    def __init__(self, n, p, ndim=None, size=None, dtype=None, *args, **kwargs):
+
+    def __init__(self, n, p, *args, **kwargs):
         self.n = tt.as_tensor_variable(n)
         self.p = tt.as_tensor_variable(p)
-        self.mode = tt.cast(tt.round(n * p), self.dtype)
 
-        self.dist_params = (self.n, self.p)
+        self.mode = tt.cast(tt.round(n * p), 'int32')
 
-        super(Binomial, self).__init__(
-            self.dist_params, ndim, size, dtype, *args, **kwargs)
+        dist_params = (self.n, self.p)
+
+        super(Binomial, self).__init__(dist_params, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         n, p = draw_values([self.n, self.p], point=point)
@@ -93,16 +99,17 @@ class BetaBinomial(Univariate, Discrete):
         beta > 0.
     """
 
-    def __init__(self, alpha, beta, n, ndim=None, size=None, dtype=None, *args, **kwargs):
+    def __init__(self, alpha, beta, n, *args, **kwargs):
         self.alpha = tt.as_tensor_variable(alpha)
         self.beta = tt.as_tensor_variable(beta)
         self.n = tt.as_tensor_variable(n)
-        self.mode = tt.cast(tt.round(alpha / (alpha + beta)), 'int8')
 
-        self.dist_params = (self.alpha, self.beta, self.n)
+        self.mode = tt.cast(tt.round(self.alpha / (self.alpha + self.beta)),
+                            'int8')
 
-        super(BetaBinomial, self).__init__(
-            self.dist_params, ndim, size, dtype, *args, **kwargs)
+        dist_params = (self.alpha, self.beta, self.n)
+
+        super(BetaBinomial, self).__init__(dist_params, *args, **kwargs)
 
     def _random(self, alpha, beta, n, size=None):
         size = size or 1
@@ -152,14 +159,15 @@ class Bernoulli(Univariate, Discrete):
     p : float
         Probability of success (0 < p < 1).
     """
-    def __init__(self, p, ndim=None, size=None, dtype=None, *args, **kwargs):
+
+    def __init__(self, p, *args, **kwargs):
         self.p = tt.as_tensor_variable(p)
+
+        dist_params = (self.p,)
+
         self.mode = tt.cast(tt.round(p), 'int8')
 
-        self.dist_params = (self.p,)
-        # FIXME: bcast, etc.
-        super(Bernoulli, self).__init__(
-            self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Bernoulli, self).__init__(dist_params, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         p = draw_values([self.p], point=point)
@@ -201,14 +209,15 @@ class Poisson(Univariate, Discrete):
     The Poisson distribution can be derived as a limiting case of the
     binomial distribution.
     """
-    def __init__(self, mu, ndim=None, size=None, dtype=None, *args, **kwargs):
+
+    def __init__(self, mu, *args, **kwargs):
         self.mu = tt.as_tensor_variable(mu)
+
         self.mode = tt.floor(mu).astype('int32')
 
-        self.dist_params = (self.mu,)
+        dist_params = (self.mu,)
 
-        super(Poisson, self).__init__(self.dist_params,
-                                      ndim, size, dtype, *args, **kwargs)
+        super(Poisson, self).__init__(dist_params, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu = draw_values([self.mu], point=point)
@@ -251,15 +260,17 @@ class NegativeBinomial(Univariate, Discrete):
     alpha : float
         Gamma distribution parameter (alpha > 0).
     """
-    def __init__(self, mu, alpha, ndim=None, size=None, dtype=None, *args, **kwargs):
+
+    def __init__(self, mu, alpha, *args, **kwargs):
         self.mu = tt.as_tensor_variable(mu)
         self.alpha = tt.as_tensor_variable(alpha)
+
         self.mode = tt.floor(mu).astype('int32')
 
-        self.dist_params = (self.mu, self.alpha)
+        dist_params = (self.mu, self.alpha)
 
-        super(NegativeBinomial, self).__init__(
-            self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(NegativeBinomial, self).__init__(dist_params,
+                                               *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu, alpha = draw_values([self.mu, self.alpha], point=point)
@@ -303,13 +314,16 @@ class Geometric(Univariate, Discrete):
     p : float
         Probability of success on an individual trial (0 < p <= 1).
     """
-    def __init__(self, p, ndim=None, size=None, dtype=None, *args, **kwargs):
+
+    def __init__(self, p, *args, **kwargs):
         self.p = tt.as_tensor_variable(p)
+
         self.mode = tt.as_tensor_variable(1)
-        self.dist_params = (self.p,)
+
+        dist_params = (self.p,)
 
         super(Geometric, self).__init__(
-            self.dist_params, ndim, size, dtype, *args, **kwargs)
+              dist_params, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         p = draw_values([self.p], point=point)
@@ -343,15 +357,16 @@ class DiscreteUniform(Univariate, Discrete):
         Upper limit (upper > lower).
     """
 
-    def __init__(self, lower, upper, ndim=None, size=None, dtype=None, *args, **kwargs):
+    def __init__(self, lower, upper, *args, **kwargs):
         self.lower = tt.floor(lower).astype('int32')
         self.upper = tt.floor(upper).astype('int32')
+
         self.mode = tt.maximum(
             tt.floor((upper - lower) / 2.).astype('int32'), self.lower)
-        self.dist_params = (self.lower, self.upper)
 
-        super(DiscreteUniform, self).__init__(
-            self.dist_params, ndim, size, dtype, *args, **kwargs)
+        dist_params = (self.lower, self.upper)
+
+        super(DiscreteUniform, self).__init__(dist_params, *args, **kwargs)
 
     def _random(self, lower, upper, size=None):
         # This way seems to be the only to deal with lower and upper
@@ -392,23 +407,24 @@ class Categorical(Univariate, Discrete):
         p > 0 and the elements of p must sum to 1. They will be automatically
         rescaled otherwise.
     """
-    def __init__(self, p, ndim=None, size=None, dtype=None, *args, **kwargs):
 
-        try:
-            self.k = tt.shape(p)[-1].tag.test_value
-        except AttributeError:
-            self.k = tt.shape(p)[-1]
+    def __init__(self, p, *args, **kwargs):
+
+        self.k = tt.shape(p)[-1]
+
+        if has_const_inputs(self.k):
+            # FIXME: This feels like a hack.  Seems like it would be better to
+            # evaluate somewhere else (e.g. exactly where a value is needed).
+            self.k = self.k.eval()
+
         self.p = tt.as_tensor_variable(p)
         self.p = (p.T / tt.sum(p, -1)).T
+
         self.mode = tt.argmax(p)
 
-        self.shape_support = tt.shape(self.p)[-1]
+        dist_params = (self.p,)
 
-        self.dist_params = (self.p,)
-        # FIXME: The stated support is univariate?
-
-        super(Categorical, self).__init__(
-            self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(Categorical, self).__init__(dist_params, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         def random_choice(k, *args, **kwargs):
@@ -452,11 +468,11 @@ class Constant(Univariate, Discrete):
         Constant parameter.
     """
 
-    def __init__(self, c, ndim=None, size=None, dtype=None, *args, **kwargs):
+    def __init__(self, c, *args, **kwargs):
         self.mean = self.median = self.mode = self.c = tt.as_tensor_variable(c)
-        self.dist_params = (self.c,)
-        super(Constant, self).__init__(
-            self.dist_params, ndim, size, dtype, *args, **kwargs)
+        dist_params = (self.c,)
+
+        super(Constant, self).__init__(dist_params, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         c = draw_values([self.c], point=point)
@@ -475,8 +491,9 @@ class Constant(Univariate, Discrete):
 
 def ConstantDist(*args, **kwargs):
     warnings.warn("ConstantDist has been deprecated. In future, use Constant instead.",
-                DeprecationWarning)
+                  DeprecationWarning)
     return Constant(*args, **kwargs)
+
 
 class ZeroInflatedPoisson(Univariate, Discrete):
     R"""
@@ -507,16 +524,16 @@ class ZeroInflatedPoisson(Univariate, Discrete):
         Expected proportion of Poisson variates (0 < psi < 1)
 
     """
-    def __init__(self, theta, psi, ndim=None, size=None, dtype=None, *args, **kwargs):
+
+    def __init__(self, theta, psi, *args, **kwargs):
         self.theta = tt.as_tensor_variable(theta)
         self.psi = tt.as_tensor_variable(psi)
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
-        self.dist_params = (self.theta, self.psi)
+        dist_params = (self.theta, self.psi)
 
-        super(ZeroInflatedPoisson, self).__init__(
-            self.dist_params, ndim, size, dtype, *args, **kwargs)
+        super(ZeroInflatedPoisson, self).__init__(dist_params, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         theta, psi = draw_values([self.theta, self.psi], point=point)
@@ -562,14 +579,18 @@ class ZeroInflatedNegativeBinomial(Univariate, Discrete):
         Expected proportion of NegativeBinomial variates (0 < psi < 1)
     """
 
-    def __init__(self, mu, alpha, psi, ndim=None, size=None, dtype=None, *args, **kwargs):
-        self.mu = mu
-        self.alpha = alpha
-        self.psi = psi
+    def __init__(self, mu, alpha, psi, *args, **kwargs):
+        self.mu = tt.as_tensor_variable(mu)
+        self.alpha = tt.as_tensor_variable(alpha)
+        self.psi = tt.as_tensor_variable(psi)
+
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
-        self.dist_params = (mu, alpha, psi)
-        super(ZeroInflatedNegativeBinomial, self).__init__(self.dist_params, ndim, size, dtype, *args, **kwargs)
+
+        dist_params = (self.mu, self.alpha, self.psi)
+
+        super(ZeroInflatedNegativeBinomial, self).__init__(
+            dist_params, *args, **kwargs)
 
     def random(self, point=None, size=None, repeat=None):
         mu, alpha, psi = draw_values(

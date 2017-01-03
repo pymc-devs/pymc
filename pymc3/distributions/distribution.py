@@ -1,4 +1,5 @@
 import collections
+import warnings
 
 import numpy as np
 import theano.tensor as tt
@@ -207,14 +208,22 @@ class Distribution(object):
         return self.get_test_value(self.testval, self.defaults)
 
     def get_test_value(self, val=None, defaults=None):
+        test_val = None
         if val is None:
             for v in defaults:
                 the_attr = getattr(self, v, None)
 
                 if the_attr is not None and np.all(np.isfinite(self.getattr_value(v))):
-                    return self.getattr_value(v)
+                    test_val = self.getattr_value(v)
+                    break
         else:
-            return self.getattr_value(val)
+            test_val = self.getattr_value(val)
+
+        if test_val is not None:
+            if self.ndim_reps > 0 and hasattr(self.shape_reps, 'value'):
+                test_val = np.tile(test_val, self.shape_reps.value)
+
+            return test_val
 
         raise AttributeError(str(self) + " has no finite default value to use, checked: " +
                              str(defaults) + " pass testval argument or adjust so value is finite.")
@@ -300,13 +309,41 @@ class DensityDist(Distribution):
 
 class Univariate(Distribution):
 
-    def __init__(self, dist_params, ndim=None, size=None, dtype=None,
+    def __init__(self, dist_params, ndim=None, size=None,
+                 shape=None, dtype=None,
                  bcast=None, *args, **kwargs):
         r"""This constructor automates some of the shape determination, since
         univariate distributions are simple in that regard.
+
+        Parameters
+        ----------
+        dist_params: tuple
+            A tuple containing the distributions parameters.
+        ndim: int
+            A hint for the number of dimensions.
+            (Not currently used, but could be useful in cases for which
+            the shape dimensions aren't easily assessed.)
+        size: tuple (int)
+            Shape of replications.
+        shape: tuple (int)
+            Deprecated; use ``size``.
+        dtype: string
+            Name of primitive numeric type.
+        bcast: tuple (bool)
+            Hint for broadcast dimensions.
         """
 
+        if shape is not None:
+            warnings.warn(('The `shape` parameter is deprecated; use `size` to'
+                           ' specify the shape and number of replications.'),
+                          DeprecationWarning)
+            if size is None:
+                size = shape
+
         self.dist_params = tuple(tt.as_tensor_variable(x) for x in dist_params)
+
+        if size is not None:
+            size = np.atleast_1d(size)
 
         ndim, size, bcast = _infer_ndim_bcast(*((ndim, size) +
                                                 self.dist_params))
