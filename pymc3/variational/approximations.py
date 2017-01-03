@@ -5,7 +5,7 @@ import theano
 import pymc3 as pm
 from ..theanof import tt_rng, memoize, change_flags
 from ..blocking import ArrayOrdering
-from ..distributions.dist_math import rho2sd, log_normal3
+from ..distributions.dist_math import rho2sd, log_normal
 from ..math import flatten_list
 from ..model import modelcontext
 import numpy as np
@@ -277,7 +277,7 @@ class BaseApproximation(object):
             mu = self.known[var][0].ravel()
             rho = self.known[var][1].ravel()
             x = self.view_from(posterior, var.name, 'all', reshape=False)
-            q = log_normal3(x, Z(mu), Z(rho))
+            q = log_normal(x, Z(mu), rho=Z(rho))
             logp.append(self.weighted_logp(var, q))
         samples = tt.sum(tt.concatenate(logp, axis=1), axis=1)
         return samples
@@ -593,5 +593,5 @@ class ADVI(BaseApproximation):
         """
         mu = self.shared_params['mu']
         rho = self.shared_params['rho']
-        samples = tt.sum(log_normal3(posterior[:, self.global_slc], Z(mu), Z(rho)), axis=1)
+        samples = tt.sum(log_normal(posterior[:, self.global_slc], Z(mu), rho=Z(rho)), axis=1)
         return samples

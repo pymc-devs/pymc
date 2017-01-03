@@ -97,56 +97,46 @@ def rho2sd(rho):
     return tt.log1p(tt.exp(rho))
 
 
-def log_normal(x, mean, std, eps=0.0):
+def log_normal(x, mean, **kwargs):
     """
     Calculate logarithm of normal distribution at point `x`
     with given `mean` and `std`
 
+    Parameters
+    ----------
+    x : Tensor
+        point of evaluation
+    mean : Tensor
+        mean of normal distribution
+    kwargs : one of parameters `{sd, tau, w, rho}`
+
     Notes
     -----
-    There are three variants for density evaluation function.
-    They use:
-        1) standard normal distribution - `std` (:code:`log_normal`)
-        2) `w`, logarithm of `std` :math:`w = log(std)` (:code:`log_normal2`)
-        3) `rho` that follows this equation :math:`rho = log(exp(std) - 1)` (:code:`log_normal3`)
+    There are four variants for density parametrization.
+    They are:
+        1) standard deviation - `std`
+        2) `w`, logarithm of `std` :math:`w = log(std)`
+        3) `rho` that follows this equation :math:`rho = log(exp(std) - 1)`
+        4) `tau` that follows this equation :math:`tau = std^{-1}`
     ----
     """
+    sd = kwargs.get('sd')
+    w = kwargs.get('w')
+    rho = kwargs.get('rho')
+    tau = kwargs.get('tau')
+    eps = kwargs.get('eps', 0.0)
+    check = sum(map(lambda a: a is not None, [sd, w, rho, tau]))
+    if check > 1:
+        raise ValueError('more than one required kwarg is passed')
+    if check == 0:
+        raise ValueError('none of required kwarg is passed')
+    if sd is not None:
+        std = sd
+    elif w is not None:
+        std = tt.exp(w)
+    elif rho is not None:
+        std = rho2sd(rho)
+    else:
+        std = tau**(-1)
     std += eps
     return c - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2 * std ** 2)
-
-
-def log_normal2(x, mean, w, eps=0.0):
-    """
-    Calculate logarithm of normal distribution at point `x`
-    with given `mean` and `w`
-
-    Notes
-    -----
-    There are three variants for density evaluation function.
-    They use:
-        1) standard normal distribution - `std` (:code:`log_normal`)
-        2) `w`, logarithm of `std` :math:`w = log(std)` (:code:`log_normal2`)
-        3) `rho` that follows this equation :math:`rho = log(exp(std) - 1)` (:code:`log_normal3`)
-    ----
-    """
-    std = tt.exp(w)
-    return log_normal(x, mean, std, eps)
-
-
-def log_normal3(x, mean, rho, eps=0.0):
-    """
-    Calculate logarithm of normal distribution at point `x`
-    with given `mean` and `rho`
-
-    Notes
-    -----
-    There are three variants for density evaluation function.
-    They use:
-        1) standard normal distribution - `std` (:code:`log_normal`)
-        2) `w`, logarithm of `std` :math:`w = log(std)` (:code:`log_normal2`)
-        3) `rho` that follows this equation :math:`rho = log(exp(std) - 1)` (:code:`log_normal3`)
-    ----
-    """
-    std = rho2sd(rho)
-    return log_normal(x, mean, std, eps)
-
