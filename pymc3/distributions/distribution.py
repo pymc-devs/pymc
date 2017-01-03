@@ -94,7 +94,7 @@ class Distribution(object):
         return dist
 
     def __init__(self, shape_supp, shape_ind, shape_reps, bcast, dtype,
-                 testval=None, defaults=None, transform=None):
+                 testval=None, defaults=None, transform=None, *args, **kwargs):
         r"""
         Distributions are specified in terms of the shape of their support, the shape
         of the space of independent instances and the shape of the space of replications.
@@ -175,6 +175,9 @@ class Distribution(object):
         self.shape_reps = _as_tensor_shape_variable(shape_reps)
         self.ndim_reps = tt.get_vector_length(self.shape_reps)
 
+        self.bcast = bcast
+        self.dtype = dtype
+
         ndim_sum = self.ndim_supp + self.ndim_ind + self.ndim_reps
         if ndim_sum == 0:
             self.shape = tt.constant([], dtype='int64')
@@ -197,7 +200,7 @@ class Distribution(object):
             testval = self.get_test_value(defaults=self.defaults)
 
         self.testval = testval
-        self.type = tt.TensorType(str(dtype), bcast)
+        self.type = tt.TensorType(str(dtype), self.bcast)
 
     def default(self):
         return self.get_test_value(self.testval, self.defaults)

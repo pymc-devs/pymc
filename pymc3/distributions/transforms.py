@@ -46,13 +46,14 @@ class TransformedDistribution(Distribution):
     """A distribution that has been transformed from one space into another."""
 
     def __init__(self, dist, transform, *args, **kwargs):
-        """
+        r"""
         Parameters
         ----------
         dist : Distribution
+            TODO
         transform : Transform
-        args, kwargs
-            arguments to Distribution"""
+            TODO
+        """
         forward = transform.forward
         testval = forward(dist.default())
 
@@ -61,9 +62,18 @@ class TransformedDistribution(Distribution):
         v = forward(FreeRV(name='v', distribution=dist))
         self.type = v.type
 
+        # We can get the transformed support shape from a single dummy var in
+        # only the support (i.e. without the independent or replication dimensions).
+        shape_supp = forward(tt.alloc(1, *dist.shape_supp)).shape
+
+        # XXX: We assume these two shapes don't change under a transform.
+        shape_ind = dist.shape_ind
+        shape_reps = dist.shape_reps
+
         super(TransformedDistribution, self).__init__(
-            v.shape.tag.test_value, v.dtype,
-            testval, dist.defaults, *args, **kwargs)
+              shape_supp, shape_ind, shape_reps,
+              v.broadcastable, v.dtype,
+              testval.tag.test_value, dist.defaults, *args, **kwargs)
 
         if transform.name == 'stickbreaking':
             b = np.hstack(((np.atleast_1d(self.shape) == 1)[:-1], False))
@@ -193,7 +203,7 @@ class StickBreaking(Transform):
     Parameters
     ----------
     eps : float, positive value
-        A small value for numerical stability in invlogit. 
+        A small value for numerical stability in invlogit.
     """
 
     name = "stickbreaking"
@@ -250,7 +260,7 @@ class Circular(Transform):
 
     def forward(self, x):
         return x
-        
+
     def jacobian_det(self, x):
         return 0
 

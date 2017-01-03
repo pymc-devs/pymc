@@ -208,11 +208,11 @@ def _elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
         r = MRG_RandomStreams(seed=random_seed)
 
     if n_mcsamples == 1:
-        n = r.normal(size=inarray.tag.test_value.shape)
+        n = r.normal(size=np.shape(inarray.tag.test_value))
         q = n * tt.exp(w) + u
         elbo = logp_(q) + tt.sum(w) + 0.5 * l * (1 + tt.log(2.0 * np.pi))
     else:
-        n = r.normal(size=(n_mcsamples, u.tag.test_value.shape[0]))
+        n = r.normal(size=(n_mcsamples, np.shape(u.tag.test_value)[0]))
         qs = n * tt.exp(w) + u
         logps, _ = theano.scan(fn=lambda q: logp_(q),
                                outputs_info=None,
@@ -255,7 +255,7 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
             i_int = i.astype('int64')
             value = param_.get_value(borrow=True)
             accu = theano.shared(
-                np.zeros(value.shape + (n_win,), dtype=value.dtype))
+                np.zeros(np.shape(value) + (n_win,), dtype=value.dtype))
             grad = tt.grad(loss, param_)
 
             # Append squared gradient vector to accu_new
@@ -324,17 +324,17 @@ def sample_vp(
     for v in global_RVs:
         u = theano.shared(vparams['means'][str(v)]).ravel()
         w = theano.shared(vparams['stds'][str(v)]).ravel()
-        n = r.normal(size=u.tag.test_value.shape)
-        updates.update({v: (n * w + u).reshape(v.tag.test_value.shape)})
+        n = r.normal(size=np.shape(u.tag.test_value))
+        updates.update({v: (n * w + u).reshape(np.shape(v.tag.test_value))})
 
     if local_RVs is not None:
         for v_, (uw, _) in local_RVs.items():
             v = get_transformed(v_)
             u = uw[0].ravel()
             w = uw[1].ravel()
-            n = r.normal(size=u.tag.test_value.shape)
+            n = r.normal(size=np.shape(u.tag.test_value))
             updates.update(
-                {v: (n * tt.exp(w) + u).reshape(v.tag.test_value.shape)})
+                {v: (n * tt.exp(w) + u).reshape(np.shape(v.tag.test_value))})
 
     # Replace some nodes of the graph with variational distributions
     vars = model.free_RVs
