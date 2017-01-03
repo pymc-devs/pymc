@@ -16,6 +16,7 @@ __all__ = ['DensityDist', 'Distribution',
            'MultivariateContinuous', 'UnivariateContinuous',
            'MultivariateDiscrete', 'UnivariateDiscrete']
 
+
 class _Unpickling(object):
     pass
 
@@ -250,8 +251,7 @@ class NoDistribution(Distribution):
                  testval=None, defaults=[], transform=None, parent_dist=None,
                  *args, **kwargs):
         super(NoDistribution, self).__init__(shape_supp, shape_ind, shape_reps,
-                                             bcast, dtype=dtype,
-                                             testval=testval,
+                                             bcast, dtype, testval=testval,
                                              defaults=defaults, *args,
                                              **kwargs)
         self.parent_dist = parent_dist

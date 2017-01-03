@@ -557,17 +557,44 @@ def as_tensor(data, name, model, distribution):
     dtype = distribution.dtype
     data = pandas_to_array(data).astype(dtype)
 
+    missing_in_dims = 0
     if hasattr(data, 'mask'):
+        missing_in_dims = np.ma.count_masked(data, axis=0)
+
+    if not np.all(missing_in_dims == 0):
         from .distributions import NoDistribution
-        testval = distribution.testval or data.mean().astype(dtype)
-        fakedist = NoDistribution.dist(shape=data.mask.sum(), dtype=dtype,
-                                       testval=testval, parent_dist=distribution)
+
+        # XXX: There was an `or` between these two values; was this a
+        # condition on None values (as interpreted below), or some kind of
+        # bitwise operation on the values?
+        testval = distribution.testval
+        if testval is None:
+            testval = data.mean()
+        testval = testval.astype(dtype)
+
+        # FIXME: What are the correct values for these?  Does it
+        # really matter?
+        shape_supp = tuple()
+        shape_ind = tuple()
+        missing_count = np.sum(missing_in_dims)
+        shape_reps = tt.as_tensor_variable(np.atleast_1d(missing_count))
+
+        bcast = (False,)
+
+        # XXX: If these missing value distributions are being used
+        # directly, then the result will be incorrect when
+        # the parent distribution is multivariate and the missing values were
+        # found about the support and/or independent dimensions.
+        fakedist = NoDistribution.dist(shape_supp, shape_ind, shape_reps,
+                                       bcast, dtype,
+                                       testval=testval[data.mask.nonzero()],
+                                       parent_dist=distribution)
         missing_values = FreeRV(name=name + '_missing', distribution=fakedist,
                                 model=model)
         constant = tt.as_tensor_variable(data.filled())
 
-        dataTensor = tt.set_subtensor(
-            constant[data.mask.nonzero()], missing_values)
+        dataTensor = tt.set_subtensor(constant[data.mask.nonzero()],
+                                      missing_values)
         dataTensor.missing_values = missing_values
         return dataTensor
     else:
