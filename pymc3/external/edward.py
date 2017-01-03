@@ -77,3 +77,4 @@ class EdwardModel(object):
         z = {key: value for key, value in zip(self.zs_keys, zs_values)}
         lp = self.model.fastlogp(z)
         return lp.astype(np.float32)
+        
