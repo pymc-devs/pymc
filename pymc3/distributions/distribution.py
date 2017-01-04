@@ -182,7 +182,7 @@ class Distribution(object):
 
         ndim_sum = self.ndim_supp + self.ndim_ind + self.ndim_reps
         if ndim_sum == 0:
-            self.shape = tt.constant([], dtype='int64')
+            self.shape = tt.constant([], dtype='int32')
         else:
             self.shape = tuple(self.shape_reps) +\
                 tuple(self.shape_ind) +\
@@ -221,7 +221,9 @@ class Distribution(object):
 
         if test_val is not None:
             if self.ndim_reps > 0 and hasattr(self.shape_reps, 'value'):
-                test_val = np.tile(test_val, self.shape_reps.value)
+                bcast_shape = np.append(self.shape_reps.value,
+                                        np.shape(test_val))
+                test_val = np.broadcast_to(test_val, bcast_shape)
 
             return test_val
 
@@ -311,7 +313,7 @@ class Univariate(Distribution):
 
     def __init__(self, dist_params, ndim=None, size=None,
                  shape=None, dtype=None,
-                 bcast=None, *args, **kwargs):
+                 *args, **kwargs):
         r"""This constructor automates some of the shape determination, since
         univariate distributions are simple in that regard.
 
@@ -329,8 +331,6 @@ class Univariate(Distribution):
             Deprecated; use ``size``.
         dtype: string
             Name of primitive numeric type.
-        bcast: tuple (bool)
-            Hint for broadcast dimensions.
         """
 
         if shape is not None:
