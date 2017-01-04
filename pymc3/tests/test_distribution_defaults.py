@@ -1,18 +1,20 @@
 from __future__ import division
 
 from ..model import Model
-from ..distributions import DiscreteUniform, Continuous
+from ..distributions import DiscreteUniform, Univariate, Continuous
 
 import numpy as np
 from nose.tools import raises
 
 
-class DistTest(Continuous):
+class DistTest(Univariate, Continuous):
 
     def __init__(self, a, b, *args, **kwargs):
-        super(DistTest, self).__init__(*args, **kwargs)
         self.a = a
         self.b = b
+
+        dist_params = (self.a, self.b)
+        super(DistTest, self).__init__(dist_params, *args, **kwargs)
 
     def logp(self, v):
         return 0

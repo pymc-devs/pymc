@@ -9,7 +9,6 @@ from __future__ import division
 
 import numpy as np
 import theano.tensor as tt
-from theano.gof.op import get_test_value
 from scipy import stats
 import warnings
 
@@ -27,26 +26,20 @@ __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
 class PositiveUnivariateContinuous(Univariate, Continuous):
     """Base class for positive univariate continuous distributions"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, dist_params, *args, **kwargs):
         transform = kwargs.get('transform', transforms.log)
-        super(PositiveUnivariateContinuous, self).__init__(transform=transform,
+        super(PositiveUnivariateContinuous, self).__init__(dist_params,
+                                                           transform=transform,
                                                            *args, **kwargs)
-        # TODO: is there a better way to use Theano's
-        # existing `...tag.test_value` mechanics?
-        ndim_sum = self.ndim_supp + self.ndim_ind + self.ndim_reps
-        if self.testval is None:
-            if ndim_sum == 0:
-                self.testval = 0.5
-            else:
-                self.testval = get_test_value(tt.alloc(*((0.5,) + self.shape)))
 
 
 class UnitUnivariateContinuous(Univariate, Continuous):
     """Base class for univariate continuous distributions in [0,1]"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, dist_params, *args, **kwargs):
         transform = kwargs.get('transform', transforms.logodds)
-        super(UnitUnivariateContinuous, self).__init__(transform=transform,
+        super(UnitUnivariateContinuous, self).__init__(dist_params,
+                                                       transform=transform,
                                                        *args, **kwargs)
 
 

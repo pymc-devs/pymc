@@ -118,19 +118,19 @@ def build_model(distfam, valuedomain, vardomains, extra_args={}):
 
 
 def integrate_nd(f, domain, shape, dtype):
-    if shape == () or shape == (1,):
+    if np.array_equal(shape, ()) or np.array_equal(shape, (1,)):
         if dtype in continuous_types:
             return integrate.quad(f, domain.lower, domain.upper, epsabs=1e-8)[0]
         else:
             return sum(f(j) for j in range(domain.lower, domain.upper + 1))
-    elif shape == (2,):
+    elif np.array_equal(shape, (2,)):
         def f2(a, b):
             return f([a, b])
 
         return integrate.dblquad(f2, domain.lower[0], domain.upper[0],
                                  lambda _: domain.lower[1],
                                  lambda _: domain.upper[1])[0]
-    elif shape == (3,):
+    elif np.array_equal(shape, (3,)):
         def f3(a, b, c):
             return f([a, b, c])
 

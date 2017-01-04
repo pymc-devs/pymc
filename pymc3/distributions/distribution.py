@@ -14,8 +14,7 @@ from ..vartypes import string_types
 
 __all__ = ['DensityDist', 'Distribution',
            'Continuous', 'Discrete', 'NoDistribution', 'TensorType',
-           'MultivariateContinuous', 'UnivariateContinuous',
-           'MultivariateDiscrete', 'UnivariateDiscrete']
+           'Multivariate']
 
 
 class _Unpickling(object):
@@ -221,8 +220,7 @@ class Distribution(object):
 
         if test_val is not None:
             if self.ndim_reps > 0 and hasattr(self.shape_reps, 'value'):
-                bcast_shape = np.append(self.shape_reps.value,
-                                        np.shape(test_val))
+                bcast_shape = self.getattr_value(self.shape)
                 test_val = np.broadcast_to(test_val, bcast_shape)
 
             return test_val
@@ -261,6 +259,7 @@ class NoDistribution(Distribution):
     def __init__(self, shape_supp, shape_ind, shape_reps, bcast, dtype,
                  testval=None, defaults=[], transform=None, parent_dist=None,
                  *args, **kwargs):
+
         super(NoDistribution, self).__init__(shape_supp, shape_ind, shape_reps,
                                              bcast, dtype, testval=testval,
                                              defaults=defaults, *args,
@@ -302,11 +301,33 @@ class Continuous(Distribution):
 class DensityDist(Distribution):
     """Distribution based on a given log density function."""
 
-    def __init__(self, logp, ndim_support, ndim, size, bcast, dtype='float64',
-                 *args, **kwargs):
-        super(DensityDist, self).__init__(ndim, size, bcast, dtype, *args,
-                                          **kwargs)
+    def __init__(self, logp, shape_supp=None, shape_ind=None, shape_reps=None,
+                 bcast=None, dtype='float64', *args, **kwargs):
         self.logp = logp
+
+        # TODO: Could add some generic handling like this in
+        # `Distribution.__init__`, just to handle deprecated use of `shape`.
+        if (shape_supp is None) or (shape_ind is None) or (shape_reps is None):
+
+            # If we only got the old `shape` parameter, assume it's only
+            # specifying replications.
+            old_shape = kwargs.get('shape', None)
+            if old_shape is not None:
+                warnings.warn(('The `shape` parameter is deprecated; use `size` to'
+                               ' specify the shape and number of replications.'),
+                              DeprecationWarning)
+                shape_supp = tuple()
+                shape_ind = tuple()
+                shape_reps = old_shape
+
+                bcast += tuple(True if s_ == 1 else False
+                               for s_ in old_shape)
+            else:
+                raise ValueError("shapes and bcast must be specified.")
+
+        super(DensityDist, self).__init__(shape_supp, shape_ind, shape_reps,
+                                          bcast, dtype, *args,
+                                          **kwargs)
 
 
 class Univariate(Distribution):
@@ -320,7 +341,14 @@ class Univariate(Distribution):
         Parameters
         ----------
         dist_params: tuple
-            A tuple containing the distributions parameters.
+            A tuple containing the distributions parameters.  These parameters
+            are checked for shape compatibility(/"broadcastibility"), so make
+            sure their dimensions line up.  For example, if a the distribution
+            for a scalar random variable has parameters `(a, b)`, where `a` is
+            scalar and `b` is a vector, if we get an array of `a` values, then
+            `b` should be given an extra dimension to broadcast along those
+            independent variates implied by `a`.  This function will try
+            to figure that stuff out, but no promises.
         ndim: int
             A hint for the number of dimensions.
             (Not currently used, but could be useful in cases for which
@@ -347,17 +375,21 @@ class Univariate(Distribution):
         ndim, ind_size, bcast = _infer_ndim_bcast(*((ndim, None) +
                                                   self.dist_params))
 
-        if size is None:
-            size = ()
-
-        # Add broadcast info from replication dimensions.
-        bcast += tuple(True if s_ == 1 else False for s_ in size)
-
         # We have to be careful with `as_tensor_variable`; it will produce
         # empty collections with dtype=floatX, which violates our expectations
         # for a shape object.
-        size = tt.as_tensor_variable(np.asarray(size, dtype=np.int),
-                                     ndim=1)
+        if size is None or np.alen(size) == 0:
+            size = np.array((), dtype=np.int)
+        elif np.shape(size) == ():
+            size = np.asarray((size,), dtype=np.int)
+        else:
+            size = np.asarray(size, dtype=np.int)
+
+        # Add broadcast info from replication dimensions.
+        bcast += tuple(True if s_ == 1 else False
+                       for s_ in size)
+
+        size = tt.as_tensor_variable(size, ndim=1)
 
         if dtype is None:
             dtype = tt.scal.upcast(*((tt.config.floatX,) +
