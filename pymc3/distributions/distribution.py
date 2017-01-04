@@ -24,7 +24,7 @@ class _Unpickling(object):
 
 def _as_tensor_shape_variable(var):
     r""" Just some useful shape object parsing steps.
-    Copied from `_infer_ndim_bcast`.
+    Mostly copied from `_infer_ndim_bcast`.
     """
 
     if var is None:
@@ -342,17 +342,29 @@ class Univariate(Distribution):
 
         self.dist_params = tuple(tt.as_tensor_variable(x) for x in dist_params)
 
-        if size is not None:
-            size = np.atleast_1d(size)
+        # Parameters need to match in shape; we use the following to
+        # determine what the [independent terms'] ultimate shape is.
+        ndim, ind_size, bcast = _infer_ndim_bcast(*((ndim, None) +
+                                                  self.dist_params))
 
-        ndim, size, bcast = _infer_ndim_bcast(*((ndim, size) +
-                                                self.dist_params))
+        if size is None:
+            size = ()
+
+        # Add broadcast info from replication dimensions.
+        bcast += tuple(True if s_ == 1 else False for s_ in size)
+
+        # We have to be careful with `as_tensor_variable`; it will produce
+        # empty collections with dtype=floatX, which violates our expectations
+        # for a shape object.
+        size = tt.as_tensor_variable(np.asarray(size, dtype=np.int),
+                                     ndim=1)
+
         if dtype is None:
             dtype = tt.scal.upcast(*((tt.config.floatX,) +
                                      tuple(x.dtype for x in self.dist_params)))
 
         super(Univariate, self).__init__(
-            tuple(), tuple(), size, bcast, *args, **kwargs)
+            tuple(), ind_size, size, bcast, *args, **kwargs)
 
 
 class Multivariate(Distribution):

@@ -14,7 +14,12 @@ import pymc3 as pm
 from . import transforms
 from ..model import Deterministic
 from .continuous import ChiSquared, Normal
-from .distribution import Multivariate, Continuous, Discrete, draw_values, generate_samples
+from .distribution import (
+    Multivariate,
+    Continuous,
+    Discrete,
+    draw_values,
+    generate_samples)
 from .special import gammaln, multigammaln
 from .dist_math import bound, logpow, factln
 
@@ -57,6 +62,7 @@ def get_tau_cov(mu, tau=None, cov=None):
             cov = tt.nlinalg.matrix_inverse(tau)
 
     return (tau, cov)
+
 
 class MvNormal(Multivariate, Continuous):
     r"""
@@ -146,7 +152,6 @@ class MvNormal(Multivariate, Continuous):
 class MvStudentT(Multivariate, Continuous):
     """
     Multivariate Student T log-likelihood.
->>>>>>> started splitting up dist. classes; some small testval test changes
 
     .. math::
         f(\mathbf{x}| \nu,\mu,\Sigma) =
@@ -250,8 +255,10 @@ class Dirichlet(Multivariate, Continuous):
     Only the first `k-1` elements of `x` are expected. Can be used
     as a parent of Multinomial and Categorical nevertheless.
     """
-    def __init__(self, a, transform=transforms.stick_breaking, ndim=None, size=None, dtype=None, *args, **kwargs):
-        # TODO: Need to apply replications/size.
+
+    def __init__(self, a, dtype=tt.config.floatX,
+                 transform=transforms.stick_breaking,
+                 *args, **kwargs):
         self.a = tt.as_tensor_variable(a)
         self.mean = self.a / tt.sum(self.a)
         self.mode = tt.switch(tt.all(self.a > 1),
@@ -260,9 +267,15 @@ class Dirichlet(Multivariate, Continuous):
 
         self.dist_params = (self.a,)
 
-        # TODO: How do we want to use ndim?
         shape_supp = (self.a.shape[-1],)
         shape_ind = tuple(self.a.shape[:-1])
+
+        shape_reps = kwargs.pop('shape', None)
+        if shape_reps is not None:
+            warnings.warn(('The `shape` parameter is deprecated; use `size` to'
+                           ' specify the shape and number of replications.'),
+                          DeprecationWarning)
+            shape_reps = kwargs.pop('size', ())
 
         # FIXME: this isn't correct/ideal
         if self.a.ndim > 0:
@@ -270,12 +283,9 @@ class Dirichlet(Multivariate, Continuous):
         else:
             bcast = (False,)
 
-        if dtype is None:
-            dtype = self.mu.dtype
-
-        super(Dirichlet, self).__init__(shape_supp, shape_ind, (), bcast,
-                                        dtype, transform=transform, *args,
-                                        **kwargs)
+        super(Dirichlet, self).__init__(shape_supp, shape_ind, shape_reps,
+                                        bcast, dtype, transform=transform,
+                                        *args, **kwargs)
 
     def random(self, point=None, size=None):
         a = draw_values([self.a], point=point)
@@ -331,44 +341,43 @@ class Multinomial(Multivariate, Discrete):
         be non-negative and sum to 1 along the last axis. They will be automatically
         rescaled otherwise.
     """
-    def __init__(self, n, p, ndim=None, size=None, dtype=None, *args,
-                 **kwargs):
-        # TODO: Need to apply replications/size.
+
+    def __init__(self, n, p, ndim=None, size=None, dtype='int32',
+                 *args, **kwargs):
         self.n = tt.as_tensor_variable(n, ndim=0)
         self.p = tt.as_tensor_variable(p)
         self.p = self.p / tt.sum(self.p, axis=-1, keepdims=True)
 
-        if len(self.shape) == 2:
-            try:
-                assert n.shape == (self.shape[0],)
-            except AttributeError:
-                # this occurs when n is a scalar Python int or float
-                n *= tt.ones(self.shape[0])
-
-            self.n = tt.shape_padright(n)
-            self.p = p if p.ndim == 2 else tt.shape_padleft(p)
-        else:
-            self.n = n
-            self.p = p
-
         self.mean = self.n * self.p
-        self.mode = tt.cast(tt.round(self.mean), 'int32')
+        self.mode = tt.cast(tt.round(self.mean), dtype)
 
         self.dist_params = (self.n, self.p)
 
-        # TODO: check that n == len(p)?
-        # TODO: How do we want to use ndim?
-        shape_supp = (self.n,)
+        # XXX, FIXME: Is this really multivariate?
+        shape_supp = (1,)
         shape_ind = ()
+        # shape_supp = (self.p.shape[-1],)
+        # shape_ind = tuple(self.p.shape[:-1])
 
-        # FIXME: this isn't correct/ideal
+        shape_reps = kwargs.pop('shape', None)
+        if shape_reps is not None:
+            warnings.warn(('The `shape` parameter is deprecated; use `size` to'
+                           ' specify the shape and number of replications.'),
+                          DeprecationWarning)
+            shape_reps = kwargs.pop('size', ())
+
+        # XXX, FIXME: Is this really multivariate?
         bcast = (False,)
+        # if self.p.ndim > 0:
+        #     bcast = (False,) * (1 + tt.get_vector_length(shape_ind))
+        # else:
+        #     bcast = (False,)
+
         if dtype is None:
             dtype = self.p.dtype
 
-        # FIXME: n.shape == p.shape? bcast, etc.
-        super(Multinomial, self).__init__(shape_supp, shape_ind, (), bcast,
-                                          dtype, *args, **kwargs)
+        super(Multinomial, self).__init__(shape_supp, shape_ind, shape_reps,
+                                          bcast, dtype, *args, **kwargs)
 
     def _random(self, n, p, size=None):
         if size == p.shape:
@@ -395,7 +404,6 @@ class Multinomial(Multivariate, Discrete):
             tt.all(tt.ge(n, 0)),
             broadcast_conditions=False
         )
-
 
 
 def posdef(AA):
@@ -484,8 +492,8 @@ class Wishart(Multivariate, Continuous):
     use WishartBartlett or LKJCorr.
     """
 
-    def __init__(self, n, V, ndim=None, size=None, dtype=None, *args,
-                 **kwargs):
+    def __init__(self, n, V, ndim=None, size=None, dtype=None,
+                 *args, **kwargs):
         warnings.warn('The Wishart distribution can currently not be used '
                       'for MCMC sampling. The probability of sampling a '
                       'symmetric matrix is basically zero. Instead, please '
@@ -534,8 +542,7 @@ class Wishart(Multivariate, Continuous):
                      matrix_pos_def(X),
                      tt.eq(X, X.T),
                      n > (p - 1),
-                     broadcast_conditions=False
-        )
+                     broadcast_conditions=False)
 
 
 def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testval=None):
@@ -656,7 +663,8 @@ class LKJCorr(Multivariate, Continuous):
         100(9), pp.1989-2001.
     """
 
-    def __init__(self, n, p, ndim=None, size=None, dtype=None, *args, **kwargs):
+    def __init__(self, n, p, ndim=None, size=None, dtype=tt.config.floatX,
+                 *args, **kwargs):
         # TODO: Need to apply replications/size.
         self.n = tt.as_tensor_variable(n, ndim=0)
         self.p = tt.as_tensor_variable(p, ndim=0)
@@ -680,7 +688,8 @@ class LKJCorr(Multivariate, Continuous):
         if dtype is None:
             dtype = self.n.dtype
 
-        super(LKJCorr, self).__init__(shape_supp, shape_ind, (), bcast, dtype,
+        super(LKJCorr, self).__init__(shape_supp, shape_ind, (),
+                                      bcast, dtype,
                                       *args, **kwargs)
 
     def _normalizing_constant(self, n, p):
@@ -714,5 +723,4 @@ class LKJCorr(Multivariate, Continuous):
                      tt.all(X <= 1), tt.all(X >= -1),
                      matrix_pos_def(X),
                      n > 0,
-                     broadcast_conditions=False
-        )
+                     broadcast_conditions=False)
