@@ -432,7 +432,7 @@ def init_nuts(init='advi', n_init=500000, model=None, **kwargs):
 
     if init == 'advi':
         v_params = pm.variational.advi(n=n_init)
-        start = pm.variational.sample_vp(v_params, 1, progressbar=False)[0]
+        start = pm.variational.sample_vp(v_params, 1, progressbar=False, hide_transformed=False)[0]
         cov = np.power(model.dict_to_array(v_params.stds), 2)
     elif init == 'advi_map':
         start = pm.find_MAP()
