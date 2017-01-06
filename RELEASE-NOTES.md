@@ -64,7 +64,7 @@ Brian Naughton <briannaughton@gmail.com>
 Byron Smith
 Chad Heyne <chadheyne@gmail.com>
 Chris Fonnesbeck <chris.fonnesbeck@vanderbilt.edu>
-Colin Carroll
+Colin Carroll <colcarroll@gmail.com>
 Corey Farwell <coreyf@rwell.org>
 David Huard <david.huard@gmail.com>
 David Huard <huardda@angus.meteo.mcgill.ca>
