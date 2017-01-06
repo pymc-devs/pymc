@@ -1,5 +1,5 @@
 # Release Notes
-## PyMC3 3.0 (September xx, 2016)
+## PyMC3 3.0 (January 7, 2017)
 
 We are proud and excited to release the first stable version of PyMC3, the product of more than [5 years](https://github.com/pymc-devs/pymc3/commit/85c7e06b6771c0d99cbc09cb68885cda8f7785cb) of ongoing development and contributions from over 80 individuals. PyMC3 is a Python module for Bayesian modeling which focuses on modern Bayesian computational methods, primarily gradient-based (Hamiltonian) MCMC sampling and variational inference. Models are specified in Python, which allows for great flexibility. The main technological difference in PyMC3 relative to previous versions is the reliance on Theano for the computational backend, rather than on Fortran extensions.
 
@@ -57,14 +57,14 @@ Andreas Klostermann <andreasklostermann@googlemail.com>
 Andres Asensio Ramos
 Andrew Clegg <andrew.clegg@pearson.com>
 Anjum48
-AustinRochford <arochford@monetate.com>
+Austin Rochford <arochford@monetate.com>
 Benjamin Edwards <bedwards@cs.unm.edu>
 Boris Avdeev <borisaqua@gmail.com>
 Brian Naughton <briannaughton@gmail.com>
 Byron Smith
 Chad Heyne <chadheyne@gmail.com>
 Chris Fonnesbeck <chris.fonnesbeck@vanderbilt.edu>
-Colin
+Colin Carroll
 Corey Farwell <coreyf@rwell.org>
 David Huard <david.huard@gmail.com>
 David Huard <huardda@angus.meteo.mcgill.ca>
@@ -89,7 +89,7 @@ Kyle Meyer <kyle@kyleam.com>
 Lin Xiao
 Mack Sweeney <mackenzie.sweeney@gmail.com>
 Matthew Emmett <memmett@unc.edu>
-Maxim
+Maxim Kochurov
 Michael Gallaspy <gallaspy.michael@gmail.com>
 Nick <nalourie@example.com>
 Osvaldo Martin <aloctavodia@gmail.com>
@@ -104,7 +104,6 @@ The Gitter Badger <badger@gitter.im>
 Thomas Kluyver <takowl@gmail.com>
 Thomas Wiecki <thomas.wiecki@gmail.com>
 Tobias Knuth <mail@tobiasknuth.de>
-Volodymyr
 Volodymyr Kazantsev
 Wes McKinney <wesmckinn@gmail.com>
 Zach Ploskey <zploskey@gmail.com>
@@ -115,7 +114,7 @@ dstuck <dstuck88@gmail.com>
 ingmarschuster <ingmar.schuster.linguistics@gmail.com>
 jan-matthis <mail@jan-matthis.de>
 jason <JasonTam22@gmailcom>
-jonsedar <jon.sedar@applied.ai>
+Jon Sedar <jon.sedar@applied.ai>
 kiudee <quietdeath@gmail.com>
 maahnman <github@mm.maahn.de>
 macgyver <neil.rabinowitz@merton.ox.ac.uk>
@@ -126,8 +125,7 @@ redst4r <redst4r@web.de>
 santon <steven.anton@idanalytics.com>
 sgenoud <stevegenoud+github@gmail.com>
 stonebig <stonebig>
-taku-y <taku.yoshioka.4096@gmail.com>
-tyarkoni <tyarkoni@gmail.com>
+Tal Yarkoni <tyarkoni@gmail.com>
 x2apps <x2apps@yahoo.com>
 zenourn <daniel@zeno.co.nz>
 
