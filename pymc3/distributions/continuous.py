@@ -1410,3 +1410,45 @@ class SkewNormal(Continuous):
             + (-tau * (value - mu)**2
             + tt.log(tau / np.pi / 2.)) / 2.,
             tau > 0, sd > 0)
+
+
+class Triangular(Continuous):
+    """
+    Continuous Triangular log-likelihood
+    Implemented by J. A. Fonseca 22/12/16
+
+    Parameters
+    ----------
+    lower : float
+        Lower limit.
+    c: float
+        mode
+    upper : float
+        Upper limit.
+    """
+
+    def __init__(self, lower=0, upper=1, c=0.5,
+                 *args, **kwargs):
+        super(Triangular, self).__init__(*args, **kwargs)
+
+        self.c = c
+        self.lower = lower
+        self.upper = upper
+        self.mean = c
+        self.median = self.mean
+
+    def random(self, point=None, size=None):
+        lower, c, upper = draw_values([self.lower, self.c, self.upper],
+                                      point=point)
+        return generate_samples(stats.triang.rvs, c=c, loc=lower, scale=upper - lower,
+                                size=size, random_state=None)
+
+    def logp(self, value):
+        c = self.c
+        lower = self.lower
+        upper = self.upper
+        return tt.switch(alltrue_elemwise([lower <= value, value < c]),
+                         tt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
+                         tt.switch(alltrue_elemwise([value == c]), tt.log(2 / (upper - lower)),
+                                   tt.switch(alltrue_elemwise([c < value, value <= upper]),
+                                             tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))), np.inf)))
