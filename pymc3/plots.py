@@ -104,7 +104,7 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
                                      lw=1.5, alpha=alpha)
                 except KeyError:
                     pass
-
+        ax[i, 0].set_ylim(ymin=0)
     plt.tight_layout()
     return ax
 
@@ -131,8 +131,6 @@ def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
             ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style)
 
         ax.plot(x, density)
-
-    ax.set_ylim(ymin=0)
 
 
 def make_2d(a):
