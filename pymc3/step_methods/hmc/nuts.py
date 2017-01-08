@@ -49,49 +49,47 @@ class NUTS(BaseHMC):
         self.k = k
         self.t0 = t0
 
-        self.Hbar = 0
+        self.h_bar = 0
         self.u = np.log(self.step_size * 10)
         self.m = 1
 
     def astep(self, q0):
-        Emax = self.Emax
-        e = self.step_size
-
         p0 = self.potential.random()
-        E0 = self.compute_energy(q0, p0)
+        start_energy = self.compute_energy(q0, p0)
 
         u = nr.uniform()
         q = qn = qp = q0
-        p = pn = pp = p0
+        pn = pp = p0
 
-        n, s, j = 1, 1, 0
+        tree_size, depth = 1., 0
+        keep_sampling = True
 
-        while s == 1:
-            v = bern(0.5) * 2 - 1
+        while keep_sampling:
+            direction = bern(0.5) * 2 - 1
+            q_edge, p_edge = {-1: (qn, pn), 1: (qp, pp)}[direction]
 
-            if v == -1:
-                qn, pn, _, _, q1, n1, s1, a, na = buildtree(
-                    self.leapfrog, qn, pn, u, v, j, e, Emax, E0)
+            q_edge, p_edge, proposal, subtree_size, is_valid_sample, a, na = buildtree(
+                self.leapfrog, q_edge, p_edge,
+                u, direction, depth,
+                self.step_size, self.Emax, start_energy)
+
+            if direction == -1:
+                qn, pn = q_edge, p_edge
             else:
-                _, _, qp, pp, q1, n1, s1, a, na = buildtree(
-                    self.leapfrog, qp, pp, u, v, j, e, Emax, E0)
+                qp, pp = q_edge, p_edge
 
-            if s1 == 1 and bern(min(1, n1 * 1. / n)):
-                q = q1
+            if is_valid_sample and bern(min(1, subtree_size / tree_size)):
+                q = proposal
 
-            n = n + n1
+            tree_size += subtree_size
 
             span = qp - qn
-            s = s1 * (span.dot(pn) >= 0) * (span.dot(pp) >= 0)
-            j = j + 1
-
-        p = -p
+            keep_sampling = is_valid_sample and (span.dot(pn) >= 0) and (span.dot(pp) >= 0)
+            depth += 1
 
         w = 1. / (self.m + self.t0)
-        self.Hbar = (1 - w) * self.Hbar + w * \
-            (self.target_accept - a * 1. / na)
-
-        self.step_size = np.exp(self.u - (self.m**self.k / self.gamma) * self.Hbar)
+        self.h_bar = (1 - w) * self.h_bar + w * (self.target_accept - a * 1. / na)
+        self.step_size = np.exp(self.u - (self.m**self.k / self.gamma) * self.h_bar)
         self.m += 1
 
         return q
@@ -103,30 +101,33 @@ class NUTS(BaseHMC):
         return Competence.INCOMPATIBLE
 
 
-def buildtree(leapfrog, q, p, u, v, j, e, Emax, E0):
-    if j == 0:
-        q1, p1, E = leapfrog(q, p, np.array(v * e))
-        dE = E - E0
+def buildtree(leapfrog, q, p, u, direction, depth, step_size, Emax, start_energy):
+    if depth == 0:
+        q_edge, p_edge, new_energy = leapfrog(q, p, np.array(direction * step_size))
+        energy_change = new_energy - start_energy
 
-        n1 = int(np.log(u) + dE <= 0)
-        s1 = int(np.log(u) + dE < Emax)
-        return q1, p1, q1, p1, q1, n1, s1, min(1, np.exp(-dE)), 1
-    qn, pn, qp, pp, q1, n1, s1, a1, na1 = buildtree(leapfrog, q, p, u, v, j - 1, e, Emax, E0)
-    if s1 == 1:
-        if v == -1:
-            qn, pn, _, _, q11, n11, s11, a11, na11 = buildtree(
-                leapfrog, qn, pn, u, v, j - 1, e, Emax, E0)
-        else:
-            _, _, qp, pp, q11, n11, s11, a11, na11 = buildtree(
-                leapfrog, qp, pp, u, v, j - 1, e, Emax, E0)
+        leaf_size = int(np.log(u) + energy_change <= 0)
+        is_valid_sample = (np.log(u) + energy_change < Emax)
+        return q_edge, p_edge, q_edge, leaf_size, is_valid_sample, min(1, np.exp(-energy_change)), 1
+    else:
+        depth -= 1
 
-        if bern(n11 * 1. / (max(n1 + n11, 1))):
-            q1 = q11
+    q, p, proposal, tree_size, is_valid_sample, a1, na1 = buildtree(
+        leapfrog, q, p, u, direction, depth, step_size, Emax, start_energy)
 
-        a1 = a1 + a11
-        na1 = na1 + na11
+    if is_valid_sample:
+        q_edge, p_edge, new_proposal, subtree_size, is_valid_subsample, a11, na11 = buildtree(
+            leapfrog, q, p, u, direction, depth, step_size, Emax, start_energy)
 
-        span = qp - qn
-        s1 = s11 * (span.dot(pn) >= 0) * (span.dot(pp) >= 0)
-        n1 = n1 + n11
-    return qn, pn, qp, pp, q1, n1, s1, a1, na1
+        tree_size += subtree_size
+        if bern(subtree_size * 1. / max(tree_size, 1)):
+            proposal = new_proposal
+
+        a1 += a11
+        na1 += na11
+        span = direction * (q_edge - q)
+        is_valid_sample = is_valid_subsample and (span.dot(p_edge) >= 0) and (span.dot(p) >= 0)
+    else:
+        q_edge, p_edge = q, p
+
+    return q_edge, p_edge, proposal, tree_size, is_valid_sample, a1, na1
