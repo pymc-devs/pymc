@@ -42,6 +42,7 @@ class linear_component(namedtuple('Estimate', 'y_est,coeffs')):
     ----------
     formula : str
         Patsy linear model descriptor.
+        E.g. 'y ~ a + b' or simply 'a + b'
     data : array
         Labeled array (e.g. pandas DataFrame, recarray).
     priors : dict
@@ -86,7 +87,11 @@ class linear_component(namedtuple('Estimate', 'y_est,coeffs')):
             priors = defaultdict(None)
 
         # Build patsy design matrix and get regressor names.
-        _, dmatrix = patsy.dmatrices(formula, data)
+        # Formula can be of form 'c ~ a + b' or 'a + b'.
+        if '~' in formula:
+            _, dmatrix = patsy.dmatrices(formula, data)
+        else:
+            dmatrix = patsy.dmatrix(formula, data)
         reg_names = dmatrix.design_info.column_names
 
         if init_vals is None:
