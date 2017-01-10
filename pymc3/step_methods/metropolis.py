@@ -119,7 +119,8 @@ class Metropolis(ArrayStepShared):
                     delta[self.discrete], 0).astype('int64')
                 q = (q0 + delta).astype('int64')
         else:
-            q = q0 + delta
+            q0 = q0.astype(theano.config.floatX)
+            q = (q0 + delta).astype(theano.config.floatX)
 
         q_new = metrop_select(self.delta_logp(q, q0), q, q0)
 
@@ -430,6 +431,6 @@ def delta_logp(logp, vars, shared):
 
     logp1 = pm.CallableTensor(logp0)(inarray1)
 
-    f = theano.function([inarray1, inarray0], logp1 - logp0)
+    f = theano.function([inarray1, inarray0], logp1 - logp0, allow_input_downcast=True)
     f.trust_input = True
     return f
