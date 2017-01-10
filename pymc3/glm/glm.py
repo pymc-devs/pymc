@@ -87,11 +87,10 @@ class linear_component(namedtuple('Estimate', 'y_est,coeffs')):
             priors = defaultdict(None)
 
         # Build patsy design matrix and get regressor names.
-        # Formula can be of form 'c ~ a + b' or 'a + b'.
-        if '~' in formula:
-            _, dmatrix = patsy.dmatrices(formula, data)
-        else:
-            dmatrix = patsy.dmatrix(formula, data)
+        try:
+            _, dmatrix = patsy.dmatrices(formula, data)  # 'c ~ a + b'
+        except patsy.PatsyError:
+            dmatrix = patsy.dmatrix(formula, data)  # 'a + b'
         reg_names = dmatrix.design_info.column_names
 
         if init_vals is None:
