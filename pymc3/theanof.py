@@ -4,7 +4,7 @@ from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
 from theano.tensor import TensorVariable
-from theano.gof import Op, Apply
+from theano.gof import Op
 from theano.configparser import change_flags
 from .memoize import memoize
 from .blocking import ArrayOrdering
@@ -13,7 +13,7 @@ from .data import DataGenerator
 __all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars',
            'cont_inputs', 'floatX', 'jacobian',
            'CallableTensor', 'join_nonshared_inputs',
-           'make_shared_replacements']
+           'make_shared_replacements', 'generator']
 
 
 def inputvars(a):
@@ -251,17 +251,19 @@ identity = tt.Elemwise(scalar_identity, name='identity')
 class GeneratorOp(Op):
     __props__ = ('generator',)
 
-    def __init__(self, generator):
-        if not isinstance(generator, DataGenerator):
-            raise ValueError('pymc3 requires special DataGenerator for consistency, '
-                             'wrap your generator with it')
+    def __init__(self, gen):
+        if not isinstance(gen, DataGenerator):
+            gen = DataGenerator(gen)
         super(GeneratorOp, self).__init__()
-        self.generator = generator
+        self.generator = gen
         self.itypes = []
         self.otypes = [self.generator.tensortype]
 
     def perform(self, node, inputs, output_storage, params=None):
-        output_storage[0][0] = self.generator.__next__()
+        try:
+            output_storage[0][0] = self.generator.__next__()
+        except StopIteration:
+            output_storage[0][0] = np.nan
 
     def do_constant_folding(self, node):
         return False
@@ -273,4 +275,5 @@ class GeneratorOp(Op):
         return rval
 
 
-
+def generator(gen):
+    return GeneratorOp(gen)()
