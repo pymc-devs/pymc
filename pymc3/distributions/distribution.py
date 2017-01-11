@@ -2,7 +2,6 @@ import numpy as np
 import theano.tensor as tt
 from theano import function
 
-from . import transforms
 from ..memoize import memoize
 from ..model import Model, get_named_nodes
 from ..vartypes import string_types
@@ -384,6 +383,7 @@ class Bounded(Distribution):
     """
 
     def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
+        import pymc3.distributions.transforms as transforms
         self.dist = distribution.dist(*args, **kwargs)
 
         self.__dict__.update(self.dist.__dict__)
