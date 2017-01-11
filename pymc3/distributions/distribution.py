@@ -30,8 +30,9 @@ class Distribution(object):
 
         if isinstance(name, string_types):
             data = kwargs.pop('observed', None)
+            population = kwargs.pop('population', None)
             dist = cls.dist(*args, **kwargs)
-            return model.Var(name, dist, data)
+            return model.Var(name, dist, data, population)
         else:
             raise TypeError("Name needs to be a string but got: %s" % name)
 
