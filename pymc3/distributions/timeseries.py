@@ -1,9 +1,9 @@
 import theano.tensor as tt
 from theano import scan
 
-from .multivariate import get_tau_cov, MvNormal, MvStudentT
-from .continuous import Normal, Flat
-from .distribution import Continuous
+from . import multivariate
+from . import continuous
+from . import distribution
 
 __all__ = [
     'AR1',
@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 
-class AR1(Continuous):
+class AR1(distribution.Continuous):
     """
     Autoregressive process with 1 lag.
 
@@ -40,13 +40,13 @@ class AR1(Continuous):
 
         x_im1 = x[:-1]
         x_i = x[1:]
-        boundary = Normal.dist(0, tau_e).logp
+        boundary = continuous.Normal.dist(0, tau_e).logp
 
-        innov_like = Normal.dist(k * x_im1, tau_e).logp(x_i)
+        innov_like = continuous.Normal.dist(k * x_im1, tau_e).logp(x_i)
         return boundary(x[0]) + tt.sum(innov_like) + boundary(x[-1])
 
 
-class GaussianRandomWalk(Continuous):
+class GaussianRandomWalk(distribution.Continuous):
     """
     Random Walk with Normal innovations
 
@@ -62,7 +62,7 @@ class GaussianRandomWalk(Continuous):
         distribution for initial value (Defaults to Flat())
     """
 
-    def __init__(self, tau=None, init=Flat.dist(), sd=None, mu=0.,
+    def __init__(self, tau=None, init=continuous.Flat.dist(), sd=None, mu=0.,
                  *args, **kwargs):
         super(GaussianRandomWalk, self).__init__(*args, **kwargs)
         self.tau = tau
@@ -80,11 +80,11 @@ class GaussianRandomWalk(Continuous):
         x_im1 = x[:-1]
         x_i = x[1:]
 
-        innov_like = Normal.dist(mu=x_im1 + mu, tau=tau, sd=sd).logp(x_i)
+        innov_like = continuous.Normal.dist(mu=x_im1 + mu, tau=tau, sd=sd).logp(x_i)
         return init.logp(x[0]) + tt.sum(innov_like)
 
 
-class GARCH11(Continuous):
+class GARCH11(distribution.Continuous):
     """
     GARCH(1,1) with Normal innovations. The model is specified by
 
@@ -131,10 +131,10 @@ class GARCH11(Continuous):
 
     def logp(self, x):
         vol = self.get_volatility(x)
-        return tt.sum(Normal.dist(0, sd=vol).logp(x))
+        return tt.sum(continuous.Normal.dist(0, sd=vol).logp(x))
 
 
-class EulerMaruyama(Continuous):
+class EulerMaruyama(distribution.Continuous):
     """
     Stochastic differential equation discretized with the Euler-Maruyama method.
 
@@ -158,10 +158,10 @@ class EulerMaruyama(Continuous):
         f, g = self.sde_fn(x[:-1], *self.sde_pars)
         mu = xt + self.dt * f
         sd = tt.sqrt(self.dt) * g
-        return tt.sum(Normal.dist(mu=mu, sd=sd).logp(x[1:]))
+        return tt.sum(continuous.Normal.dist(mu=mu, sd=sd).logp(x[1:]))
 
 
-class MvGaussianRandomWalk(Continuous):
+class MvGaussianRandomWalk(distribution.Continuous):
     """
     Multivariate Random Walk with Normal innovations
 
@@ -176,10 +176,10 @@ class MvGaussianRandomWalk(Continuous):
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
-    def __init__(self, mu=0., cov=None, tau=None, init=Flat.dist(),
+    def __init__(self, mu=0., cov=None, tau=None, init=continuous.Flat.dist(),
                  *args, **kwargs):
         super(MvGaussianRandomWalk, self).__init__(*args, **kwargs)
-        tau, cov = get_tau_cov(mu, tau=tau, cov=cov)
+        tau, cov = multivariate.get_tau_cov(mu, tau=tau, cov=cov)
         self.tau = tau
         self.cov = cov
         self.mu = mu
@@ -194,11 +194,11 @@ class MvGaussianRandomWalk(Continuous):
         x_im1 = x[:-1]
         x_i = x[1:]
 
-        innov_like = MvNormal.dist(mu=x_im1 + mu, tau=tau).logp(x_i)
+        innov_like = multivariate.MvNormal.dist(mu=x_im1 + mu, tau=tau).logp(x_i)
         return init.logp(x[0]) + tt.sum(innov_like)
 
 
-class MvStudentTRandomWalk(Continuous):
+class MvStudentTRandomWalk(distribution.Continuous):
     """
     Multivariate Random Walk with StudentT innovations
 
@@ -214,10 +214,10 @@ class MvStudentTRandomWalk(Continuous):
     init : distribution
         distribution for initial value (Defaults to Flat())
     """
-    def __init__(self, nu, mu=0., cov=None, tau=None, init=Flat.dist(),
+    def __init__(self, nu, mu=0., cov=None, tau=None, init=continuous.Flat.dist(),
                  *args, **kwargs):
         super(MvStudentTRandomWalk, self).__init__(*args, **kwargs)
-        tau, cov = get_tau_cov(mu, tau=tau, cov=cov)
+        tau, cov = multivariate.get_tau_cov(mu, tau=tau, cov=cov)
         self.tau = tau
         self.cov = cov
         self.mu = mu
@@ -233,5 +233,5 @@ class MvStudentTRandomWalk(Continuous):
 
         x_im1 = x[:-1]
         x_i = x[1:]
-        innov_like = MvStudentT.dist(nu, cov, mu=x_im1 + mu).logp(x_i)
+        innov_like = multivariate.MvStudentT.dist(nu, cov, mu=x_im1 + mu).logp(x_i)
         return init.logp(x[0]) + tt.sum(innov_like)
