@@ -29,11 +29,7 @@ class DataGenerator(object):
     Helper class that helps to infer data type of generator with looking
     at the first item, preserving the order of the resulting generator
     """
-    def __init__(self, iterable):
-        if hasattr(iterable, '__len__'):
-            generator = itertools.cycle(iterable)
-        else:
-            generator = iter(iterable)
+    def __init__(self, generator):
         self.test_value = next(generator)
         self.gen = itertools.chain([self.test_value], generator)
         self.tensortype = tt.TensorType(

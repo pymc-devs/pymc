@@ -8,7 +8,7 @@ from theano.tensor.var import TensorVariable
 
 import pymc3 as pm
 from .memoize import memoize
-from .theanof import gradient, hessian, inputvars
+from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types
 from .blocking import DictToArrayBijection, ArrayOrdering
 
@@ -458,7 +458,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         """All the continuous variables in the model"""
         return list(typefilter(self.vars, continuous_types))
 
-    def Var(self, name, dist, data=None):
+    def Var(self, name, dist, data=None, population=None):
         """Create and add (un)observed random variable to the model with an
         appropriate prior distribution.
 
@@ -491,7 +491,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
                 return var
         elif isinstance(data, dict):
             var = MultiObservedRV(name=name, data=data, distribution=dist,
-                                  model=self)
+                                  model=self, population=population)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs += var.missing_values
@@ -500,7 +500,8 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
                     self.named_vars[v.name] = v
         else:
             var = ObservedRV(name=name, data=data,
-                             distribution=dist, model=self)
+                             distribution=dist, model=self,
+                             population=population)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs.append(var.missing_values)
@@ -780,6 +781,8 @@ def as_tensor(data, name, model, distribution):
             constant[data.mask.nonzero()], missing_values)
         dataTensor.missing_values = missing_values
         return dataTensor
+    elif hasattr(data, '__next__'):
+        return generator(data)
     else:
         data = tt.as_tensor_variable(data, name=name)
         data.missing_values = None
@@ -792,7 +795,7 @@ class ObservedRV(Factor, TensorVariable):
     """
 
     def __init__(self, type=None, owner=None, index=None, name=None, data=None,
-                 distribution=None, model=None):
+                 distribution=None, model=None, population=None):
         """
         Parameters
         ----------
@@ -814,7 +817,12 @@ class ObservedRV(Factor, TensorVariable):
             data = as_tensor(data, name, model, distribution)
             self.missing_values = data.missing_values
 
-            self.logp_elemwiset = distribution.logp(data)
+            logp_elemwiset = distribution.logp(data)
+            if population is None:
+                coef = tt.as_tensor(1)
+            else:
+                coef = tt.as_tensor(population) / logp_elemwiset.shape[0]
+            self.logp_elemwiset = logp_elemwiset * coef
             self.model = model
             self.distribution = distribution
 
@@ -835,7 +843,7 @@ class MultiObservedRV(Factor):
     Potentially partially observed.
     """
 
-    def __init__(self, name, data, distribution, model):
+    def __init__(self, name, data, distribution, model, population=None):
         """
         Parameters
         ----------
@@ -851,7 +859,12 @@ class MultiObservedRV(Factor):
 
         self.missing_values = [datum.missing_values for datum in self.data.values()
                                if datum.missing_values is not None]
-        self.logp_elemwiset = distribution.logp(**self.data)
+        logp_elemwiset = distribution.logp(**self.data)
+        if population is None:
+            coef = tt.as_tensor(1)
+        else:
+            coef = tt.as_tensor(population) / logp_elemwiset.shape[0]
+        self.logp_elemwiset = logp_elemwiset * coef
         self.model = model
         self.distribution = distribution
 
