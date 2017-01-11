@@ -17,6 +17,9 @@ class TestGenerator(unittest.TestCase):
         f = theano.function([], gop)
         self.assertEqual(f(), np.float32(0))
         self.assertEqual(f(), np.float32(1))
+        for i in range(2, 100):
+            f()
+        self.assertEqual(f(), np.float32(100))
 
     def test_ndim(self):
         for ndim in range(10):
