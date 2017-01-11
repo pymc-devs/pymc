@@ -2,7 +2,7 @@ import itertools
 import unittest
 import numpy as np
 import theano
-from ..theanof import DataGenerator, GeneratorOp
+from ..theanof import DataGenerator, GeneratorOp, generator
 
 
 def integers():
@@ -42,8 +42,7 @@ class TestGenerator(unittest.TestCase):
             np.testing.assert_equal(f(), res[1])
 
     def test_cloning_available(self):
-        generator = DataGenerator(integers())
-        gop = GeneratorOp(generator)()
+        gop = generator(integers())
         res = gop ** 2
         shared = theano.shared(np.float32(10))
         res1 = theano.clone(res, {gop: shared})
