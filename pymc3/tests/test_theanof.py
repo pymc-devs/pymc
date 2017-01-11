@@ -14,6 +14,7 @@ class TestGenerator(unittest.TestCase):
                 i += 1
         generator = DataGenerator(integers())
         gop = GeneratorOp(generator)()
+        self.assertEqual(gop.tag.test_value, np.float32(0))
         f = theano.function([], gop)
         self.assertEqual(f(), np.float32(0))
         self.assertEqual(f(), np.float32(1))
