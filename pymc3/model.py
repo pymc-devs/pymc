@@ -477,11 +477,13 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         name = self.name_for(name)
         if data is None:
             if getattr(dist, "transform", None) is None:
-                var = FreeRV(name=name, distribution=dist, model=self)
+                var = FreeRV(name=name, distribution=dist, model=self,
+                             population=population)
                 self.free_RVs.append(var)
             else:
                 var = TransformedRV(name=name, distribution=dist, model=self,
-                                    transform=dist.transform)
+                                    transform=dist.transform,
+                                    population=population)
                 pm._log.debug('Applied {transform}-transform to {name}'
                               ' and added transformed {orig_name} to model.'.format(
                                 transform=dist.transform.name,
@@ -718,7 +720,7 @@ class FreeRV(Factor, TensorVariable):
     """Unobserved random variable that a model is specified in terms of."""
 
     def __init__(self, type=None, owner=None, index=None, name=None,
-                 distribution=None, model=None):
+                 distribution=None, model=None, population=None):
         """
         Parameters
         ----------
@@ -737,7 +739,12 @@ class FreeRV(Factor, TensorVariable):
             self.distribution = distribution
             self.tag.test_value = np.ones(
                 distribution.shape, distribution.dtype) * distribution.default()
-            self.logp_elemwiset = distribution.logp(self)
+            logp_elemwiset = distribution.logp(self)
+            if population is None:
+                coef = tt.as_tensor(1)
+            else:
+                coef = tt.as_tensor(population) / logp_elemwiset.shape[0]
+            self.logp_elemwiset = logp_elemwiset * coef
             self.model = model
 
             incorporate_methods(source=distribution, destination=self,
@@ -909,7 +916,8 @@ def Potential(name, var, model=None):
 class TransformedRV(TensorVariable):
 
     def __init__(self, type=None, owner=None, index=None, name=None,
-                 distribution=None, model=None, transform=None):
+                 distribution=None, model=None, transform=None,
+                 population=None):
         """
         Parameters
         ----------
@@ -929,7 +937,7 @@ class TransformedRV(TensorVariable):
 
             transformed_name = "{}_{}_".format(name, transform.name)
             self.transformed = model.Var(
-                transformed_name, transform.apply(distribution))
+                transformed_name, transform.apply(distribution), population=population)
 
             normalRV = transform.backward(self.transformed)
 
