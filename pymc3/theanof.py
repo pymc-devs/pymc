@@ -3,8 +3,12 @@ import numpy as np
 from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
+from theano.tensor import TensorVariable
+from theano.gof import Op, Apply
+from theano.configparser import change_flags
 from .memoize import memoize
 from .blocking import ArrayOrdering
+from .data import DataGenerator
 
 __all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars',
            'cont_inputs', 'floatX', 'jacobian',
@@ -242,3 +246,31 @@ class CallableTensor(object):
 
 scalar_identity = IdentityOp(scalar.upgrade_to_float, name='scalar_identity')
 identity = tt.Elemwise(scalar_identity, name='identity')
+
+
+class GeneratorOp(Op):
+    __props__ = ('generator',)
+
+    def __init__(self, generator):
+        if not isinstance(generator, DataGenerator):
+            raise ValueError('pymc3 requires special DataGenerator for consistency, '
+                             'wrap your generator with it')
+        super(GeneratorOp, self).__init__()
+        self.generator = generator
+        self.itypes = []
+        self.otypes = [self.generator.tensortype]
+
+    def perform(self, node, inputs, output_storage, params=None):
+        output_storage[0][0] = self.generator.__next__()
+
+    def do_constant_folding(self, node):
+        return False
+
+    @change_flags(compute_test_value='off')
+    def __call__(self, *args, **kwargs):
+        rval = super(GeneratorOp, self).__call__(*args, **kwargs)
+        rval.tag.test_value = self.generator.test_value
+        return rval
+
+
+
