@@ -53,6 +53,7 @@ if __name__ == "__main__":
                     'pymc3.examples',
                     'pymc3.glm',
                     'pymc3.step_methods',
+                    'pymc3.step_methods.hmc',
                     'pymc3.tuning',
                     'pymc3.tests',
                     'pymc3.variational',
