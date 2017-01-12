@@ -60,6 +60,8 @@ from .multivariate import LKJCorr
 from .timeseries import AR1
 from .timeseries import GaussianRandomWalk
 from .timeseries import GARCH11
+from .timeseries import MvGaussianRandomWalk
+from .timeseries import MvStudentTRandomWalk
 
 from .transforms import transform
 from .transforms import stick_breaking
@@ -116,6 +118,8 @@ __all__ = ['Uniform',
            'LKJCorr',
            'AR1',
            'GaussianRandomWalk',
+           'MvGaussianRandomWalk',
+           'MvStudentTRandomWalk',
            'GARCH11',
            'SkewNormal',
            'Mixture',
