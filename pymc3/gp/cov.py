@@ -121,3 +121,19 @@ class Cosine(Stationary):
         X, Z = self._slice(X, Z)
         return tt.cos(self.euclidean_dist(X, Z))
 
+class Linear(Covariance):
+    def __init__(self, input_dim, centers, active_dims=None):
+        Covariance.__init__(self, input_dim, active_dims)
+        self.centers = centers
+    def K(self, X, Z=None):
+        X, Z = self._slice(X, Z)
+        # subtract centers from X, Z
+        Xc = tt.sub(X, self.centers)
+        if Z is None:
+            return tt.dot(Xc, tt.transpose(Xc))
+        else:
+            Zc = tt.sub(Z, self.centers)
+            return tt.dot(Xc, tt.transpose(Zc))
+
+
+
