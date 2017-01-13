@@ -52,13 +52,6 @@ class Combination(Covariance):
             else:
                 self.factor_list.append(factor)
 
-        # make covariance function names (if not provided)
-        #   take pymc3 variables/lengthscales etc?
-
-        # build out covariances
-
-        # flag to set for 'is_noise'
-
 class Add(Combination):
     def K(self, X, Z=None):
         return reduce((lambda x, y: x + y),
@@ -122,4 +115,9 @@ class Exponential(Stationary):
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.exp(-0.5 * self.euclidean_dist(X, Z))
+
+class Cosine(Stationary):
+    def K(self, X, Z=None):
+        X, Z = self._slice(X, Z)
+        return tt.cos(self.euclidean_dist(X, Z))
 
