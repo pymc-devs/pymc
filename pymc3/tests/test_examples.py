@@ -54,7 +54,7 @@ class ARM5_4(SeededTest):
             h = H(start)
 
             step = pm.HamiltonianMC(model.vars, h)
-            pm.sample(50, step, start)
+            pm.sample(50, step=step, start=start)
 
 
 class TestARM12_6(SeededTest):
@@ -88,7 +88,7 @@ class TestARM12_6(SeededTest):
             start = pm.find_MAP(start=start,
                                 vars=[model['groupmean'], model['sd_interval_'], model['floor_m']])
             step = pm.NUTS(model.vars, scaling=start)
-            pm.sample(50, step, start)
+            pm.sample(50, step=step, start=start)
 
 
 class TestARM12_6Uranium(SeededTest):
@@ -129,7 +129,7 @@ class TestARM12_6Uranium(SeededTest):
             h = np.diag(H(start))
 
             step = pm.HamiltonianMC(model.vars, h)
-            pm.sample(50, step, start)
+            pm.sample(50, step=step, start=start)
 
 
 def build_disaster_model(masked=False):
