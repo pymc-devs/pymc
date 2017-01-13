@@ -34,7 +34,8 @@ class TestGLM(SeededTest):
             Normal('y_obs', mu=y_est, sd=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
-            trace = sample(500, step, start, progressbar=False, random_seed=self.random_seed)
+            trace = sample(500, step=step, start=start, progressbar=False,
+                                 random_seed=self.random_seed)
 
             self.assertAlmostEqual(np.mean(trace['Intercept']), self.intercept, 1)
             self.assertAlmostEqual(np.mean(trace['x']), self.slope, 1)
@@ -44,7 +45,7 @@ class TestGLM(SeededTest):
         with Model() as model:
             glm.glm('y ~ x', self.data_linear)
             step = Slice(model.vars)
-            trace = sample(500, step, progressbar=False, random_seed=self.random_seed)
+            trace = sample(500, step=step, progressbar=False, random_seed=self.random_seed)
 
             self.assertAlmostEqual(np.mean(trace['Intercept']), self.intercept, 1)
             self.assertAlmostEqual(np.mean(trace['x']), self.slope, 1)
@@ -55,7 +56,7 @@ class TestGLM(SeededTest):
             glm.glm('y ~ x', self.data_logistic,
                     family=glm.families.Binomial(link=glm.families.logit))
             step = Slice(model.vars)
-            trace = sample(1000, step, progressbar=False, random_seed=self.random_seed)
+            trace = sample(1000, step=step, progressbar=False, random_seed=self.random_seed)
 
             self.assertAlmostEqual(np.mean(trace['Intercept']), self.intercept, 1)
             self.assertAlmostEqual(np.mean(trace['x']), self.slope, 1)

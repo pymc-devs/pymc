@@ -20,7 +20,7 @@ def run(n_samples=3000):
     start = model.test_point
     h = pm.find_hessian(start, model=model)
     step = pm.Metropolis(model.vars, h, blocked=True, model=model)
-    trace = pm.sample(n_samples, step, start, model=model)
+    trace = pm.sample(n_samples, step=step, start=start, model=model)
     return trace
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ def test_plots():
         start = model.test_point
         h = find_hessian(start)
         step = Metropolis(model.vars, h)
-        trace = sample(3000, step, start)
+        trace = sample(3000, step=step, start=start)
 
         traceplot(trace)
         forestplot(trace)
@@ -34,7 +34,7 @@ def test_plots_multidimensional():
     with model as model:
         h = np.diag(find_hessian(start))
         step = Metropolis(model.vars, h)
-        trace = sample(3000, step, start)
+        trace = sample(3000, step=step, start=start)
 
         traceplot(trace)
         plot_posterior(trace)
