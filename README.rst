@@ -34,7 +34,7 @@ Features
 Getting started
 ---------------
 
--  The `PyMC3 tutorial <http://pymc-devs.github.io/pymc3/notebooks/getting_started.html>`__ 
+-  The `PyMC3 tutorial <http://pymc-devs.github.io/pymc3/notebooks/getting_started.html>`__
 -  `PyMC3 examples <http://pymc-devs.github.io/pymc3/examples.html>`__
    and the `API reference <http://pymc-devs.github.io/pymc3/api.html>`__
 -  `Probabilistic Programming and Bayesian Methods for Hackers <https://github.com/CamDavidsonPilon/Probabilistic-Programming-and-Bayesian-Methods-for-Hackers>`__
@@ -93,7 +93,7 @@ Another option is to clone the repository and install PyMC3 using
 Dependencies
 ------------
 
-PyMC3 is tested on Python 2.7 and 3.5 and depends on Theano, NumPy,
+PyMC3 is tested on Python 2.7 and 3.6 and depends on Theano, NumPy,
 SciPy, Pandas, and Matplotlib (see ``requirements.txt`` for version
 information).
 
@@ -154,9 +154,8 @@ Sponsors
 .. |Build Status| image:: https://travis-ci.org/pymc-devs/pymc3.png?branch=master
    :target: https://travis-ci.org/pymc-devs/pymc3
 .. |Coverage| image:: https://coveralls.io/repos/github/pymc-devs/pymc3/badge.svg?branch=master
-   :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master 
+   :target: https://coveralls.io/github/pymc-devs/pymc3?branch=master
 .. |NumFOCUS| image:: http://www.numfocus.org/uploads/6/0/6/9/60696727/1457562110.png
    :target: http://www.numfocus.org/
 .. |Quantopian| image:: https://raw.githubusercontent.com/pymc-devs/pymc3/master/docs/quantopianlogo.jpg
    :target: https://quantopian.com
-
