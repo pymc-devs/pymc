@@ -143,8 +143,9 @@ class Linear(Covariance):
             Zc = tt.sub(Z, self.centers)
             return tt.dot(Xc, tt.transpose(Zc))
 
+
 class WarpedInput(Covariance):
-    def __init__(self, input_dim, warp_func, cov_func, args=None, active_dims=None):
+    def __init__(self, input_dim, cov_func, warp_func, args=None, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
         self.cov_func = cov_func
         def w(x, args):
@@ -164,5 +165,19 @@ class WarpedInput(Covariance):
         else:
             return self.cov_func.K(self.w(X, self.args), self.w(Z, self.args))
 
+
+class BasisFuncCov(Covariance):
+    def __init__(self, input_dim, alpha, basis, active_dims=None):
+        Covariance.__init__(self, input_dim, active_dims)
+        self.alpha = alpha
+        self.basis = basis
+
+    def K(self, X, Z=None):
+        X, Z = self._slice(X, Z)
+        phi = tt.dot(self.basis, self.alpha)
+        if Z is None:
+            return tt.dot(phi, tt.transpose(phi))
+        else:
+            return tt.dot(phi, tt.transpose(tt.dot(self.basis, self.alpha)))
 
 
