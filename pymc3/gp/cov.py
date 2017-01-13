@@ -85,19 +85,23 @@ class Stationary(Covariance):
         r2 = self.square_dist(X, Z)
         return tt.sqrt(r2 + 1e-12)
 
+
 class ExpQuad(Stationary):
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.exp( -0.5 * self.square_dist(X, Z))
+
 
 class RatQuad(Stationary):
     def __init__(self, input_dim, lengthscales, alpha, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
         self.lengthscales = lengthscales
         self.alpha = alpha
+
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.power((1.0 + 0.5 * self.square_dist(X, Z) * (1.0 / self.alpha)), -1.0 * self.alpha)
+
 
 class Matern52(Stationary):
     def K(self, X, Z=None):
@@ -105,35 +109,52 @@ class Matern52(Stationary):
         r = self.euclidean_dist(X, Z)
         return (1.0 + np.sqrt(5.0) * r + 5.0 / 3.0 * tt.square(r)) * tt.exp(-1.0 * np.sqrt(5.0) * r)
 
+
 class Matern32(Stationary):
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
         r = self.euclidean_dist(X, Z)
         return (1.0 + np.sqrt(3.0) * r) * tt.exp(-np.sqrt(3.0) * r)
 
+
 class Exponential(Stationary):
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.exp(-0.5 * self.euclidean_dist(X, Z))
+
 
 class Cosine(Stationary):
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
         return tt.cos(self.euclidean_dist(X, Z))
 
+
 class Linear(Covariance):
     def __init__(self, input_dim, centers, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
         self.centers = centers
+
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
-        # subtract centers from X, Z
         Xc = tt.sub(X, self.centers)
         if Z is None:
             return tt.dot(Xc, tt.transpose(Xc))
         else:
             Zc = tt.sub(Z, self.centers)
             return tt.dot(Xc, tt.transpose(Zc))
+
+class WarpedInput(Covariance):
+    def __init__(self, input_dim, warp_func, cov_func, active_dims=None):
+        Covariance.__init__(self, input_dim, active_dims)
+        self.cov_func = cov_func
+        self.warp_func = warp_func
+
+    def K(self, X, Z=None):
+        X, Z = self._slice(X, Z)
+        if Z is None:
+            return self.cov_func.K(self.warp_func(X), Z)
+        else:
+            return self.cov_func.K(self.warp_func(X), self.warp_func(Z))
 
 
 
