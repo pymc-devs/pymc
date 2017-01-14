@@ -469,6 +469,8 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         data : array_like (optional)
            If data is provided, the variable is observed. If None,
            the variable is unobserved.
+        total_size : scalar
+            upscales logp of variable with :math:`coef = total_size/var.shape[0]`
 
         Returns
         -------
@@ -728,7 +730,10 @@ class FreeRV(Factor, TensorVariable):
         owner : theano owner (optional)
         name : str
         distribution : Distribution
-        model : Model"""
+        model : Model
+        total_size : scalar Tensor (optional)
+            needed for upscaling logp
+        """
         if type is None:
             type = distribution.type
         super(FreeRV, self).__init__(type, owner, index, name)
@@ -811,6 +816,8 @@ class ObservedRV(Factor, TensorVariable):
         name : str
         distribution : Distribution
         model : Model
+        total_size : scalar Tensor (optional)
+            needed for upscaling logp
         """
         from .distributions import TensorType
         if type is None:
@@ -859,6 +866,8 @@ class MultiObservedRV(Factor):
         name : str
         distribution : Distribution
         model : Model
+        total_size : scalar Tensor (optional)
+            needed for upscaling logp
         """
         self.name = name
         self.data = {name: as_tensor(data, name, model, distribution)
@@ -924,10 +933,12 @@ class TransformedRV(TensorVariable):
 
         type : theano type (optional)
         owner : theano owner (optional)
-
         name : str
         distribution : Distribution
-        model : Model"""
+        model : Model
+        total_size : scalar Tensor (optional)
+            needed for upscaling logp
+        """
         if type is None:
             type = distribution.type
         super(TransformedRV, self).__init__(type, owner, index, name)
