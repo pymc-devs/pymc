@@ -458,7 +458,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         """All the continuous variables in the model"""
         return list(typefilter(self.vars, continuous_types))
 
-    def Var(self, name, dist, data=None, population=None):
+    def Var(self, name, dist, data=None, total_size=None):
         """Create and add (un)observed random variable to the model with an
         appropriate prior distribution.
 
@@ -478,12 +478,12 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         if data is None:
             if getattr(dist, "transform", None) is None:
                 var = FreeRV(name=name, distribution=dist, model=self,
-                             population=population)
+                             total_size=total_size)
                 self.free_RVs.append(var)
             else:
                 var = TransformedRV(name=name, distribution=dist, model=self,
                                     transform=dist.transform,
-                                    population=population)
+                                    total_size=total_size)
                 pm._log.debug('Applied {transform}-transform to {name}'
                               ' and added transformed {orig_name} to model.'.format(
                                 transform=dist.transform.name,
@@ -493,7 +493,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
                 return var
         elif isinstance(data, dict):
             var = MultiObservedRV(name=name, data=data, distribution=dist,
-                                  model=self, population=population)
+                                  model=self, total_size=total_size)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs += var.missing_values
@@ -503,7 +503,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         else:
             var = ObservedRV(name=name, data=data,
                              distribution=dist, model=self,
-                             population=population)
+                             total_size=total_size)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs.append(var.missing_values)
@@ -720,7 +720,7 @@ class FreeRV(Factor, TensorVariable):
     """Unobserved random variable that a model is specified in terms of."""
 
     def __init__(self, type=None, owner=None, index=None, name=None,
-                 distribution=None, model=None, population=None):
+                 distribution=None, model=None, total_size=None):
         """
         Parameters
         ----------
@@ -740,10 +740,10 @@ class FreeRV(Factor, TensorVariable):
             self.tag.test_value = np.ones(
                 distribution.shape, distribution.dtype) * distribution.default()
             logp_elemwiset = distribution.logp(self)
-            if population is None:
+            if total_size is None:
                 coef = tt.as_tensor(1)
             else:
-                coef = tt.as_tensor(population) / logp_elemwiset.shape[0]
+                coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
             self.logp_elemwiset = logp_elemwiset * coef
             self.model = model
 
@@ -802,7 +802,7 @@ class ObservedRV(Factor, TensorVariable):
     """
 
     def __init__(self, type=None, owner=None, index=None, name=None, data=None,
-                 distribution=None, model=None, population=None):
+                 distribution=None, model=None, total_size=None):
         """
         Parameters
         ----------
@@ -825,10 +825,10 @@ class ObservedRV(Factor, TensorVariable):
             self.missing_values = data.missing_values
 
             logp_elemwiset = distribution.logp(data)
-            if population is None:
+            if total_size is None:
                 coef = tt.as_tensor(1)
             else:
-                coef = tt.as_tensor(population) / logp_elemwiset.shape[0]
+                coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
             self.logp_elemwiset = logp_elemwiset * coef
             self.model = model
             self.distribution = distribution
@@ -850,7 +850,7 @@ class MultiObservedRV(Factor):
     Potentially partially observed.
     """
 
-    def __init__(self, name, data, distribution, model, population=None):
+    def __init__(self, name, data, distribution, model, total_size=None):
         """
         Parameters
         ----------
@@ -867,10 +867,10 @@ class MultiObservedRV(Factor):
         self.missing_values = [datum.missing_values for datum in self.data.values()
                                if datum.missing_values is not None]
         logp_elemwiset = distribution.logp(**self.data)
-        if population is None:
+        if total_size is None:
             coef = tt.as_tensor(1)
         else:
-            coef = tt.as_tensor(population) / logp_elemwiset.shape[0]
+            coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
         self.logp_elemwiset = logp_elemwiset * coef
         self.model = model
         self.distribution = distribution
@@ -917,7 +917,7 @@ class TransformedRV(TensorVariable):
 
     def __init__(self, type=None, owner=None, index=None, name=None,
                  distribution=None, model=None, transform=None,
-                 population=None):
+                 total_size=None):
         """
         Parameters
         ----------
@@ -937,7 +937,7 @@ class TransformedRV(TensorVariable):
 
             transformed_name = "{}_{}_".format(name, transform.name)
             self.transformed = model.Var(
-                transformed_name, transform.apply(distribution), population=population)
+                transformed_name, transform.apply(distribution), total_size=total_size)
 
             normalRV = transform.backward(self.transformed)
 
