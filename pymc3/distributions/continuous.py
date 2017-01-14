@@ -14,11 +14,11 @@ import warnings
 
 from . import transforms
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
-from .distribution import Continuous, draw_values, generate_samples
+from .distribution import Continuous, draw_values, generate_samples, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
-           'Bound', 'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
+           'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
            'HalfNormal', 'Wald', 'Pareto', 'InverseGamma', 'ExGaussian',
            'VonMises', 'SkewNormal']
 
@@ -1092,111 +1092,6 @@ class Weibull(PositiveContinuous):
                      + (alpha - 1) * tt.log(value / beta)
                      - (value / beta)**alpha,
                      value >= 0, alpha > 0, beta > 0)
-
-
-class Bounded(Continuous):
-    R"""
-    An upper, lower or upper+lower bounded distribution
-
-    Parameters
-    ----------
-    distribution : pymc3 distribution
-        Distribution to be transformed into a bounded distribution
-    lower : float (optional)
-        Lower bound of the distribution, set to -inf to disable.
-    upper : float (optional)
-        Upper bound of the distribibution, set to inf to disable.
-    tranform : 'infer' or object
-        If 'infer', infers the right transform to apply from the supplied bounds.
-        If transform object, has to supply .forward() and .backward() methods.
-        See pymc3.distributions.transforms for more information.
-    """
-
-    def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
-        self.dist = distribution.dist(*args, **kwargs)
-
-        self.__dict__.update(self.dist.__dict__)
-        self.__dict__.update(locals())
-
-        if hasattr(self.dist, 'mode'):
-            self.mode = self.dist.mode
-
-        if transform == 'infer':
-
-            default = self.dist.default()
-
-            if not np.isinf(lower) and not np.isinf(upper):
-                self.transform = transforms.interval(lower, upper)
-                if default <= lower or default >= upper:
-                    self.testval = 0.5 * (upper + lower)
-
-            if not np.isinf(lower) and np.isinf(upper):
-                self.transform = transforms.lowerbound(lower)
-                if default <= lower:
-                    self.testval = lower + 1
-
-            if np.isinf(lower) and not np.isinf(upper):
-                self.transform = transforms.upperbound(upper)
-                if default >= upper:
-                    self.testval = upper - 1
-
-    def _random(self, lower, upper, point=None, size=None):
-        samples = np.zeros(size).flatten()
-        i, n = 0, len(samples)
-        while i < len(samples):
-            sample = self.dist.random(point=point, size=n)
-            select = sample[np.logical_and(sample > lower, sample <= upper)]
-            samples[i:(i + len(select))] = select[:]
-            i += len(select)
-            n -= len(select)
-        if size is not None:
-            return np.reshape(samples, size)
-        else:
-            return samples
-
-    def random(self, point=None, size=None, repeat=None):
-        lower, upper = draw_values([self.lower, self.upper], point=point)
-        return generate_samples(self._random, lower, upper, point,
-                                dist_shape=self.shape,
-                                size=size)
-
-    def logp(self, value):
-        return bound(self.dist.logp(value),
-                     value >= self.lower, value <= self.upper)
-
-
-class Bound(object):
-    R"""
-    Creates a new upper, lower or upper+lower bounded distribution
-
-    Parameters
-    ----------
-    distribution : pymc3 distribution
-        Distribution to be transformed into a bounded distribution
-    lower : float (optional)
-        Lower bound of the distribution
-    upper : float (optional)
-
-    Example
-    -------
-    boundedNormal = pymc3.Bound(pymc3.Normal, lower=0.0)
-    par = boundedNormal(mu=0.0, sd=1.0, testval=1.0)
-    """
-
-    def __init__(self, distribution, lower=-np.inf, upper=np.inf):
-        self.distribution = distribution
-        self.lower = lower
-        self.upper = upper
-
-    def __call__(self, *args, **kwargs):
-        first, args = args[0], args[1:]
-
-        return Bounded(first, self.distribution, self.lower, self.upper,
-                       *args, **kwargs)
-
-    def dist(self, *args, **kwargs):
-        return Bounded.dist(self.distribution, self.lower, self.upper,
-                            *args, **kwargs)
 
 
 def StudentTpos(*args, **kwargs):

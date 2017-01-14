@@ -1,11 +1,17 @@
+import numpy as np
+
 import contextlib
 from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
 from theano.configparser import change_flags
+from theano.tensor import TensorVariable
+from theano.gof import Op
+from theano.configparser import change_flags
 from .memoize import memoize
 from .blocking import ArrayOrdering
 from theano.sandbox.rng_mrg import MRG_RandomStreams
+from .data import DataGenerator
 
 
 __all__ = ['gradient',
@@ -20,7 +26,8 @@ __all__ = ['gradient',
            'tt_rng',
            'set_tt_rng',
            'no_test_val',
-           'change_flags']
+           'change_flags',
+           'generator']
 
 
 @contextlib.contextmanager
@@ -67,10 +74,19 @@ def cont_inputs(f):
     return typefilter(inputvars(f), continuous_types)
 
 
+def floatX(X):
+    """
+    Convert a theano tensor or numpy array to theano.config.floatX type.
+    """
+    try:
+        return X.astype(theano.config.floatX)
+    except AttributeError:
+        # Scalar passed
+        return np.asarray(X, dtype=theano.config.floatX)
+
 """
 Theano derivative functions
 """
-
 
 def gradient1(f, v):
     """flat gradient of f wrt v"""
@@ -298,3 +314,46 @@ def set_tt_rng(new_rng):
     global _tt_rng
     _tt_rng = new_rng
     launch_rng(_tt_rng)
+
+
+class GeneratorOp(Op):
+    """
+    Generaror Op is designed for storing python generators
+    inside theano graph. The main limitation is generator itself.
+
+    There are some important cases when generator becomes exhausted
+        - not endless generator is passed
+        - exception is raised while `generator.__next__` is performed
+            Note: it is dangerous in simple python generators, but ok in
+            custom class based generators with explicit state
+        - data type on each iteration should be the same
+    """
+    __props__ = ('generator',)
+
+    def __init__(self, gen):
+        if not isinstance(gen, DataGenerator):
+            gen = DataGenerator(gen)
+        super(GeneratorOp, self).__init__()
+        self.generator = gen
+        self.itypes = []
+        self.otypes = [self.generator.tensortype]
+
+    def perform(self, node, inputs, output_storage, params=None):
+        try:
+            output_storage[0][0] = self.generator.__next__()
+        except StopIteration:
+            output_storage[0][0] = np.nan
+
+    def do_constant_folding(self, node):
+        return False
+
+    @change_flags(compute_test_value='off')
+    def __call__(self, *args, **kwargs):
+        rval = super(GeneratorOp, self).__call__(*args, **kwargs)
+        rval.tag.test_value = self.generator.test_value
+        return rval
+
+
+def generator(gen):
+    """shortcut for `GeneratorOp`"""
+    return GeneratorOp(gen)()

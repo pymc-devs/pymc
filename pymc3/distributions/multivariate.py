@@ -245,7 +245,8 @@ class Dirichlet(Continuous):
         return bound(tt.sum(logpow(value, a - 1) - gammaln(a), axis=-1)
                      + gammaln(tt.sum(a, axis=-1)),
                      tt.all(value >= 0), tt.all(value <= 1),
-                     k > 1, tt.all(a > 0))
+                     k > 1, tt.all(a > 0),
+                     broadcast_conditions=False)
 
 
 class Multinomial(Discrete):
@@ -323,7 +324,9 @@ class Multinomial(Discrete):
             tt.all(tt.eq(tt.sum(x, axis=-1, keepdims=True), n)),
             tt.all(p <= 1),
             tt.all(tt.eq(tt.sum(p, axis=-1), 1)),
-            tt.all(tt.ge(n, 0)))
+            tt.all(tt.ge(n, 0)),
+            broadcast_conditions=False
+        )
 
 
 def posdef(AA):
@@ -443,7 +446,9 @@ class Wishart(Continuous):
                       - 2 * multigammaln(n / 2., p)) / 2,
                      matrix_pos_def(X),
                      tt.eq(X, X.T),
-                     n > (p - 1))
+                     n > (p - 1),
+                     broadcast_conditions=False
+        )
 
 
 def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, testval=None):
@@ -605,4 +610,6 @@ class LKJCorr(Continuous):
         return bound(result,
                      tt.all(X <= 1), tt.all(X >= -1),
                      matrix_pos_def(X),
-                     n > 0)
+                     n > 0,
+                     broadcast_conditions=False
+        )

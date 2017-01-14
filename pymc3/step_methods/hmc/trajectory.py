@@ -116,7 +116,7 @@ def get_theano_hamiltonian_functions(model_vars, shared, logpt, potential,
 
 def energy(H, q, p):
     """Compute the total energy for the Hamiltonian at a given position/momentum"""
-    return -(H.logp(q) - H.pot.energy(p))
+    return H.pot.energy(p) - H.logp(q)
 
 
 def leapfrog(H, q, p, epsilon, n_steps):

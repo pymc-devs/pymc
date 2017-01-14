@@ -1,4 +1,4 @@
-from pymc3 import Normal, sample, Model, Bound
+from pymc3 import Normal, sample, Model, Bound, summary
 import theano.tensor as tt
 import numpy as np
 
@@ -29,29 +29,35 @@ model {
   r ~ normal(mu,sigma);
 }
 """
-J = 8
-r = np.array([28, 8, -3, 7, -1, 1, 18, 12])
-sigma1 = np.array([15, 10, 16, 11, 9, 11, 10, 18])
-alpha0 = np.array([10, 10, 16, 8, 9, 11, 12, 18])
 
-with Model() as garch:
-    alpha1 = Normal('alpha1', 0, 1, shape=J)
-    BoundedNormal = Bound(Normal, upper=(1 - alpha1))
-    beta1 = BoundedNormal('beta1', 0, sd=1e6)
-    mu = Normal('mu', 0, sd=1e6)
 
-    theta = tt.sqrt(alpha0 + alpha1 * tt.pow(r - mu, 2) +
-                    beta1 * tt.pow(sigma1, 2))
+def get_garch_model():
+    r = np.array([28, 8, -3, 7, -1, 1, 18, 12])
+    sigma1 = np.array([15, 10, 16, 11, 9, 11, 10, 18])
+    alpha0 = np.array([10, 10, 16, 8, 9, 11, 12, 18])
+    shape = r.shape
 
-    obs = Normal('obs', mu, sd=theta, observed=r)
+    with Model() as garch:
+        alpha1 = Normal('alpha1', mu=np.zeros(shape=shape), sd=np.ones(shape=shape), shape=shape)
+        BoundedNormal = Bound(Normal, upper=(1 - alpha1))
+        beta1 = BoundedNormal('beta1',
+                              mu=np.zeros(shape=shape),
+                              sd=1e6 * np.ones(shape=shape),
+                              shape=shape)
+        mu = Normal('mu', mu=np.zeros(shape=shape), sd=1e6 * np.ones(shape=shape), shape=shape)
+        theta = tt.sqrt(alpha0 + alpha1 * tt.pow(r - mu, 2) +
+                        beta1 * tt.pow(sigma1, 2))
+        Normal('obs', mu, sd=theta, observed=r)
+    return garch
 
 
 def run(n=1000):
     if n == "short":
         n = 50
-    with garch:
-        tr = sample(n)
+    with get_garch_model():
+        tr = sample(n, n_init=10000)
+    return tr
 
 
 if __name__ == '__main__':
-    run()
+    print(summary(run()))

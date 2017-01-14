@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.stats import kde, mode
-from numpy.linalg import LinAlgError
 import matplotlib.pyplot as plt
 import pymc3 as pm
 from .stats import quantiles, hpd
@@ -48,7 +47,12 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
     prior_style : str
         Line style for prior plot. Defaults to '--' (dashed line).
     ax : axes
-        Matplotlib axes. Defaults to None.
+        Matplotlib axes. Accepts an array of axes, e.g.:
+
+        >>> fig, axs = plt.subplots(3, 2) # 3 RVs
+        >>> pymc3.traceplot(trace, ax=axs)
+
+        Creates own axes by default.
 
     Returns
     -------
@@ -100,7 +104,7 @@ def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
                                      lw=1.5, alpha=alpha)
                 except KeyError:
                     pass
-
+        ax[i, 0].set_ylim(ymin=0)
     plt.tight_layout()
     return ax
 
@@ -117,26 +121,16 @@ def histplot_op(ax, data, alpha=.35):
 
 
 def kdeplot_op(ax, data, prior=None, prior_alpha=1, prior_style='--'):
-    errored = []
     for i in range(data.shape[1]):
         d = data[:, i]
-        try:
-            density, l, u = fast_kde(d)
-            x = np.linspace(l, u, len(density))
+        density, l, u = fast_kde(d)
+        x = np.linspace(l, u, len(density))
 
-            if prior is not None:
-                p = prior.logp(x).eval()
-                ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style)
+        if prior is not None:
+            p = prior.logp(x).eval()
+            ax.plot(x, np.exp(p), alpha=prior_alpha, ls=prior_style)
 
-            ax.plot(x, density)
-            ax.set_ylim(bottom=0)
-
-        except LinAlgError:
-            errored.append(i)
-
-    if errored:
-        ax.text(.27, .47, 'WARNING: KDE plot failed for: ' + str(errored), style='italic',
-                bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 10})
+        ax.plot(x, density)
 
 
 def make_2d(a):
@@ -298,62 +292,54 @@ def var_str(name, shape):
 
 def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quartiles=True,
                rhat=True, main=None, xtitle=None, xrange=None, ylabels=None,
-               chain_spacing=0.05, vline=0, gs=None):
-    """ Forest plot (model summary plot)
-
+               chain_spacing=0.05, vline=0, gs=None, plot_transformed=False):
+    """
+    Forest plot (model summary plot)
     Generates a "forest plot" of 100*(1-alpha)% credible intervals for either
     the set of variables in a given model, or a specified set of nodes.
 
-    :Arguments:
-        trace_obj: NpTrace or MultiTrace object
-            Trace(s) from an MCMC sample.
+    Parameters
+    ----------
+    
+    trace_obj: NpTrace or MultiTrace object
+        Trace(s) from an MCMC sample.
+    varnames: list
+        List of variables to plot (defaults to None, which results in all
+        variables plotted).
+    transform : callable
+        Function to transform data (defaults to identity)
+    alpha (optional): float
+        Alpha value for (1-alpha)*100% credible intervals (defaults to 0.05).
+    quartiles (optional): bool
+        Flag for plotting the interquartile range, in addition to the 
+        (1-alpha)*100% intervals (defaults to True).
+    rhat (optional): bool
+        Flag for plotting Gelman-Rubin statistics. Requires 2 or more chains
+        (defaults to True).
+    main (optional): string
+        Title for main plot. Passing False results in titles being suppressed;
+        passing None (default) results in default titles.
+    xtitle (optional): string
+        Label for x-axis. Defaults to no label
+    xrange (optional): list or tuple
+        Range for x-axis. Defaults to matplotlib's best guess.
+    ylabels (optional): list or array
+        User-defined labels for each variable. If not provided, the node
+        __name__ attributes are used.
+    chain_spacing (optional): float
+        Plot spacing between chains (defaults to 0.05).
+    vline (optional): numeric
+        Location of vertical reference line (defaults to 0).
+    gs : GridSpec
+        Matplotlib GridSpec object. Defaults to None.
+    plot_transformed : bool
+        Flag for plotting automatically transformed variables in addition to
+        original variables (defaults to False).
 
-        varnames: list
-            List of variables to plot (defaults to None, which results in all
-            variables plotted).
+    Returns
+    -------
 
-        transform : callable
-            Function to transform data (defaults to identity)
-
-        alpha (optional): float
-            Alpha value for (1-alpha)*100% credible intervals (defaults to
-            0.05).
-
-        quartiles (optional): bool
-            Flag for plotting the interquartile range, in addition to the
-            (1-alpha)*100% intervals (defaults to True).
-
-        rhat (optional): bool
-            Flag for plotting Gelman-Rubin statistics. Requires 2 or more
-            chains (defaults to True).
-
-        main (optional): string
-            Title for main plot. Passing False results in titles being
-            suppressed; passing None (default) results in default titles.
-
-        xtitle (optional): string
-            Label for x-axis. Defaults to no label
-
-        xrange (optional): list or tuple
-            Range for x-axis. Defaults to matplotlib's best guess.
-
-        ylabels (optional): list or array
-            User-defined labels for each variable. If not provided, the node
-            __name__ attributes are used.
-
-        chain_spacing (optional): float
-            Plot spacing between chains (defaults to 0.05).
-
-        vline (optional): numeric
-            Location of vertical reference line (defaults to 0).
-
-        gs : GridSpec
-            Matplotlib GridSpec object. Defaults to None.
-
-        Returns
-        -------
-
-        gs : matplotlib GridSpec
+    gs : matplotlib GridSpec
 
     """
     from matplotlib import gridspec
@@ -382,7 +368,10 @@ def forestplot(trace_obj, varnames=None, transform=lambda x: x, alpha=0.05, quar
         rhat = False
 
     if varnames is None:
-        varnames = trace_obj.varnames
+            if plot_transformed:
+                varnames = [name for name in trace_obj.varnames]
+            else:
+                varnames = [name for name in trace_obj.varnames if not name.endswith('_')]
 
     # Empty list for y-axis labels
     labels = []
@@ -788,6 +777,7 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
 
         fig.tight_layout()
     return ax
+
     
 def fast_kde(x):
     """
@@ -808,6 +798,8 @@ def fast_kde(x):
     xmax: maximum value of x
     
     """
+    # add small jitter in case input values are the same
+    x = np.random.normal(x, 1e-12)
     
     xmin, xmax = x.min(), x.max()
     
@@ -815,7 +807,7 @@ def fast_kde(x):
     nx = 256
 
     # compute histogram
-    bins = np.linspace(x.min(), x.max(), nx)
+    bins = np.linspace(xmin, xmax, nx)
     xyi = np.digitize(x, bins)
     dx = (xmax - xmin) / (nx - 1)
     grid = np.histogram(x, bins=nx)[0]

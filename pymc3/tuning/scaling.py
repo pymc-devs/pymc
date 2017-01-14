@@ -105,7 +105,7 @@ def find_hessian_diag(point, vars=None, model=None):
     return H(Point(point, model=model))
 
 
-def guess_scaling(point, vars=None, model=None, scaling_bound=1e-3):
+def guess_scaling(point, vars=None, model=None, scaling_bound=1e-8):
     model = modelcontext(model)
     try:
         h = find_hessian_diag(point, vars, model=model)
@@ -123,10 +123,10 @@ def adjust_scaling(s, scaling_bound):
         return eig_recompose(val, vec)
 
 
-def adjust_precision(tau, scaling_bound=1e-3):
+def adjust_precision(tau, scaling_bound=1e-8):
     mag = sqrt(abs(tau))
 
-    bounded = bound(log(mag), log(1/scaling_bound), log(scaling_bound))
+    bounded = bound(log(mag), log(scaling_bound), log(1./scaling_bound))
     return exp(bounded)**2
 
 

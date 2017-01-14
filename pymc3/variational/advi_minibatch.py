@@ -8,23 +8,10 @@ from theano.configparser import change_flags
 import tqdm
 
 import pymc3 as pm
-from pymc3.theanof import reshape_t, inputvars
-from .advi import check_discrete_rvs, ADVIFit, adagrad_optimizer, gen_random_state
+from pymc3.theanof import reshape_t, inputvars, floatX
+from .advi import ADVIFit, adagrad_optimizer, gen_random_state
 
 __all__ = ['advi_minibatch']
-
-
-if theano.config.floatX == 'float32':
-    floatX = np.float32
-    floatX_str = 'float32'
-elif theano.config.floatX == 'float64':
-    floatX = np.float64
-    floatX_str = 'float64'
-else:
-    raise ValueError('float16 is not supported.')
-
-
-nan_ = floatX(np.nan)
 
 
 def _value_error(cond, str):
@@ -73,7 +60,7 @@ def _init_uw_global_shared(start, global_RVs):
     bij = pm.DictToArrayBijection(global_order, start)
     u_start = bij.map(start)
     w_start = np.zeros_like(u_start)
-    uw_start = np.concatenate([u_start, w_start]).astype(floatX_str)
+    uw_start = floatX(np.concatenate([u_start, w_start]))
     uw_global_shared = theano.shared(uw_start, 'uw_global_shared')
 
     return uw_global_shared, bij
@@ -152,7 +139,7 @@ def _make_logpt(global_RVs, local_RVs, observed_RVs, potentials):
 
 
 def _elbo_t(
-    logp, uw_g, uw_l, inarray_g, inarray_l, c_g, c_l, n_mcsamples, 
+    logp, uw_g, uw_l, inarray_g, inarray_l, c_g, c_l, n_mcsamples,
     random_seed):
     """Return expression of approximate ELBO based on Monte Carlo sampling.
     """
@@ -432,8 +419,6 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         This parameter is ignored when :code:`optimizer` is set.
     random_seed : int
         Seed to initialize random state.
-    mode :  string or `Mode` instance.
-        compilation mode passed to Theano functions
 
     Returns
     -------
@@ -457,8 +442,14 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     model = pm.modelcontext(model)
     vars = inputvars(vars if vars is not None else model.vars)
     start = start if start is not None else model.test_point
-    check_discrete_rvs(vars)
+
+    if not pm.model.all_continuous(vars):
+        raise ValueError('Model can not include discrete RVs for ADVI.')
+
     _check_minibatches(minibatch_tensors, minibatches)
+    
+    if encoder_params is None:
+        encoder_params = []
 
     # Prepare optimizer
     if optimizer is None:
@@ -489,7 +480,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         )
 
     # ELBO wrt variational parameters
-    elbo, uw_l, uw_g = _make_elbo_t(observed_RVs, global_RVs, local_RVs, 
+    elbo, uw_l, uw_g = _make_elbo_t(observed_RVs, global_RVs, local_RVs,
                                     model.potentials, n_mcsamples, random_seed)
 
     # Replacements tensors of variational parameters in the graph

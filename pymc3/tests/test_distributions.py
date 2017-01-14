@@ -80,7 +80,7 @@ def product(domains, n_samples=-1):
         return []
     all_vals = [zip(names, val) for val in itertools.product(*[d.vals for d in domains])]
     if n_samples > 0 and len(all_vals) > n_samples:
-            return nr.choice(all_vals, n_samples, replace=False)
+            return (all_vals[j] for j in nr.choice(len(all_vals), n_samples, replace=False))
     return all_vals
 
 
@@ -90,7 +90,7 @@ Rplusbig = Domain([0, .5, .9, .99, 1, 1.5, 2, 20, inf])
 Rminusbig = Domain([-inf, -2, -1.5, -1, -.99, -.9, -.5, -0.01, 0])
 Unit = Domain([0, .001, .1, .5, .75, .99, 1])
 
-Circ = Domain([-np.pi -2.1, -1, -.01, .0, .01, 1, 2.1, np.pi])
+Circ = Domain([-np.pi, -2.1, -1, -.01, .0, .01, 1, 2.1, np.pi])
 
 Runif = Domain([-1, -.4, 0, .4, 1])
 Rdunif = Domain([-10, 0, 10.])
@@ -102,6 +102,7 @@ I = Domain([-1000, -3, -2, -1, 0, 1, 2, 3, 1000], 'int64')
 NatSmall = Domain([0, 3, 4, 5, 1000], 'int64')
 Nat = Domain([0, 1, 2, 3, 2000], 'int64')
 NatBig = Domain([0, 1, 2, 3, 5000, 50000], 'int64')
+PosNat = Domain([1, 2, 3, 2000], 'int64')
 
 Bool = Domain([0, 0, 1, 1], 'int64')
 
@@ -337,6 +338,8 @@ class TestMatchesScipy(SeededTest):
         PositiveNormal = Bound(Normal, lower=0.)
         self.pymc3_matches_scipy(PositiveNormal, Rplus, {'mu': Rplus, 'sd': Rplus},
                                  lambda value, mu, sd: sp.norm.logpdf(value, mu, sd))
+        with Model(): x = PositiveNormal('x', mu=0, sd=1, transform=None)
+        assert np.isinf(x.logp({'x':-1}))
 
     def test_discrete_unif(self):
         self.pymc3_matches_scipy(
@@ -477,7 +480,15 @@ class TestMatchesScipy(SeededTest):
     def test_poisson(self):
         self.pymc3_matches_scipy(Poisson, Nat, {'mu': Rplus},
                                  lambda value, mu: sp.poisson.logpmf(value, mu))
-
+                                 
+    def test_bound_poisson(self):
+        NonZeroPoisson = Bound(Poisson, lower=1.)
+        self.pymc3_matches_scipy(NonZeroPoisson, PosNat, {'mu': Rplus},
+                                lambda value, mu: sp.poisson.logpmf(value, mu))
+        
+        with Model(): x = NonZeroPoisson('x', mu=4)
+        assert np.isinf(x.logp({'x':0}))
+        
     def test_constantdist(self):
         self.pymc3_matches_scipy(Constant, I, {'c': I},
                                  lambda value, c: np.log(c == value))
