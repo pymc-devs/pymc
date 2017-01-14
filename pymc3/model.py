@@ -772,6 +772,8 @@ def pandas_to_array(data):
         return data
     elif isinstance(data, theano.gof.graph.Variable):
         return data
+    elif hasattr(data, '__next__'):
+        return generator(data)
     else:
         return np.asarray(data)
 
@@ -793,8 +795,6 @@ def as_tensor(data, name, model, distribution):
             constant[data.mask.nonzero()], missing_values)
         dataTensor.missing_values = missing_values
         return dataTensor
-    elif hasattr(data, '__next__'):
-        return generator(data)
     else:
         data = tt.as_tensor_variable(data, name=name)
         data.missing_values = None
