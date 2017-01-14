@@ -249,6 +249,17 @@ identity = tt.Elemwise(scalar_identity, name='identity')
 
 
 class GeneratorOp(Op):
+    """
+    Generaror Op is designed for storing python generators
+    inside theano graph. The main limitation is generator itself.
+
+    There are some important cases when generator becomes exhausted
+        - not endless generator is passed
+        - exception is raised while `generator.__next__` is performed
+            Note: it is dangerous in simple python generators, but ok in
+            custom class based generators with explicit state
+        - data type on each iteration should be the same
+    """
     __props__ = ('generator',)
 
     def __init__(self, gen):
@@ -276,4 +287,5 @@ class GeneratorOp(Op):
 
 
 def generator(gen):
+    """shortcut for `GeneratorOp`"""
     return GeneratorOp(gen)()
