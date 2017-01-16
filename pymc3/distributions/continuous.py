@@ -1449,7 +1449,7 @@ class Triangular(Continuous):
         upper = self.upper
         return tt.switch(alltrue_elemwise([lower <= value, value < c]),
                          tt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
-                         tt.switch(alltrue_elemwise([value == c]), tt.log(2 / (upper - lower)),
+                         tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
                          tt.switch(alltrue_elemwise([c < value, value <= upper]),
-                         tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))), np.inf)))
+                         tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
 
