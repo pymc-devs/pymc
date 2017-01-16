@@ -1,12 +1,4 @@
-<<<<<<< 8c87f738da31e2985230434ecff6e25b14c05e91
 __version__ = "3.0"
-=======
-__version__ = "3.0.rc2"
-<<<<<<< HEAD
->>>>>>> initial gp commit
-=======
-print "using gp modified version"
->>>>>>> 947d0c2edad1f378090b082ea4093ba1d5b403e1
 
 from .blocking import *
 from .distributions import *
