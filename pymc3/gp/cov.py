@@ -169,15 +169,14 @@ class WarpedInput(Covariance):
 class BasisFuncCov(Covariance):
     def __init__(self, input_dim, alpha, basis, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
+        # non functional, idealy user would suppy basis *function* from theano, so
+        # that prediction could be done, not just a one off linear basis for fitting
         self.alpha = alpha
         self.basis = basis
 
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
         phi = tt.dot(self.basis, self.alpha)
-        if Z is None:
-            return tt.dot(phi, tt.transpose(phi))
-        else:
-            return tt.dot(phi, tt.transpose(tt.dot(self.basis, self.alpha)))
+        return tt.dot(phi, tt.transpose(phi))
 
 
