@@ -11,7 +11,7 @@ from ..distributions import (DensityDist, Categorical, Multinomial, VonMises, Di
                              BetaBinomial, HalfStudentT, StudentT, Weibull, Pareto, InverseGamma,
                              Gamma, Cauchy, HalfCauchy, Lognormal, Laplace, NegativeBinomial,
                              Geometric, Exponential, ExGaussian, Normal, Flat, LKJCorr, Wald,
-                             ChiSquared, HalfNormal, DiscreteUniform, Bound, Uniform,
+                             ChiSquared, HalfNormal, DiscreteUniform, Bound, Uniform, Triangular,
                              Binomial, Wishart, SkewNormal)
 from ..distributions import continuous, multivariate
 from numpy import array, inf, log, exp
@@ -333,6 +333,11 @@ class TestMatchesScipy(SeededTest):
             Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif},
             lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower))
 
+    def test_triangular(self):
+        self.pymc3_matches_scipy(
+            Triangular, Runif, {'lower': -Rplusunif, 'c': R, 'upper': Rplusunif},
+            lambda value, c, lower, upper: sp.triang.logpdf(value, c-lower, lower, upper-lower))
+
     def test_bound_normal(self):
         PositiveNormal = Bound(Normal, lower=0.)
         self.pymc3_matches_scipy(PositiveNormal, Rplus, {'mu': Rplus, 'sd': Rplus},
@@ -462,7 +467,6 @@ class TestMatchesScipy(SeededTest):
     def test_skew_normal(self):
         self.pymc3_matches_scipy(SkewNormal, R, {'mu': R, 'sd': Rplusbig, 'alpha': R},
                                  lambda value, alpha, mu, sd: sp.skewnorm.logpdf(value, alpha, mu, sd))
-
     def test_binomial(self):
         self.pymc3_matches_scipy(Binomial, Nat, {'n': NatSmall, 'p': Unit},
                                  lambda value, n, p: sp.binom.logpmf(value, n, p))

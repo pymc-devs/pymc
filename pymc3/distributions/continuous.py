@@ -1438,17 +1438,11 @@ class Triangular(Continuous):
         self.median = self.mean
 
     def random(self, point=None, size=None):
-        lower, c, upper = draw_values([self.lower, self.c, self.upper],
+        c, lower, upper = draw_values([self.c, self.lower, self.upper],
                                       point=point)
-        return generate_samples(stats.triang.rvs, c=c, loc=lower, scale=upper - lower,
+        return generate_samples(stats.triang.rvs, c=c-lower, loc=lower, scale=upper-lower,
                                 size=size, random_state=None)
 
     def logp(self, value):
         c = self.c
-        lower = self.lower
-        upper = self.upper
-        return tt.switch(alltrue_elemwise([lower <= value, value < c]),
-                         tt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
-                         tt.switch(alltrue_elemwise([value == c]), tt.log(2 / (upper - lower)),
-                                   tt.switch(alltrue_elemwise([c < value, value <= upper]),
-                                             tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))), np.inf)))
+        return tt.switch(alltrue_elemwise([value < c]), tt.log(2 * value / c), tt.log(2 * (1 - value) / (1 - c)))
