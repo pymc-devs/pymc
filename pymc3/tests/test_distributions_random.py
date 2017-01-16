@@ -180,6 +180,10 @@ class TestUniform(BaseTestCases.BaseTestCase):
     distribution = pm.Uniform
     params = {'lower': 0., 'upper': 1.}
 
+class TestTriangular(BaseTestCases.BaseTestCase):
+    distribution = pm.Triangular
+    params = {'c': 0.5,'lower': 0., 'upper': 1.}
+
 
 class TestWald(BaseTestCases.BaseTestCase):
     distribution = pm.Wald
