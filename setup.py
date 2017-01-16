@@ -10,9 +10,9 @@ MAINTAINER = 'Thomas Wiecki'
 MAINTAINER_EMAIL = 'thomas.wiecki@gmail.com'
 AUTHOR = 'John Salvatier and Christopher Fonnesbeck'
 AUTHOR_EMAIL = 'chris.fonnesbeck@vanderbilt.edu'
-URL = "http://github.com/pymc-devs/pymc"
+URL = "http://github.com/pymc-devs/pymc3"
 LICENSE = "Apache License, Version 2.0"
-VERSION = "3.0.rc6"
+VERSION = "3.0"
 
 classifiers = ['Development Status :: 5 - Production/Stable',
                'Programming Language :: Python',

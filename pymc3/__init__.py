@@ -1,4 +1,4 @@
-__version__ = "3.0.rc6"
+__version__ = "3.0"
 
 from .blocking import *
 from .distributions import *
