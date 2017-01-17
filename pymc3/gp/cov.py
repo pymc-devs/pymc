@@ -16,9 +16,9 @@ class Covariance(object):
     def __init__(self, input_dim, active_dims=None):
         self.input_dim = input_dim
         if active_dims is None:
-            self.active_dims = np.arange(input_dim, dtype=np.int32)
+            self.active_dims = np.arange(input_dim)
         else:
-            self.active_dims = np.array(active_dims, dtype=np.int32)
+            self.active_dims = np.array(active_dims)
             assert len(active_dims) == input_dim
 
     def _slice(self, X, Z):
@@ -66,7 +66,6 @@ class Prod(Combination):
 class Stationary(Covariance):
     def __init__(self, input_dim, lengthscales, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
-        # distributions have a shape parameter, use that to determine ARD.  no defaults
         self.lengthscales = lengthscales
 
     def square_dist(self, X, Z):
@@ -130,33 +129,63 @@ class Cosine(Stationary):
 
 
 class Linear(Covariance):
-    def __init__(self, input_dim, centers, active_dims=None):
+    def __init__(self, input_dim, slopes, centers, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
         self.centers = centers
+        self.slopes  = slopes
 
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
-        Xc = tt.sub(X, self.centers)
+        # need to fix this with slope and center
+        Xc = tt.sub(tt.mul(self.slopes, X), self.centers)
         if Z is None:
             return tt.dot(Xc, tt.transpose(Xc))
         else:
             Zc = tt.sub(Z, self.centers)
             return tt.dot(Xc, tt.transpose(Zc))
 
+class Gibbs(Covariance):
+    def __init__(self, input_dim, lengthscale_func, args=None, active_dims=None):
+        Covariance.__init__(self, input_dim, active_dims)
+        assert callable(lengthscale_func), "Must be a function"
+        self.l = handle_args(lengthscale_func, args)
+        self.args = args
+
+    def square_dist(self, X, Z):
+        # smallish? problem in here
+        X = tt.mul(X, 1.0 / self.l(X, self.args))
+        Xs = tt.sum(tt.square(X), 1)
+        if Z is None:
+            return -2.0 * tt.dot(X, tt.transpose(X)) +\
+                   tt.reshape(Xs, (-1, 1)) + tt.reshape(Xs, (1, -1))
+        else:
+            Z = tt.mul(Z, 1.0 / self.l(Z, self.args))
+            Zs = tt.sum(tt.square(Z), 1)
+            return -2.0 * tt.dot(X, tt.transpose(Z)) +\
+                   tt.reshape(Xs, (-1, 1)) + tt.reshape(Zs, (1, -1))
+
+    def euclidean_dist(self, X, Z):
+        r2 = self.square_dist(X, Z)
+        return tt.sqrt(r2 + 1e-12)
+
+    def K(self, X, Z=None):
+        X, Z = self._slice(X, Z)
+        lx = self.l(X, self.args)
+        if Z is None:
+            lxp = lx
+        else:
+            lxp = self.l(Z, self.args)
+        c = tt.prod(tt.sqrt( ((2.0 * lx * lxp) / (tt.square(lx) + tt.square(lxp))) + 1e-12))
+        return c * tt.exp(-0.5 * self.square_dist(X, Z))
+
 
 class WarpedInput(Covariance):
     def __init__(self, input_dim, cov_func, warp_func, args=None, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
-        self.cov_func = cov_func
-        def w(x, args):
-            if args is None:
-                return warp_func(x)
-            else:
-                if not isinstance(args, tuple):
-                    args = (args,)
-                return warp_func(x, *args)
-        self.w = w
+        assert callable(warp_func), "Must be a function"
+        self.w = handle_args(warp_func, args)
         self.args = args
+        self.cov_func = cov_func
 
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
@@ -170,13 +199,24 @@ class BasisFuncCov(Covariance):
     def __init__(self, input_dim, alpha, basis, active_dims=None):
         Covariance.__init__(self, input_dim, active_dims)
         # non functional, idealy user would suppy basis *function* from theano, so
-        # that prediction could be done, not just a one off linear basis for fitting
+        # that prediction could be done, not just a one off linear basis that can
+        # only be used for fitting.  This requires e.g. spline functionality in theano
         self.alpha = alpha
         self.basis = basis
 
     def K(self, X, Z=None):
         X, Z = self._slice(X, Z)
         phi = tt.dot(self.basis, self.alpha)
-        return tt.dot(phi, tt.transpose(phi))
+        return tt.exp(tt.dot(phi, tt.transpose(phi)))
+
+def handle_args(func, args):
+    def func2(x, args):
+        if args is None:
+            return func(x)
+        else:
+            if not isinstance(args, tuple):
+                args = (args,)
+            return func(x, *args)
+    return func2
 
 
