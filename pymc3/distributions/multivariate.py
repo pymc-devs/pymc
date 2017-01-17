@@ -8,7 +8,7 @@ import theano
 import theano.tensor as tt
 
 from scipy import stats
-import theano.tensor.slinalg
+
 from theano.tensor.nlinalg import det, matrix_inverse, trace
 
 import pymc3 as pm
