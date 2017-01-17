@@ -210,13 +210,13 @@ class BasisFuncCov(Covariance):
         return tt.exp(tt.dot(phi, tt.transpose(phi)))
 
 def handle_args(func, args):
-    def func2(x, args):
+    def f(x, args):
         if args is None:
             return func(x)
         else:
             if not isinstance(args, tuple):
                 args = (args,)
             return func(x, *args)
-    return func2
+    return f
 
 
