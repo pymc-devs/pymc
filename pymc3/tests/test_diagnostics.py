@@ -22,7 +22,7 @@ class TestGelmanRubin(SeededTest):
             step2 = Metropolis([model.switchpoint])
             start = {'early_mean': 7., 'late_mean': 1., 'switchpoint': 90}
             ptrace = sample(n_samples, step=[step1, step2], start=start, njobs=2, progressbar=False,
-                            random_seed=[20090425, 19700903])
+                            random_seed=[1, 4])
         return ptrace
 
     def test_good(self):
