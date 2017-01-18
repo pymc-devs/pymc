@@ -14,11 +14,11 @@ import warnings
 
 from . import transforms
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
-from .distribution import Continuous, draw_values, generate_samples
+from .distribution import Continuous, draw_values, generate_samples, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
            'StudentT', 'Cauchy', 'HalfCauchy', 'Gamma', 'Weibull',
-           'Bound', 'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
+           'HalfStudentT', 'StudentTpos', 'Lognormal', 'ChiSquared',
            'HalfNormal', 'Wald', 'Pareto', 'InverseGamma', 'ExGaussian',
            'VonMises', 'SkewNormal']
 
@@ -147,7 +147,7 @@ class Uniform(Continuous):
         lower = self.lower
         upper = self.upper
         return bound(-tt.log(upper - lower),
-                              value >= lower, value <= upper)
+                     value >= lower, value <= upper)
 
 
 class Flat(Continuous):
@@ -1092,114 +1092,6 @@ class Weibull(PositiveContinuous):
                      + (alpha - 1) * tt.log(value / beta)
                      - (value / beta)**alpha,
                      value >= 0, alpha > 0, beta > 0)
-
-
-class Bounded(Continuous):
-    R"""
-    An upper, lower or upper+lower bounded distribution
-
-    Parameters
-    ----------
-    distribution : pymc3 distribution
-        Distribution to be transformed into a bounded distribution
-    lower : float (optional)
-        Lower bound of the distribution, set to -inf to disable.
-    upper : float (optional)
-        Upper bound of the distribibution, set to inf to disable.
-    tranform : 'infer' or object
-        If 'infer', infers the right transform to apply from the supplied bounds.
-        If transform object, has to supply .forward() and .backward() methods.
-        See pymc3.distributions.transforms for more information.
-    """
-
-    def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
-        self.dist = distribution.dist(*args, **kwargs)
-        self.__dict__.update(self.dist.__dict__)
-        self.__dict__.update(locals())
-
-        if hasattr(self.dist, 'mode'):
-            self.mode = self.dist.mode
-
-        if transform == 'infer':
-            self.transform, self.testval = self._infer(lower, upper)
-
-    def _infer(self, lower, upper):
-        """Infer proper transforms for the variable, and adjust test_value.
-
-        In particular, this deals with the case where lower or upper may be +/-inf, or an
-        `ndarray` or a `theano.tensor.TensorVariable`
-        """
-        if isinstance(upper, tt.TensorVariable):
-            _upper = upper.tag.test_value
-        else:
-            _upper = upper
-        if isinstance(lower, tt.TensorVariable):
-            _lower = lower.tag.test_value
-        else:
-            _lower = lower
-
-        testval = self.dist.default()
-        if not self._isinf(_lower) and not self._isinf(_upper):
-            transform = transforms.interval(lower, upper)
-            if (testval <= _lower).any() or (testval >= _upper).any():
-                testval = 0.5 * (_upper + _lower)
-        elif not self._isinf(_lower) and self._isinf(_upper):
-            transform = transforms.lowerbound(lower)
-            if (testval <= _lower).any():
-                testval = lower + 1
-        elif self._isinf(_lower) and not self._isinf(_upper):
-            transform = transforms.upperbound(upper)
-            if (testval >= _upper).any():
-                testval = _upper - 1
-        else:
-            transform = None
-        return transform, testval
-
-    def _isinf(self, value):
-        """Checks whether the value is +/-inf, or else returns 0 (even if an ndarray with
-        entries that are +/-inf)
-        """
-        try:
-            return bool(np.isinf(value))
-        except ValueError:
-            return False
-
-    def _random(self, lower, upper, point=None, size=None):
-        samples = np.zeros(size).flatten()
-        i, n = 0, len(samples)
-        while i < len(samples):
-            sample = self.dist.random(point=point, size=n)
-            select = sample[np.logical_and(sample > lower, sample <= upper)]
-            samples[i:(i + len(select))] = select[:]
-            i += len(select)
-            n -= len(select)
-        if size is not None:
-            return np.reshape(samples, size)
-        else:
-            return samples
-
-    def random(self, point=None, size=None, repeat=None):
-        lower, upper = draw_values([self.lower, self.upper], point=point)
-        return generate_samples(self._random, lower, upper, point,
-                                dist_shape=self.shape,
-                                size=size)
-
-    def logp(self, value):
-        return bound(self.dist.logp(value),
-                     value >= self.lower, value <= self.upper)
-
-
-def Bound(distribution, lower=-np.inf, upper=np.inf):
-    class _BoundedDist(Bounded):
-        def __init__(self, *args, **kwargs):
-            first, args = args[0], args[1:]
-            super(self, _BoundedDist).__init__(first, distribution, lower, upper, *args, **kwargs)
-
-        @classmethod
-        def dist(cls, *args, **kwargs):
-            return Bounded.dist(distribution, lower, upper, *args, **kwargs)
-
-    return _BoundedDist
 
 
 def StudentTpos(*args, **kwargs):
