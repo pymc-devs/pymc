@@ -7,6 +7,7 @@ import sys
 import warnings
 from .model import modelcontext
 
+from scipy.misc import logsumexp
 from scipy.stats.distributions import pareto
 
 import pymc3 as pm
@@ -101,7 +102,7 @@ def log_post_trace(trace, model):
     '''
     Calculate the elementwise log-posterior for the sampled trace.
     '''
-    return np.hstack([obs.logp_elemwise(pt) for pt in trace] for obs in model.observed_RVs)
+    return np.vstack([obs.logp_elemwise(pt) for obs in model.observed_RVs] for pt in trace)
 
 
 def waic(trace, model=None, n_eff=False):
@@ -132,7 +133,7 @@ def waic(trace, model=None, n_eff=False):
 
     log_py = log_post_trace(trace, model)
 
-    lppd_i = np.log(np.mean(np.exp(log_py), axis=0))
+    lppd_i = logsumexp(log_py, axis = 0, b = 1.0 / log_py.shape[0])
 
     vars_lpd = np.var(log_py, axis=0)
     if np.any(vars_lpd > 0.4):
@@ -183,8 +184,7 @@ def loo(trace, model=None, n_eff=False):
     log_py = log_post_trace(trace, model)
 
     # Importance ratios
-    py = np.exp(log_py)
-    r = 1. / py
+    r = np.exp(-log_py)
     r_sorted = np.sort(r, axis=0)
 
     # Extract largest 20% of importance ratios and fit generalized Pareto to each
@@ -222,7 +222,7 @@ def loo(trace, model=None, n_eff=False):
     # Truncate weights to guarantee finite variance
     w = np.minimum(r_new, r_new.mean(axis=0) * S**0.75)
 
-    loo_lppd_i = -2 * np.log(np.sum(w * py, axis=0) / np.sum(w, axis=0))
+    loo_lppd_i = -2.0 * logsumexp(log_py, axis = 0, b = w / np.sum(w, axis = 0))
 
     loo_lppd_se = np.sqrt(len(loo_lppd_i) * np.var(loo_lppd_i))
 
@@ -365,7 +365,7 @@ def mc_error(x, batches=5):
       x : Numpy array
           An array containing MCMC samples
       batches : integer
-          Number of batchas
+          Number of batches
     """
 
     if x.ndim > 1:
@@ -428,7 +428,7 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
 
 
 def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_transformed=False,
-               alpha=0.05, batches=100):
+               alpha=0.05, batches=None):
     R"""Create a data frame with summary statistics.
 
     Parameters
@@ -458,15 +458,15 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
         addition to, rather than in place of, the default statistics.
         This is only meaningful when `stat_funcs` is not None.
     include_transformed : bool
-        Flag for reporting automatically transformed variables in addition to
-        original variables (defaults to False).
+        Flag for reporting automatically transformed variables in addition
+        to original variables (defaults to False).
     alpha : float
         The alpha level for generating posterior intervals. Defaults
         to 0.05. This is only meaningful when `stat_funcs` is None.
-    batches : int
-        Batch size for calculating standard deviation for
-        non-independent samples. Defaults to 100. This is only
-        meaningful when `stat_funcs` is None.
+    batches : None or int
+        Batch size for calculating standard deviation for non-independent
+        samples. Defaults to the smaller of 100 or the number of samples.
+        This is only meaningful when `stat_funcs` is None.
 
 
     See also
@@ -509,6 +509,9 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
         else:
             varnames = [name for name in trace.varnames if not name.endswith('_')]
 
+    if batches is None:
+        batches = min([100, len(trace)])
+
     funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
              lambda x: pd.Series(np.std(x, 0), name='sd'),
              lambda x: pd.Series(mc_error(x, batches), name='mc_error'),
@@ -535,7 +538,7 @@ def _hpd_df(x, alpha):
     return pd.DataFrame(hpd(x, alpha), columns=cnames)
 
 
-def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
+def summary(trace, varnames=None, alpha=0.05, start=0, batches=None, roundto=3,
             include_transformed=False, to_file=None):
     R"""
     Generate a pretty-printed summary of the node.
@@ -553,9 +556,10 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
     start : int
       The starting index from which to summarize (each) chain. Defaults
       to zero.
-    batches : int
-      Batch size for calculating standard deviation for non-independent
-      samples. Defaults to 100.
+    batches : None or int
+        Batch size for calculating standard deviation for non-independent
+        samples. Defaults to the smaller of 100 or the number of samples.
+        This is only meaningful when `stat_funcs` is None.
     roundto : int
       The number of digits to round posterior statistics.
     include_transformed : bool
@@ -570,6 +574,9 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
             varnames = [name for name in trace.varnames]
         else:
             varnames = [name for name in trace.varnames if not name.endswith('_')]
+
+    if batches is None:
+        batches = min([100, len(trace)])
 
     stat_summ = _StatSummary(roundto, batches, alpha)
     pq_summ = _PosteriorQuantileSummary(roundto, alpha)

@@ -192,12 +192,8 @@ def dump(name, trace, chains=None):
     if chains is None:
         chains = trace.chains
 
-    var_shapes = trace._straces[chains[0]].var_shapes
-    flat_names = {v: ttab.create_flat_names(v, shape)
-                  for v, shape in var_shapes.items()}
-
     for chain in chains:
         filename = os.path.join(name, 'chain-{}.csv'.format(chain))
         df = ttab.trace_to_dataframe(
-            trace, chains=chain, flat_names=flat_names,hide_transformed_vars=False)
+            trace, chains=chain, hide_transformed_vars=False)
         df.to_csv(filename, index=False)

@@ -1,9 +1,5 @@
 language: python
 
-python:
-  - "2.7"
-  - "3.5"
-
 before_install:
   - . ./scripts/install_miniconda.sh
   - "export DISPLAY=:99.0"
@@ -17,10 +13,12 @@ install:
   - pip install coveralls
 
 env:
-  - TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 -e test_examples -e test_distributions" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
-  - TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions pymc3.tests.test_examples" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
-  - TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions_random" PYTHON_VERSION=${TRAVIS_PYTHON_VERSION}
-
+  - PYTHON_VERSION=2.7 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 -e test_examples -e test_distributions"
+  - PYTHON_VERSION=2.7 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions pymc3.tests.test_examples"
+  - PYTHON_VERSION=2.7 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions_random"
+  - PYTHON_VERSION=3.6 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 -e test_examples -e test_distributions"
+  - PYTHON_VERSION=3.6 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions pymc3.tests.test_examples"
+  - PYTHON_VERSION=3.6 TESTCMD=" -vv --with-timer --with-coverage --cover-package=pymc3 pymc3.tests.test_distributions_random"
 script:
   - . ./scripts/test.sh $TESTCMD
 

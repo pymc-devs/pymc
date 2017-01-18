@@ -9,7 +9,6 @@ Howto
 
 .. toctree::
    notebooks/posterior_predictive.ipynb
-   notebooks/NUTS_scaling_using_ADVI.ipynb
    notebooks/howto_debugging.ipynb
    notebooks/LKJ.ipynb
 
@@ -19,7 +18,7 @@ Applied
 .. toctree::
    notebooks/BEST.ipynb
    notebooks/stochastic_volatility.ipynb
-   notebooks/pmf-pymc.ipynb
+   notebooks/probabilistic-matrix-factorization.ipynb
    notebooks/rugby_analytics.ipynb
    notebooks/survival_analysis.ipynb
    notebooks/GP-smoothing.ipynb
@@ -33,9 +32,9 @@ GLM
    notebooks/GLM-robust-with-outlier-detection.ipynb
    notebooks/GLM-model-selection.ipynb
    notebooks/GLM-rolling-regression.ipynb
-   notebooks/GLM-logistic.ipynb
    notebooks/GLM-hierarchical.ipynb
    notebooks/GLM-poisson-regression.ipynb
+   notebooks/hierarchical_partial_pooling.ipynb
 
 Mixture Models
 ==============

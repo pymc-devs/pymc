@@ -4,26 +4,14 @@ import numpy as np
 import theano
 import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
+from theano.configparser import change_flags
 import tqdm
 
 import pymc3 as pm
-from pymc3.theanof import reshape_t, inputvars
-from .advi import check_discrete_rvs, ADVIFit, adagrad_optimizer, gen_random_state
+from pymc3.theanof import reshape_t, inputvars, floatX
+from .advi import ADVIFit, adagrad_optimizer, gen_random_state
 
 __all__ = ['advi_minibatch']
-
-
-if theano.config.floatX == 'float32':
-    floatX = np.float32
-    floatX_str = 'float32'
-elif theano.config.floatX == 'float64':
-    floatX = np.float64
-    floatX_str = 'float64'
-else:
-    raise ValueError('float16 is not supported.')
-
-
-nan_ = floatX(np.nan)
 
 
 def _value_error(cond, str):
@@ -66,12 +54,13 @@ def _get_rvss(
     return local_RVs, observed_RVs
 
 
-def _init_uw_global_shared(start, global_RVs, global_order):
+def _init_uw_global_shared(start, global_RVs):
+    global_order = pm.ArrayOrdering([v for v in global_RVs])
     start = {v.name: start[v.name] for v in global_RVs}
     bij = pm.DictToArrayBijection(global_order, start)
     u_start = bij.map(start)
     w_start = np.zeros_like(u_start)
-    uw_start = np.concatenate([u_start, w_start]).astype(floatX_str)
+    uw_start = floatX(np.concatenate([u_start, w_start]))
     uw_global_shared = theano.shared(uw_start, 'uw_global_shared')
 
     return uw_global_shared, bij
@@ -82,6 +71,7 @@ def _join_global_RVs(global_RVs, global_order):
         inarray_global = None
         uw_global = None
         replace_global = {}
+        c_g = 0
     else:
         joined_global = tt.concatenate([v.ravel() for v in global_RVs])
         uw_global = tt.vector('uw_global')
@@ -92,13 +82,18 @@ def _join_global_RVs(global_RVs, global_order):
         inarray_global = joined_global.type('inarray_global')
         inarray_global.tag.test_value = joined_global.tag.test_value
 
-        get_var = {var.name: var for var in global_RVs}
-        replace_global = {
-            get_var[var]: reshape_t(inarray_global[slc], shp).astype(dtyp)
-            for var, slc, shp, dtyp in global_order.vmap
-        }
+        # Replace RVs with reshaped subvectors of the joined vector
+        # The order of global_order is the same with that of global_RVs
+        subvecs = [reshape_t(inarray_global[slc], shp).astype(dtyp)
+                   for _, slc, shp, dtyp in global_order.vmap]
+        replace_global = {v: subvec for v, subvec in zip(global_RVs, subvecs)}
 
-    return inarray_global, uw_global, replace_global
+        # Weight vector
+        cs = [c for _, c in global_RVs.items()]
+        oness = [tt.ones(v.ravel().tag.test_value.shape) for v in global_RVs]
+        c_g = tt.concatenate([c * ones for c, ones in zip(cs, oness)])
+
+    return inarray_global, uw_global, replace_global, c_g
 
 
 def _join_local_RVs(local_RVs, local_order):
@@ -106,6 +101,7 @@ def _join_local_RVs(local_RVs, local_order):
         inarray_local = None
         uw_local = None
         replace_local = {}
+        c_l = 0
     else:
         joined_local = tt.concatenate([v.ravel() for v in local_RVs])
         uw_local = tt.vector('uw_local')
@@ -121,23 +117,30 @@ def _join_local_RVs(local_RVs, local_order):
             for var, slc, shp, dtyp in local_order.vmap
         }
 
-    return inarray_local, uw_local, replace_local
+        # Weight vector
+        cs = [c for _, (_, c) in local_RVs.items()]
+        oness = [tt.ones(v.ravel().tag.test_value.shape) for v in local_RVs]
+        c_l = tt.concatenate([c * ones for c, ones in zip(cs, oness)])
+
+    return inarray_local, uw_local, replace_local, c_l
 
 
-def _make_logpt(global_RVs, local_RVs, observed_RVs, model):
+def _make_logpt(global_RVs, local_RVs, observed_RVs, potentials):
     """Return expression of log probability.
     """
     # Scale log probability for mini-batches
-    factors = [s * v.logpt for v, s in observed_RVs.items()] + \
-              [v.logpt for v in global_RVs] + model.potentials
-    if local_RVs is not None:
-        factors += [s * v.logpt for v, (_, s) in local_RVs.items()]
+    factors = [c * v.logpt for v, c in observed_RVs.items()] + \
+              [c * v.logpt for v, c in global_RVs.items()] + \
+              [c * v.logpt for v, (_, c) in local_RVs.items()] + \
+              potentials
     logpt = tt.add(*map(tt.sum, factors))
 
     return logpt
 
 
-def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
+def _elbo_t(
+    logp, uw_g, uw_l, inarray_g, inarray_l, c_g, c_l, n_mcsamples,
+    random_seed):
     """Return expression of approximate ELBO based on Monte Carlo sampling.
     """
     if random_seed is None:
@@ -152,24 +155,22 @@ def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
     # Sampling local variational parameters
     if uw_l is not None:
         l_l = (uw_l.size / 2).astype('int64')
-        l_l_ = (uw_l.size / 2).astype(floatX_str)
         u_l = uw_l[:l_l]
         w_l = uw_l[l_l:]
         ns_l = r.normal(size=(n_mcsamples, inarray_l.tag.test_value.shape[0]))
         zs_l = ns_l * tt.exp(w_l) + u_l
-        elbo += tt.sum(w_l) + 0.5 * l_l_ * normal_const
+        elbo += tt.sum(c_l * (w_l + 0.5 * normal_const))
     else:
         zs_l = None
 
     # Sampling global variational parameters
     if uw_g is not None:
         l_g = (uw_g.size / 2).astype('int64')
-        l_g_ = (uw_g.size / 2).astype(floatX_str)
         u_g = uw_g[:l_g]
         w_g = uw_g[l_g:]
         ns_g = r.normal(size=(n_mcsamples, inarray_g.tag.test_value.shape[0]))
         zs_g = ns_g * tt.exp(w_g) + u_g
-        elbo += tt.sum(w_g) + 0.5 * l_g_ * normal_const
+        elbo += tt.sum(c_g * (w_g + 0.5 * normal_const))
     else:
         zs_g = None
 
@@ -203,52 +204,168 @@ def _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l, n_mcsamples, random_seed):
     return elbo
 
 
+def _make_elbo_t(
+    observed_RVs, global_RVs, local_RVs, potentials, n_mcsamples, random_seed):
+    global_order = pm.ArrayOrdering([v for v in global_RVs])
+    local_order = pm.ArrayOrdering([v for v in local_RVs])
+
+    inarray_g, uw_g, replace_g, c_g = _join_global_RVs(global_RVs, global_order)
+    inarray_l, uw_l, replace_l, c_l = _join_local_RVs(local_RVs, local_order)
+
+    logpt = _make_logpt(global_RVs, local_RVs, observed_RVs, potentials)
+    replace = replace_g
+    replace.update(replace_l)
+    logpt = theano.clone(logpt, replace, strict=False)
+
+    elbo = _elbo_t(logpt, uw_g, uw_l, inarray_g, inarray_l, c_g, c_l,
+                   n_mcsamples, random_seed)
+
+    return elbo, uw_l, uw_g
+
+
+@change_flags(compute_test_value='ignore')
 def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                    minibatch_RVs=None, minibatch_tensors=None,
-                   minibatches=None, local_RVs=None, observed_RVs=None,
-                   encoder_params=[], total_size=None, optimizer=None,
-                   learning_rate=.001, epsilon=.1, random_seed=None):
+                   minibatches=None, global_RVs=None, local_RVs=None,
+                   observed_RVs=None, encoder_params=None, total_size=None,
+                   optimizer=None, learning_rate=.001, epsilon=.1,
+                   random_seed=None, mode=None):
     """Perform mini-batch ADVI.
 
-    This function implements a mini-batch ADVI with the meanfield
-    approximation. Autoencoding variational inference is also supported.
+    This function implements a mini-batch automatic differentiation variational
+    inference (ADVI; Kucukelbir et al., 2015) with the meanfield
+    approximation. Autoencoding variational Bayes (AEVB; Kingma and Welling,
+    2014) is also supported.
 
-    The log probability terms for mini-batches, corresponding to RVs in
-    minibatch_RVs, are scaled to (total_size) / (the number of samples in each
-    mini-batch), where total_size is an argument for the total data size.
+    For explanation, we classify random variables in probabilistic models into
+    three types. Observed random variables
+    :math:`{\cal Y}=\{\mathbf{y}_{i}\}_{i=1}^{N}` are :math:`N` observations.
+    Each :math:`\mathbf{y}_{i}` can be a set of observed random variables,
+    i.e., :math:`\mathbf{y}_{i}=\{\mathbf{y}_{i}^{k}\}_{k=1}^{V_{o}}`, where
+    :math:`V_{k}` is the number of the types of observed random variables
+    in the model.
 
-    minibatch_tensors is a list of tensors (can be shared variables) to which
-    mini-batch samples are set during the optimization. In most cases, these
-    tensors are observations for RVs in the model.
+    The next ones are global random variables
+    :math:`\Theta=\{\\theta^{k}\}_{k=1}^{V_{g}}`, which are used to calculate
+    the probabilities for all observed samples.
 
-    local_RVs and observed_RVs are used for autoencoding variational Bayes.
-    Both of these RVs are associated with each of given samples.
-    The difference is that local_RVs are unkown and their posterior
-    distributions are approximated.
+    The last ones are local random variables
+    :math:`{\cal Z}=\{\mathbf{z}_{i}\}_{i=1}^{N}`, where
+    :math:`\mathbf{z}_{i}=\{\mathbf{z}_{i}^{k}\}_{k=1}^{V_{l}}`.
+    These RVs are used only in AEVB.
 
-    local_RVs are Ordered dict, whose keys and values are RVs and a tuple of
-    two objects. The first is the theano expression of variational parameters
-    (mean and log of std) of the approximate posterior, which are encoded from
-    given samples by an arbitrary deterministic function, e.g., MLP. The other
-    one is a scaling constant to be multiplied to the log probability term
-    corresponding to the RV.
+    The goal of ADVI is to approximate the posterior distribution
+    :math:`p(\Theta,{\cal Z}|{\cal Y})` by variational posterior
+    :math:`q(\Theta)\prod_{i=1}^{N}q(\mathbf{z}_{i})`. All of these terms
+    are normal distributions (mean-field approximation).
 
-    observed_RVs are also Ordered dict with RVs as the keys, but whose values
-    are only the scaling constant as in local_RVs. In this case, total_size is
-    ignored.
+    :math:`q(\Theta)` is parametrized with its means and standard deviations.
+    These parameters are denoted as :math:`\gamma`. While :math:`\gamma` is
+    a constant, the parameters of :math:`q(\mathbf{z}_{i})` are dependent on
+    each observation. Therefore these parameters are denoted as
+    :math:`\\xi(\mathbf{y}_{i}; \\nu)`, where :math:`\\nu` is the parameters
+    of :math:`\\xi(\cdot)`. For example, :math:`\\xi(\cdot)` can be a
+    multilayer perceptron or convolutional neural network.
 
-    If local_RVs is None (thus not using autoencoder), the following two
-    settings are equivalent:
+    In addition to :math:`\\xi(\cdot)`, we can also include deterministic
+    mappings for the likelihood of observations. We denote the parameters of
+    the deterministic mappings as :math:`\eta`. An example of such mappings is
+    the deconvolutional neural network used in the convolutional VAE example
+    in the PyMC3 notebook directory.
 
-    - observed_RVs=OrderedDict([(rv, total_size / minibatch_size)])
-    - minibatch_RVs=[rv], total_size=total_size
+    This function maximizes the evidence lower bound (ELBO)
+    :math:`{\cal L}(\gamma, \\nu, \eta)` defined as follows:
 
-    where minibatch_size is minibatch_tensors[0].shape[0].
+    .. math::
 
-    The variational parameters and the parameters of the autoencoder are
-    simultaneously optimized with given optimizer, which is a function that
-    returns a dictionary of parameter updates as provided to Theano function.
-    See the docstring of pymc3.variational.advi().
+        {\cal L}(\gamma,\\nu,\eta) & =
+        \mathbf{c}_{o}\mathbb{E}_{q(\Theta)}\left[
+        \sum_{i=1}^{N}\mathbb{E}_{q(\mathbf{z}_{i})}\left[
+        \log p(\mathbf{y}_{i}|\mathbf{z}_{i},\Theta,\eta)
+        \\right]\\right] \\\\ &
+        - \mathbf{c}_{g}KL\left[q(\Theta)||p(\Theta)\\right]
+        - \mathbf{c}_{l}\sum_{i=1}^{N}
+            KL\left[q(\mathbf{z}_{i})||p(\mathbf{z}_{i})\\right],
+
+    where :math:`KL[q(v)||p(v)]` is the Kullback-Leibler divergence
+
+    .. math::
+
+        KL[q(v)||p(v)] = \int q(v)\log\\frac{q(v)}{p(v)}dv,
+
+    :math:`\mathbf{c}_{o/g/l}` are vectors for weighting each term of ELBO.
+    More precisely, we can write each of the terms in ELBO as follows:
+
+    .. math::
+
+        \mathbf{c}_{o}\log p(\mathbf{y}_{i}|\mathbf{z}_{i},\Theta,\eta) & = &
+        \sum_{k=1}^{V_{o}}c_{o}^{k}
+            \log p(\mathbf{y}_{i}^{k}|
+                   {\\rm pa}(\mathbf{y}_{i}^{k},\Theta,\eta)) \\\\
+        \mathbf{c}_{g}KL\left[q(\Theta)||p(\Theta)\\right] & = &
+        \sum_{k=1}^{V_{g}}c_{g}^{k}KL\left[
+            q(\\theta^{k})||p(\\theta^{k}|{\\rm pa(\\theta^{k})})\\right] \\\\
+        \mathbf{c}_{l}KL\left[q(\mathbf{z}_{i}||p(\mathbf{z}_{i})\\right] & = &
+        \sum_{k=1}^{V_{l}}c_{l}^{k}KL\left[
+            q(\mathbf{z}_{i}^{k})||
+            p(\mathbf{z}_{i}^{k}|{\\rm pa}(\mathbf{z}_{i}^{k}))\\right],
+
+    where :math:`{\\rm pa}(v)` denotes the set of parent variables of :math:`v`
+    in the directed acyclic graph of the model.
+
+    When using mini-batches, :math:`c_{o}^{k}` and :math:`c_{l}^{k}` should be
+    set to :math:`N/M`, where :math:`M` is the number of observations in each
+    mini-batch. Another weighting scheme was proposed in
+    (Blundell et al., 2015) for accelarating model fitting.
+
+    For working with ADVI, we need to give the probabilistic model
+    (:code:`model`), the three types of RVs (:code:`observed_RVs`,
+    :code:`global_RVs` and :code:`local_RVs`), the tensors to which
+    mini-bathced samples are supplied (:code:`minibatches`) and
+    parameters of deterministic mappings :math:`\\xi` and :math:`\eta`
+    (:code:`encoder_params`) as input arguments.
+
+    :code:`observed_RVs` is a :code:`OrderedDict` of the form
+    :code:`{y_k: c_k}`, where :code:`y_k` is a random variable defined in the
+    PyMC3 model. :code:`c_k` is a scalar (:math:`c_{o}^{k}`) and it can be a
+    shared variable.
+
+    :code:`global_RVs` is a :code:`OrderedDict` of the form
+    :code:`{t_k: c_k}`, where :code:`t_k` is a random variable defined in the
+    PyMC3 model. :code:`c_k` is a scalar (:math:`c_{g}^{k}`) and it can be a
+    shared variable.
+
+    :code:`local_RVs` is a :code:`OrderedDict` of the form
+    :code:`{z_k: ((m_k, s_k), c_k)}`, where :code:`z_k` is a random variable
+    defined in the PyMC3 model. :code:`c_k` is a scalar (:math:`c_{l}^{k}`)
+    and it can be a shared variable. :code:`(m_k, s_k)` is a pair of tensors
+    of means and log standard deviations of the variational distribution;
+    samples drawn from the variational distribution replaces :code:`z_k`.
+    It should be noted that if :code:`z_k` has a transformation that changes
+    the dimension (e.g., StickBreakingTransform), the variational distribution
+    must have the same dimension. For example, if :code:`z_k` is distributed
+    with Dirichlet distribution with :code:`p` choices, :math:`m_k` and
+    :code:`s_k` has the shape :code:`(n_samples_in_minibatch, p - 1)`.
+
+    :code:`minibatch_tensors` is a list of tensors (can be shared variables)
+    to which mini-batch samples are set during the optimization.
+    These tensors are observations (:code:`obs=`) in :code:`observed_RVs`.
+
+    :code:`minibatches` is a generator of a list of :code:`numpy.ndarray`.
+    Each item of the list will be set to tensors in :code:`minibatch_tensors`.
+
+    :code:`encoder_params` is a list of shared variables of the parameters
+    :math:`\\nu` and :math:`\eta`. We do not need to include the variational
+    parameters of the global variables, :math:`\gamma`, because these are
+    automatically created and updated in this function.
+
+    The following is a list of example notebooks using advi_minibatch:
+
+    - docs/source/notebooks/GLM-hierarchical-advi-minibatch.ipynb
+    - docs/source/notebooks/bayesian_neural_network_advi.ipynb
+    - docs/source/notebooks/convolutional_vae_keras_advi.ipynb
+    - docs/source/notebooks/gaussian-mixture-model-advi.ipynb
+    - docs/source/notebooks/lda-advi-aevb.ipynb
 
     Parameters
     ----------
@@ -276,12 +393,17 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     total_size : int
         Total size of training samples. This is used to appropriately scale the
         log likelihood terms corresponding to mini-batches in ELBO.
-    local_RVs : Ordered dict
-        Include encoded variational parameters and a scaling constant for
-        the corresponding RV. See the above description.
     observed_RVs : Ordered dict
         Include a scaling constant for the corresponding RV. See the above
-        description
+        description.
+    global_RVs : Ordered dict or None
+        Include a scaling constant for the corresponding RV. See the above
+        description. If :code:`None`, it is set to
+        :code:`{v: 1 for v in grvs}`, where :code:`grvs` is
+        :code:`list(set(vars) - set(list(local_RVs) + list(observed_RVs)))`.
+    local_RVs : Ordered dict or None
+        Include encoded variational parameters and a scaling constant for
+        the corresponding RV. See the above description.
     encoder_params : list of theano shared variables
         Parameters of encoder.
     optimizer : (loss, list of shared variables) -> dict or OrderedDict
@@ -290,11 +412,11 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         Adagrad optimizer is used with parameters :code:`learning_rate`
         and :code:`epsilon` below.
     learning_rate: float
-        Base learning rate for adagrad. This parameter is ignored when
-        an optimizer is given.
+        Base learning rate for adagrad.
+        This parameter is ignored when :code:`optimizer` is set.
     epsilon : float
         Offset in denominator of the scale of learning rate in Adagrad.
-        This parameter is ignored when an optimizer is given.
+        This parameter is ignored when :code:`optimizer` is set.
     random_seed : int
         Seed to initialize random state.
 
@@ -302,14 +424,32 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     -------
     ADVIFit
         Named tuple, which includes 'means', 'stds', and 'elbo_vals'.
+
+    References
+    ----------
+    - Kingma, D. P., & Welling, M. (2014).
+      Auto-Encoding Variational Bayes. stat, 1050, 1.
+    - Kucukelbir, A., Ranganath, R., Gelman, A., & Blei, D. (2015).
+      Automatic variational inference in Stan. In Advances in neural
+      information processing systems (pp. 568-576).
+    - Blundell, C., Cornebise, J., Kavukcuoglu, K., & Wierstra, D. (2015).
+      Weight Uncertainty in Neural Network. In Proceedings of the 32nd
+      International Conference on Machine Learning (ICML-15) (pp. 1613-1622).
     """
-    theano.config.compute_test_value = 'ignore'
+    if encoder_params is None:
+        encoder_params = []
 
     model = pm.modelcontext(model)
     vars = inputvars(vars if vars is not None else model.vars)
     start = start if start is not None else model.test_point
-    check_discrete_rvs(vars)
+
+    if not pm.model.all_continuous(vars):
+        raise ValueError('Model can not include discrete RVs for ADVI.')
+
     _check_minibatches(minibatch_tensors, minibatches)
+    
+    if encoder_params is None:
+        encoder_params = []
 
     # Prepare optimizer
     if optimizer is None:
@@ -320,10 +460,8 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
                                         minibatch_tensors, total_size)
 
     # Replace local_RVs with transformed variables
-    ds = model.deterministics
-
     def get_transformed(v):
-        if v in ds:
+        if hasattr(v, 'transformed'):
             return v.transformed
         return v
     local_RVs = OrderedDict(
@@ -331,30 +469,26 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     )
 
     # Get global variables
-    global_RVs = list(set(vars) - set(list(local_RVs) + list(observed_RVs)))
-
-    # Ordering for concatenation of random variables
-    global_order = pm.ArrayOrdering([v for v in global_RVs])
-    local_order = pm.ArrayOrdering([v for v in local_RVs])
+    grvs = list(set(vars) - set(list(local_RVs) + list(observed_RVs)))
+    if global_RVs is None:
+        global_RVs = OrderedDict({v: 1 for v in grvs})
+    elif len(grvs) != len(global_RVs):
+        _value_error(
+            'global_RVs ({}) must have all global RVs: {}'.format(
+                [v for v in global_RVs], grvs
+            )
+        )
 
     # ELBO wrt variational parameters
-    inarray_g, uw_g, replace_g = _join_global_RVs(global_RVs, global_order)
-    inarray_l, uw_l, replace_l = _join_local_RVs(local_RVs, local_order)
-    logpt = _make_logpt(global_RVs, local_RVs, observed_RVs, model)
-    replace = replace_g
-    replace.update(replace_l)
-    logp = theano.clone(logpt, replace, strict=False)
-    elbo = _elbo_t(logp, uw_g, uw_l, inarray_g, inarray_l,
-                   n_mcsamples, random_seed)
-    del logpt
+    elbo, uw_l, uw_g = _make_elbo_t(observed_RVs, global_RVs, local_RVs,
+                                    model.potentials, n_mcsamples, random_seed)
 
     # Replacements tensors of variational parameters in the graph
     replaces = dict()
 
     # Variational parameters for global RVs
     if 0 < len(global_RVs):
-        uw_global_shared, bij = _init_uw_global_shared(start, global_RVs,
-                                                       global_order)
+        uw_global_shared, bij = _init_uw_global_shared(start, global_RVs)
         replaces.update({uw_g: uw_global_shared})
 
     # Variational parameters for local RVs, encoded from samples in
@@ -382,7 +516,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     if 0 < len(global_RVs):
         params += [uw_global_shared]
     updates = OrderedDict(optimizer(loss=-1 * elbo, param=params))
-    f = theano.function(tensors, elbo, updates=updates)
+    f = theano.function(tensors, elbo, updates=updates, mode=mode)
 
     # Optimization loop
     elbos = np.empty(n)
@@ -390,7 +524,9 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
     for i in progress:
         e = f(*next(minibatches))
         elbos[i] = e
-        if i % (n // 10) == 0 and i > 0:
+        if n < 10:
+            progress.set_description('ELBO = {:,.2f}'.format(elbos[i]))
+        elif i % (n // 10) == 0 and i > 0:
             avg_elbo = elbos[i - n // 10:i].mean()
             progress.set_description('Average ELBO = {:,.2f}'.format(avg_elbo))
 
