@@ -399,7 +399,7 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
 
 
 def init_nuts(init='advi', njobs=1, n_init=500000, model=None,
-            random_seed=-1, **kwargs):
+              random_seed=-1, **kwargs):
     """Initialize and sample from posterior of a continuous model.
 
     This is a convenience function. NUTS convergence and sampling speed is extremely
@@ -443,21 +443,22 @@ def init_nuts(init='advi', njobs=1, n_init=500000, model=None,
     if init == 'advi':
         v_params = pm.variational.advi(n=n_init, random_seed=random_seed)
         start = pm.variational.sample_vp(v_params, njobs, progressbar=False,
-        hide_transformed=False, random_seed=random_seed)
+                                         hide_transformed=False, 
+                                         random_seed=random_seed)
         if njobs == 1:
             start = start[0]
         cov = np.power(model.dict_to_array(v_params.stds), 2)
     elif init == 'advi_map':
         start = pm.find_MAP()
-        v_params = pm.variational.advi(n=n_init, start=start,
-        random_seed=random_seed)
+        v_params = pm.variational.advi(n=n_init, start=start, 
+                                       random_seed=random_seed)
         cov = np.power(model.dict_to_array(v_params.stds), 2)
     elif init == 'map':
         start = pm.find_MAP()
         cov = pm.find_hessian(point=start)
     elif init == 'nuts':
         init_trace = pm.sample(step=pm.NUTS(), draws=n_init,
-        random_seed=random_seed)[n_init//2:]
+                               random_seed=random_seed)[n_init // 2:]
         cov = np.atleast_1d(pm.trace_cov(init_trace))
         start = np.random.choice(init_trace, njobs)
         if njobs == 1:
