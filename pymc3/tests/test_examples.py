@@ -263,7 +263,7 @@ class TestLatentOccupancy(SeededTest):
             start = {'psi': 0.5, 'z': (self.y > 0).astype(int), 'theta': 5}
             step_one = pm.Metropolis([model.theta_interval_, model.psi_logodds_])
             step_two = pm.BinaryMetropolis([model.z])
-            pm.sample(50, [step_one, step_two], start)
+            pm.sample(50, step=[step_one, step_two], start=start)
 
 
 class TestRSV(SeededTest):
