@@ -20,7 +20,7 @@ def test_plots():
         start = model.test_point
         h = find_hessian(start)
         step = Metropolis(model.vars, h)
-        trace = sample(3000, step, start)
+        trace = sample(3000, step=step, start=start)
 
         traceplot(trace)
         forestplot(trace)
@@ -34,7 +34,7 @@ def test_plots_multidimensional():
     with model as model:
         h = np.diag(find_hessian(start))
         step = Metropolis(model.vars, h)
-        trace = sample(3000, step, start)
+        trace = sample(3000, step=step, start=start)
 
         traceplot(trace)
         plot_posterior(trace)
@@ -47,7 +47,7 @@ def test_multichain_plots():
         step1 = Slice([model.early_mean_log_, model.late_mean_log_])
         step2 = Metropolis([model.switchpoint])
         start = {'early_mean': 2., 'late_mean': 3., 'switchpoint': 50}
-        ptrace = sample(1000, [step1, step2], start, njobs=2)
+        ptrace = sample(1000, step=[step1, step2], start=start, njobs=2)
 
     forestplot(ptrace, varnames=['early_mean', 'late_mean'])
     autocorrplot(ptrace, varnames=['switchpoint'])
