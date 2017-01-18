@@ -8,7 +8,7 @@ from ..vartypes import string_types
 from .dist_math import bound
 
 
-__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Bound', 
+__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Bound',
            'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
 
 
@@ -30,8 +30,9 @@ class Distribution(object):
 
         if isinstance(name, string_types):
             data = kwargs.pop('observed', None)
+            total_size = kwargs.pop('total_size', None)
             dist = cls.dist(*args, **kwargs)
-            return model.Var(name, dist, data)
+            return model.Var(name, dist, data, total_size)
         else:
             raise TypeError("Name needs to be a string but got: %s" % name)
 
@@ -410,7 +411,7 @@ class Bounded(Distribution):
                 self.transform = transforms.upperbound(upper)
                 if default >= upper:
                     self.testval = upper - 1
-                    
+
         if issubclass(distribution, Discrete):
             self.transform = None
 

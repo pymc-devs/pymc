@@ -10,6 +10,9 @@ import theano.tensor as tt
 
 from .special import gammaln, multigammaln
 
+c = - 0.5 * np.log(2 * np.pi)
+
+
 def bound(logp, *conditions, **kwargs):
     """
     Bounds a log probability density with several conditions.
@@ -95,3 +98,64 @@ def i1(x):
                      x**9 / 1474560 + x**11 / 176947200 + x**13 / 29727129600,
                      np.e**x / (2 * np.pi * x)**0.5 * (1 - 3 / (8 * x) + 15 / (128 * x**2) + 315 / (3072 * x**3)
                                                        + 14175 / (98304 * x**4)))
+
+
+def sd2rho(sd):
+    """
+    `sd -> rho` theano converter
+
+    :math:`mu + sd*e = mu + log(1+exp(rho))*e`"""
+    return tt.log(tt.exp(sd) - 1)
+
+
+def rho2sd(rho):
+    """
+    `rho -> sd` theano converter
+
+    :math:`mu + sd*e = mu + log(1+exp(rho))*e`"""
+    return tt.log1p(tt.exp(rho))
+
+
+def log_normal(x, mean, **kwargs):
+    """
+    Calculate logarithm of normal distribution at point `x`
+    with given `mean` and `std`
+
+    Parameters
+    ----------
+    x : Tensor
+        point of evaluation
+    mean : Tensor
+        mean of normal distribution
+    kwargs : one of parameters `{sd, tau, w, rho}`
+
+    Notes
+    -----
+    There are four variants for density parametrization.
+    They are:
+        1) standard deviation - `std`
+        2) `w`, logarithm of `std` :math:`w = log(std)`
+        3) `rho` that follows this equation :math:`rho = log(exp(std) - 1)`
+        4) `tau` that follows this equation :math:`tau = std^{-1}`
+    ----
+    """
+    sd = kwargs.get('sd')
+    w = kwargs.get('w')
+    rho = kwargs.get('rho')
+    tau = kwargs.get('tau')
+    eps = kwargs.get('eps', 0.0)
+    check = sum(map(lambda a: a is not None, [sd, w, rho, tau]))
+    if check > 1:
+        raise ValueError('more than one required kwarg is passed')
+    if check == 0:
+        raise ValueError('none of required kwarg is passed')
+    if sd is not None:
+        std = sd
+    elif w is not None:
+        std = tt.exp(w)
+    elif rho is not None:
+        std = rho2sd(rho)
+    else:
+        std = tau**(-1)
+    std += eps
+    return c - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2 * std ** 2)

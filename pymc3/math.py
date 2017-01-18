@@ -22,3 +22,7 @@ def invlogit(x, eps=sys.float_info.epsilon):
 
 def logit(p):
     return tt.log(p / (1 - p))
+
+
+def flatten_list(tensors):
+    return tt.concatenate([var.ravel() for var in tensors])

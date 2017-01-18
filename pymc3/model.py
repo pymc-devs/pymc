@@ -8,7 +8,7 @@ from theano.tensor.var import TensorVariable
 
 import pymc3 as pm
 from .memoize import memoize
-from .theanof import gradient, hessian, inputvars
+from .theanof import gradient, hessian, inputvars, generator
 from .vartypes import typefilter, discrete_types, continuous_types
 from .blocking import DictToArrayBijection, ArrayOrdering
 
@@ -458,7 +458,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         """All the continuous variables in the model"""
         return list(typefilter(self.vars, continuous_types))
 
-    def Var(self, name, dist, data=None):
+    def Var(self, name, dist, data=None, total_size=None):
         """Create and add (un)observed random variable to the model with an
         appropriate prior distribution.
 
@@ -469,6 +469,8 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         data : array_like (optional)
            If data is provided, the variable is observed. If None,
            the variable is unobserved.
+        total_size : scalar
+            upscales logp of variable with :math:`coef = total_size/var.shape[0]`
 
         Returns
         -------
@@ -477,11 +479,13 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         name = self.name_for(name)
         if data is None:
             if getattr(dist, "transform", None) is None:
-                var = FreeRV(name=name, distribution=dist, model=self)
+                var = FreeRV(name=name, distribution=dist, model=self,
+                             total_size=total_size)
                 self.free_RVs.append(var)
             else:
                 var = TransformedRV(name=name, distribution=dist, model=self,
-                                    transform=dist.transform)
+                                    transform=dist.transform,
+                                    total_size=total_size)
                 pm._log.debug('Applied {transform}-transform to {name}'
                               ' and added transformed {orig_name} to model.'.format(
                                 transform=dist.transform.name,
@@ -491,7 +495,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
                 return var
         elif isinstance(data, dict):
             var = MultiObservedRV(name=name, data=data, distribution=dist,
-                                  model=self)
+                                  model=self, total_size=total_size)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs += var.missing_values
@@ -500,7 +504,8 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
                     self.named_vars[v.name] = v
         else:
             var = ObservedRV(name=name, data=data,
-                             distribution=dist, model=self)
+                             distribution=dist, model=self,
+                             total_size=total_size)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs.append(var.missing_values)
@@ -717,7 +722,7 @@ class FreeRV(Factor, TensorVariable):
     """Unobserved random variable that a model is specified in terms of."""
 
     def __init__(self, type=None, owner=None, index=None, name=None,
-                 distribution=None, model=None):
+                 distribution=None, model=None, total_size=None):
         """
         Parameters
         ----------
@@ -725,7 +730,10 @@ class FreeRV(Factor, TensorVariable):
         owner : theano owner (optional)
         name : str
         distribution : Distribution
-        model : Model"""
+        model : Model
+        total_size : scalar Tensor (optional)
+            needed for upscaling logp
+        """
         if type is None:
             type = distribution.type
         super(FreeRV, self).__init__(type, owner, index, name)
@@ -736,7 +744,14 @@ class FreeRV(Factor, TensorVariable):
             self.distribution = distribution
             self.tag.test_value = np.ones(
                 distribution.shape, distribution.dtype) * distribution.default()
-            self.logp_elemwiset = distribution.logp(self)
+            logp_elemwiset = distribution.logp(self)
+            if total_size is None:
+                coef = tt.as_tensor(1)
+            else:
+                assert logp_elemwiset.ndim >= 1, ('Variable with scaled density '
+                                                  'needs to be at least 1 dimensional')
+                coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
+            self.logp_elemwiset = logp_elemwiset * coef
             self.model = model
 
             incorporate_methods(source=distribution, destination=self,
@@ -759,6 +774,8 @@ def pandas_to_array(data):
         return data
     elif isinstance(data, theano.gof.graph.Variable):
         return data
+    elif hasattr(data, '__next__'):
+        return generator(data)
     else:
         return np.asarray(data)
 
@@ -792,7 +809,7 @@ class ObservedRV(Factor, TensorVariable):
     """
 
     def __init__(self, type=None, owner=None, index=None, name=None, data=None,
-                 distribution=None, model=None):
+                 distribution=None, model=None, total_size=None):
         """
         Parameters
         ----------
@@ -801,6 +818,8 @@ class ObservedRV(Factor, TensorVariable):
         name : str
         distribution : Distribution
         model : Model
+        total_size : scalar Tensor (optional)
+            needed for upscaling logp
         """
         from .distributions import TensorType
         if type is None:
@@ -814,7 +833,14 @@ class ObservedRV(Factor, TensorVariable):
             data = as_tensor(data, name, model, distribution)
             self.missing_values = data.missing_values
 
-            self.logp_elemwiset = distribution.logp(data)
+            logp_elemwiset = distribution.logp(data)
+            if total_size is None:
+                coef = tt.as_tensor(1)
+            else:
+                assert logp_elemwiset.ndim >= 1, ('Variable with scaled density '
+                                                  'needs to be at least 1 dimensional')
+                coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
+            self.logp_elemwiset = logp_elemwiset * coef
             self.model = model
             self.distribution = distribution
 
@@ -835,7 +861,7 @@ class MultiObservedRV(Factor):
     Potentially partially observed.
     """
 
-    def __init__(self, name, data, distribution, model):
+    def __init__(self, name, data, distribution, model, total_size=None):
         """
         Parameters
         ----------
@@ -844,6 +870,8 @@ class MultiObservedRV(Factor):
         name : str
         distribution : Distribution
         model : Model
+        total_size : scalar Tensor (optional)
+            needed for upscaling logp
         """
         self.name = name
         self.data = {name: as_tensor(data, name, model, distribution)
@@ -851,7 +879,14 @@ class MultiObservedRV(Factor):
 
         self.missing_values = [datum.missing_values for datum in self.data.values()
                                if datum.missing_values is not None]
-        self.logp_elemwiset = distribution.logp(**self.data)
+        logp_elemwiset = distribution.logp(**self.data)
+        if total_size is None:
+            coef = tt.as_tensor(1)
+        else:
+            assert logp_elemwiset.ndim >= 1, ('Variable with scaled density '
+                                              'needs to be at least 1 dimensional')
+            coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
+        self.logp_elemwiset = logp_elemwiset * coef
         self.model = model
         self.distribution = distribution
 
@@ -896,17 +931,20 @@ def Potential(name, var, model=None):
 class TransformedRV(TensorVariable):
 
     def __init__(self, type=None, owner=None, index=None, name=None,
-                 distribution=None, model=None, transform=None):
+                 distribution=None, model=None, transform=None,
+                 total_size=None):
         """
         Parameters
         ----------
 
         type : theano type (optional)
         owner : theano owner (optional)
-
         name : str
         distribution : Distribution
-        model : Model"""
+        model : Model
+        total_size : scalar Tensor (optional)
+            needed for upscaling logp
+        """
         if type is None:
             type = distribution.type
         super(TransformedRV, self).__init__(type, owner, index, name)
@@ -916,7 +954,7 @@ class TransformedRV(TensorVariable):
 
             transformed_name = "{}_{}_".format(name, transform.name)
             self.transformed = model.Var(
-                transformed_name, transform.apply(distribution))
+                transformed_name, transform.apply(distribution), total_size=total_size)
 
             normalRV = transform.backward(self.transformed)
 
