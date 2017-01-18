@@ -1,4 +1,30 @@
 # Release Notes
+
+## PyMC3 3.1 (TBA)
+
+### New features
+
+* `Model` can now be inherited from and act as a base class for user specified models (see pymc3.models.linear).
+
+* Add MvGaussianRandomWalk and MvStudentTRandomWalk distributions.
+
+* Add `EdwardModel` wrapper to run PyMC3 models in Edward.
+
+* GLM models do not need a left-hand variable anymore.
+
+* Refactored HMC and NUTS for better readability.
+
+* Add support for Python 3.6.
+
+### Fixes
+
+* Bound now works for discrete distributions as well.
+
+* Random sampling now returns the correct shape even for higher dimensional RVs.
+
+* Use theano Psi and GammaLn functions to enable GPU support for them.
+
+
 ## PyMC3 3.0 (January 9, 2017)
 
 We are proud and excited to release the first stable version of PyMC3, the product of more than [5 years](https://github.com/pymc-devs/pymc3/commit/85c7e06b6771c0d99cbc09cb68885cda8f7785cb) of ongoing development and contributions from over 80 individuals. PyMC3 is a Python module for Bayesian modeling which focuses on modern Bayesian computational methods, primarily gradient-based (Hamiltonian) MCMC sampling and variational inference. Models are specified in Python, which allows for great flexibility. The main technological difference in PyMC3 relative to previous versions is the reliance on Theano for the computational backend, rather than on Fortran extensions.
@@ -39,7 +65,7 @@ Since the beta release last year, the following improvements have been implement
 Old: `Normal(name, mu, tau)`
 New: `Normal(name, mu, sd)` (supplying keyword arguments is unaffected).
 
-* `MvNormal` calling signature changed: 
+* `MvNormal` calling signature changed:
 Old: `MvNormal(name, mu, tau)`
 New: `MvNormal(name, mu, cov)` (supplying keyword arguments is unaffected).
 
@@ -47,19 +73,19 @@ We on the PyMC3 core team would like to thank everyone for contributing and now 
 
 ### Contributors
 
-The following authors contributed to this release: 
- 
-Chris Fonnesbeck <chris.fonnesbeck@vanderbilt.edu> 
-John Salvatier <jsalvatier@gmail.com> 
-Thomas Wiecki <thomas.wiecki@gmail.com> 
+The following authors contributed to this release:
+
+Chris Fonnesbeck <chris.fonnesbeck@vanderbilt.edu>
+John Salvatier <jsalvatier@gmail.com>
+Thomas Wiecki <thomas.wiecki@gmail.com>
 Colin Carroll <colcarroll@gmail.com>
 Maxim Kochurov <maxim.v.kochurov@gmail.com>
-Taku Yoshioka <taku.yoshioka.4096@gmail.com> 
-Peadar Coyle (springcoil) <peadarcoyle@googlemail.com> 
-Austin Rochford <arochford@monetate.com> 
-Osvaldo Martin <aloctavodia@gmail.com> 
- 
-In addition, the following community members contributed to this release: 
+Taku Yoshioka <taku.yoshioka.4096@gmail.com>
+Peadar Coyle (springcoil) <peadarcoyle@googlemail.com>
+Austin Rochford <arochford@monetate.com>
+Osvaldo Martin <aloctavodia@gmail.com>
+
+In addition, the following community members contributed to this release:
 
 A Kuz <for.akuz@gmail.com>
 A. Flaxman <abie@alum.mit.edu>

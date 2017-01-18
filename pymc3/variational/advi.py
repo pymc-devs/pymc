@@ -11,6 +11,7 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams
 
 import pymc3 as pm
 from pymc3.backends.base import MultiTrace
+from ..theanof import floatX
 
 from tqdm import trange
 
@@ -36,7 +37,8 @@ def gen_random_state():
 
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
-         optimizer=None, learning_rate=.001, epsilon=.1, random_seed=None):
+         optimizer=None, learning_rate=.001, epsilon=.1, mode=None,     
+         random_seed=None):
     """Perform automatic differentiation variational inference (ADVI).
 
     This function implements the meanfield ADVI, where the variational
@@ -87,6 +89,8 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         This parameter is ignored when optimizer is given.
     random_seed : int or None
         Seed to initialize random state. None uses current seed.
+    mode :  string or `Mode` instance.
+        Compilation mode passed to Theano functions
 
     Returns
     -------
@@ -111,7 +115,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     vars = pm.inputvars(vars)
 
     if not pm.model.all_continuous(vars):
-        raise ValueError('Model should not include discrete RVs for ADVI.')
+        raise ValueError('Model can not include discrete RVs for ADVI.')
 
     n_mcsamples = 100 if accurate_elbo else 1
 
@@ -137,7 +141,7 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
     uw_shared = theano.shared(uw, 'uw_shared')
     elbo = pm.CallableTensor(elbo)(uw_shared)
     updates = optimizer(loss=-1 * elbo, param=[uw_shared])
-    f = theano.function([], [uw_shared, elbo], updates=updates)
+    f = theano.function([], [uw_shared, elbo], updates=updates, mode=mode)
 
     # Optimization loop
     elbos = np.empty(n)
@@ -146,17 +150,26 @@ def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
         for i in progress:
             uw_i, e = f()
             elbos[i] = e
-            if i % (n // 10) == 0 and i > 0:
+            if n < 10:
+                progress.set_description('ELBO = {:,.5g}'.format(elbos[i]))
+            elif i % (n // 10) == 0 and i > 0:
                 avg_elbo = elbos[i - n // 10:i].mean()
                 progress.set_description('Average ELBO = {:,.5g}'.format(avg_elbo))
     except KeyboardInterrupt:
         elbos = elbos[:i]
-        avg_elbo = elbos[i - n // 10:].mean()
-        pm._log.info('Interrupted at {:,d} [{:.0f}%]: Average ELBO = {:,.5g}'.format(
-            i, 100 * i // n, avg_elbo))
+        if n < 10:
+            pm._log.info('Interrupted at {:,d} [{:.0f}%]: ELBO = {:,.5g}'.format(
+                i, 100 * i // n, elbos[i]))
+        else:
+            avg_elbo = elbos[i - n // 10:].mean()
+            pm._log.info('Interrupted at {:,d} [{:.0f}%]: Average ELBO = {:,.5g}'.format(
+                i, 100 * i // n, avg_elbo))
     else:
-        avg_elbo = elbos[-n // 10:].mean()
-        pm._log.info('Finished [100%]: Average ELBO = {:,.5g}'.format(avg_elbo))
+        if n < 10:
+            pm._log.info('Finished [100%]: ELBO = {:,.5g}'.format(elbos[-1]))
+        else:
+            avg_elbo = elbos[-n // 10:].mean()
+            pm._log.info('Finished [100%]: Average ELBO = {:,.5g}'.format(avg_elbo))
 
     # Estimated parameters
     l = int(uw_i.size / 2)
@@ -181,8 +194,8 @@ def _calc_elbo(vars, model, n_mcsamples, random_seed):
     [logp], inarray = pm.join_nonshared_inputs([logpt], vars, shared)
 
     uw = tt.vector('uw')
-    uw.tag.test_value = np.concatenate([inarray.tag.test_value,
-                                        inarray.tag.test_value]).astype(theano.config.floatX)
+    uw.tag.test_value = floatX(np.concatenate([inarray.tag.test_value,
+                                               inarray.tag.test_value]))
 
     elbo = _elbo_t(logp, uw, inarray, n_mcsamples, random_seed)
 
@@ -251,7 +264,7 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
             param = list(param)
 
         for param_ in param:
-            i = theano.shared(np.array(0, dtype=theano.config.floatX))
+            i = theano.shared(floatX(np.array(0)))
             i_int = i.astype('int64')
             value = param_.get_value(borrow=True)
             accu = theano.shared(

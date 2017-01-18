@@ -6,7 +6,7 @@ import theano.tensor as tt
 from scipy import stats
 
 from .dist_math import bound, factln, binomln, betaln, logpow
-from .distribution import Discrete, draw_values, generate_samples
+from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
            'NegativeBinomial', 'ConstantDist', 'Constant', 'ZeroInflatedPoisson',
@@ -250,7 +250,7 @@ class NegativeBinomial(Discrete):
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        return stats.poisson.rvs(g)
+        return reshape_sampled(stats.poisson.rvs(g), size, self.shape)
 
     def logp(self, value):
         mu = self.mu
@@ -441,9 +441,11 @@ class Constant(Discrete):
         c = self.c
         return bound(0, tt.eq(value, c))
 
+
 def ConstantDist(*args, **kwargs):
+    import warnings
     warnings.warn("ConstantDist has been deprecated. In future, use Constant instead.",
-                DeprecationWarning)
+                  DeprecationWarning)
     return Constant(*args, **kwargs)
 
 
@@ -489,7 +491,8 @@ class ZeroInflatedPoisson(Discrete):
         g = generate_samples(stats.poisson.rvs, theta,
                              dist_shape=self.shape,
                              size=size)
-        return g * (np.random.random(np.squeeze(g.shape)) < psi)
+        sampled = g * (np.random.random(np.squeeze(g.shape)) < psi)
+        return reshape_sampled(sampled, size, self.shape)
 
     def logp(self, value):
         return tt.switch(value > 0,
@@ -543,7 +546,8 @@ class ZeroInflatedNegativeBinomial(Discrete):
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        return stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
+        sampled = stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
+        return reshape_sampled(sampled, size, self.shape)
 
     def logp(self, value):
         return tt.switch(value > 0,

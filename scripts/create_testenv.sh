@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e # fail on first error
+set -ex # fail on first error, print commands
 
 while test $# -gt 0
 do
@@ -15,7 +15,7 @@ do
     shift
 done
 
-PYTHON_VERSION=${PYTHON_VERSION:-3.5} # if no python specified, use 3.5
+PYTHON_VERSION=${PYTHON_VERSION:-3.6} # if no python specified, use 3.6
 
 if [ -z ${GLOBAL} ]
 then
@@ -23,7 +23,9 @@ then
     source activate testenv
 fi
 
-conda install --yes pyqt=4.11.4 jupyter pyzmq numpy scipy nose matplotlib pandas Cython patsy statsmodels joblib coverage mkl-service
+pip install jupyter
+conda install --yes pyqt matplotlib --channel conda-forge
+conda install --yes pyzmq numpy scipy nose pandas Cython patsy statsmodels joblib coverage mkl-service
 if [ ${PYTHON_VERSION} == "2.7" ]; then
     conda install --yes mock enum34;
 fi

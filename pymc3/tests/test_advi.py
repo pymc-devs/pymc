@@ -119,6 +119,12 @@ class TestADVI(SeededTest):
         np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
         np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
+        # Test for n < 10
+        with Model():
+            mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
+            Normal('x', mu=mu_, sd=sd, observed=data)
+            advi_fit = advi(n=5, accurate_elbo=False, learning_rate=1e-1)
+
     def test_advi_optimizer(self):
         n = 1000
         sd0 = 2.
@@ -177,6 +183,15 @@ class TestADVI(SeededTest):
 
         np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.4)
         np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
+
+        # Test for n < 10
+        with Model():
+            mu_ = Normal('mu', mu=mu0, sd=sd0, testval=0)
+            x = Normal('x', mu=mu_, sd=sd, observed=data_t)
+            advi_fit = advi_minibatch(
+                n=5, minibatch_tensors=[data_t],
+                minibatch_RVs=[x], minibatches=minibatches,
+                total_size=n, learning_rate=1e-1)
 
     def test_advi_minibatch_shared(self):
         n = 1000
