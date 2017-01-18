@@ -32,12 +32,12 @@ class TestGelmanRubin(SeededTest):
         self.assertTrue(all(1 / self.good_ratio < r <
                             self.good_ratio for r in rhat.values()))
 
-    # def test_bad(self):
-    #     """Confirm Gelman-Rubin statistic is far from 1 for a small number of samples."""
-    #     n_samples = 10
-    #     rhat = gelman_rubin(self.get_ptrace(n_samples))
-    #     self.assertFalse(all(1 / self.good_ratio < r <
-    #                          self.good_ratio for r in rhat.values()))
+    def test_bad(self):
+        """Confirm Gelman-Rubin statistic is far from 1 for a small number of samples."""
+        n_samples = 10
+        rhat = gelman_rubin(self.get_ptrace(n_samples))
+        self.assertFalse(all(1 / self.good_ratio < r <
+                             self.good_ratio for r in rhat.values()))
 
     def test_right_shape_python_float(self, shape=None, test_shape=None):
         """Check Gelman-Rubin statistic shape is correct w/ python float"""
