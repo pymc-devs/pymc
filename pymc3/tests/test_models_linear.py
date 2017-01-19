@@ -1,7 +1,7 @@
 import numpy as np
 from .helpers import SeededTest
 from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
-from pymc3.models.linear import LinearComponent, Glm
+from pymc3.linear_models import LinearComponent, GLM
 
 
 # Generate data
@@ -72,7 +72,7 @@ class TestGLM(SeededTest):
                 'glm_x0',
                 'glm_Intercept'
             }
-            Glm(
+            GLM(
                 self.data_linear['x'],
                 self.data_linear['y'],
                 name='glm'
@@ -88,7 +88,7 @@ class TestGLM(SeededTest):
     def test_glm_from_formula(self):
         with Model() as model:
             NAME = 'glm'
-            Glm.from_formula('y ~ x', self.data_linear, name=NAME)
+            GLM.from_formula('y ~ x', self.data_linear, name=NAME)
             start = find_MAP()
             step = Slice(model.vars)
             trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
@@ -101,7 +101,7 @@ class TestGLM(SeededTest):
         with Model():
             self.assertRaises(
                 ValueError,
-                Glm,
+                GLM,
                 1,
                 self.data_linear['y'],
                 name='lm'

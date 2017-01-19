@@ -7,7 +7,7 @@ from .utils import any_to_tensor_and_labels
 
 __all__ = [
     'LinearComponent',
-    'Glm'
+    'GLM'
 ]
 
 
@@ -86,7 +86,7 @@ class LinearComponent(Model):
                    priors=priors, vars=vars, name=name, model=model)
 
 
-class Glm(LinearComponent):
+class GLM(LinearComponent):
     """Creates glm model, y_est is accessible via attribute
     Parameters
     ----------
@@ -106,7 +106,7 @@ class Glm(LinearComponent):
     """
     def __init__(self, x, y, intercept=True, labels=None,
                  priors=None, vars=None, family='normal', name='', model=None):
-        super(Glm, self).__init__(
+        super(GLM, self).__init__(
             x, y, intercept=intercept, labels=labels,
             priors=priors, vars=vars, name=name, model=model
         )
