@@ -21,6 +21,7 @@ class AR1(Continuous):
 
     def __init__(self, k, tau_e, *args, **kwargs):
         super(AR1, self).__init__(*args, **kwargs)
+        self.param_names = ['k', 'tau_e']
         self.k = k
         self.tau_e = tau_e
         self.tau = tau_e * (1 - k ** 2)
@@ -57,6 +58,7 @@ class GaussianRandomWalk(Continuous):
     def __init__(self, tau=None, init=Flat.dist(), sd=None, mu=0.,
                  *args, **kwargs):
         super(GaussianRandomWalk, self).__init__(*args, **kwargs)
+        self.param_names = ['tau', 'sd', 'mu']
         self.tau = tau
         self.sd = sd
         self.mu = mu
@@ -101,6 +103,7 @@ class GARCH11(Continuous):
     def __init__(self, omega=None, alpha_1=None, beta_1=None,
                  initial_vol=None, *args, **kwargs):
         super(GARCH11, self).__init__(*args, **kwargs)
+        self.param_names = ['omega', 'alpha_1', 'beta_1', 'initial_vol']
 
         self.omega = omega
         self.alpha_1 = alpha_1
@@ -141,6 +144,7 @@ class EulerMaruyama(Continuous):
     """
     def __init__(self, dt, sde_fn, sde_pars, *args, **kwds):
         super(EulerMaruyama, self).__init__(*args, **kwds)
+        self.param_names = ['dt']
         self.dt = dt
         self.sde_fn = sde_fn
         self.sde_pars = sde_pars

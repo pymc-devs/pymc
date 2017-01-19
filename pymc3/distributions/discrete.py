@@ -40,6 +40,7 @@ class Binomial(Discrete):
 
     def __init__(self, n, p, *args, **kwargs):
         super(Binomial, self).__init__(*args, **kwargs)
+        self.param_names = ['n', 'p']
         self.n = n
         self.p = p
         self.mode = tt.cast(tt.round(n * p), self.dtype)
@@ -91,6 +92,7 @@ class BetaBinomial(Discrete):
 
     def __init__(self, alpha, beta, n, *args, **kwargs):
         super(BetaBinomial, self).__init__(*args, **kwargs)
+        self.param_names = ['n', 'alpha', 'beta']
         self.alpha = alpha
         self.beta = beta
         self.n = n
@@ -147,6 +149,7 @@ class Bernoulli(Discrete):
 
     def __init__(self, p, *args, **kwargs):
         super(Bernoulli, self).__init__(*args, **kwargs)
+        self.param_names = ['p']
         self.p = p
         self.mode = tt.cast(tt.round(p), 'int8')
 
@@ -193,6 +196,7 @@ class Poisson(Discrete):
 
     def __init__(self, mu, *args, **kwargs):
         super(Poisson, self).__init__(*args, **kwargs)
+        self.param_names = ['mu']
         self.mu = mu
         self.mode = tt.floor(mu).astype('int32')
 
@@ -240,6 +244,7 @@ class NegativeBinomial(Discrete):
 
     def __init__(self, mu, alpha, *args, **kwargs):
         super(NegativeBinomial, self).__init__(*args, **kwargs)
+        self.param_names = ['mu', 'alpha']
         self.mu = mu
         self.alpha = alpha
         self.mode = tt.floor(mu).astype('int32')
@@ -289,6 +294,7 @@ class Geometric(Discrete):
 
     def __init__(self, p, *args, **kwargs):
         super(Geometric, self).__init__(*args, **kwargs)
+        self.param_names = ['p']
         self.p = p
         self.mode = 1
 
@@ -326,6 +332,7 @@ class DiscreteUniform(Discrete):
 
     def __init__(self, lower, upper, *args, **kwargs):
         super(DiscreteUniform, self).__init__(*args, **kwargs)
+        self.param_names = ['lower', 'upper']
         self.lower = tt.floor(lower).astype('int32')
         self.upper = tt.floor(upper).astype('int32')
         self.mode = tt.maximum(
@@ -373,6 +380,7 @@ class Categorical(Discrete):
 
     def __init__(self, p, *args, **kwargs):
         super(Categorical, self).__init__(*args, **kwargs)
+        self.param_names = ['p']
         try:
             self.k = tt.shape(p)[-1].tag.test_value
         except AttributeError:
@@ -419,12 +427,13 @@ class Constant(Discrete):
 
     Parameters
     ----------
-    value : float or int
+    c : float or int
         Constant parameter.
     """
 
     def __init__(self, c, *args, **kwargs):
         super(Constant, self).__init__(*args, **kwargs)
+        self.param_names = ['c']
         self.mean = self.median = self.mode = self.c = c
 
     def random(self, point=None, size=None, repeat=None):
@@ -479,6 +488,7 @@ class ZeroInflatedPoisson(Discrete):
 
     def __init__(self, theta, psi, *args, **kwargs):
         super(ZeroInflatedPoisson, self).__init__(*args, **kwargs)
+        self.param_names = ['theta', 'psi']
         self.theta = theta
         self.psi = psi
         self.pois = Poisson.dist(theta)
@@ -530,6 +540,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     def __init__(self, mu, alpha, psi, *args, **kwargs):
         super(ZeroInflatedNegativeBinomial, self).__init__(*args, **kwargs)
+        self.param_names = ['mu', 'alpha', 'psi']
         self.mu = mu
         self.alpha = alpha
         self.psi = psi

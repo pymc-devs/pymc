@@ -193,7 +193,7 @@ class StickBreaking(Transform):
     Parameters
     ----------
     eps : float, positive value
-        A small value for numerical stability in invlogit. 
+        A small value for numerical stability in invlogit.
     """
 
     name = "stickbreaking"
@@ -250,7 +250,7 @@ class Circular(Transform):
 
     def forward(self, x):
         return x
-        
+
     def jacobian_det(self, x):
         return 0
 

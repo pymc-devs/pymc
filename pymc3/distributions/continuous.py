@@ -126,7 +126,7 @@ class Uniform(Continuous):
     def __init__(self, lower=0, upper=1, transform='interval',
                  *args, **kwargs):
         super(Uniform, self).__init__(*args, **kwargs)
-
+        self.param_names = ['lower', 'upper']
         self.lower = lower
         self.upper = upper
         self.mean = (upper + lower) / 2.
@@ -206,7 +206,7 @@ class Normal(Continuous):
         # called to display a warning we have to fetch the args and
         # kwargs manually.  After a certain period we should revert
         # back to the old calling signature.
-
+        self.param_names = ['mu', 'sd', 'tau']
         if len(args) == 1:
             mu = args[0]
             sd = kwargs.pop('sd', None)
@@ -273,6 +273,7 @@ class HalfNormal(PositiveContinuous):
 
     def __init__(self, sd=None, tau=None, *args, **kwargs):
         super(HalfNormal, self).__init__(*args, **kwargs)
+        self.param_names = ['sd', 'tau']
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.mean = tt.sqrt(2 / (np.pi * self.tau))
         self.variance = (1. - 2 / np.pi) / self.tau
@@ -352,6 +353,7 @@ class Wald(PositiveContinuous):
 
     def __init__(self, mu=None, lam=None, phi=None, alpha=0., *args, **kwargs):
         super(Wald, self).__init__(*args, **kwargs)
+        self.param_names = ['mu', 'lam', 'phi', 'alpha']
         self.mu, self.lam, self.phi = self.get_mu_lam_phi(mu, lam, phi)
         self.alpha = alpha
         self.mean = self.mu + alpha
@@ -458,6 +460,7 @@ class Beta(UnitContinuous):
                  *args, **kwargs):
         super(Beta, self).__init__(*args, **kwargs)
 
+        self.param_names = ['alpha', 'beta', 'mu', 'sd']
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
         self.beta = beta
@@ -520,6 +523,7 @@ class Exponential(PositiveContinuous):
 
     def __init__(self, lam, *args, **kwargs):
         super(Exponential, self).__init__(*args, **kwargs)
+        self.param_names = ['lam']
         self.lam = lam
         self.mean = 1. / lam
         self.median = self.mean * tt.log(2)
@@ -565,6 +569,7 @@ class Laplace(Continuous):
 
     def __init__(self, mu, b, *args, **kwargs):
         super(Laplace, self).__init__(*args, **kwargs)
+        self.param_names = ['mu', 'b']
         self.b = b
         self.mean = self.median = self.mode = self.mu = mu
 
@@ -617,6 +622,7 @@ class Lognormal(PositiveContinuous):
     def __init__(self, mu=0, sd=None, tau=None, *args, **kwargs):
         super(Lognormal, self).__init__(*args, **kwargs)
 
+        self.param_names = ['mu', 'tau']
         self.mu = mu
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
 
@@ -678,6 +684,7 @@ class StudentT(Continuous):
 
     def __init__(self, nu, mu=0, lam=None, sd=None, *args, **kwargs):
         super(StudentT, self).__init__(*args, **kwargs)
+        self.param_names = ['nu', 'mu', 'lam']
         self.nu = nu = tt.as_tensor_variable(nu)
         self.lam, self.sd = get_tau_sd(tau=lam, sd=sd)
         self.mean = self.median = self.mode = self.mu = mu
@@ -845,6 +852,7 @@ class HalfCauchy(PositiveContinuous):
 
     def __init__(self, beta, *args, **kwargs):
         super(HalfCauchy, self).__init__(*args, **kwargs)
+        self.param_names = ['beta']
         self.mode = 0
         self.median = beta
         self.beta = beta
@@ -1257,6 +1265,7 @@ class ExGaussian(Continuous):
 
     def __init__(self, mu, sigma, nu, *args, **kwargs):
         super(ExGaussian, self).__init__(*args, **kwargs)
+        self.param_names = ['mu', 'sigma', 'nu']
         self.mu = mu
         self.sigma = sigma
         self.nu = nu
@@ -1319,6 +1328,7 @@ class VonMises(Continuous):
     def __init__(self, mu=0.0, kappa=None, transform='circular',
                  *args, **kwargs):
         super(VonMises, self).__init__(*args, **kwargs)
+        self.param_names = ['mu', 'kappa']
         self.mean = self.median = self.mode = self.mu = mu
         self.kappa = kappa
         self.variance = 1 - i1(kappa) / i0(kappa)
@@ -1382,6 +1392,7 @@ class SkewNormal(Continuous):
     """
     def __init__(self, mu=0.0, sd=None, tau=None, alpha=1,  *args, **kwargs):
         super(SkewNormal, self).__init__(*args, **kwargs)
+        self.param_names = ['mu', 'sd', 'tau', 'alpha']
         self.mu = mu
         self.tau, self.sd = get_tau_sd(tau=tau, sd=sd)
         self.alpha = alpha
