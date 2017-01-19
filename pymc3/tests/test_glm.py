@@ -29,7 +29,7 @@ class TestGLM(SeededTest):
 
     def test_linear_component(self):
         with Model() as model:
-            y_est, _ = LinearComponent('y ~ x', self.data_linear)
+            y_est, _ = LinearComponent.from_formula('y ~ x', self.data_linear)
             sigma = Uniform('sigma', 0, 20)
             Normal('y_obs', mu=y_est, sd=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
@@ -71,8 +71,7 @@ class TestGLM(SeededTest):
 
     def test_from_xy(self):
         with Model():
-            GLM.from_formula.from_xy(
-                self.data_logistic['x'],
+            GLM(self.data_logistic['x'],
                 self.data_logistic['y'],
                 family=families.Binomial(link=families.logit),
                 name='glm1')
