@@ -1,5 +1,5 @@
 import unittest
-import theano.tensor as tt
+from theano import theano, tensor as tt
 import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal
 from pymc3 import Potential, Deterministic
@@ -118,3 +118,13 @@ class TestNested(unittest.TestCase):
             self.assertTrue(model is model.root)
             with pm.Model() as sub:
                 self.assertTrue(model is sub.root)
+
+    def test_density_scaling(self):
+        with pm.Model() as model1:
+            Normal('n', observed=[[1]], total_size=1)
+            p1 = theano.function([], model1.logpt)
+
+        with pm.Model() as model2:
+            Normal('n', observed=[[1]], total_size=2)
+            p2 = theano.function([], model2.logpt)
+            self.assertEqual(p1() * 2, p2())
