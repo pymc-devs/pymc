@@ -24,7 +24,6 @@ from .plots import *
 
 from .tests import test
 
-from . import glm
 from .data import *
 
 import logging

@@ -1,7 +1,8 @@
 import numpy as np
 
 from .helpers import SeededTest
-from pymc3 import glm, Model, Uniform, Normal, find_MAP, Slice, sample
+from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
+from pymc3.linear_model import glm
 
 
 # Generate data
