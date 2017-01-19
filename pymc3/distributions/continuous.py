@@ -460,7 +460,7 @@ class Beta(UnitContinuous):
                  *args, **kwargs):
         super(Beta, self).__init__(*args, **kwargs)
 
-        self.param_names = ['alpha', 'beta', 'mu', 'sd']
+        self.param_names = ['alpha', 'beta']
         alpha, beta = self.get_alpha_beta(alpha, beta, mu, sd)
         self.alpha = alpha
         self.beta = beta
