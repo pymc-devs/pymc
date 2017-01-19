@@ -746,8 +746,10 @@ class FreeRV(Factor, TensorVariable):
                 distribution.shape, distribution.dtype) * distribution.default()
             logp_elemwiset = distribution.logp(self)
             if total_size is None:
-                coef = tt.as_tensor(1)
+                coef = tt.constant(1)
             else:
+                assert logp_elemwiset.ndim >= 1, ('Variable with scaled density '
+                                                  'needs to be at least 1 dimensional')
                 coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
             self.logp_elemwiset = logp_elemwiset * coef
             self.model = model
@@ -833,8 +835,10 @@ class ObservedRV(Factor, TensorVariable):
 
             logp_elemwiset = distribution.logp(data)
             if total_size is None:
-                coef = tt.as_tensor(1)
+                coef = tt.constant(1)
             else:
+                assert logp_elemwiset.ndim >= 1, ('Variable with scaled density '
+                                                  'needs to be at least 1 dimensional')
                 coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
             self.logp_elemwiset = logp_elemwiset * coef
             self.model = model
@@ -877,8 +881,10 @@ class MultiObservedRV(Factor):
                                if datum.missing_values is not None]
         logp_elemwiset = distribution.logp(**self.data)
         if total_size is None:
-            coef = tt.as_tensor(1)
+            coef = tt.constant(1)
         else:
+            assert logp_elemwiset.ndim >= 1, ('Variable with scaled density '
+                                              'needs to be at least 1 dimensional')
             coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
         self.logp_elemwiset = logp_elemwiset * coef
         self.model = model
