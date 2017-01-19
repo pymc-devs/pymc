@@ -2,8 +2,7 @@ import numpy as np
 
 from .helpers import SeededTest
 from pymc3 import Model, Uniform, Normal, find_MAP, Slice, sample
-from pymc3.linear_model import glm
-
+from pymc3 import families, GLM, LinearComponent
 
 # Generate data
 def generate_data(intercept, slope, size=700):
@@ -30,7 +29,7 @@ class TestGLM(SeededTest):
 
     def test_linear_component(self):
         with Model() as model:
-            y_est, _ = glm.linear_component('y ~ x', self.data_linear)
+            y_est, _ = LinearComponent('y ~ x', self.data_linear)
             sigma = Uniform('sigma', 0, 20)
             Normal('y_obs', mu=y_est, sd=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
@@ -43,7 +42,7 @@ class TestGLM(SeededTest):
 
     def test_glm(self):
         with Model() as model:
-            glm.glm('y ~ x', self.data_linear)
+            GLM.from_formula('y ~ x', self.data_linear)
             step = Slice(model.vars)
             trace = sample(500, step, progressbar=False, random_seed=self.random_seed)
 
@@ -53,8 +52,8 @@ class TestGLM(SeededTest):
 
     def test_glm_link_func(self):
         with Model() as model:
-            glm.glm('y ~ x', self.data_logistic,
-                    family=glm.families.Binomial(link=glm.families.logit))
+            GLM.from_formula('y ~ x', self.data_logistic,
+                    family=families.Binomial(link=families.logit))
             step = Slice(model.vars)
             trace = sample(1000, step, progressbar=False, random_seed=self.random_seed)
 
@@ -63,17 +62,17 @@ class TestGLM(SeededTest):
 
     def test_more_than_one_glm_is_ok(self):
         with Model():
-            glm.glm('y ~ x', self.data_logistic,
-                    family=glm.families.Binomial(link=glm.families.logit),
+            GLM.from_formula('y ~ x', self.data_logistic,
+                    family=families.Binomial(link=families.logit),
                     name='glm1')
-            glm.glm('y ~ x', self.data_logistic,
-                    family=glm.families.Binomial(link=glm.families.logit),
+            GLM.from_formula('y ~ x', self.data_logistic,
+                    family=families.Binomial(link=families.logit),
                     name='glm2')
 
     def test_from_xy(self):
         with Model():
-            glm.glm.from_xy(
+            GLM.from_formula.from_xy(
                 self.data_logistic['x'],
                 self.data_logistic['y'],
-                family=glm.families.Binomial(link=glm.families.logit),
+                family=families.Binomial(link=families.logit),
                 name='glm1')

@@ -1,7 +1,7 @@
 import theano.tensor as tt
 import numpy as np
 from ..distributions import Normal, Flat
-from .glm import families
+from . import families
 from ..model import Model, Deterministic
 from .utils import any_to_tensor_and_labels
 
@@ -102,7 +102,7 @@ class GLM(LinearComponent):
             defaults to Normal.dist(mu=0, tau=1.0E-6)
     init : dict - test_vals for coefficients
     vars : dict - random variables instead of creating new ones
-    family : pymc3.glm.families object
+    family : pymc3.linear_models.families object
     """
     def __init__(self, x, y, intercept=True, labels=None,
                  priors=None, vars=None, family='normal', name='', model=None):
