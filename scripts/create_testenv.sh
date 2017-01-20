@@ -37,6 +37,7 @@ pip install --no-deps numdifftools
 pip install git+https://github.com/Theano/Theano.git
 pip install git+https://github.com/mahmoudimus/nose-timer.git
 pip install h5py
+pip install emcee
 
 if [ -z ${NO_SETUP} ]
 then
