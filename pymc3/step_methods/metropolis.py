@@ -70,6 +70,11 @@ class Metropolis(ArrayStepShared):
         compilation mode passed to Theano functions
     """
     default_blocked = False
+    generates_stats = True
+    stats_dtypes = [{
+        'accept': np.float64,
+        'tune': np.bool,
+    }]
 
     def __init__(self, vars=None, S=None, proposal_dist=NormalProposal, scaling=1.,
                  tune=True, tune_interval=100, model=None, mode=None, **kwargs):
@@ -124,14 +129,20 @@ class Metropolis(ArrayStepShared):
         else:
             q = floatX(q0 + delta)
 
-        q_new = metrop_select(self.delta_logp(q, q0), q, q0)
+        accept = self.delta_logp(q, q0)
+        q_new = metrop_select(accept, q, q0)
 
         if q_new is q:
             self.accepted += 1
 
         self.steps_until_tune -= 1
 
-        return q_new
+        stats = {
+            'tune': self.tune,
+            'accept': np.exp(accept),
+        }
+
+        return q_new, [stats]
 
     @staticmethod
     def competence(var):

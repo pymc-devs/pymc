@@ -29,6 +29,15 @@ class NUTS(BaseHMC):
     The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo.
     """
     default_blocked = True
+    generates_stats = True
+    stats_dtypes = [{
+        'depth': np.int64,
+        'step_size': np.float64,
+        'tune': np.bool,
+        'accept': np.float64,
+        'step_size_bar': np.float64,
+        'tree_size': np.float64,
+    }]
 
     def __init__(self, vars=None, Emax=1000, target_accept=0.8,
                  gamma=0.05, k=0.75, t0=10, **kwargs):
@@ -116,7 +125,16 @@ class NUTS(BaseHMC):
 
         self.m += 1
 
-        return q
+        stats = {
+            'depth': depth,
+            'step_size': step_size,
+            'tune': self.tune,
+            'accept': a * 1. / na,
+            'step_size_bar': np.exp(self.log_step_size_bar),
+            'tree_size': tree_size,
+        }
+
+        return q, [stats]
 
     @staticmethod
     def competence(var):

@@ -25,8 +25,6 @@ class BaseHMC(ArrayStepShared):
         is_cov : bool, default=False
             Treat scaling as a covariance matrix/vector if True, else treat it as a
             precision matrix/vector
-        state
-            State object
         model : pymc3 Model instance.  default=Context model
         blocked: Boolean, default True
         use_single_leapfrog: Boolean, will leapfrog steps take a single step at a time.
