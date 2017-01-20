@@ -1,7 +1,5 @@
 import theano
-from theano.ifelse import ifelse
-
-from .arraystep import ArrayStepShared, ArrayStep, Competence
+from .arraystep import ArrayStepShared
 from ..model import modelcontext
 from ..theanof import inputvars, make_shared_replacements
 from ..blocking import ArrayOrdering, DictToArrayBijection
