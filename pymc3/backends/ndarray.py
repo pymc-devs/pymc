@@ -2,6 +2,8 @@
 
 Store sampling values in memory as a NumPy array.
 """
+from collections import OrderedDict
+
 import numpy as np
 from ..backends import base
 
@@ -173,6 +175,107 @@ class NDArray(base.BaseTrace):
         idx = int(idx)
         return {varname: values[idx]
                 for varname, values in self.samples.items()}
+
+
+class MultiNDArray(NDArray):
+    def __init__(self, nparticles=1, name=None, model=None, vars=None):
+        super(MultiNDArray, self).__init__(name, model, vars)
+        self.nparticles = nparticles
+        self.samples = OrderedDict([])
+
+
+    def iter_fn(self, point, particle):
+        d = {}
+        for k, v in point.iteritems():
+            d[k] = v[..., particle]
+        return self.fn(d)
+
+    def record(self, point):
+        """
+        :param q:
+        :return:
+        """
+        for w in range(self.nparticles):
+            for varname, value in zip(self.varnames, self.iter_fn(point, w)):
+                self.samples[varname][w, self.draw_idx] = value
+        self.draw_idx += 1
+
+    def setup(self, draws, chain):
+        """Perform chain-specific setup.
+
+        Parameters
+        ----------
+        draws : int
+            Expected number of draws
+        chain : int
+            Chain number
+        """
+        self.chain = chain
+        if self.samples:  # Concatenate new array if chain is already present.
+            old_draws = len(self)
+            self.draws = old_draws + draws
+            self.draws_idx = old_draws
+            for varname, shape in self.var_shapes.items():
+                old_var_samples = self.samples[varname]
+                new_var_samples = np.zeros((self.nparticles, draws) + shape,
+                                           self.var_dtypes[varname])
+                self.samples[varname] = np.concatenate((old_var_samples,
+                                                        new_var_samples),
+                                                       axis=0)
+        else:  # Otherwise, make array of zeros for each variable.
+            self.draws = draws
+            for varname, shape in self.var_shapes.items():
+                self.samples[varname] = np.zeros((self.nparticles, draws) + shape,
+                                                 dtype=self.var_dtypes[varname])
+
+    def close(self):
+        if self.draw_idx == self.draws:
+            return
+        # Remove trailing zeros if interrupted before completed all
+        # draws.
+        self.samples = {var: vtrace[:, :self.draw_idx]
+                        for var, vtrace in self.samples.items()}
+
+    # Selection methods
+
+    def __len__(self):
+        if not self.samples:  # `setup` has not been called.
+            return 0
+        varname = self.varnames[0]
+        return self.samples[varname].shape[1]
+
+    def get_values(self, varname, burn=0, thin=1, particle_idx=slice(None)):
+        """Get values from trace.
+
+        Parameters
+        ----------
+        varname : str
+        burn : int
+        thin : int
+        particle_idx: int
+
+        Returns
+        -------
+        A NumPy array
+        """
+        return self.samples[varname][particle_idx, burn::thin]
+
+    def _slice(self, step_idx, particle_idx=slice(None)):
+        # Slicing directly instead of using _slice_as_ndarray to
+        # support stop value in slice (which is needed by
+        # iter_sample).
+
+        sliced = MultiNDArray(model=self.model, vars=self.vars)
+        sliced.chain = self.chain
+        sliced.samples = {varname: values[particle_idx, step_idx]
+                          for varname, values in self.samples.items()}
+        return sliced
+
+    def get_particle_trace(self, particle_idx):
+        sliced = NDArray(model=self.model, vars=self.vars)
+        sliced.chain = self.chain
+        sliced.samples = {varname: values[particle_idx]
+                          for varname, values in self.samples.items()}
 
 
 def _slice_as_ndarray(strace, idx):
