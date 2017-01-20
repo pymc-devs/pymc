@@ -749,7 +749,7 @@ class FreeRV(Factor, TensorVariable):
             if total_size is None:
                 coef = tt.constant(1)
             else:
-                if logp_elemwiset.ndim >= 1:
+                if not logp_elemwiset.ndim >= 1:
                     raise ValueError('Variable with scaled density '
                                      'needs to be at least 1 dimensional')
                 coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
@@ -840,7 +840,7 @@ class ObservedRV(Factor, TensorVariable):
             if total_size is None:
                 coef = tt.constant(1)
             else:
-                if logp_elemwiset.ndim >= 1:
+                if not logp_elemwiset.ndim >= 1:
                     raise ValueError('Variable with scaled density '
                                      'needs to be at least 1 dimensional')
                 coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
@@ -887,7 +887,7 @@ class MultiObservedRV(Factor):
         if total_size is None:
             coef = tt.constant(1)
         else:
-            if logp_elemwiset.ndim >= 1:
+            if not logp_elemwiset.ndim >= 1:
                 raise ValueError('Variable with scaled density '
                                  'needs to be at least 1 dimensional')
             coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
