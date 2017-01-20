@@ -1,4 +1,3 @@
-import itertools
 import types
 import pkgutil
 import io
@@ -35,13 +34,19 @@ class DataGenerator(object):
                 isinstance(generator, types.GeneratorType)):
             raise TypeError('Object should be generator like')
         self.test_value = next(generator)
-        self.gen = itertools.chain([self.test_value], generator)
+        # make pickling potentially possible
+        self._yielded_test_value = False
+        self.gen = generator
         self.tensortype = tt.TensorType(
             self.test_value.dtype,
             ((False, ) * self.test_value.ndim))
 
     def __next__(self):
-        return next(self.gen)
+        if not self._yielded_test_value:
+            self._yielded_test_value = True
+            return self.test_value
+        else:
+            return next(self.gen)
 
     next = __next__
 
