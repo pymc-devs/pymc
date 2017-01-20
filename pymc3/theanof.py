@@ -272,7 +272,7 @@ class GeneratorOp(Op):
 
     def perform(self, node, inputs, output_storage, params=None):
         try:
-            output_storage[0][0] = self.generator.__next__()
+            output_storage[0][0] = next(self.generator)
         except StopIteration:
             output_storage[0][0] = np.nan
 
