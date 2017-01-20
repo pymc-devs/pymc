@@ -126,7 +126,8 @@ class NDArray(base.BaseTrace):
     def __len__(self):
         if not self.samples:  # `setup` has not been called.
             return 0
-        return self.draw_idx
+        varname = self.varnames[0]
+        return self.samples[varname].shape[0]
 
     def get_values(self, varname, burn=0, thin=1):
         """Get values from trace.
