@@ -300,7 +300,8 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
         strace.setup(draws, chain, step.stats_dtypes)
     else:
         strace.setup(draws, chain)
-    for s in step.methods:
+    methods = step.methods if isinstance(step, CompoundStep) else [step]
+    for s in methods:
         s._draws = draws
     for i in range(draws):
         if i == tune:
