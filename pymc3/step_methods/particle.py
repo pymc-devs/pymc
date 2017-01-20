@@ -57,7 +57,7 @@ class EmceeSamplerStep(ParticleStep):
 
     def setup_step(self, point_array):
         assert point_array.shape == (self.nparticles, self.emcee_sampler.dim)
-        self.sample_generator = self.emcee_sampler.sample(point_array, storechain=True, iterations=self._draws)
+        self.sample_generator = self.emcee_sampler.sample(point_array, storechain=False, iterations=self._draws)
 
     def astep(self, point_array):
         if not hasattr(self, 'sample_generator'):
