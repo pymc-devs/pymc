@@ -211,6 +211,7 @@ class MultiNDArray(NDArray):
             Chain number
         """
         self.chain = chain
+        self.chain_coverage = range(chain, chain+self.nparticles)
         if self.samples:  # Concatenate new array if chain is already present.
             old_draws = len(self)
             self.draws = old_draws + draws
@@ -271,12 +272,20 @@ class MultiNDArray(NDArray):
                           for varname, values in self.samples.items()}
         return sliced
 
-    def get_particle_trace(self, particle_idx):
+    def get_particle_trace(self, particle_index):
+        assert isinstance(particle_index, int)
         sliced = NDArray(model=self.model, vars=self.vars)
-        sliced.chain = self.chain
-        sliced.samples = {varname: values[particle_idx]
+        sliced.chain = self.chain_coverage[particle_index]
+        sliced.samples = {varname: values[particle_index]
                           for varname, values in self.samples.items()}
+        return sliced
 
+    def get_flat_trace(self):
+        sliced = NDArray(model=self.model, vars=self.vars)
+        sliced.chain = self.chain_coverage[0]
+        sliced.samples = {varname: values.ravel()
+                          for varname, values in self.samples.items()}
+        return sliced
 
 def _slice_as_ndarray(strace, idx):
     if idx.start is None:

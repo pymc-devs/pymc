@@ -1,8 +1,12 @@
+import theano
+from theano.ifelse import ifelse
+
 from .arraystep import ArrayStepShared, ArrayStep, Competence
 from ..model import modelcontext
 from ..theanof import inputvars, make_shared_replacements
 from ..blocking import ArrayOrdering, DictToArrayBijection
 from emcee import EnsembleSampler
+import pymc3 as pm
 import numpy as np
 
 class ParticleStep(ArrayStepShared):
@@ -25,6 +29,7 @@ class ParticleStep(ArrayStepShared):
         self.ordering = ArrayOrdering(vars, self.nparticles)
         self.shared = {str(var): shared for var, shared in shared.items()}
         self.blocked = True
+        self.t_func = logp(model.logpt, vars, shared)
 
     def step(self, point):
         for var, share in self.shared.items():
@@ -41,12 +46,12 @@ class EmceeSamplerStep(ParticleStep):
     def __init__(self, nparticles=None, model=None, mode=None, **kwargs):
         super(EmceeSamplerStep, self).__init__(nparticles, model, mode, **kwargs)
         dim = len(self.model.vars)
-        t_func = self.model.makefn([self.model.logpt])
-        def lnpostfn(p):
-            s = t_func(*p)
-            return s[0]
-        self.emcee_sampler = EnsembleSampler(self.nparticles, dim, lnpostfn, **kwargs)
-        self.names = []
+        def lnprob(p):
+            s = self.t_func(p)
+            if np.isnan(s):
+                return -np.inf
+            return s
+        self.emcee_sampler = EnsembleSampler(self.nparticles, dim, lnprob, **kwargs)
 
 
     def flatten_args(self):
@@ -61,3 +66,12 @@ class EmceeSamplerStep(ParticleStep):
             self.setup_step(point_array)
         q, lnprob, state = self.sample_generator.next()
         return q.T
+
+
+def logp(logp, vars, shared):
+    [logp0], inarray0 = pm.join_nonshared_inputs([logp], vars, shared)
+    tensor_type = inarray0.type
+
+    f = theano.function([inarray0], logp0)
+    f.trust_input = True
+    return f
