@@ -85,7 +85,7 @@ def assign_step_methods(model, step=None, methods=(NUTS, HamiltonianMC, Metropol
 
 def sample(draws, step=None, init='advi', n_init=200000, start=None,
            trace=None, chain=0, njobs=1, tune=None, progressbar=True,
-           model=None, random_seed=-1, ):
+           model=None, random_seed=-1):
     """
     Draw a number of samples using the given step method.
     Multiple step methods supported via compound step method

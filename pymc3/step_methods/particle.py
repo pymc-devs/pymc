@@ -40,11 +40,11 @@ class ParticleStep(ArrayStepShared):
         return bij.rmap(apoint)
 
 
-class EmceeSamplerStep(ParticleStep):
+class Emcee(ParticleStep):
     default_blocked = True
 
     def __init__(self, nparticles=None, model=None, mode=None, **kwargs):
-        super(EmceeSamplerStep, self).__init__(nparticles, model, mode, **kwargs)
+        super(Emcee, self).__init__(nparticles, model, mode, **kwargs)
 
         def lnprob(p):
             s = self.t_func(p)
@@ -67,7 +67,6 @@ class EmceeSamplerStep(ParticleStep):
 def logp(logp, vars, shared):
     [logp0], inarray0 = pm.join_nonshared_inputs([logp], vars, shared)
     tensor_type = inarray0.type
-
     f = theano.function([inarray0], logp0)
     f.trust_input = True
     return f
