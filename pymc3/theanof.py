@@ -1,3 +1,4 @@
+import types
 import numpy as np
 
 from .vartypes import typefilter, continuous_types
@@ -263,9 +264,8 @@ class GeneratorOp(Op):
     __props__ = ('generator',)
 
     def __init__(self, gen):
-        if not isinstance(gen, DataGenerator):
-            gen = DataGenerator(gen)
         super(GeneratorOp, self).__init__()
+        gen = self._cast_gen(gen)
         self.generator = gen
         self.itypes = []
         self.otypes = [self.generator.tensortype]
@@ -281,12 +281,33 @@ class GeneratorOp(Op):
     def do_constant_folding(self, node):
         return False
 
+    class _set_gen(object):
+        """For pickling"""
+        def __init__(self, op):
+            self.op = op
+
+        def __call__(self, gen):
+            self.op.set_gen(gen)
+
     @change_flags(compute_test_value='off')
     def __call__(self, *args, **kwargs):
         rval = super(GeneratorOp, self).__call__(*args, **kwargs)
+        rval.set_gen = self._set_gen(self)
         rval.tag.test_value = self.generator.test_value
         return rval
 
+    def set_gen(self, gen):
+        gen = self._cast_gen(gen)
+        assert gen.tensortype == self.generator.tensortype
+        self.generator = gen
+
+    @staticmethod
+    def _cast_gen(gen):
+        if not isinstance(gen, DataGenerator):
+            assert (hasattr(gen, '__next__') or
+                    isinstance(gen, types.GeneratorType))
+            gen = DataGenerator(gen)
+        return gen
 
 def generator(gen):
     """shortcut for `GeneratorOp`"""
