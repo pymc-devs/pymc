@@ -1,4 +1,5 @@
 import itertools
+import types
 import pkgutil
 import io
 
@@ -30,6 +31,9 @@ class DataGenerator(object):
     at the first item, preserving the order of the resulting generator
     """
     def __init__(self, generator):
+        if not (hasattr(generator, '__next__') or
+                isinstance(generator, types.GeneratorType)):
+            raise TypeError('Object should be generator like')
         self.test_value = next(generator)
         self.gen = itertools.chain([self.test_value], generator)
         self.tensortype = tt.TensorType(

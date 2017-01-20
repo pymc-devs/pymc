@@ -1,4 +1,3 @@
-import types
 import numpy as np
 
 from .vartypes import typefilter, continuous_types
@@ -265,7 +264,8 @@ class GeneratorOp(Op):
 
     def __init__(self, gen):
         super(GeneratorOp, self).__init__()
-        gen = self._cast_gen(gen)
+        if not isinstance(gen, DataGenerator):
+            gen = DataGenerator(gen)
         self.generator = gen
         self.itypes = []
         self.otypes = [self.generator.tensortype]
@@ -297,18 +297,12 @@ class GeneratorOp(Op):
         return rval
 
     def set_gen(self, gen):
-        gen = self._cast_gen(gen)
+        if not isinstance(gen, DataGenerator):
+            gen = DataGenerator(gen)
         if not gen.tensortype == self.generator.tensortype:
             raise ValueError('New generator should yield the same type')
         self.generator = gen
 
-    @staticmethod
-    def _cast_gen(gen):
-        if not isinstance(gen, DataGenerator):
-            assert (hasattr(gen, '__next__') or
-                    isinstance(gen, types.GeneratorType))
-            gen = DataGenerator(gen)
-        return gen
 
 def generator(gen):
     """shortcut for `GeneratorOp`"""
