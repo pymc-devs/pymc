@@ -4,6 +4,7 @@ import numpy as np
 import pymc3 as pm
 from pymc3.distributions import HalfCauchy, Normal
 from pymc3 import Potential, Deterministic
+from pymc3.theanof import generator
 
 
 class NewModel(pm.Model):
@@ -152,7 +153,8 @@ class TestScaling(unittest.TestCase):
             p1 = theano.function([], model1.logpt)
 
         with pm.Model() as model2:
-            Normal('n', observed=gen2(), total_size=100)
+            gen_var = generator(gen2())
+            Normal('n', observed=gen_var, total_size=100)
             p2 = theano.function([], model2.logpt)
 
         # We want densities to be equal
