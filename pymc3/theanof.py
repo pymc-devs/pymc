@@ -1,19 +1,27 @@
 import numpy as np
 import theano
 
-from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
 from theano.gof import Op
 from theano.configparser import change_flags
+
+from .vartypes import typefilter, continuous_types
 from .memoize import memoize
 from .blocking import ArrayOrdering
 from .data import DataGenerator
 
-__all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars',
-           'cont_inputs', 'floatX', 'jacobian',
-           'CallableTensor', 'join_nonshared_inputs',
-           'make_shared_replacements', 'generator']
+__all__ = ['gradient',
+           'hessian',
+           'hessian_diag',
+           'inputvars',
+           'cont_inputs',
+           'floatX',
+           'jacobian',
+           'CallableTensor',
+           'join_nonshared_inputs',
+           'make_shared_replacements',
+           'generator']
 
 
 def inputvars(a):
@@ -325,3 +333,42 @@ def generator(gen, default=None):
         - var.set_default(value) : sets new default value (None erases default value)
     """
     return GeneratorOp(gen, default)()
+
+
+@change_flags(compute_test_value='off')
+def launch_rng(rng):
+    """Helper function for safe launch of rng.
+    If not launched, there will be problems with test_value
+    Parameters
+    ----------
+    rng : theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+    """
+    state = rng.rstate
+    rng.inc_rstate()
+    rng.set_rstate(state)
+
+_tt_rng = MRG_RandomStreams()
+launch_rng(_tt_rng)
+
+
+def tt_rng():
+    """Get the package-level random number generator.
+    Returns
+    -------
+    `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+        `theano.sandbox.rng_mrg.MRG_RandomStreams`
+        instance passed to the most recent call of `set_tt_rng`
+    """
+    return _tt_rng
+
+
+def set_tt_rng(new_rng):
+    """Set the package-level random number generator.
+    Parameters
+    ----------
+    new_rng : `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
+        The random number generator to use.
+    """
+    global _tt_rng
+    _tt_rng = new_rng
+    launch_rng(_tt_rng)
