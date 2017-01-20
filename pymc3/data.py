@@ -39,6 +39,8 @@ class DataGenerator(object):
     def __next__(self):
         return next(self.gen)
 
+    next = __next__
+
     def __iter__(self):
         return self
 

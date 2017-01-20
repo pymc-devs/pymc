@@ -1,5 +1,6 @@
 import threading
 import six
+import types
 
 import numpy as np
 import theano
@@ -774,7 +775,8 @@ def pandas_to_array(data):
         return data
     elif isinstance(data, theano.gof.graph.Variable):
         return data
-    elif hasattr(data, '__next__'):
+    elif (hasattr(data, '__next__') or
+          isinstance(data, types.GeneratorType)):
         return generator(data)
     else:
         return np.asarray(data)
