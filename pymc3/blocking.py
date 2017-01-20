@@ -28,7 +28,7 @@ class ArrayOrdering(object):
             self.vmap.append(VarMap(str(var), slc, var.dshape, var.dtype))
             dim += var.dsize
         if self.nparticles is not None:
-            self.dimensions = (dim, self.nparticles)
+            self.dimensions = (self.nparticles, dim)
         else:
             self.dimensions = dim
 
@@ -59,10 +59,10 @@ class DictToArrayBijection(object):
         dpt : dict
         """
         apt = np.empty(self.ordering.dimensions, dtype=self.array_dtype)
-        for var, slc, _, _ in self.ordering.vmap:
+        for var, slc, shp, _ in self.ordering.vmap:
             if self.ordering.nparticles is not None:
                 for d in range(self.ordering.nparticles):
-                    apt[slc, d] = dpt[var][..., d].ravel()
+                    apt[d, slc] = dpt[var][d].ravel()
             else:
                 apt[slc] = dpt[var].ravel()
         return apt
@@ -80,7 +80,7 @@ class DictToArrayBijection(object):
         for var, slc, shp, dtyp in self.ordering.vmap:
             if self.ordering.nparticles is not None:
                 for d in range(self.ordering.nparticles):
-                    dpt[var][..., d] = np.atleast_1d(apt)[slc, d].reshape(shp).astype(dtyp)
+                    dpt[var][d] = np.atleast_1d(apt)[d, slc].reshape(shp).astype(dtyp)
             else:
                 dpt[var] = np.atleast_1d(apt)[slc].reshape(shp).astype(dtyp)
 

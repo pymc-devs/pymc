@@ -22,14 +22,16 @@ class ParticleStep(ArrayStepShared):
         self.mode = mode
         self.model = model
         self.vars = vars
+        self.dim = sum([i.dsize for i in self.vars])
         if nparticles is None:
-            self.nparticles = (len(self.vars)*2) + 1
+            self.nparticles = (self.dim*2) + 2
         else:
             self.nparticles = nparticles
         self.ordering = ArrayOrdering(vars, self.nparticles)
         self.shared = {str(var): shared for var, shared in shared.items()}
         self.blocked = True
         self.t_func = logp(model.logpt, vars, shared)
+
 
     def step(self, point):
         for var, share in self.shared.items():
@@ -45,27 +47,23 @@ class EmceeSamplerStep(ParticleStep):
 
     def __init__(self, nparticles=None, model=None, mode=None, **kwargs):
         super(EmceeSamplerStep, self).__init__(nparticles, model, mode, **kwargs)
-        dim = len(self.model.vars)
+
         def lnprob(p):
             s = self.t_func(p)
             if np.isnan(s):
                 return -np.inf
             return s
-        self.emcee_sampler = EnsembleSampler(self.nparticles, dim, lnprob, **kwargs)
-
-
-    def flatten_args(self):
-        pass
+        self.emcee_sampler = EnsembleSampler(self.nparticles, self.dim, lnprob, **kwargs)
 
     def setup_step(self, point_array):
-        assert point_array.shape == (self.emcee_sampler.dim, self.nparticles)
-        self.sample_generator = self.emcee_sampler.sample(point_array.T, storechain=True, iterations=self._draws)
+        assert point_array.shape == (self.nparticles, self.emcee_sampler.dim)
+        self.sample_generator = self.emcee_sampler.sample(point_array, storechain=True, iterations=self._draws)
 
     def astep(self, point_array):
         if not hasattr(self, 'sample_generator'):
             self.setup_step(point_array)
         q, lnprob, state = self.sample_generator.next()
-        return q.T
+        return q
 
 
 def logp(logp, vars, shared):

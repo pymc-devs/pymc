@@ -187,7 +187,7 @@ class MultiNDArray(NDArray):
     def iter_fn(self, point, particle):
         d = {}
         for k, v in point.iteritems():
-            d[k] = v[..., particle]
+            d[k] = v[particle]
         return self.fn(d)
 
     def record(self, point):
