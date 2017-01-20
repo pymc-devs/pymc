@@ -1,7 +1,10 @@
+import itertools
 import pkgutil
 import io
 
-__all__ = ['get_data_file']
+import theano.tensor as tt
+
+__all__ = ['get_data_file', 'DataGenerator']
 
 
 def get_data_file(pkg, path):
@@ -19,3 +22,30 @@ def get_data_file(pkg, path):
     """
 
     return io.BytesIO(pkgutil.get_data(pkg, path))
+
+
+class DataGenerator(object):
+    """
+    Helper class that helps to infer data type of generator with looking
+    at the first item, preserving the order of the resulting generator
+    """
+    def __init__(self, generator):
+        self.test_value = next(generator)
+        self.gen = itertools.chain([self.test_value], generator)
+        self.tensortype = tt.TensorType(
+            self.test_value.dtype,
+            ((False, ) * self.test_value.ndim))
+
+    def __next__(self):
+        return next(self.gen)
+
+    next = __next__
+
+    def __iter__(self):
+        return self
+
+    def __eq__(self, other):
+        return id(self) == id(other)
+
+    def __hash__(self):
+        return hash(id(self))

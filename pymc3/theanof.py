@@ -3,13 +3,17 @@ import numpy as np
 from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
+from theano.tensor import TensorVariable
+from theano.gof import Op
+from theano.configparser import change_flags
 from .memoize import memoize
 from .blocking import ArrayOrdering
+from .data import DataGenerator
 
 __all__ = ['gradient', 'hessian', 'hessian_diag', 'inputvars',
            'cont_inputs', 'floatX', 'jacobian',
            'CallableTensor', 'join_nonshared_inputs',
-           'make_shared_replacements']
+           'make_shared_replacements', 'generator']
 
 
 def inputvars(a):
@@ -242,3 +246,46 @@ class CallableTensor(object):
 
 scalar_identity = IdentityOp(scalar.upgrade_to_float, name='scalar_identity')
 identity = tt.Elemwise(scalar_identity, name='identity')
+
+
+class GeneratorOp(Op):
+    """
+    Generaror Op is designed for storing python generators
+    inside theano graph. The main limitation is generator itself.
+
+    There are some important cases when generator becomes exhausted
+        - not endless generator is passed
+        - exception is raised while `generator.__next__` is performed
+            Note: it is dangerous in simple python generators, but ok in
+            custom class based generators with explicit state
+        - data type on each iteration should be the same
+    """
+    __props__ = ('generator',)
+
+    def __init__(self, gen):
+        if not isinstance(gen, DataGenerator):
+            gen = DataGenerator(gen)
+        super(GeneratorOp, self).__init__()
+        self.generator = gen
+        self.itypes = []
+        self.otypes = [self.generator.tensortype]
+
+    def perform(self, node, inputs, output_storage, params=None):
+        try:
+            output_storage[0][0] = next(self.generator)
+        except StopIteration:
+            output_storage[0][0] = np.nan
+
+    def do_constant_folding(self, node):
+        return False
+
+    @change_flags(compute_test_value='off')
+    def __call__(self, *args, **kwargs):
+        rval = super(GeneratorOp, self).__call__(*args, **kwargs)
+        rval.tag.test_value = self.generator.test_value
+        return rval
+
+
+def generator(gen):
+    """shortcut for `GeneratorOp`"""
+    return GeneratorOp(gen)()

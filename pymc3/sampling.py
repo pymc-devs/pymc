@@ -98,16 +98,20 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
         A step function or collection of functions. If no step methods are
         specified, or are partially specified, they will be assigned
         automatically (defaults to None).
-    init : str {'advi', 'advi_map', 'map', 'nuts', None}
+    init : str {'ADVI', 'ADVI_MAP', 'MAP', 'NUTS', None}
         Initialization method to use.
-        * advi : Run ADVI to estimate posterior mean and diagonal covariance matrix.
-        * advi_map: Initialize ADVI with MAP and use MAP as starting point.
-        * map : Use the MAP as starting point.
-        * nuts : Run NUTS and estimate posterior mean and covariance matrix.
+        * ADVI : Run ADVI to estimate starting points and diagonal covariance
+        matrix. If njobs > 1 it will sample starting points from the estimated
+        posterior, otherwise it will use the estimated posterior mean.
+        * ADVI_MAP: Initialize ADVI with MAP and use MAP as starting point.
+        * MAP : Use the MAP as starting point.
+        * NUTS : Run NUTS to estimate starting points and covariance matrix. If
+        njobs > 1 it will sample starting points from the estimated posterior,
+        otherwise it will use the estimated posterior mean.
         * None : Do not initialize.
     n_init : int
         Number of iterations of initializer
-        If 'advi', number of iterations, if 'nuts', number of draws.
+        If 'ADVI', number of iterations, if 'nuts', number of draws.
     start : dict
         Starting point in parameter space (or partial point)
         Defaults to trace.point(-1)) if there is a trace provided and
@@ -142,11 +146,14 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     MultiTrace object with access to sampling values
     """
     model = modelcontext(model)
+    
+    if init is not None:
+        init = init.lower()
 
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')
-        start_, step = init_nuts(init=init, n_init=n_init, model=model)
+        start_, step = init_nuts(init=init, njobs=njobs, n_init=n_init, model=model, random_seed=random_seed)
         if start is None:
             start = start_
     else:
@@ -393,7 +400,8 @@ def sample_ppc(trace, samples=None, model=None, vars=None, size=None, random_see
     return {k: np.asarray(v) for k, v in ppc.items()}
 
 
-def init_nuts(init='advi', n_init=500000, model=None, **kwargs):
+def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
+              random_seed=-1, **kwargs):
     """Initialize and sample from posterior of a continuous model.
 
     This is a convenience function. NUTS convergence and sampling speed is extremely
@@ -403,15 +411,17 @@ def init_nuts(init='advi', n_init=500000, model=None, **kwargs):
 
     Parameters
     ----------
-    init : str {'advi', 'advi_map', 'map', 'nuts'}
+    init : str {'ADVI', 'ADVI_MAP', 'MAP', 'NUTS'}
         Initialization method to use.
-        * advi : Run ADVI to estimate posterior mean and diagonal covariance matrix.
-        * advi_map: Initialize ADVI with MAP and use MAP as starting point.
-        * map : Use the MAP as starting point.
-        * nuts : Run NUTS and estimate posterior mean and covariance matrix.
+        * ADVI : Run ADVI to estimate posterior mean and diagonal covariance matrix.
+        * ADVI_MAP: Initialize ADVI with MAP and use MAP as starting point.
+        * MAP : Use the MAP as starting point.
+        * NUTS : Run NUTS and estimate posterior mean and covariance matrix.
+    njobs : int
+        Number of parallel jobs to start. 
     n_init : int
         Number of iterations of initializer
-        If 'advi', number of iterations, if 'metropolis', number of draws.
+        If 'ADVI', number of iterations, if 'metropolis', number of draws.
     model : Model (optional if in `with` context)
     **kwargs : keyword arguments
         Extra keyword arguments are forwarded to pymc3.NUTS.
@@ -430,23 +440,34 @@ def init_nuts(init='advi', n_init=500000, model=None, **kwargs):
 
     pm._log.info('Initializing NUTS using {}...'.format(init))
 
+    random_seed = int(np.atleast_1d(random_seed)[0])
+    
+    if init is not None:
+        init = init.lower()
+
     if init == 'advi':
-        v_params = pm.variational.advi(n=n_init)
-        start = pm.variational.sample_vp(v_params, 1, progressbar=False, hide_transformed=False)[0]
+        v_params = pm.variational.advi(n=n_init, random_seed=random_seed)
+        start = pm.variational.sample_vp(v_params, njobs, progressbar=False,
+                                         hide_transformed=False, 
+                                         random_seed=random_seed)
+        if njobs == 1:
+            start = start[0]
         cov = np.power(model.dict_to_array(v_params.stds), 2)
     elif init == 'advi_map':
         start = pm.find_MAP()
-        v_params = pm.variational.advi(n=n_init, start=start)
+        v_params = pm.variational.advi(n=n_init, start=start, 
+                                       random_seed=random_seed)
         cov = np.power(model.dict_to_array(v_params.stds), 2)
     elif init == 'map':
         start = pm.find_MAP()
         cov = pm.find_hessian(point=start)
-
     elif init == 'nuts':
-        init_trace = pm.sample(step=pm.NUTS(), draws=n_init)
-        cov = pm.trace_cov(init_trace[n_init//2:])
-
-        start = {varname: np.mean(init_trace[varname]) for varname in init_trace.varnames}
+        init_trace = pm.sample(step=pm.NUTS(), draws=n_init,
+                               random_seed=random_seed)[n_init // 2:]
+        cov = np.atleast_1d(pm.trace_cov(init_trace))
+        start = np.random.choice(init_trace, njobs)
+        if njobs == 1:
+            start = start[0]
     else:
         raise NotImplemented('Initializer {} is not supported.'.format(init))
 
