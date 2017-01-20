@@ -298,7 +298,8 @@ class GeneratorOp(Op):
 
     def set_gen(self, gen):
         gen = self._cast_gen(gen)
-        assert gen.tensortype == self.generator.tensortype
+        if not gen.tensortype == self.generator.tensortype:
+            raise ValueError('New generator should yield the same type')
         self.generator = gen
 
     @staticmethod
