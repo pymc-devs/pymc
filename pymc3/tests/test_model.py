@@ -120,6 +120,8 @@ class TestNested(unittest.TestCase):
             with pm.Model() as sub:
                 self.assertTrue(model is sub.root)
 
+
+class TestScaling(unittest.TestCase):
     def test_density_scaling(self):
         with pm.Model() as model1:
             Normal('n', observed=[[1]], total_size=1)
