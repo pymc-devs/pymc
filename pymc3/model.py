@@ -171,7 +171,21 @@ class Factor(object):
     @property
     def logpt(self):
         """Theano scalar of log-probability of the model"""
-        return tt.sum(self.logp_elemwiset)
+
+        return tt.sum(self.logp_elemwiset) * self.scaling
+
+    @property
+    def scaling(self):
+        total_size = getattr(self, 'total_size', None)
+        if total_size is None:
+            coef = tt.constant(1)
+        else:
+            if self.logp_elemwiset.ndim >= 1:
+                denom = self.logp_elemwiset.shape[0]
+            else:
+                denom = 1
+            coef = tt.as_tensor(total_size) / denom
+        return coef
 
 
 class InitContextMeta(type):
@@ -436,7 +450,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         """List of random variables the model is defined in terms of
         (which excludes deterministics).
         """
-        return (self.free_RVs + self.observed_RVs)
+        return self.free_RVs + self.observed_RVs
 
     @property
     def unobserved_RVs(self):
@@ -480,13 +494,14 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
         name = self.name_for(name)
         if data is None:
             if getattr(dist, "transform", None) is None:
-                var = FreeRV(name=name, distribution=dist, model=self,
-                             total_size=total_size)
+                var = FreeRV(name=name, distribution=dist,
+                             total_size=total_size, model=self)
                 self.free_RVs.append(var)
             else:
-                var = TransformedRV(name=name, distribution=dist, model=self,
+                var = TransformedRV(name=name, distribution=dist,
                                     transform=dist.transform,
-                                    total_size=total_size)
+                                    total_size=total_size,
+                                    model=self)
                 pm._log.debug('Applied {transform}-transform to {name}'
                               ' and added transformed {orig_name} to model.'.format(
                                 transform=dist.transform.name,
@@ -496,7 +511,7 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
                 return var
         elif isinstance(data, dict):
             var = MultiObservedRV(name=name, data=data, distribution=dist,
-                                  model=self, total_size=total_size)
+                                  total_size=total_size, model=self)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs += var.missing_values
@@ -505,8 +520,8 @@ class Model(six.with_metaclass(InitContextMeta, Context, Factor)):
                     self.named_vars[v.name] = v
         else:
             var = ObservedRV(name=name, data=data,
-                             distribution=dist, model=self,
-                             total_size=total_size)
+                             distribution=dist,
+                             total_size=total_size, model=self)
             self.observed_RVs.append(var)
             if var.missing_values:
                 self.free_RVs.append(var.missing_values)
@@ -723,7 +738,7 @@ class FreeRV(Factor, TensorVariable):
     """Unobserved random variable that a model is specified in terms of."""
 
     def __init__(self, type=None, owner=None, index=None, name=None,
-                 distribution=None, model=None, total_size=None):
+                 distribution=None, total_size=None, model=None):
         """
         Parameters
         ----------
@@ -745,15 +760,8 @@ class FreeRV(Factor, TensorVariable):
             self.distribution = distribution
             self.tag.test_value = np.ones(
                 distribution.shape, distribution.dtype) * distribution.default()
-            logp_elemwiset = distribution.logp(self)
-            if total_size is None:
-                coef = tt.constant(1)
-            else:
-                if not logp_elemwiset.ndim >= 1:
-                    raise ValueError('Variable with scaled density '
-                                     'needs to be at least 1 dimensional')
-                coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
-            self.logp_elemwiset = logp_elemwiset * coef
+            self.logp_elemwiset = distribution.logp(self)
+            self.total_size = total_size
             self.model = model
 
             incorporate_methods(source=distribution, destination=self,
@@ -812,7 +820,7 @@ class ObservedRV(Factor, TensorVariable):
     """
 
     def __init__(self, type=None, owner=None, index=None, name=None, data=None,
-                 distribution=None, model=None, total_size=None):
+                 distribution=None, total_size=None, model=None):
         """
         Parameters
         ----------
@@ -836,15 +844,8 @@ class ObservedRV(Factor, TensorVariable):
             data = as_tensor(data, name, model, distribution)
             self.missing_values = data.missing_values
 
-            logp_elemwiset = distribution.logp(data)
-            if total_size is None:
-                coef = tt.constant(1)
-            else:
-                if not logp_elemwiset.ndim >= 1:
-                    raise ValueError('Variable with scaled density '
-                                     'needs to be at least 1 dimensional')
-                coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
-            self.logp_elemwiset = logp_elemwiset * coef
+            self.logp_elemwiset = distribution.logp(data)
+            self.total_size = total_size
             self.model = model
             self.distribution = distribution
 
@@ -865,7 +866,7 @@ class MultiObservedRV(Factor):
     Potentially partially observed.
     """
 
-    def __init__(self, name, data, distribution, model, total_size=None):
+    def __init__(self, name, data, distribution, total_size=None, model=None):
         """
         Parameters
         ----------
@@ -883,15 +884,8 @@ class MultiObservedRV(Factor):
 
         self.missing_values = [datum.missing_values for datum in self.data.values()
                                if datum.missing_values is not None]
-        logp_elemwiset = distribution.logp(**self.data)
-        if total_size is None:
-            coef = tt.constant(1)
-        else:
-            if not logp_elemwiset.ndim >= 1:
-                raise ValueError('Variable with scaled density '
-                                 'needs to be at least 1 dimensional')
-            coef = tt.as_tensor(total_size) / logp_elemwiset.shape[0]
-        self.logp_elemwiset = logp_elemwiset * coef
+        self.logp_elemwiset = distribution.logp(**self.data)
+        self.total_size = total_size
         self.model = model
         self.distribution = distribution
 
