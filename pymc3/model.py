@@ -810,8 +810,8 @@ class ObservedRV(Factor, TensorVariable):
         super(TensorVariable, self).__init__(type, None, None, name)
 
         if distribution is not None:
-
             data = as_tensor(data, name, model, distribution)
+
             self.missing_values = data.missing_values
 
             self.logp_elemwiset = distribution.logp(data)
