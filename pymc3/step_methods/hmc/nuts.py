@@ -65,7 +65,7 @@ class NUTS(BaseHMC):
         keep_sampling = True
 
         while keep_sampling:
-            direction = floatX(bern(0.5)) * 2 - 1
+            direction = bern(0.5) * 2 - 1
             q_edge, p_edge = {-1: (qn, pn), 1: (qp, pp)}[direction]
 
             q_edge, p_edge, proposal, subtree_size, is_valid_sample, a, na = buildtree(
