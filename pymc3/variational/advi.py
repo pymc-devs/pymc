@@ -37,7 +37,7 @@ def gen_random_state():
 
 
 def advi(vars=None, start=None, model=None, n=5000, accurate_elbo=False,
-         optimizer=None, learning_rate=.001, epsilon=.1, mode=None,     
+         optimizer=None, learning_rate=.001, epsilon=.1, mode=None,
          random_seed=None):
     """Perform automatic differentiation variational inference (ADVI).
 
@@ -206,7 +206,7 @@ def _elbo_t(logp, uw, inarray, n_mcsamples, random_seed):
     """Create Theano tensor of approximate ELBO by Monte Carlo sampling.
     """
     l = (uw.size / 2)
-    l_int = l.astype('int64')
+    l_int = l.astype('int32')
     u = uw[:l_int]
     w = uw[l_int:]
 
@@ -265,7 +265,7 @@ def adagrad_optimizer(learning_rate, epsilon, n_win=10):
 
         for param_ in param:
             i = theano.shared(floatX(np.array(0)))
-            i_int = i.astype('int64')
+            i_int = i.astype('int32')
             value = param_.get_value(borrow=True)
             accu = theano.shared(
                 np.zeros(value.shape + (n_win,), dtype=value.dtype))

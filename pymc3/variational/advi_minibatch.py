@@ -42,7 +42,7 @@ def _get_rvss(
                      'When minibatch_RVs is given, local_RVs and ' +
                      'observed_RVs must be None.')
 
-        s = floatX(total_size) / minibatch_tensors[0].shape[0]
+        s = floatX(total_size / minibatch_tensors[0].shape[0])
         local_RVs = OrderedDict()
         observed_RVs = OrderedDict([(v, s) for v in minibatch_RVs])
 
@@ -447,7 +447,7 @@ def advi_minibatch(vars=None, start=None, model=None, n=5000, n_mcsamples=1,
         raise ValueError('Model can not include discrete RVs for ADVI.')
 
     _check_minibatches(minibatch_tensors, minibatches)
-    
+
     if encoder_params is None:
         encoder_params = []
 
