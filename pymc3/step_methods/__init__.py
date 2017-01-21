@@ -16,10 +16,4 @@ from .gibbs import ElemwiseCategorical
 
 from .slicer import Slice
 
-from .nuts import NUTS
-
-<<<<<<< HEAD
 from .atmcmc import ATMCMC
-=======
-from .atmcmc import ATMCMC
->>>>>>> 7460b0922a30ea7f85b9362020c981e9e308b210

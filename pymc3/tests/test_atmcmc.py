@@ -68,7 +68,6 @@ class TestATMCMC(SeededTest):
             progressbar=False,
             stage='0',
             homepath=self.test_folder,
-            trace=self.test_folder,
             model=ATMIP_test,
             rm_flag=False)
 
