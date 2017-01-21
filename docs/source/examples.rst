@@ -22,6 +22,7 @@ Applied
    notebooks/rugby_analytics.ipynb
    notebooks/survival_analysis.ipynb
    notebooks/GP-smoothing.ipynb
+   notebooks/dawid-skene.ipynb
 
 GLM
 ===
