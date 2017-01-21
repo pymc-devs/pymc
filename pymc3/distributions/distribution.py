@@ -11,7 +11,6 @@ from .dist_math import bound
 __all__ = ['DensityDist', 'Distribution', 'Continuous', 'Bound',
            'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
 
-floatX = theano.config.floatX
 
 class _Unpickling(object):
     pass
@@ -118,7 +117,9 @@ class Discrete(Distribution):
 class Continuous(Distribution):
     """Base class for continuous distributions"""
 
-    def __init__(self, shape=(), dtype=floatX, defaults=['median', 'mean', 'mode'], *args, **kwargs):
+    def __init__(self, shape=(), dtype=None, defaults=['median', 'mean', 'mode'], *args, **kwargs):
+        if dtype is None:
+            dtype = theano.config.floatX
         super(Continuous, self).__init__(
             shape, dtype, defaults=defaults, *args, **kwargs)
 
@@ -126,7 +127,9 @@ class Continuous(Distribution):
 class DensityDist(Distribution):
     """Distribution based on a given log density function."""
 
-    def __init__(self, logp, shape=(), dtype=floatX, testval=0, *args, **kwargs):
+    def __init__(self, logp, shape=(), dtype=None, testval=0, *args, **kwargs):
+        if dtype is None:
+            dtype = theano.config.floatX
         super(DensityDist, self).__init__(
             shape, dtype, testval, *args, **kwargs)
         self.logp = logp
