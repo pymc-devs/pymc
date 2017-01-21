@@ -100,26 +100,6 @@ class ListToArrayBijection(object):
             array[slc] = list_arrays[list_ind].ravel()
         return array
 
-    def f3map(self, list_arrays):
-        """
-        Maps values from List space to array space with 3 columns
-
-        Parameters
-        ----------
-        list_arrays : list
-            of :class:`numpy.ndarray` with size: n x 3
-
-        Returns
-        -------
-        array : :class:`numpy.ndarray`
-            single array comprising all the input arrays
-        """
-
-        array = np.empty((self.ordering.dimensions, 3))
-        for list_ind, slc, _, _ in self.ordering.vmap:
-            array[slc, :] = list_arrays[list_ind]
-        return array
-
     def rmap(self, array):
         """
         Maps value from array space to List space
@@ -140,27 +120,6 @@ class ListToArrayBijection(object):
         for list_ind, slc, shp, dtype in self.ordering.vmap:
             a_list[list_ind] = np.atleast_1d(
                                         array)[slc].reshape(shp).astype(dtype)
-
-        return a_list
-
-    def srmap(self, tarray):
-        """
-        Maps value from symbolic variable array space to List space
-
-        Parameters
-        ----------
-        tarray : :class:`theano.tensor.Tensor`
-
-        Returns
-        -------
-        a_list : list
-            of :class:`theano.tensor.Tensor`
-        """
-
-        a_list = copy.copy(self.list_arrays)
-
-        for list_ind, slc, shp, dtype in self.ordering.vmap:
-            a_list[list_ind] = tarray[slc].reshape(shp).astype(dtype.name)
 
         return a_list
 

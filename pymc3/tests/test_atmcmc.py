@@ -2,6 +2,7 @@ import pymc3 as pm
 import numpy as np
 from pymc3.step_methods import atmcmc
 from tempfile import mkdtemp
+import shutil
 import theano.tensor as tt
 
 from .helpers import SeededTest
@@ -75,3 +76,6 @@ class TestATMCMC(SeededTest):
         mu1d = np.abs(x).mean(axis=0)
 
         np.testing.assert_allclose(mu1, mu1d, rtol=0., atol=0.03)
+
+    def tearDown(self):
+        shutil.rmtree(self.test_folder)
