@@ -40,8 +40,8 @@ class Binomial(Discrete):
 
     def __init__(self, n, p, *args, **kwargs):
         super(Binomial, self).__init__(*args, **kwargs)
-        self.n = n
-        self.p = p
+        self.n = n = tt.as_tensor_variable(n)
+        self.p = p = tt.as_tensor_variable(p)
         self.mode = tt.cast(tt.round(n * p), self.dtype)
 
     def random(self, point=None, size=None, repeat=None):
@@ -91,9 +91,9 @@ class BetaBinomial(Discrete):
 
     def __init__(self, alpha, beta, n, *args, **kwargs):
         super(BetaBinomial, self).__init__(*args, **kwargs)
-        self.alpha = alpha
-        self.beta = beta
-        self.n = n
+        self.alpha = alpha = tt.as_tensor_variable(alpha)
+        self.beta = beta = tt.as_tensor_variable(beta)
+        self.n = n = tt.as_tensor_variable(n)
         self.mode = tt.cast(tt.round(alpha / (alpha + beta)), 'int8')
 
     def _random(self, alpha, beta, n, size=None):
@@ -147,7 +147,7 @@ class Bernoulli(Discrete):
 
     def __init__(self, p, *args, **kwargs):
         super(Bernoulli, self).__init__(*args, **kwargs)
-        self.p = p
+        self.p = p = tt.as_tensor_variable(p)
         self.mode = tt.cast(tt.round(p), 'int8')
 
     def random(self, point=None, size=None, repeat=None):
@@ -193,7 +193,7 @@ class Poisson(Discrete):
 
     def __init__(self, mu, *args, **kwargs):
         super(Poisson, self).__init__(*args, **kwargs)
-        self.mu = mu
+        self.mu = mu = tt.as_tensor_variable(mu)
         self.mode = tt.floor(mu).astype('int32')
 
     def random(self, point=None, size=None, repeat=None):
@@ -240,8 +240,8 @@ class NegativeBinomial(Discrete):
 
     def __init__(self, mu, alpha, *args, **kwargs):
         super(NegativeBinomial, self).__init__(*args, **kwargs)
-        self.mu = mu
-        self.alpha = alpha
+        self.mu = mu = tt.as_tensor_variable(mu)
+        self.alpha = alpha = tt.as_tensor_variable(alpha)
         self.mode = tt.floor(mu).astype('int32')
 
     def random(self, point=None, size=None, repeat=None):
@@ -289,7 +289,7 @@ class Geometric(Discrete):
 
     def __init__(self, p, *args, **kwargs):
         super(Geometric, self).__init__(*args, **kwargs)
-        self.p = p
+        self.p = p = tt.as_tensor_variable(p)
         self.mode = 1
 
     def random(self, point=None, size=None, repeat=None):
@@ -377,7 +377,7 @@ class Categorical(Discrete):
             self.k = tt.shape(p)[-1].tag.test_value
         except AttributeError:
             self.k = tt.shape(p)[-1]
-        self.p = tt.as_tensor_variable(p)
+        self.p = p = tt.as_tensor_variable(p)
         self.p = (p.T / tt.sum(p, -1)).T
         self.mode = tt.argmax(p)
 
@@ -425,7 +425,7 @@ class Constant(Discrete):
 
     def __init__(self, c, *args, **kwargs):
         super(Constant, self).__init__(*args, **kwargs)
-        self.mean = self.median = self.mode = self.c = c
+        self.mean = self.median = self.mode = self.c = c = tt.as_tensor_variable(c)
 
     def random(self, point=None, size=None, repeat=None):
         c = draw_values([self.c], point=point)
@@ -481,8 +481,8 @@ class ZeroInflatedPoisson(Discrete):
 
     def __init__(self, theta, psi, *args, **kwargs):
         super(ZeroInflatedPoisson, self).__init__(*args, **kwargs)
-        self.theta = theta
-        self.psi = psi
+        self.theta = theta = tt.as_tensor_variable(theta)
+        self.psi = psi = tt.as_tensor_variable(psi)
         self.pois = Poisson.dist(theta)
         self.mode = self.pois.mode
 
@@ -533,9 +533,9 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     def __init__(self, mu, alpha, psi, *args, **kwargs):
         super(ZeroInflatedNegativeBinomial, self).__init__(*args, **kwargs)
-        self.mu = mu
-        self.alpha = alpha
-        self.psi = psi
+        self.mu = mu = tt.as_tensor_variable(mu)
+        self.alpha = alpha = tt.as_tensor_variable(alpha)
+        self.psi = psi = tt.as_tensor_variable(psi)
         self.nb = NegativeBinomial.dist(mu, alpha)
         self.mode = self.nb.mode
 
