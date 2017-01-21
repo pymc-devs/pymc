@@ -6,7 +6,7 @@ import theano.tensor as tt
 from scipy import stats
 
 from .dist_math import bound, factln, binomln, betaln, logpow
-from .distribution import Discrete, draw_values, generate_samples
+from .distribution import Discrete, draw_values, generate_samples, reshape_sampled
 
 __all__ = ['Binomial',  'BetaBinomial',  'Bernoulli',  'Poisson',
            'NegativeBinomial', 'ConstantDist', 'Constant', 'ZeroInflatedPoisson',
@@ -250,7 +250,7 @@ class NegativeBinomial(Discrete):
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        return stats.poisson.rvs(g)
+        return reshape_sampled(stats.poisson.rvs(g), size, self.shape)
 
     def logp(self, value):
         mu = self.mu
@@ -441,9 +441,11 @@ class Constant(Discrete):
         c = self.c
         return bound(0, tt.eq(value, c))
 
+
 def ConstantDist(*args, **kwargs):
+    import warnings
     warnings.warn("ConstantDist has been deprecated. In future, use Constant instead.",
-                DeprecationWarning)
+                  DeprecationWarning)
     return Constant(*args, **kwargs)
 
 
@@ -454,7 +456,7 @@ class ZeroInflatedPoisson(Discrete):
     Often used to model the number of events occurring in a fixed period
     of time when the times at which events occur are independent.
 
-    .. math:: 
+    .. math::
 
         f(x \mid \theta, \psi) = \left\{ \begin{array}{l}
             (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
@@ -489,7 +491,8 @@ class ZeroInflatedPoisson(Discrete):
         g = generate_samples(stats.poisson.rvs, theta,
                              dist_shape=self.shape,
                              size=size)
-        return g * (np.random.random(np.squeeze(g.shape)) < psi)
+        sampled = g * (np.random.random(np.squeeze(g.shape)) < psi)
+        return reshape_sampled(sampled, size, self.shape)
 
     def logp(self, value):
         return tt.switch(value > 0,
@@ -503,7 +506,7 @@ class ZeroInflatedNegativeBinomial(Discrete):
 
     The Zero-inflated version of the Negative Binomial (NB).
     The NB distribution describes a Poisson random variable
-    whose rate parameter is gamma distributed. 
+    whose rate parameter is gamma distributed.
 
     .. math::
 
@@ -543,7 +546,8 @@ class ZeroInflatedNegativeBinomial(Discrete):
                              dist_shape=self.shape,
                              size=size)
         g[g == 0] = np.finfo(float).eps  # Just in case
-        return stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
+        sampled = stats.poisson.rvs(g) * (np.random.random(np.squeeze(g.shape)) < psi)
+        return reshape_sampled(sampled, size, self.shape)
 
     def logp(self, value):
         return tt.switch(value > 0,

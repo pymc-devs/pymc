@@ -105,7 +105,7 @@ def log_post_trace(trace, model):
     return np.vstack([obs.logp_elemwise(pt) for obs in model.observed_RVs] for pt in trace)
 
 
-def waic(trace, model=None, n_eff=False):
+def waic(trace, model=None, n_eff=False, pointwise=False):
     """
     Calculate the widely available information criterion, its standard error
     and the effective number of parameters of the samples in trace from model.
@@ -120,6 +120,9 @@ def waic(trace, model=None, n_eff=False):
         Optional model. Default None, taken from context.
     n_eff: bool
         if True the effective number parameters will be returned.
+        Default False
+    pointwise: bool
+        if True the pointwise predictive accuracy will be returned.
         Default False
 
 
@@ -152,6 +155,8 @@ def waic(trace, model=None, n_eff=False):
 
     if n_eff:
         return waic, waic_se, p_waic
+    elif pointwise:
+        return waic, waic_se, waic_i, p_waic
     else:
         return waic, waic_se
 
@@ -365,7 +370,7 @@ def mc_error(x, batches=5):
       x : Numpy array
           An array containing MCMC samples
       batches : integer
-          Number of batchas
+          Number of batches
     """
 
     if x.ndim > 1:
@@ -428,7 +433,7 @@ def quantiles(x, qlist=(2.5, 25, 50, 75, 97.5), transform=lambda x: x):
 
 
 def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_transformed=False,
-               alpha=0.05, batches=100):
+               alpha=0.05, batches=None):
     R"""Create a data frame with summary statistics.
 
     Parameters
@@ -458,15 +463,15 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
         addition to, rather than in place of, the default statistics.
         This is only meaningful when `stat_funcs` is not None.
     include_transformed : bool
-        Flag for reporting automatically transformed variables in addition to
-        original variables (defaults to False).
+        Flag for reporting automatically transformed variables in addition
+        to original variables (defaults to False).
     alpha : float
         The alpha level for generating posterior intervals. Defaults
         to 0.05. This is only meaningful when `stat_funcs` is None.
-    batches : int
-        Batch size for calculating standard deviation for
-        non-independent samples. Defaults to 100. This is only
-        meaningful when `stat_funcs` is None.
+    batches : None or int
+        Batch size for calculating standard deviation for non-independent
+        samples. Defaults to the smaller of 100 or the number of samples.
+        This is only meaningful when `stat_funcs` is None.
 
 
     See also
@@ -509,6 +514,9 @@ def df_summary(trace, varnames=None, stat_funcs=None, extend=False, include_tran
         else:
             varnames = [name for name in trace.varnames if not name.endswith('_')]
 
+    if batches is None:
+        batches = min([100, len(trace)])
+
     funcs = [lambda x: pd.Series(np.mean(x, 0), name='mean'),
              lambda x: pd.Series(np.std(x, 0), name='sd'),
              lambda x: pd.Series(mc_error(x, batches), name='mc_error'),
@@ -535,7 +543,7 @@ def _hpd_df(x, alpha):
     return pd.DataFrame(hpd(x, alpha), columns=cnames)
 
 
-def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
+def summary(trace, varnames=None, alpha=0.05, start=0, batches=None, roundto=3,
             include_transformed=False, to_file=None):
     R"""
     Generate a pretty-printed summary of the node.
@@ -553,9 +561,10 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
     start : int
       The starting index from which to summarize (each) chain. Defaults
       to zero.
-    batches : int
-      Batch size for calculating standard deviation for non-independent
-      samples. Defaults to 100.
+    batches : None or int
+        Batch size for calculating standard deviation for non-independent
+        samples. Defaults to the smaller of 100 or the number of samples.
+        This is only meaningful when `stat_funcs` is None.
     roundto : int
       The number of digits to round posterior statistics.
     include_transformed : bool
@@ -570,6 +579,9 @@ def summary(trace, varnames=None, alpha=0.05, start=0, batches=100, roundto=3,
             varnames = [name for name in trace.varnames]
         else:
             varnames = [name for name in trace.varnames if not name.endswith('_')]
+
+    if batches is None:
+        batches = min([100, len(trace)])
 
     stat_summ = _StatSummary(roundto, batches, alpha)
     pq_summ = _PosteriorQuantileSummary(roundto, alpha)

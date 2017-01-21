@@ -1,6 +1,6 @@
 from .compound import CompoundStep
 
-from .hmc import HamiltonianMC
+from .hmc import HamiltonianMC, NUTS
 
 from .metropolis import Metropolis
 from .metropolis import BinaryMetropolis

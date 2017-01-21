@@ -5,13 +5,16 @@ from theano import function
 from ..memoize import memoize
 from ..model import Model, get_named_nodes
 from ..vartypes import string_types
+from .dist_math import bound
 
 
-__all__ = ['DensityDist', 'Distribution', 'Continuous',
+__all__ = ['DensityDist', 'Distribution', 'Continuous', 'Bound', 
            'Discrete', 'NoDistribution', 'TensorType', 'draw_values']
+
 
 class _Unpickling(object):
     pass
+
 
 class Distribution(object):
     """Statistical distribution"""
@@ -129,12 +132,10 @@ class DensityDist(Distribution):
 
 
 class MultivariateContinuous(Continuous):
-
     pass
 
 
 class MultivariateDiscrete(Discrete):
-
     pass
 
 
@@ -265,6 +266,22 @@ def broadcast_shapes(*args):
     return tuple(x)
 
 
+def infer_shape(shape):
+    try:
+        shape = tuple(shape or ())
+    except TypeError:  # If size is an int
+        shape = tuple((shape,))
+    except ValueError:  # If size is np.array
+        shape = tuple(shape)
+    return shape
+
+
+def reshape_sampled(sampled, size, dist_shape):
+    dist_shape = infer_shape(dist_shape)
+    repeat_shape = infer_shape(size)
+    return np.reshape(sampled, repeat_shape + dist_shape)
+
+
 def replicate_samples(generator, size, repeats, *args, **kwargs):
     n = int(np.prod(repeats))
     if n == 1:
@@ -326,10 +343,7 @@ def generate_samples(generator, *args, **kwargs):
     else:
         prefix_shape = tuple(dist_shape)
 
-    try:
-        repeat_shape = tuple(size or ())
-    except TypeError:  # If size is an int
-        repeat_shape = tuple((size,))
+    repeat_shape = infer_shape(size)
 
     if broadcast_shape == (1,) and prefix_shape == ():
         if size is not None:
@@ -342,13 +356,118 @@ def generate_samples(generator, *args, **kwargs):
                                         broadcast_shape,
                                         repeat_shape + prefix_shape,
                                         *args, **kwargs)
-            if broadcast_shape == (1,) and not prefix_shape == ():
-                samples = np.reshape(samples, repeat_shape + prefix_shape)
         else:
             samples = replicate_samples(generator,
                                         broadcast_shape,
                                         prefix_shape,
                                         *args, **kwargs)
-            if broadcast_shape == (1,):
-                samples = np.reshape(samples, prefix_shape)
-    return samples
+    return reshape_sampled(samples, size, dist_shape)
+
+
+class Bounded(Distribution):
+    R"""
+    An upper, lower or upper+lower bounded distribution
+
+    Parameters
+    ----------
+    distribution : pymc3 distribution
+        Distribution to be transformed into a bounded distribution
+    lower : float (optional)
+        Lower bound of the distribution, set to -inf to disable.
+    upper : float (optional)
+        Upper bound of the distribibution, set to inf to disable.
+    tranform : 'infer' or object
+        If 'infer', infers the right transform to apply from the supplied bounds.
+        If transform object, has to supply .forward() and .backward() methods.
+        See pymc3.distributions.transforms for more information.
+    """
+
+    def __init__(self, distribution, lower, upper, transform='infer', *args, **kwargs):
+        import pymc3.distributions.transforms as transforms
+        self.dist = distribution.dist(*args, **kwargs)
+
+        self.__dict__.update(self.dist.__dict__)
+        self.__dict__.update(locals())
+
+        if hasattr(self.dist, 'mode'):
+            self.mode = self.dist.mode
+
+        if transform == 'infer':
+
+            default = self.dist.default()
+
+            if not np.isinf(lower) and not np.isinf(upper):
+                self.transform = transforms.interval(lower, upper)
+                if default <= lower or default >= upper:
+                    self.testval = 0.5 * (upper + lower)
+
+            if not np.isinf(lower) and np.isinf(upper):
+                self.transform = transforms.lowerbound(lower)
+                if default <= lower:
+                    self.testval = lower + 1
+
+            if np.isinf(lower) and not np.isinf(upper):
+                self.transform = transforms.upperbound(upper)
+                if default >= upper:
+                    self.testval = upper - 1
+                    
+        if issubclass(distribution, Discrete):
+            self.transform = None
+
+    def _random(self, lower, upper, point=None, size=None):
+        samples = np.zeros(size).flatten()
+        i, n = 0, len(samples)
+        while i < len(samples):
+            sample = self.dist.random(point=point, size=n)
+            select = sample[np.logical_and(sample > lower, sample <= upper)]
+            samples[i:(i + len(select))] = select[:]
+            i += len(select)
+            n -= len(select)
+        if size is not None:
+            return np.reshape(samples, size)
+        else:
+            return samples
+
+    def random(self, point=None, size=None, repeat=None):
+        lower, upper = draw_values([self.lower, self.upper], point=point)
+        return generate_samples(self._random, lower, upper, point,
+                                dist_shape=self.shape,
+                                size=size)
+
+    def logp(self, value):
+        return bound(self.dist.logp(value),
+                     value >= self.lower, value <= self.upper)
+
+
+class Bound(object):
+    R"""
+    Creates a new upper, lower or upper+lower bounded distribution
+
+    Parameters
+    ----------
+    distribution : pymc3 distribution
+        Distribution to be transformed into a bounded distribution
+    lower : float (optional)
+        Lower bound of the distribution
+    upper : float (optional)
+
+    Example
+    -------
+    boundedNormal = pymc3.Bound(pymc3.Normal, lower=0.0)
+    par = boundedNormal(mu=0.0, sd=1.0, testval=1.0)
+    """
+
+    def __init__(self, distribution, lower=-np.inf, upper=np.inf):
+        self.distribution = distribution
+        self.lower = lower
+        self.upper = upper
+
+    def __call__(self, *args, **kwargs):
+        first, args = args[0], args[1:]
+
+        return Bounded(first, self.distribution, self.lower, self.upper,
+                       *args, **kwargs)
+
+    def dist(self, *args, **kwargs):
+        return Bounded.dist(self.distribution, self.lower, self.upper,
+                            *args, **kwargs)

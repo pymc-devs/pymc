@@ -10,25 +10,43 @@ import theano.tensor as tt
 
 from .special import gammaln, multigammaln
 
-
-def bound(logp, *conditions):
+def bound(logp, *conditions, **kwargs):
     """
-    Bounds a log probability density with several conditions
+    Bounds a log probability density with several conditions.
 
     Parameters
     ----------
     logp : float
     *conditions : booleans
+    broadcast_conditions : bool (optional, default=True)
+        If True, broadcasts logp to match the largest shape of the conditions.
+        This is used e.g. in DiscreteUniform where logp is a scalar constant and the shape
+        is specified via the conditions.
+        If False, will return the same shape as logp.
+        This is used e.g. in Multinomial where broadcasting can lead to differences in the logp.
 
     Returns
     -------
-    logp if all conditions are true
-    -inf if some are false
+    logp with elements set to -inf where any condition is False
     """
+    broadcast_conditions = kwargs.get('broadcast_conditions', True)
+
+    if broadcast_conditions:
+        alltrue = alltrue_elemwise
+    else:
+        alltrue = alltrue_scalar
+
     return tt.switch(alltrue(conditions), logp, -np.inf)
 
 
-def alltrue(vals):
+def alltrue_elemwise(vals):
+    ret = 1
+    for c in vals:
+        ret = ret * (1 * c)
+    return ret
+
+
+def alltrue_scalar(vals):
     return tt.all([tt.all(1 * val) for val in vals])
 
 
