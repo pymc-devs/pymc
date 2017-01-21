@@ -15,3 +15,7 @@ from .metropolis import MultivariateNormalProposal
 from .gibbs import ElemwiseCategorical
 
 from .slicer import Slice
+
+from .nuts import NUTS
+
+from .atmcmc import ATMCMC
