@@ -61,7 +61,6 @@ mtrace = atmcmc.ATMIP_sample(
     progressbar=True,
     stage='0',
     homepath=test_folder,
-    trace=test_folder,
     model=ATMIP_test,
     rm_flag=False)
 
