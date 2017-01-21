@@ -1,6 +1,5 @@
 import threading
 import six
-import types
 
 import numpy as np
 import theano
@@ -10,7 +9,7 @@ from theano.tensor.var import TensorVariable
 import pymc3 as pm
 from .memoize import memoize
 from .theanof import gradient, hessian, inputvars, generator
-from .vartypes import typefilter, discrete_types, continuous_types
+from .vartypes import typefilter, discrete_types, continuous_types, isgenerator
 from .blocking import DictToArrayBijection, ArrayOrdering
 
 __all__ = [
@@ -784,8 +783,7 @@ def pandas_to_array(data):
         return data
     elif isinstance(data, theano.gof.graph.Variable):
         return data
-    elif (hasattr(data, '__next__') or
-          isinstance(data, types.GeneratorType)):
+    elif isgenerator(data):
         return generator(data)
     else:
         return np.asarray(data)

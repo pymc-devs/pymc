@@ -1,8 +1,8 @@
-import types
 import pkgutil
 import io
 
 import theano.tensor as tt
+from .vartypes import isgenerator
 
 __all__ = ['get_data_file', 'DataGenerator']
 
@@ -30,8 +30,7 @@ class DataGenerator(object):
     at the first item, preserving the order of the resulting generator
     """
     def __init__(self, generator):
-        if not (hasattr(generator, '__next__') or
-                isinstance(generator, types.GeneratorType)):
+        if not isgenerator(generator):
             raise TypeError('Object should be generator like')
         self.test_value = next(generator)
         # make pickling potentially possible
@@ -41,6 +40,7 @@ class DataGenerator(object):
             self.test_value.dtype,
             ((False, ) * self.test_value.ndim))
 
+    # python3 generator
     def __next__(self):
         if not self._yielded_test_value:
             self._yielded_test_value = True
@@ -48,6 +48,7 @@ class DataGenerator(object):
         else:
             return next(self.gen)
 
+    # python2 generator
     next = __next__
 
     def __iter__(self):
