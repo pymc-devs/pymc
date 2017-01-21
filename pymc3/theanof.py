@@ -78,7 +78,7 @@ def gradient(f, vars=None):
 def jacobian1(f, v):
     """jacobian of f wrt v"""
     f = tt.flatten(f)
-    idx = tt.arange(f.shape[0])
+    idx = tt.arange(f.shape[0], dtype='int32')
 
     def grad_i(i):
         return gradient1(f[i], v)
@@ -103,9 +103,8 @@ def hessian(f, vars=None):
 
 
 def hessian_diag1(f, v):
-
     g = gradient1(f, v)
-    idx = tt.arange(g.shape[0])
+    idx = tt.arange(g.shape[0], dtype='int32')
 
     def hess_ii(i):
         return gradient1(g[i], v)[i]

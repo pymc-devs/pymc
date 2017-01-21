@@ -12,6 +12,7 @@ import theano.tensor as tt
 from scipy import stats
 import warnings
 
+from pymc3.theanof import floatX
 from . import transforms
 from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
 from .distribution import Continuous, draw_values, generate_samples, Bound
@@ -98,7 +99,7 @@ def get_tau_sd(tau=None, sd=None):
     tau = 1. * tau
     sd = 1. * sd
 
-    return (tau, sd)
+    return (floatX(tau), floatX(sd))
 
 
 class Uniform(Continuous):
