@@ -60,7 +60,7 @@ mtrace = atmcmc.ATMIP_sample(
     n_jobs=n_jobs,
     progressbar=True,
     stage='0',
-    trace=test_folder,
+    homepath=test_folder,
     model=ATMIP_test,
     rm_flag=False)
 

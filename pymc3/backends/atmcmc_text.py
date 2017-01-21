@@ -64,10 +64,30 @@ def worker(q_in, q_out, function, eprintignore, pshared):
 def parimap(function, *iterables, **kwargs):
     """
     More efficient Queueing compared to Pool in multiprocessing.
+    Runs a function in parallel by using Queues.
     Adapted from the pyrocko package. http://www.pyrocko.org
+
+    Parameters
+    ----------
+    function : function
+        Function that is to be parallelised
+    iterables : list
+        of arguments that are used by the function to be looped over
+        these are being forked in the process
+    kwargs : dict
+        can be:
+        nprocs : int
+            Number of processors to use
+        eprintignore : str
+            Error strings to be printed if error occurs.
+        pshared : dict
+            arguments that the function relies on, these are not being forked!
+            meant to be for arguments that dont change during the parallel
+            process reduces overhead if being used.
     """
-    assert all(
-        k in ('nprocs', 'eprintignore', 'pshared') for k in kwargs.keys())
+    for k in kwargs.keys():
+        if k not in ('nprocs', 'eprintignore', 'pshared'):
+            raise TypeError('Argument "%s" is not supported' % k)
 
     nprocs = kwargs.get('nprocs', None)
     eprintignore = kwargs.get('eprintignore', 'all')
