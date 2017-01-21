@@ -6,6 +6,7 @@ Created on Mar 7, 2011
 from ..arraystep import metrop_select, Competence
 from .base_hmc import BaseHMC
 from pymc3.vartypes import discrete_types
+from pymc3.theanof import floatX
 import numpy as np
 
 
@@ -40,7 +41,7 @@ class HamiltonianMC(BaseHMC):
         self.step_rand = step_rand
 
     def astep(self, q0):
-        e = np.array(self.step_rand(self.step_size))
+        e = floatX(self.step_rand(self.step_size))
         n_steps = np.array(self.path_length / e, dtype='int32')
         q = q0
         p = self.H.pot.random()  # initialize momentum
