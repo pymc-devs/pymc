@@ -152,6 +152,9 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     if init is not None:
         init = init.lower()
 
+    if isinstance(step, ParticleStep):
+        trace = MultiNDArray(step.nparticles)
+
     if init is not None and pm.model.all_continuous(model.vars):
         if step is None:
             # By default, use NUTS sampler
@@ -172,7 +175,6 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
                 start = _start
         else:
             step = assign_step_methods(model, step)
-
     else:
         step = assign_step_methods(model, step)
 
@@ -595,3 +597,7 @@ def transform_start_particles(var_dict_list, nparticles, njobs, model=None):
                     d[varname].append(value)
         l.append(d)
     return l
+
+def get_random_starters(nwalkers, model=None):
+    model = pm.modelcontext(model)
+    return {v.name: v.distribution.random(size=nwalkers) for v in model.vars}
