@@ -1,11 +1,11 @@
+import pymc3 as pm
 import theano
+
 from .arraystep import ArrayStepShared
+from ..blocking import ArrayOrdering, DictToArrayBijection
 from ..model import modelcontext
 from ..theanof import inputvars, make_shared_replacements
-from ..blocking import ArrayOrdering, DictToArrayBijection
-from emcee import EnsembleSampler
-import pymc3 as pm
-import numpy as np
+
 
 class ParticleStep(ArrayStepShared):
     def __new__(cls, *args, **kwargs):
@@ -38,30 +38,6 @@ class ParticleStep(ArrayStepShared):
         bij = DictToArrayBijection(self.ordering, point)
         apoint = self.astep(bij.map(point))
         return bij.rmap(apoint)
-
-
-class Emcee(ParticleStep):
-    default_blocked = True
-
-    def __init__(self, nparticles=None, model=None, mode=None, **kwargs):
-        super(Emcee, self).__init__(nparticles, model, mode, **kwargs)
-
-        def lnprob(p):
-            s = self.t_func(p)
-            if np.isnan(s):
-                return -np.inf
-            return s
-        self.emcee_sampler = EnsembleSampler(self.nparticles, self.dim, lnprob, **kwargs)
-
-    def setup_step(self, point_array):
-        assert point_array.shape == (self.nparticles, self.emcee_sampler.dim)
-        self.sample_generator = self.emcee_sampler.sample(point_array, storechain=False, iterations=self._draws)
-
-    def astep(self, point_array):
-        if not hasattr(self, 'sample_generator'):
-            self.setup_step(point_array)
-        q, lnprob, state = self.sample_generator.next()
-        return q
 
 
 def logp(logp, vars, shared):

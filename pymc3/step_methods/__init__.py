@@ -18,4 +18,4 @@ from .slicer import Slice
 
 from .elliptical_slice import EllipticalSlice
 
-from .particle import Emcee, ParticleStep
+from .particle import ParticleStep
