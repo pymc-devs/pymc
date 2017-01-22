@@ -346,8 +346,8 @@ class Approximation(object):
             rho = self.known[var][1].ravel()
             x = self.view(z, var.name, reshape=False)
             q = log_normal(x, Z(mu), rho=Z(rho))
-            logp.append(q * var.scaling)
-        return tt.sum(tt.concatenate(logp, axis=1))
+            logp.append(q.sum() * var.scaling)
+        return tt.sum(logp)
 
     def log_q_W_global(self, z):
         """
