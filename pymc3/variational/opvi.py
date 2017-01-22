@@ -66,14 +66,16 @@ class Operator(object):
         def __call__(self, z):
             return self.obj(z)
 
-        def updates(self, z, obj_optimizer=None, test_optimizer=None):
+        def updates(self, z, obj_optimizer=None, test_optimizer=None, more_params=None):
+            if more_params is None:
+                more_params = []
             if obj_optimizer is None:
                 obj_optimizer = adagrad_optimizer(learning_rate=.001, epsilon=.1)
             if test_optimizer is None:
                 obj_optimizer = adagrad_optimizer(learning_rate=.001, epsilon=.1)
             target = self(z)
             updates = theano.OrderedUpdates()
-            updates.update(obj_optimizer(target, self.obj_params))
+            updates.update(obj_optimizer(target, self.obj_params + more_params))
             if self.test_params:
                 updates.update(test_optimizer(-target, self.test_params))
             else:
