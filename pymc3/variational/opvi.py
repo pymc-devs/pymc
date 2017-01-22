@@ -86,6 +86,8 @@ class Operator(object):
 def cast_to_list(params):
     if isinstance(params, list):
         return params
+    elif isinstance(params, tuple):
+        return list(params)
     elif isinstance(params, dict):
         return list(params.values())
     elif isinstance(params, theano.compile.SharedVariable):
