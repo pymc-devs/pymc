@@ -37,12 +37,8 @@ class Operator(object):
         self.model = approx.model
         self.approx = approx
 
-    order = property(lambda self: self.approx.order)
     flat_view = property(lambda self: self.approx.flat_view)
     input = property(lambda self: self.approx.flat_view.input)
-
-    def view(self, space, name, reshape=True):
-        return self.approx.view(space, name, reshape)
 
     def logp(self, z):
         p = theano.clone(self.model.logpt, self.flat_view.replacements, strict=False)
@@ -83,12 +79,6 @@ class Operator(object):
             else:
                 pass
             return updates
-
-
-class KL(Operator):
-    def apply(self, f):
-        z = self.input
-        return self.logq(z) - self.logp(z)
 
 
 def cast_to_list(params):
@@ -160,6 +150,48 @@ class Approximation(object):
     def create_shared_params(self):
         pass
 
+    def _local_mu_rho(self):
+        mu = []
+        rho = []
+        for var in self.local_vars:
+            mu.append(self.known[var][0].ravel())
+            rho.append(self.known[var][1].ravel())
+        mu = tt.concatenate(mu)
+        rho = tt.concatenate(rho)
+        return mu, rho
+
+    def apply_replacements(self, node, deterministic=False, include=None, exclude=None):
+        """
+        Replace variables in graph with variational approximation. By default, replaces all variables
+        Parameters
+        ----------
+        node : Variable
+            node for replacements
+        deterministic : bool
+            whether to use zeros as initial distribution
+            if True - zero initial point will produce constant latent variables
+        include : list
+            latent variables to be replaced
+        exclude : list
+            latent variables to be excluded for replacements
+        Returns
+        -------
+        node with replacements
+        """
+        if include is not None and exclude is not None:
+            raise ValueError('Only one parameter is supported {include|exclude}, got two')
+        if include is not None:
+            replacements = {k: v for k, v
+                            in self.flat_view.replacements.items() if k in include}
+        elif exclude is not None:
+            replacements = {k: v for k, v
+                            in self.flat_view.replacements.items() if k not in exclude}
+        else:
+            replacements = self.flat_view.replacements
+        node = theano.clone(node, replacements, strict=False)
+        posterior = self.random(no_rand=deterministic)
+        return theano.clone(node, {self.input: posterior})
+
     def to_flat_input(self, node):
         """
         Replaces vars with flattened view stored in self.input
@@ -170,15 +202,34 @@ class Approximation(object):
     def params(self):
         return cast_to_list(self.shared_params)
 
-    def _local_mu_rho(self):
-        mu = []
-        rho = []
-        for var in self.local_vars:
-            mu.append(self.known[var][0].ravel())
-            rho.append(self.known[var][1].ravel())
-        mu = tt.concatenate(mu)
-        rho = tt.concatenate(rho)
-        return mu, rho
+    def normal(self, samples, no_rand=False, l=None):
+        """
+        Initial distribution for constructing posterior
+        Parameters
+        ----------
+        samples : int - number of samples
+        no_rand : bool - return zeros if True
+        l : length of sample, defaults to latent space dim
+
+        Returns
+        -------
+        Tensor
+            sampled latent space shape == size + latent_dim
+        """
+        if l is None:
+            l = self.total_size
+        if samples is None:
+            shape = tt.as_tensor(l)[None]
+        else:
+            shape = tt.stack([tt.as_tensor(samples),
+                              tt.as_tensor(l)])
+        if isinstance(no_rand, bool):
+            no_rand = int(no_rand)
+        zeros = tt.as_tensor(no_rand)
+        space = ifelse(zeros,
+                       tt.zeros(shape),
+                       tt_rng().normal(shape))
+        return space
 
     def random_local(self, size=None, no_rand=False):
         """
@@ -307,38 +358,6 @@ class Approximation(object):
     def logq(self, z):
         return self.log_q_W_global(z) + self.log_q_W_local(z)
 
-    def apply_replacements(self, node, deterministic=False, include=None, exclude=None):
-        """
-        Replace variables in graph with variational approximation. By default, replaces all variables
-        Parameters
-        ----------
-        node : Variable
-            node for replacements
-        deterministic : bool
-            whether to use zeros as initial distribution
-            if True - zero initial point will produce constant latent variables
-        include : list
-            latent variables to be replaced
-        exclude : list
-            latent variables to be excluded for replacements
-        Returns
-        -------
-        node with replacements
-        """
-        if include is not None and exclude is not None:
-            raise ValueError('Only one parameter is supported {include|exclude}, got two')
-        if include is not None:
-            replacements = {k: v for k, v
-                            in self.flat_view.replacements.items() if k in include}
-        elif exclude is not None:
-            replacements = {k: v for k, v
-                            in self.flat_view.replacements.items() if k not in exclude}
-        else:
-            replacements = self.flat_view.replacements
-        node = theano.clone(node, replacements, strict=False)
-        posterior = self.random(no_rand=deterministic)
-        return theano.clone(node, {self.input: posterior})
-
     def view(self, space, name, reshape=True):
         """
         Construct view on a variable from flattened `space`
@@ -397,34 +416,11 @@ class Approximation(object):
     def global_slc(self):
         return slice(self.local_size, self.total_size)
 
-    def normal(self, samples, no_rand=False, l=None):
-        """
-        Initial distribution for constructing posterior
-        Parameters
-        ----------
-        samples : int - number of samples
-        no_rand : bool - return zeros if True
-        l : length of sample, defaults to latent space dim
 
-        Returns
-        -------
-        Tensor
-            sampled latent space shape == size + latent_dim
-        """
-        if l is None:
-            l = self.total_size
-        if samples is None:
-            shape = tt.as_tensor(l)[None]
-        else:
-            shape = tt.stack([tt.as_tensor(samples),
-                              tt.as_tensor(l)])
-        if isinstance(no_rand, bool):
-            no_rand = int(no_rand)
-        zeros = tt.as_tensor(no_rand)
-        space = ifelse(zeros,
-                       tt.zeros(shape),
-                       tt_rng().normal(shape))
-        return space
+class KL(Operator):
+    def apply(self, f):
+        z = self.input
+        return self.logq(z) - self.logp(z)
 
 
 class MeanField(Approximation):
