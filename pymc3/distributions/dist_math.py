@@ -189,6 +189,7 @@ def log_normal_mv(x, mean, **kwargs):
     # avoid unnecessary computations
     if L is not None:
         S = L.dot(L.T)
+        T = tt.nlinalg.matrix_inverse(S)
         Det = tt.nlinalg.det(S)
     elif T is not None:
         Det = 1 / tt.nlinalg.det(T)
@@ -198,5 +199,5 @@ def log_normal_mv(x, mean, **kwargs):
     delta = x - mean
     k = S.shape[0]
     result = k * tt.log(2 * np.pi) + tt.log(Det)
-    result += delta.dot(T).dot(delta).sum(axis=delta.ndim - 1)
+    result += delta.dot(T).dot(delta)
     return -1 / 2. * result
