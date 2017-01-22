@@ -102,7 +102,7 @@ class GLM(LinearComponent):
             defaults to Normal.dist(mu=0, tau=1.0E-6)
     init : dict - test_vals for coefficients
     vars : dict - random variables instead of creating new ones
-    family : pymc3.linear_models.families object
+    family : pymc3..families object
     """
     def __init__(self, x, y, intercept=True, labels=None,
                  priors=None, vars=None, family='normal', name='', model=None):
