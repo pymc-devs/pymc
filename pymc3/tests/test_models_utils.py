@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import pandas as pd
 import theano.tensor as tt
-from pymc3. import utils
+from pymc3.glm import utils
 
 
 class TestUtils(unittest.TestCase):
