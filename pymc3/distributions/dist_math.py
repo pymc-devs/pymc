@@ -11,6 +11,9 @@ import theano.tensor as tt
 from .special import gammaln
 
 
+c = - 0.5 * np.log(2 * np.pi)
+
+
 def bound(logp, *conditions, **kwargs):
     """
     Bounds a log probability density with several conditions.
