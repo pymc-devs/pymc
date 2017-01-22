@@ -30,7 +30,8 @@ class NUTS(BaseHMC):
         ----------
         vars : list of Theano variables, default continuous vars
         Emax : float, default 1000
-            maximum energy
+            Maximum energy change allowed during leapfrog steps. Larger
+            deviations will abort the integration.
         target_accept : float (0,1) default .8
             target for avg accept probability between final branch and initial position
         gamma : float, default .05
@@ -39,6 +40,8 @@ class NUTS(BaseHMC):
         t0 : int, default 10
             slows inital adapatation
         kwargs: passed to BaseHMC
+
+        The step size adaptation stops when `self.tune` is set to False.
         """
         super(NUTS, self).__init__(vars, use_single_leapfrog=True, **kwargs)
 
@@ -50,12 +53,21 @@ class NUTS(BaseHMC):
         self.t0 = t0
 
         self.h_bar = 0
-        self.u = np.log(self.step_size * 10)
+        self.mu = np.log(self.step_size * 10)
+        self.log_step_size = np.log(self.step_size)
+        self.log_step_size_bar = 0
         self.m = 1
+
+        self.tune = True
 
     def astep(self, q0):
         p0 = self.potential.random()
         start_energy = self.compute_energy(q0, p0)
+
+        if self.tune:
+            step_size = np.exp(self.log_step_size)
+        else:
+            step_size = np.exp(self.log_step_size_bar)
 
         u = nr.uniform()
         q = qn = qp = q0
@@ -71,7 +83,7 @@ class NUTS(BaseHMC):
             q_edge, p_edge, proposal, subtree_size, is_valid_sample, a, na = buildtree(
                 self.leapfrog, q_edge, p_edge,
                 u, direction, depth,
-                self.step_size, self.Emax, start_energy)
+                step_size, self.Emax, start_energy)
 
             if direction == -1:
                 qn, pn = q_edge, p_edge
@@ -89,7 +101,12 @@ class NUTS(BaseHMC):
 
         w = 1. / (self.m + self.t0)
         self.h_bar = (1 - w) * self.h_bar + w * (self.target_accept - a * 1. / na)
-        self.step_size = np.exp(self.u - (self.m**self.k / self.gamma) * self.h_bar)
+
+        if self.tune:
+            self.log_step_size = self.mu - self.h_bar * np.sqrt(self.m) / self.gamma
+            mk = self.m ** -self.k
+            self.log_step_size_bar = mk * self.log_step_size + (1 - mk) * self.log_step_size_bar
+
         self.m += 1
 
         return q
