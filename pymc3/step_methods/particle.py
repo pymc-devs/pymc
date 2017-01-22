@@ -12,8 +12,11 @@ class ParticleStep(ArrayStepShared):
         obj = ArrayStepShared.__new__(cls, *args[1:], **kwargs)
         return obj
 
-    def __init__(self, nparticles=None, model=None, mode=None, **kwargs):
+    def __init__(self, nparticles=None, vars=None, model=None, mode=None, **kwargs):
         model = modelcontext(model)
+        if vars is not None and len(vars) != len(model.vars):
+            raise NotImplementedError(
+                'ParticleStep sampling is not yet implemented along with other sampling techniques!')
         vars = model.vars
         vars = inputvars(vars)
         shared = make_shared_replacements(vars, model)

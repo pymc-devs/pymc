@@ -5,8 +5,8 @@ from pymc3 import ParticleStep
 class EmceeEnsemble(ParticleStep):
     default_blocked = True
 
-    def __init__(self, nparticles=None, model=None, mode=None, **kwargs):
-        super(EmceeEnsemble, self).__init__(nparticles, model, mode, **kwargs)
+    def __init__(self, nparticles=None, vars=None, model=None, mode=None, **kwargs):
+        super(EmceeEnsemble, self).__init__(nparticles, vars, model, mode, **kwargs)
 
         def lnprob(p):
             s = self.t_func(p)
