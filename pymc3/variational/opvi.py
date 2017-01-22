@@ -356,6 +356,9 @@ class Approximation(object):
         raise NotImplementedError
 
     def logq(self, z):
+        """
+        Total logq for approximation
+        """
         return self.log_q_W_global(z) + self.log_q_W_local(z)
 
     def view(self, space, name, reshape=True):
@@ -419,6 +422,9 @@ class Approximation(object):
 
 class KL(Operator):
     def apply(self, f):
+        """KL divergence between posterior and approximation for input `z`
+            :math:`z ~ Approximation`
+        """
         z = self.input
         return self.logq(z) - self.logp(z)
 
@@ -437,13 +443,44 @@ class MeanField(Approximation):
         Gradient wrt mu, rho in density parametrization
         is set to zero to lower variance of ELBO
         """
-        mu = self.shared_params['mu']
-        rho = self.shared_params['rho']
-        samples = tt.sum(log_normal(z[self.global_slc], Z(mu), rho=Z(rho)))
-        return samples
+        mu = Z(self.shared_params['mu'])
+        rho = Z(self.shared_params['rho'])
+        logq = tt.sum(log_normal(z[self.global_slc], mu, rho=rho))
+        return logq
 
     def random_global(self, samples=None, no_rand=False):
         initial = self.normal(samples, no_rand, l=self.global_size)
         sd = rho2sd(self.shared_params['rho'])
         mu = self.shared_params['mu']
         return sd * initial + mu
+
+
+class FullRank(Approximation):
+    def create_shared_params(self):
+        return {'mu': theano.shared(
+                    self.input.tag.test_value[self.global_slc]),
+                'L': theano.shared(
+                    np.eye(self.global_size, dtype=theano.config.floatX).ravel())
+                }
+
+    def log_q_W_global(self, z):
+        """
+        log_q_W samples over q for global vars
+        Gradient wrt mu, rho in density parametrization
+        is set to zero to lower variance of ELBO
+        """
+        mu = Z(self.shared_params['mu'])
+        L = Z(self.shared_params['L']).reshape((self.global_size, self.global_size))
+        S = L.dot(L.T)
+        delta = z - mu
+        k = S.shape[0]
+
+        result = k * tt.log(2 * np.pi) + tt.log(1. * tt.nlinalg.det(S))
+        result += delta.dot(tt.nlinalg.matrix_inverse(S)).dot(delta)
+        return -1 / 2. * result
+
+    def random_global(self, samples=None, no_rand=False):
+        initial = self.normal(samples, no_rand, l=self.global_size)
+        L = self.shared_params['L'].reshape((self.global_size, self.global_size))
+        mu = self.shared_params['mu']
+        return initial.dot(L) + mu

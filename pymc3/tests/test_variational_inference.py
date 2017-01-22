@@ -5,7 +5,7 @@ import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 import pymc3 as pm
 from pymc3 import Model, Normal
-from pymc3.variational.opvi import KL, MeanField, TestFunction
+from pymc3.variational.opvi import KL, MeanField, FullRank, TestFunction
 from ..theanof import set_tt_rng
 from . import models
 set_tt_rng(MRG_RandomStreams(42))
@@ -103,7 +103,7 @@ class TestApproximates:
                 obj_f = self.op(approx)(self.test_function())
                 updates = obj_f.updates(obj_f.random())
                 step = theano.function([], [], updates=updates)
-                for _ in range(30000):
+                for _ in range(self.NITER):
                     step()
                 trace = approx.sample_vp(10000)
 
@@ -113,6 +113,11 @@ class TestApproximates:
 
 class TestMeanField(TestApproximates.Base):
     pass
+
+
+class TestFullRank(TestApproximates.Base):
+    approx = FullRank
+
 
 if __name__ == '__main__':
     unittest.main()
