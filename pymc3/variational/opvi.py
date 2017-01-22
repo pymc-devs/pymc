@@ -4,7 +4,7 @@ from theano.ifelse import ifelse
 import theano
 import pymc3 as pm
 from .advi import adagrad_optimizer
-from ..theanof import tt_rng, memoize, change_flags
+from ..theanof import tt_rng, memoize, change_flags, GradScale
 from ..blocking import ArrayOrdering
 from ..distributions.dist_math import rho2sd, log_normal, log_normal_mv
 from ..distributions.distribution import infer_shape
@@ -118,7 +118,8 @@ class TestFunction(object):
 
 
 class Approximation(object):
-    def __init__(self, local_rv=None, model=None):
+    # TODO: docs
+    def __init__(self, local_rv=None, model=None, cost_part_grad_scale=1):
         model = modelcontext(model)
         self.model = model
         self.check_model(model)
@@ -138,6 +139,7 @@ class Approximation(object):
             model=self.model,
             vars=self.local_vars + self.global_vars
         )
+        self.cost_part_grad_scale = cost_part_grad_scale
         self.shared_params = self.create_shared_params()
 
     input = property(lambda self: self.flat_view.input)
@@ -195,6 +197,17 @@ class Approximation(object):
         node = theano.clone(node, replacements, strict=False)
         posterior = self.random(no_rand=deterministic)
         return theano.clone(node, {self.input: posterior})
+
+    def scale_grad(self, inp):
+        """
+        Identity with scaling gradient
+
+        References
+        ----------
+        Sticking the Landing: A Simple Reduced-Variance Gradient for ADVI
+        approximateinference.org/accepted/RoederEtAl2016.pdf
+        """
+        return GradScale(self.cost_part_grad_scale)(inp)
 
     def to_flat_input(self, node):
         """
@@ -348,8 +361,10 @@ class Approximation(object):
         for var in self.local_vars:
             mu = self.known[var][0].ravel()
             rho = self.known[var][1].ravel()
+            mu = self.scale_grad(mu)
+            rho = self.scale_grad(rho)
             x = self.view(z, var.name, reshape=False)
-            q = log_normal(x, Z(mu), rho=Z(rho))
+            q = log_normal(x, mu, rho=rho)
             logp.append(q.sum() * var.scaling)
         return tt.sum(logp)
 
@@ -447,8 +462,10 @@ class MeanField(Approximation):
         Gradient wrt mu, rho in density parametrization
         is set to zero to lower variance of ELBO
         """
-        mu = Z(self.shared_params['mu'])
-        rho = Z(self.shared_params['rho'])
+        mu = self.shared_params['mu']
+        rho = self.shared_params['rho']
+        mu = self.scale_grad(mu)
+        rho = self.scale_grad(rho)
         logq = tt.sum(log_normal(z[self.global_slc], mu, rho=rho))
         return logq
 
@@ -473,8 +490,10 @@ class FullRank(Approximation):
         Gradient wrt mu, rho in density parametrization
         is set to zero to lower variance of ELBO
         """
-        mu = Z(self.shared_params['mu'])
-        L = Z(self.shared_params['L']).reshape((self.global_size, self.global_size))
+        mu = self.shared_params['mu']
+        L = self.shared_params['L'].reshape((self.global_size, self.global_size))
+        mu = self.scale_grad(mu)
+        L = self.scale_grad(L)
         return log_normal_mv(z, mu, chol=L)
 
     def random_global(self, samples=None, no_rand=False):

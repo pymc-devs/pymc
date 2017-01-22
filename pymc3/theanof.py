@@ -372,3 +372,11 @@ def set_tt_rng(new_rng):
     global _tt_rng
     _tt_rng = new_rng
     launch_rng(_tt_rng)
+
+
+class GradScale(theano.compile.ViewOp):
+    def __init__(self, multiplier):
+        self.multiplier = multiplier
+
+    def grad(self, args, g_outs):
+        return [self.multiplier * g_out for g_out in g_outs]
