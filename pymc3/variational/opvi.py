@@ -405,7 +405,7 @@ class Approximation(object):
             raise ValueError('Space should have no more than 2 dims, got %d' % space.ndim)
         if reshape:
             if len(_shape) > 0:
-                if isinstance(space, tt.Tensor):
+                if isinstance(space, tt.TensorVariable):
                     shape = tt.concatenate([space.shape[:-1],
                                             tt.as_tensor(_shape)])
                 else:
@@ -446,6 +446,13 @@ class KL(Operator):
         """
         z = self.input
         return self.logq(z) - self.logp(z)
+
+
+class LS(Operator):
+    def apply(self, f):
+        z = self.input
+        jacobian = theano.gradient.jacobian
+        return (tt.Rop(self.logp(z), z, f(z)) + jacobian(f(z), z).sum()) ** 2
 
 
 class MeanField(Approximation):
