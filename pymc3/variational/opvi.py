@@ -85,7 +85,6 @@ class Operator(object):
             return updates
 
 
-
 class KL(Operator):
     def apply(self, f):
         z = self.input
@@ -171,8 +170,74 @@ class Approximation(object):
     def params(self):
         return cast_to_list(self.shared_params)
 
-    def random(self, size=None, no_rand=False):
+    def _local_mu_rho(self):
+        mu = []
+        rho = []
+        for var in self.local_vars:
+            mu.append(self.known[var][0].ravel())
+            rho.append(self.known[var][1].ravel())
+        mu = tt.concatenate(mu)
+        rho = tt.concatenate(rho)
+        return mu, rho
+
+    def random_local(self, size=None, no_rand=False):
+        """
+        Implements posterior distribution from initial latent space
+        Parameters
+        ----------
+        size : number of samples from distribution
+        no_rand : whether use deterministic distribution
+
+        Returns
+        -------
+        local posterior space
+        """
+
+        mu, rho = self._local_mu_rho()
+        e = self.normal(size, no_rand, self.local_size)
+        return e * rho2sd(rho) + mu
+
+    def random_global(self, size=None, no_rand=False):
+        """
+        Implements posterior distribution from initial latent space
+        Parameters
+        ----------
+        size : number of samples from distribution
+        no_rand : whether use deterministic distribution
+
+        Returns
+        -------
+        global posterior space
+        """
         raise NotImplementedError
+
+    def random(self, size=None, no_rand=False):
+        """
+        Implements posterior distribution from initial latent space
+        Parameters
+        ----------
+        size : number of samples from distribution
+        no_rand : whether use deterministic distribution
+
+        Returns
+        -------
+        posterior space
+        """
+        if size is None:
+            ax = 0
+        else:
+            ax = 1
+        if self.local_vars and self.global_vars:
+            return tt.concatenate([
+                self.random_local(size, no_rand),
+                self.random_global(size, no_rand)
+            ], axis=ax)
+        elif self.local_vars:
+            return self.random_local(size, no_rand)
+        elif self.global_vars:
+            return self.random_global(size, no_rand)
+        else:
+            raise ValueError('No FreeVARs in model')
 
     @property
     @memoize
@@ -332,24 +397,27 @@ class Approximation(object):
     def global_slc(self):
         return slice(self.local_size, self.total_size)
 
-    def normal(self, samples, no_rand=False):
+    def normal(self, samples, no_rand=False, l=None):
         """
         Initial distribution for constructing posterior
         Parameters
         ----------
         samples : int - number of samples
         no_rand : bool - return zeros if True
+        l : length of sample, defaults to latent space dim
 
         Returns
         -------
         Tensor
             sampled latent space shape == size + latent_dim
         """
+        if l is None:
+            l = self.total_size
         if samples is None:
-            shape = tt.as_tensor(self.total_size)[None]
+            shape = tt.as_tensor(l)[None]
         else:
             shape = tt.stack([tt.as_tensor(samples),
-                              tt.as_tensor(self.total_size)])
+                              tt.as_tensor(l)])
         if isinstance(no_rand, bool):
             no_rand = int(no_rand)
         zeros = tt.as_tensor(no_rand)
@@ -378,8 +446,8 @@ class MeanField(Approximation):
         samples = tt.sum(log_normal(z[self.global_slc], Z(mu), rho=Z(rho)))
         return samples
 
-    def random(self, samples=None, no_rand=False):
-        initial = self.normal(samples, no_rand)
+    def random_global(self, samples=None, no_rand=False):
+        initial = self.normal(samples, no_rand, l=self.global_size)
         sd = rho2sd(self.shared_params['rho'])
         mu = self.shared_params['mu']
         return sd * initial + mu
