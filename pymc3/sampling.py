@@ -6,7 +6,7 @@ import numpy as np
 
 import pymc3 as pm
 from .backends.base import merge_traces, BaseTrace, MultiTrace
-from .backends.ndarray import NDArray
+from .backends.ndarray import NDArray, MultiNDArray
 from .model import modelcontext, Point
 from .step_methods import (NUTS, HamiltonianMC, Metropolis, BinaryMetropolis,
                            BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
@@ -152,6 +152,9 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     if init is not None:
         init = init.lower()
 
+    if isinstance(step, ParticleStep):
+        trace = MultiNDArray(step.nparticles)
+
     if step is None and init is not None and pm.model.all_continuous(model.vars):
         # By default, use NUTS sampler
         pm._log.info('Auto-assigning NUTS sampler...')
@@ -267,7 +270,10 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     if len(strace) > 0:
         _soft_update(start, strace.point(-1))
     else:
-        _soft_update(start, model.test_point)
+        if hasattr(strace, 'nparticles'):
+            start = get_random_starters(strace.nparticles, model)
+        else:
+            _soft_update(start, model.test_point)
 
     try:
         step = CompoundStep(step)
@@ -496,3 +502,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
     step = pm.NUTS(scaling=cov, is_cov=True, **kwargs)
 
     return start, step
+
+def get_random_starters(nwalkers, model=None):
+    model = pm.modelcontext(model)
+    return {v.name: v.distribution.random(size=nwalkers) for v in model.vars}
