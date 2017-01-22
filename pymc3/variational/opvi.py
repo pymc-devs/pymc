@@ -87,7 +87,7 @@ def cast_to_list(params):
     if isinstance(params, list):
         return params
     elif isinstance(params, dict):
-        return params.values()
+        return list(params.values())
     elif isinstance(params, theano.compile.SharedVariable):
         return [params]
     elif params is None:
