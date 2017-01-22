@@ -6,6 +6,7 @@ pandas>=0.18.0
 patsy>=0.4.0
 joblib>=0.9
 tqdm>=4.8.4
+networkx==1.11.0
 CommonMark==0.5.4
 recommonmark
 sphinx
