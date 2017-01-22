@@ -156,3 +156,47 @@ def log_normal(x, mean, **kwargs):
         std = tau**(-1)
     std += eps
     return c - tt.log(tt.abs_(std)) - (x - mean) ** 2 / (2 * std ** 2)
+
+
+def log_normal_mv(x, mean, **kwargs):
+    """
+    Calculate logarithm of normal distribution at point `x`
+    with given `mean` and `sigma` matrix
+    Parameters
+    ----------
+    x : Tensor
+        point of evaluation
+    mean : Tensor
+        mean of normal distribution
+    kwargs : one of parameters `{cov, tau, chol}`
+    Notes
+    -----
+    There are three variants for density parametrization.
+    They are:
+        1) covariance matrix - `cov`
+        2) precision matrix - `tau`,
+        3) cholesky decomposition matrix  - `chol`
+    ----
+    """
+    T = kwargs.get('tau')
+    S = kwargs.get('cov')
+    L = kwargs.get('chol')
+    check = sum(map(lambda a: a is not None, [T, S, L]))
+    if check > 1:
+        raise ValueError('more than one required kwarg is passed')
+    if check == 0:
+        raise ValueError('none of required kwarg is passed')
+    # avoid unnecessary computations
+    if L is not None:
+        S = L.dot(L.T)
+        Det = tt.nlinalg.det(S)
+    elif T is not None:
+        Det = 1 / tt.nlinalg.det(T)
+    else:
+        T = tt.nlinalg.matrix_inverse(S)
+        Det = tt.nlinalg.det(S)
+    delta = x - mean
+    k = S.shape[0]
+    result = k * tt.log(2 * np.pi) + tt.log(Det)
+    result += delta.dot(T).dot(delta).sum(axis=delta.ndim - 1)
+    return -1 / 2. * result

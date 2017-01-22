@@ -6,7 +6,7 @@ import pymc3 as pm
 from .advi import adagrad_optimizer
 from ..theanof import tt_rng, memoize, change_flags
 from ..blocking import ArrayOrdering
-from ..distributions.dist_math import rho2sd, log_normal
+from ..distributions.dist_math import rho2sd, log_normal, log_normal_mv
 from ..distributions.distribution import infer_shape
 from ..math import flatten_list
 from ..model import modelcontext
@@ -473,13 +473,7 @@ class FullRank(Approximation):
         """
         mu = Z(self.shared_params['mu'])
         L = Z(self.shared_params['L']).reshape((self.global_size, self.global_size))
-        S = L.dot(L.T)
-        delta = z - mu
-        k = S.shape[0]
-
-        result = k * tt.log(2 * np.pi) + tt.log(1. * tt.nlinalg.det(S))
-        result += delta.dot(tt.nlinalg.matrix_inverse(S)).dot(delta)
-        return -1 / 2. * result
+        return log_normal_mv(z, mu, chol=L)
 
     def random_global(self, samples=None, no_rand=False):
         initial = self.normal(samples, no_rand, l=self.global_size)
