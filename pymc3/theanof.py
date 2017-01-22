@@ -267,10 +267,7 @@ class GeneratorOp(Op):
         self._nan[...] = np.nan
 
     def perform(self, node, inputs, output_storage, params=None):
-        try:
-            output_storage[0][0] = next(self.generator)
-        except StopIteration:
-            output_storage[0][0] = self._nan
+        output_storage[0][0] = next(self.generator, self._nan)
 
     def do_constant_folding(self, node):
         return False

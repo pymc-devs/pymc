@@ -63,19 +63,19 @@ class TestGenerator(unittest.TestCase):
 
     def test_setvalue(self):
         def gen():
-            for _ in range(2):
-                yield np.ones((10, 10))
+            for i in range(2):
+                yield np.ones((10, 10)) * i
 
         gop = generator(gen())
         f = theano.function([], gop)
         res = [f() for _ in range(3)]
-        np.testing.assert_equal(np.ones((10, 10)), res[0])
-        np.testing.assert_equal(np.ones((10, 10)), res[1])
+        np.testing.assert_equal(np.ones((10, 10)) * 0, res[0])
+        np.testing.assert_equal(np.ones((10, 10)) * 1, res[1])
         self.assertTrue(res[2].shape == (10, 10))
         self.assertTrue(np.isnan(res[2]).all())
         gop.set_gen(gen())
         res = [f() for _ in range(3)]
-        np.testing.assert_equal(np.ones((10, 10)), res[0])
-        np.testing.assert_equal(np.ones((10, 10)), res[1])
+        np.testing.assert_equal(np.ones((10, 10)) * 0, res[0])
+        np.testing.assert_equal(np.ones((10, 10)) * 1, res[1])
         self.assertTrue(res[2].shape == (10, 10))
         self.assertTrue(np.isnan(res[2]).all())
