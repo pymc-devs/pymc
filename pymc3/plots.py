@@ -1,12 +1,13 @@
 import numpy as np
 from scipy.stats import kde, mode
 import matplotlib.pyplot as plt
+import networkx as nx
 import pymc3 as pm
 from .stats import quantiles, hpd
 from scipy.signal import gaussian, convolve
 
 __all__ = ['traceplot', 'kdeplot', 'kde2plot',
-           'forestplot', 'autocorrplot', 'plot_posterior']
+           'forestplot', 'autocorrplot', 'plot_posterior', 'plot_network']
 
 
 def traceplot(trace, varnames=None, transform=lambda x: x, figsize=None,
@@ -783,13 +784,13 @@ def plot_posterior(trace, varnames=None, transform=lambda x: x, figsize=None,
         fig.tight_layout()
     return ax
 
-    
+
 def fast_kde(x):
     """
     A fft-based Gaussian kernel density estimate (KDE) for computing
     the KDE on a regular grid.
     The code was adapted from https://github.com/mfouesneau/faststats
-    
+
     Parameters
     ----------
 
@@ -801,13 +802,13 @@ def fast_kde(x):
     grid: A gridded 1D KDE of the input points (x).
     xmin: minimum value of x
     xmax: maximum value of x
-    
+
     """
     # add small jitter in case input values are the same
     x = np.random.normal(x, 1e-12)
-    
+
     xmin, xmax = x.min(), x.max()
-    
+
     n = len(x)
     nx = 256
 
@@ -839,3 +840,77 @@ def fast_kde(x):
     grid /= norm_factor
 
     return grid, xmin, xmax
+
+
+def _get_all_parents(end_node, starting_list=[]):
+    for parent in end_node.owner.get_parents():
+        starting_list.append(parent)
+        if parent.owner is not None:
+            _get_all_parents(parent, starting_list)
+    return starting_list
+
+
+def plot_network(model, layout='spectral', plot=True, ax=None):
+    """
+    Create and optionally draw a directed graph (network) representation of a
+    provided model.
+
+    Parameters
+    ----------
+    model : pymc3.Model
+        The Model object to be coerced into a graph.
+    layout : str
+        Layout to use when plotting the graph. Available options are:
+        'circular', 'shell', 'spectral', 'spring', 'force-directed', 'random'.
+    plot : bool
+        Plots the graph using Matplotlib if True. If False, no plot is created
+        and only the graph object is returned.
+    ax : Matplotlib Axes object, optional
+        Draw the graph in specified Matplotlib axes.
+
+    Returns
+    -------
+    graph : networkx.DiGraph
+        The graph object extracted from the information in the model.
+    """
+
+    available_layouts = {
+        "circular": nx.circular_layout,
+        "shell": nx.shell_layout,
+        "spectral": nx.spectral_layout,
+        "spring": nx.spring_layout,
+        "force-directed": nx.fruchterman_reingold_layout,
+        "random": nx.random_layout,
+    }
+
+    try:
+        layout_func = available_layouts[layout]
+    except KeyError:
+        msg = (u"The selected layout option ({}) is not available. Please "
+               u"choose from the following options: {}".format(
+                  layout, available_layouts.keys()
+               ))
+        raise KeyError(msg)
+
+    graph = nx.DiGraph()
+
+    variables = model.named_vars.values()
+    for var in variables:
+        graph.add_node(var)
+        dist = var.distribution
+        for param_name in getattr(dist, "param_names", []):
+            param_value = getattr(dist, param_name)
+            owner = getattr(param_value, "owner", None)
+            if param_value in variables:
+                graph.add_edge(param_value, var)
+            elif owner is not None:
+                parents = _get_all_parents(param_value)
+                for parent in parents:
+                    if parent in variables:
+                        graph.add_edge(parent, var)
+
+    if plot:
+        pos = layout_func(graph)
+        nx.draw_networkx(graph, pos, ax)
+
+    return graph

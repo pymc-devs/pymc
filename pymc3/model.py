@@ -1,6 +1,5 @@
 import threading
 
-import networkx as nx
 import numpy as np
 import theano
 import theano.tensor as tt
@@ -94,14 +93,6 @@ def _get_named_nodes(graph, nodes):
     return nodes
 
 
-def get_all_parents(end_node, starting_list=[]):
-    for parent in end_node.owner.get_parents():
-        starting_list.append(parent)
-        if parent.owner is not None:
-            get_all_parents(parent, starting_list)
-    return starting_list
-
-
 class Context(object):
     """Functionality for objects that put themselves in a context using
     the `with` statement.
@@ -192,7 +183,6 @@ class Model(Context, Factor):
         self.potentials = []
         self.missing_values = []
         self.model = self
-        self.graph = nx.DiGraph()
 
     @property
     @memoize
@@ -316,18 +306,6 @@ class Model(Context, Factor):
                 self.free_RVs.append(var.missing_values)
                 self.missing_values.append(var.missing_values)
                 self.named_vars[var.missing_values.name] = var.missing_values
-
-        self.graph.add_node(var)
-        for param_name in getattr(dist, "param_names", []):
-            param_value = getattr(dist, param_name)
-            owner = getattr(param_value, "owner", None)
-            if param_value in self.vars:
-                self.graph.add_edge(param_value, var)
-            elif owner is not None:
-                parents = get_all_parents(param_value)
-                for parent in parents:
-                    if parent in self.vars:
-                        self.graph.add_edge(parent, var)
 
         self.add_random_variable(var)
         return var
