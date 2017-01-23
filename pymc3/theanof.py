@@ -340,6 +340,7 @@ def launch_rng(rng):
     """
     Helper function for safe launch of theano random generator.
     If not launched, there will be problems with test_value
+
     Parameters
     ----------
     rng : `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
@@ -355,6 +356,7 @@ launch_rng(_tt_rng)
 def tt_rng():
     """
     Get the package-level random number generator.
+
     Returns
     -------
     `theano.sandbox.rng_mrg.MRG_RandomStreams` instance
@@ -367,6 +369,7 @@ def tt_rng():
 def set_tt_rng(new_rng):
     """
     Set the package-level random number generator.
+
     Parameters
     ----------
     new_rng : `theano.sandbox.rng_mrg.MRG_RandomStreams` instance

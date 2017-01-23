@@ -169,6 +169,7 @@ class Approximation(object):
     def apply_replacements(self, node, deterministic=False, include=None, exclude=None):
         """
         Replace variables in graph with variational approximation. By default, replaces all variables
+
         Parameters
         ----------
         node : Variable
@@ -180,6 +181,7 @@ class Approximation(object):
             latent variables to be replaced
         exclude : list
             latent variables to be excluded for replacements
+
         Returns
         -------
         node with replacements
@@ -222,6 +224,7 @@ class Approximation(object):
     def normal(self, samples, no_rand=False, l=None):
         """
         Initial distribution for constructing posterior
+
         Parameters
         ----------
         samples : int - number of samples
@@ -251,6 +254,7 @@ class Approximation(object):
     def random_local(self, size=None, no_rand=False):
         """
         Implements posterior distribution from initial latent space
+
         Parameters
         ----------
         size : number of samples from distribution
@@ -268,6 +272,7 @@ class Approximation(object):
     def random_global(self, size=None, no_rand=False):
         """
         Implements posterior distribution from initial latent space
+
         Parameters
         ----------
         size : number of samples from distribution
@@ -282,6 +287,7 @@ class Approximation(object):
     def random(self, size=None, no_rand=False):
         """
         Implements posterior distribution from initial latent space
+
         Parameters
         ----------
         size : number of samples from distribution
@@ -383,6 +389,7 @@ class Approximation(object):
     def view(self, space, name, reshape=True):
         """
         Construct view on a variable from flattened `space`
+
         Parameters
         ----------
         space : space to take view of variable from
@@ -390,6 +397,7 @@ class Approximation(object):
             name of variable
         reshape : bool
             whether to reshape variable from vectorized view
+
         Returns
         -------
         variable view
