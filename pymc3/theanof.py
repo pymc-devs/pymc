@@ -256,18 +256,23 @@ class GeneratorOp(Op):
     """
     __props__ = ('generator',)
 
-    def __init__(self, gen):
+    def __init__(self, gen, default=None):
         super(GeneratorOp, self).__init__()
         if not isinstance(gen, DataGenerator):
             gen = DataGenerator(gen)
         self.generator = gen
         self.itypes = []
         self.otypes = [self.generator.tensortype]
-        self._nan = np.zeros_like(self.generator.test_value)
-        self._nan[...] = np.nan
+        if default is not None:
+            self.set_default(default)
+        else:
+            self.default = None
 
     def perform(self, node, inputs, output_storage, params=None):
-        output_storage[0][0] = next(self.generator, self._nan)
+        if self.default is not None:
+            output_storage[0][0] = next(self.generator, self.default)
+        else:
+            output_storage[0][0] = next(self.generator)
 
     def do_constant_folding(self, node):
         return False
@@ -280,10 +285,20 @@ class GeneratorOp(Op):
         def __call__(self, gen):
             self.op.set_gen(gen)
 
+    class _set_default(object):
+        """For pickling"""
+        def __init__(self, op):
+            self.op = op
+
+        def __call__(self, value):
+            self.op.set_default(value)
+
     @change_flags(compute_test_value='off')
     def __call__(self, *args, **kwargs):
         rval = super(GeneratorOp, self).__call__(*args, **kwargs)
+        # maybe not the best solution but works
         rval.set_gen = self._set_gen(self)
+        rval.set_default = self._set_default(self)
         rval.tag.test_value = self.generator.test_value
         return rval
 
@@ -294,7 +309,18 @@ class GeneratorOp(Op):
             raise ValueError('New generator should yield the same type')
         self.generator = gen
 
+    def set_default(self, value):
+        value = np.asarray(value)
+        tensortype = tt.TensorType(
+                        value.dtype,
+                        ((False,) * value.ndim)
+        )
+        if not tensortype == self.generator.tensortype:
+            raise ValueError('Default value should have the '
+                             'same type as generator')
+        self.default = value
 
-def generator(gen):
+
+def generator(gen, default=None):
     """shortcut for `GeneratorOp`"""
-    return GeneratorOp(gen)()
+    return GeneratorOp(gen, default)()
