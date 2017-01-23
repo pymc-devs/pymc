@@ -328,7 +328,7 @@ class GeneratorOp(Op):
 def generator(gen, default=None):
     """
     Generator variable with possibility to set default value and new generator.
-    Raises StopIteration if generator is exhausted and
+    Raises StopIteration if generator is exhausted
 
     Parameters
     ----------
