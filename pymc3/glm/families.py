@@ -22,6 +22,7 @@ identity = Identity()
 logit = tt.nnet.sigmoid
 inverse = tt.inv
 exp = tt.exp
+log = tt.log
 
 
 class Family(object):
@@ -107,5 +108,12 @@ class Binomial(Family):
 class Poisson(Family):
     link = exp
     likelihood = pm_dists.Poisson
+    parent = 'mu'
+    priors = {'mu': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
+
+
+class NegativeBinomial(Family):
+    link = log
+    likelihood = pm_dists.NegativeBinomial
     parent = 'mu'
     priors = {'mu': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
