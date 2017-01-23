@@ -42,7 +42,7 @@ class Operator(object):
 
     def logp(self, z):
         p = theano.clone(self.model.logpt, self.flat_view.replacements, strict=False)
-        p = theano.clone(p, {self.input: z}, strict=False)
+        p = theano.clone(p, {self.input: z})
         return p
 
     def logq(self, z):
@@ -58,13 +58,17 @@ class Operator(object):
 
     class ObjectiveFunction(object):
         def __init__(self, op, tf):
-            self.random = lambda: op.approx.random()
-            self.obj = lambda z: theano.clone(op.apply(tf), {op.input: z}, strict=False)
-            self.test_params = tf.params
-            self.obj_params = op.approx.params
+            self.tf = tf
+            self.op = op
+
+        obj_params = property(lambda self: self.op.approx.params)
+        test_params = property(lambda self: self.tf.params)
+
+        def random(self):
+            return self.op.approx.random()
 
         def __call__(self, z):
-            return self.obj(z)
+            return theano.clone(self.op.apply(self.tf), {self.op.input: z})
 
         def updates(self, z, obj_optimizer=None, test_optimizer=None, more_params=None):
             if more_params is None:
