@@ -247,12 +247,16 @@ class GeneratorOp(Op):
     Generaror Op is designed for storing python generators
     inside theano graph. The main limitation is generator itself.
 
-    There are some important cases when generator becomes exhausted
-        - not endless generator is passed
-        - exception is raised while `generator.__next__` is performed
-            Note: it is dangerous in simple python generators, but ok in
-            custom class based generators with explicit state
-        - data type on each iteration should be the same
+    __call__ creates TensorVariable
+        It has 2 new methods (assigned externally)
+        - var.set_gen(gen) : sets new generator
+        - var.set_default(value) : sets new default value (None erases default value)
+
+    Parameters
+    ----------
+    gen : generator that implements __next__ (py3) or next (py2) method
+        and yields np.arrays with same types
+    default : np.array with the same type as generator produces
     """
     __props__ = ('generator',)
 
@@ -263,10 +267,7 @@ class GeneratorOp(Op):
         self.generator = gen
         self.itypes = []
         self.otypes = [self.generator.tensortype]
-        if default is not None:
-            self.set_default(default)
-        else:
-            self.default = None
+        self.set_default(default)
 
     def perform(self, node, inputs, output_storage, params=None):
         if self.default is not None:
@@ -310,17 +311,36 @@ class GeneratorOp(Op):
         self.generator = gen
 
     def set_default(self, value):
-        value = np.asarray(value)
-        tensortype = tt.TensorType(
-                        value.dtype,
-                        ((False,) * value.ndim)
-        )
-        if not tensortype == self.generator.tensortype:
-            raise ValueError('Default value should have the '
-                             'same type as generator')
-        self.default = value
+        if value is None:
+            self.default = None
+        else:
+            value = np.asarray(value)
+            tensortype = tt.TensorType(
+                            value.dtype,
+                            ((False,) * value.ndim)
+            )
+            if not tensortype == self.generator.tensortype:
+                raise ValueError('Default value should have the '
+                                 'same type as generator')
+            self.default = value
 
 
 def generator(gen, default=None):
-    """shortcut for `GeneratorOp`"""
+    """
+    Generator variable with possibility to set default value and new generator.
+    Raises StopIteration if generator is exhausted and
+
+    Parameters
+    ----------
+    gen : generator that implements __next__ (py3) or next (py2) method
+        and yields np.arrays with same types
+    default : np.array with the same type as generator produces
+
+    Returns
+    -------
+    TensorVariable
+        It has 2 new methods (assigned externally)
+        - var.set_gen(gen) : sets new generator
+        - var.set_default(value) : sets new default value (None erases default value)
+    """
     return GeneratorOp(gen, default)()
