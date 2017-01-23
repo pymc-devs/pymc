@@ -109,3 +109,11 @@ class Poisson(Family):
     likelihood = pm_dists.Poisson
     parent = 'mu'
     priors = {'mu': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
+
+
+class NegativeBinomial(Family):
+    link = exp
+    likelihood = pm_dists.NegativeBinomial
+    parent = 'mu'
+    priors = {'mu': pm_dists.HalfCauchy.dist(beta=10, testval=1.),
+              'alpha': pm_dists.HalfCauchy.dist(beta=10, testval=1.)}
