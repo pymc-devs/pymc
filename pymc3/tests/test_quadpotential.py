@@ -9,10 +9,6 @@ from pymc3.step_methods.hmc import quadpotential
 from nose.tools import raises, assert_raises
 from nose.plugins.skip import SkipTest
 
-if quadpotential.chol_available:
-    from scipy import sparse
-    from sksparse import cholmod
-
 
 def require_sparse(f):
     @functools.wraps(f)
@@ -75,7 +71,7 @@ def test_equal_diag():
             quadpotential.quad_potential(np.diag(1. / diag), True, False),
         ]
         if quadpotential.chol_available:
-            diag_ = sparse.csc_matrix(np.diag(1. / diag))
+            diag_ = scipy.sparse.csc_matrix(np.diag(1. / diag))
             pots.append(quadpotential.quad_potential(diag_, True, False))
 
         v = np.diag(1. / diag).dot(x_)

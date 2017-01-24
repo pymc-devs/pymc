@@ -1,6 +1,6 @@
 """
 Copied and modified from Edward code base (https://github.com/blei-lab/edward) following
-deprecation of external package wrappers by Edward.
+deprecation of external package wrappers by Edward.  Requires installation of tensorflow.
 """
 
 from __future__ import absolute_import
@@ -9,7 +9,7 @@ from __future__ import print_function
 
 import numpy as np
 import six
-import tensorflow as tf
+import tensorflow as tf  # pragma pylint: disable=import-error
 
 class EdwardModel(object):
     """Model wrapper for models written in PyMC3 to be fit using Edward.
@@ -25,7 +25,7 @@ class EdwardModel(object):
             shared variables are set during inference, and all latent
             variables live on their original (constrained) space.
         """
-        
+
         self.model = model
         self.n_vars = None
 
@@ -77,4 +77,3 @@ class EdwardModel(object):
         z = {key: value for key, value in zip(self.zs_keys, zs_values)}
         lp = self.model.fastlogp(z)
         return lp.astype(np.float32)
-        
