@@ -13,7 +13,8 @@ from scipy import stats
 import warnings
 
 from . import transforms
-from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1
+
+from .dist_math import bound, logpow, gammaln, betaln, std_cdf, i0, i1, alltrue_elemwise
 from .distribution import Continuous, draw_values, generate_samples, Bound
 
 __all__ = ['Uniform', 'Flat', 'Normal', 'Beta', 'Exponential', 'Laplace',
@@ -1302,3 +1303,46 @@ class SkewNormal(Continuous):
             + (-tau * (value - mu)**2
             + tt.log(tau / np.pi / 2.)) / 2.,
             tau > 0, sd > 0)
+
+
+class Triangular(Continuous):
+    """
+    Continuous Triangular log-likelihood
+    Implemented by J. A. Fonseca 22/12/16
+
+    Parameters
+    ----------
+    lower : float
+        Lower limit.
+    c: float
+        mode
+    upper : float
+        Upper limit.
+    """
+
+    def __init__(self, lower=0, upper=1, c=0.5,
+                 *args, **kwargs):
+        super(Triangular, self).__init__(*args, **kwargs)
+
+        self.c = c
+        self.lower = lower
+        self.upper = upper
+        self.mean = c
+        self.median = self.mean
+
+    def random(self, point=None, size=None):
+        c, lower, upper = draw_values([self.c, self.lower, self.upper],
+                                      point=point)
+        return generate_samples(stats.triang.rvs, c=c-lower, loc=lower, scale=upper-lower,
+                                size=size, dist_shape=self.shape, random_state=None)
+
+    def logp(self, value):
+        c = self.c
+        lower = self.lower
+        upper = self.upper
+        return tt.switch(alltrue_elemwise([lower <= value, value < c]),
+                         tt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
+                         tt.switch(tt.eq(value, c), tt.log(2 / (upper - lower)),
+                         tt.switch(alltrue_elemwise([c < value, value <= upper]),
+                         tt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),np.inf)))
+
