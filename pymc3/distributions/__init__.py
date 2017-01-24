@@ -124,5 +124,6 @@ __all__ = ['Uniform',
            'GARCH11',
            'SkewNormal',
            'Mixture',
-           'NormalMixture'
+           'NormalMixture',
+           'Triangular'
            ]
