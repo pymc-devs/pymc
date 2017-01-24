@@ -5,7 +5,10 @@ import theano.tensor as tt
 from theano.sandbox.rng_mrg import MRG_RandomStreams
 import pymc3 as pm
 from pymc3 import Model, Normal
-from pymc3.variational.opvi import KL, MeanField, FullRank, TestFunction
+from pymc3.variational.opvi import (
+    KL, MeanField, FullRank, TestFunction,
+    NeuralNetwork, TestNeuralNetwork, LS
+)
 from ..theanof import set_tt_rng
 from . import models
 set_tt_rng(MRG_RandomStreams(42))
@@ -15,7 +18,7 @@ class TestApproximates:
     class Base(unittest.TestCase):
         op = KL
         approx = MeanField
-        test_function = TestFunction
+        tf = TestFunction
         NITER = 30000
 
         def test_elbo(self):
@@ -34,7 +37,7 @@ class TestApproximates:
 
             # Create variational gradient tensor
             mean_field = self.approx(model=model)
-            elbo = -self.op(mean_field)(self.test_function())(mean_field.random())
+            elbo = -self.op(mean_field)(self.tf())(mean_field.random())
 
             mean_field.shared_params['mu'].set_value(post_mu)
             mean_field.shared_params['rho'].set_value(np.log(np.exp(post_sd) - 1))
@@ -100,7 +103,7 @@ class TestApproximates:
                 Normal('x', mu=mu_, sd=sd, observed=data)
                 pm.Deterministic('mu_sq', mu_**2)
                 approx = self.approx()
-                obj_f = self.op(approx)(self.test_function())
+                obj_f = self.op(approx)(self.tf(approx.total_size))
                 updates = obj_f.updates(obj_f.random())
                 step = theano.function([], [], updates=updates)
                 for _ in range(self.NITER):
@@ -118,6 +121,12 @@ class TestMeanField(TestApproximates.Base):
 class TestFullRank(TestApproximates.Base):
     approx = FullRank
 
+
+class TestLSOp(TestApproximates.Base):
+    NITER = 100000
+    approx = NeuralNetwork
+    tf = TestNeuralNetwork
+    op = LS
 
 if __name__ == '__main__':
     unittest.main()

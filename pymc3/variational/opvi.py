@@ -4,7 +4,7 @@ from theano.ifelse import ifelse
 import theano
 import pymc3 as pm
 from .advi import adagrad_optimizer
-from ..theanof import tt_rng, memoize, change_flags, GradScale
+from ..theanof import tt_rng, memoize, change_flags, GradScale, identity
 from ..blocking import ArrayOrdering
 from ..distributions.dist_math import rho2sd, log_normal, log_normal_mv
 from ..distributions.distribution import infer_shape
@@ -76,7 +76,7 @@ class Operator(object):
             if obj_optimizer is None:
                 obj_optimizer = adagrad_optimizer(learning_rate=.001, epsilon=.1)
             if test_optimizer is None:
-                obj_optimizer = adagrad_optimizer(learning_rate=.001, epsilon=.1)
+                test_optimizer = adagrad_optimizer(learning_rate=.001, epsilon=.1)
             target = self(z)
             updates = theano.OrderedUpdates()
             updates.update(obj_optimizer(target, self.obj_params + more_params))
@@ -103,7 +103,12 @@ def cast_to_list(params):
 
 
 class TestFunction(object):
-    shared_params = None
+    def __init__(self, dim=None):
+        self.dim = dim
+        self.shared_params = self.create_shared_params()
+
+    def create_shared_params(self):
+        pass
 
     @property
     def params(self):
@@ -116,7 +121,7 @@ class TestFunction(object):
     def from_function(cls, f):
         if not callable(f):
             raise ValueError('Need callable, got %r' % f)
-        obj = TestFunction()
+        obj = TestFunction(None)
         obj.__call__ = f
         return obj
 
@@ -520,3 +525,67 @@ class FullRank(Approximation):
         L = self.shared_params['L'].reshape((self.global_size, self.global_size))
         mu = self.shared_params['mu']
         return initial.dot(L) + mu
+
+
+class NeuralNetwork(Approximation):
+    def __init__(self, local_rv=None, model=None, layers=3, activations=tt.nnet.relu):
+        if not isinstance(activations, (list, tuple)):
+            activations = [activations] * layers
+            activations[-1] = identity
+        self.layers = layers
+        self.activations = activations
+        self.layers = layers
+        super(NeuralNetwork, self).__init__(local_rv, model)
+
+    def create_shared_params(self):
+        dim = self.global_size
+        weights = [theano.shared(
+            np.random.normal(size=(dim, dim)).astype(dtype=theano.config.floatX).ravel()
+        )
+                   for _ in range(self.layers)]
+        bias = [theano.shared(
+            np.random.normal(size=(dim, )).astype(dtype=theano.config.floatX).ravel()
+        )
+                for _ in range(self.layers)]
+        return weights + bias
+
+    def random(self, size=None, no_rand=False):
+        z = self.normal(size, no_rand, self.global_size)
+        weights = self.shared_params[:self.layers]
+        weights = [w.reshape((self.global_size, self.global_size)) for w in weights]
+        bias = self.shared_params[self.layers:]
+        activations = self.activations
+        for w, b, a in zip(weights, bias, activations):
+            z = a(z.dot(w) + b)
+        return z
+
+
+class TestNeuralNetwork(TestFunction):
+    def __init__(self, dim, layers=3, activations=tt.nnet.relu):
+        if not isinstance(activations, (list, tuple)):
+            activations = [activations] * layers
+            activations[-1] = tt.tanh
+        self.layers = layers
+        self.activations = activations
+        super(TestNeuralNetwork, self).__init__(dim=dim)
+
+    def create_shared_params(self):
+        dim = self.dim
+        weights = [theano.shared(
+            np.random.normal(size=(dim, dim)).astype(dtype=theano.config.floatX).ravel()
+        )
+                   for _ in range(self.layers)]
+        bias = [theano.shared(
+            np.random.normal(size=(dim, )).astype(dtype=theano.config.floatX).ravel()
+        )
+                for _ in range(self.layers)]
+        return weights + bias
+
+    def __call__(self, z):
+        weights = self.shared_params[:self.layers]
+        weights = [w.reshape((self.dim, self.dim)) for w in weights]
+        bias = self.shared_params[self.layers:]
+        activations = self.activations
+        for w, b, a in zip(weights, bias, activations):
+            z = a(z.dot(w) + b)
+        return z
