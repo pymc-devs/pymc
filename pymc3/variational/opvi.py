@@ -7,15 +7,12 @@ from .advi import adagrad_optimizer
 from ..theanof import tt_rng, memoize, change_flags, GradScale, identity
 from ..blocking import ArrayOrdering
 from ..distributions.dist_math import rho2sd, log_normal, log_normal_mv
-from ..distributions.distribution import infer_shape
 from ..math import flatten_list
 from ..model import modelcontext
 import numpy as np
 
 # helper class
 FlatView = collections.namedtuple('FlatView', 'input, replacements')
-# shortcut for zero grad
-Z = theano.gradient.zero_grad
 
 
 def flatten_model(model, vars=None):
@@ -68,13 +65,14 @@ class Operator(object):
             return self.op.approx.random()
 
         def __call__(self, z):
-            return theano.clone(self.op.apply(self.tf), {self.op.input: z})
+            a = theano.clone(self.op.apply(self.tf), {self.op.input: z})
+            return tt.abs_(a)
 
         def updates(self, z, obj_optimizer=None, test_optimizer=None, more_params=None):
             if more_params is None:
                 more_params = []
             if obj_optimizer is None:
-                obj_optimizer = adagrad_optimizer(learning_rate=.001, epsilon=.1)
+                obj_optimizer = adagrad_optimizer(learning_rate=.01, epsilon=.1)
             if test_optimizer is None:
                 test_optimizer = adagrad_optimizer(learning_rate=.001, epsilon=.1)
             target = self(z)
@@ -458,7 +456,8 @@ class Approximation(object):
 
 class KL(Operator):
     def apply(self, f):
-        """KL divergence between posterior and approximation for input `z`
+        """
+        KL divergence between posterior and approximation for input `z`
             :math:`z ~ Approximation`
         """
         z = self.input
@@ -468,8 +467,11 @@ class KL(Operator):
 class LS(Operator):
     def apply(self, f):
         z = self.input
+        logp = self.logp
         jacobian = theano.gradient.jacobian
-        return (tt.Rop(self.logp(z), z, f(z)) + jacobian(f(z), z).sum()) ** 2
+        trace = tt.nlinalg.trace
+        return (tt.Rop(logp(z), z, f(z)) +
+                trace(jacobian(f(z), z)))
 
 
 class MeanField(Approximation):
@@ -528,7 +530,7 @@ class FullRank(Approximation):
 
 
 class NeuralNetwork(Approximation):
-    def __init__(self, local_rv=None, model=None, layers=3, activations=tt.nnet.relu):
+    def __init__(self, local_rv=None, model=None, layers=2, activations=tt.nnet.relu):
         if not isinstance(activations, (list, tuple)):
             activations = [activations] * layers
             activations[-1] = identity
@@ -561,7 +563,7 @@ class NeuralNetwork(Approximation):
 
 
 class TestNeuralNetwork(TestFunction):
-    def __init__(self, dim, layers=3, activations=tt.nnet.relu):
+    def __init__(self, dim, layers=2, activations=tt.nnet.relu):
         if not isinstance(activations, (list, tuple)):
             activations = [activations] * layers
             activations[-1] = tt.tanh

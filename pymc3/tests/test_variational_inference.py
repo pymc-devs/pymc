@@ -11,11 +11,12 @@ from pymc3.variational.opvi import (
 )
 from ..theanof import set_tt_rng
 from . import models
+from .helpers import SeededTest
 set_tt_rng(MRG_RandomStreams(42))
 
 
 class TestApproximates:
-    class Base(unittest.TestCase):
+    class Base(SeededTest):
         op = KL
         approx = MeanField
         tf = TestFunction
@@ -86,7 +87,7 @@ class TestApproximates:
                 trace = mf.sample_vp(draws=1, hide_transformed=False)
                 self.assertListEqual(sorted(trace.varnames), ['p', 'p_logodds_'])
 
-        def test_advi_optimizer(self):
+        def test_optimizer(self):
             n = 1000
             sd0 = 2.
             mu0 = 4.
@@ -104,12 +105,16 @@ class TestApproximates:
                 pm.Deterministic('mu_sq', mu_**2)
                 approx = self.approx()
                 obj_f = self.op(approx)(self.tf(approx.total_size))
+                updates = obj_f.updates(obj_f.random(),
+                                        obj_optimizer=lambda *a: {})
+                step = theano.function([], [], updates=updates)
+                for _ in range(self.NITER):
+                    step()
                 updates = obj_f.updates(obj_f.random())
                 step = theano.function([], [], updates=updates)
                 for _ in range(self.NITER):
                     step()
                 trace = approx.sample_vp(10000)
-
             np.testing.assert_allclose(np.mean(trace['mu']), mu_post, rtol=0.1)
             np.testing.assert_allclose(np.std(trace['mu']), np.sqrt(1. / d), rtol=0.4)
 
@@ -123,7 +128,7 @@ class TestFullRank(TestApproximates.Base):
 
 
 class TestLSOp(TestApproximates.Base):
-    NITER = 100000
+    NITER = 1000000
     approx = NeuralNetwork
     tf = TestNeuralNetwork
     op = LS
