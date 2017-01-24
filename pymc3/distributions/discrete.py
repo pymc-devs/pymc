@@ -402,7 +402,7 @@ class Categorical(Discrete):
         p = self.p
         k = self.k
 
-        # Check bounds before using them for indexing
+        # Clip values before using them for indexing
         value_clip = tt.clip(value, 0, k - 1)
 
         sumto1 = theano.gradient.zero_grad(
