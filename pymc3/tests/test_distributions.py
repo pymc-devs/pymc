@@ -334,9 +334,6 @@ class TestMatchesScipy(SeededTest):
             Uniform, Runif, {'lower': -Rplusunif, 'upper': Rplusunif},
             lambda value, lower, upper: sp.uniform.logpdf(value, lower, upper - lower))
 
-    Runif = Domain([-1, -.4, 0, .4, 1])
-    Rdunif = Domain([-10, 0, 10.])
-    Rplusunif = Domain([0, .5, inf])
     def test_triangular(self):
         self.pymc3_matches_scipy(
             Triangular, Runif, {'lower': -Rplusunif, 'c': Runif, 'upper': Rplusunif},
