@@ -30,8 +30,9 @@ class Distribution(object):
 
         if isinstance(name, string_types):
             data = kwargs.pop('observed', None)
+            total_size = kwargs.pop('total_size', None)
             dist = cls.dist(*args, **kwargs)
-            return model.Var(name, dist, data)
+            return model.Var(name, dist, data, total_size)
         else:
             raise TypeError("Name needs to be a string but got: %s" % name)
 
@@ -279,7 +280,11 @@ def infer_shape(shape):
 def reshape_sampled(sampled, size, dist_shape):
     dist_shape = infer_shape(dist_shape)
     repeat_shape = infer_shape(size)
-    return np.reshape(sampled, repeat_shape + dist_shape)
+
+    if np.size(sampled) == 1 or repeat_shape or dist_shape:
+        return np.reshape(sampled, repeat_shape + dist_shape)
+    else:
+        return sampled
 
 
 def replicate_samples(generator, size, repeats, *args, **kwargs):

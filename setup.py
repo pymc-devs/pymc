@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from setuptools import setup, find_packages
+from setuptools import setup
 import sys
 
 
@@ -48,7 +48,21 @@ if __name__ == "__main__":
           license=LICENSE,
           url=URL,
           long_description=LONG_DESCRIPTION,
-          packages=find_packages(include=['docs', '.']),
+          packages=['pymc3',
+                    'pymc3.backends',
+                    'pymc3.distributions',
+                    'pymc3.examples',
+                    'pymc3.glm',
+                    'pymc3.step_methods',
+                    'pymc3.step_methods.hmc',
+                    'pymc3.tuning',
+                    'pymc3.tests',
+                    'pymc3.variational',
+                    'pymc3.models',
+                    'pymc3.external',
+                    'docs',
+                    '.',
+          ],
           classifiers=classifiers,
           install_requires=install_reqs,
           tests_require=test_reqs,

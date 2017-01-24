@@ -34,7 +34,7 @@ class TestGLM(SeededTest):
             Normal('y_obs', mu=y_est, sd=sigma, observed=self.y_linear)
             start = find_MAP(vars=[sigma])
             step = Slice(model.vars)
-            trace = sample(500, step, start, progressbar=False, random_seed=self.random_seed)
+            trace = sample(500, step=step, start=start, progressbar=False, random_seed=self.random_seed)
 
             self.assertAlmostEqual(np.mean(trace['Intercept']), self.intercept, 1)
             self.assertAlmostEqual(np.mean(trace['x']), self.slope, 1)
