@@ -1334,7 +1334,7 @@ class Triangular(Continuous):
         c, lower, upper = draw_values([self.c, self.lower, self.upper],
                                       point=point)
         return generate_samples(stats.triang.rvs, c=c-lower, loc=lower, scale=upper-lower,
-                                size=size, random_state=None)
+                                size=size, dist_shape=self.shape, random_state=None)
 
     def logp(self, value):
         c = self.c
