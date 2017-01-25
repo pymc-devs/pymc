@@ -306,7 +306,6 @@ def _iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
     methods = step.methods if isinstance(step, CompoundStep) else [step]
     for s in methods:
         s.expected_ndraws = draws
-
     for i in range(draws):
         if i == tune:
             step = stop_tuning(step)

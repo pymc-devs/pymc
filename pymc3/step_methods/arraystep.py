@@ -81,18 +81,6 @@ class BlockedStep(object):
     def _competence(cls, vars):
         return [cls.competence(var) for var in np.atleast_1d(vars)]
 
-    @property
-    def expected_ndraws(self):
-        try:
-            return self._expected_ndraws
-        except AttributeError:
-            return None
-
-    @expected_ndraws.setter
-    def expected_ndraws(self, n):
-        if n > 0:
-            self._expected_ndraws = int(n)
-
 
 class ArrayStep(BlockedStep):
     """
