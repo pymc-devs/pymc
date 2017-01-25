@@ -4,7 +4,7 @@ import theano
 import six
 
 __all__ = ['bool_types', 'int_types', 'float_types', 'complex_types', 'continuous_types',
-           'discrete_types', 'default_type', 'typefilter', 'isgenerator']
+           'discrete_types', 'typefilter', 'isgenerator']
 
 bool_types = set(['int8'])
 
