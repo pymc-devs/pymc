@@ -530,7 +530,7 @@ class FullRank(Approximation):
 
 
 class NeuralNetwork(Approximation):
-    def __init__(self, local_rv=None, model=None, layers=2, activations=tt.nnet.relu):
+    def __init__(self, local_rv=None, model=None, layers=1, activations=tt.nnet.relu):
         if not isinstance(activations, (list, tuple)):
             activations = [activations] * layers
             activations[-1] = identity
@@ -563,7 +563,7 @@ class NeuralNetwork(Approximation):
 
 
 class TestNeuralNetwork(TestFunction):
-    def __init__(self, dim, layers=2, activations=tt.nnet.relu):
+    def __init__(self, dim, layers=2, activations=tt.tanh):
         if not isinstance(activations, (list, tuple)):
             activations = [activations] * layers
             activations[-1] = tt.tanh

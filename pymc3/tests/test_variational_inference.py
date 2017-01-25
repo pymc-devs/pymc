@@ -105,11 +105,6 @@ class TestApproximates:
                 pm.Deterministic('mu_sq', mu_**2)
                 approx = self.approx()
                 obj_f = self.op(approx)(self.tf(approx.total_size))
-                updates = obj_f.updates(obj_f.random(),
-                                        obj_optimizer=lambda *a: {})
-                step = theano.function([], [], updates=updates)
-                for _ in range(self.NITER):
-                    step()
                 updates = obj_f.updates(obj_f.random())
                 step = theano.function([], [], updates=updates)
                 for _ in range(self.NITER):
@@ -128,7 +123,7 @@ class TestFullRank(TestApproximates.Base):
 
 
 class TestLSOp(TestApproximates.Base):
-    NITER = 1000000
+    NITER = 100000
     approx = NeuralNetwork
     tf = TestNeuralNetwork
     op = LS
