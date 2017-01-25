@@ -244,13 +244,15 @@ identity = tt.Elemwise(scalar_identity, name='identity')
 
 class GeneratorOp(Op):
     """
-    Generaror Op is designed for storing python generators
-    inside theano graph. The main limitation is generator itself.
+    Generaror Op is designed for storing python generators inside theano graph.
 
     __call__ creates TensorVariable
         It has 2 new methods (assigned externally)
         - var.set_gen(gen) : sets new generator
         - var.set_default(value) : sets new default value (None erases default value)
+
+    If generator is exhausted, variable will produce default value if it is not None,
+    else raises `StopIteration` exception that can be caught on runtime.
 
     Parameters
     ----------
@@ -328,7 +330,8 @@ class GeneratorOp(Op):
 def generator(gen, default=None):
     """
     Generator variable with possibility to set default value and new generator.
-    Raises StopIteration if generator is exhausted
+    If generator is exhausted variable will produce default value if it is not None,
+    else raises `StopIteration` exception that can be caught on runtime.
 
     Parameters
     ----------
