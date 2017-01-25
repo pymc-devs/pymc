@@ -10,7 +10,6 @@ from .model import modelcontext
 from scipy.misc import logsumexp
 from scipy.stats.distributions import pareto
 
-import pymc3 as pm
 from .backends import tracetab as ttab
 
 __all__ = ['autocorr', 'autocov', 'dic', 'bpic', 'waic', 'loo', 'hpd', 'quantiles',

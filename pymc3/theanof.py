@@ -3,7 +3,6 @@ import numpy as np
 from .vartypes import typefilter, continuous_types
 from theano import theano, scalar, tensor as tt
 from theano.gof.graph import inputs
-from theano.tensor import TensorVariable
 from theano.gof import Op
 from theano.configparser import change_flags
 from .memoize import memoize

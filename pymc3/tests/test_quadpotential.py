@@ -6,7 +6,7 @@ import theano
 
 from pymc3.step_methods.hmc import quadpotential
 
-from nose.tools import raises, assert_raises
+from nose.tools import raises
 from nose.plugins.skip import SkipTest
 
 
