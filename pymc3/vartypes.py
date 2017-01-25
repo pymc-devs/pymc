@@ -1,6 +1,5 @@
 import sys
 
-import theano
 import six
 
 __all__ = ['bool_types', 'int_types', 'float_types', 'complex_types', 'continuous_types',

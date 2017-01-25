@@ -4,7 +4,7 @@ See the docstring for pymc3.backends for more information (including
 creating custom backends).
 """
 import numpy as np
-from ..model import modelcontext, TransformedRV
+from ..model import modelcontext
 
 
 class BackendError(Exception):

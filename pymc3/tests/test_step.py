@@ -4,7 +4,6 @@ import unittest
 from .checks import close_to
 from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model
 from .helpers import SeededTest
-from pymc3 import df_summary, traceplot
 from pymc3.sampling import assign_step_methods, sample
 from pymc3.model import Model
 from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,

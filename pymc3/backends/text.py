@@ -16,7 +16,6 @@ represents two variables, x and y, where x is a scalar and y has a
 shape of (3, 2).
 """
 from glob import glob
-import numpy as np
 import os
 import pandas as pd
 

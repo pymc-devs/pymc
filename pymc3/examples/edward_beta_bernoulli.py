@@ -8,13 +8,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import edward as ed  # pragma pylint: disable=import-error
+import edward as ed  # pylint: disable=import-error
 import numpy as np
 import pymc3 as pm
 import theano
-import tensorflow as tf  # pragma pylint: disable=import-error
+import tensorflow as tf  # pylint: disable=import-error
 
-from edward.models import Beta  # pragma pylint: disable=import-error
+from edward.models import Beta  # pylint: disable=import-error
 from pymc3.external.edward import EdwardModel
 
 x_obs = theano.shared(np.zeros(1))

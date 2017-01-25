@@ -3,7 +3,7 @@ import theano.tensor as tt
 import pymc3 as pm
 
 from ..distributions import Discrete
-from ..distributions.dist_math import bound, factln, alltrue_elemwise, alltrue_scalar
+from ..distributions.dist_math import bound, factln, alltrue_scalar
 
 
 def test_bound():

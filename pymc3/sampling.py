@@ -146,7 +146,7 @@ def sample(draws, step=None, init='advi', n_init=200000, start=None,
     MultiTrace object with access to sampling values
     """
     model = modelcontext(model)
-    
+
     if init is not None:
         init = init.lower()
 
@@ -193,7 +193,7 @@ def _sample(draws, step=None, start=None, trace=None, chain=0, tune=None,
             pass
     except KeyboardInterrupt:
         strace.close()
-    return MultiTrace([strace])
+    return MultiTrace([strace])  # pylint: disable=undefined-loop-variable
 
 
 def iter_sample(draws, step, start=None, trace=None, chain=0, tune=None,
@@ -418,7 +418,7 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
         * MAP : Use the MAP as starting point.
         * NUTS : Run NUTS and estimate posterior mean and covariance matrix.
     njobs : int
-        Number of parallel jobs to start. 
+        Number of parallel jobs to start.
     n_init : int
         Number of iterations of initializer
         If 'ADVI', number of iterations, if 'metropolis', number of draws.
@@ -441,21 +441,21 @@ def init_nuts(init='ADVI', njobs=1, n_init=500000, model=None,
     pm._log.info('Initializing NUTS using {}...'.format(init))
 
     random_seed = int(np.atleast_1d(random_seed)[0])
-    
+
     if init is not None:
         init = init.lower()
 
     if init == 'advi':
         v_params = pm.variational.advi(n=n_init, random_seed=random_seed)
         start = pm.variational.sample_vp(v_params, njobs, progressbar=False,
-                                         hide_transformed=False, 
+                                         hide_transformed=False,
                                          random_seed=random_seed)
         if njobs == 1:
             start = start[0]
         cov = np.power(model.dict_to_array(v_params.stds), 2)
     elif init == 'advi_map':
         start = pm.find_MAP()
-        v_params = pm.variational.advi(n=n_init, start=start, 
+        v_params = pm.variational.advi(n=n_init, start=start,
                                        random_seed=random_seed)
         cov = np.power(model.dict_to_array(v_params.stds), 2)
     elif init == 'map':

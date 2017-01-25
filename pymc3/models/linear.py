@@ -1,5 +1,4 @@
 import theano.tensor as tt
-import pandas as pd
 import numpy as np
 from ..distributions import Normal, Flat
 from ..glm import families

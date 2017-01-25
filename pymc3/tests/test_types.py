@@ -1,24 +1,14 @@
-import os
 from copy import copy
 
 import unittest
 import theano
 
-from .checks import close_to
-from .models import simple_categorical, mv_simple, mv_simple_discrete, simple_2model
-from .helpers import SeededTest
-from pymc3 import df_summary, traceplot
-from pymc3.sampling import assign_step_methods, sample
+from pymc3.sampling import sample
 from pymc3.model import Model
-from pymc3.step_methods import (NUTS, BinaryGibbsMetropolis, CategoricalGibbsMetropolis,
-                                Metropolis, Slice, CompoundStep,
-                                MultivariateNormalProposal, HamiltonianMC)
-from pymc3.distributions import Binomial, Normal, Bernoulli, Categorical, InverseGamma
+from pymc3.step_methods import NUTS, Metropolis, Slice, HamiltonianMC
+from pymc3.distributions import Normal
 
-from numpy.testing import assert_array_almost_equal
 import numpy as np
-from tqdm import tqdm
-from scipy import stats
 
 
 class TestType(unittest.TestCase):
